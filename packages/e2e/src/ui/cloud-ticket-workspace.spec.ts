@@ -4,6 +4,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin } from "../ui-server";
 import { enableCloudWorkspaceProvider } from "./helpers/cloud-workspace-provider";
+import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 
 test("a plain-folder ticket creates a linked cloud workspace through its provider form", async ({ page, request }) => {
   const home = await (await request.get(`${uiOrigin}/v1/filesystem/list`)).json();
@@ -13,12 +14,31 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
   expect(directory.ok()).toBe(true);
   const { path } = await directory.json();
   let projectId: string | undefined;
+  const staleCatalog = Promise.withResolvers<void>();
   try {
     const created = await request.post(`${uiOrigin}/v1/projects`, { data: folderProjectInput({}, path) });
     expect(created.ok()).toBe(true);
     projectId = (await created.json()).id;
     const workspacesUrl = `${uiOrigin}/v1/workspaces?project_id=${projectId}`;
     const [homeWorkspace] = await (await request.get(workspacesUrl)).json();
+    await page.addInitScript((id) => localStorage.setItem("dashboard-wb2:selected-project:global", id), projectId!);
+    await page.goto(`/projects/${projectId}`);
+    const workspaceNavigation = await showHiddenSidenavEntry(page, "Workspaces");
+    await workspaceNavigation.hover();
+    await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
+    const catalogCaptured = Promise.withResolvers<void>();
+    let heldCatalog = false;
+    await page.route(`**/v1/projects/${projectId}/workspace-providers`, async (route) => {
+      if (heldCatalog) return route.continue();
+      heldCatalog = true;
+      const response = await route.fetch();
+      expect(await response.json()).toEqual([]);
+      catalogCaptured.resolve();
+      await staleCatalog.promise;
+      await route.fulfill({ response });
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await catalogCaptured.promise;
     const providerId = await enableCloudWorkspaceProvider({
       request,
       apiBase: uiOrigin,
@@ -28,15 +48,21 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     });
     const providers = await (await request.get(`${uiOrigin}/v1/projects/${projectId}/workspace-providers`)).json();
     expect(providers).toEqual([expect.objectContaining({ id: providerId })]);
+    await workspaceNavigation.hover();
+    await workspaceNavigation.getByRole("button", { name: "New workspace", exact: true }).click();
+    staleCatalog.resolve();
+    const providerDialog = page.getByRole("dialog", { name: "Create workspace", exact: true });
+    await expect(providerDialog.getByRole("textbox", { name: "Source template" })).toBeVisible();
+    await providerDialog.getByRole("button", { name: "Cancel", exact: true }).click();
     const ticket = await createPlannerTicket(request, uiOrigin, projectId!, { content: "# Cloud workspace ticket" });
-    await page.addInitScript((id) => localStorage.setItem("dashboard-wb2:selected-project:global", id), projectId!);
     const gitRequests: string[] = [];
     page.on("request", (request) => {
       if (/\/v1\/workspaces\/[^/]+\/diff/.test(request.url())) gitRequests.push(request.url());
     });
     await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Cloud workspace ticket", { exact: true }).click();
-    await page.getByText("Workspaces", { exact: true }).hover();
+    await expect(page.getByRole("option", { name: "Project workspace", exact: true })).toBeVisible();
+    await page.getByText("Workspaces", { exact: true }).last().hover();
     await page.getByRole("button", { name: "Create workspace", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Create workspace", exact: true });
     await expect(dialog.getByText("Test cloud workspace", { exact: true })).toBeVisible();
@@ -91,6 +117,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     );
     expect(gitRequests).toEqual([]);
   } finally {
+    staleCatalog.resolve();
     if (projectId) expect((await request.delete(`${uiOrigin}/v1/projects/${projectId}`)).ok()).toBe(true);
     if (existsSync(path)) rmSync(path, { recursive: true, force: true });
   }

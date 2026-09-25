@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { uiOrigin } from "../ui-server";
+import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 
 test("ticket work opens a shared non-Git folder and loads files without Git requests", async ({ page, request }) => {
   const home = await (await request.get(`${uiOrigin}/v1/filesystem/list`)).json();
@@ -31,8 +32,23 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
       if (/\/v1\/workspaces\/[^/]+\/diff/.test(request.url())) gitRequests.push(request.url());
     });
     await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    const workspaceNavigation = await showHiddenSidenavEntry(page, "Workspaces");
+    await workspaceNavigation.hover();
+    await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
+    await workspaceNavigation.click();
+    await expect(page.getByRole("row").filter({ hasText: workspace.workspace_shorthand })).toBeVisible();
+    const providerRoute = `**/v1/projects/${projectId}/workspace-providers`;
+    await page.route(providerRoute, (route) => route.fulfill({ status: 503, body: "Provider catalog unavailable" }));
+    await page.reload();
+    await expect(workspaceNavigation).toBeVisible();
+    await workspaceNavigation.hover();
+    await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("row").filter({ hasText: workspace.workspace_shorthand })).toBeVisible();
+    await page.unroute(providerRoute);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Plain folder ticket", { exact: true }).click();
-    await page.getByText("Workspaces", { exact: true }).hover();
+    await expect(page.getByRole("option", { name: "Project workspace", exact: true })).toBeVisible();
+    await page.getByText("Workspaces", { exact: true }).last().hover();
     await expect(page.getByRole("button", { name: "Create workspace", exact: true })).toHaveCount(0);
     await page.getByRole("option", { name: "Project workspace", exact: true }).click();
     await expect(page.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();

@@ -1,13 +1,12 @@
 import { Spinner } from "@chakra-ui/react";
 import { type CreateWorkspaceCommandParams, resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
-import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
@@ -18,6 +17,7 @@ import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
+import { registerWorkspaceSidenavContributions } from "./workspace-navigation";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 import { watchOpenWorkspaceResource } from "./workspace-resource-sync";
 
@@ -42,30 +42,6 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContext, options: CreateWorkspa
         ...(options.anchors ? { anchors: options.anchors.map((anchor) => ({ ...anchor })) } : {}),
       },
     },
-  });
-};
-const workspaceNavigationNode = (): TreeNode => ({
-  id: dashboardViews.workspaces.id,
-  label: "Workspaces",
-  icon: dashboardViews.workspaces.icon,
-  canHide: true,
-  hiddenByDefault: true,
-  commandId: dashboardCommandIds.openWorkspaces,
-  target: { kind: "page", page: workbenchPages.workspaces },
-  actions: [
-    {
-      id: "new-workspace",
-      label: "New workspace",
-      icon: "Plus",
-      commandId: dashboardCommandIds.createWorkspace,
-    },
-  ],
-});
-const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
-  registerDashboardNavigationContribution(ctx, {
-    id: "dashboard.workspaces.project-nav",
-    modes: ["project"],
-    getSections: () => [{ id: "navigation.root", nodes: [workspaceNavigationNode()] }],
   });
 };
 const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
