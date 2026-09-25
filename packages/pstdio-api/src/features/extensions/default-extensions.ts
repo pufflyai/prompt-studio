@@ -1,4 +1,5 @@
 import { existsSync, statSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
@@ -15,7 +16,6 @@ import {
   type InstalledExtensionSource,
   installExtensionSource,
   isLocalExtensionSource,
-  toExtensionEnableInput,
 } from "./install-extension-source";
 
 export {
@@ -287,30 +287,7 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
   }, deps.signal);
 };
 
-export const registerInstalledExtensionSources = async (
-  extensionService: {
-    registerInstalledSource: (input: {
-      displayName: string;
-      extensionId: string;
-      installName: string;
-      manifest: Record<string, unknown>;
-      name: string;
-      sourceHash: string;
-      sourceKind: "git" | "local_path";
-      sourcePath: string;
-      sourceRef: string | null;
-      version: string | null;
-    }) => Promise<unknown>;
-  },
-  installed: InstalledExtensionSource[],
-) => {
-  for (const extension of installed) {
-    await extensionService.registerInstalledSource({
-      installName: extension.installName,
-      ...toExtensionEnableInput(extension),
-    });
-  }
-};
+export { registerInstalledExtensionSources } from "./register-installed-extension-sources";
 
 type InstallRepoDefaultExtensionsInput = {
   defaultExtensions: DefaultExtensionEntry[];
@@ -322,34 +299,49 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
   const materialized: string[] = [];
   const skipped: string[] = [];
 
-  await withResolvedDefaultEntries(
-    {
-      config: { defaultExtensions: input.defaultExtensions },
-      prepareSharedCheckout: input.prepareSharedCheckout,
-      sourceMode: true,
-    },
-    async (entries, prepareNamedSource) => {
-      for (const resolved of entries) {
-        if (resolved.scope !== "repo") continue;
+  const rollback = async () => {
+    const results = await Promise.allSettled(
+      materialized.map((name) =>
+        rm(join(input.repoPath, ".pstdio", "extensions", name), { recursive: true, force: true }),
+      ),
+    );
+    for (const result of results) {
+      if (result.status === "rejected") throw result.reason;
+    }
+  };
 
-        const target = join(input.repoPath, ".pstdio", "extensions", resolved.installName);
-        if (existsSync(target)) {
-          skipped.push(resolved.installName);
-          continue;
+  try {
+    await withResolvedDefaultEntries(
+      {
+        config: { defaultExtensions: input.defaultExtensions },
+        prepareSharedCheckout: input.prepareSharedCheckout,
+        sourceMode: true,
+      },
+      async (entries, prepareNamedSource) => {
+        for (const resolved of entries) {
+          if (resolved.scope !== "repo") continue;
+
+          const target = join(input.repoPath, ".pstdio", "extensions", resolved.installName);
+          if (existsSync(target)) {
+            skipped.push(resolved.installName);
+            continue;
+          }
+
+          const installInput = toInstallInput(resolved.entry);
+          await installExtensionSource({
+            ...installInput,
+            existsOk: false,
+            force: false,
+            prepareNamedSource,
+            repoPath: input.repoPath,
+          });
+          materialized.push(resolved.installName);
         }
-
-        const installInput = toInstallInput(resolved.entry);
-        await installExtensionSource({
-          ...installInput,
-          existsOk: true,
-          force: false,
-          prepareNamedSource,
-          repoPath: input.repoPath,
-        });
-        materialized.push(resolved.installName);
-      }
-    },
-  );
-
-  return { materialized, skipped };
+      },
+    );
+  } catch (error) {
+    await rollback();
+    throw error;
+  }
+  return { materialized, skipped, rollback };
 };

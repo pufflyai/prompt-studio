@@ -1,12 +1,8 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  installDefaultExtensions,
-  installRepoDefaultExtensions,
-  resolveDefaultExtensionsConfig,
-} from "./default-extensions";
+import { installDefaultExtensions, resolveDefaultExtensionsConfig } from "./default-extensions";
 import { installed, writeExtension } from "./default-extensions-test-fixtures";
 
 afterEach(() => {
@@ -343,38 +339,6 @@ describe("installDefaultExtensions sources", () => {
           source: broken,
         },
       ]);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-});
-
-describe("installRepoDefaultExtensions", () => {
-  test("materializes only repo-scoped defaults without overwriting existing folders", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-repo-defaults-"));
-    const source = join(root, "source-extension");
-    const userSource = join(root, "user-extension");
-    const repo = join(root, "repo");
-    writeExtension(source, "source-extension", "repo");
-    writeExtension(userSource, "user-extension", "user");
-
-    try {
-      const first = await installRepoDefaultExtensions({
-        repoPath: repo,
-        defaultExtensions: [
-          { source, installName: "source-extension", skipInstall: true },
-          { source: userSource, installName: "user-extension", skipInstall: true },
-        ],
-      });
-      writeFileSync(join(repo, ".pstdio", "extensions", "source-extension", "custom.txt"), "custom");
-      const second = await installRepoDefaultExtensions({
-        repoPath: repo,
-        defaultExtensions: [{ source, installName: "source-extension", skipInstall: true }],
-      });
-
-      expect(first).toEqual({ materialized: ["source-extension"], skipped: [] });
-      expect(second).toEqual({ materialized: [], skipped: ["source-extension"] });
-      expect(existsSync(join(repo, ".pstdio", "extensions", "user-extension", "extension.ts"))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

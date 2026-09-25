@@ -1,3 +1,4 @@
+import { realpath } from "node:fs/promises";
 import type { createReposDBService } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
 import type { createRepoRegistration, RepoRegistrationScope } from "./repo-registration";
@@ -21,11 +22,22 @@ export const createRepoService = (deps: RepoServiceDeps) => {
     input: Parameters<typeof db.registerForProject>[1],
     setup: RegistrationSetup = {},
   ) => {
+    const existingRepos = await db.list();
+    let existing = existingRepos.find((repo) => repo.path === input.path);
+    if (!existing) {
+      for (const repo of existingRepos) {
+        if ((await realpath(repo.path).catch(() => null)) === input.path) {
+          existing = repo;
+          break;
+        }
+      }
+    }
+    const registration = existing ? { ...input, path: existing.path } : input;
     // Filesystem checks and installation share the path lock but must not hold the DB transaction.
     const rollback = await setup.prepare?.();
     try {
       return await deps.runRegistration(async (scope) => {
-        const repo = await scope.reposDBService.registerForProject(projectId, input);
+        const repo = await scope.reposDBService.registerForProject(projectId, registration);
         await setup.initialize?.(repo, scope);
         const link = await scope.reposDBService.getProjectRepoLink(projectId, repo.id);
         scope.eventBus.emit("repos", "set", repo);

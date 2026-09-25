@@ -72,5 +72,7 @@ export const createReposDBService = (db: DbClient) => {
     return removed ?? null;
   };
 
-  return { get, registerForProject, listByProject, getProjectRepoLink, removeFromProject };
+  const list = () => db.select().from(repos);
+
+  return { get, registerForProject, listByProject, getProjectRepoLink, removeFromProject, list };
 };

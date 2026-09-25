@@ -21,19 +21,27 @@ export const prepareProjectRepo = async (
     }
   }
 
+  let rollbackExtensions: (() => Promise<void>) | undefined;
   const restoreConfig = async () => {
     if (previous) await writeFile(configPath, previous);
     else if (existsSync(configPath)) await rm(configPath);
   };
+  const rollback = async () => {
+    const results = await Promise.allSettled([restoreConfig(), rollbackExtensions?.()]);
+    for (const result of results) {
+      if (result.status === "rejected") throw result.reason;
+    }
+  };
   try {
     await bootstrapProjectRepo(path, projectId);
-    await installRepoDefaultExtensions({
+    const installed = await installRepoDefaultExtensions({
       repoPath: path,
       defaultExtensions: (await resolveDefaultExtensionsConfig()).defaultExtensions,
     });
+    rollbackExtensions = installed.rollback;
   } catch (error) {
-    await restoreConfig();
+    await rollback();
     throw error;
   }
-  return restoreConfig;
+  return rollback;
 };

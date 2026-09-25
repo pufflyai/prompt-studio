@@ -139,3 +139,51 @@ test("failed setup preserves existing extension registrations and settings", asy
   );
   expect(handle.deps.eventBus.getSince(seq)).toEqual([]);
 });
+
+test("re-registering a stored directory alias preserves repository identity", async () => {
+  const project = await handle.deps.projectService.create({ name: "Stored alias" });
+  const path = join(root, "stored-alias");
+  mkdirSync(path);
+  const existing = await handle.deps.repoService.registerForProject(project.id, { name: "repo", path: `${path}/.` });
+  const response = await register(project.id, path);
+  expect(response.status).toBe(201);
+  expect((await response.json()).id).toBe(existing.id);
+  expect(await handle.deps.repoService.listByProject(project.id)).toEqual([existing]);
+});
+
+test("failed setup removes new defaults and retry installs the current source", async () => {
+  const project = await handle.deps.projectService.create({ name: "Default rollback" });
+  await handle.deps.workspaceService.create({ project_id: project.id, shorthand_base: "existing", name: "repo" });
+  const path = join(root, "default-rollback");
+  const source = join(root, "default-source");
+  mkdirSync(path);
+  mkdirSync(source);
+  writeFileSync(
+    join(source, "package.json"),
+    JSON.stringify({
+      name: "rollback-default",
+      version: "1.0.0",
+      publisher: "test",
+      main: "./extension.ts",
+      type: "module",
+      engines: { pstdio: EXTENSION_API_VERSION },
+      pstdio: { scope: "repo" },
+    }),
+  );
+  writeFileSync(join(source, "extension.ts"), "export default {};\n");
+  writeFileSync(join(source, "marker.txt"), "first");
+  const previous = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({
+    defaultExtensions: [{ source, installName: "rollback-default", skipInstall: true }],
+  });
+  try {
+    expect((await register(project.id, path)).status).toBe(500);
+    expect(() => readFileSync(join(path, ".pstdio", "extensions", "rollback-default", "marker.txt"))).toThrow();
+    writeFileSync(join(source, "marker.txt"), "second");
+    const retry = await handle.deps.projectService.create({ name: "Retry defaults" });
+    expect((await register(retry.id, path)).status).toBe(201);
+    expect(readFileSync(join(path, ".pstdio", "extensions", "rollback-default", "marker.txt"), "utf8")).toBe("second");
+  } finally {
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = previous;
+  }
+});
