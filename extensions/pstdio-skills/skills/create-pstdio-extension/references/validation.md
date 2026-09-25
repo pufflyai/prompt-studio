@@ -15,12 +15,14 @@ and use e2e checks when behavior changes.
 
 ## Focused checks
 
-Use Bun commands only.
+Use the Bun runtime included in the installed `pst` executable. Do not assume `bun`, `bunx`, or Node.js is installed separately. In a POSIX shell:
 
 ```bash
-bun test <path-to-test>
-bun run --cwd <path-to-extension> typecheck
+BUN_BE_BUN=1 pst test <path-to-test>
+BUN_BE_BUN=1 pst run --bun --cwd <path-to-extension> typecheck
 ```
+
+In PowerShell, set `$env:BUN_BE_BUN = "1"`, run the same `pst test` or `pst run --bun` commands without the environment prefix, and remove it with `Remove-Item Env:BUN_BE_BUN` before running normal `pst` commands. Keep this setting limited to the Bun command.
 
 Run the extension typecheck only when the extension package has that script. For first-party extension behavior, prefer
 tests next to the relevant extension file or in the package that owns the runtime behavior.
@@ -33,7 +35,7 @@ Run Prompt Studio and start the extension watcher from a linked git project:
 pst extensions dev <path-to-extension>
 ```
 
-The first cycle checks the extension contract and dashboard host capabilities, publishes a valid installed snapshot, enables it for the current project, and reports contribution and webview IDs. Later source saves refresh that snapshot. Changes to `package.json`, `bun.lock`, or `bun.lockb` run `bun install` before refresh. Errors stay in the terminal and do not stop the watcher or replace the last valid snapshot.
+The first cycle checks the extension contract and dashboard host capabilities, publishes a valid installed snapshot, enables it for the current project, and reports contribution and webview IDs. Later source saves refresh that snapshot. Changes to `package.json`, `bun.lock`, or `bun.lockb` install dependencies with the bundled Bun runtime before refresh. Errors stay in the terminal and do not stop the watcher or replace the last valid snapshot.
 
 Stop with Ctrl+C. The command removes watchers and temporary staging folders but leaves the last valid extension enabled.
 
@@ -42,11 +44,13 @@ Stop with Ctrl+C. The command removes watchers and temporary staging folders but
 Provision Chromium once, then run the installed CLI:
 
 ```bash
-bunx playwright@1.60.0 install chromium --with-deps
+pst extensions install-browser
 pst extensions test <path-to-extension>
 pst extensions test <path-to-extension> --json
 pst extensions test <path-to-extension> --project-path <fixture-containing-source> --keep-home
 ```
+
+Browser setup uses the installed CLI's bundled Bun runtime with `BUN_BE_BUN=1` and forces Playwright's installer to run with Bun. It chooses the version matching the bundled browser client and reuses downloaded browsers. On Linux, add `--with-deps` to install missing system libraries; this may require administrator access. `PLAYWRIGHT_BROWSERS_PATH` selects the browser cache for setup and smoke runs.
 
 The command copies inputs, installs dependencies, checks declarations, creates a fresh project, and opens resource-free pages in the real dashboard. It observes the initial mounted views and bridge calls. A caught capability denial still fails the run. It does not run arbitrary commands, create domain resources, click optional tabs, or test future interactions. Read the visited and unexercised contributions even when the command passes. An extension without pages can pass with zero UI visits.
 
@@ -112,5 +116,4 @@ Keep any packaged smoke-test expectations aligned with the current bundled artif
 
 ## Final validation
 
-Before handoff for non-documentation changes, run the full validation command your project defines
-(for example `bun run validate`). If validation cannot run, record the exact command, failure, and reason.
+Before handoff for non-documentation changes, run the full validation command your project defines with the bundled Bun runtime (for example `BUN_BE_BUN=1 pst run --bun validate` in a POSIX shell). Prompt Studio repository contributors use the repository's documented Bun toolchain and `bun run validate`. If validation cannot run, record the exact command, failure, and reason.

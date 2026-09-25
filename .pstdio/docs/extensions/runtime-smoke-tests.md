@@ -1,6 +1,8 @@
 # Extension runtime smoke checks
 
-Run `pst extensions test ./my-extension` to install a local source into a disposable home and load its resource-free pages in the real dashboard. Provision the matching Chromium browser once with `bunx playwright@1.60.0 install chromium --with-deps`.
+Run `pst extensions install-browser` once, then `pst extensions test ./my-extension` to install a local source into a disposable home and load its resource-free pages in the real dashboard. Browser setup uses the Bun runtime included in the installed CLI and the matching Playwright version. It does not require a separate Bun, bunx, or Node.js installation. Browser downloads are cached and reused.
+
+On Linux, use `pst extensions install-browser --with-deps` when browser system libraries are also needed. Installing system libraries may require administrator access. `PLAYWRIGHT_BROWSERS_PATH` selects the browser cache for both setup and smoke runs.
 
 Use `--json` for one machine-readable result on stdout. Logs go to stderr. Use `--keep-home` to retain the temporary run directory and evidence after all processes stop. `--project-path <directory>` supplies fixture context containing the source and its relative local dependencies. Original source files, caller project configuration, lockfiles and installed dependencies are never changed. Dependencies install in the copied context. Source symlinks and absolute local dependencies are unsupported.
 
@@ -12,4 +14,4 @@ A pass covers registration, selected resource-free page compositions, mounted we
 
 Chromium support follows Playwright 1.60.0: macOS arm64/x64, Windows x64, and supported Linux x64/arm64 distributions. Browser support loads only for this command. See [ADR 0029](../adrs/0029-temporary-chromium-only-playwright-bundle.md) for the temporary compiled-bundle exclusion of optional BiDi modules.
 
-For repository validation, build dashboard assets first, run `bun run validate`, then `bun run --cwd scripts verify:packages`. Packaged consumer fixtures exercise passing views, startup exceptions and capability denials caught by guest code. For interactive dashboard validation use `bun run dev:playwright` and stop it with `bun run dev:playwright:down`.
+For Prompt Studio repository contributors with the repository's Bun toolchain installed, build dashboard assets first, run `bun run validate`, then `bun run --cwd scripts verify:packages`. Packaged consumer fixtures exercise passing views, startup exceptions, capability denials caught by guest code, and browser setup without external JavaScript runtimes. For interactive dashboard validation use `bun run dev:playwright` and stop it with `bun run dev:playwright:down`. These contributor commands are not prerequisites for installed CLI users.

@@ -4,4 +4,4 @@
 "pstdio-skills": patch
 ---
 
-Add isolated extension smoke checks with packaged Chromium support and host diagnostics.
+Add isolated extension smoke checks, browser setup through bundled Bun, and host diagnostics.

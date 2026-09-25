@@ -41,9 +41,7 @@ export const runExtensionSmoke = async (input: {
     const { chromium } = await import("playwright-core");
     const executablePath = chromium.executablePath();
     if (!existsSync(executablePath))
-      throw new Error(
-        `Chromium is missing. Run: bunx playwright@1.60.0 install chromium --with-deps\nExpected browser: ${executablePath}`,
-      );
+      throw new Error(`Chromium is missing. Run: pst extensions install-browser\nExpected browser: ${executablePath}`);
     context = await createSmokeContext(input);
     const evidence = join(context.root, "evidence");
     mkdirSync(evidence);

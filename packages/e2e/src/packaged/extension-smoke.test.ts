@@ -94,7 +94,7 @@ test("missing Chromium produces a setup result without changing source", () => {
       expect.objectContaining({
         status: "failed",
         id: "setup",
-        message: expect.stringContaining("bunx playwright@1.60.0 install chromium --with-deps"),
+        phase: "setup",
       }),
     );
     expect(existsSync(join(source, "bun.lock"))).toBe(false);

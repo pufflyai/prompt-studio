@@ -60,17 +60,30 @@ export const createCompiledBunSmokeFixture = (rootDir = mkdtempSync(join(tmpdir(
   mkdirSync(cacheDir, { recursive: true });
   writeFileSync(
     join(extensionDir, "package.json"),
-    `${JSON.stringify({ name: "compiled-bun-smoke", private: true, dependencies: { "local-dep": "file:./local-dep" } })}\n`,
+    `${JSON.stringify({ name: "compiled-bun-smoke", private: true, scripts: { typecheck: "verify-runtime" }, dependencies: { "local-dep": "file:./local-dep" } })}\n`,
   );
-  writeFileSync(join(localDepDir, "package.json"), `${JSON.stringify({ name: "local-dep", version: "1.0.0" })}\n`);
+  writeFileSync(
+    join(localDepDir, "package.json"),
+    `${JSON.stringify({ name: "local-dep", version: "1.0.0", bin: { "verify-runtime": "check.ts" } })}\n`,
+  );
+  writeFileSync(
+    join(localDepDir, "check.ts"),
+    '#!/usr/bin/env node\nif (!process.versions.bun) throw new Error("The package script must use bundled Bun");\n',
+    { mode: 0o755 },
+  );
   writeFileSync(join(srcDir, "entry.ts"), "export const answer = 42;\n");
+  writeFileSync(
+    join(srcDir, "entry.test.ts"),
+    'import { expect, test } from "bun:test";\nimport { answer } from "./entry";\ntest("extension behavior", () => expect(answer).toBe(42));\n',
+  );
 
   return { rootDir, extensionDir, cacheDir, outfile };
 };
 
 export const buildCompiledBunSmokePlan = ({ binPath, fixture }: { binPath: string; fixture: SmokeFixture }) => {
   const env = {
-    ...process.env,
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== "PATH")),
+    PATH: "",
     BUN_BE_BUN: "1",
     BUN_INSTALL_CACHE_DIR: fixture.cacheDir,
   };
@@ -93,6 +106,18 @@ export const buildCompiledBunSmokePlan = ({ binPath, fixture }: { binPath: strin
         fixture.outfile,
       ],
       cwd: fixture.extensionDir,
+      env,
+    },
+    test: {
+      binPath,
+      args: ["test", join(fixture.extensionDir, "src", "entry.test.ts")],
+      cwd: fixture.extensionDir,
+      env,
+    },
+    script: {
+      binPath,
+      args: ["run", "--bun", "--cwd", fixture.extensionDir, "typecheck"],
+      cwd: fixture.rootDir,
       env,
     },
   };
@@ -140,7 +165,10 @@ export const runCompiledBunSmoke = (platformBinaries: PlatformBinary[]) => {
       throw new Error(`Compiled binary build smoke wrote unexpected output to ${fixture.outfile}.`);
     }
 
-    process.stdout.write(`OK: ${binPath} runs Bun install/build with BUN_BE_BUN=1\n`);
+    runSmokeCommand("test", plan.test);
+    runSmokeCommand("package script", plan.script);
+
+    process.stdout.write(`OK: ${binPath} runs Bun install/build/test/scripts with BUN_BE_BUN=1 and no PATH tools\n`);
   } finally {
     rmSync(fixture.rootDir, { recursive: true, force: true });
   }
