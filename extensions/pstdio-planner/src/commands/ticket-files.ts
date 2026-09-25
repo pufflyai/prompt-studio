@@ -247,8 +247,10 @@ export const listTicketFilesTree = async (
   };
 
   // Linked workspaces open as native workspace tabs from the same sidenav.
-  const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) =>
-    isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
+  const workspaces = await ctx.workspaces.list();
+  const linkedWorkspaces = workspaces.filter((workspace) => isWorkspaceLinkedToTicket(workspace, ticket.shorthand));
+  const visibleWorkspaces = workspaces.filter(
+    (workspace) => workspace.is_default || linkedWorkspaces.includes(workspace),
   );
 
   const statusesById = new Map((await statusesCollection(ctx.storage).list()).map((status) => [status.id, status]));
@@ -257,7 +259,7 @@ export const listTicketFilesTree = async (
     parentTicketId: ticket.id,
     statusesById,
   });
-  const linkedWorkspacesSection = buildWorkspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
+  const linkedWorkspacesSection = buildWorkspacesSection(visibleWorkspaces, ticket.id, ticketMeta);
 
   // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
   // to its workspaces. The ticket shows the whole conversation history either way.

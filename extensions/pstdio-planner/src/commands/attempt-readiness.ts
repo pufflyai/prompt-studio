@@ -47,6 +47,7 @@ export const loadAttemptReadiness = async (
       "Planner attempts require a Git repository with a usable base commit. Tools and ordinary sessions remain available in the project folder.",
     );
   }
+  const rootPath = home.root_path;
 
   const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
   const active = attempts.filter(
@@ -58,7 +59,7 @@ export const loadAttemptReadiness = async (
   const settings = await ctx.settings.all();
   const configuredCapacity = settings["automation.maxInProgress"];
   const maxInProgress = typeof configuredCapacity === "number" ? configuredCapacity : 2;
-  const mainHeadSha = await runGit(ctx, home.root_path, ["rev-parse", commandParams.base ?? "HEAD"]);
+  const mainHeadSha = await runGit(ctx, rootPath, ["rev-parse", commandParams.base ?? "HEAD"]);
   const doneStatusIds = new Set(
     statuses.filter((status) => status.name.trim().toLowerCase() === "done").map((status) => status.id),
   );
@@ -75,7 +76,7 @@ export const loadAttemptReadiness = async (
     maxInProgress,
     isAncestor: async (baseSha, headSha) => {
       const result = await ctx.process.run({
-        command: ["git", "-C", home.root_path, "merge-base", "--is-ancestor", baseSha, headSha],
+        command: ["git", "-C", rootPath, "merge-base", "--is-ancestor", baseSha, headSha],
       });
       if (result.exitCode === 0) return true;
       if (result.exitCode === 1) return false;

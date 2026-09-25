@@ -1,6 +1,7 @@
 import {
   type CommandContext,
   defineCommand,
+  type ExtensionWorkspace,
   l10n,
   params,
   type ResourceAnchor,
@@ -96,6 +97,18 @@ const ticketTemplateVars = (ticket: string, template: string | undefined) => ({
 export const harnessInput = (agent: { harnessId: string; model?: string } | undefined) =>
   agent ? { harness: agent } : {};
 
+const requireReadyWorkspace = async (ctx: Pick<CommandContext, "workspaces">, workspace: ExtensionWorkspace) => {
+  if (workspace.setup_error) throw new Error(workspace.setup_error);
+  if (workspace.provider_state && workspace.provider_state !== "ready") {
+    const result = await ctx.workspaces.resolve(workspace.id);
+    throw new Error(result.error?.message ?? "The workspace is not ready. Check its setup status.");
+  }
+  if (workspace.initializing) throw new Error("Workspace setup is still running. Try again when it finishes.");
+  if (workspace.execution_kind === "local" && !workspace.root_path) {
+    throw new Error("Attach a project folder in settings before opening ticket work.");
+  }
+};
+
 export const createAnchoredWorkspace = async (
   ctx: Pick<
     CommandContext<{
@@ -122,6 +135,7 @@ export const createAnchoredWorkspace = async (
     provider_id: "pstdio.worktree",
     params: { base: base ?? commandParams.base ?? "HEAD" },
   });
+  await requireReadyWorkspace(ctx, workspace);
 
   return { anchor, mode: attemptMode, ticket, workspace };
 };
@@ -140,9 +154,16 @@ export const createWorkspaceCommand = defineCommand({
   params: {
     ticket: ticketActionParams.ticket,
     rowId: ticketActionParams.rowId,
-    base: params.text({ label: "Base revision", defaultValue: "HEAD" }),
   },
   async run(ctx, commandParams) {
+    const providers = await ctx.workspaces.listProviders();
+    if (!providers.some((provider) => provider.id === "pstdio.worktree")) {
+      const workspace = await ctx.workspaces.getDefault();
+      if (!workspace) throw new Error("Attach a project workspace in settings before opening ticket work.");
+      await requireReadyWorkspace(ctx, workspace);
+      const { ticket } = await resolveTicketIdentity(ctx, resolveTicket(ctx, commandParams));
+      return { mode: "shared", ticket, workspace, session: null };
+    }
     const { mode, ticket, workspace } = await createAnchoredWorkspace(ctx, commandParams);
 
     return {

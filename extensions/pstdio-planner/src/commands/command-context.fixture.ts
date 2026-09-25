@@ -28,9 +28,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
           execution_kind: "local",
           provider_state: "ready",
         }),
-        listProviders: async () => [
-          { id: "pstdio.worktree", label: "Git worktree", params: { type: "object", properties: {} } },
-        ],
+        listProviders: async () => [{ id: "pstdio.worktree", label: "Git worktree", params: {} }],
         ...input.overrides?.workspaces,
       },
     },

@@ -1,5 +1,6 @@
 import {
   type ExtensionWorkspace,
+  l10n,
   type TreeAction,
   type TreeNode,
   type TreeViewSection,
@@ -22,18 +23,28 @@ type LinkedWorkspaceMetadata = {
 
 const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMetadata) => {
   const label = workspaceLabel(workspace);
+  let workspaceType = "folder";
+  let icon = "Folder";
+  if (workspace.provider_id === "pstdio.worktree") {
+    workspaceType = "worktree";
+    icon = "GitBranch";
+  }
+  if (workspace.execution_kind === "remote") {
+    workspaceType = "remote";
+    icon = "Cloud";
+  }
   const workspaceMetadata = {
     workspaceId: workspace.id,
     ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
-    workspaceType: workspace.root_path ? "worktree" : "current_branch",
+    workspaceType,
     ...ticket,
   };
   const resource = { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata };
 
   return {
     id: `workspace-${workspace.id}`,
-    label,
-    icon: "GitBranch",
+    label: workspace.is_default ? l10n("ticketWorkspaces.shared", "Project workspace (shared)") : label,
+    icon,
     resource,
     target: {
       kind: "page",
@@ -46,11 +57,6 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
 
 const workspaceActivityAt = (workspace: ExtensionWorkspace) => workspace.updated_at ?? workspace.created_at ?? "";
 
-const createWorkspaceTreeActionParams = {
-  repo: createWorkspaceCommand.params!.repo,
-  mode: createWorkspaceCommand.params!.mode,
-};
-
 const workspaceSectionActions = (ticketId: string): TreeAction[] => [
   {
     id: "create-workspace",
@@ -58,7 +64,6 @@ const workspaceSectionActions = (ticketId: string): TreeAction[] => [
     icon: "Plus",
     command: createWorkspaceCommand.ref,
     params: { ticket: ticketId },
-    input: createWorkspaceTreeActionParams,
   },
 ];
 

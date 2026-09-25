@@ -18,7 +18,7 @@ import {
 import { createWorkspacesModule } from "./module";
 
 const WORKSPACE_ID = "PS-118_A5";
-type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed" | "remote";
+type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed" | "remote" | "failed";
 const selectedPathForStory = (state: WorkspaceStoryState) => {
   if (state === "text" || state === "default" || state === "collapsed") return "README.md";
   if (state === "image") return "assets/logo.png";
@@ -26,18 +26,28 @@ const selectedPathForStory = (state: WorkspaceStoryState) => {
 };
 const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
   const selectedPath = selectedPathForStory(state);
+  let workspaceType = "worktree";
+  if (state === "default") workspaceType = "folder";
+  if (state === "remote") workspaceType = "remote";
   return {
     type: "workspace",
     id: WORKSPACE_ID,
     label: WORKSPACE_ID,
-    icon: "GitBranch",
+    icon: state === "default" ? "Folder" : "GitBranch",
     metadata: {
       projectId: "prompt-studio",
       workspaceId: WORKSPACE_ID,
       workspaceShorthand: WORKSPACE_ID,
-      workspaceType: state === "default" || state === "remote" ? "current_branch" : "worktree",
+      workspaceType,
       workspaceView: state === "diffs" ? "diffs" : "files",
       workspaceSupportsDiff: state !== "default" && state !== "remote",
+      ...(state === "failed"
+        ? {
+            workspaceProviderState: "failed",
+            workspaceError: "The project folder does not exist at revision HEAD.",
+            workspaceSupportsDiff: false,
+          }
+        : {}),
       ...(state === "remote"
         ? {
             workspaceExecutionKind: "remote",
@@ -168,3 +178,4 @@ export const ImagePreview: Story = { args: { state: "image" } };
 export const DefaultWorkspace: Story = { args: { state: "default" } };
 export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
 export const RemoteWithoutFileViews: Story = { args: { state: "remote" } };
+export const FailedWorkspaceSetup: Story = { args: { state: "failed" } };

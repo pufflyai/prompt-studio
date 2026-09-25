@@ -6,11 +6,6 @@ import { createTicketCommand } from "./create-ticket";
 import { createWorkspaceCommand } from "./ticket-actions";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
-const createWorkspaceTreeActionParams = {
-  repo: createWorkspaceCommand.params!.repo,
-  mode: createWorkspaceCommand.params!.mode,
-};
-
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
     rendererId: "pstdio.pstdio-planner.view.ticket-files",
@@ -36,6 +31,7 @@ describe("ticket files tree workspace commands", () => {
       ],
       branch: "feature/work",
       root_path: "/tmp/ws-1",
+      provider_id: "pstdio.worktree",
     };
     const unrelated = {
       id: "ws-2",
@@ -73,7 +69,6 @@ describe("ticket files tree workspace commands", () => {
           icon: "Plus",
           command: createWorkspaceCommand.ref,
           params: { ticket: ticket.id },
-          input: createWorkspaceTreeActionParams,
         },
       ],
       nodes: [
@@ -202,7 +197,6 @@ describe("ticket files tree workspace commands", () => {
           icon: "Plus",
           command: createWorkspaceCommand.ref,
           params: { ticket: ticket.id },
-          input: createWorkspaceTreeActionParams,
         },
       ],
       nodes: [

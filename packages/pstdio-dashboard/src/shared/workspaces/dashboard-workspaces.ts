@@ -95,9 +95,7 @@ const createWorkspaceResourceMetadata = (input: {
     }),
     ...(input.workspace.provider_id ? { workspaceProviderId: input.workspace.provider_id } : {}),
     ...(input.workspace.display_path ? { workspaceDisplayPath: input.workspace.display_path } : {}),
-    ...(input.workspace.setup_error || providerError?.message
-      ? { workspaceError: input.workspace.setup_error ?? providerError?.message }
-      : {}),
+    workspaceError: input.workspace.setup_error ?? providerError?.message ?? null,
     // Resource-scoped action menus (header overflow, tree context menu) gate the
     // rename/archive/delete actions on this flag so the default workspace stays permanent.
     workspaceIsDefault: Boolean(input.workspace.is_default),

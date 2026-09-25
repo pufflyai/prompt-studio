@@ -18,5 +18,6 @@
   "displayMenu.propertyOptions.updatedAt": "Mis à jour",
   "settingsPanels.ticketTags.title": "Étiquettes",
   "ticketDetail.none": "Aucun",
-  "ticketDetail.parent": "Parent"
+  "ticketDetail.parent": "Parent",
+  "ticketWorkspaces.shared": "Espace de travail du projet (partagé)"
 }

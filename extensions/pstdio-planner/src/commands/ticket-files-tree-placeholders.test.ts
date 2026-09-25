@@ -83,6 +83,7 @@ describe("ticket files tree workspace metadata", () => {
                   { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
                 ],
                 root_path: "/tmp/ws-1",
+                provider_id: "pstdio.worktree",
               },
             ],
           },

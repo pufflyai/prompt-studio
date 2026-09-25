@@ -25,6 +25,35 @@ export const expectPlannerIdentities = async (input: {
   );
   expect(new Set(identities.map((identity) => identity.id)).size).toBe(3);
   expect(new Set(identities.map((identity) => identity.shorthand)).size).toBe(3);
+  const sharedWorkspaces = await Promise.all(
+    identities.map(async (ticket) => {
+      const response = await fetch(
+        `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.create-workspace/execute`,
+        {
+          method: "POST",
+          headers: { ...input.headers, "content-type": "application/json" },
+          body: JSON.stringify({ source: "api", params: { ticket: ticket.id } }),
+        },
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { outcome: { value: { workspace: { id: string } } } };
+      expect(body).toMatchObject({
+        outcome: {
+          ok: true,
+          value: {
+            mode: "shared",
+            workspace: { is_default: true, provider_state: "ready", anchors_json: [] },
+          },
+        },
+      });
+      return body.outcome.value.workspace;
+    }),
+  );
+  expect(new Set(sharedWorkspaces.map((workspace) => workspace.id)).size).toBe(1);
+  const files = await fetch(`${input.baseUrl}/v1/workspaces/${sharedWorkspaces[0].id}/files`, {
+    headers: input.headers,
+  });
+  expect(files.status).toBe(200);
   const updateRes = await fetch(
     `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.update-ticket/execute`,
     {
