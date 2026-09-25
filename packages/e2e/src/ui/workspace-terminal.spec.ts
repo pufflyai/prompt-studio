@@ -213,6 +213,10 @@ test("closing a terminal tab leaves no shell process behind", async ({ page, req
   try {
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}`);
+    // The project layout replaces the initial layout after its data loads.
+    await expect(
+      page.getByRole("region", { name: "Main", exact: true }).getByText("PS-387 Terminal Cleanup", { exact: true }),
+    ).toBeVisible();
 
     const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
     if (await showSecondary.isVisible()) await showSecondary.click();

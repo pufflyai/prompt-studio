@@ -70,7 +70,7 @@ test("recovers from a stalled runtime and retries without replacing its owner", 
   } finally {
     if (suspendedPid !== null) resumeProcess(suspendedPid);
     await disposePackagedApp(app);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });
 
@@ -112,6 +112,6 @@ test("keeps an uncertain runtime owner intact until its descriptor is repaired",
     expect(readDescriptor(home)).toBeNull();
   } finally {
     await disposePackagedApp(app);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });

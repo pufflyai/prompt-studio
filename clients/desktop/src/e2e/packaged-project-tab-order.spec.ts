@@ -85,6 +85,6 @@ test("reorders project tabs with mouse and keyboard and restores their order aft
     expect(app.browser.contexts()[0].pages()).toHaveLength(2);
   } finally {
     await disposePackagedApp(app);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });

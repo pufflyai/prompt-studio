@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { Diff } from "./diff-card";
-import { DiffViewer } from "./diff-viewer";
+import { DiffViewer } from "./lazy-diff";
 
 // A large, mixed-size changeset for exercising selection scrolling. The initially-expanded diffs at
 // the top are tall and their measured heights drift from any per-diff estimate, so clicking a file

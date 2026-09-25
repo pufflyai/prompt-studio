@@ -83,7 +83,7 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
     expect(existsSync(join(home, "runtime.json"))).toBe(false);
   } finally {
     await disposePackagedApp(app);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });
 
@@ -161,7 +161,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
   } finally {
     await disposePackagedApp(first);
     await disposePackagedApp(second);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });
 
@@ -198,6 +198,6 @@ test("shows recovery promptly after a sidecar crash and retries without relaunch
     expect(await close).toMatchObject({ exitCode: 0 });
   } finally {
     await disposePackagedApp(app);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });

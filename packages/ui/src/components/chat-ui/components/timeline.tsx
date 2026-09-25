@@ -2,7 +2,7 @@ import { Avatar, Box, Button, Card, Timeline as ChakraTimeline, Image, Span, Sta
 import { ChevronUpIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { DiffEditor } from "@/components/diff-viewer/diff-editor";
+import { DiffEditor } from "@/components/diff-viewer/lazy-diff";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { IconName } from "../utils/get-icon";

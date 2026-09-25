@@ -259,11 +259,13 @@ jobs:
 
       - name: Test source Electron
         if: runner.os == 'Linux'
-        run: xvfb-run -a bun run --cwd clients/desktop test:electron
+        working-directory: clients/desktop
+        run: xvfb-run -a bunx playwright test --config playwright.config.ts
 
       - name: Test source Electron on macOS and Windows
         if: runner.os != 'Linux'
-        run: bun run --cwd clients/desktop test:electron
+        working-directory: clients/desktop
+        run: bunx playwright test --config playwright.config.ts
 
       - name: Configure the packaged Electron sandbox
         if: runner.os == 'Linux'

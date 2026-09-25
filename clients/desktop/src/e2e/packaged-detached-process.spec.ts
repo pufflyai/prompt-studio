@@ -78,7 +78,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
         } catch {}
       }
       await disposePackagedApp(app);
-      removePackagedHome(home);
+      await removePackagedHome(home);
     }
   });
 }

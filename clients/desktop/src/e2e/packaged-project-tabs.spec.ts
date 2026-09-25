@@ -88,7 +88,7 @@ test("opens and closes project tabs while preserving pages and terminals", async
     expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
   } finally {
     await disposePackagedApp(app);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });
 
@@ -122,6 +122,6 @@ test("reports a failed tab write and recovers when the next tab change can be sa
     expect(saved).toEqual({ projectIds: [first.id, second.id] });
   } finally {
     await disposePackagedApp(app);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });

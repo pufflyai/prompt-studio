@@ -52,8 +52,8 @@ test("explains a database ownership conflict and retries after its owner stops",
     expect(await close).toMatchObject({ exitCode: 0 });
   } finally {
     await disposePackagedApp(app);
-    removePackagedHome(desktopHome);
-    removePackagedHome(ownerHome);
+    await removePackagedHome(desktopHome);
+    await removePackagedHome(ownerHome);
   }
 });
 
@@ -96,6 +96,6 @@ test("keeps a damaged database intact and retries after its control file is rest
     expect(await close).toMatchObject({ exitCode: 0 });
   } finally {
     await disposePackagedApp(app);
-    removePackagedHome(home);
+    await removePackagedHome(home);
   }
 });

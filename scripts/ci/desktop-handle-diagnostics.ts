@@ -1,9 +1,10 @@
 export {};
+
 const path = "clients/desktop/src/e2e/packaged-app-helpers.ts";
 let source = await Bun.file(path).text();
 source = `import { execFileSync as inspectHandles } from "node:child_process";\n${source}`;
 source = source.replace(
-  '  rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });',
+  "  rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });",
   `  try {
     rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   } catch (error) {

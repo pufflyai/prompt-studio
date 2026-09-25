@@ -14,7 +14,9 @@ try {
     const hash = createHash("sha256");
     const started = performance.now();
     for await (const chunk of createReadStream(path, { highWaterMark })) hash.update(chunk);
-    console.log(JSON.stringify({ highWaterMark, durationMs: performance.now() - started, checksum: hash.digest("hex") }));
+    console.log(
+      JSON.stringify({ highWaterMark, durationMs: performance.now() - started, checksum: hash.digest("hex") }),
+    );
   }
 } finally {
   rmSync(root, { recursive: true, force: true });

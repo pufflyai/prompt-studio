@@ -7,6 +7,7 @@ import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { registerPackagedCleanup, spawnPackagedProcess, stopPackagedProcess } from "../testing/packaged-fixture";
+import { stopPackagedRuntime } from "../testing/stop-packaged-runtime";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { waitForVisibleElement } from "./visible-element-timing";
@@ -45,8 +46,9 @@ export const createPackagedHome = () => {
           contentType: "text/plain",
         });
       }
+      await attachRuntimeOutput(home);
     } finally {
-      removePackagedHome(home);
+      await removePackagedHome(home);
     }
   });
   return home;
@@ -56,6 +58,15 @@ export const readDescriptor = (home: string) => {
   const path = join(home, "runtime.json");
   if (!existsSync(path)) return null;
   return JSON.parse(readFileSync(path, "utf8")) as RuntimeDescriptor;
+};
+
+const attachRuntimeOutput = async (home: string) => {
+  const path = join(home, "desktop-runtime.log");
+  if (!existsSync(path)) return;
+  await test.info().attach("runtime-output", {
+    body: redactSensitiveText(readFileSync(path, "utf8").slice(-32_000), [readDescriptor(home)?.token ?? ""]),
+    contentType: "text/plain",
+  });
 };
 
 export const waitForDescriptor = async (home: string, predicate = (_descriptor: RuntimeDescriptor) => true) => {
@@ -236,16 +247,13 @@ export const disposePackagedApp = async (app: PackagedWindow | null) => {
     body: redactSensitiveText(log, [app.runtime?.token ?? "", readDescriptor(app.home)?.token ?? ""]),
     contentType: "text/plain",
   });
+  await attachRuntimeOutput(app.home);
   await app.browser.close().catch(() => {});
   await stopPackagedProcess(app.child);
 };
 
-export const removePackagedHome = (home: string) => {
+export const removePackagedHome = async (home: string) => {
   const runtime = readDescriptor(home);
-  if (runtime) {
-    try {
-      process.kill(runtime.pid, "SIGKILL");
-    } catch {}
-  }
+  if (runtime) await stopPackagedRuntime(runtime.pid);
   rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 };

@@ -14,6 +14,8 @@ jobs:
         include:
           - os: windows-latest
             target: win32-x64
+          - os: macos-15-intel
+            target: darwin-x64
     steps:
       - uses: actions/checkout@v5
         with:
@@ -29,6 +31,9 @@ jobs:
 
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
+
+      - name: Verify runtime process lifetime and cleanup
+        run: bun test clients/desktop/src/testing/stop-packaged-runtime.test.ts clients/desktop/src/testing/stop-packaged-process.test.ts clients/desktop/src/runtime/runtime-process.test.ts
 
       - name: Configure the source Electron sandbox
         if: runner.os == 'Linux'
@@ -71,6 +76,7 @@ jobs:
           $tools >> $env:GITHUB_PATH
 
       - name: Inspect Windows home handles on failure
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $tools = Join-Path $env:RUNNER_TEMP "handle"
@@ -100,7 +106,8 @@ jobs:
 
       - name: Test source Electron on macOS and Windows
         if: always() && runner.os != 'Linux'
-        run: bun run --cwd clients/desktop test:electron
+        working-directory: clients/desktop
+        run: bunx playwright test --config playwright.config.ts
 
       - name: Preserve Electron readiness results and redacted failure traces
         if: always()
@@ -111,7 +118,7 @@ jobs:
           if-no-files-found: error
 
       - name: Preserve Windows development package for manual validation
-        if: always()
+        if: always() && runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: desktop-development-win32-x64

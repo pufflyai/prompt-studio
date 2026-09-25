@@ -10,7 +10,7 @@ import {
   readPerformanceFrameRateSnapshot,
 } from "@/components/internal/performance-panel";
 import type { Diff } from "./diff-card";
-import { DiffViewer } from "./diff-viewer";
+import { DiffViewer } from "./lazy-diff";
 
 type StoryFn = () => ReactNode;
 

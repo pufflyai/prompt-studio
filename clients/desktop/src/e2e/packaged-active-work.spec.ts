@@ -89,7 +89,7 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       expect(existsSync(join(home, "runtime.json"))).toBe(false);
     } finally {
       await disposePackagedApp(app);
-      removePackagedHome(home);
+      await removePackagedHome(home);
     }
   });
 }

@@ -39,7 +39,7 @@ test("refuses a second packaged runtime on an occupied loopback port", async () 
     ).toBe(true);
     expect(await runPackagedCli(ownerHome, ["close"])).toMatchObject({ exitCode: 0 });
   } finally {
-    removePackagedHome(contenderHome);
-    removePackagedHome(ownerHome);
+    await removePackagedHome(contenderHome);
+    await removePackagedHome(ownerHome);
   }
 });
