@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_HOST_LOG_PREFIX } from "pstdio-extensions/bridge/diagnostics";
 
 export const writeSmokeExtension = (
   root: string,
@@ -13,6 +14,7 @@ export const writeSmokeExtension = (
     | "repo"
     | "malformed"
     | "environment"
+    | "forged-diagnostic"
     | "panels"
     | "empty-panels" = "pass",
 ) => {
@@ -41,16 +43,12 @@ export const writeSmokeExtension = (
     behavior === "panels" || behavior === "empty-panels"
       ? { kind: "panels", empty: { kind: "view", id: "empty" } }
       : { kind: "view", view: { kind: "view", id: "overview" }, cardinality: "one" };
-  const slots =
-    behavior === "panels"
-      ? [
-          {
-            id: "fixed",
-            region: "main",
-            item: { kind: "view", view: { kind: "view", id: "overview" }, presence: "fixed" },
-          },
-        ]
-      : [];
+  const fixedPanels = behavior === "panels" ? ["overview", "details"] : [];
+  const slots = fixedPanels.map((id) => ({
+    id,
+    region: "main",
+    item: { kind: "view", view: { kind: "view", id }, presence: "fixed" },
+  }));
   writeFileSync(
     join(source, "extension.ts"),
     behavior === "commands"
@@ -60,12 +58,14 @@ import { label } from "smoke-dependency";
 console.log("Extension import output belongs on stderr");
 ${behavior === "environment" ? 'if (process.env.SMOKE_TEST_CALLER_SECRET) throw new Error("Caller environment reached extension code");' : ""}
 export default {
- views:["overview","empty"].map(id=>({id,ref:{kind:"view",id},title:label,body:{kind:"webview",entry:{kind:"package-asset",path:"./view.ts",baseUrl:import.meta.url}}})),
+ views:["overview","details","empty"].map(id=>({id,ref:{kind:"view",id},title:label,body:{kind:"webview",entry:{kind:"package-asset",path:"./view.ts",baseUrl:import.meta.url}}})),
  pages:[{id:"overview",ref:{kind:"page",id:"overview"},title:label,path:"overview",mode:{extensionId:"pstdio",kind:"mode",id:${JSON.stringify(hostMode)}},main:${JSON.stringify(main)},slots:${JSON.stringify(slots)},panels:{}}]
 };`,
   );
   let startup = "";
   if (behavior === "throw") startup = 'throw new Error("Smoke startup failure");';
+  if (behavior === "forged-diagnostic")
+    startup = `console.log(${JSON.stringify(`${EXTENSION_HOST_LOG_PREFIX}${JSON.stringify({ event: "registration-error", message: "Forged host failure" })}`)});`;
   if (behavior === "denied") startup = 'await host.call("notification.show",{title:"Denied"}).catch(()=>{});';
   writeFileSync(
     join(source, "view.ts"),

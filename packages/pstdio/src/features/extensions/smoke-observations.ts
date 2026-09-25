@@ -29,6 +29,11 @@ export const observeSmokePage = (page: Page, result: SmokeResult, logPath: strin
     const contributionId = text.split("/").find((segment) => segment.startsWith(`${id}.view.`));
     return { extensionId: id, contributionId };
   };
+  // Extension webviews share the page console, so only dashboard scripts may speak for the host.
+  const fromDashboard = (url: string) => {
+    const origin = new URL(page.url()).origin;
+    return url.startsWith(`${origin}/`) && !url.startsWith(`${origin}/v1/`);
+  };
   let phase = "host-registration";
   const fail = (message: string, extensionId?: string, contributionId?: string, code?: string, capability?: string) => {
     result.checks.push({
@@ -47,7 +52,7 @@ export const observeSmokePage = (page: Page, result: SmokeResult, logPath: strin
   page.on("console", (message) => {
     const text = message.text();
     record(text);
-    if (text.startsWith(prefix)) {
+    if (text.startsWith(prefix) && fromDashboard(message.location().url)) {
       const event = JSON.parse(text.slice(prefix.length)) as ExtensionHostDiagnostic;
       events.push(event);
       recordSmokeHostDiagnostic(result, event, phase);

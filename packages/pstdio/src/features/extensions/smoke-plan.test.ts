@@ -2,16 +2,17 @@ import { expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { planSmokePages } from "./smoke-plan";
 
-const page = (localId: string): WorkbenchExtensionMetadata["pages"][number] => ({
-  id: `acme.test.page.${localId}`,
-  localId,
-  extensionId: "acme.test",
-  title: "Same label",
-  path: localId,
-  mode: { extensionId: "pstdio", kind: "mode", id: "project" },
-  main: { kind: "view", view: { extensionId: "acme.test", kind: "view", id: "overview" }, cardinality: "one" },
-  slots: [],
-});
+const page = (localId: string) =>
+  ({
+    id: `acme.test.page.${localId}`,
+    localId,
+    extensionId: "acme.test",
+    title: "Same label",
+    path: localId,
+    mode: { extensionId: "pstdio", kind: "mode", id: "project" },
+    main: { kind: "view", view: { extensionId: "acme.test", kind: "view", id: "overview" }, cardinality: "one" },
+    slots: [],
+  }) satisfies WorkbenchExtensionMetadata["pages"][number];
 test("visits resource-free pages with resolvable parents and permits duplicate labels", () => {
   const root = page("root");
   const child = { ...page("child"), parent: { extensionId: "acme.test", kind: "page" as const, id: "root" } };

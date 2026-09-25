@@ -17,6 +17,7 @@ for (const [behavior, code] of [
   ["malformed", 2],
   ["repo", 0],
   ["environment", 0],
+  ["forged-diagnostic", 0],
   ["panels", 0],
   ["empty-panels", 0],
 ] as const) {
@@ -63,7 +64,11 @@ for (const [behavior, code] of [
       }
       if (behavior === "commands") expect(result.coverage.visited).toEqual([]);
       if (behavior === "panels") {
-        expect(result.coverage.visited).toContain("test.smoke.view.overview");
+        // Only the active main tab mounts; the inactive fixed panel must be reported, not passed.
+        const panels = ["test.smoke.view.overview", "test.smoke.view.details"];
+        const unexercised = result.coverage.unexercised.map((item: { contributionId: string }) => item.contributionId);
+        expect(panels.filter((id) => result.coverage.visited.includes(id))).toHaveLength(1);
+        expect(panels.filter((id) => unexercised.includes(id))).toHaveLength(1);
         expect(result.coverage.visited).not.toContain("test.smoke.view.empty");
       }
       if (behavior === "empty-panels") expect(result.coverage.visited).toContain("test.smoke.view.empty");

@@ -10,7 +10,6 @@ beforeAll(buildBinary, 180_000);
 
 test("installs the smoke browser without external JavaScript runtimes", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-browser-consumer-"));
-  const browserCache = join(root, "browsers");
   const callerManifest = JSON.stringify({ name: "browser-setup-consumer", private: true });
   writeFileSync(join(root, "package.json"), callerManifest);
   try {
@@ -21,16 +20,13 @@ test("installs the smoke browser without external JavaScript runtimes", async ()
         ...env,
         PATH: "",
         PSTDIO_HOME: join(root, "home"),
-        BUN_INSTALL_CACHE_DIR: join(root, "bun-cache"),
-        PLAYWRIGHT_BROWSERS_PATH: browserCache,
       },
       encoding: "utf8",
       timeout: 29_000,
     });
     expect({ code: result.status, stderr: result.stderr }).toMatchObject({ code: 0 });
     expect(existsSync(join(root, "home", "runtime.json"))).toBe(false);
-    const browserPath = chromium.executablePath().match(/chromium-\d+[/\\].+$/)![0];
-    const browser = await chromium.launch({ executablePath: join(browserCache, browserPath) });
+    const browser = await chromium.launch({ executablePath: chromium.executablePath() });
     try {
       const page = await browser.newPage();
       expect(await page.evaluate(() => 6 * 7)).toBe(42);
