@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
 import { classifyCodexTool } from "./items";
@@ -23,8 +24,7 @@ interface RolloutState {
   nextId: (kind: string) => string;
 }
 
-export const codexSessionsRoot = () =>
-  join(process.env.CODEX_HOME ?? join(process.env.HOME ?? "", ".codex"), "sessions");
+export const codexSessionsRoot = () => join(process.env.CODEX_HOME ?? join(homedir(), ".codex"), "sessions");
 
 // Rollout files live under <sessions>/<year>/<month>/<day>/rollout-<timestamp>-<thread-id>.jsonl;
 // the timestamp is unknown at lookup time, so match on the thread-id suffix.

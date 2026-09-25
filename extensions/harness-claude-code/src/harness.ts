@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { discoverClaudeModels } from "./models";
@@ -8,8 +10,8 @@ import type { ClaudeCodeTranscriptEntry } from "./types";
 
 export const buildTranscriptPath = (agentSessionId: string, cwd?: string) => {
   const projectDir = cwd ?? process.cwd();
-  const sanitized = projectDir.replace(/\//g, "-");
-  return `${process.env.HOME}/.claude/projects/${sanitized}/${agentSessionId}.jsonl`;
+  const sanitized = projectDir.replace(/[^a-zA-Z0-9]/g, "-");
+  return join(homedir(), ".claude", "projects", sanitized, `${agentSessionId}.jsonl`);
 };
 
 const defaultReadTranscript = async (agentSessionId: string, cwd?: string) => {

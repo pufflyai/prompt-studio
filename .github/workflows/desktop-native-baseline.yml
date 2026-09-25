@@ -5,15 +5,15 @@ on:
 permissions:
   contents: read
 jobs:
-  windows:
+  intel_diagnostic:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            target: win32-x64
+          - os: macos-15-intel
+            target: darwin-x64
     steps:
       - uses: actions/checkout@v5
         with:
@@ -29,6 +29,9 @@ jobs:
 
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
+
+      - name: Add startup timing probes
+        run: bun scripts/ci/desktop-startup-diagnostics.ts
 
       - name: Build desktop and dependencies
         run: bun run build -- --scope @pstdio/desktop --include-dependencies
@@ -72,8 +75,8 @@ jobs:
           DEBUG: pw:api,pw:browser
         run: xvfb-run -a bun run --cwd clients/desktop test:packaged
 
-      - name: Test packaged Electron on Windows
-        if: runner.os == 'Windows'
+      - name: Test packaged Electron on Intel
+        if: runner.os != 'Linux'
         env:
           DEBUG: pw:api,pw:browser
         run: bun run --cwd clients/desktop test:packaged
@@ -82,8 +85,8 @@ jobs:
         if: runner.os == 'Linux'
         run: xvfb-run -a bun run --cwd clients/desktop test:electron
 
-      - name: Test source Electron on Windows
-        if: runner.os == 'Windows'
+      - name: Test source Electron on Intel
+        if: runner.os != 'Linux'
         run: bun run --cwd clients/desktop test:electron
 
       - name: Preserve Electron readiness results and redacted failure traces

@@ -1,6 +1,31 @@
 import { describe, expect, test } from "bun:test";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { HarnessContext } from "@pstdio/sdk/extensions";
-import { createClaudeCodeHarness } from "./harness";
+import { buildTranscriptPath, createClaudeCodeHarness } from "./harness";
+
+test("finds native user transcripts when HOME is absent", () => {
+  const originalHome = process.env.HOME;
+  delete process.env.HOME;
+  try {
+    expect(buildTranscriptPath("session-id", "/workspace/project")).toBe(
+      join(homedir(), ".claude", "projects", "-workspace-project", "session-id.jsonl"),
+    );
+  } finally {
+    if (originalHome === undefined) delete process.env.HOME;
+    else process.env.HOME = originalHome;
+  }
+});
+
+test.each([
+  ["C:\\Users\\Developer\\My Project", "C--Users-Developer-My-Project"],
+  ["C:/Users/Developer/My Project", "C--Users-Developer-My-Project"],
+  ["\\\\server\\share\\project.name", "--server-share-project-name"],
+])("matches Claude transcript encoding for %s", (cwd, directory) => {
+  expect(buildTranscriptPath("session-id", cwd)).toBe(
+    join(homedir(), ".claude", "projects", directory, "session-id.jsonl"),
+  );
+});
 
 const ctx: HarnessContext = {
   extensionId: "pstdio.harness-claude-code",
