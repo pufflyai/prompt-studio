@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { listBranches } from "pstdio-wt";
@@ -31,7 +31,7 @@ export const registerRepoRoute = createRoute({
   method: "post",
   path: "/projects/{id}/repos",
   description:
-    "Register a repo and link it to a project. Stale local config links are overwritten when the previous project no longer exists.",
+    "Register an existing directory and link it to a project after required setup succeeds. Failed setup removes new repository rows and links without publishing them. Stale local config links are overwritten when the previous project no longer exists.",
   tags: ["Projects"],
   request: {
     query: z.object({}).strict(),
@@ -48,6 +48,10 @@ export const registerRepoRoute = createRoute({
     201: {
       description: "Repo registered.",
       content: { "application/json": { schema: repoResponseSchema } },
+    },
+    400: {
+      description: "Repo path must be an existing directory.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
     },
     404: {
       description: "Project not found.",
@@ -121,6 +125,11 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
       return c.json({ error: "Project not found" }, 404);
     }
 
+    const directory = await stat(path).catch(() => null);
+    if (!directory?.isDirectory()) {
+      return c.json({ error: "Repo path must be an existing directory" }, 400);
+    }
+
     const pstdioPath = join(path, ".pstdio");
     const configPath = join(pstdioPath, "config.json");
     const relinkState = await resolveRelinkState(deps, {
@@ -131,21 +140,22 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
       return c.json({ error: relinkState.linkedProjectError }, 409);
     }
 
-    const repo = await deps.repoService.registerForProject(id, { name, path });
+    const repo = await deps.repoService.registerForProject(id, { name, path }, async (repo) => {
+      await bootstrapProjectRepo(path, id);
+      await installRepoDefaultExtensions({
+        repoPath: repo.path,
+        defaultExtensions: (await resolveDefaultExtensionsConfig()).defaultExtensions,
+      });
+      await syncRepoExtensionsForProject({
+        extensionService: deps.extensionService,
+        installedExtensionSourcesService: deps.installedExtensionSourcesService,
+        projectId: id,
+        repoPath: repo.path,
+      });
 
-    await bootstrapProjectRepo(path, id);
-    await installRepoDefaultExtensions({
-      repoPath: repo.path,
-      defaultExtensions: (await resolveDefaultExtensionsConfig()).defaultExtensions,
+      // Keep workspace creation last: no required setup can fail after it succeeds.
+      await ensureDefaultWorkspace(deps, { projectId: id, repo });
     });
-    await syncRepoExtensionsForProject({
-      extensionService: deps.extensionService,
-      installedExtensionSourcesService: deps.installedExtensionSourcesService,
-      projectId: id,
-      repoPath: repo.path,
-    });
-
-    await ensureDefaultWorkspace(deps, { projectId: id, repo });
 
     await provisionProjectWorkspaces(deps, id);
 
