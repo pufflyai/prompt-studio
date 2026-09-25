@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -40,7 +41,7 @@ const writeRepoDefaultExtension = (sourcePath: string) => {
 };
 
 beforeAll(async () => {
-  tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-test-"));
+  tempRoot = await realpath(mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-test-")));
   const repoDefaultSourcePath = join(tempRoot, repoDefaultInstallName);
   writeRepoDefaultExtension(repoDefaultSourcePath);
   previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
@@ -240,7 +241,7 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
   });
 
   test("installs extension-backed skills without any prior agent configuration", async () => {
-    const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-"));
+    const isolatedRoot = await realpath(mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-")));
     const handle = await createTestApp({
       harnessRegistry: createTestHarnessRegistry([
         createTestHarnessRecord("claude-code", { availability: "INSTALLED" }),

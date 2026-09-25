@@ -297,6 +297,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     );
     input.signal?.throwIfAborted();
 
+    const sourceHash = hashExtensionSource(installPath);
     if (installPath !== targetPath) {
       const preserveDependencies = linkedInstalledDependencies;
       if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));
@@ -313,7 +314,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
         resolvedSource.kind === "named"
           ? { kind: "named" as const, name: resolvedSource.name, ref: resolvedSource.ref }
           : { kind: "local" as const, path: resolvedSource.path, ref: resolvedSource.ref },
-      sourceHash: hashExtensionSource(targetPath),
+      sourceHash,
       targetPath,
     };
   } finally {

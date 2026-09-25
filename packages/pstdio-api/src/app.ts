@@ -26,6 +26,7 @@ import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
 import { createProjectService } from "./services/project-service";
+import { createRepoRegistration } from "./services/repo-registration";
 import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
 import { createSettingsService } from "./services/settings-service";
@@ -47,6 +48,7 @@ const createCoreDomainServices = (input: {
   dbs: ReturnType<typeof createAppDatabaseServices>;
   eventBus: EventBus;
   storageRoot: string;
+  onInstalledSourcesChanged: (path?: string) => Promise<void>;
 }) => {
   const { db, dbs, eventBus, storageRoot } = input;
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -55,7 +57,15 @@ const createCoreDomainServices = (input: {
   return {
     fileService,
     projectService: createProjectService({ projectsDBService: dbs.projectsDBService, eventBus }),
-    repoService: createRepoService({ reposDBService: dbs.reposDBService, eventBus }),
+    repoService: createRepoService({
+      reposDBService: dbs.reposDBService,
+      eventBus,
+      runRegistration: createRepoRegistration({
+        db,
+        eventBus,
+        onInstalledSourcesChanged: input.onInstalledSourcesChanged,
+      }),
+    }),
     extensionFileService: createExtensionFileService({
       extensionFilesDBService: dbs.extensionFilesDBService,
       extensionInstancesDBService: dbs.extensionInstancesService,
@@ -136,7 +146,13 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     syncService,
     workspaceSessionService,
     workspaceService,
-  } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
+  } = createCoreDomainServices({
+    db,
+    dbs,
+    eventBus,
+    storageRoot,
+    onInstalledSourcesChanged: (path) => refreshInstalledSources(path),
+  });
   const {
     extensionConnectionService,
     extensionRuntime,
@@ -145,6 +161,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents,
+    refreshInstalledSources,
   } = await wireAppExtensionServices({
     config: input.config.extensions,
     db,

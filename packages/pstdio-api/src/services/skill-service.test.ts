@@ -20,7 +20,6 @@ import { EventBus } from "../features/sync/event-bus";
 import { createExtensionService } from "./extension-service";
 import { createFileService } from "./file-service";
 import { createProjectService } from "./project-service";
-import { createRepoService } from "./repo-service";
 import { createSkillService } from "./skill-service";
 
 const emptyRuntime = {
@@ -184,7 +183,7 @@ const setupServiceWithExtension = async () => {
     eventBus: new EventBus(),
     projectsDBService: createProjectsDBService(db),
   });
-  const repoService = createRepoService({ eventBus: new EventBus(), reposDBService: createReposDBService(db) });
+  const repoService = createReposDBService(db);
   const extensionService = createExtensionService({
     extensionInstancesService: createExtensionInstancesDBService(db),
     extensionUserDataService: createExtensionUserDataDBService(db),

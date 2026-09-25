@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -89,7 +90,7 @@ afterEach(() => {
 
 describe("live repo-local extension discovery", () => {
   test("discovers a repo-local extension added after the API starts", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-live-discovery-"));
+    const root = await realpath(mkdtempSync(join(tmpdir(), "pstdio-live-discovery-")));
     tempRoots.push(root);
     const restoreEnv = setEnv({
       HOME: join(root, "home"),
