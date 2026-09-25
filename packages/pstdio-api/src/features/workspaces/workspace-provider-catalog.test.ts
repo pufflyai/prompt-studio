@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createWorktree, git, resolveLatestBase } from "pstdio-wt";
+import { createWorktree, git, listBranches, resolveLatestBase } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
 import { listWorkspaceProviders } from "./workspace-provider-catalog";
 
@@ -119,6 +119,42 @@ describe("workspace provider branch choices", () => {
     for (const option of base.options) {
       expect(await git(repo.path, ["rev-parse", "--verify", `${option.value}^{commit}`])).toBeTruthy();
     }
+  });
+
+  test("keeps cloud providers available when Git cannot list branches", async () => {
+    const repo = await createRepo("broken-branch-list");
+    await git(repo.path, ["config", "branch.sort", "invalid-sort-field"]);
+    expect(await git(repo.path, ["rev-parse", "--verify", "HEAD^{commit}"])).toBeTruthy();
+    await expect(listBranches(repo.path)).rejects.toThrow("unknown field name");
+    const params = {
+      image: { type: "select", options: [{ label: "Ubuntu", value: "ubuntu" }] },
+    };
+    const deps = {
+      ...providerCatalog([repo]),
+      extensionRuntimeCatalog: {
+        get: async () => ({
+          runtime: { workspaceTypes: [{ id: "example.cloud", provider: { label: "Cloud", params } }] },
+        }),
+      },
+    } as unknown as WorkspacesRouteDeps;
+
+    expect(await listWorkspaceProviders(deps, "project-1")).toMatchObject([{ id: "example.cloud", params }]);
+  });
+
+  test("does not hide extension discovery failures when Git discovery also fails", async () => {
+    const repo = await createRepo("failed-provider-discovery");
+    await git(repo.path, ["config", "branch.sort", "invalid-sort-field"]);
+    const failure = new Error("Extension catalog unavailable");
+    const deps = {
+      ...providerCatalog([repo]),
+      extensionRuntimeCatalog: {
+        get: async () => {
+          throw failure;
+        },
+      },
+    } as unknown as WorkspacesRouteDeps;
+
+    await expect(listWorkspaceProviders(deps, "project-1")).rejects.toBe(failure);
   });
 
   test("preserves provider-declared choices without a Git source", async () => {

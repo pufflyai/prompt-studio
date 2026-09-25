@@ -138,7 +138,8 @@ describe("createDb", () => {
 
   it("upgrades a pre-extension-storage template into readable extension storage", async () => {
     const { dbPath, tempRoot } = createTempDbPath();
-    const pglite = new PGlite(dbPath);
+    // Build the historical fixture without disk-heavy initdb, then persist it for the upgrade.
+    const pglite = new PGlite();
     await pglite.waitReady;
     const oldDb = drizzle(pglite, { schema });
     const migrationsFolder = await resolveMigrationsFolder();
@@ -172,7 +173,11 @@ describe("createDb", () => {
         ('template-1', 'project-1', 'implement_ticket', 'prompt', 'file-1', true,
          '2026-01-01', '2026-01-01', NULL);
     `);
+    const image = await pglite.dumpDataDir("none");
     await pglite.close();
+    const persisted = new PGlite(dbPath, { loadDataDir: image });
+    await persisted.waitReady;
+    await persisted.close();
 
     const current = await createDb({ path: dbPath });
     const templates = await current.pglite.query<{
