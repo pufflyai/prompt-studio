@@ -55,10 +55,10 @@ but show the document as one centered column without the introduction and downlo
 panel. `DOCUMENT_VIEWS` in `src/content/landing-content.ts` names them.
 
 Ghost navigation buttons sit at the bottom of the introduction and download panel,
-outside its scroll area. Legal pages place the same buttons at the end of the
-document. Each button shows its destination page name and an arrow. Start Here
+outside its scroll area. Legal documents have no previous or next page links.
+Each button shows its destination page name and an arrow. Start Here
 only shows the next page. The main pages follow the sidebar order, and Features
-leads back to Start Here. Privacy leads to Terms, and Terms returns to Start Here.
+leads back to Start Here.
 These links use browser history without remounting the download panel.
 
 ## Product examples

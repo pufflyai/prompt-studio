@@ -1,27 +1,23 @@
 import { Box, Button } from "@chakra-ui/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { type LandingView, VIEW_META } from "../../content/landing-content";
-import { useDocStyles, useLandingStyles } from "../../hooks/use-landing-styles";
+import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { landingPathForView, nextLandingView, previousLandingView } from "../../services/landing-route";
 
 interface PageNavigationProps {
   view: LandingView;
   onNavigate: (view: LandingView) => void;
-  /** Documents place the navigation at the end of their column, product pages in the download panel. */
-  placement?: "panel" | "document";
 }
 
 export const PageNavigation = (props: PageNavigationProps) => {
-  const { view, onNavigate, placement = "panel" } = props;
+  const { view, onNavigate } = props;
   const panelStyles = useLandingStyles();
-  const docStyles = useDocStyles();
-  const navigation = placement === "document" ? docStyles.navigation : panelStyles.heroNavigation;
   const pages = [
     { direction: "previous", label: "Previous", view: previousLandingView(view), icon: ArrowLeft },
     { direction: "next", label: "Next", view: nextLandingView(view), icon: ArrowRight },
   ];
   return (
-    <Box as="nav" aria-label="Page navigation" css={navigation}>
+    <Box as="nav" aria-label="Page navigation" css={panelStyles.heroNavigation}>
       {pages.map((page) => {
         const targetView = page.view;
         if (!targetView) return null;

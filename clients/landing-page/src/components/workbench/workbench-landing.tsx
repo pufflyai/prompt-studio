@@ -57,11 +57,7 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
       <WorkbenchNav activeView={view} onOpenNavigation={() => setPaletteOpen(true)} />
       <Box as="main" css={styles.main}>
         {isDocumentView(view) ? (
-          <DocColumn
-            html={legalDocuments[view]}
-            pageKey={page.path}
-            navigation={<PageNavigation view={view} placement="document" onNavigate={navigate} />}
-          />
+          <DocColumn html={legalDocuments[view]} pageKey={page.path} />
         ) : (
           <LandingPanels page={page} navigation={<PageNavigation view={view} onNavigate={navigate} />}>
             <LandingContent

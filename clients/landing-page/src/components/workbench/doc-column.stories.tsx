@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { DocColumn } from "./doc-column";
-import { PageNavigation } from "./page-navigation";
 
 // Sample markup only. Real legal text lives in the markdown files.
 const PRIVACY_HTML = `
@@ -44,7 +43,6 @@ export const PrivacyPolicy: Story = {
   args: {
     html: PRIVACY_HTML,
     pageKey: "/privacy/",
-    navigation: <PageNavigation view="privacy" placement="document" onNavigate={() => {}} />,
   },
 };
 
@@ -52,6 +50,5 @@ export const TermsOfService: Story = {
   args: {
     html: TERMS_HTML,
     pageKey: "/terms/",
-    navigation: <PageNavigation view="terms" placement="document" onNavigate={() => {}} />,
   },
 };
