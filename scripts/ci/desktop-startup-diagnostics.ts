@@ -1,4 +1,6 @@
 // Temporary native-run instrumentation. Remove after diagnosing startup.
+export {};
+
 const path = "packages/pstdio-db/src/db/connection.pglite.ts";
 let source = await Bun.file(path).text();
 source = source.replace(
