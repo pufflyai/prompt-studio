@@ -29,7 +29,8 @@ jobs:
         shell: pwsh
         run: |
           $env:E2E_PACKAGED_BINARY_PATH = Join-Path $env:RUNNER_TEMP "desktop-candidate/resources/bin/pstdio.exe"
-          bun test packages/e2e/src/packaged/packaged-serve-smoke.test.ts --test-name-pattern "serves compiled webviews"
+          Set-Content packages/e2e/src/packaged/desktop-webview-diagnostic.test.ts 'import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke"; registerLinkedWebviewSmokeTests();'
+          bun test packages/e2e/src/packaged/desktop-webview-diagnostic.test.ts
       - name: Reproduce synchronous Windows directory removal and verify asynchronous cleanup
         shell: pwsh
         run: |
