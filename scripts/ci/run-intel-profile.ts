@@ -35,11 +35,11 @@ const exit = child.exited.then((code) => {
 const sampled = new Set<number>();
 let sample: Promise<void> | undefined;
 while (!finished) {
-  const ps = Bun.spawn(["ps", "-axo", "pid=,ppid=,pgid=,pcpu=,rss=,etime=,comm="], { stdout: "pipe" });
+  const ps = Bun.spawn(["ps", "-axo", "pid=,ppid=,pgid=,pcpu=,rss=,etime=,time=,comm="], { stdout: "pipe" });
   const rows = (await new Response(ps.stdout).text()).trim().split("\n");
   await ps.exited;
   const processes = rows.flatMap((line) => {
-    const match = line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+(\d+)\s+(\S+)\s+(.+)$/);
+    const match = line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.+)$/);
     return match
       ? [
           {
@@ -49,7 +49,8 @@ while (!finished) {
             cpu: Number(match[4]),
             rss: Number(match[5]),
             elapsed: match[6],
-            command: match[7],
+            cpuTime: match[7],
+            command: match[8],
           },
         ]
       : [];

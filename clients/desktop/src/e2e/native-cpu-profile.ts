@@ -24,6 +24,17 @@ export const startNativeCpuProfiles = (context: BrowserContext) => {
             body: JSON.stringify({ startedAt, stoppedAt: Date.now(), url: page.url() }),
             contentType: "application/json",
           });
+          if (page.url().startsWith("http://127.0.0.1:")) {
+            const script = await page.evaluate(async () => {
+              const entry = document.querySelector<HTMLScriptElement>('script[type="module"][src]');
+              return entry ? { url: entry.src, source: await (await fetch(entry.src)).text() } : undefined;
+            });
+            if (script) {
+              const sourcePath = info.outputPath(`${name}-entry.js`);
+              await writeFile(sourcePath, script.source);
+              await info.attach(`${name}-entry`, { path: sourcePath, contentType: "text/javascript" });
+            }
+          }
           await session.detach();
         };
       })().catch((error) => async () => {
