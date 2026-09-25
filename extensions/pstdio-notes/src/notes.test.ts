@@ -33,6 +33,14 @@ const createMount = () => {
 };
 
 describe("notes", () => {
+  test("rejects blank titles without creating a document", async () => {
+    const mount = createMount();
+
+    await expect(createNote(mount, " \t\n ")).rejects.toThrow("title");
+
+    expect(await listNotes(mount)).toEqual([]);
+  });
+
   test("preserves notes created concurrently with the same title", async () => {
     const mount = createMount();
     const notes = await Promise.all([createNote(mount, "Ideas"), createNote(mount, "Ideas")]);

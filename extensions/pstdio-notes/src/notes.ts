@@ -51,6 +51,7 @@ export const listNotes = async (mount: NotesMount) => {
 
 export const createNote = async (mount: NotesMount, rawTitle: string) => {
   const title = rawTitle.trim();
+  if (!title) throw new Error("A note title is required.");
   // Identity is allocated independently of the directory, so concurrent creates cannot overwrite each other.
   const id = `${noteId(title)}-${crypto.randomUUID()}`;
 
