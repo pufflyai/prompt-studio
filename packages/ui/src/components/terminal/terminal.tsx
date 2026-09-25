@@ -1,4 +1,5 @@
 import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import type { ITheme } from "@xterm/xterm";
 import { Terminal as Xterm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
@@ -190,6 +191,11 @@ export const Terminal = (props: TerminalProps) => {
       });
       const fit = new FitAddon();
       xterm.loadAddon(fit);
+      xterm.loadAddon(
+        new WebLinksAddon((event, uri) => {
+          if (event.ctrlKey || event.metaKey) window.open(uri, "_blank", "noopener,noreferrer");
+        }),
+      );
       xterm.open(container);
       sink = createTerminalSink(xterm);
 

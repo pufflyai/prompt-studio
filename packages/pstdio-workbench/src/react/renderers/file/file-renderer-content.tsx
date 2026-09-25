@@ -75,6 +75,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
           <CodeEditor
             key={editorKey}
             language={presentation.language}
+            fileName={content.fileName}
             defaultCode={content.content ?? ""}
             isEditable={presentation.isEditable}
             showLineNumbers
