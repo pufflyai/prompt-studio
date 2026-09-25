@@ -49,8 +49,11 @@ const environment: CommandRunnerEnvironment = {
     create: async () => createSessionResource(),
     followup: async () => {},
     addAnchors: async () => {},
+    removeAnchors: async () => {},
   },
   workspaces: {
+    addAnchors: async () => {},
+    removeAnchors: async () => {},
     list: async () => [],
     get: async () => null,
     getByShorthand: async () => null,

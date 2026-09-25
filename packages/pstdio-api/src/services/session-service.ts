@@ -272,6 +272,18 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     recoverQueuedDispatchClaim,
     requeueAfterTerminal,
     update,
+    addAnchors: async (id: string, anchors: Parameters<typeof raw.addAnchors>[1]) => {
+      const updated = await raw.addAnchors(id, anchors);
+      if (updated) deps.eventBus.emit("sessions", "set", updated);
+      else logNoOpSet("addAnchors", id);
+      return updated;
+    },
+    removeAnchors: async (id: string, refs: Parameters<typeof raw.removeAnchors>[1]) => {
+      const updated = await raw.removeAnchors(id, refs);
+      if (updated) deps.eventBus.emit("sessions", "set", updated);
+      else logNoOpSet("removeAnchors", id);
+      return updated;
+    },
     transitionStatus,
     cancel,
     archive,

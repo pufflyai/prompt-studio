@@ -147,15 +147,13 @@ export const createSessionsApi = (
         signal: input.signal,
       });
     },
-    addAnchors: async (sessionId, anchors) => {
-      const session = await requireProjectSession(sessionId);
-      const merged = [...(session.anchors_json ?? [])];
-      for (const anchor of anchors) {
-        const index = merged.findIndex((candidate) => candidate.type === anchor.type && candidate.id === anchor.id);
-        if (index >= 0) merged[index] = anchor;
-        else merged.push(anchor);
-      }
-      await deps.sessionService.update(sessionId, { anchors_json: merged });
+    addAnchors: async (id, anchors) => {
+      await requireProjectSession(id);
+      await deps.sessionService.addAnchors(id, anchors);
+    },
+    removeAnchors: async (id, refs) => {
+      await requireProjectSession(id);
+      await deps.sessionService.removeAnchors(id, refs);
     },
   };
 };

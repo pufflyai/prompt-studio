@@ -1,6 +1,6 @@
 import type { WorkspaceCapabilities, WorkspaceProviderResult, WorkspaceProviderState } from "./extension";
 import type { JsonObject } from "./json";
-import type { ResourceAnchor } from "./resources";
+import type { ResourceAnchor, ResourceRef } from "./resources";
 
 export interface ExtensionWorkspace {
   id: string;
@@ -35,6 +35,8 @@ export interface ExtensionWorkspacesApi {
   get(id: string): Promise<ExtensionWorkspace | null>;
   getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;
   create(input: CreateExtensionWorkspaceInput): Promise<ExtensionWorkspace>;
+  addAnchors(workspaceId: string, anchors: ResourceAnchor[]): Promise<void>;
+  removeAnchors(workspaceId: string, refs: Pick<ResourceRef, "type" | "id">[]): Promise<void>;
   resolve(id: string): Promise<WorkspaceProviderResult>;
   cancel(id: string): Promise<ExtensionWorkspace>;
   archive(id: string): Promise<ExtensionWorkspace>;

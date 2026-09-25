@@ -8,6 +8,7 @@ import {
   workspaces,
 } from "../../db/schemas.pg";
 import { renameWorkspace } from "./rename-workspace";
+import { createWorkspaceAnchorMutations } from "./workspace-anchors";
 import {
   buildWorkspaceRecord,
   type CreateInput,
@@ -306,6 +307,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     createDefault: (input: { project_id: string; name: string; branch: string | null }) =>
       insertDefaultWorkspace(db, input),
     getDefault: (projectId: string) => selectDefaultWorkspace(db, projectId),
+    ...createWorkspaceAnchorMutations(db),
     get,
     list,
     listForProviderReconciliation,

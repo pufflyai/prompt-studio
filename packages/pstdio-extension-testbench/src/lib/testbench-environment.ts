@@ -155,6 +155,7 @@ export const createBenchEnvironment = (
     },
     sessions: {
       addAnchors: async () => {},
+      removeAnchors: async () => {},
       get: async () => null,
       list: async () => [],
       listByWorkspace: async () => [],
@@ -167,6 +168,8 @@ export const createBenchEnvironment = (
       followup: async () => {},
     },
     workspaces: {
+      addAnchors: async () => {},
+      removeAnchors: async () => {},
       list: async () => seed?.workspaces ?? [],
       archive: async (id) => ({ id }),
       cancel: async (id) => ({ id }),

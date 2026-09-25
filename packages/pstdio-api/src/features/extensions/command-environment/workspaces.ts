@@ -108,6 +108,14 @@ export const createWorkspacesApi = (
       input.signal?.throwIfAborted();
       return workspace as ExtensionWorkspace;
     },
+    addAnchors: async (id, anchors) => {
+      await requireScopedWorkspace(id);
+      await deps.workspaceService.addAnchors(id, anchors);
+    },
+    removeAnchors: async (id, refs) => {
+      await requireScopedWorkspace(id);
+      await deps.workspaceService.removeAnchors(id, refs);
+    },
     resolve: async (id) => {
       const workspace = await requireScopedWorkspace(id);
       const localTarget = await resolveWorkspaceExecutionTarget(deps, id);
