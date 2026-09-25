@@ -11,6 +11,7 @@ import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensio
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -329,6 +330,7 @@ test(
 
 registerCoreDefaultExtensionSmokeTests();
 registerExtensionDiagnosticsSmokeTests();
+registerLinkedWebviewSmokeTests();
 registerRemoteExecutionSmokeTests();
 
 test("packaged CLI includes automation and machine authentication", () => {
