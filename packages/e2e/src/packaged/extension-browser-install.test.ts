@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "@playwright/test";
@@ -11,6 +11,8 @@ beforeAll(buildBinary, 180_000);
 test("installs the smoke browser without external JavaScript runtimes", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-browser-consumer-"));
   const browserCache = join(root, "browsers");
+  const callerManifest = JSON.stringify({ name: "browser-setup-consumer", private: true });
+  writeFileSync(join(root, "package.json"), callerManifest);
   try {
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== "PATH"));
     const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
@@ -34,7 +36,7 @@ test("installs the smoke browser without external JavaScript runtimes", async ()
     } finally {
       await browser.close();
     }
-    expect(existsSync(join(root, "package.json"))).toBe(false);
+    expect(readFileSync(join(root, "package.json"), "utf8")).toBe(callerManifest);
     expect(existsSync(join(root, "bun.lock"))).toBe(false);
     expect(existsSync(join(root, "node_modules"))).toBe(false);
   } finally {

@@ -60,15 +60,12 @@ export const createCompiledBunSmokeFixture = (rootDir = mkdtempSync(join(tmpdir(
   mkdirSync(cacheDir, { recursive: true });
   writeFileSync(
     join(extensionDir, "package.json"),
-    `${JSON.stringify({ name: "compiled-bun-smoke", private: true, scripts: { typecheck: "verify-runtime" }, dependencies: { "local-dep": "file:./local-dep" } })}\n`,
+    `${JSON.stringify({ name: "compiled-bun-smoke", private: true, dependencies: { "local-dep": "file:./local-dep" } })}\n`,
   );
-  writeFileSync(
-    join(localDepDir, "package.json"),
-    `${JSON.stringify({ name: "local-dep", version: "1.0.0", bin: { "verify-runtime": "check.ts" } })}\n`,
-  );
+  writeFileSync(join(localDepDir, "package.json"), `${JSON.stringify({ name: "local-dep", version: "1.0.0" })}\n`);
   writeFileSync(
     join(localDepDir, "check.ts"),
-    '#!/usr/bin/env node\nif (!process.versions.bun) throw new Error("The package script must use bundled Bun");\n',
+    '#!/usr/bin/env node\nif (!process.versions.bun) throw new Error("The package executable must use bundled Bun");\n',
     { mode: 0o755 },
   );
   writeFileSync(join(srcDir, "entry.ts"), "export const answer = 42;\n");
@@ -114,9 +111,9 @@ export const buildCompiledBunSmokePlan = ({ binPath, fixture }: { binPath: strin
       cwd: fixture.extensionDir,
       env,
     },
-    script: {
+    executable: {
       binPath,
-      args: ["run", "--bun", "--cwd", fixture.extensionDir, "typecheck"],
+      args: ["--cwd", fixture.extensionDir, "./node_modules/local-dep/check.ts"],
       cwd: fixture.rootDir,
       env,
     },
@@ -166,9 +163,11 @@ export const runCompiledBunSmoke = (platformBinaries: PlatformBinary[]) => {
     }
 
     runSmokeCommand("test", plan.test);
-    runSmokeCommand("package script", plan.script);
+    runSmokeCommand("package executable", plan.executable);
 
-    process.stdout.write(`OK: ${binPath} runs Bun install/build/test/scripts with BUN_BE_BUN=1 and no PATH tools\n`);
+    process.stdout.write(
+      `OK: ${binPath} runs Bun install/build/test/package files with BUN_BE_BUN=1 and no PATH tools\n`,
+    );
   } finally {
     rmSync(fixture.rootDir, { recursive: true, force: true });
   }

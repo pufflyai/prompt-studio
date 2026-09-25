@@ -19,13 +19,12 @@ Use the Bun runtime included in the installed `pst` executable. Do not assume `b
 
 ```bash
 BUN_BE_BUN=1 pst test <path-to-test>
-BUN_BE_BUN=1 pst run --bun --cwd <path-to-extension> typecheck
+BUN_BE_BUN=1 pst --cwd <path-to-extension> ./node_modules/typescript/bin/tsc --noEmit
 ```
 
-In PowerShell, set `$env:BUN_BE_BUN = "1"`, run the same `pst test` or `pst run --bun` commands without the environment prefix, and remove it with `Remove-Item Env:BUN_BE_BUN` before running normal `pst` commands. Keep this setting limited to the Bun command.
+In PowerShell, set `$env:BUN_BE_BUN = "1"`, run the same commands without the environment prefix, and remove it with `Remove-Item Env:BUN_BE_BUN` before running normal `pst` commands. Keep this setting limited to the Bun command.
 
-Run the extension typecheck only when the extension package has that script. For first-party extension behavior, prefer
-tests next to the relevant extension file or in the package that owns the runtime behavior.
+Run the TypeScript command only when the extension has TypeScript installed and a `tsconfig.json`. Preserve any extra compiler options from its typecheck script. Execute the package's JavaScript entry file directly: package-command wrappers can require a separate runtime on Windows. For first-party extension behavior, prefer tests next to the relevant extension file or in the package that owns the runtime behavior.
 
 ## Local development loop
 
@@ -50,7 +49,7 @@ pst extensions test <path-to-extension> --json
 pst extensions test <path-to-extension> --project-path <fixture-containing-source> --keep-home
 ```
 
-Browser setup uses the installed CLI's bundled Bun runtime with `BUN_BE_BUN=1` and forces Playwright's installer to run with Bun. It chooses the version matching the bundled browser client and reuses downloaded browsers. On Linux, add `--with-deps` to install missing system libraries; this may require administrator access. `PLAYWRIGHT_BROWSERS_PATH` selects the browser cache for setup and smoke runs.
+Browser setup uses the installed CLI's bundled Bun runtime with `BUN_BE_BUN=1` to install the matching browser package and execute its JavaScript entry file directly. It reuses downloaded browsers. On Linux, add `--with-deps` to install missing system libraries; this may require administrator access. `PLAYWRIGHT_BROWSERS_PATH` selects the browser cache for setup and smoke runs.
 
 The command copies inputs, installs dependencies, checks declarations, creates a fresh project, and opens resource-free pages in the real dashboard. It observes the initial mounted views and bridge calls. A caught capability denial still fails the run. It does not run arbitrary commands, create domain resources, click optional tabs, or test future interactions. Read the visited and unexercised contributions even when the command passes. An extension without pages can pass with zero UI visits.
 
@@ -116,4 +115,4 @@ Keep any packaged smoke-test expectations aligned with the current bundled artif
 
 ## Final validation
 
-Before handoff for non-documentation changes, run the full validation command your project defines with the bundled Bun runtime (for example `BUN_BE_BUN=1 pst run --bun validate` in a POSIX shell). Prompt Studio repository contributors use the repository's documented Bun toolchain and `bun run validate`. If validation cannot run, record the exact command, failure, and reason.
+Before handoff for non-documentation changes, run the full validation your project defines. Inspect package scripts and run their JavaScript or TypeScript entry files with bundled Bun as above; check that any additional tools are available before invoking them. Prompt Studio repository contributors use the repository's documented Bun toolchain and `bun run validate`. If validation cannot run, record the exact command, failure, and reason.
