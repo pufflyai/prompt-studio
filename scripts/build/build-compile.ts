@@ -40,7 +40,7 @@ const target = `bun-${process.platform}-${process.arch}`;
 const outfile = "./dist/pstdio";
 
 console.log(`\nCompiling for ${target}...`);
-await $`bun build ${CLI_ENTRY} --compile --target=${target} --asset-naming [dir]/[name].[ext] --outfile ${outfile}`;
+await $`bun build ${CLI_ENTRY} --compile --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] --outfile ${outfile}`;
 
 // 4. Verify the binary works
 const version = await $`${outfile} --version`.text();

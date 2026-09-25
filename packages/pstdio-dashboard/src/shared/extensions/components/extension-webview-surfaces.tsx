@@ -1,6 +1,6 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
-import { ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
+import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useState } from "react";
 import { buildApiUrl } from "@/lib/api";
 
@@ -82,6 +82,7 @@ export const BridgedWebviewSurface = (props: {
   const { capabilities, extensionProps, hostEvents, theme, view } = props;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const diagnostics = createWebviewDiagnostics(view);
 
   return (
     <Box
@@ -108,10 +109,15 @@ export const BridgedWebviewSurface = (props: {
         hostEvents={hostEvents}
         title={view.label}
         onReady={() => {
+          diagnostics.onReady();
           setError(null);
           setReady(true);
         }}
-        onError={(err) => setError(err.message)}
+        onDiagnostics={diagnostics.onDiagnostics}
+        onError={(err) => {
+          diagnostics.onError(err);
+          setError(err.message);
+        }}
       />
     </Box>
   );

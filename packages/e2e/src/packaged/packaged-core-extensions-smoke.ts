@@ -106,6 +106,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
                 expect.objectContaining({ path: "references/examples/controls.ts" }),
                 expect.objectContaining({ path: "references/examples/table-navigation.ts" }),
                 expect.objectContaining({ path: "references/pages.md" }),
+                expect.objectContaining({ path: "references/validation.md" }),
               ]),
             }),
           );

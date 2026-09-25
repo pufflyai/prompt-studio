@@ -56,6 +56,8 @@ test("checks the repo scope and reports bundled versions despite an invalid user
 });
 
 test("includes the extension development and update commands", () => {
+  const testResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "test", "--help"], { encoding: "utf8" });
+  expect(testResult.status).toBe(0);
   const devResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "dev", "--help"], { encoding: "utf8" });
   const updateResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "update", "--help"], { encoding: "utf8" });
 

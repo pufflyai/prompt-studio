@@ -37,13 +37,29 @@ The first cycle checks the extension contract and dashboard host capabilities, p
 
 Stop with Ctrl+C. The command removes watchers and temporary staging folders but leaves the last valid extension enabled.
 
-## Install and runtime smoke test
+## Isolated runtime smoke test
 
-Install the extension source into a throwaway Prompt Studio home and validate loaded contributions:
+Provision Chromium once, then run the installed CLI:
 
 ```bash
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions add <path-to-extension> --force
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
+bunx playwright@1.60.0 install chromium --with-deps
+pst extensions test <path-to-extension>
+pst extensions test <path-to-extension> --json
+pst extensions test <path-to-extension> --project-path <fixture-containing-source> --keep-home
+```
+
+The command copies inputs, installs dependencies, checks declarations, creates a fresh project, and opens resource-free pages in the real dashboard. It observes the initial mounted views and bridge calls. A caught capability denial still fails the run. It does not run arbitrary commands, create domain resources, click optional tabs, or test future interactions. Read the visited and unexercised contributions even when the command passes. An extension without pages can pass with zero UI visits.
+
+Exit codes are 0 for a smoke pass, 1 for an extension runtime failure, 2 for an installation or declaration error, and 3 for inputs or setup failures. JSON mode writes one result to stdout; progress and child logs go to stderr. `--keep-home` retains inputs, project, home, logs and the result; browser and host processes still stop.
+
+A fixture directory must contain the source and all local directory dependencies. Absolute local dependencies and source symlinks are rejected. Use relative paths and ordinary files. Without a fixture the run uses a minimal scratch Git repo, so repo-dependent behavior is outside coverage. The caller's linked project and API configuration are not used.
+
+Chromium is provisioned with Playwright 1.60.0. Supported browser targets are macOS arm64/x64, Windows x64, and Linux x64/arm64 on Playwright-supported distributions. Missing browser binaries or system libraries are setup failures. Build the dashboard before source-development runs; release validation must run the compiled command outside the checkout.
+
+For an existing disposable install, static checking remains available:
+
+```bash
+pst extensions check --scope user --json
 ```
 
 Treat warnings as actionable. They do not block loading, but they describe behavior an author should confirm.

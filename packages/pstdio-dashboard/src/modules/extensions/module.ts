@@ -4,6 +4,7 @@ import type {
 } from "@pstdio/sdk/api";
 import type { PageLocation } from "@pstdio/sdk/extensions";
 import type { Disposable, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
@@ -117,7 +118,12 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           ];
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
-          console.error(`[dashboard.extensions] contribution registration failed: ${message}`);
+          logExtensionHostDiagnostic({
+            event: "registration-error",
+            projectId: nextProjectId,
+            extensionId: nextMetadata.extensions.length === 1 ? nextMetadata.extensions[0]?.id : undefined,
+            message,
+          });
         }
       };
 
