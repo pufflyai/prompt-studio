@@ -228,7 +228,7 @@ const remapRuntimePackageAssets = (value: unknown, runtimePackagePath: string, p
 const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
   const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
   const entryPath = isPackagedRuntime()
-    ? await bundleEntry(filePath, packagePath, dirname(runtimePackage.entryPath))
+    ? await bundleEntry(runtimePackage.entryPath, runtimePackage.packagePath, dirname(runtimePackage.entryPath))
     : runtimePackage.entryPath;
   const mod = await importWithCacheKey(entryPath);
   return remapRuntimePackageAssets(mod, runtimePackage.packagePath, packagePath);
