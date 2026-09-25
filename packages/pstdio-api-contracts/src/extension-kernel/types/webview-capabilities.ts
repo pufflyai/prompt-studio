@@ -55,6 +55,7 @@ export type WebviewCapabilityDeclaration =
 
 export interface WebviewCommandsExecuteParams {
   commandId: string;
+  workspaceId?: string;
   params?: JsonObject;
   resource?: ResourceRef;
   metadata?: JsonObject;

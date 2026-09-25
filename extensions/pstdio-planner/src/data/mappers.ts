@@ -18,6 +18,7 @@ import {
   ticketDisplayTitle,
 } from "./ticket-resource-hierarchy";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
+import { workspacePresentation } from "./workspace-presentation";
 import type { TicketWorkspaceSession, TicketWorkspaceSessionLookup } from "./workspace-sessions";
 import { ticketShorthandFromWorkspace } from "./workspace-ticket-link";
 
@@ -88,24 +89,27 @@ const workspaceDisplayName = (workspace: ExtensionWorkspace) => {
 const workspaceToBadgeItem = (
   workspace: ExtensionWorkspace,
   session: TicketWorkspaceSession | undefined,
-): TicketWorkspaceBadgeItem => ({
-  id: workspace.id,
-  label: workspace.workspace_shorthand?.trim() || workspaceDisplayName(workspace),
-  icon: workspace.root_path ? "GitBranch" : "GitCommit",
-  resource: {
-    type: "workspace",
+): TicketWorkspaceBadgeItem => {
+  const { icon, workspaceType } = workspacePresentation(workspace);
+  return {
     id: workspace.id,
-    label: workspaceDisplayName(workspace),
-    metadata: {
-      workspaceId: workspace.id,
-      workspaceType: workspace.root_path ? "worktree" : "current_branch",
-      ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
+    label: workspace.workspace_shorthand?.trim() || workspaceDisplayName(workspace),
+    icon,
+    resource: {
+      type: "workspace",
+      id: workspace.id,
+      label: workspaceDisplayName(workspace),
+      metadata: {
+        workspaceId: workspace.id,
+        workspaceType,
+        ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
+      },
     },
-  },
-  ...(workspace.created_at ? { createdAt: workspace.created_at } : {}),
-  // Carried per workspace so switching among a ticket's workspaces never shows another one's status.
-  ...(session ? { session } : {}),
-});
+    ...(workspace.created_at ? { createdAt: workspace.created_at } : {}),
+    // Carried per workspace so switching among a ticket's workspaces never shows another one's status.
+    ...(session ? { session } : {}),
+  };
+};
 
 const byNewestWorkspace = (left: TicketWorkspaceBadgeItem, right: TicketWorkspaceBadgeItem) =>
   (right.createdAt ?? "").localeCompare(left.createdAt ?? "") ||

@@ -6,7 +6,7 @@ export const assertSafePathSegment = (value: string) => {
 };
 
 export const requireRepoFiles = (projectFiles: ArtifactMount | undefined) => {
-  if (!projectFiles) throw new Error("This command must be run inside a project repository.");
+  if (!projectFiles) throw new Error("This command must be run inside a project folder.");
   return projectFiles;
 };
 

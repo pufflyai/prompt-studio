@@ -65,6 +65,11 @@ Page and panel navigation targets remain the API for opening views and tabs.
 
 ## Webview change subscriptions
 
+To run webview commands in a selected workspace, pass `{ workspaceId }` to
+`createWebviewClient(host, options)`. Without that option, commands use the project's
+default workspace. The host resolves the workspace target and checks project ownership.
+The low-level `commands.execute` bridge accepts the same `workspaceId` field.
+
 Use the typed client's `events.subscribe(event, listener)` to refetch after a command changes data:
 
 ```ts

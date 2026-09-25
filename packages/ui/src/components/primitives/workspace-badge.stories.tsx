@@ -1,5 +1,6 @@
 import { Box, VStack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, within } from "storybook/test";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
 
 const meta: Meta<typeof WorkspaceBadge> = {
@@ -21,6 +22,40 @@ export default meta;
 
 type Story = StoryObj<typeof WorkspaceBadge>;
 
+export const ProjectFolder: Story = {
+  args: {
+    workspaceType: "folder",
+    label: "Project workspace",
+    sessionStatus: "in_progress",
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByLabelText("Project folder")).toBeVisible();
+  },
+};
+
+export const GitWorktree: Story = {
+  args: {
+    workspaceType: "worktree",
+    shorthand: "PS-412_A1",
+    diffAdditions: 18,
+    diffDeletions: 4,
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByLabelText("Git worktree")).toBeVisible();
+  },
+};
+
+export const RemoteWorkspace: Story = {
+  args: {
+    workspaceType: "remote",
+    label: "Cloud development",
+    sessionStatus: "completed",
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByLabelText("Remote workspace")).toBeVisible();
+  },
+};
+
 export const Initializing: Story = {
   args: {
     initializing: true,
@@ -30,7 +65,7 @@ export const Initializing: Story = {
 
 export const SingleWorkspaceNoShorthand: Story = {
   args: {
-    workspaceType: "current_branch",
+    workspaceType: "folder",
     sessionStatus: "in_progress",
     hasMultipleWorkspaces: false,
   },
@@ -79,12 +114,10 @@ export const LongWorkspaceName: Story = {
 
 export const NamedMultipleWorkspaces: Story = {
   args: {
-    label: "Current branch review pass",
-    workspaceType: "current_branch",
+    label: "Remote review pass",
+    workspaceType: "remote",
     shorthand: "PS-412_A5",
     hasMultipleWorkspaces: true,
-    diffAdditions: 3,
-    diffDeletions: 1,
     showLeadingSessionIndicator: false,
   },
 };
@@ -122,13 +155,15 @@ export const StateMatrix: Story = {
       <WorkspaceBadge workspaceType="worktree" initializing shorthand="A1" />
       <WorkspaceBadge workspaceType="worktree" shorthand="A2" sessionStatus="in_progress" hasMultipleWorkspaces />
       <WorkspaceBadge
-        workspaceType="current_branch"
+        workspaceType="worktree"
         shorthand="A3"
         attemptStatus={{ name: "Ready", color: "green", description: "Ready to merge" }}
         diffAdditions={9}
         diffDeletions={2}
       />
       <WorkspaceBadge workspaceType="worktree" sessionStatus="failed" />
+      <WorkspaceBadge workspaceType="folder" label="Project workspace" sessionStatus="in_progress" />
+      <WorkspaceBadge workspaceType="remote" label="Cloud development" sessionStatus="completed" />
     </VStack>
   ),
 };

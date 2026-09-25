@@ -51,7 +51,15 @@ export const expectPlannerIdentities = async (input: {
   const tree = (await treeResponse.json()) as { outcome: { value: { id: string }[] } };
   expect(tree.outcome.value.find((section) => section.id === "workspaces")).toMatchObject({
     actions: [],
-    nodes: [expect.objectContaining({ resource: expect.objectContaining({ id: sharedWorkspaces[0].id }) })],
+    nodes: [
+      expect.objectContaining({
+        icon: "Folder",
+        resource: expect.objectContaining({
+          id: sharedWorkspaces[0].id,
+          metadata: expect.objectContaining({ workspaceType: "folder" }),
+        }),
+      }),
+    ],
   });
   const files = await fetch(`${input.baseUrl}/v1/workspaces/${sharedWorkspaces[0].id}/files`, {
     headers: input.headers,

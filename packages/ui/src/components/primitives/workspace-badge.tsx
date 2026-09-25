@@ -49,11 +49,10 @@ export interface WorkspaceBadgeProps {
   onSessionIndicatorClick?: () => void;
 }
 
-const resolveWorkspaceIcon = (workspaceType: WorkspaceBadgeProps["workspaceType"]) => {
-  if (workspaceType === "folder") return FolderIcon;
-  if (workspaceType === "remote") return CloudIcon;
-
-  return GitBranchIcon;
+const WORKSPACE_TYPE_INDICATORS = {
+  folder: { icon: FolderIcon, label: "Project folder" },
+  remote: { icon: CloudIcon, label: "Remote workspace" },
+  worktree: { icon: GitBranchIcon, label: "Git worktree" },
 };
 
 const resolveAttemptStatusColor = (color: string) => {
@@ -121,17 +120,12 @@ const WorkspaceTypeIndicator = (props: {
   shorthand?: string;
 }) => {
   const { workspaceType, initializing, label, shorthand } = props;
-  const WorkspaceTypeIcon = resolveWorkspaceIcon(workspaceType);
+  const { icon: WorkspaceTypeIcon, label: workspaceTypeLabel } = WORKSPACE_TYPE_INDICATORS[workspaceType];
   const displayLabel = label ?? shorthand;
 
   return (
     <HStack as="span" gap="2xs" alignItems="center" color="fg.muted" minW="0">
-      <Icon
-        as={WorkspaceTypeIcon}
-        boxSize="3.5"
-        flexShrink={0}
-        aria-label={workspaceType === "worktree" ? "Worktree" : "Current branch"}
-      />
+      <Icon as={WorkspaceTypeIcon} boxSize="3.5" flexShrink={0} aria-label={workspaceTypeLabel} />
       {initializing ? <Spinner size="xs" color="fg.muted" /> : null}
       {displayLabel ? (
         <Text as="span" textStyle="label/XS/medium" color="fg.muted" minW="0" maxW="10rem" truncate>

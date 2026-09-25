@@ -144,7 +144,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
             body: {
               metadata: input.metadata,
               params: input.params,
-              repo: input.repo,
+              workspaceId: input.workspaceId,
               resource: input.resource,
               source: "dashboard",
             },

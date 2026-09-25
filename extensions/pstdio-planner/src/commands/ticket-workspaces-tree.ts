@@ -10,6 +10,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import type { TicketResourceReference } from "../data/ticket-resource-hierarchy";
+import { workspacePresentation } from "../data/workspace-presentation";
 
 const createWorkspace = commandRef<CreateWorkspaceCommandParams>({
   extensionId: "pstdio",
@@ -29,16 +30,7 @@ type LinkedWorkspaceMetadata = {
 
 const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMetadata) => {
   const label = workspaceLabel(workspace);
-  let workspaceType = "folder";
-  let icon = "Folder";
-  if (workspace.provider_id === "pstdio.worktree") {
-    workspaceType = "worktree";
-    icon = "GitBranch";
-  }
-  if (workspace.execution_kind === "remote") {
-    workspaceType = "remote";
-    icon = "Cloud";
-  }
+  const { workspaceType, icon } = workspacePresentation(workspace);
   const workspaceMetadata = {
     workspaceId: workspace.id,
     ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),

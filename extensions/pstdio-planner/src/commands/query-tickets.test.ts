@@ -26,6 +26,8 @@ const makeWorkspace = (id: string, shorthand: string, createdAt: string): Extens
   id,
   workspace_shorthand: shorthand,
   root_path: `/worktrees/${shorthand}`,
+  provider_id: "pstdio.worktree",
+  execution_kind: "local",
   created_at: createdAt,
 });
 
