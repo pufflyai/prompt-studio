@@ -2,26 +2,38 @@ import { writeFile } from "node:fs/promises";
 import { type BrowserContext, type Page, test } from "@playwright/test";
 import { redactSensitiveText } from "pstdio-logging";
 
-export const startNativeCpuProfiles = (context: BrowserContext) => {
+export const startNativeCpuProfiles = (context: BrowserContext, launchPid: number | undefined) => {
   const info = test.info();
   const pending: Array<Promise<() => Promise<void>>> = [];
   let stopped: Promise<void> | undefined;
   let index = 0;
   const start = (page: Page) => {
-    const name = `native-renderer-${index++}`;
+    const name = `native-renderer-${launchPid}-${index++}`;
     pending.push(
       (async () => {
         const startedAt = Date.now();
         const session = await context.newCDPSession(page);
+        await session.send("Performance.enable");
+        const before = await session.send("Performance.getMetrics");
         await session.send("Profiler.enable");
         await session.send("Profiler.start");
+        const profilingStartedAt = Date.now();
         return async () => {
           const { profile } = await session.send("Profiler.stop");
+          const after = await session.send("Performance.getMetrics");
           const path = info.outputPath(`${name}.cpuprofile`);
           await writeFile(path, redactSensitiveText(JSON.stringify(profile)));
           await info.attach(name, { path, contentType: "application/json" });
           await info.attach(`${name}-timing`, {
-            body: JSON.stringify({ startedAt, stoppedAt: Date.now(), url: page.url() }),
+            body: JSON.stringify({
+              launchPid,
+              startedAt,
+              profilingStartedAt,
+              stoppedAt: Date.now(),
+              url: page.url(),
+              before,
+              after,
+            }),
             contentType: "application/json",
           });
           if (page.url().startsWith("http://127.0.0.1:")) {
