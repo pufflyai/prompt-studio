@@ -1,5 +1,5 @@
 import { Box, Dialog, Portal, Stack } from "@chakra-ui/react";
-import { ParamEditor, type SelectionParam } from "@pstdio/ui";
+import { ParamEditor, type SelectionParam } from "@pstdio/ui/param-editor";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";

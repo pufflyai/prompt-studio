@@ -1,5 +1,5 @@
 import type { ExtensionSettingValueRecord } from "@pstdio/sdk/api";
-import type { Param, ParamValueMap } from "@pstdio/ui";
+import type { Param, ParamValueMap } from "@pstdio/ui/param-editor";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 
 const settingValue = (record: ExtensionSettingValueRecord) =>

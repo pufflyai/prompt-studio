@@ -138,8 +138,15 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "clients/*": {
-      "entry": ["package.json", "astro.config.*", "src/pages/**/*.{astro,md,mdx,ts,tsx}", "src/layouts/**/*.astro"],
-      "project": ["*.{ts,mjs}", "src/**/*.{astro,ts,tsx,md,mdx}"],
+      "entry": [
+        "package.json",
+        "astro.config.*",
+        "remotion.config.ts",
+        "remotion/index.ts",
+        "src/pages/**/*.{astro,md,mdx,ts,tsx}",
+        "src/layouts/**/*.astro"
+      ],
+      "project": ["*.{ts,mjs}", "remotion/**/*.{ts,tsx}", "src/**/*.{astro,ts,tsx,md,mdx}"],
       "ignore": ["dist/**"]
     }
   }

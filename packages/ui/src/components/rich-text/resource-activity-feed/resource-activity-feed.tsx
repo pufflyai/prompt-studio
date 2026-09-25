@@ -12,19 +12,18 @@ import {
   ScanSearch,
   Sparkles,
 } from "lucide-react";
-import { type ComponentType, lazy, type ReactNode, Suspense } from "react";
+import type { ComponentType, ReactNode } from "react";
 
+import {
+  type ActivityActor,
+  ActivityComment,
+  ActivityEvent,
+  ActivityFeed,
+  ActivityTimeline,
+} from "@/components/activity";
 import { AlertMessage } from "@/components/primitives/alert";
 import { EmptyState } from "@/components/primitives/empty-state";
-import type { ActivityActor } from "./activity.types";
-import { ActivityComment } from "./activity-comment";
-import { ActivityEvent } from "./activity-event";
-import { ActivityFeed } from "./activity-root";
-import { ActivityTimeline } from "./activity-timeline";
-
-const RichMessage = /* @__PURE__ */ lazy(() =>
-  import("../rich-text/rich-message/rich-message").then((module) => ({ default: module.RichMessage })),
-);
+import { RichMessage } from "../rich-message/rich-message";
 
 export type ResourceActivityFeedSize = "comfortable" | "compact";
 
@@ -214,9 +213,7 @@ const ResourceActivityItem = (props: ResourceActivityItemProps) => {
       size={size}
     >
       <Stack gap={size === "compact" ? "xs" : "sm"}>
-        <Suspense fallback={<Text>{item.markdown}</Text>}>
-          <RichMessage defaultState={item.markdown} fullWidth />
-        </Suspense>
+        <RichMessage defaultState={item.markdown} fullWidth />
         <ItemActions
           item={item}
           size={size}

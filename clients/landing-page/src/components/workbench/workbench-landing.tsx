@@ -1,25 +1,23 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
+import { isDocumentView, type LegalDocuments } from "../../content/landing-content";
 import type { LandingPage } from "../../content/landing-pages";
-import { privacyPage, termsPage } from "../../content/legal";
 import type { ToolExampleId } from "../../content/tool-examples-content";
 import { useLandingNavigation } from "../../hooks/use-landing-navigation";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { useWindowChrome } from "../../hooks/use-window-chrome";
-import { DocView } from "../sections/doc-view";
 import { ExamplesView } from "../sections/examples-view";
 import { FeaturesView } from "../sections/features-view";
 import { StartHereView } from "../sections/start-here-view";
 import { WhatIsPromptStudioView } from "../sections/what-is-prompt-studio-view";
 import { CommandPaletteModal } from "./command-palette-modal";
+import { DocColumn } from "./doc-column";
 import { LandingPanels } from "./landing-panels";
 import { PageNavigation } from "./page-navigation";
 import { ProjectTabsBar } from "./project-tabs-bar";
 import { ResourceSidebar } from "./resource-sidebar";
 import { WorkbenchNav } from "./workbench-nav";
 import { WorkbenchStatusBar } from "./workbench-status-bar";
-
-const LEGAL_PAGES = { privacy: privacyPage, terms: termsPage };
 
 interface LandingContentProps {
   page: LandingPage;
@@ -35,7 +33,6 @@ const LandingContent = (props: LandingContentProps) => {
   if (view === "examples" && exampleId)
     page = <ExamplesView key={exampleId} exampleId={exampleId} onNavigate={onNavigateExample} />;
   if (view === "what-is-prompt-studio") page = <WhatIsPromptStudioView />;
-  if (view === "privacy" || view === "terms") page = <DocView page={LEGAL_PAGES[view]} />;
   return (
     <Box layerStyle="panel" bg="bg" width="full" minWidth="0" height="full" overflow="hidden">
       {page}
@@ -45,10 +42,11 @@ const LandingContent = (props: LandingContentProps) => {
 
 interface WorkbenchLandingProps {
   initialPath: string;
+  legalDocuments: LegalDocuments;
 }
 
 export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
-  const { initialPath } = props;
+  const { initialPath, legalDocuments } = props;
   const { page, navigate, navigateExample, paletteOpen, setPaletteOpen } = useLandingNavigation(initialPath);
   const { view } = page;
   const { windowed, offset, toggleWindowed, onTitleBarPointerDown } = useWindowChrome();
@@ -58,13 +56,21 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
     <Flex direction="column" flex="1" minWidth="0">
       <WorkbenchNav activeView={view} onOpenNavigation={() => setPaletteOpen(true)} />
       <Box as="main" css={styles.main}>
-        <LandingPanels page={page} navigation={<PageNavigation view={view} onNavigate={navigate} />}>
-          <LandingContent
-            page={page}
-            onNavigateExample={navigateExample}
-            windowOffset={windowed ? offset : undefined}
+        {isDocumentView(view) ? (
+          <DocColumn
+            html={legalDocuments[view]}
+            pageKey={page.path}
+            navigation={<PageNavigation view={view} placement="document" onNavigate={navigate} />}
           />
-        </LandingPanels>
+        ) : (
+          <LandingPanels page={page} navigation={<PageNavigation view={view} onNavigate={navigate} />}>
+            <LandingContent
+              page={page}
+              onNavigateExample={navigateExample}
+              windowOffset={windowed ? offset : undefined}
+            />
+          </LandingPanels>
+        )}
       </Box>
     </Flex>
   );

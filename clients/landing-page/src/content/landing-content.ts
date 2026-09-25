@@ -19,6 +19,15 @@ export interface ViewMeta {
   icon: LucideIcon;
 }
 
+/** Legal pages come from markdown in `src/content/legal` and read as one column in the workbench. */
+export const DOCUMENT_VIEWS = ["privacy", "terms"] as const satisfies LandingView[];
+export type DocumentView = (typeof DOCUMENT_VIEWS)[number];
+/** Compiled HTML of each legal document, keyed by its view. */
+export type LegalDocuments = Record<DocumentView, string>;
+
+export const isDocumentView = (view: LandingView): view is DocumentView =>
+  (DOCUMENT_VIEWS as readonly LandingView[]).includes(view);
+
 export const VIEW_META: Record<LandingView, ViewMeta> = {
   start: { label: "Start Here", icon: Sparkles },
   "what-is-prompt-studio": { label: "What is Prompt Studio", icon: BadgeCheck },
