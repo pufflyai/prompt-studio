@@ -93,7 +93,7 @@ const ticketHierarchyMetadata = async (
   return ticketResourceHierarchyMetadata(ticket, parentLookup);
 };
 
-const resolveTicketAnchor = async (
+export const resolveTicketAnchor = async (
   ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "extensionId" | "projectId" | "storage">,
   ticketRef: string,
 ) => {

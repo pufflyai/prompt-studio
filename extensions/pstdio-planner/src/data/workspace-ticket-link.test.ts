@@ -23,15 +23,19 @@ describe("workspace ticket link", () => {
   });
 
   test("reads the ticket shorthand from an anchor stored before the field moved", async () => {
-    const { isWorkspaceLinkedToTicket, ticketShorthandFromWorkspace } = await import("./workspace-ticket-link");
+    const { isWorkspaceLinkedToTicket, ticketShorthandsFromWorkspace } = await import("./workspace-ticket-link");
 
-    expect(ticketShorthandFromWorkspace(workspace([legacyAnchor()]))).toBe("T-9");
+    expect(ticketShorthandsFromWorkspace(workspace([legacyAnchor()]))).toEqual(["T-9"]);
     expect(isWorkspaceLinkedToTicket(workspace([legacyAnchor()]), "T-9")).toBe(true);
   });
 
-  test("falls back to the workspace shorthand convention when no ticket anchor exists", async () => {
-    const { ticketShorthandFromWorkspace } = await import("./workspace-ticket-link");
-
-    expect(ticketShorthandFromWorkspace(workspace([], "T-4_A2"))).toBe("T-4");
+  test("reads every ticket anchor", async () => {
+    const { ticketShorthandsFromWorkspace, isWorkspaceLinkedToTicket } = await import("./workspace-ticket-link");
+    const shared = workspace([
+      { type: "ticket", id: "one", shorthand: "T-1" },
+      { type: "ticket", id: "two", shorthand: "T-2" },
+    ]);
+    expect(ticketShorthandsFromWorkspace(shared)).toEqual(["T-1", "T-2"]);
+    expect(isWorkspaceLinkedToTicket(shared, "T-2")).toBe(true);
   });
 });

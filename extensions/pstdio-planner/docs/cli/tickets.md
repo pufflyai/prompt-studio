@@ -18,6 +18,8 @@ pst tickets save --id <id> [--status <status>]
 pst tickets pull [--id <id>] [--force]
 pst tickets files --id <id>
 pst tickets implement --id <id> [--agent <agent>]
+pst tickets link --id <id> (--workspace <workspace> | --session <session-id>)
+pst tickets unlink --id <id> (--workspace <workspace> | --session <session-id>)
 pst tickets workspaces --id <id>
 pst tickets worktrees list --id <id>
 pst tickets worktrees remove-all --id <id>
@@ -63,3 +65,22 @@ pst tickets save --id PS-12
 `link-review` attaches a review URL, such as a pull request, to the ticket. `proposal-refined` marks a proposal as ready for a person to review.
 
 See the [Planner CLI index](./index.md) for namespaced attempt and review commands.
+
+## Link workspaces and sessions
+
+Create a workspace, then link each ticket you want to work on:
+
+```sh
+pst workspaces create
+pst tickets link --id PS-1 --workspace WS-19
+pst tickets link --id PS-2 --workspace WS-19
+pst tickets workspaces --id PS-2
+```
+
+For separate workspaces, create one per ticket and link each separately. Link an existing session with `pst tickets link --id PS-1 --session <session-id>`.
+
+Both commands require exactly one target. Workspaces accept a shorthand or ID; sessions accept an ID. Repeating a link refreshes its anchor without adding a duplicate. Every linked ticket shows the workspace or session. Links use resource anchors, not workspace or branch names. Linking does not copy ticket drafts.
+
+Remove a link with `pst tickets unlink --id PS-1 --workspace WS-19` or `--session <session-id>`. Other ticket links remain. A managed attempt's own ticket cannot be unlinked from its workspace, implementation session, or review sessions.
+
+Archiving a ticket only archives a shared workspace after all tickets linked to it are archived.

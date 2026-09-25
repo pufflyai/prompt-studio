@@ -18,5 +18,7 @@
   "displayMenu.propertyOptions.updatedAt": "Mis à jour",
   "settingsPanels.ticketTags.title": "Étiquettes",
   "ticketDetail.none": "Aucun",
-  "ticketDetail.parent": "Parent"
+  "ticketDetail.parent": "Parent",
+  "commands.linkTicket": "Lier le ticket",
+  "commands.unlinkTicket": "Délier le ticket"
 }

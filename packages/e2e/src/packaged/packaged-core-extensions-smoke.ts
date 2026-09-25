@@ -111,6 +111,15 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
             }),
           );
 
+          for (const name of ["implement-ticket", "pstdio"]) {
+            expect(skills).toContainEqual(
+              expect.objectContaining({
+                name,
+                files: expect.arrayContaining([expect.objectContaining({ path: "SKILL.md" })]),
+              }),
+            );
+          }
+
           const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
             headers: runtimeAuthorization(started.descriptor),
           });

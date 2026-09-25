@@ -19,7 +19,7 @@ import {
 } from "./ticket-resource-hierarchy";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 import type { TicketWorkspaceSession, TicketWorkspaceSessionLookup } from "./workspace-sessions";
-import { ticketShorthandFromWorkspace } from "./workspace-ticket-link";
+import { ticketShorthandsFromWorkspace } from "./workspace-ticket-link";
 
 export { ticketDisplayTitle } from "./ticket-resource-hierarchy";
 
@@ -118,11 +118,11 @@ export const createTicketWorkspaceLookup = (
   const lookup: TicketWorkspaceLookup = new Map();
 
   for (const workspace of workspaces) {
-    const ticketShorthand = ticketShorthandFromWorkspace(workspace);
-    if (!ticketShorthand) continue;
-    const items = lookup.get(ticketShorthand) ?? [];
-    items.push(workspaceToBadgeItem(workspace, sessions.get(workspace.id)));
-    lookup.set(ticketShorthand, items);
+    for (const ticketShorthand of ticketShorthandsFromWorkspace(workspace)) {
+      const items = lookup.get(ticketShorthand) ?? [];
+      items.push(workspaceToBadgeItem(workspace, sessions.get(workspace.id)));
+      lookup.set(ticketShorthand, items);
+    }
   }
 
   for (const items of lookup.values()) items.sort(byNewestWorkspace);

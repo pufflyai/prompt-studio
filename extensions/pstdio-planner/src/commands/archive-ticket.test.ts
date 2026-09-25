@@ -293,3 +293,30 @@ describe("archive ticket", () => {
     ]);
   });
 });
+
+test("keeps a shared workspace until every linked ticket is archived", async () => {
+  const storage = createMemoryStorage();
+  await seedTicket(storage);
+  await putTicket(storage, makeTicket({ id: "ticket-2", shorthand: "T-2" }));
+  const workspace = { id: "shared", anchors_json: [ticketAnchor("T-1", "ticket-1"), ticketAnchor("T-2", "ticket-2")] };
+  const archived: string[] = [];
+  for (const id of ["ticket-1", "ticket-2"]) {
+    await archiveTicketCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: {},
+        overrides: {
+          resource: { type: "ticket", id },
+          workspaces: {
+            list: async () => [workspace],
+            archive: async (id) => {
+              archived.push(id);
+              return workspace;
+            },
+          },
+        },
+      }),
+    );
+    expect(archived).toEqual(id === "ticket-1" ? [] : ["shared"]);
+  }
+});

@@ -2,10 +2,21 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.12
+  version: 0.0.13
 ---
 
-Implement Planner tickets in a managed workspace. The Planner owns ticket status. Produce a committed revision, save a change request report, and submit both.
+Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report. Submit both when the workspace has a managed attempt.
+
+## Workspace
+
+Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
+
+- If you run inside a workspace from `pst pstdio-planner run-attempt`, work there.
+- When asked to implement tickets in a worktree, run `pst workspaces create`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path.
+- For several tickets in one workspace, create one workspace and link every ticket to it.
+- For one workspace per ticket, create and link a workspace for each ticket.
+
+Only a `run-attempt` workspace has a managed attempt. In any other workspace, skip step 5. Give the user the workspace shorthand, commit SHA and report ID instead.
 
 ## Workflow
 
@@ -13,7 +24,7 @@ Implement Planner tickets in a managed workspace. The Planner owns ticket status
    - For "implement the next ticket", list tickets in the project's ready status with `pst tickets list --status <ready-status>`. Use `pst statuses list` to find the status name.
    - Read the full body with `pst tickets panel --id <shorthand>` before changing code.
 2. Implement only the ticket's scope. Follow the repository's contributor rules.
-3. Run the required validation and commit the finished change in the managed workspace.
+3. Run the required validation and commit the finished change in the workspace.
 4. Create the change request report described below.
 5. Keep the `reportId` returned by `pst reports save`. Read the commit SHA with `git rev-parse HEAD`, then run:
    - `pst pstdio-planner submit-change-request --workspace-id <workspace-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-attempt-state implementing`

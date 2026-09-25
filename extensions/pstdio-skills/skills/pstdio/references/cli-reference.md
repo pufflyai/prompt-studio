@@ -57,7 +57,7 @@ pst workspaces merge --id <id> [--delete-workspace]
 pst workspaces delete --id <id>
 ```
 
-Core workspace creation is standalone. Planner creates ticket-linked workspaces through managed attempts.
+Core workspace creation is standalone. Link it to one or more tickets with `pst tickets link --id <ticket> --workspace <workspace>`. Planner also creates linked workspaces through managed attempts.
 
 ## Extensions
 
@@ -101,6 +101,8 @@ pst tickets save --id <id> [--status <status>]
 pst tickets pull [--id <id>] [--force]
 pst tickets files --id <id>
 pst tickets implement --id <id> [--agent <agent>]
+pst tickets link --id <id> (--workspace <workspace> | --session <session-id>)
+pst tickets unlink --id <id> (--workspace <workspace> | --session <session-id>)
 pst tickets workspaces --id <id>
 pst tickets worktrees list --id <id>
 pst tickets worktrees remove-all --id <id>

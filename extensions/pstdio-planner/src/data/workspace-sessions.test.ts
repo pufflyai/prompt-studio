@@ -4,6 +4,7 @@ import { loadLatestWorkspaceSessions } from "./workspace-sessions";
 
 const makeWorkspace = (id: string, overrides: Partial<ExtensionWorkspace> = {}): ExtensionWorkspace => ({
   id,
+  anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
   workspace_shorthand: "T-1_A1",
   ...overrides,
 });
@@ -41,7 +42,7 @@ describe("loadLatestWorkspaceSessions", () => {
     const calls: string[] = [];
     await loadLatestWorkspaceSessions(sessionsApi({}, calls), [
       makeWorkspace("workspace-1"),
-      makeWorkspace("workspace-unlinked", { workspace_shorthand: "scratch" }),
+      makeWorkspace("workspace-unlinked", { workspace_shorthand: "scratch", anchors_json: [] }),
     ]);
 
     expect(calls).toEqual(["workspace-1"]);

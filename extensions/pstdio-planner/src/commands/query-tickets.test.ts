@@ -24,6 +24,7 @@ type WorkspaceSession = Awaited<ReturnType<ExtensionSessionsApi["listByWorkspace
 
 const makeWorkspace = (id: string, shorthand: string, createdAt: string): ExtensionWorkspace => ({
   id,
+  anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
   workspace_shorthand: shorthand,
   worktree_path: `/worktrees/${shorthand}`,
   created_at: createdAt,
