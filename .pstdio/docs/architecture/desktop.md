@@ -120,10 +120,10 @@ resources/
 macOS release staging signs the Bun runtime with the release identity, hardened runtime, a secure timestamp, and the JIT entitlement before computing its checksum. Forge preserves that nested signature when signing the enclosing application. Signing the runtime again would change its bytes and invalidate the manifest. The packaged launch suite checks the final signed application, so this ordering is part of release validation.
 
 Active release targets are Apple Silicon macOS arm64 and Linux x64. Intel macOS
-desktop distribution is deferred after native startup and packaged test deadlines
-failed. Windows desktop distribution remains deferred until trusted signing is
-available. Forge retains their packaging support, but CI does not build or publish
-those desktop targets. Intel macOS and Windows CLI packages remain supported.
+desktop distribution is deferred while native startup checks remain unreliable.
+Windows desktop distribution remains deferred until trusted signing and
+installation/update verification are available. Native CI builds and tests all four desktop targets. Release CI publishes
+only the active targets. Intel macOS and Windows CLI packages remain supported.
 Forge produces ZIP and DMG artifacts on macOS and
 ZIP and DEB artifacts on Linux. The package enables ASAR integrity and an
 explicit full Electron fuse policy that disables Node execution, Node options,
@@ -193,9 +193,9 @@ Database recovery tests use temporary homes. They verify that a competing databa
 
 Detached-work tests install a small command-only fixture from `packages/workbench-fixture/fixtures/detached-work`. Its only dependency is the public SDK. Installation runs normally in each isolated home, and the tests verify that its process continues after either desktop quit or API shutdown.
 
-Workbench startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Startup-window timing uses the later of the native window's first `show` event and the lifecycle document's first contentful paint. The native event also verifies that the window is visible. The controller shows the prerendered startup document at DOM readiness, before remaining resources finish loading or the workbench view is created, so a fast attachment cannot cover the startup renderer while the window is still hidden. Runtime discovery and sidecar verification start after the lifecycle page loads, so checksum reads and process startup do not compete with the initial window display. Both timings are measured from process launch, including time before the debugger attaches. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The limits are 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds for crash recovery. The startup window must appear in less than 1.5 seconds on macOS and less than 1 second on Linux, on both cold launches and warm attachment. The supported desktop release targets are Apple Silicon and Linux; Intel desktop support remains deferred.
+Workbench startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Startup-window timing uses the later of the native window's first `show` event and the lifecycle document's first contentful paint. The native event also verifies that the window is visible. The controller shows the prerendered startup document at DOM readiness, before remaining resources finish loading or the workbench view is created, so a fast attachment cannot cover the startup renderer while the window is still hidden. Runtime discovery and sidecar verification start after the lifecycle page loads, so checksum reads and process startup do not compete with the initial window display. Both timings are measured from process launch, including time before the debugger attaches. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The limits are 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds for crash recovery. The startup window must appear in less than 1.5 seconds on macOS and less than 1 second on Linux and Windows, on both cold launches and warm attachment. The supported desktop release targets are Apple Silicon and Linux; Intel remains deferred. Intel CI disables hosted-runner indexing before dependency installation; [ADR 0032](../adrs/0032-temporary-macos-ci-indexing.md) records the measured contention and temporary isolation.
 
-Pull-request CI runs both Electron suites on Linux and Apple Silicon before downstream Docker
+Pull-request CI runs both Electron suites on Linux, Apple Silicon, Intel macOS, and Windows before downstream Docker
 builds can run. It configures the SUID sandbox for the source and packaged
 executables, verifies the packaged fuse policy, and uploads readiness results
 and browser traces. Trace export removes runtime cookies and bearer

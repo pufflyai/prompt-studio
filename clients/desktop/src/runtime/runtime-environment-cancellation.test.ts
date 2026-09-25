@@ -13,7 +13,7 @@ const isRunning = (pid: number) => {
 
 for (const shell of ["/bin/bash", "/bin/zsh"]) {
   test.skipIf(process.platform === "win32" || !existsSync(shell))(
-    `cancels ${shell} and its startup child before returning`,
+    `cancels ${shell} startup and terminates its child`,
     async () => {
       const home = mkdtempSync(join(tmpdir(), "desktop-shell-processes-"));
       const startup =
@@ -45,6 +45,10 @@ for (const shell of ["/bin/bash", "/bin/zsh"]) {
         expect(pids.every(isRunning)).toBe(true);
         controller.abort(reason);
         expect(await outcome).toBe(reason);
+        // Parent close can precede a killed descendant's final OS exit transition.
+        for (let attempt = 0; attempt < 100 && pids.some(isRunning); attempt++) {
+          await Bun.sleep(10);
+        }
         expect(pids.filter(isRunning)).toEqual([]);
       } finally {
         controller.abort(reason);

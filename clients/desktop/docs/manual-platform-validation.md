@@ -36,7 +36,9 @@ Release candidates and published releases are different. An unsigned Windows dev
 
 For a Windows development artifact, extract the entire ZIP to one directory, keep its `resources` directory beside `Prompt Studio.exe`, and run that executable. Follow the application checks below and record installation, signature, and update checks as pending.
 
-For a published release, download the Intel `darwin-x64` DMG or the Windows `win32-x64-Setup.exe` from the same version. Compare its SHA-256 with that release's checksum file.
+For the Intel diagnostic artifact named in the report, extract the downloaded ZIP, then extract `pstdio-intel-diagnostic.tar.gz` with `tar -xzf pstdio-intel-diagnostic.tar.gz`. Open `Prompt Studio-darwin-x64/Prompt Studio.app` in Finder. This is the signed app used by the native checks. Run the signature checks below against that app's actual path. It can prove application behavior, but it does not prove DMG installation or an update.
+
+Intel and Windows publication remain disabled while their release checks are incomplete. Once enabled, download the Intel `darwin-x64` DMG or the Windows `win32-x64-Setup.exe` from the same published version. Compare its SHA-256 with that release's checksum file.
 
 ```powershell
 Get-FileHash .\Prompt-Studio-VERSION-win32-x64-Setup.exe -Algorithm SHA256

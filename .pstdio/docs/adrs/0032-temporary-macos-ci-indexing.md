@@ -22,11 +22,25 @@ explain every Intel failure.
 
 ## Temporary workaround
 
-Test disabling Spotlight indexing with `sudo mdutil -a -i off` on the disposable
-native macOS CI runner before dependency installation. Record indexing status.
-Compare the unchanged signed application and unchanged packaged suite against
-the original failure. Retain this CI setup only if the native evidence supports
-it. Do not change application startup, retries, performance budgets, or timeouts.
+Disable Spotlight indexing with `sudo mdutil -a -i off` on the disposable native
+Intel macOS CI runner before dependency installation. Record indexing status.
+[Control run 36184823777](https://github.com/pufflyai/prompt-studio/actions/runs/36184823777)
+tests the exact unchanged signed application without profiling. All 19 original
+cases pass in 232.7 seconds, with no retries or skips. Cold startup takes 5369 ms,
+warm attachment 2164 ms, startup windows 695/812 ms, and recovery 90 ms. The prior
+signed acceptance run failed cold/warm readiness at 19526/3732 ms. This supports
+retaining the measured contention fix in the Intel jobs; it does not establish
+Spotlight as the only possible source of slow startup. Application startup,
+retries, performance budgets, and timeouts stay unchanged.
+
+A fresh signed build in [run 36185150848](https://github.com/pufflyai/prompt-studio/actions/runs/36185150848)
+still passes only 17 of 19 cases with indexing disabled. Its first launch spends
+about 8.9 seconds before the first application initialization log, and cold
+workbench readiness takes 10090 ms, above the unchanged 8000 ms limit. Warm
+attachment takes 2580 ms and passes. The suite takes 327.7 seconds, about 41%
+longer than the control. Signatures, notarization, Gatekeeper, and fuses pass;
+release artifact preparation remains blocked. This confirms that removing
+indexing contention alone does not establish Intel release readiness.
 
 This is a temporary runner workaround, not the intended product design. It
 removes Spotlight contention from CI and does not prove startup performance

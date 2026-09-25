@@ -236,6 +236,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Isolate hosted Intel runner indexing
+        if: matrix.target == 'darwin-x64'
+        # Temporary hosted-runner workaround; see ADR 0032.
+        run: |
+          sudo mdutil -a -i off
+          mdutil -a -s
+
       - uses: actions/setup-node@v5
         with:
           node-version: "24"

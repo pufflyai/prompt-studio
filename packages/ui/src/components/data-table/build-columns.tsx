@@ -1,16 +1,18 @@
-import { Icon as ChakraIcon, chakra, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
-import type { CellContext, HeaderContext, RowSelectionState } from "@tanstack/react-table";
-import { Check, ChevronDown, CircleHelp, Minus } from "lucide-react";
-import { type CSSProperties, cloneElement, isValidElement, type ReactNode } from "react";
-
-import { Checkbox } from "@/components/primitives/checkbox";
-import { Tooltip } from "@/components/primitives/tooltip";
-import { ListRow } from "../list-row/list-row";
-import { CategoricalColorCell, resolveCategoricalColor } from "./categorical-color-cell";
+import type { RowSelectionState } from "@tanstack/react-table";
+import type { ReactNode } from "react";
+import { resolveCategoricalColor } from "./categorical-color-cell";
 import { resolveColorCellStyle } from "./color-cell-style";
-import { ColorScaleCell, resolveColorScaleValue } from "./color-scale-cell";
-import { columnHelper, formatDisplayValue, getIcon, isDisplayValue } from "./helpers";
-import { JsonCell } from "./json-cell";
+import { resolveColorScaleValue } from "./color-scale-cell";
+import {
+  ColumnDataCell,
+  ColumnHeader,
+  RowActionsCell,
+  RowIndexCell,
+  SelectionCell,
+  SelectionHeader,
+} from "./data-table-cell-renderers";
+import type { DataTableColumnMeta } from "./data-table-column-meta";
+import { columnHelper, getIcon, isDisplayValue } from "./helpers";
 import type { DataTableColumnRenderer, DataTableRowAction, RowData } from "./types";
 
 const getSortValue = (value: unknown) => {
@@ -29,179 +31,17 @@ const compareValues = (valueA: unknown, valueB: unknown) => {
   return String(valueA).localeCompare(String(valueB));
 };
 
-const toSingleLineElement = (element: ReactNode) => {
-  if (!isValidElement<{ style?: CSSProperties }>(element)) return element;
-
-  return cloneElement(element, {
-    style: {
-      ...element.props.style,
-      flexWrap: "nowrap",
-      minWidth: 0,
-      whiteSpace: "nowrap",
-    },
-  });
-};
-
 interface BuildColumnsOptions {
   columnIcons?: Partial<Record<string, ReactNode>>;
   columnDescriptions?: Partial<Record<string, string>>;
   compactHeaders?: Partial<Record<string, string>>;
   enableSelection?: boolean;
+  selectedRowIds?: RowSelectionState;
   rowActions?: DataTableRowAction[];
   getRowActions?: (row: RowData) => DataTableRowAction[];
-  selectedRowIds?: RowSelectionState;
   columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
   wrapRows?: boolean;
 }
-
-const stopControlPropagation = (event: { stopPropagation: () => void }) => {
-  event.stopPropagation();
-};
-
-const SelectionHeader = (props: HeaderContext<RowData, unknown>) => {
-  const { table } = props;
-  const checked = table.getIsAllRowsSelected();
-  const isIndeterminate = !checked && table.getIsSomeRowsSelected();
-
-  return (
-    <Checkbox
-      checked={checked ? true : isIndeterminate ? "indeterminate" : false}
-      aria-label="Select all"
-      icon={<ChakraIcon as={isIndeterminate ? Minus : Check} boxSize="12px" strokeWidth="3" />}
-      onClick={stopControlPropagation}
-      onCheckedChange={(details) => table.toggleAllRowsSelected(details.checked === true)}
-    />
-  );
-};
-
-const SelectionCell = (props: CellContext<RowData, unknown> & { selectedRowIds?: RowSelectionState }) => {
-  const { row, selectedRowIds } = props;
-
-  return (
-    <Checkbox
-      checked={Boolean(selectedRowIds?.[row.id])}
-      aria-label="Select row"
-      icon={<ChakraIcon as={Check} boxSize="12px" strokeWidth="3" />}
-      onClick={stopControlPropagation}
-      onCheckedChange={(details) => row.toggleSelected(details.checked === true)}
-    />
-  );
-};
-
-const mergeRowActions = (rowActions: DataTableRowAction[], dynamicActions: DataTableRowAction[]) => {
-  const dynamicLabels = new Set(dynamicActions.map((action) => action.label));
-  return [...dynamicActions, ...rowActions.filter((action) => !dynamicLabels.has(action.label))];
-};
-
-const RowActionsCell = (
-  props: CellContext<RowData, unknown> & {
-    actions: DataTableRowAction[];
-    getActions?: (row: RowData) => DataTableRowAction[];
-  },
-) => {
-  const { row, actions, getActions } = props;
-  const resolvedActions = mergeRowActions(actions, getActions?.(row.original) ?? []);
-
-  if (resolvedActions.length === 0) return null;
-
-  return (
-    <Menu.Root>
-      <Menu.Trigger asChild>
-        <IconButton aria-label="Row actions" size="2xs" variant="ghost" onClick={stopControlPropagation}>
-          <ChakraIcon as={ChevronDown} boxSize="14px" />
-        </IconButton>
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content zIndex="popover" bg="bg">
-            {resolvedActions.map((action) => (
-              <Menu.Item key={action.label} value={action.label} asChild>
-                <ListRow
-                  asChild
-                  variant="full-width"
-                  tone={action.destructive ? "danger" : "default"}
-                  label={action.label}
-                  icon={action.icon}
-                  onClick={stopControlPropagation}
-                  onActivate={() => action.onSelect(row.original)}
-                />
-              </Menu.Item>
-            ))}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
-  );
-};
-
-interface FormattedCellProps {
-  value: unknown;
-  wrapRows: boolean;
-}
-
-const FormattedCell = (props: FormattedCellProps) => {
-  const { value, wrapRows } = props;
-  const displayValue = formatDisplayValue(value);
-
-  if (isValidElement(displayValue)) {
-    return (
-      <chakra.span
-        display="inline-flex"
-        maxWidth="full"
-        minW="0"
-        overflow={wrapRows ? "visible" : "hidden"}
-        overflowWrap={wrapRows ? "anywhere" : undefined}
-        whiteSpace={wrapRows ? "normal" : "nowrap"}
-      >
-        {wrapRows ? displayValue : toSingleLineElement(displayValue)}
-      </chakra.span>
-    );
-  }
-
-  return (
-    <Text
-      maxWidth="full"
-      overflow={wrapRows ? "visible" : "hidden"}
-      overflowWrap={wrapRows ? "anywhere" : undefined}
-      textOverflow={wrapRows ? undefined : "ellipsis"}
-      textStyle="paragraph/S/regular"
-      whiteSpace={wrapRows ? "normal" : "nowrap"}
-    >
-      {displayValue}
-    </Text>
-  );
-};
-
-interface DataCellProps {
-  columnLabel: string;
-  renderer?: DataTableColumnRenderer;
-  value: unknown;
-  wrapRows: boolean;
-}
-
-const DataCell = (props: DataCellProps) => {
-  const { columnLabel, renderer, value, wrapRows } = props;
-
-  if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} />;
-
-  if (renderer?.type === "color-scale") {
-    const color = resolveColorScaleValue(value, renderer.stops);
-    if (color && typeof value === "number") return <ColorScaleCell value={value} />;
-  }
-
-  if (renderer?.type === "categorical-color") {
-    const color = resolveCategoricalColor(value, renderer.categories);
-    if (color) {
-      return (
-        <CategoricalColorCell>
-          <FormattedCell value={value} wrapRows={wrapRows} />
-        </CategoricalColorCell>
-      );
-    }
-  }
-
-  return <FormattedCell value={value} wrapRows={wrapRows} />;
-};
 
 const resolveDataCellStyle = (value: unknown, renderer?: DataTableColumnRenderer) => {
   if (renderer?.type === "color-scale") {
@@ -221,9 +61,9 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     columnDescriptions,
     compactHeaders,
     enableSelection = false,
+    selectedRowIds,
     rowActions = [],
     getRowActions,
-    selectedRowIds,
     columnRenderers,
     wrapRows = false,
   } = options;
@@ -232,17 +72,14 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     id: "rowIndex",
     enableResizing: false,
     size: 20,
-    cell: (info) => (
-      <chakra.span display={"block"} textStyle={"paragraph/S/regular"} textAlign={"center"}>
-        {info.getValue()}
-      </chakra.span>
-    ),
+    cell: RowIndexCell,
   });
 
   const selectionColumn = columnHelper.display({
     id: "rowSelection",
     header: SelectionHeader,
-    cell: (info) => <SelectionCell {...info} selectedRowIds={selectedRowIds} />,
+    cell: SelectionCell,
+    meta: { selectedRowIds } satisfies DataTableColumnMeta,
     enableResizing: false,
     enableSorting: false,
     size: 36,
@@ -258,37 +95,16 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
 
     return columnHelper.accessor((row) => row[fallBackKey], {
       id: fallBackKey,
-      header: () => {
-        const headerLabel = compactHeaders?.[fallBackKey] ?? fallBackKey;
-        return (
-          <chakra.span display="inline-flex" alignItems="center" gap="4px" minW="0" maxW="full" overflow="hidden">
-            {headerIcon}
-            <chakra.span overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-              {headerLabel}
-            </chakra.span>
-            {columnDescription ? (
-              <Tooltip content={columnDescription}>
-                <ChakraIcon
-                  as={CircleHelp}
-                  aria-label={`About ${headerLabel}`}
-                  boxSize="12px"
-                  color="fg.muted"
-                  cursor="help"
-                  flexShrink={0}
-                  opacity={0.6}
-                  tabIndex={0}
-                />
-              </Tooltip>
-            ) : null}
-          </chakra.span>
-        );
-      },
-      cell: (info) => (
-        <DataCell columnLabel={fallBackKey} renderer={renderer} value={info.getValue()} wrapRows={wrapRows} />
-      ),
+      header: ColumnHeader,
+      cell: ColumnDataCell,
       meta: {
+        headerLabel: compactHeaders?.[fallBackKey] ?? fallBackKey,
+        headerIcon,
+        columnDescription,
+        renderer,
+        wrapRows,
         getCellStyle: (value: unknown) => resolveDataCellStyle(value, renderer),
-      },
+      } satisfies DataTableColumnMeta,
       sortingFn: (rowA, rowB) => {
         const valueA = getSortValue(rowA.original[fallBackKey]);
         const valueB = getSortValue(rowB.original[fallBackKey]);
@@ -300,7 +116,8 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
   const rowActionsColumn = columnHelper.display({
     id: "rowActions",
     header: "",
-    cell: (info) => <RowActionsCell {...info} actions={rowActions} getActions={getRowActions} />,
+    cell: RowActionsCell,
+    meta: { rowActions, getRowActions } satisfies DataTableColumnMeta,
     enableResizing: false,
     enableSorting: false,
     size: 36,

@@ -8,10 +8,10 @@ import {
   type Table as TanStackTable,
 } from "@tanstack/react-table";
 import { ArrowDownAZ, ArrowUpAZ, MoreVertical } from "lucide-react";
-import type { CSSProperties } from "react";
 import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { ListRow } from "../list-row/list-row";
+import type { DataTableColumnMeta } from "./data-table-column-meta";
 import type { DataTableCellContext, DataTableProps, RowData } from "./types";
 
 const utilityColumnIds = new Set(["rowIndex", "rowSelection", "rowActions"]);
@@ -139,10 +139,6 @@ interface DataTableCellViewProps {
   row: Row<RowData>;
   wrapRows: boolean;
   getCellContextMenuActions?: DataTableProps["getCellContextMenuActions"];
-}
-
-interface DataTableColumnMeta {
-  getCellStyle?: (value: unknown) => CSSProperties | undefined;
 }
 
 const DataTableCellView = (props: DataTableCellViewProps) => {
