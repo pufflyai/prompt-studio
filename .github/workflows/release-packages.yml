@@ -62,7 +62,7 @@ jobs:
 
       - name: Install Chromium for packaged extension smoke tests
         if: runner.os != 'Windows'
-        run: bunx playwright install chromium --with-deps
+        run: bunx playwright@1.60.0 install chromium --with-deps
 
       - name: Verify packaged Bun toolchain
         env:
@@ -121,7 +121,7 @@ jobs:
         run: bun run --cwd scripts release:platforms:scaffold
 
       - name: Install Chromium for packaged extension smoke tests
-        run: bunx playwright install chromium --with-deps
+        run: bunx playwright@1.60.0 install chromium --with-deps
 
       - name: Verify binaries
         run: bun run --cwd scripts verify:packages
