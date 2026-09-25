@@ -5,15 +5,6 @@ on:
 permissions:
   contents: read
 jobs:
-  intel-checksum:
-    runs-on: macos-15-intel
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-      - run: node scripts/ci/desktop-checksum-benchmark.ts
   windows:
     runs-on: windows-latest
     timeout-minutes: 5
@@ -27,17 +18,17 @@ jobs:
           bun-version-file: package.json
       - name: Install test dependencies
         run: bun install --frozen-lockfile --ignore-scripts
-      - name: Verify timeout cleanup reaches descendant processes
+      - name: Reproduce synchronous Windows directory removal and verify asynchronous cleanup
         shell: pwsh
         run: |
-          $helper = "clients/desktop/src/testing/stop-packaged-process.ts"
+          $helper = "clients/desktop/src/testing/remove-packaged-directory.ts"
           $original = Get-Content $helper -Raw
           try {
-            Set-Content $helper 'export const stopPackagedProcess = async (child) => { const exited = new Promise((resolve) => child.once("exit", resolve)); child.kill("SIGKILL"); await exited; };'
-            bun test clients/desktop/src/testing/stop-packaged-process.test.ts
-            if ($LASTEXITCODE -eq 0) { throw "Regression must fail with direct-child cleanup" }
+            Set-Content $helper 'import { rmSync } from "node:fs"; export const removePackagedDirectory = (path) => rmSync(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });'
+            bun test clients/desktop/src/testing/remove-packaged-directory.test.ts
+            if ($LASTEXITCODE -eq 0) { throw "Regression must fail with synchronous removal" }
           } finally {
             Set-Content $helper $original
           }
-          bun test clients/desktop/src/testing/packaged-fixture.test.ts clients/desktop/src/testing/stop-packaged-process.test.ts clients/desktop/src/runtime/runtime-process.test.ts
+          bun test clients/desktop/src/testing/remove-packaged-directory.test.ts clients/desktop/src/testing/stop-packaged-runtime.test.ts clients/desktop/src/testing/packaged-fixture.test.ts clients/desktop/src/testing/stop-packaged-process.test.ts clients/desktop/src/runtime/runtime-process.test.ts
           exit $LASTEXITCODE

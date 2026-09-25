@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
@@ -7,6 +7,7 @@ import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { registerPackagedCleanup, spawnPackagedProcess, stopPackagedProcess } from "../testing/packaged-fixture";
+import { removePackagedDirectory } from "../testing/remove-packaged-directory";
 import { stopPackagedRuntime } from "../testing/stop-packaged-runtime";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
@@ -255,5 +256,5 @@ export const disposePackagedApp = async (app: PackagedWindow | null) => {
 export const removePackagedHome = async (home: string) => {
   const runtime = readDescriptor(home);
   if (runtime) await stopPackagedRuntime(runtime.pid);
-  rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  await removePackagedDirectory(home);
 };

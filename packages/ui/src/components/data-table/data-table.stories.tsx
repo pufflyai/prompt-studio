@@ -184,6 +184,7 @@ export const ColumnStats = {
   },
   play: async ({ canvasElement }: PlayContext) => {
     const canvas = within(canvasElement);
+    await expect(await canvas.findByLabelText("Distribution for Amount")).toBeVisible();
 
     await userEvent.click(canvas.getByLabelText("Display settings"));
     const displayMenu = within(document.body);
@@ -220,6 +221,7 @@ export const SingleValueStats = {
   },
   play: async ({ canvasElement }: PlayContext) => {
     const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Paid", { selector: "[data-single-value-stat] *" })).toBeVisible();
 
     await expect(
       canvas.getByText(new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(1200)),

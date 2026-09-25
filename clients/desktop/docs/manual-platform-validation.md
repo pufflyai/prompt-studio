@@ -67,7 +67,9 @@ Use a fresh test account or a disposable remote machine. Keep the account throug
 7. Relaunch from Finder or Start. Confirm the project, ticket, file contents, and tabs persist. Repeat after signing out and back in.
 8. Save screenshots and the exact build, OS, CPU, and observed results in the change request report. Record a failure at the step that produced it.
 
-For the background-runtime check, run the installed `pst serve` while the desktop is open. Quit the desktop, run `pst projects list`, and confirm the same project is still available. Reopen the desktop, then run `pst close` to stop the runtime. Startup diagnostics include `desktop-runtime.log` beside `runtime.json` in the Prompt Studio home; each new runtime launch replaces that file.
+For the background-runtime check, use the CLI bundled with this exact desktop build. On macOS it is `/Applications/Prompt Studio.app/Contents/Resources/bin/pstdio`. On Windows it is `resources\bin\pstdio.exe` inside the installed application's directory. Open that directory from the running application's location, rather than guessing a versioned installation path.
+
+Run that executable with `--version`, then with `serve` while the desktop is open. Quit the desktop, run it with `projects list`, and confirm the same project is still available. Reopen the desktop, then run it with `close` to stop the runtime. Startup diagnostics include `desktop-runtime.log` beside `runtime.json` in the Prompt Studio home; each new runtime launch replaces that file.
 
 Remote desktop video latency is not a startup measurement. Use the native Playwright `packaged-release-readiness.json` annotations for cold workbench, startup-window, warm attachment, and recovery timing.
 

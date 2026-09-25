@@ -10,7 +10,7 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, lazy, Suspense, useEffect, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useKanbanRendererStore } from "../kanban-renderer/use-kanban-renderer-store";
 import { buildColumns } from "./build-columns";
@@ -30,12 +30,15 @@ import {
   shouldEnableSelection,
   shouldHighlightActiveRow,
 } from "./data-table-state";
-import { DataTableStatsRow } from "./data-table-stats-row";
 import { DataTableBodyRow, DataTableColumnHeader } from "./data-table-table-parts";
 import { EditModeDataTable } from "./edit-mode-data-table";
 import { PaginationFooter } from "./pagination-footer";
 import { SelectionToolbar } from "./selection-toolbar";
 import type { DataTableProps, RowData } from "./types";
+
+const DataTableStatsRow = lazy(() =>
+  import("./data-table-stats-row").then((module) => ({ default: module.DataTableStatsRow })),
+);
 
 interface DatasetPaginationProps {
   table: ReturnType<typeof useReactTable<RowData>>;
@@ -237,13 +240,15 @@ const DatasetDataTable = (props: DataTableProps) => {
                     ))}
                   </Table.Row>
                   {columnStats && showStats ? (
-                    <DataTableStatsRow
-                      headerGroup={headerGroup}
-                      rows={filteredData}
-                      columnStats={columnStats}
-                      noBorder={noBorder}
-                      fullWidth={fullWidth}
-                    />
+                    <Suspense fallback={null}>
+                      <DataTableStatsRow
+                        headerGroup={headerGroup}
+                        rows={filteredData}
+                        columnStats={columnStats}
+                        noBorder={noBorder}
+                        fullWidth={fullWidth}
+                      />
+                    </Suspense>
                   ) : null}
                 </Fragment>
               ))}

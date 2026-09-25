@@ -5,4 +5,4 @@
 "@pstdio/ui": patch
 ---
 
-Fix native desktop runtime lifetime, compiled extension loading, and harness transcript paths.
+Fix native desktop runtime lifetime, compiled extensions, and harness paths; defer diff and chart loading to speed up startup.

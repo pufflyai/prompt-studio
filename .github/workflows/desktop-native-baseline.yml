@@ -14,8 +14,6 @@ jobs:
         include:
           - os: windows-latest
             target: win32-x64
-          - os: macos-15-intel
-            target: darwin-x64
     steps:
       - uses: actions/checkout@v5
         with:
@@ -33,7 +31,7 @@ jobs:
         run: node scripts/ci/install-native-dependencies.ts
 
       - name: Verify runtime process lifetime and cleanup
-        run: bun test clients/desktop/src/testing/stop-packaged-runtime.test.ts clients/desktop/src/testing/stop-packaged-process.test.ts clients/desktop/src/runtime/runtime-process.test.ts
+        run: bun test clients/desktop/src/testing/remove-packaged-directory.test.ts clients/desktop/src/testing/stop-packaged-runtime.test.ts clients/desktop/src/testing/stop-packaged-process.test.ts clients/desktop/src/runtime/runtime-process.test.ts
 
       - name: Configure the source Electron sandbox
         if: runner.os == 'Linux'

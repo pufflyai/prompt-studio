@@ -9,7 +9,7 @@ import { includePinnedDiffIndexes } from "./diff-drawer-scroll";
 import type { DiffViewMode } from "./types";
 import { useSelectedDiffScroll } from "./use-selected-diff-scroll";
 
-interface DiffDrawerProps {
+export interface DiffDrawerProps {
   diffs: Diff[];
   selectedDiffPath?: string | null;
   onLoadDiff?: (path: string) => Promise<void>;
