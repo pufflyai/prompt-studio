@@ -19,8 +19,8 @@ export interface WorkspaceProvisionPayload {
   workspace: ExtensionWorkspace;
   /** Absolute working directory to materialize files into — a worktree path or the repo root. */
   workspaceDir: string;
-  /** Local home directory of the project, independent of this workspace's repository. */
-  projectDir: string;
+  /** Local home directory of the project, absent when its default workspace has no local target. */
+  projectDir?: string;
   providerId: string;
   repoPath: string;
   branch?: string;

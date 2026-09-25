@@ -1,5 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
+import { isLocalizedString } from "@pstdio/sdk/extensions";
 import { ListRow } from "@pstdio/ui";
 import type { CommandParamSchema } from "@pstdio/workbench";
 import {
@@ -10,13 +11,11 @@ import {
   normalizeCommandParamValues,
 } from "@pstdio/workbench/react";
 import { useState } from "react";
+import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 
-const label = (value: unknown): string => {
-  if (typeof value === "string") return value;
-  if (value && typeof value === "object" && "default" in value && typeof value.default === "string")
-    return value.default;
-  return "";
-};
+const label = (value: unknown) =>
+  typeof value === "string" || isLocalizedString(value) ? resolveLocalizableString(value) : "";
+
 const schemaFor = (provider: WorkspaceProviderDescriptor): CommandParamSchema =>
   Object.fromEntries(
     Object.entries(provider.params).map(([key, param]) => [

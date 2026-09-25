@@ -8,6 +8,7 @@ import {
   worktreeProviderId,
 } from "./workspace-provider-identity";
 import type { WorkspaceRecord } from "./workspace-provider-projection";
+import { assertWorkspaceShorthand } from "./workspace-shorthand";
 import { setupWorkspaceWorktree } from "./worktree-setup";
 
 export { resolveWorkspaceExecutionTarget } from "./workspace-provider-execution-target";
@@ -48,6 +49,7 @@ export const createProviderBackedWorkspace = async (
     signal?: AbortSignal;
   },
 ) => {
+  if (input.shorthandBase !== undefined) assertWorkspaceShorthand(input.shorthandBase);
   const providerId = input.providerId ?? worktreeProviderId;
   const params = mergeProviderParams(input);
   const repo = isBuiltInProviderId(providerId)

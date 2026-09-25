@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { resolvePstdioWorkspacesPath } from "pstdio-paths";
 import { createWorktree, git, resolveLatestBase } from "pstdio-wt";
+import { assertWorkspaceShorthand } from "./workspace-shorthand";
 
 export const resolveWorkspacesRoot = () => resolvePstdioWorkspacesPath({ env: process.env });
 
@@ -19,6 +20,7 @@ export const hasUsableGitBase = async (path: string) => {
 // `.pstdio/config.json` (incl. the workspace id) is materialized later by the provision
 // lifecycle, uniformly for every workspace type.
 export const setupWorkspaceWorktree = async (input: { repoPath: string; workspaceShorthand: string; base: string }) => {
+  assertWorkspaceShorthand(input.workspaceShorthand);
   const branch = `workspace/${input.workspaceShorthand}`;
   const worktreePath = join(resolveWorkspacesRoot(), input.workspaceShorthand);
   const base = await resolveLatestBase(input.repoPath, input.base);

@@ -64,6 +64,19 @@ afterAll(async () => {
 });
 
 describe("POST /v1/workspaces", () => {
+  test("rejects unsafe shorthand identifiers without storing a workspace", async () => {
+    const before = await (await app.request(`/v1/workspaces?project_id=${projectId}`)).json();
+    for (const shorthand of ["../outside", "foo/../../outside", "foo\\outside", "bad name", "bad~ref"]) {
+      const response = await app.request("/v1/workspaces", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ project_id: projectId, provider_id: "cloud.remote", shorthand_base: shorthand }),
+      });
+      expect(response.status).toBe(400);
+    }
+    expect(await (await app.request(`/v1/workspaces?project_id=${projectId}`)).json()).toEqual(before);
+  });
+
   test("creates a provider workspace with caller anchors and shorthand", async () => {
     const repoRoot = createGitRepo("anchored-workspace-repo");
     await registerRepo(repoRoot);

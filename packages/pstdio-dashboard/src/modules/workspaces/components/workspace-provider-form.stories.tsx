@@ -26,6 +26,25 @@ type Story = StoryObj<typeof meta>;
 export const NoProviders: Story = {};
 export const GitAndRemote: Story = { args: { providers: [git, remote] } };
 export const RemoteParameters: Story = { args: { providers: [remote] } };
+export const TranslationTokens: Story = {
+  args: {
+    providers: [
+      {
+        id: "cloud.localized",
+        label: { $l10n: "workspace.cloud" },
+        description: { $l10n: "workspace.description" },
+        params: {
+          region: {
+            type: "select",
+            label: { $l10n: "workspace.region" },
+            description: { $l10n: "workspace.regionDescription" },
+            options: [{ value: "eu", label: { $l10n: "workspace.europe" } }],
+          },
+        },
+      },
+    ],
+  },
+};
 export const NoLocation: Story = { args: { providers: [] } };
 export const Provisioning: Story = { args: { providers: [remote], busy: true } };
 export const ProviderFailure: Story = {

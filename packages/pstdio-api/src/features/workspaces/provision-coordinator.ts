@@ -22,7 +22,6 @@ const buildProvisionPayload = async (
   const { projectId, workspace, repoPath } = input;
   const home = await deps.workspaceService.getDefault(projectId);
   const projectLocation = home ? await resolveWorkspaceLocation(deps, home) : undefined;
-  if (!projectLocation) throw new Error("Project workspace has no local location for provisioning.");
   const workspaceDir = resolveWorkspaceDir(workspace, repoPath);
   const type = workspaceType(workspace, repoPath);
   return {
@@ -30,7 +29,7 @@ const buildProvisionPayload = async (
     workspaceId: workspace.id,
     workspace: { ...workspace, root_path: workspaceDir },
     workspaceDir,
-    projectDir: projectLocation.root,
+    projectDir: projectLocation?.root,
     providerId: workspace.provider_id ?? (type === "root" ? "pstdio.root" : "pstdio.worktree"),
     repoPath,
     branch: workspace.branch ?? undefined,
@@ -106,16 +105,16 @@ const gatedProvision = async <W extends { id: string }>(
   const { projectId, workspace, repoPath } = input;
   const initializing = ((await deps.workspaceService.setInitializing(workspace.id, true)) as W | null) ?? workspace;
 
-  const { payload, failure } = await provisionRepo(deps, { projectId, workspace: initializing, repoPath }, hooks);
-
-  if (failure) {
-    const errored =
-      ((await deps.workspaceService.setSetupError(workspace.id, failure.message)) as W | null) ?? initializing;
-    return { workspace: errored, payload, ok: false as const };
+  try {
+    const { payload, failure } = await provisionRepo(deps, { projectId, workspace: initializing, repoPath }, hooks);
+    const result =
+      ((await deps.workspaceService.setSetupError(workspace.id, failure?.message ?? null)) as W | null) ?? initializing;
+    return { workspace: result, payload, ok: !failure };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const errored = ((await deps.workspaceService.setSetupError(workspace.id, message)) as W | null) ?? initializing;
+    return { workspace: errored, payload: undefined, ok: false };
   }
-
-  const ready = ((await deps.workspaceService.setSetupError(workspace.id, null)) as W | null) ?? initializing;
-  return { workspace: ready, payload, ok: true as const };
 };
 
 // Creation lifecycle used by both creation paths: gate provisioning, then fire the
@@ -128,7 +127,7 @@ export const runWorkspaceProvisioning = async <W extends { id: string }>(
 ) => {
   if ((input.workspace as ExtensionWorkspace).execution_kind === "remote") return input.workspace;
   const { workspace, payload, ok } = await gatedProvision(deps, input, hooks);
-  if (ok) hooks.fireReadyAsync(deps, input.projectId, workspaceEvents.ready, payload);
+  if (ok && payload) hooks.fireReadyAsync(deps, input.projectId, workspaceEvents.ready, payload);
   return workspace;
 };
 
@@ -180,8 +179,6 @@ const runProjectWorkspaceProvisioning = async (
     deps.repoService.listByProject(projectId),
   ]);
 
-  if (repos.length === 0) return;
-
   for (const workspace of workspaces) {
     if (workspace.provider_state && workspace.provider_state !== "ready") continue;
     if (workspace.execution_kind && workspace.execution_kind !== "local") continue;
@@ -192,7 +189,10 @@ const runProjectWorkspaceProvisioning = async (
 
     // A root workspace can span every linked repo; a worktree workspace resolves to its own
     // worktree dir regardless of the repo passed, so provisioning it once is enough.
-    const repoPaths = workspace.worktree_path ? [repos[0].path] : repos.map((repo) => repo.path);
+    const repoPaths = workspace.worktree_path
+      ? [repos[0]?.path ?? workspace.worktree_path]
+      : repos.map((repo) => repo.path);
+    if (repoPaths.length === 0) continue;
     await reprovisionWorkspace(deps, { projectId, workspace: workspace as ExtensionWorkspace, repoPaths }, hooks);
   }
 };

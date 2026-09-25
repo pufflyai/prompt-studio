@@ -10,7 +10,7 @@ import type {
 import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
-import { resolveProvisionLocation } from "./command-environment/legacy-provision-location";
+import { resolveLegacyWorkspaceLocation } from "./command-environment/legacy-workspace-location";
 import type { ExtensionsRouteDeps } from "./deps";
 
 export type ExtensionEventDeps = ExtensionsRouteDeps;
@@ -35,7 +35,6 @@ const resolveEventContext = async <TPayload extends Struct>(
   deps: ExtensionEventDeps,
   projectId: string,
   payload: TPayload,
-  eventId: string,
 ) => {
   const repos = await deps.repoService.listByProject(projectId);
   const requestedWorkspaceId = stringValue((payload as { workspaceId?: unknown }).workspaceId);
@@ -52,8 +51,7 @@ const resolveEventContext = async <TPayload extends Struct>(
     (repoId ? repos.find((candidate) => candidate.id === repoId) : undefined) ??
     (requestedRepoPath ? repos.find((candidate) => candidate.path === requestedRepoPath) : undefined);
   const location = workspace
-    ? await resolveProvisionLocation(deps, workspace, {
-        eventId,
+    ? await resolveLegacyWorkspaceLocation(deps, workspace, {
         repo: repo ? { projectId, repoId: repo.id, path: repo.path } : undefined,
       })
     : undefined;
@@ -84,7 +82,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
 ) => {
   const eventId = eventIdFor(event);
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  const context = await resolveEventContext(deps, projectId, payload, eventId);
+  const context = await resolveEventContext(deps, projectId, payload);
   const runner = createCommandRunner(snapshot.runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>

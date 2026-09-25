@@ -5,6 +5,7 @@ import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
 import { runWorkspaceProvisioning } from "../provision-coordinator";
 import { createProviderBackedWorkspace, WorkspaceRepoNotFoundError } from "../workspace-provider-service";
+import { InvalidWorkspaceShorthandError } from "../workspace-shorthand";
 
 export const createWorkspaceRoute = createRoute({
   method: "post",
@@ -18,6 +19,10 @@ export const createWorkspaceRoute = createRoute({
     },
   },
   responses: {
+    400: {
+      description: "Invalid workspace shorthand.",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
     201: {
       description: "Workspace created.",
       content: { "application/json": { schema: workspaceResponseSchema } },
@@ -51,6 +56,7 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
           runWorkspaceProvisioning(deps, { projectId: input.project_id, workspace, repoPath }),
       });
     } catch (error) {
+      if (error instanceof InvalidWorkspaceShorthandError) return c.json({ error: error.message }, 400);
       if (error instanceof WorkspaceRepoNotFoundError) return c.json({ error: error.message }, 404);
       throw error;
     }
