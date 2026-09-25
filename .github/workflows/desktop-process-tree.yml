@@ -10,10 +10,25 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - name: Install test dependencies
         run: bun install --frozen-lockfile --ignore-scripts
       - name: Verify timeout cleanup reaches descendant processes
-        run: bun test clients/desktop/src/testing/packaged-fixture.test.ts
+        shell: pwsh
+        run: |
+          $helper = "clients/desktop/src/testing/stop-packaged-process.ts"
+          $original = Get-Content $helper -Raw
+          try {
+            Set-Content $helper 'export const stopPackagedProcess = async (child) => { const exited = new Promise((resolve) => child.once("exit", resolve)); child.kill("SIGKILL"); await exited; };'
+            bun test clients/desktop/src/testing/stop-packaged-process.test.ts
+            if ($LASTEXITCODE -eq 0) { throw "Regression must fail with direct-child cleanup" }
+          } finally {
+            Set-Content $helper $original
+          }
+          bun test clients/desktop/src/testing/packaged-fixture.test.ts clients/desktop/src/testing/stop-packaged-process.test.ts
+          exit $LASTEXITCODE

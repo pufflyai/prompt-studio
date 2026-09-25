@@ -168,7 +168,7 @@ export class DesktopRuntimeManager {
     const instanceId = this.#deps.createInstanceId();
     const child = this.#deps.spawn(sidecarPath, createSidecarLaunchArguments(instanceId), {
       // A desktop-owned runtime can be promoted to outlive the desktop process.
-      detached: true,
+      detached: process.platform === "win32",
       env,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
