@@ -77,10 +77,43 @@ for (const target of ["workspace", "session"] as const) {
     const two = { type: "ticket", id: "two" };
     const three = { type: "ticket", id: "three" };
     await Promise.all([api.addAnchors(resource.id, [one]), api.addAnchors(resource.id, [two])]);
-    expect((await api.get(resource.id))?.anchors_json).toEqual([one, two]);
+    const linked = (await api.get(resource.id))?.anchors_json;
+    expect(linked).toHaveLength(2);
+    expect(linked).toEqual(expect.arrayContaining([one, two]));
     await Promise.all([api.removeAnchors(resource.id, [one]), api.addAnchors(resource.id, [three])]);
     expect((await api.get(resource.id))?.anchors_json).toEqual([two, three]);
     await Promise.all([api.removeAnchors(resource.id, [two]), api.removeAnchors(resource.id, [three])]);
     expect((await api.get(resource.id))?.anchors_json).toEqual([]);
+  });
+}
+
+for (const target of ["workspace", "session"] as const) {
+  test(`${target} skips unchanged anchor removals`, async () => {
+    const env = await setup();
+    const resource =
+      target === "workspace"
+        ? await env.workspaceService.createStandalone({ project_id: env.project.id })
+        : await env.sessionService.create({ project_id: env.project.id, title: "Unchanged", agent: "test" });
+    const api = target === "workspace" ? env.workspaces : env.sessions;
+    const service = target === "workspace" ? env.workspaceService : env.sessionService;
+    const anchor = { type: "ticket", id: "one" };
+    await api.addAnchors(resource.id, [anchor]);
+    const before = await service.get(resource.id);
+    const sequence = env.eventBus.seq;
+    await api.removeAnchors(resource.id, []);
+    await api.removeAnchors(resource.id, [
+      { type: "ticket", id: "missing" },
+      { type: "document", id: "one" },
+    ]);
+    expect(await service.get(resource.id)).toEqual(before);
+    expect(env.eventBus.getSince(sequence)).toEqual([]);
+
+    await Promise.all([api.removeAnchors(resource.id, [anchor]), api.removeAnchors(resource.id, [anchor])]);
+    expect((await api.get(resource.id))?.anchors_json).toEqual([]);
+    expect(env.eventBus.getSince(sequence)).toHaveLength(1);
+    const removed = await service.get(resource.id);
+    await api.removeAnchors(resource.id, [anchor]);
+    expect(await service.get(resource.id)).toEqual(removed);
+    expect(env.eventBus.getSince(sequence)).toHaveLength(1);
   });
 }
