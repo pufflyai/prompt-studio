@@ -16,6 +16,7 @@ export const landingSlotRecipe = defineSlotRecipe({
     "body",
     "main",
     "hero",
+    "downloadColumn",
     "heroCopy",
     "pageNavigation",
     "tools",
@@ -120,7 +121,10 @@ export const landingSlotRecipe = defineSlotRecipe({
       "& > [data-part=viewport] > [data-part=content]": { display: { base: "contents", lg: "block" } },
       "& > [data-part=scrollbar]": { display: { base: "none", lg: "flex" } },
     },
+    downloadColumn: { display: "flex", flexDirection: "column", height: "full", minHeight: 0, minWidth: 0 },
     hero: {
+      flex: 1,
+      minHeight: 0,
       display: "flex",
       flexDirection: "column",
       layerStyle: "panel",

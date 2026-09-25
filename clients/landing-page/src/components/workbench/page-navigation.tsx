@@ -33,7 +33,7 @@ export const PageNavigation = (props: PageNavigationProps) => {
               }}
             >
               <page.icon />
-              {page.label}
+              {VIEW_META[targetView].label}
             </a>
           </Button>
         );

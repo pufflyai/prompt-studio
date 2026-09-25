@@ -54,9 +54,9 @@ Legal pages keep the workbench shell, with the title bar, sidebar, and status ba
 but show the document as one centered column without the introduction and download
 panel. `DOCUMENT_VIEWS` in `src/content/landing-content.ts` names them.
 
-Previous and Next buttons sit together in a header above the main panels, outside
-their scroll area. Legal documents have no previous or next page links.
-Each button has an arrow and an accessible label naming its destination. Start Here
+Page navigation buttons sit in a header above the introduction and download panel,
+outside that panel's scroll area. The right content panel keeps its full height. Legal documents have no previous or next page links.
+Each button shows its destination page name and an arrow. Start Here
 only shows the next page. The main pages follow the sidebar order, and Features
 leads back to Start Here.
 These links use browser history without remounting the download panel.

@@ -55,12 +55,11 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
   const content = (
     <Flex direction="column" flex="1" minWidth="0">
       <WorkbenchNav activeView={view} onOpenNavigation={() => setPaletteOpen(true)} />
-      {!isDocumentView(view) && <PageNavigation view={view} onNavigate={navigate} />}
       <Box as="main" css={styles.main}>
         {isDocumentView(view) ? (
           <DocColumn html={legalDocuments[view]} pageKey={page.path} />
         ) : (
-          <LandingPanels page={page}>
+          <LandingPanels page={page} navigation={<PageNavigation view={view} onNavigate={navigate} />}>
             <LandingContent
               page={page}
               onNavigateExample={navigateExample}
