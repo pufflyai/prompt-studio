@@ -3,19 +3,27 @@ import { dirname } from "node:path";
 import type { DesktopWorkbenchState } from "../desktop-api";
 
 const readState = (path: string) => {
-  if (!existsSync(path)) return { pageLocations: {} };
+  if (!existsSync(path)) return { pageLocations: {}, kanbanViews: {} };
   try {
     const value = JSON.parse(readFileSync(path, "utf8")) as unknown;
-    if (!value || typeof value !== "object" || Array.isArray(value)) return { pageLocations: {} };
+    if (!value || typeof value !== "object" || Array.isArray(value)) return { pageLocations: {}, kanbanViews: {} };
     const state = value as Partial<DesktopWorkbenchState>;
     const selectedProjectId = typeof state.selectedProjectId === "string" ? state.selectedProjectId : undefined;
     const pageLocations =
       state.pageLocations && typeof state.pageLocations === "object" && !Array.isArray(state.pageLocations)
         ? Object.fromEntries(Object.entries(state.pageLocations).filter((entry) => typeof entry[1] === "string"))
         : {};
-    return { pageLocations, ...(selectedProjectId ? { selectedProjectId } : {}) };
+    const kanbanViews =
+      state.kanbanViews && typeof state.kanbanViews === "object" && !Array.isArray(state.kanbanViews)
+        ? Object.fromEntries(
+            Object.entries(state.kanbanViews).filter(
+              ([key, value]) => key.startsWith("pstdio/ui/kanban-renderer/") && typeof value === "string",
+            ),
+          )
+        : {};
+    return { pageLocations, kanbanViews, ...(selectedProjectId ? { selectedProjectId } : {}) };
   } catch {
-    return { pageLocations: {} };
+    return { pageLocations: {}, kanbanViews: {} };
   }
 };
 
@@ -29,12 +37,22 @@ export class DesktopWorkbenchStateStore {
   }
 
   getState() {
-    return { ...this.#state, pageLocations: { ...this.#state.pageLocations } };
+    return {
+      ...this.#state,
+      pageLocations: { ...this.#state.pageLocations },
+      kanbanViews: { ...this.#state.kanbanViews },
+    };
   }
 
   setSelectedProjectId(projectId: string | null) {
     if (projectId) this.#state.selectedProjectId = projectId;
     else delete this.#state.selectedProjectId;
+    this.#write();
+  }
+
+  setKanbanView(key: string, value: string | null) {
+    if (value === null) delete this.#state.kanbanViews[key];
+    else this.#state.kanbanViews[key] = value;
     this.#write();
   }
 

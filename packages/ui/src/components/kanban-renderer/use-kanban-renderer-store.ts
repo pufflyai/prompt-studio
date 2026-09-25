@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 import { createBrowserStorage } from "../../utils/browser-storage";
 import { omitFilterCategory } from "./kanban-renderer-helpers";
+import { type KanbanRendererStorage, useKanbanRendererStorage } from "./kanban-renderer-storage";
 import {
   applyKanbanRendererView,
   isKanbanRendererViewDirty,
@@ -60,6 +61,7 @@ interface KanbanRendererState extends KanbanRendererSnapshot {
 
 interface CreateKanbanRendererStoreOptions {
   storageKey: string;
+  storage?: KanbanRendererStorage;
   initialState?: KanbanRendererStoreInitialState;
 }
 
@@ -142,7 +144,7 @@ const migrateFilters = (filters: Record<string, unknown>): KanbanRendererFilterS
 };
 
 export const createKanbanRendererStore = (options: CreateKanbanRendererStoreOptions) => {
-  const { storageKey, initialState } = options;
+  const { storageKey, initialState, storage } = options;
   const snapshot = createSnapshot(initialState);
 
   return createStore<KanbanRendererState>()(
@@ -281,7 +283,15 @@ export const createKanbanRendererStore = (options: CreateKanbanRendererStoreOpti
           const filters = migrateFilters(state.filters ?? {});
           return createSnapshot({ settings, filters });
         },
-        storage: createJSONStorage(createBrowserStorage),
+        storage: createJSONStorage(() =>
+          storage
+            ? {
+                getItem: (key) => storage.getItem(key),
+                setItem: (key, value) => storage.setItem(key, value),
+                removeItem: (key) => storage.removeItem?.(key),
+              }
+            : createBrowserStorage(),
+        ),
         partialize: (state) => ({
           settings: state.settings,
           filters: state.filters,
@@ -293,14 +303,27 @@ export const createKanbanRendererStore = (options: CreateKanbanRendererStoreOpti
   );
 };
 
+const hostStoreRegistries = new WeakMap<
+  KanbanRendererStorage,
+  Map<string, ReturnType<typeof createKanbanRendererStore>>
+>();
 const workspaceStoreRegistry = new Map<string, ReturnType<typeof createKanbanRendererStore>>();
 
-export const getKanbanRendererStore = (storageKey: string, initialState?: KanbanRendererStoreInitialState) => {
-  const existingStore = workspaceStoreRegistry.get(storageKey);
+export const getKanbanRendererStore = (
+  storageKey: string,
+  initialState?: KanbanRendererStoreInitialState,
+  storage?: KanbanRendererStorage,
+) => {
+  let registry = storage ? hostStoreRegistries.get(storage) : workspaceStoreRegistry;
+  if (!registry) {
+    registry = new Map();
+    hostStoreRegistries.set(storage!, registry);
+  }
+  const existingStore = registry.get(storageKey);
   if (existingStore) return existingStore;
 
-  const store = createKanbanRendererStore({ storageKey, initialState });
-  workspaceStoreRegistry.set(storageKey, store);
+  const store = createKanbanRendererStore({ storageKey, initialState, storage });
+  registry.set(storageKey, store);
   return store;
 };
 
@@ -309,7 +332,7 @@ export const useKanbanRendererStore = <T>(
   selector: (state: KanbanRendererState) => T,
   initialState?: KanbanRendererStoreInitialState,
 ) => {
-  const store = getKanbanRendererStore(storageKey, initialState);
+  const store = getKanbanRendererStore(storageKey, initialState, useKanbanRendererStorage());
   return useStore(store, selector);
 };
 
