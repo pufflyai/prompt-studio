@@ -19,6 +19,8 @@ import { test, spawnPackagedProcess } from ${JSON.stringify(fixture)};
 test("holds a packaged process past the test deadline", async () => {
   const child = spawnPackagedProcess(${JSON.stringify(process.execPath)}, ["-e", "setInterval(() => {}, 1000)"], { stdio: "pipe" });
   writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+  // Expire only after the child exists; waiting a full second adds no coverage.
+  test.setTimeout(1);
   await new Promise(() => {});
 });
 `,
@@ -34,7 +36,7 @@ test("holds a packaged process past the test deadline", async () => {
       new Response(runner.stdout).text(),
       new Response(runner.stderr).text(),
     ]);
-    expect(`${stdout}\n${stderr}`).toContain("Test timeout of 1000ms exceeded");
+    expect(`${stdout}\n${stderr}`).toContain("Test timeout of 1ms exceeded");
     expect(code).toBe(1);
     expect(existsSync(pidFile)).toBe(true);
     childPid = Number(readFileSync(pidFile, "utf8"));
