@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 test("terminates packaged process trees when the test body times out", async () => {
+  const node = Bun.which("node");
+  if (!node) throw new Error("The packaged Playwright tests require Node.js");
   const root = mkdtempSync(join(tmpdir(), "pstdio-fixture-timeout-"));
   const pidFile = join(root, "child.pid");
   let childPids: number[] = [];
@@ -19,7 +21,7 @@ import { test, spawnPackagedProcess } from ${JSON.stringify(fixture)};
 test("holds a packaged process past the test deadline", async () => {
   const descendant = ${JSON.stringify(`import { writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(pidFile)}, JSON.stringify([process.ppid, process.pid])); setInterval(() => {}, 1000);`)};
   const parent = "import { spawn } from 'node:child_process'; spawn(process.execPath, ['-e', " + JSON.stringify(descendant) + "], { stdio: 'ignore' }); setInterval(() => {}, 1000);";
-  spawnPackagedProcess(${JSON.stringify(process.execPath)}, ["-e", parent], { stdio: "pipe" });
+  spawnPackagedProcess(${JSON.stringify(node)}, ["-e", parent], { stdio: "pipe" });
   while (!existsSync(${JSON.stringify(pidFile)})) await new Promise((resolve) => setTimeout(resolve, 10));
   // Expire only after the child exists; waiting a full second adds no coverage.
   test.setTimeout(1);
@@ -28,7 +30,7 @@ test("holds a packaged process past the test deadline", async () => {
 `,
   );
   try {
-    const runner = Bun.spawn([process.execPath, playwright, "test", "--config", join(root, "playwright.config.ts")], {
+    const runner = Bun.spawn([node, playwright, "test", "--config", join(root, "playwright.config.ts")], {
       cwd: root,
       stdout: "pipe",
       stderr: "pipe",
