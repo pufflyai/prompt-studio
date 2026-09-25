@@ -22,6 +22,7 @@ describe("DesktopWorkbenchStateStore", () => {
     first.setPageLocation("project-one", '{"version":1,"location":{"page":{"kind":"page","id":"workspaces"}}}');
 
     expect(new DesktopWorkbenchStateStore(path).getState()).toEqual({
+      kanbanViews: {},
       pageLocations: {
         "project-one": '{"version":1,"location":{"page":{"kind":"page","id":"workspaces"}}}',
       },
@@ -37,7 +38,7 @@ describe("DesktopWorkbenchStateStore", () => {
     store.setSelectedProjectId("project-one");
     store.setSelectedProjectId(null);
 
-    expect(store.getState()).toEqual({ pageLocations: {} });
+    expect(store.getState()).toEqual({ pageLocations: {}, kanbanViews: {} });
   });
 
   test("does not load or persist session drafts", () => {
@@ -49,12 +50,30 @@ describe("DesktopWorkbenchStateStore", () => {
       JSON.stringify({
         selectedProjectId: "project-one",
         pageLocations: {},
+        kanbanViews: {},
         sessionDrafts: { "session-one": "private draft" },
       }),
     );
 
     const store = new DesktopWorkbenchStateStore(path);
 
-    expect(store.getState()).toEqual({ pageLocations: {}, selectedProjectId: "project-one" });
+    expect(store.getState()).toEqual({ pageLocations: {}, kanbanViews: {}, selectedProjectId: "project-one" });
+  });
+});
+
+test("persists and removes project-scoped kanban snapshots across desktop restarts", () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-desktop-views-"));
+  roots.push(root);
+  const path = join(root, "workbench-state.json");
+  const key = "pstdio/ui/kanban-renderer/tickets:project:one";
+  const otherKey = "pstdio/ui/kanban-renderer/tickets:project:two";
+  const first = new DesktopWorkbenchStateStore(path);
+  first.setKanbanView(key, '{"activeViewId":"saved"}');
+  first.setKanbanView(otherKey, '{"activeViewId":"other"}');
+  const restarted = new DesktopWorkbenchStateStore(path);
+  expect(restarted.getState().kanbanViews[key]).toBe('{"activeViewId":"saved"}');
+  restarted.setKanbanView(key, null);
+  expect(new DesktopWorkbenchStateStore(path).getState().kanbanViews).toEqual({
+    [otherKey]: '{"activeViewId":"other"}',
   });
 });

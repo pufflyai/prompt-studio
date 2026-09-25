@@ -9,6 +9,7 @@ export const dashboardPageLocationStorageKey = (namespace: string, projectId: st
   `${namespace}:page-location:${projectId}`;
 
 export const resolveDesktopWorkbenchStorageKey = (key: string) => {
+  if (key.startsWith("pstdio/ui/kanban-renderer/")) return { kind: "kanban-view" as const };
   if (key === dashboardProjectSelectionStorageKey(dashboardWorkbenchStorageNamespace)) {
     return { kind: "selected-project" as const };
   }
