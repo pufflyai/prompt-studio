@@ -28,6 +28,7 @@ test("installs the smoke browser without external JavaScript runtimes", async ()
       timeout: 29_000,
     });
     expect({ code: result.status, stderr: result.stderr }).toMatchObject({ code: 0 });
+    expect(existsSync(join(root, "home", "runtime.json"))).toBe(false);
     const browserPath = chromium.executablePath().match(/chromium-\d+[/\\].+$/)![0];
     const browser = await chromium.launch({ executablePath: join(browserCache, browserPath) });
     try {

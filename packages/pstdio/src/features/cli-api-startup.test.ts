@@ -11,6 +11,10 @@ describe("shouldEnsureApiForCommand", () => {
     expect(shouldEnsureApiForCommand({ _: ["extensions", "test"] })).toBe(false);
   });
 
+  test("installs the smoke browser without starting an API", () => {
+    expect(shouldEnsureApiForCommand({ _: ["extensions", "install-browser"] })).toBe(false);
+  });
+
   test("skips local logs command", () => {
     expect(shouldEnsureApiForCommand({ _: ["logs"] })).toBe(false);
   });
