@@ -24,7 +24,7 @@ describe("repos service", () => {
   test("registerForProject upserts repo and links to project", async () => {
     const project = await projects.create({ name: "TestProject" });
 
-    const { repo } = await repos.registerForProject(project.id, {
+    const repo = await repos.registerForProject(project.id, {
       name: "my-repo",
       path: "/home/user/my-repo",
     });
@@ -41,12 +41,12 @@ describe("repos service", () => {
   test("registerForProject reuses existing repo when path matches", async () => {
     const project = await projects.create({ name: "TestProject" });
 
-    const { repo: first } = await repos.registerForProject(project.id, {
+    const first = await repos.registerForProject(project.id, {
       name: "my-repo",
       path: "/home/user/my-repo",
     });
 
-    const { repo: second } = await repos.registerForProject(project.id, {
+    const second = await repos.registerForProject(project.id, {
       name: "my-repo",
       path: "/home/user/my-repo",
     });
@@ -59,7 +59,7 @@ describe("repos service", () => {
 
   test("removeFromProject unlinks a repo from the project", async () => {
     const project = await projects.create({ name: "TestProject" });
-    const { repo: repoA } = await repos.registerForProject(project.id, { name: "repo-a", path: "/a" });
+    const repoA = await repos.registerForProject(project.id, { name: "repo-a", path: "/a" });
     await repos.registerForProject(project.id, { name: "repo-b", path: "/b" });
 
     await repos.removeFromProject(project.id, repoA.id);
@@ -73,12 +73,12 @@ describe("repos service", () => {
     const projectA = await projects.create({ name: "ProjectA" });
     const projectB = await projects.create({ name: "ProjectB" });
 
-    const { repo: repoA } = await repos.registerForProject(projectA.id, {
+    const repoA = await repos.registerForProject(projectA.id, {
       name: "shared-repo",
       path: "/home/user/shared-repo",
     });
 
-    const { repo: repoB } = await repos.registerForProject(projectB.id, {
+    const repoB = await repos.registerForProject(projectB.id, {
       name: "shared-repo",
       path: "/home/user/shared-repo",
     });

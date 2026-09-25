@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
@@ -9,7 +9,7 @@ let root: string;
 let previousDefaults: string | undefined;
 
 beforeAll(async () => {
-  root = mkdtempSync(join(tmpdir(), "register-repo-failure-"));
+  root = realpathSync(mkdtempSync(join(tmpdir(), "register-repo-failure-")));
   previousDefaults = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({ defaultExtensions: [] });
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage"), buildWebviews: false });
@@ -73,7 +73,8 @@ test("bootstrap failure rolls back registration and a repaired path can be retri
   expect(await handle.deps.workspaceService.list(project.id)).toHaveLength(1);
 });
 
-test("a read-only directory leaves no registration state", async () => {
+// Windows chmod does not enforce POSIX directory write permissions.
+test.skipIf(process.platform === "win32")("a read-only directory leaves no registration state", async () => {
   const project = await handle.deps.projectService.create({ name: "Read only" });
   const path = join(root, "readonly");
   mkdirSync(path);
@@ -96,6 +97,6 @@ test("extension discovery failure after bootstrap leaves no registration state",
   writeFileSync(join(path, ".pstdio", "extensions"), "blocks extension discovery");
   const seq = handle.deps.eventBus.seq;
   expect((await register(project.id, path)).status).toBe(500);
-  expect(existsSync(join(path, ".pstdio", "config.json"))).toBe(true);
+  expect(existsSync(join(path, ".pstdio", "config.json"))).toBe(false);
   await expectClean(project.id, seq);
 });

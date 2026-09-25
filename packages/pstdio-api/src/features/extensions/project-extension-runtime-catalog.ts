@@ -47,7 +47,7 @@ type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
   projectService: ReturnType<typeof createProjectService>;
-  repoService: ReturnType<typeof createRepoService>;
+  repoService: Pick<ReturnType<typeof createRepoService>, "listByProject">;
   loadSources?: typeof loadExtensionSources;
   observer?: ProjectExtensionRuntimeCatalogObserver;
 }) => {

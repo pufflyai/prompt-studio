@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -89,7 +89,7 @@ afterEach(() => {
 
 describe("repo-local default extensions", () => {
   test("loads the materialized worktree automation copy from an isolated custom repo", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-repo-local-extension-"));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-repo-local-extension-")));
     const defaultInstallName = "repo-worktree-automation";
     const defaultSourcePath = join(root, defaultInstallName);
     const markerPath = join(root, "repo-local-marker.txt");

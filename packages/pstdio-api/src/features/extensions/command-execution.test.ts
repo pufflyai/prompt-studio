@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -130,7 +130,7 @@ const createGitRepo = (name: string) => {
 };
 
 beforeEach(async () => {
-  tempRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-command-test-"));
+  tempRoot = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-extension-command-test-")));
   previousPstdioHome = process.env.PSTDIO_HOME;
   previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_HOME = join(tempRoot, "home");

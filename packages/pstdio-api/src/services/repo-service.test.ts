@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createDb, createProjectsDBService, createReposDBService } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
+import { createRepoRegistration } from "./repo-registration";
 import { createRepoService } from "./repo-service";
 
 let database: Awaited<ReturnType<typeof createDb>>;
@@ -10,7 +11,11 @@ const eventBus = new EventBus();
 beforeAll(async () => {
   database = await createDb({ path: ":memory:" });
   projectService = createProjectsDBService(database.db);
-  repoService = createRepoService({ reposDBService: createReposDBService(database.db), eventBus });
+  repoService = createRepoService({
+    reposDBService: createReposDBService(database.db),
+    eventBus,
+    runRegistration: createRepoRegistration({ db: database.db, eventBus, onInstalledSourcesChanged: async () => {} }),
+  });
 });
 afterAll(async () => {
   await database?.close();
@@ -21,11 +26,17 @@ test("repository initialization failure removes new rows without publishing even
   let repoId = "";
   const seq = eventBus.seq;
   await expect(
-    repoService.registerForProject(project.id, { name: "repo", path: "/failed-repo" }, async (repo) => {
-      repoId = repo.id;
-      expect(eventBus.getSince(seq)).toEqual([]);
-      throw new Error("setup failed");
-    }),
+    repoService.registerForProject(
+      project.id,
+      { name: "repo", path: "/failed-repo" },
+      {
+        initialize: async (repo) => {
+          repoId = repo.id;
+          expect(eventBus.getSince(seq)).toEqual([]);
+          throw new Error("setup failed");
+        },
+      },
+    ),
   ).rejects.toThrow("setup failed");
   expect(repoId).not.toBe("");
   expect(await repoService.get(repoId)).toBeNull();
@@ -42,8 +53,10 @@ test("failed initialization preserves an existing repository and its previous li
   const seq = eventBus.seq;
   for (const project of [first, second]) {
     await expect(
-      repoService.registerForProject(project.id, input, async () => {
-        throw new Error("setup failed");
+      repoService.registerForProject(project.id, input, {
+        initialize: async () => {
+          throw new Error("setup failed");
+        },
       }),
     ).rejects.toThrow("setup failed");
   }
@@ -64,10 +77,12 @@ test.each([
     const target = differentProject ? await projectService.create({ name: "Other project" }) : project;
     const input = { name: "concurrent", path: `/concurrent-repo-${differentProject}` };
     const seq = eventBus.seq;
-    const failed = repoService.registerForProject(project.id, input, async () => {
-      entered.resolve();
-      await release.promise;
-      throw new Error("setup failed");
+    const failed = repoService.registerForProject(project.id, input, {
+      initialize: async () => {
+        entered.resolve();
+        await release.promise;
+        throw new Error("setup failed");
+      },
     });
     const failure = failed.catch((error) => error);
     await entered.promise;
@@ -85,6 +100,35 @@ test.each([
       expect.objectContaining({ table: "repos", op: "set", data: repo }),
       expect.objectContaining({ table: "project_repos", op: "set", data: link }),
     ]);
+  } finally {
+    release.resolve();
+  }
+});
+
+test("a snapshot read cannot retain a repository whose initialization fails", async () => {
+  const project = await projectService.create({ name: "Snapshot during setup" });
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const registration = repoService
+    .registerForProject(
+      project.id,
+      { name: "pending", path: "/pending-snapshot" },
+      {
+        initialize: async () => {
+          entered.resolve();
+          await release.promise;
+          throw new Error("setup failed");
+        },
+      },
+    )
+    .catch((error) => error);
+  try {
+    await entered.promise;
+    const snapshot = repoService.listByProject(project.id);
+    await Promise.race([snapshot, Bun.sleep(50)]);
+    release.resolve();
+    expect(await registration).toMatchObject({ message: "setup failed" });
+    expect(await snapshot).toEqual([]);
   } finally {
     release.resolve();
   }

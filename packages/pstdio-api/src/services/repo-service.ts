@@ -1,33 +1,43 @@
 import type { createReposDBService } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
+import type { createRepoRegistration, RepoRegistrationScope } from "./repo-registration";
 
 export type RepoServiceDeps = {
   reposDBService: ReturnType<typeof createReposDBService>;
   eventBus: EventBus;
+  runRegistration: ReturnType<typeof createRepoRegistration>;
 };
+
+type Repo = NonNullable<Awaited<ReturnType<RepoServiceDeps["reposDBService"]["get"]>>>;
+interface RegistrationSetup {
+  prepare?: () => Promise<(() => Promise<void>) | void>;
+  initialize?: (repo: Repo, scope: RepoRegistrationScope) => Promise<void>;
+}
 
 export const createRepoService = (deps: RepoServiceDeps) => {
   const db = deps.reposDBService;
   const register = async (
     projectId: string,
     input: Parameters<typeof db.registerForProject>[1],
-    initialize?: (repo: NonNullable<Awaited<ReturnType<typeof db.get>>>) => Promise<void>,
+    setup: RegistrationSetup = {},
   ) => {
-    const { repo, createdRepo, createdLink } = await db.registerForProject(projectId, input);
+    // Filesystem checks and installation share the path lock but must not hold the DB transaction.
+    const rollback = await setup.prepare?.();
     try {
-      await initialize?.(repo);
+      return await deps.runRegistration(async (scope) => {
+        const repo = await scope.reposDBService.registerForProject(projectId, input);
+        await setup.initialize?.(repo, scope);
+        const link = await scope.reposDBService.getProjectRepoLink(projectId, repo.id);
+        scope.eventBus.emit("repos", "set", repo);
+        if (link) scope.eventBus.emit("project_repos", "set", link);
+        return repo;
+      });
     } catch (error) {
-      if (createdLink) await db.removeFromProject(projectId, repo.id);
-      if (createdRepo) await db.hardDelete(repo.id);
+      await rollback?.();
       throw error;
     }
-    const link = await db.getProjectRepoLink(projectId, repo.id);
-    deps.eventBus.emit("repos", "set", repo);
-    if (link) deps.eventBus.emit("project_repos", "set", link);
-    return repo;
   };
-  // Initialization and rollback share ownership of these rows. A later registration
-  // of the same path must wait until that ownership has been settled.
+  // The config ownership check and the database commit must agree on the same path owner.
   const registrations = new Map<string, Promise<unknown>>();
   const registerForProject = (...args: Parameters<typeof register>) => {
     const path = args[1].path;

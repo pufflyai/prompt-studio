@@ -38,7 +38,7 @@ export const createReposDBService = (db: DbClient) => {
         });
       }
 
-      return { repo, createdRepo: !existingRepo, createdLink: !existingLink };
+      return repo;
     });
 
   const listByProject = async (projectId: string) => {
@@ -72,9 +72,5 @@ export const createReposDBService = (db: DbClient) => {
     return removed ?? null;
   };
 
-  const hardDelete = async (repoId: string) => {
-    await db.delete(repos).where(eq(repos.id, repoId));
-  };
-
-  return { hardDelete, get, registerForProject, listByProject, getProjectRepoLink, removeFromProject };
+  return { get, registerForProject, listByProject, getProjectRepoLink, removeFromProject };
 };
