@@ -82,14 +82,14 @@ describe("createDb", () => {
   });
 
   it("allows a database directory to be reopened after close", async () => {
-    const { dbPath, tempRoot } = createSeededDbPath();
-    const first = await createDb({ path: dbPath });
-    await first.close();
-
-    const second = await createDb({ path: dbPath });
-    await second.close();
-
-    fs.rmSync(tempRoot, { force: true, recursive: true });
+    // The seed is already closed; reopening it avoids a full copy and a redundant engine startup.
+    const reopened = await createDb({ path: seed.dbPath });
+    try {
+      const result = await reopened.pglite.query("SELECT 1 AS ready");
+      expect(result.rows).toEqual([{ ready: 1 }]);
+    } finally {
+      await reopened.close();
+    }
   });
 
   it("reclaims a lock owned by a dead process", async () => {
