@@ -16,6 +16,9 @@ for (const [behavior, code] of [
   ["invalid", 2],
   ["malformed", 2],
   ["repo", 0],
+  ["environment", 0],
+  ["panels", 0],
+  ["empty-panels", 0],
 ] as const) {
   test(`packaged extension smoke reports ${behavior} outside the checkout`, () => {
     const root = mkdtempSync(join(tmpdir(), "extension-smoke-consumer-"));
@@ -41,6 +44,7 @@ for (const [behavior, code] of [
             PSTDIO_API_URL: "http://127.0.0.1:1",
             PSTDIO_PROJECT_ID: "caller",
             PSTDIO_DEFAULT_EXTENSIONS: '["must-not-load"]',
+            SMOKE_TEST_CALLER_SECRET: "caller-secret",
           },
           encoding: "utf8",
           timeout: 29_000,
@@ -58,6 +62,11 @@ for (const [behavior, code] of [
         expect(result.browser.name).toBe("chromium");
       }
       if (behavior === "commands") expect(result.coverage.visited).toEqual([]);
+      if (behavior === "panels") {
+        expect(result.coverage.visited).toContain("test.smoke.view.overview");
+        expect(result.coverage.visited).not.toContain("test.smoke.view.empty");
+      }
+      if (behavior === "empty-panels") expect(result.coverage.visited).toContain("test.smoke.view.empty");
       if (behavior === "denied")
         expect(result.checks).toContainEqual(
           expect.objectContaining({ code: "undeclared_webview_capability", capability: "notification.show" }),

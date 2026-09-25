@@ -19,7 +19,7 @@ export const exerciseSmokeDashboard = async (input: {
   page.setDefaultTimeout(10_000);
   const observation = observeSmokePage(page, result, input.logPath);
   const abort = () => {
-    void context.close();
+    void context.close().catch(() => {});
   };
   signal.addEventListener("abort", abort, { once: true });
   const extensionId = result.extension!.id;
@@ -51,7 +51,6 @@ export const exerciseSmokeDashboard = async (input: {
   } finally {
     signal.removeEventListener("abort", abort);
     if (result.evidence) await page.screenshot({ path: `${result.evidence.directory}/dashboard.png` }).catch(() => {});
-    await context.close();
     completeSmokeCoverage(
       inventory,
       result,

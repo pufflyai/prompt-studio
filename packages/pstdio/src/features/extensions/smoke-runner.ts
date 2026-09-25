@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createClient, createRequest } from "@pstdio/sdk/client";
@@ -6,15 +6,11 @@ import type { BrowserContext } from "playwright-core";
 import { toExtensionEnableInput } from "pstdio-api/extensions/install-extension-source";
 import { CLI_VERSION } from "../cli-version";
 import { exerciseSmokeDashboard } from "./smoke-browser";
+import { finishExtensionSmoke } from "./smoke-cleanup";
 import { startSmokeHost } from "./smoke-host";
 import { installSmokeSource, SmokeInstallError } from "./smoke-install";
 import { createSmokeContext } from "./smoke-isolation";
-import { completeSmokeChecks, type SmokeResult } from "./smoke-result";
-
-const finishSmokeContext = (root: string, keepHome: boolean | undefined, result: SmokeResult) => {
-  if (keepHome) writeFileSync(join(root, "result.json"), JSON.stringify(result, null, 2));
-  else rmSync(root, { recursive: true, force: true });
-};
+import type { SmokeResult } from "./smoke-result";
 
 export const runExtensionSmoke = async (input: {
   source: string;
@@ -117,13 +113,13 @@ export const runExtensionSmoke = async (input: {
     result.checks.push({ id: phase === "install-check" ? "install-check" : "setup", status: "failed", phase, message });
   } finally {
     result.durations[phase] = Math.round(performance.now() - started);
-    try {
-      await browser?.close();
-    } finally {
-      await host?.close();
-    }
-    completeSmokeChecks(result);
-    if (context) finishSmokeContext(context.root, input.keepHome, result);
+    await finishExtensionSmoke({
+      root: context?.root,
+      keepHome: input.keepHome,
+      result,
+      closeBrowser: () => browser?.close() ?? Promise.resolve(),
+      closeHost: () => host?.close() ?? Promise.resolve(),
+    });
   }
   return result;
 };

@@ -14,6 +14,20 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 const omitted = new Set([".git", "node_modules"]);
+// Extension entry points execute in child processes. Inherit only OS launch and locale settings.
+const inheritedEnvironment = new Set([
+  "PATH",
+  "PATHEXT",
+  "SYSTEMROOT",
+  "WINDIR",
+  "COMSPEC",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  "LANG",
+  "LC_ALL",
+  "TZ",
+]);
 const inside = (root: string, path: string) => {
   const rel = relative(root, path);
   return rel !== ".." && !rel.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) && !isAbsolute(rel);
@@ -90,13 +104,7 @@ export const createSmokeContext = async (input: { source: string; projectPath?: 
     if (input.projectPath) copy(project);
     else mkdirSync(project);
     const env: NodeJS.ProcessEnv = Object.fromEntries(
-      Object.entries(input.env ?? process.env).filter(
-        ([key]) =>
-          !key.startsWith("PSTDIO_") &&
-          !key.startsWith("GIT_") &&
-          !key.startsWith("BUN_") &&
-          !["NODE_OPTIONS", "INIT_CWD", "PWD"].includes(key),
-      ),
+      Object.entries(input.env ?? process.env).filter(([key]) => inheritedEnvironment.has(key.toUpperCase())),
     );
     Object.assign(env, {
       HOME: home,

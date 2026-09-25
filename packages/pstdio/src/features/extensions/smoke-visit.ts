@@ -85,13 +85,18 @@ export const visitSmokePage = async (
           .some((event) => event.event === "registration-ready" && event.projectId === projectId),
       signal,
     );
-    await page.locator(`[data-workbench-page=${JSON.stringify(item.page.id)}]`).waitFor();
-    const main = item.page.main.kind === "view" ? item.page.main.view : item.page.main.empty;
-    const mainId = main.extensionId === "pstdio" ? main.id : `${main.extensionId}.view.${main.id}`;
-    await page
-      .locator(`[data-workbench-view=${JSON.stringify(mainId)}][data-workbench-renderer="mounted"]`)
-      .first()
-      .waitFor();
+    const mainRegion = page
+      .locator(`[data-workbench-page=${JSON.stringify(item.page.id)}]`)
+      .locator('[data-workbench-region="main"]');
+    let renderer = mainRegion.locator('[data-workbench-renderer="mounted"]');
+    if (item.page.main.kind === "view") {
+      const view = item.page.main.view;
+      const viewId = view.extensionId === "pstdio" ? view.id : `${view.extensionId}.view.${view.id}`;
+      renderer = mainRegion.locator(
+        `[data-workbench-view=${JSON.stringify(viewId)}][data-workbench-renderer="mounted"]`,
+      );
+    }
+    await renderer.first().waitFor();
     await checkSmokeComposition(input, start);
     const failed = hasHostFailure(observation.events.slice(start));
     result.checks.push({

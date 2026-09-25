@@ -62,6 +62,26 @@ test("creates a scratch git repo and ignores existing installs", async () => {
   expect(existsSync(join(context.source, "node_modules"))).toBe(false);
 });
 
+test("keeps process launch settings without passing caller credentials or arbitrary variables", async () => {
+  const source = fixture();
+  manifest(source);
+  const context = await createSmokeContext({
+    source,
+    env: {
+      ...process.env,
+      GITHUB_TOKEN: "caller-token",
+      AWS_SECRET_ACCESS_KEY: "caller-key",
+      SMOKE_TEST_CALLER_SECRET: "caller-secret",
+    },
+  });
+  roots.push(context.root);
+  expect(context.env.PATH).toBe(process.env.PATH);
+  expect(context.env.SystemRoot).toBe(process.env.SystemRoot);
+  expect(context.env.GITHUB_TOKEN).toBeUndefined();
+  expect(context.env.AWS_SECRET_ACCESS_KEY).toBeUndefined();
+  expect(context.env.SMOKE_TEST_CALLER_SECRET).toBeUndefined();
+});
+
 test("stages repo-local extension sources while preserving fixture data without caller installs", async () => {
   const root = fixture();
   const source = join(root, ".pstdio/extensions/local-tool");
