@@ -5,7 +5,8 @@ import type {
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import { AlertMessage, EmptyState, ParamEditor, Switch, type SwitchProps } from "@pstdio/ui";
+import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
+import { ParamEditor } from "@pstdio/ui/param-editor";
 import {
   ArrowLeft,
   ArrowUpCircle,

@@ -27,12 +27,12 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@types/matter-js": "^0.20.2",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
     "@storybook/addon-docs": "^10.1.9",
     "@storybook/react": "^10.1.9",
     "@storybook/react-vite": "^10.1.9",
+    "@types/matter-js": "^0.20.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "storybook": "^10.1.9"
   }
 }

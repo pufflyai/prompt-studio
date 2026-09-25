@@ -1,4 +1,4 @@
-import { ParamEditorRow } from "@pstdio/ui";
+import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import type { ReactNode } from "react";
 import type { WorkbenchCommandExecutionContext } from "../../core";
 import { type CommandParamEntry, type CommandParamValue, isCommandFilesParamValue } from "./command-palette-params";

@@ -8,14 +8,15 @@ The local theme extends the shared theme with the landing illustration colors.
 ## Code structure
 
 - `src/components/workbench` owns page chrome and panel composition.
-- `src/components/sections` contains Start Here, What is Prompt Studio, Examples, Features, and legal views.
+- `src/components/sections` contains Start Here, What is Prompt Studio, Examples, and Features.
 - `src/components/downloads` contains the download picker and agent compatibility cards.
 - `src/components/examples` contains the interactive icon set editor and coding agent demos.
-- `src/content` owns the page catalog, navigation metadata, example data, building blocks, and legal copy.
+- `src/content` owns the page catalog, navigation metadata, example data, building blocks, and which views are documents.
 - `src/hooks` connects browser navigation, release loading, and animation to React.
-- `src/services` resolves routes and page metadata, loads GitHub releases, selects desktop assets, and converts legal copy to Markdown.
+- `src/services` resolves routes, page metadata, and structured data, loads GitHub releases, and selects desktop assets.
 - `src/services/shapes` owns tool geometry, placement, collisions, dragging, and simulation cleanup.
 - `src/theme/recipes` owns page layouts and demo styles, with colocated Storybook stories.
+- `src/content/legal` holds the legal documents as markdown. See [Legal documents](#legal-documents).
 
 The demos and falling tools render in code. They use no screenshot or image assets.
 
@@ -49,11 +50,16 @@ control collapses or expands the window. Red and yellow enter window mode and ar
 disabled there. Drag the title bar to move the window. Mobile navigation opens a
 menu below the header; desktop navigation uses the sidebar. There are no breadcrumbs.
 
-Ghost navigation buttons sit at the bottom of the introduction and download panel,
-outside its scroll area. Each button shows its destination page name and an arrow.
-Start Here only shows the next page. The main pages follow the sidebar order, and
-Features leads back to Start Here. Privacy leads to Terms, and Terms returns to
-Start Here. These links use browser history without remounting the download panel.
+Legal pages keep the workbench shell, with the title bar, sidebar, and status bar,
+but show the document as one centered column without the introduction and download
+panel. `DOCUMENT_VIEWS` in `src/content/landing-content.ts` names them.
+
+Page navigation buttons sit in a header above the introduction and download panel,
+outside that panel's scroll area. The right content panel keeps its full height. Legal documents have no previous or next page links.
+Each button shows its destination page name and an arrow. Start Here
+only shows the next page. The main pages follow the sidebar order, and Features
+leads back to Start Here.
+These links use browser history without remounting the download panel.
 
 ## Product examples
 
@@ -82,8 +88,7 @@ inspector follow the repository's icon editor.
 The dashboard supports agent selection, pause and resume, and approving a result.
 Each building block keeps the same shape across the page and the falling tools.
 The shapes above each example explain the blocks it uses. Search, notifications, navigation,
-extension management, and themes have a separate Features page. Space separates
-each feature's description and demo from the next feature.
+extension management, and themes have a separate Features page. A single page gap separates feature sections, without extra section padding.
 Use "workbench" for the overall home for tools. A workspace is a separate product concept.
 
 The page layout and preview styles use the local `landingStory` and `landingToolDemo`
@@ -94,8 +99,40 @@ Build these stories with `bun run --cwd clients/landing-page build-storybook`.
 The reusable component stories remain in the UI package's Storybook.
 
 The page catalog supplies static routes, unique metadata, canonical links, and
-`/sitemap.xml`. `/robots.txt` points crawlers to that sitemap. The
-[SEO audit](docs/seo-audit.md) records the checks and remaining work.
+`/sitemap.xml`. `/robots.txt` points crawlers to that sitemap. Canonical URLs end
+in a slash, matching the directory URLs the static server returns. `/404.html`
+carries `noindex` and no canonical link.
+
+`landing-structured-data.ts` builds one JSON-LD graph per page: an `Organization`
+publisher, the `WebSite`, and the current `WebPage`. Only the start page adds a
+`SoftwareApplication` node, so no other page claims to be a downloadable app.
+
+## Legal documents
+
+The privacy policy and the terms of service are markdown files in
+`src/content/legal`, one per page: `privacy.md` is served at `/privacy/` and
+`terms.md` at `/terms/`. The markdown is the only source of the legal text. Edit it
+there, never in code.
+
+Write one sentence per line. Markdown still renders consecutive lines as one
+paragraph, but each change then shows up as its own line in a diff, so a reviewer
+sees exactly which sentence changed between versions. A list item that needs more
+than one sentence continues on an indented line.
+
+Astro compiles the markdown at build time in `src/services/legal-documents.ts`. The
+pages hand the HTML to the workbench as props, and `DocColumn` shows it, so the
+served HTML holds every heading, paragraph, list, and link, and no markdown parser
+ships to the browser. The `landingDoc` recipe styles the plain tags.
+
+The build itself fails when a legal page in `DOCUMENT_VIEWS` has no markdown file, so
+a renamed or deleted document cannot ship as an empty page.
+
+## Brand assets
+
+The social banner is the original 1546x423 image in `public/images/banner.png`.
+The 180x180 Apple touch icon uses the full mark from the desktop
+`clients/desktop/assets/icon.svg`, on an opaque white background.
+The operating system supplies the home screen icon's rounded corners.
 
 ## Desktop downloads
 

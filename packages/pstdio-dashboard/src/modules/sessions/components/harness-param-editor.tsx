@@ -1,4 +1,4 @@
-import { type Param, ParamEditorRow, type ParamValueMap } from "@pstdio/ui";
+import { type Param, ParamEditorRow, type ParamValueMap } from "@pstdio/ui/param-editor";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
 import { type HarnessParamValues, resolveHarnessParamText, updateHarnessParamOverride } from "./harness-param-values";
 

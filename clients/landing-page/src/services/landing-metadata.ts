@@ -1,32 +1,13 @@
 import { siteMetadata } from "../config/site-metadata";
 import { landingPageFromPath } from "./landing-route";
+import { landingStructuredData } from "./landing-structured-data";
 
 export const landingMetadata = (path: string) => {
   const page = landingPageFromPath(path);
   const title = page?.title ?? "Page not found | Prompt Studio";
   const description = page?.description ?? "The requested Prompt Studio page could not be found.";
   const canonicalUrl = new URL(page?.path ?? path, siteMetadata.siteUrl).href;
-  const websiteId = `${siteMetadata.siteUrl}/#website`;
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": websiteId,
-        url: `${siteMetadata.siteUrl}/`,
-        name: "Prompt Studio",
-        description: siteMetadata.description,
-      },
-      {
-        "@type": "WebPage",
-        "@id": canonicalUrl,
-        url: canonicalUrl,
-        name: title,
-        description,
-        isPartOf: { "@id": websiteId },
-      },
-    ],
-  };
+  const structuredData = landingStructuredData({ title, description, canonicalUrl, home: page?.path === "/" });
   return { title, description, canonicalUrl, structuredData, indexable: Boolean(page) };
 };
 

@@ -1,4 +1,4 @@
-import type { ParamEditorProps } from "@pstdio/ui";
+import type { ParamEditorProps } from "@pstdio/ui/param-editor";
 import type { PreferencePropertySchema, PreferenceValue } from "../../../core";
 
 // `@pstdio/ui` does not export the Param union by name, so derive it from the

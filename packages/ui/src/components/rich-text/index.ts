@@ -10,6 +10,18 @@ export type {
 export type { PromptEditorProps, PromptEditorRef, ReferenceItem } from "./prompt-input/prompt-input";
 export { PromptEditor } from "./prompt-input/prompt-input";
 export { generateEditorStateFromString, getTextFromSerializedEditorState } from "./prompt-input/utils";
+export type {
+  ResourceActivityFeedAction,
+  ResourceActivityFeedAttention,
+  ResourceActivityFeedEventItem,
+  ResourceActivityFeedItem,
+  ResourceActivityFeedMessageItem,
+  ResourceActivityFeedProps,
+  ResourceActivityFeedSize,
+  ResourceActivityIconName,
+  ResourceActivityRelatedResource,
+} from "./resource-activity-feed/resource-activity-feed";
+export { ResourceActivityFeed } from "./resource-activity-feed/resource-activity-feed";
 export type { RichMessageProps } from "./rich-message/rich-message";
 export { RichMessage, RichMessage as MarkdownPreview } from "./rich-message/rich-message";
 export { DefaultRichTextCodeEditor, DefaultRichTextDataTable } from "./shared/components/default-rich-text-components";

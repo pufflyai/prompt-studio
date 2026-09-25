@@ -76,63 +76,8 @@ const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean
             collapsible={false}
             resizeLabel="Resize download panel"
             resizablePanel={
-              <Box css={styles.hero}>
-                <Box flex="1" minHeight="0">
-                  <ScrollArea height="full">
-                    <Box css={styles.heroCopy}>
-                      <HStack>
-                        <Badge css={styles.releaseBadge} size="lg">
-                          Alpha release
-                        </Badge>
-                      </HStack>
-                      <Text as="h1" textStyle="heading/XL">
-                        A workbench for your tools.
-                      </Text>
-                      <Text textStyle="paragraph/XL/regular" color="fg.muted">
-                        Coding agents can build tools to help with your work. Prompt Studio gives them a place to live,
-                        with the shared infrastructure they need to work together: search, CLI commands, editors, custom
-                        UI, and more.
-                      </Text>
-                      <Box css={styles.download}>
-                        <Button variant="primary" size="lg" width="full">
-                          {desktopAvailable ? <Download /> : <SquareTerminal />}
-                          {desktopAvailable ? "Download Prompt Studio" : "Use via CLI"}
-                        </Button>
-                        <Text textStyle="label/S/regular" color="fg.muted">
-                          {desktopAvailable
-                            ? "macOS · Apple silicon · DMG · v0.32.0"
-                            : "The desktop app is not available on this platform yet."}
-                        </Text>
-                        <HStack gap="xs">
-                          <SearchableMenu
-                            showSearch={false}
-                            searchPlaceholder="Find a build"
-                            emptyState="No builds available"
-                            trigger={
-                              <Button variant="ghost" size="sm">
-                                Other platforms
-                                <ChevronDown />
-                              </Button>
-                            }
-                            items={[
-                              { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: desktopAvailable },
-                              { id: "linux", label: "Linux · x64 · DEB" },
-                            ]}
-                          />
-                          {desktopAvailable && (
-                            <Button asChild variant="ghost" size="sm">
-                              <a href="https://github.com/pufflyai/prompt-studio/blob/main/README.md">
-                                <SquareTerminal />
-                                Use via CLI
-                              </a>
-                            </Button>
-                          )}
-                        </HStack>
-                      </Box>
-                    </Box>
-                  </ScrollArea>
-                </Box>
-                <Box as="nav" aria-label="Page navigation" css={styles.heroNavigation}>
+              <Box css={styles.downloadColumn}>
+                <Box as="nav" aria-label="Page navigation" css={styles.pageNavigation}>
                   {pageIndex > 0 && (
                     <Button
                       variant="ghost"
@@ -152,6 +97,63 @@ const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean
                     <ArrowRight />
                     {STORY_PAGES[nextPageIndex].label}
                   </Button>
+                </Box>
+                <Box css={styles.hero}>
+                  <Box flex="1" minHeight="0">
+                    <ScrollArea height="full">
+                      <Box css={styles.heroCopy}>
+                        <HStack>
+                          <Badge css={styles.releaseBadge} size="lg">
+                            Alpha release
+                          </Badge>
+                        </HStack>
+                        <Text as="h1" textStyle="heading/XL">
+                          A workbench for your tools.
+                        </Text>
+                        <Text textStyle="paragraph/XL/regular" color="fg.muted">
+                          Coding agents can build tools to help with your work. Prompt Studio gives them a place to
+                          live, with the shared infrastructure they need to work together: search, CLI commands,
+                          editors, custom UI, and more.
+                        </Text>
+                        <Box css={styles.download}>
+                          <Button variant="primary" size="lg" width="full">
+                            {desktopAvailable ? <Download /> : <SquareTerminal />}
+                            {desktopAvailable ? "Download Prompt Studio" : "Use via CLI"}
+                          </Button>
+                          <Text textStyle="label/S/regular" color="fg.muted">
+                            {desktopAvailable
+                              ? "macOS · Apple silicon · DMG · v0.32.0"
+                              : "The desktop app is not available on this platform yet."}
+                          </Text>
+                          <HStack gap="xs">
+                            <SearchableMenu
+                              showSearch={false}
+                              searchPlaceholder="Find a build"
+                              emptyState="No builds available"
+                              trigger={
+                                <Button variant="ghost" size="sm">
+                                  Other platforms
+                                  <ChevronDown />
+                                </Button>
+                              }
+                              items={[
+                                { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: desktopAvailable },
+                                { id: "linux", label: "Linux · x64 · DEB" },
+                              ]}
+                            />
+                            {desktopAvailable && (
+                              <Button asChild variant="ghost" size="sm">
+                                <a href="https://github.com/pufflyai/prompt-studio/blob/main/README.md">
+                                  <SquareTerminal />
+                                  Use via CLI
+                                </a>
+                              </Button>
+                            )}
+                          </HStack>
+                        </Box>
+                      </Box>
+                    </ScrollArea>
+                  </Box>
                 </Box>
               </Box>
             }

@@ -39,11 +39,18 @@ bun run --cwd packages/ui test-storybook
 - `src/index.ts`: public exports for `@pstdio/ui`
 - `.storybook/*`: Storybook configuration and Vitest setup
 
+The root entry holds the light, widely reused components. A feature that pulls a
+heavy dependency, such as the Lexical editor, Monaco, Mermaid, or the terminal,
+gets its own entry: `./rich-text`, `./param-editor`, `./kanban-renderer`,
+`./data-table`, `./chat-ui`, `./diff`, `./mermaid`, `./terminal`. Nothing reachable
+from the root entry may import one of those, or every consumer's bundler emits the
+heavy chunks even when the consumer never renders the feature.
+
 ## Contributor Workflow
 
 1. Implement or update the component in `src/components`.
 2. Add or update stories next to the component to cover important user-visible states.
-3. If the component is public, export it from `src/index.ts`.
+3. If the component is public, export it from `src/index.ts`, or from the entry that owns its heavy dependency.
 4. If you add a new package entrypoint, update `package.json#exports`.
 5. Run validations before opening a PR.
 

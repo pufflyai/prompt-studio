@@ -1,5 +1,5 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
-import type { FileUploadValue } from "@pstdio/ui";
+import type { FileUploadValue } from "@pstdio/ui/param-editor";
 import type { CommandParamDescriptor, CommandParamSchema, WorkbenchCommandExecutionContext } from "../../core";
 export interface CommandFilesParamValue {
   refs: string[];

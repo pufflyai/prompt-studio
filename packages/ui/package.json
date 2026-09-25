@@ -42,6 +42,10 @@
       "import": "./dist/kanban-renderer.js",
       "types": "./dist/components/kanban-renderer/index.d.ts"
     },
+    "./param-editor": {
+      "import": "./dist/param-editor.js",
+      "types": "./dist/components/param-editor/index.d.ts"
+    },
     "./data-table": {
       "import": "./dist/data-table.js",
       "types": "./dist/components/data-table/index.d.ts"
