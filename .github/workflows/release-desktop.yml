@@ -218,7 +218,7 @@ jobs:
 
       - name: Extract desktop release notes
         shell: bash
-        run: bun run --cwd scripts release:changelog -- pstdio "${{ inputs.version }}" > "${{ runner.temp }}/desktop-release-notes.md"
+        run: bun run --cwd scripts release:notes "${{ inputs.version }}" > "${{ runner.temp }}/desktop-release-notes.md"
 
       - name: Prepare release artifacts
         env:

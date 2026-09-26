@@ -1,97 +1,53 @@
 ---
-status: "draft"
+status: "accepted"
 created: "2026-03-10T20:12:05Z"
 ---
 
-# Product Requirements Document: Versioning and Releases
+# Versioning and releases
 
-## Summary
+Prompt Studio ships one version across pstdio, SDK, UI, workbench, desktop and every core extension. Changesets owns their versions through one fixed group in `.changeset/config.json`. See [ADR 0031](../../adrs/0031-release-all-core-packages-under-one-version.md).
 
-Publishable Prompt Studio packages are versioned with Changesets and released from `main` through the `Release Packages` GitHub Actions workflow.
+## Contributor flow
 
-## Problem
+1. Run `bun changeset`. Select the packages changed, choose a bump and write a one-line summary. Follow the package selection rules in `AGENTS.md`.
+2. Commit the changeset with the change. The selected package decides where the summary appears in release notes.
+3. Merge into `main`. CI opens or updates the Version Packages PR. The highest pending bump sets the next version for every member of the group.
+4. Review and merge that PR. All group members should have the same version. Extension SDK and UI dependency ranges must remain unchanged unless an extension PR explicitly updates them.
 
-Release behavior needs one current source of truth that matches the repo scripts and CI workflow instead of a standalone PRD page.
+Do not edit versions by hand. Add new released workspace packages to the fixed group, or list private helpers in `ignore`. `validate:changesets` enforces membership and requires repo-local `.pstdio` workspaces to be ignored. Third-party extensions keep their own versions and refs.
 
-## Goals
+## Release pipeline
 
-- Document the current release flow and contributor responsibilities.
-- Keep the workflow aligned with Changesets and the repo's published packages.
+`.github/workflows/release-packages.yml` runs on `main` with Bun from the root `packageManager` field and Node 24. It validates and builds the monorepo, compiles platform binaries, verifies packaged output and generates checksums.
 
-## Non-Goals
+The workflow publishes generated `@pstdio/cli-*` platform packages at the host version. `changesets/action` then either opens the version PR or runs `changeset publish`. npm receives pstdio, SDK, UI and workbench at the shared version, including packages with no code changes.
 
-- Manual version editing in package manifests.
-- A release flow that bypasses Changesets.
+`release:version` runs Changesets, stamps changelog dates, synchronizes generated platform metadata, installs dependencies and synchronizes the lockfile. Desktop is versioned directly by Changesets; it has no separate version sync script. Published extension SDK and UI ranges stay under extension ownership because dependency propagation applies only to `workspace:` ranges.
 
-## Overview
+Publishing creates local npm package tags, but CI pushes only `pstdio@<version>`. It creates one draft GitHub release titled `v<version>` with:
 
-The release path is:
+- Combined package notes from `bun run --cwd scripts release:notes <version>`, in fixed-group order. Empty sections and date stamps are omitted.
+- GitHub's generated PR list, contributor notes and comparison link.
+- CLI binaries, checksums and `install.sh`.
 
-1. Contributors add a changeset for publishable package changes.
-2. The PR merges into `main`.
-3. The `Release Packages` workflow opens or updates the Changesets version PR.
-4. When version bumps are ready, the workflow publishes packages to npm and creates GitHub releases for published tags.
+The desktop workflow builds, signs and verifies native artifacts, attaches them to that draft and publishes it only after its checks pass. Desktop assets and updater URLs retain the `pstdio@` prefix. Core extension catalog entries use `{hostRelease}` to install from that same tag. No separate extension tags, tarballs or GitHub releases are produced.
 
-## Requirements
+## Validation
 
-### Functional Requirements
+Run `bun run validate` and `bun run --cwd scripts verify:packages`. For changes to release logic, use a disposable Prompt Studio workspace to run `bun changeset status --verbose` and `bun run --cwd scripts release:version`. Check that all group versions agree, extension dependency ranges remain unchanged and `release:notes <version>` contains only actual entries. Do not publish from the disposable workspace.
 
-1. Package versioning must use Changesets.
-2. Release automation must run from `main`.
-3. Published packages must go through the repo `release` script.
+The first combined release must be checked for the expected previous `pstdio@` tag in GitHub's generated comparison link and for the `pstdio` entry in Changesets' published package output.
 
-### UX Requirements
+## One-time historical cleanup
 
-- Contributors should only need to declare intent with `bun changeset`.
-- Release notes should come from generated Changesets and GitHub release notes.
-
-### Operational Requirements
-
-- The workflow reads Bun 1.4.2 from the root `packageManager` field and uses Node.js 22.14+ (npm upgraded to the latest CLI for trusted publishing).
-- The workflow requires write permissions for contents and pull requests.
-- npm trusted publisher entries must point to `.github/workflows/release-packages.yml` for `pstdio`, `@pstdio/ui`, and `@pstdio/sdk`.
-
-## Behavior
-
-1. Run `bun changeset` when a publishable workspace package changes.
-2. Commit the generated `.changeset/*.md` file with the PR.
-3. On push to `main`, `.github/workflows/release-packages.yml` runs `changesets/action`.
-4. The action either opens or updates the version PR, or publishes packages through `bun run release`.
-5. When packages publish successfully, the workflow creates GitHub releases for each published `<name>@<version>` tag.
-6. A published `pstdio` package holds its GitHub release in draft while the native
-   desktop workflow builds, signs, notarizes, launches, and verifies the complete
-   target matrix. The release becomes public only after desktop checks pass.
-
-## Interface
-
-### Contributor Commands
-
-| Command           | Purpose                                              |
-| ----------------- | ---------------------------------------------------- |
-| `bun changeset`   | Declare package bumps and changelog summary.         |
-| `bun run release` | Build and publish through Changesets when run by CI. |
-
-### Workflow
-
-| File                                     | Purpose                                    |
-| ---------------------------------------- | ------------------------------------------ |
-| `.github/workflows/release-packages.yml` | Automates version PR creation and publish. |
-| `.changeset/config.json`                 | Changesets repo configuration.             |
-| `.github/workflows/release-desktop.yml`  | Builds and verifies native desktop assets. |
-
-## Rules & Constraints
-
-- Do not edit package versions manually.
-- Private packages are not meant to be published, even if the monorepo still builds and tests them.
-- Release behavior should stay aligned with the root `release` script and the Changesets action.
-- `clients/desktop/package.json` is private but must carry the same version as
-  `pstdio`; `scripts/release/version.sh` synchronizes it during the version PR.
-- Desktop assets are attached to the matching `pstdio@<version>` release.
+After PS-410 merges, inventory the obsolete extension and private-package tags and releases. Keep all `pstdio@*`, `@pstdio/sdk@*`, `@pstdio/ui@*` and `@pstdio/workbench@*` history. Show the exact deletion list and obtain explicit approval before deleting releases, their tarballs and tags. Immutable release tag names cannot be reused. The ticket's cookbook contains the operator procedure. This cleanup is separate from the release workflow.
 
 ## Errors
 
-| Error                 | Cause                                                         |
-| --------------------- | ------------------------------------------------------------- |
-| No version PR appears | No pending changesets were merged to `main`.                  |
-| Publish step fails    | Registry auth, package metadata, or build output was invalid. |
-| Desktop release stays draft | A native build, credential, signature, notarization, launch, fuse, checksum, or version check failed. |
+| Symptom | Check |
+| --- | --- |
+| No version PR | Confirm pending changesets reached main. |
+| Version validation fails | Add the named released package to the fixed group or ignore a private helper. |
+| Publish fails | Check registry trust, package metadata and build output. |
+| Notes generation fails | Check that every existing changelog includes the release version. |
+| Desktop release stays draft | Check native credentials, signatures, launch validation, checksums and version agreement. |

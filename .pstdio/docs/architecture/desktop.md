@@ -132,8 +132,8 @@ CLI inspection, and privileged `file://` behavior.
 ## Native releases and updates
 
 Desktop artifacts ship on the matching `pstdio@<version>` GitHub release. The
-private desktop package version is synchronized from `packages/pstdio` by the
-Changesets version command. Native release preparation rejects any drift between
+private desktop package belongs to the same Changesets fixed version group as
+`pstdio`, so Changesets versions both together. Native release preparation rejects any drift between
 the Electron application, compiled sidecar, installer, sidecar manifest, and
 update metadata.
 
