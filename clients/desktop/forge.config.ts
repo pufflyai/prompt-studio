@@ -3,8 +3,11 @@ import { join } from "node:path";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import type { ForgeConfig } from "@electron-forge/shared-types";
+import { version } from "./package.json";
+import { finalizeWindowsSidecar } from "./src/packaging/finalize-windows-sidecar";
 import { desktopPackageName } from "./src/packaging/package-layout";
 import { resolveDesktopSigning } from "./src/release/release-config";
+import { validateSidecarArtifact } from "./src/runtime/sidecar-artifact";
 
 const desktopRoot = import.meta.dirname;
 const assetsRoot = join(desktopRoot, "assets");
@@ -50,6 +53,14 @@ const config: ForgeConfig = {
     windowsSign: signing.windowsSign,
   },
   hooks: {
+    postPackage: async (_forgeConfig, result) => {
+      if (result.platform !== "win32" || !signing.windowsSign) return;
+      for (const outputPath of result.outputPaths) {
+        const resourcesPath = join(outputPath, "resources");
+        finalizeWindowsSidecar(resourcesPath);
+        await validateSidecarArtifact({ resourcesPath, platform: "win32", arch: result.arch, appVersion: version });
+      }
+    },
     prePackage: async (_forgeConfig, platform, arch) => {
       run(["run", "build:sidecar", "--", "--platform", platform, "--arch", arch]);
       run(["run", "build"]);

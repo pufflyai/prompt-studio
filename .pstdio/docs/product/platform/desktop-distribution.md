@@ -90,9 +90,11 @@ Repository administrators provision these GitHub Actions secrets:
 | `APPLE_API_KEY_ID` | App Store Connect key ID |
 | `APPLE_API_ISSUER` | App Store Connect issuer UUID |
 
-`WINDOWS_CERTIFICATE` and `WINDOWS_CERTIFICATE_PASSWORD` remain optional workflow
-inputs for the deferred Windows lane. They are not required for the active
-macOS and Linux release set.
+Windows uses Azure Artifact Signing with GitHub OIDC. The private key stays in
+Azure; no `.pfx` file or client secret is needed. The account, Public Trust profile,
+endpoint, and Azure identity IDs are repository Actions variables. See
+[Windows signing setup](../../../../clients/desktop/docs/windows-signing.md).
+These settings are not required for the active macOS and Linux release set.
 
 Credentials are decoded only into the native runner's temporary directory. The
 macOS certificate is imported into an ephemeral keychain that is deleted even

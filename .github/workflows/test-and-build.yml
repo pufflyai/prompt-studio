@@ -283,19 +283,9 @@ jobs:
       - name: Verify packaged Electron fuses
         run: bun run --cwd clients/desktop verify:fuses
 
-      - name: Install Windows process suspension test tool
+      - name: Set up Windows desktop tests
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $tools = Join-Path $env:RUNNER_TEMP "pstools"
-          $archive = Join-Path $env:RUNNER_TEMP "PSTools.zip"
-          Invoke-WebRequest https://download.sysinternals.com/files/PSTools.zip -OutFile $archive
-          Expand-Archive $archive -DestinationPath $tools
-          $signature = Get-AuthenticodeSignature (Join-Path $tools "pssuspend64.exe")
-          if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "CN=Microsoft Corporation,") {
-            throw "PsSuspend must have a valid Microsoft signature"
-          }
-          $tools >> $env:GITHUB_PATH
+        uses: ./.github/actions/setup-windows-desktop-tests
 
       - name: Test packaged Electron
         if: runner.os == 'Linux'

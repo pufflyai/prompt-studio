@@ -1,0 +1,61 @@
+name: Verify Windows signing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+      - uses: ./.github/actions/setup-windows-signing
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile: ${{ vars.AZURE_SIGNING_PROFILE }}
+      - name: Build signed app and installer
+        env:
+          PSTDIO_DESKTOP_RELEASE: "1"
+        run: bun run --cwd clients/desktop make -- --arch=x64
+      - name: Verify signatures and installer payload
+        run: bun clients/desktop/scripts/verify-windows-signatures.ts
+      - name: Verify Electron fuse policy
+        run: bun run --cwd clients/desktop verify:fuses
+      - name: Set up Windows desktop tests
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/setup-windows-desktop-tests
+
+      - name: Smoke signed packaged application
+        run: bun run --cwd clients/desktop test:packaged
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-signed-readiness
+          path: clients/desktop/test-results
+          if-no-files-found: warn
+      - name: Upload signed installer for manual testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-signed-candidate
+          path: clients/desktop/out/make
+          if-no-files-found: error
+          retention-days: 14

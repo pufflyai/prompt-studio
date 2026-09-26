@@ -3,7 +3,9 @@
 ## Status
 
 Temporary. Remove this decision when the Windows desktop release has a trusted
-signing service, an owner, and native release evidence.
+signing connection, an owner, and native release evidence. The owner has an
+existing Azure Artifact Signing account. PS-3 now prepares its GitHub OIDC
+integration; account/profile access and a real signed build remain unverified.
 
 ## Ideal design
 
@@ -24,8 +26,9 @@ lanes that can proceed now.
 
 Keep the Windows packaging, signing, artifact preparation, and updater code for
 later, but remove `win32-x64` from the active desktop workflow matrix and the
-required published release set. Make the two Windows workflow secrets optional
-while the lane is disabled. Do not publish a Windows desktop artifact.
+required published release set. Azure Artifact Signing replaces the original
+PFX workflow inputs. Keep its variables unused by the active macOS/Linux lanes
+while Windows is disabled. Do not publish a Windows desktop artifact.
 
 This decision does not change the separate Windows CLI build or the generic
 Windows runtime support.
@@ -50,8 +53,8 @@ fallback, or alternate publisher.
 When trusted Windows signing and ownership are available:
 
 1. Restore `win32-x64` to the active release target list and workflow matrix.
-2. Make `WINDOWS_CERTIFICATE` and `WINDOWS_CERTIFICATE_PASSWORD` required again,
-   or replace them with the selected managed-signing contract.
+2. Verify the Azure Artifact Signing OIDC connection and Public Trust profile
+   using the dedicated Windows signing workflow.
 3. Run the Windows package on a native runner and verify Authenticode on the app,
    sidecar, and installer.
 4. Prove the Squirrel update metadata against the approved GitHub release.

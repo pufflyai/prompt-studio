@@ -238,6 +238,7 @@ jobs:
     needs: release
     permissions:
       contents: write
+      id-token: write
     uses: ./.github/workflows/release-desktop.yml
     with:
       version: ${{ needs.release.outputs.pstdio_version }}
@@ -249,5 +250,3 @@ jobs:
       APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
       APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
       APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}

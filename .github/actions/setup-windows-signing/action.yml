@@ -1,0 +1,65 @@
+name: Set up Azure Artifact Signing
+description: Authenticate with GitHub OIDC and prepare the Windows signing tools
+inputs:
+  client-id:
+    required: true
+    description: Azure application client ID
+  tenant-id:
+    required: true
+    description: Azure tenant ID
+  subscription-id:
+    required: true
+    description: Azure subscription ID
+  endpoint:
+    required: true
+    description: Artifact Signing account endpoint
+  account-name:
+    required: true
+    description: Artifact Signing account name
+  certificate-profile:
+    required: true
+    description: Approved Public Trust certificate profile name
+runs:
+  using: composite
+  steps:
+    - name: Log in to Azure with GitHub identity
+      uses: azure/login@v3
+      with:
+        client-id: ${{ inputs.client-id }}
+        tenant-id: ${{ inputs.tenant-id }}
+        subscription-id: ${{ inputs.subscription-id }}
+    - uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 8.0.x
+    - name: Prepare signing tools and metadata
+      shell: pwsh
+      env:
+        SIGNING_ENDPOINT: ${{ inputs.endpoint }}
+        SIGNING_ACCOUNT: ${{ inputs.account-name }}
+        SIGNING_PROFILE: ${{ inputs.certificate-profile }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        foreach ($name in @('SIGNING_ENDPOINT', 'SIGNING_ACCOUNT', 'SIGNING_PROFILE')) {
+          if (-not [Environment]::GetEnvironmentVariable($name)) { throw "Missing $name" }
+        }
+        $tools = Join-Path $env:RUNNER_TEMP 'artifact-signing'
+        nuget install Microsoft.ArtifactSigning.Client -Version 1.0.128 -Source https://api.nuget.org/v3/index.json -OutputDirectory $tools -NonInteractive
+        if ($LASTEXITCODE -ne 0) { throw 'Artifact Signing client installation failed' }
+        $dlib = Join-Path $tools 'Microsoft.ArtifactSigning.Client.1.0.128/bin/x64/Azure.CodeSigning.Dlib.dll'
+        if (-not (Test-Path $dlib)) { throw "Signing library missing: $dlib" }
+        $sdk = Get-ChildItem "${env:ProgramFiles(x86)}/Windows Kits/10/bin" -Directory |
+          Where-Object { $_.Name -match '^10\.0\.\d+\.\d+$' -and [version]$_.Name -ge [version]'10.0.26100.0' } |
+          Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
+        if (-not $sdk) { throw 'A supported Windows SDK is required' }
+        $signtool = Join-Path $sdk.FullName 'x64/signtool.exe'
+        if (-not (Test-Path $signtool)) { throw "SignTool missing: $signtool" }
+        $metadata = Join-Path $tools 'metadata.json'
+        @{
+          Endpoint = $env:SIGNING_ENDPOINT
+          CodeSigningAccountName = $env:SIGNING_ACCOUNT
+          CertificateProfileName = $env:SIGNING_PROFILE
+          ExcludeCredentials = @('EnvironmentCredential', 'WorkloadIdentityCredential', 'ManagedIdentityCredential', 'SharedTokenCacheCredential', 'VisualStudioCredential', 'VisualStudioCodeCredential', 'AzurePowerShellCredential', 'AzureDeveloperCliCredential', 'InteractiveBrowserCredential')
+        } | ConvertTo-Json | Set-Content -Encoding utf8 $metadata
+        "AZURE_SIGNING_METADATA=$metadata" >> $env:GITHUB_ENV
+        "AZURE_SIGNING_DLIB=$dlib" >> $env:GITHUB_ENV
+        "WINDOWS_SIGNTOOL_PATH=$signtool" >> $env:GITHUB_ENV
