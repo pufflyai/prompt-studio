@@ -74,7 +74,7 @@
     "./monaco/*": "./dist-monaco/*"
   },
   "scripts": {
-    "build": "bun run typegen:tokens && bun run build:monaco && vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
+    "build": "bun run typegen:tokens && bun run build:monaco && NODE_ENV=production vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
     "build:monaco": "vite build --config vite.monaco.config.ts",
     "visualize-bundle": "bunx vite-bundle-visualizer",
     "lint": "bun run typecheck && biome check .",
