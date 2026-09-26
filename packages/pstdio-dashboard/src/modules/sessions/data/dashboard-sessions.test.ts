@@ -1,10 +1,36 @@
 import { describe, expect, test } from "bun:test";
-import { getWriter } from "@/lib/sync/collections";
+import { getCollection, getWriter } from "@/lib/sync/collections";
 import {
   buildDashboardSessionsFromRows,
+  createDashboardSessions,
   resolveDashboardSessionView,
   resolveDashboardSessionViewForPlacement,
 } from "./dashboard-sessions";
+
+test("selected session and recent menus never enumerate unrelated files", () => {
+  getWriter("sessions")!.upsert({ id: "keyed", title: "Selected", project_id: "project" });
+  getWriter("workspace_sessions")!.upsert({ id: "keyed-link", session_id: "keyed", workspace_id: "keyed-workspace" });
+  getWriter("workspaces")!.upsert({ id: "keyed-workspace", project_id: "project", name: "Workspace" });
+  const files = getCollection("files");
+  const descriptor = Object.getOwnPropertyDescriptor(files, "state");
+  Object.defineProperty(files, "state", {
+    configurable: true,
+    get: () => {
+      throw new Error("Files enumerated");
+    },
+  });
+  try {
+    expect(resolveDashboardSessionView("keyed").workspaceTitle).toBe("Workspace");
+    expect(createDashboardSessions("project").some((session) => session.id === "keyed")).toBe(true);
+    getWriter("workspace_sessions")!.remove("keyed-link");
+    expect(resolveDashboardSessionView("keyed").workspaceId).toBeNull();
+  } finally {
+    if (descriptor) Object.defineProperty(files, "state", descriptor);
+    else Reflect.deleteProperty(files, "state");
+    getWriter("sessions")!.remove("keyed");
+    getWriter("workspaces")!.remove("keyed-workspace");
+  }
+});
 
 describe("resolveDashboardSessionView", () => {
   test("keeps an opened session addressable before synced rows arrive", () => {
@@ -49,9 +75,6 @@ describe("resolveDashboardSessionView", () => {
   });
   test("exposes session status on the session resource", () => {
     const [session] = buildDashboardSessionsFromRows({
-      files: [],
-      projectRepos: [],
-      repos: [],
       sessions: [
         {
           id: "session-1",

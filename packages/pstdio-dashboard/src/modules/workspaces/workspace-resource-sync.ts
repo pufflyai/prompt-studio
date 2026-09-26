@@ -21,7 +21,9 @@ export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
       return;
     setResourceBreadcrumb(ctx, resource);
   };
-  const unsubscribeData = subscribeDashboardData(sync);
+  const unsubscribeData = subscribeDashboardData((change) => {
+    if (!change || ["workspaces", "project_repos", "repos"].includes(change.table)) sync();
+  });
   // Resolve after the page commits so a ticket-to-workspace transition keeps its exact parent.
   const unsubscribePage = ctx.pages.store.subscribe(sync);
   return {

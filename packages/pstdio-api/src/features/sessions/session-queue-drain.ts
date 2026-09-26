@@ -9,12 +9,7 @@ const isTerminal = (status: string) =>
 export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
   const maybeRequeueReleasedSession = async (sessionId: string) => {
     const session = await deps.sessionService.get(sessionId);
-    if (!session || !isTerminal(session.status)) return;
-
-    if (session.status === "cancelled") {
-      await deps.sessionQueueEntriesService.removeBySession(sessionId);
-      return;
-    }
+    if (!session || !isTerminal(session.status) || session.status === "cancelled") return;
 
     const pending = await deps.sessionQueueEntriesService.listPendingBySession(sessionId);
     if (pending.length === 0) return;

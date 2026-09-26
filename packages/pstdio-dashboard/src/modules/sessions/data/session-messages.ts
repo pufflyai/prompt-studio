@@ -1,5 +1,4 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { getApiClient } from "@/lib/api";
 
 export interface DashboardSessionMessagePatch {
   op: "add" | "replace" | "remove";
@@ -7,75 +6,26 @@ export interface DashboardSessionMessagePatch {
   value?: unknown;
 }
 
-const isEmptyTextLikePart = (part: SessionMessage["parts"][number]) => {
-  if (part.type !== "text" && part.type !== "reasoning") return false;
-  return part.text.trim().length === 0;
-};
-
-const sanitizeMessages = (messages: SessionMessage[]) => {
-  const sanitized: SessionMessage[] = [];
-
-  for (const message of messages) {
-    const parts = message.parts.filter((part) => !isEmptyTextLikePart(part));
-    if (parts.length === 0) continue;
-    sanitized.push({ ...message, parts });
-  }
-
-  return sanitized;
-};
+export const visibleSessionMessages = (messages: readonly SessionMessage[]) =>
+  messages.flatMap((message) => {
+    const parts = message.parts.filter(
+      (part) => !((part.type === "text" || part.type === "reasoning") && !part.text.trim()),
+    );
+    return parts.length ? [{ ...message, parts }] : [];
+  });
 
 export const applyDashboardSessionMessagePatch = (messages: SessionMessage[], patch: DashboardSessionMessagePatch) => {
   if (patch.path === "/messages" && (patch.op === "add" || patch.op === "replace")) {
-    if (!Array.isArray(patch.value)) return sanitizeMessages(messages);
-    return sanitizeMessages(patch.value as SessionMessage[]);
+    return Array.isArray(patch.value) ? (patch.value as SessionMessage[]) : messages;
   }
-
   const match = patch.path.match(/^\/messages\/(\d+)$/);
-  if (!match) return sanitizeMessages(messages);
-
+  if (!match) return messages;
   const index = Number(match[1]);
+  const limit = patch.op === "add" ? messages.length : messages.length - 1;
+  if (index > limit || !Number.isSafeInteger(index)) return messages;
   const next = [...messages];
-
-  if (patch.op === "add") {
-    next.splice(index, 0, patch.value as SessionMessage);
-  } else if (patch.op === "replace") {
-    next[index] = patch.value as SessionMessage;
-  } else if (patch.op === "remove") {
-    next.splice(index, 1);
-  }
-
-  return sanitizeMessages(next);
-};
-
-export const fetchDashboardSessionConversationMessages = async (sessionId: string) => {
-  try {
-    const payload = await getApiClient().sessions.getConversation(sessionId);
-    if (!Array.isArray(payload.messages)) return [];
-
-    return applyDashboardSessionMessagePatch([], {
-      op: "replace",
-      path: "/messages",
-      value: payload.messages,
-    });
-  } catch {
-    return null;
-  }
-};
-
-export const resolveDashboardStreamEndMessages = (
-  streamedMessages: SessionMessage[],
-  hydratedMessages: SessionMessage[],
-) => {
-  if (streamedMessages.length >= hydratedMessages.length) return streamedMessages;
-  return hydratedMessages;
-};
-
-export const combineSessionMessageSources = (
-  streamedMessages: SessionMessage[],
-  hydratedMessages: SessionMessage[],
-  sessionId: string,
-) => {
-  if (streamedMessages.length === 0) return hydratedMessages;
-  const queued = hydratedMessages.filter((message) => message.id.startsWith(`queued-prompt-${sessionId}-`));
-  return [...streamedMessages, ...queued];
+  if (patch.op === "add") next.splice(index, 0, patch.value as SessionMessage);
+  else if (patch.op === "replace") next[index] = patch.value as SessionMessage;
+  else next.splice(index, 1);
+  return next;
 };

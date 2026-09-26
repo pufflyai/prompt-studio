@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { EventStore, HarnessExit } from "pstdio-api-contracts";
-import { createEventStore } from "pstdio-api-runtime-host";
+import type { HarnessExit } from "pstdio-api-contracts";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { createTrackedSessionStore } from "./session-store.test-utils";
 import { spawnAgentSession } from "./spawn-agent";
 
 const OPENCODE_ID = testHarnessId("opencode");
@@ -25,9 +25,9 @@ const createOpencodeRegistry = (done: Promise<HarnessExit>) =>
   ]);
 
 const createDeps = (
-  eventStore: EventStore & { close(): void },
+  store: ReturnType<typeof createTrackedSessionStore>,
   transitionStatus: ReturnType<typeof mock>,
-  remove: ReturnType<typeof mock>,
+  _remove: ReturnType<typeof mock>,
   registry: ReturnType<typeof createTestHarnessRegistry>,
   options?: { processExitTimeoutMs?: number },
 ) =>
@@ -40,21 +40,10 @@ const createDeps = (
       update: async () => null,
     },
     sessionService: {
-      get: async () => null,
+      get: async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" }),
       update: async () => null,
       transitionStatus,
-      store: {
-        create: mock(() => ({
-          eventStore,
-          approvalService: { handleResponse: () => {}, dispose: () => {} },
-        })),
-        get: mock(() => ({
-          eventStore,
-          approvalService: { handleResponse: () => {}, dispose: () => {} },
-        })),
-        setSession: mock(() => true),
-        remove,
-      },
+      store,
     },
     processExitTimeoutMs: options?.processExitTimeoutMs,
   }) as unknown as Parameters<typeof spawnAgentSession>[1];
@@ -64,7 +53,7 @@ describe("OpenCode session timeout repro", () => {
     const { promise: done, resolve: resolveExit } = Promise.withResolvers<HarnessExit>();
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
     const remove = mock(() => {});
-    const eventStore = createEventStore();
+    const store = createTrackedSessionStore();
 
     await spawnAgentSession(
       {
@@ -73,7 +62,7 @@ describe("OpenCode session timeout repro", () => {
         prompt: "hello",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
+      createDeps(store, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
     );
 
     // No EventStore patches arrive — simulates a long OpenCode tool call
@@ -90,15 +79,15 @@ describe("OpenCode session timeout repro", () => {
       await wait(10);
     }
 
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed");
-    expect(remove).toHaveBeenCalledWith("session_1");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed", expect.anything());
+    expect(store.get("session_1")).toBeNull();
   });
 
   test("resumed OpenCode session does not re-fail under quiet condition", async () => {
     const { promise: done, resolve: resolveExit } = Promise.withResolvers<HarnessExit>();
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
     const remove = mock(() => {});
-    const eventStore = createEventStore();
+    const store = createTrackedSessionStore();
 
     await spawnAgentSession(
       {
@@ -107,7 +96,7 @@ describe("OpenCode session timeout repro", () => {
         prompt: "resumed follow-up",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
+      createDeps(store, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
     );
 
     // No patches at all — same quiet condition that previously caused false failure
@@ -122,7 +111,7 @@ describe("OpenCode session timeout repro", () => {
       await wait(10);
     }
 
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed", expect.anything());
   });
 
   test("POST timeout transitions API session to disconnected, not completed or failed", async () => {
@@ -133,7 +122,7 @@ describe("OpenCode session timeout repro", () => {
       status: "disconnected",
     }));
     const remove = mock(() => {});
-    const eventStore = createEventStore();
+    const store = createTrackedSessionStore();
 
     await spawnAgentSession(
       {
@@ -142,7 +131,7 @@ describe("OpenCode session timeout repro", () => {
         prompt: "hello",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
+      createDeps(store, transitionStatus, remove, createOpencodeRegistry(done), { processExitTimeoutMs: 20 }),
     );
 
     // Simulate the provider signaling a POST timeout
@@ -153,7 +142,7 @@ describe("OpenCode session timeout repro", () => {
       await wait(10);
     }
 
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "disconnected");
-    expect(remove).toHaveBeenCalledWith("session_1");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "disconnected", expect.anything());
+    expect(store.get("session_1")).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { HarnessContext, HarnessEventSink, JsonPatch } from "@pstdio/sdk/extensions";
+import type { HarnessContext, HarnessEventSink, JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
 import { createFakeHarness } from "./fake-harness";
 
 const ctx: HarnessContext = {
@@ -23,9 +23,17 @@ const ctx: HarnessContext = {
   state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
 };
 
-const recordingSink = () => {
+const recordingSink = (initial: SessionMessage[] = []) => {
   const patches: JsonPatch[] = [];
-  const sink: HarnessEventSink = { push: (patch) => patches.push(patch) };
+  const messages = [...initial];
+  const sink: HarnessEventSink = {
+    push: (patch) => {
+      patches.push(patch);
+      const index = Number(patch.path.slice("/messages/".length));
+      messages[index] = patch.value as SessionMessage;
+    },
+    getMessages: () => messages,
+  };
   return { patches, sink };
 };
 
@@ -51,6 +59,7 @@ describe("createFakeHarness", () => {
       index: 0,
     });
     expect(messages[1]?.role).toBe("assistant");
+    expect(sink.getMessages()).toEqual(messages);
   });
 
   test("resolves cancelled when stopped before completion", async () => {
@@ -67,7 +76,9 @@ describe("createFakeHarness", () => {
     const started = await harness.start(ctx, { prompt: "Initial", sessionId: "host-1", events: recordingSink().sink });
     await started.done;
 
-    const { patches, sink } = recordingSink();
+    const { patches, sink } = recordingSink(
+      await harness.getMessages(ctx, { agentSessionId: started.agentSessionId! }),
+    );
     const resumed = await harness.resume(ctx, {
       agentSessionId: started.agentSessionId!,
       sessionId: "host-1",
@@ -84,6 +95,7 @@ describe("createFakeHarness", () => {
     expect(messages).toHaveLength(4);
     expect(messages[2]).toMatchObject({ role: "user", index: 2 });
     expect(messages[3]).toMatchObject({ role: "assistant", index: 3 });
+    expect(sink.getMessages()).toEqual(messages);
   });
 
   test("emits a question tool part for the question trigger prompt", async () => {

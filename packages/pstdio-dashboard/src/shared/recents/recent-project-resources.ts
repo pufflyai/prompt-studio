@@ -1,12 +1,7 @@
 import type { ResourceRef } from "@pstdio/workbench";
-import type { SyncedRow } from "@/lib/sync/collections";
+import { getCollection, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
-import {
-  type DashboardRows,
-  isDashboardProjectRow,
-  isVisibleDashboardRow,
-  readDashboardRows,
-} from "@/shared/sync/dashboard-rows";
+import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
 
 export interface RecentProjectResource {
   id: string;
@@ -38,7 +33,7 @@ const createSessionRecent = (row: SyncedRow, projectId: string | undefined): Rec
 // timestamp, so they are the recents it can order today. The shape stays
 // resource-kind agnostic so other kinds join without changing callers.
 export const createRecentProjectResources = (
-  rows: DashboardRows,
+  rows: Pick<DashboardRows, "sessions">,
   projectId: string | undefined,
   limit = recentProjectResourceLimit,
 ) =>
@@ -51,4 +46,4 @@ export const createRecentProjectResources = (
 // The data version is unused: it ties the recompute to the sync store version so
 // callers re-read whenever synced rows change.
 export const readRecentProjectResources = (projectId: string | undefined, _dataVersion: number) =>
-  createRecentProjectResources(readDashboardRows(), projectId);
+  createRecentProjectResources({ sessions: Array.from(getCollection("sessions").values()) }, projectId);

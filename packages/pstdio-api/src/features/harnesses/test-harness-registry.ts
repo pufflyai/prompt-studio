@@ -1,4 +1,5 @@
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
+import { reconcileMessageHistory } from "pstdio-api-contracts";
 import type { HarnessProvider } from "pstdio-api-contracts/extension-kernel";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
@@ -25,6 +26,7 @@ export const createTestHarnessRecord = (
     listModels: () => [],
     start: () => ({ done: Promise.resolve({ status: "completed" as const }), stop: () => {} }),
     resume: () => ({ done: Promise.resolve({ status: "completed" as const }), stop: () => {} }),
+    recoverMessages: (_ctx, input) => reconcileMessageHistory(input),
     ...options?.provider,
     ref: options?.provider?.ref ?? { kind: "harness", id: localId },
   };

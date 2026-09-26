@@ -214,6 +214,7 @@ describe("POST /v1/sessions harness params", () => {
     });
 
     expect(followUpRes.status).toBe(200);
+    for (let attempt = 0; resumeParamAgent.mock.calls.length === 0 && attempt < 50; attempt++) await Bun.sleep(10);
     expect(resumeParamAgent).toHaveBeenCalledTimes(1);
     expect(resumeParamAgent.mock.calls[0]?.[1].params).toEqual({ effort: "high", dryRun: false });
   });

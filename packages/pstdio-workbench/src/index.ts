@@ -227,6 +227,7 @@ export type {
 
 export {
   batchWorkbenchChanges,
+  createRendererReadRegistry,
   createStatusBarRegistry,
   createStatusRegistry,
   createViewRegistry,
@@ -243,6 +244,10 @@ export {
   isWorkbenchModePanelAvailable,
   isWorkbenchViewHierarchyNode,
   matchesContextExpression,
+  type RendererReadBinding,
+  type RendererReadRegistry,
+  type RendererReadRequest,
+  rendererReadKey,
   resolveAnchorRegion,
   resourceContextMenuPath,
   resourceHierarchyCycleCode,

@@ -164,7 +164,10 @@ describe("harness registry project scope", () => {
     });
 
     const harness = await service.get(testHarnessId("remote"), SCOPE);
-    await harness?.start({ prompt: "run", sessionId: "session-1", events: { push: () => {} } }, SCOPE);
+    await harness?.start(
+      { prompt: "run", sessionId: "session-1", events: { push: () => {}, getMessages: () => [] } },
+      SCOPE,
+    );
 
     expect(request).toHaveBeenCalledWith("control-plane", {
       method: "POST",

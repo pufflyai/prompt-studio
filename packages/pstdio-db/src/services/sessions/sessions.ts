@@ -2,6 +2,7 @@ import { and, count, eq, inArray, ne } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { type ResourceRef, session_queue_entries, sessions } from "../../db/schemas.pg";
 import { mergeResourceAnchors, removeResourceAnchors } from "../resource-anchors";
+import { updateSessionStatus } from "./session-status";
 import {
   archiveQueued,
   cancelQueued,
@@ -163,24 +164,27 @@ export const createSessionsDBService = (db: DbClient) => {
   };
 
   const insertEntryForActive = async (input: QueueExistingInput) => {
-    const timestamp = nowTimestamp();
+    return db.transaction(async (tx) => {
+      const [session] = await tx.select().from(sessions).where(eq(sessions.id, input.id)).for("update");
+      if (!session || session.status === "cancelled") return null;
+      const timestamp = nowTimestamp();
+      const [entry] = await tx
+        .insert(session_queue_entries)
+        .values({
+          session_id: input.id,
+          prompt: input.prompt,
+          request_kind: input.request_kind,
+          question_response_json: input.question_response_json ?? null,
+          attachments_json: input.attachments_json ?? null,
+          params_json: input.params_json ?? null,
+          dispatch_started_at: null,
+          created_at: timestamp,
+          updated_at: timestamp,
+        })
+        .returning();
 
-    const [entry] = await db
-      .insert(session_queue_entries)
-      .values({
-        session_id: input.id,
-        prompt: input.prompt,
-        request_kind: input.request_kind,
-        question_response_json: input.question_response_json ?? null,
-        attachments_json: input.attachments_json ?? null,
-        params_json: input.params_json ?? null,
-        dispatch_started_at: null,
-        created_at: timestamp,
-        updated_at: timestamp,
-      })
-      .returning();
-
-    return entry ?? null;
+      return entry ?? null;
+    });
   };
 
   const get = async (id: string) => {
@@ -221,16 +225,11 @@ export const createSessionsDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  const updateStatus = async (id: string, status: SessionStatus) => {
-    const sets: Partial<SessionRecord> = { status, updated_at: nowTimestamp() };
-
-    if (status === "completed" || status === "failed" || status === "cancelled") {
-      sets.last_request_ended = nowTimestamp();
-    }
-
-    const [updated] = await db.update(sessions).set(sets).where(eq(sessions.id, id)).returning();
-    return updated ?? null;
-  };
+  const updateStatus = async (
+    id: string,
+    status: SessionStatus,
+    options?: { expectedLastRequestStarted: string | null },
+  ) => updateSessionStatus(db, id, status, options);
 
   const archive = async (id: string) => {
     const [updated] = await db

@@ -1,15 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { HarnessSession } from "pstdio-api-contracts";
-import { createEventStore } from "pstdio-api-runtime-host";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
 import { reattachAgentSession, resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
-
-const createStoreEntry = () => ({
-  eventStore: createEventStore(),
-  approvalService: { handleResponse: () => {}, dispose: () => {} },
-});
 
 const completedSession = (): HarnessSession => ({
   agentSessionId: "agent_session_1",
@@ -37,21 +32,18 @@ const buildHarness = () => {
 };
 
 const createSessionServiceMock = () => {
-  const storeEntries = new Map<string, unknown>();
   return {
-    get: mock(async () => null),
+    get: mock(async () => ({
+      id: "s_1",
+      project_id: "project_1",
+      agent: CLAUDE_CODE_ID,
+      agent_session_id: "agent_1",
+      cwd: "/repo",
+      status: "in_progress",
+    })),
     update: mock(async () => null),
     transitionStatus: mock(async () => null),
-    store: {
-      create: mock((id: string) => {
-        const entry = createStoreEntry();
-        storeEntries.set(id, entry);
-        return entry;
-      }),
-      get: mock((id: string) => storeEntries.get(id) ?? null),
-      setSession: mock(() => true),
-      remove: mock(() => {}),
-    },
+    store: createTrackedSessionStore(),
   };
 };
 
@@ -70,6 +62,7 @@ describe("resumeAgentSession", () => {
       },
       {
         harnessRegistry: registry,
+        fileService: checkpointFileService,
         sessionService,
         eventBus: {
           emit: () => {},
@@ -109,6 +102,7 @@ describe("resumeAgentSession", () => {
       },
       {
         harnessRegistry: registry,
+        fileService: checkpointFileService,
         sessionService,
         eventBus: {
           emit: () => {},
@@ -143,6 +137,7 @@ describe("workspace readiness gate", () => {
         { sessionId: "s_1", agentSessionId: "agent_1", agentId: CLAUDE_CODE_ID, prompt: "continue", cwd: "/repo" },
         {
           harnessRegistry: registry,
+          fileService: checkpointFileService,
           sessionService,
           eventBus: { emit: () => {} },
           workspaceSessionService: erroredWorkspace,
@@ -161,6 +156,7 @@ describe("workspace readiness gate", () => {
     await expect(
       reattachAgentSession({ sessionId: "s_1", agentSessionId: "agent_1", agentId: CLAUDE_CODE_ID, cwd: "/repo" }, {
         harnessRegistry: registry,
+        fileService: checkpointFileService,
         sessionService,
         eventBus: { emit: () => {} },
         workspaceSessionService: erroredWorkspace,
@@ -178,6 +174,7 @@ describe("workspace readiness gate", () => {
     await expect(
       spawnAgentSession({ sessionId: "s_1", agentId: CLAUDE_CODE_ID, prompt: "start", cwd: undefined }, {
         harnessRegistry: registry,
+        fileService: checkpointFileService,
         sessionService,
         eventBus: { emit: () => {} },
         workspaceSessionService: {
@@ -214,6 +211,7 @@ describe("workspace readiness gate", () => {
       },
       {
         harnessRegistry: registry,
+        fileService: checkpointFileService,
         sessionService,
         eventBus: { emit: () => {} },
         workspaceSessionService: {

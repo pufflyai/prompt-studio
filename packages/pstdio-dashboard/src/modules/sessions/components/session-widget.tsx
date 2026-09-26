@@ -6,8 +6,8 @@ import {
   dashboardActiveResourceIdContextKey,
   dashboardActiveResourceKindContextKey,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
+import { subscribeSessionData } from "../data/session-data-subscription";
 import { DashboardSessionChatPanel, ReviewChangesAction } from "./session-chat-panel";
 
 interface SessionWidgetProps {
@@ -20,7 +20,10 @@ export const SessionWidget = (props: SessionWidgetProps) => {
   const [view, setView] = useState(() => resolveDashboardSessionViewForPlacement(input.instance));
   useEffect(() => {
     const refresh = () => setView(resolveDashboardSessionViewForPlacement(input.instance));
-    const unsubscribe = subscribeDashboardData(refresh);
+    const unsubscribe = subscribeSessionData(
+      input.instance.resource?.type === "session" ? input.instance.resource.id : undefined,
+      refresh,
+    );
     refresh();
     return unsubscribe;
   }, [input.instance]);

@@ -1,16 +1,11 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { HarnessSession } from "pstdio-api-contracts";
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
-import { createEventStore } from "pstdio-api-runtime-host";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { createTrackedSessionStore } from "./session-store.test-utils";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
-
-const createStoreEntry = () => ({
-  eventStore: createEventStore(),
-  approvalService: { handleResponse: () => {}, dispose: () => {} },
-});
 
 const completedSession = (): HarnessSession => ({
   agentSessionId: "agent_session_1",
@@ -19,21 +14,11 @@ const completedSession = (): HarnessSession => ({
 });
 
 const createSessionService = () => {
-  const storeEntries = new Map<string, unknown>();
   return {
     get: mock(async () => ({ id: "session_99", project_id: "project_1", status: "in_progress" })),
     update: async () => null,
     transitionStatus: async () => null,
-    store: {
-      create: mock((id: string) => {
-        const entry = createStoreEntry();
-        storeEntries.set(id, entry);
-        return entry;
-      }),
-      get: mock((id: string) => storeEntries.get(id) ?? null),
-      setSession: mock(() => true),
-      remove: mock(() => {}),
-    },
+    store: createTrackedSessionStore(),
   };
 };
 

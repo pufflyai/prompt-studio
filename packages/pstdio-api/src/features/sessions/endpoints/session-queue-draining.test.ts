@@ -79,6 +79,7 @@ describe("POST /v1/sessions queue draining", () => {
 
     expect(followUpRes.status).toBe(200);
     expect(await followUpRes.json()).toMatchObject({ id: session.id, status: "in_progress" });
+    for (let attempt = 0; resumeSession.mock.calls.length === 0 && attempt < 50; attempt++) await Bun.sleep(10);
     expect(resumeSession).toHaveBeenCalledTimes(1);
     expect(await handle.deps.sessionQueueEntriesService.listPending()).not.toContainEqual(
       expect.objectContaining({ session_id: session.id }),

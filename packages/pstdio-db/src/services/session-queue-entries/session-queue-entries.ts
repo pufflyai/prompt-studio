@@ -23,6 +23,13 @@ class PendingSwapFailed extends Error {}
 const nowTimestamp = () => new Date().toISOString();
 
 export const createSessionQueueEntriesDBService = (db: DbClient) => {
+  const get = async (queuePosition: number) => {
+    const [entry] = await db
+      .select()
+      .from(session_queue_entries)
+      .where(eq(session_queue_entries.queue_position, queuePosition));
+    return entry ?? null;
+  };
   const create = async (input: CreateInput) => {
     const timestamp = input.created_at ?? nowTimestamp();
     const [created] = await db
@@ -150,6 +157,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
   };
 
   return {
+    get,
     create,
     createDispatchStarted,
     listPending,

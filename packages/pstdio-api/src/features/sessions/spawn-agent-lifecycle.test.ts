@@ -1,15 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { HarnessSession } from "pstdio-api-contracts";
-import { createEventStore } from "pstdio-api-runtime-host";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
 import { spawnAgentSession } from "./spawn-agent";
 
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
-
-const createStoreEntry = () => ({
-  eventStore: createEventStore(),
-  approvalService: { handleResponse: () => {}, dispose: () => {} },
-});
 
 const completedSession = (): HarnessSession => ({
   agentSessionId: "agent_session_1",
@@ -22,21 +17,11 @@ const completedSession = (): HarnessSession => ({
 const readyWorkspaceSession = { getWorkspaceBySessionId: async () => null };
 
 const createSessionServiceMock = () => {
-  const storeEntries = new Map<string, unknown>();
   return {
-    get: mock(async () => null),
+    get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" })),
     update: mock(async () => null),
     transitionStatus: mock(async () => null),
-    store: {
-      create: mock((id: string) => {
-        const entry = createStoreEntry();
-        storeEntries.set(id, entry);
-        return entry;
-      }),
-      get: mock((id: string) => storeEntries.get(id) ?? null),
-      setSession: mock(() => true),
-      remove: mock(() => {}),
-    },
+    store: createTrackedSessionStore(),
   };
 };
 
@@ -59,6 +44,7 @@ describe("spawnAgentSession lifecycle", () => {
       {
         harnessRegistry: registry,
         sessionService,
+        fileService: checkpointFileService,
         eventBus: { emit: () => {} },
         workspaceSessionService: readyWorkspaceSession,
       } as unknown as Parameters<typeof spawnAgentSession>[1],
@@ -89,6 +75,7 @@ describe("spawnAgentSession lifecycle", () => {
       {
         harnessRegistry: registry,
         sessionService,
+        fileService: checkpointFileService,
         eventBus: { emit: () => {} },
         workspaceSessionService: readyWorkspaceSession,
       } as unknown as Parameters<typeof spawnAgentSession>[1],
@@ -97,7 +84,7 @@ describe("spawnAgentSession lifecycle", () => {
     await Bun.sleep(0);
 
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(sessionService.transitionStatus).toHaveBeenCalledWith("s_cancelled_running", "cancelled");
+    expect(sessionService.transitionStatus).toHaveBeenCalledWith("s_cancelled_running", "cancelled", expect.anything());
   });
 
   test("rejects and cancels when cancellation lands while the accepted session id is persisted", async () => {
@@ -119,6 +106,7 @@ describe("spawnAgentSession lifecycle", () => {
       {
         harnessRegistry: registry,
         sessionService,
+        fileService: checkpointFileService,
         eventBus: { emit: () => {} },
         workspaceSessionService: readyWorkspaceSession,
       } as unknown as Parameters<typeof spawnAgentSession>[1],
@@ -130,7 +118,7 @@ describe("spawnAgentSession lifecycle", () => {
     await expect(spawning).rejects.toThrow();
     expect(stop).toHaveBeenCalledTimes(1);
     expect(sessionService.store.setSession).not.toHaveBeenCalled();
-    expect(sessionService.transitionStatus).toHaveBeenCalledWith("s_cancelled_persist", "cancelled");
+    expect(sessionService.transitionStatus).toHaveBeenCalledWith("s_cancelled_persist", "cancelled", expect.anything());
   });
 
   test("keeps the session active and tracked when request cancellation cleanup fails", async () => {
@@ -149,6 +137,7 @@ describe("spawnAgentSession lifecycle", () => {
       {
         harnessRegistry: registry,
         sessionService,
+        fileService: checkpointFileService,
         eventBus: { emit: () => {} },
         workspaceSessionService: readyWorkspaceSession,
       } as unknown as Parameters<typeof spawnAgentSession>[1],
@@ -162,6 +151,7 @@ describe("spawnAgentSession lifecycle", () => {
     expect(sessionService.store.setSession).toHaveBeenCalledWith(
       "s_cleanup_failed",
       expect.objectContaining({ agentSessionId: "accepted-1" }),
+      expect.anything(),
     );
   });
 
@@ -193,14 +183,7 @@ describe("spawnAgentSession lifecycle", () => {
           get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" })),
           update: async () => null,
           transitionStatus,
-          store: {
-            create: mock(() => ({
-              ...createStoreEntry(),
-            })),
-            get: mock(() => null),
-            setSession: mock(() => true),
-            remove: mock(() => {}),
-          },
+          store: createTrackedSessionStore(),
         },
       } as unknown as Parameters<typeof spawnAgentSession>[1],
     );
@@ -210,7 +193,7 @@ describe("spawnAgentSession lifecycle", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed", expect.anything());
   });
 
   test("does not overwrite a cancelled session when the session exits later", async () => {
@@ -218,8 +201,10 @@ describe("spawnAgentSession lifecycle", () => {
     const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { start } })]);
 
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
-    const remove = mock(() => {});
+    const store = createTrackedSessionStore();
+    const remove = store.remove;
     const get = mock(async () => ({ id: "session_1", project_id: "project_1", status: "cancelled" }));
+    get.mockResolvedValueOnce({ id: "session_1", project_id: "project_1", status: "in_progress" });
     get.mockResolvedValueOnce({ id: "session_1", project_id: "project_1", status: "in_progress" });
 
     await spawnAgentSession(
@@ -244,14 +229,7 @@ describe("spawnAgentSession lifecycle", () => {
           get,
           update: async () => null,
           transitionStatus,
-          store: {
-            create: mock(() => ({
-              ...createStoreEntry(),
-            })),
-            get: mock(() => null),
-            setSession: mock(() => true),
-            remove,
-          },
+          store,
         },
       } as unknown as Parameters<typeof spawnAgentSession>[1],
     );
@@ -261,7 +239,7 @@ describe("spawnAgentSession lifecycle", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
-    expect(remove).toHaveBeenCalledWith("session_1");
+    expect(remove).toHaveBeenCalledWith("session_1", expect.anything());
     expect(transitionStatus).not.toHaveBeenCalled();
   });
 });

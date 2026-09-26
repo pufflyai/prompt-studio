@@ -1,6 +1,7 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
-import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
+import { logStartupFailure } from "./session-startup-failure";
+import type { ActiveSession } from "./session-store";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 export type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
@@ -45,36 +46,6 @@ export const withSchedulingLock = async <T>(operation: () => Promise<T>) => {
   } finally {
     resolve();
   }
-};
-
-export const logStartupFailure = async (
-  deps: SessionsRouteDeps,
-  input: {
-    error: unknown;
-    session: ExistingSession;
-    agentId: string;
-    cwd?: string;
-    model?: string;
-    submittedQueuePosition?: number;
-  },
-) => {
-  sessionLogger.error(
-    {
-      err: input.error,
-      event: "session.spawn.failed",
-      session_id: input.session.id,
-      project_id: input.session.project_id,
-      agent: input.agentId,
-      cwd: input.cwd ?? null,
-      model: input.model ?? null,
-    },
-    "Agent session startup failed",
-  );
-  if (input.submittedQueuePosition !== undefined) {
-    await deps.sessionQueueEntriesService.remove(input.submittedQueuePosition);
-  }
-  deps.sessionService.store.remove(input.session.id);
-  await deps.sessionService.transitionStatus(input.session.id, "failed");
 };
 
 export const hasCreateCapacity = async (deps: SessionsRouteDeps) => {
@@ -163,7 +134,7 @@ export const createSubmittedDispatchEntry = async (
   return entry?.queue_position;
 };
 
-export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchContext) => {
+export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: DispatchContext) => {
   const { session, prompt, cwd, agentId, switchingAgent, model, params } = input;
 
   await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, params, switchingAgent });
@@ -179,43 +150,66 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
     params,
   });
 
-  const fail = (error: unknown) =>
-    logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition });
+  const fail = (error: unknown, entry: ActiveSession | null) =>
+    logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition, entry });
 
-  const launch = async (starting: Promise<unknown>) => {
-    if (!input.signal) {
-      void starting.catch(fail);
+  return async () => {
+    const launch = async (starting: Promise<unknown>) => {
+      const owner = deps.sessionService.store.get(session.id);
+      if (!input.signal) {
+        void starting.catch((error) => fail(error, owner));
+        return;
+      }
+      try {
+        await starting;
+      } catch (error) {
+        if (input.signal.aborted) {
+          if (submittedQueuePosition !== undefined) {
+            await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+          }
+          await deps.sessionService.cancel(session.id);
+        } else {
+          await fail(error, owner);
+        }
+        throw error;
+      }
+    };
+
+    if (!switchingAgent && session.agent_session_id) {
+      await launch(
+        resumeAgentSession(
+          {
+            sessionId: session.id,
+            projectId: projectIdForAgentEnv(session),
+            agentSessionId: session.agent_session_id,
+            agentId,
+            prompt,
+            attachments: input.attachments,
+            model,
+            params,
+            cwd,
+            questionResponse: input.questionResponse,
+            submittedQueuePosition,
+            signal: input.signal,
+          },
+          deps,
+        ),
+      );
+      deps.sessionService.emitResumedHook?.(dispatchSession);
       return;
     }
-    try {
-      await starting;
-    } catch (error) {
-      if (input.signal.aborted) {
-        if (submittedQueuePosition !== undefined) {
-          await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
-        }
-        await deps.sessionService.cancel(session.id);
-      } else {
-        await fail(error);
-      }
-      throw error;
-    }
-  };
 
-  if (!switchingAgent && session.agent_session_id) {
     await launch(
-      resumeAgentSession(
+      spawnAgentSession(
         {
           sessionId: session.id,
           projectId: projectIdForAgentEnv(session),
-          agentSessionId: session.agent_session_id,
           agentId,
           prompt,
           attachments: input.attachments,
           model,
           params,
           cwd,
-          questionResponse: input.questionResponse,
           submittedQueuePosition,
           signal: input.signal,
         },
@@ -223,25 +217,5 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
       ),
     );
     deps.sessionService.emitResumedHook?.(dispatchSession);
-    return;
-  }
-
-  await launch(
-    spawnAgentSession(
-      {
-        sessionId: session.id,
-        projectId: projectIdForAgentEnv(session),
-        agentId,
-        prompt,
-        attachments: input.attachments,
-        model,
-        params,
-        cwd,
-        submittedQueuePosition,
-        signal: input.signal,
-      },
-      deps,
-    ),
-  );
-  deps.sessionService.emitResumedHook?.(dispatchSession);
+  };
 };

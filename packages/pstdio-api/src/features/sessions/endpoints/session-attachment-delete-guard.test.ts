@@ -167,7 +167,7 @@ describe("session attachment delete guard", () => {
   });
 
   test("rejects deleting a direct-dispatched follow-up attachment immediately after follow-up returns", async () => {
-    const isolated = await createIsolatedApp({ delayHarnessResolutionAfterGets: 1 });
+    const isolated = await createIsolatedApp({ delayHarnessResolutionAfterGets: 2 });
     try {
       const project = await createProject(isolated.app, "Immediate Follow-up Delete Guard Project");
       const session = await isolated.deps.sessionService.create({

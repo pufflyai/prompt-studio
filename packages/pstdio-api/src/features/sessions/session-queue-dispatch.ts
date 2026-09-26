@@ -1,7 +1,9 @@
 import type { HarnessAttachment } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { resolveSessionAttachments } from "./session-attachments";
-import { type ExistingSession, logStartupFailure, type PendingQueueEntry } from "./session-scheduler-internals";
+import type { ExistingSession, PendingQueueEntry } from "./session-scheduler-internals";
+import { logStartupFailure } from "./session-startup-failure";
+import type { ActiveSession } from "./session-store";
 import { resumeAgentSession, spawnAgentSession, WorkspaceSessionNotReadyError } from "./spawn-agent";
 
 export const dispatchQueuedEntry = async (
@@ -18,17 +20,27 @@ export const dispatchQueuedEntry = async (
   if (!dispatchSession) return;
 
   const submittedQueuePosition = entry.attachments_json?.length ? entry.queue_position : undefined;
+  let owner: ActiveSession | null = null;
+  const removeEntry = () =>
+    submittedQueuePosition === undefined ? deps.sessionQueueEntriesService.remove(entry.queue_position) : undefined;
   const fail = async (error: unknown) => {
     if (error instanceof WorkspaceSessionNotReadyError && error.retryable) {
       deps.sessionService.store.remove(session.id);
       await deps.sessionService.recoverQueuedDispatchClaim(session.id, entry.queue_position);
       return;
     }
-    await deps.sessionQueueEntriesService.remove(entry.queue_position);
-    await logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model });
+    // Startup failure keeps an entry whose submitted attachments are not saved in the conversation yet.
+    await removeEntry();
+    await logStartupFailure(deps, {
+      error,
+      session: dispatchSession,
+      agentId,
+      cwd,
+      model,
+      submittedQueuePosition,
+      entry: owner,
+    });
   };
-  const removeEntry = () =>
-    submittedQueuePosition === undefined ? deps.sessionQueueEntriesService.remove(entry.queue_position) : undefined;
 
   let attachments: HarnessAttachment[];
   try {
@@ -57,6 +69,7 @@ export const dispatchQueuedEntry = async (
       },
       deps,
     ).then(removeEntry, fail);
+    owner = deps.sessionService.store.get(session.id);
     deps.sessionService.emitStartedHook?.(dispatchSession);
     return { settled };
   }
@@ -78,6 +91,7 @@ export const dispatchQueuedEntry = async (
       },
       deps,
     ).then(removeEntry, fail);
+    owner = deps.sessionService.store.get(session.id);
     deps.sessionService.emitResumedHook?.(dispatchSession);
     return { settled };
   }
@@ -96,6 +110,7 @@ export const dispatchQueuedEntry = async (
     },
     deps,
   ).then(removeEntry, fail);
+  owner = deps.sessionService.store.get(session.id);
   deps.sessionService.emitResumedHook?.(dispatchSession);
   return { settled };
 };
