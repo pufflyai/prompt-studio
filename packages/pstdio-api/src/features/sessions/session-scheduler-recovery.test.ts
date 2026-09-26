@@ -6,7 +6,7 @@ import type { HarnessExit, HarnessSession, HarnessStartInput } from "pstdio-api-
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
-import { dispatchQueuedEntry } from "./session-scheduler-internals";
+import { dispatchQueuedEntry } from "./session-queue-dispatch";
 
 const FAKE_ID = testHarnessId("fake");
 

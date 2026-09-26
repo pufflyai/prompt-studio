@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
-import { dispatchQueuedEntry } from "./session-scheduler-internals";
+import { dispatchQueuedEntry } from "./session-queue-dispatch";
 
 test.each(["start", "follow_up", "resume"])("keeps a queued %s for retry when startup is not ready", async (kind) => {
   let starts = 0;

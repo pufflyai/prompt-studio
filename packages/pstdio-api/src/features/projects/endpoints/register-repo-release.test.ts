@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { git } from "pstdio-wt";
 import { writeExtension } from "../../extensions/default-extensions-test-fixtures";
 
-test("registers a repository with catalog defaults pinned to the host release", async () => {
+test.each(["{hostRelease}", "fixed-release"])("registers mixed catalog defaults with %s", async (catalogRef) => {
   const root = mkdtempSync(join(tmpdir(), "register-release-defaults-"));
   const source = join(root, "catalog-repo");
   const repo = join(root, "project-repo");
@@ -16,26 +16,28 @@ test("registers a repository with catalog defaults pinned to the host release", 
     await git(source, ["init", "-b", "main"]);
     await git(source, ["add", "."]);
     await git(source, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "release"]);
+    await git(source, ["tag", "fixed-release"]);
+    writeFileSync(join(source, "extensions/release-test/marker.txt"), "host");
+    await git(source, ["add", "."]);
+    await git(source, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "host"]);
     await git(source, ["tag", "test-release"]);
     mkdirSync(repo);
     writeFileSync(
       catalog,
       JSON.stringify({
         version: 1,
-        extensions: [
-          {
-            installName: "release-test",
-            displayName: "Release fixture",
-            description: "",
-            default: true,
-            origin: {
-              kind: "git",
-              url: pathToFileURL(source).href,
-              path: "extensions/release-test",
-              ref: "{hostRelease}",
-            },
+        extensions: ["release-test", "explicit-test"].map((installName) => ({
+          installName,
+          displayName: "Release fixture",
+          description: "",
+          default: true,
+          origin: {
+            kind: "git",
+            url: pathToFileURL(source).href,
+            path: "extensions/release-test",
+            ref: catalogRef,
           },
-        ],
+        })),
       }),
     );
     // Catalogs are cached per runtime. A fresh process also proves the packaged-source path.
@@ -64,7 +66,10 @@ test("registers a repository with catalog defaults pinned to the host release", 
           PSTDIO_HOME: join(root, "home"),
           PSTDIO_EXTENSION_CATALOG: catalog,
           PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-            defaultExtensions: [{ source: "release-test", skipInstall: true }],
+            defaultExtensions: [
+              { source: "release-test", installName: "release-test", skipInstall: true },
+              { source: "explicit-test", installName: "explicit-test", ref: "test-release", skipInstall: true },
+            ],
           }),
         },
         stdout: "pipe",
@@ -78,6 +83,8 @@ test("registers a repository with catalog defaults pinned to the host release", 
     ]);
     expect({ status, output: status === 0 ? "" : stdout + stderr }).toEqual({ status: 0, output: "" });
     expect(existsSync(join(repo, ".pstdio/extensions/release-test/extension.ts"))).toBe(true);
+    expect(existsSync(join(repo, ".pstdio/extensions/release-test/marker.txt"))).toBe(catalogRef === "{hostRelease}");
+    expect(readFileSync(join(repo, ".pstdio/extensions/explicit-test/marker.txt"), "utf8")).toBe("host");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
