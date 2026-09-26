@@ -6,6 +6,7 @@ import type { HarnessExit, HarnessSession, HarnessStartInput } from "pstdio-api-
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { dispatchQueuedEntry } from "./session-scheduler-internals";
 
 const FAKE_ID = testHarnessId("fake");
 
@@ -178,11 +179,11 @@ describe("session scheduler startup recovery", () => {
     }
   });
 
-  test("recovers a queued entry claimed before dispatch was initiated", async () => {
+  test("recovers a queued entry while dispatch is waiting for the harness", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-claimed-queue-recovery-test-"));
     const databasePath = join(tempRoot, "db");
     const storageRoot = join(tempRoot, "storage");
-    const firstApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createRegistry() });
+    const firstApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createBlockedRegistry(0) });
 
     try {
       const projectRes = await firstApp.app.request("/v1/projects", {
@@ -205,7 +206,8 @@ describe("session scheduler startup recovery", () => {
       );
 
       const [entry] = await firstApp.deps.sessionQueueEntriesService.listPendingBySession(queued.id);
-      await firstApp.deps.sessionService.claimQueuedForDispatch(queued.id, entry!.queue_position);
+      await dispatchQueuedEntry(firstApp.deps, queued, entry!);
+      expect(startSession).not.toHaveBeenCalled();
       expect(await firstApp.deps.sessionService.get(queued.id)).toMatchObject({ status: "in_progress" });
       expect(await firstApp.deps.sessionQueueEntriesService.listDispatchStarted()).toContainEqual(
         expect.objectContaining({ session_id: queued.id, prompt: "recover claimed prompt" }),

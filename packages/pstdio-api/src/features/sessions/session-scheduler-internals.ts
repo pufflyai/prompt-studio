@@ -2,7 +2,7 @@ import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pst
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { resolveSessionAttachments } from "./session-attachments";
-import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
+import { resumeAgentSession, spawnAgentSession, WorkspaceSessionNotReadyError } from "./spawn-agent";
 
 export type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
 export type PendingQueueEntry = Awaited<
@@ -178,8 +178,15 @@ export const dispatchQueuedEntry = async (
   if (!dispatchSession) return;
 
   const submittedQueuePosition = hasAttachmentRefs(entry.attachments_json) ? entry.queue_position : undefined;
-  const fail = (error: unknown) =>
-    logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition });
+  const fail = async (error: unknown) => {
+    if (error instanceof WorkspaceSessionNotReadyError && error.retryable) {
+      deps.sessionService.store.remove(session.id);
+      await deps.sessionService.recoverQueuedDispatchClaim(session.id, entry.queue_position);
+      return;
+    }
+    await deps.sessionQueueEntriesService.remove(entry.queue_position);
+    await logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model });
+  };
   const removeEntry = () =>
     submittedQueuePosition === undefined ? deps.sessionQueueEntriesService.remove(entry.queue_position) : undefined;
 
@@ -210,8 +217,9 @@ export const dispatchQueuedEntry = async (
         submittedQueuePosition,
       },
       deps,
-    ).catch(fail);
-    await removeEntry();
+    )
+      .then(removeEntry)
+      .catch(fail);
     deps.sessionService.emitStartedHook?.(dispatchSession);
     return;
   }
@@ -232,8 +240,9 @@ export const dispatchQueuedEntry = async (
         submittedQueuePosition,
       },
       deps,
-    ).catch(fail);
-    await removeEntry();
+    )
+      .then(removeEntry)
+      .catch(fail);
     deps.sessionService.emitResumedHook?.(dispatchSession);
     return;
   }
@@ -251,8 +260,9 @@ export const dispatchQueuedEntry = async (
       submittedQueuePosition,
     },
     deps,
-  ).catch(fail);
-  await removeEntry();
+  )
+    .then(removeEntry)
+    .catch(fail);
   deps.sessionService.emitResumedHook?.(dispatchSession);
 };
 

@@ -817,6 +817,11 @@ const saveStatus = useCommandMutation({
 
 ## Terminal Sessions
 
+On Linux and macOS, runtime activity includes terminals running a foreground command,
+but excludes interactive shells waiting at their prompt. Background and stopped jobs
+do not count as foreground work. A directly launched program counts as active until
+it exits. If the host cannot inspect a process, it conservatively reports activity.
+
 Terminals are layered: the workbench-native terminal surface is the product UI, and `terminal.session` is the low-level host service behind it.
 
 - **Runtime contexts** get `ctx.terminal` (an `ExtensionTerminalApi`) when the host wires a PTY supervisor. `ctx.terminal.openSession(request)` returns a host-side `TerminalSessionHandle` with `write`, `resize`, `kill`, and a single-consumer `events()` iterable. The handle never crosses into renderer code.

@@ -175,6 +175,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
 
     deps.eventBus.emit("sessions", "set", updated);
     emitStatusChanged(updated);
+    await deps.onCapacityAvailable?.({});
     return updated;
   };
 

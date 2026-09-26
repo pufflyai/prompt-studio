@@ -11,6 +11,7 @@ export const prepareProjectRepo = async (
   projectService: Pick<ReturnType<typeof createProjectService>, "get">,
   projectId: string,
   path: string,
+  releaseRef?: string,
 ) => {
   const configPath = join(path, ".pstdio", "config.json");
   const previous = existsSync(configPath) ? await readFile(configPath) : null;
@@ -36,6 +37,7 @@ export const prepareProjectRepo = async (
     await bootstrapProjectRepo(path, projectId);
     const installed = await installRepoDefaultExtensions({
       repoPath: path,
+      releaseRef,
       defaultExtensions: (await resolveDefaultExtensionsConfig()).defaultExtensions,
     });
     rollbackExtensions = installed.rollback;
