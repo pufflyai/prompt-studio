@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { nextSessionRunStart } from "./session-run-start";
@@ -48,14 +48,27 @@ export const claimQueuedForDispatch = async (db: DbClient, id: string, queuePosi
   }
 };
 
-export const recoverQueuedDispatchClaim = async (db: DbClient, id: string, queuePosition: number) => {
+export const recoverQueuedDispatchClaim = async (
+  db: DbClient,
+  id: string,
+  queuePosition: number,
+  expectedLastRequestStarted: string | null,
+) => {
   const timestamp = nowTimestamp();
 
   return db.transaction(async (tx) => {
+    const [session] = await tx.select().from(sessions).where(eq(sessions.id, id)).for("update");
+    if (session?.status !== "in_progress" || session.last_request_started !== expectedLastRequestStarted) return null;
     const [entry] = await tx
       .update(session_queue_entries)
       .set({ dispatch_started_at: null, updated_at: timestamp })
-      .where(eq(session_queue_entries.queue_position, queuePosition))
+      .where(
+        and(
+          eq(session_queue_entries.queue_position, queuePosition),
+          eq(session_queue_entries.session_id, id),
+          isNotNull(session_queue_entries.dispatch_started_at),
+        ),
+      )
       .returning();
 
     if (!entry) return null;

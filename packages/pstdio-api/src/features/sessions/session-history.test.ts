@@ -9,7 +9,7 @@ test("a reader waiting on an obsolete initializer follows the new conversation o
   store.create(
     "s",
     () => {},
-    () => first.promise,
+    async () => ({ messages: await first.promise }),
   );
   const deps = { sessionService: { store } } as Parameters<typeof getSessionHistory>[1];
   const reading = getSessionHistory("s", deps);

@@ -3,6 +3,7 @@ import type {
   ApprovalService,
   EventStore,
   HarnessSession,
+  SessionHistoryIssue,
   SessionMessage,
 } from "pstdio-api-contracts";
 import { createApprovalService, createEventStore } from "pstdio-api-runtime-host";
@@ -25,7 +26,9 @@ export const createSessionStore = () => {
   const create = (
     sessionId: string,
     onApprovalRequest: (request: ApprovalRequest) => void,
-    initialize?: (previous: ActiveSession | undefined) => Promise<SessionMessage[]>,
+    initialize?: (
+      previous: ActiveSession | undefined,
+    ) => Promise<{ messages: SessionMessage[]; historyIssue?: SessionHistoryIssue }>,
   ) => {
     const existing = sessions.get(sessionId);
     if (existing && !initialize) {
@@ -49,10 +52,10 @@ export const createSessionStore = () => {
     if (initialize) {
       void Promise.resolve()
         .then(() => initialize(existing))
-        .then((messages) => {
+        .then(({ messages, historyIssue }) => {
           if (sessions.get(sessionId) !== entry || entry.cancellationRequested)
             throw new DOMException("Session was cancelled", "AbortError");
-          ready.resolve(createSessionConversation(eventStore, messages));
+          ready.resolve(createSessionConversation(eventStore, messages, historyIssue));
         })
         .catch((error) => {
           if (sessions.get(sessionId) === entry) {

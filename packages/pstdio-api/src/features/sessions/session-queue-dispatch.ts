@@ -19,18 +19,21 @@ export const dispatchQueuedEntry = async (
 
   if (!dispatchSession) return;
 
-  const submittedQueuePosition = entry.attachments_json?.length ? entry.queue_position : undefined;
+  const submittedQueuePosition = entry.queue_position;
   let owner: ActiveSession | null = null;
   const removeEntry = () =>
-    submittedQueuePosition === undefined ? deps.sessionQueueEntriesService.remove(entry.queue_position) : undefined;
+    entry.attachments_json?.length ? undefined : deps.sessionQueueEntriesService.remove(entry.queue_position);
   const fail = async (error: unknown) => {
     if (error instanceof WorkspaceSessionNotReadyError && error.retryable) {
       deps.sessionService.store.remove(session.id);
-      await deps.sessionService.recoverQueuedDispatchClaim(session.id, entry.queue_position);
+      await deps.sessionService.recoverQueuedDispatchClaim(
+        session.id,
+        entry.queue_position,
+        dispatchSession.last_request_started,
+      );
       return;
     }
-    // Startup failure keeps an entry whose submitted attachments are not saved in the conversation yet.
-    await removeEntry();
+    // The queued prompt stays until the failed conversation, and any attachments it submitted, are saved.
     await logStartupFailure(deps, {
       error,
       session: dispatchSession,

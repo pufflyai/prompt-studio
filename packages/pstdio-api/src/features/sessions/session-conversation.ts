@@ -26,10 +26,11 @@ const applyMessagePatch = (messages: SessionMessage[], patch: JsonPatch) => {
 export const createSessionConversation = (
   events: EventStore & { close(): void },
   initialMessages: SessionMessage[] = [],
+  initialHistoryIssue?: SessionHistoryIssue,
 ) => {
   let messages = [...initialMessages];
   let closed = false;
-  let historyIssue: SessionHistoryIssue | undefined;
+  let historyIssue = initialHistoryIssue;
   return {
     get closed() {
       return closed;

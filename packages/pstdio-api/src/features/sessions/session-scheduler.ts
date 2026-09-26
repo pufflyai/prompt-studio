@@ -239,16 +239,17 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       return prepareExistingDispatch(deps, context);
     }
 
-    if (status === "in_progress" || status === "awaiting_input" || status === "queued") {
+    if (status === "in_progress" || status === "awaiting_input") {
       return insertAbortAwareFollowUp(deps, context, false);
     }
 
+    if (needsHistory) return { historyKey };
+    if (status === "queued") return insertAbortAwareFollowUp(deps, context, false);
     if (input.respectCapacity && !(await hasCreateCapacity(deps))) {
       return insertAbortAwareFollowUp(deps, context, true);
     }
 
     input.signal?.throwIfAborted();
-    if (needsHistory) return { historyKey };
     return prepareExistingDispatch(deps, context);
   };
 
@@ -278,7 +279,11 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     for (const entry of claimedEntries) {
       const session = await deps.sessionService.get(entry.session_id);
       if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
-        await deps.sessionService.recoverQueuedDispatchClaim(session.id, entry.queue_position);
+        await deps.sessionService.recoverQueuedDispatchClaim(
+          session.id,
+          entry.queue_position,
+          session.last_request_started,
+        );
       }
     }
 

@@ -58,6 +58,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
 
   // --- mutations (orchestrated) ---
   const cancel = async (id: string) => {
+    const expectedOwner = store.get(id);
     const existing = await raw.get(id);
     if (existing?.status === "queued") {
       const cancelled = await raw.cancelQueued(id);
@@ -73,8 +74,10 @@ export const createSessionService = (deps: SessionServiceDeps) => {
         }
         return cancelled;
       }
+      return null;
     }
 
+    if (store.get(id) !== expectedOwner) return null;
     const entry = store.markCancellationRequested(id);
     await entry?.session?.stop();
 
@@ -168,8 +171,12 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return updated;
   };
 
-  const recoverQueuedDispatchClaim = async (id: string, queuePosition: number) => {
-    const updated = await raw.recoverQueuedDispatchClaim(id, queuePosition);
+  const recoverQueuedDispatchClaim = async (
+    id: string,
+    queuePosition: number,
+    expectedLastRequestStarted: string | null,
+  ) => {
+    const updated = await raw.recoverQueuedDispatchClaim(id, queuePosition, expectedLastRequestStarted);
     if (!updated) return null;
 
     deps.eventBus.emit("sessions", "set", updated);

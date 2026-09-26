@@ -181,31 +181,6 @@ describe("SessionService", () => {
       expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled", { expectedLastRequestStarted: null });
       expect(result).toMatchObject({ id: "s1", status: "cancelled" });
     });
-
-    test("falls back to active cancellation when queued cancellation loses the dispatch race", async () => {
-      const { deps, sessionsDb, mocks } = buildDeps();
-      (sessionsDb.get as ReturnType<typeof mock>).mockImplementation(async () => ({
-        id: "s1",
-        status: "queued",
-        last_request_started: null,
-      }));
-      const service = createSessionService(deps);
-      const stop = mock(() => {});
-
-      service.store.create("s1", () => {});
-      service.store.setSession("s1", {
-        agentSessionId: "agent_1",
-        done: new Promise(() => {}),
-        stop,
-      });
-
-      const result = await service.cancel("s1");
-
-      expect(mocks.cancelQueued).toHaveBeenCalledWith("s1");
-      expect(stop).toHaveBeenCalledTimes(1);
-      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled", { expectedLastRequestStarted: null });
-      expect(result).toMatchObject({ id: "s1", status: "cancelled" });
-    });
   });
 
   describe("create", () => {

@@ -218,7 +218,8 @@ describe("sessions service", () => {
     const [entry] = await sessionQueueEntriesService.listPendingBySession(queued.id);
     const claimed = await sessionsService.claimQueuedForDispatch(queued.id, entry!.queue_position);
 
-    const recovered = await sessionsService.recoverQueuedDispatchClaim(queued.id, entry!.queue_position);
+    const recover = sessionsService.recoverQueuedDispatchClaim;
+    const recovered = await recover(queued.id, entry!.queue_position, claimed!.last_request_started);
 
     expect(recovered).toMatchObject({
       id: queued.id,

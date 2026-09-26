@@ -43,11 +43,19 @@ test("dispatch and recovery never reuse a prior run identity", async () => {
     request_kind: "follow_up",
   });
   const first = await sessions.claimQueuedForDispatch(session.id, entry!.queue_position);
-  await sessions.recoverQueuedDispatchClaim(session.id, entry!.queue_position);
+  await sessions.recoverQueuedDispatchClaim(session.id, entry!.queue_position, first!.last_request_started);
   setSystemTime(new Date("2026-09-26T11:00:00.000Z"));
   const second = await sessions.claimQueuedForDispatch(session.id, entry!.queue_position);
   expect(first!.last_request_started! > session.last_request_started!).toBe(true);
   expect(second!.last_request_started! > first!.last_request_started!).toBe(true);
+  expect(
+    await sessions.recoverQueuedDispatchClaim(session.id, entry!.queue_position, first!.last_request_started),
+  ).toBeNull();
+  expect(await sessions.get(session.id)).toMatchObject({
+    status: "in_progress",
+    last_request_started: second!.last_request_started,
+  });
+  expect((await queue.get(entry!.queue_position))?.dispatch_started_at).not.toBeNull();
   expect(
     await sessions.updateStatus(session.id, "cancelled", { expectedLastRequestStarted: first!.last_request_started }),
   ).toBeNull();

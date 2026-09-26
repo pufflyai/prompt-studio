@@ -34,7 +34,7 @@ export const initializeConversation = (
       signal?.throwIfAborted();
       if (history.historyIssue && history.historyIssue.code !== "native_unavailable")
         throw new SessionHistoryError(history.historyIssue);
-      return history.messages;
+      return history;
     },
   );
   return entry;

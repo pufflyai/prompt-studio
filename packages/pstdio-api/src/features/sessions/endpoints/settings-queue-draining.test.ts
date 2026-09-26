@@ -20,6 +20,15 @@ const pendingSession = (): HarnessSession => ({
 
 const startSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
 
+const observeStarts = (count: number) => {
+  const started = Promise.withResolvers<void>();
+  startSession.mockImplementation(() => {
+    if (startSession.mock.calls.length === count) started.resolve();
+    return pendingSession();
+  });
+  return started.promise;
+};
+
 const createRegistry = () =>
   createTestHarnessRegistry([
     createTestHarnessRecord("fake", {
@@ -33,6 +42,7 @@ afterEach(() => {
 
 describe("PATCH /v1/settings queue draining", () => {
   test("starts queued sessions when the concurrency setting is raised", async () => {
+    const started = observeStarts(2);
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-settings-drain-queue-test-"));
     const isolated = await createTestApp({
       databasePath: ":memory:",
@@ -75,6 +85,7 @@ describe("PATCH /v1/settings queue draining", () => {
         body: JSON.stringify({ max_concurrent_sessions: 2 }),
       });
       expect(settingsRes.status).toBe(200);
+      await started;
 
       expect(await isolated.deps.sessionService.get(queued.id)).toMatchObject({ id: queued.id, status: "in_progress" });
       expect(startSession).toHaveBeenCalledTimes(2);
@@ -86,6 +97,7 @@ describe("PATCH /v1/settings queue draining", () => {
   });
 
   test("drains all queued sessions when concurrency becomes unlimited", async () => {
+    const started = observeStarts(3);
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-settings-unlimited-drain-queue-test-"));
     const isolated = await createTestApp({
       databasePath: ":memory:",
@@ -132,6 +144,7 @@ describe("PATCH /v1/settings queue draining", () => {
         body: JSON.stringify({ max_concurrent_sessions: null }),
       });
       expect(settingsRes.status).toBe(200);
+      await started;
 
       const drained = await Promise.all(queuedSessions.map((session) => isolated.deps.sessionService.get(session.id)));
       expect(drained.map((session) => session?.status)).toEqual(["in_progress", "in_progress"]);

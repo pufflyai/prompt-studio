@@ -84,6 +84,7 @@ describe("project-scoped session harness reads", () => {
     const recoverQueuedDispatchClaim = mock(async () => null);
     const session = {
       id: "session-2",
+      last_request_started: "2026-09-26T10:00:00.000Z",
       agent: AGENT_ID,
       agent_session_id: "agent-session-2",
       project_id: PROJECT_ID,
@@ -106,7 +107,7 @@ describe("project-scoped session harness reads", () => {
     await createSessionScheduler(deps).recoverQueuedSessions();
 
     expect(get).not.toHaveBeenCalled();
-    expect(recoverQueuedDispatchClaim).toHaveBeenCalledWith(session.id, 4);
+    expect(recoverQueuedDispatchClaim).toHaveBeenCalledWith(session.id, 4, session.last_request_started);
   });
 
   test("message reads fall back to persisted messages when the project harness is disabled", async () => {

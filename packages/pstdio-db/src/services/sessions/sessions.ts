@@ -270,8 +270,8 @@ export const createSessionsDBService = (db: DbClient) => {
     queueExistingWithEntry,
     insertEntryForActive,
     claimQueuedForDispatch: (id: string, queuePosition: number) => claimQueuedForDispatch(db, id, queuePosition),
-    recoverQueuedDispatchClaim: (id: string, queuePosition: number) =>
-      recoverQueuedDispatchClaim(db, id, queuePosition),
+    recoverQueuedDispatchClaim: (id: string, queuePosition: number, expectedLastRequestStarted: string | null) =>
+      recoverQueuedDispatchClaim(db, id, queuePosition, expectedLastRequestStarted),
     requeueAfterTerminal: (id: string) => requeueAfterTerminal(db, id),
     cancelQueued: (id: string) => cancelQueued(db, id),
     archiveQueued: (id: string) => archiveQueued(db, id),
