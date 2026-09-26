@@ -22,6 +22,7 @@ import { findFreePort } from "../extension-process-api";
 import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
+import { createAutomationApi } from "./automation";
 import { createExtensionFilesApi } from "./extension-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
@@ -146,6 +147,10 @@ export const createCommandEnvironment = (
     repos: createReposApi(deps, input.projectId),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
+    automation: createAutomationApi(() => deps.automationService, {
+      projectId: input.projectId,
+      extensionId: input.extensionId,
+    }),
     process: hostApis.process,
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
     connections: hostApis.connections,

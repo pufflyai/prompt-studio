@@ -171,6 +171,7 @@ export const createContextFactory = (
       events: buildEventsApi(dispatcher, ids.extensionId),
       activity: env.activity,
       notify: env.notify,
+      automation: env.automation,
       process: hostApis.process,
       net: env.net,
       connections: hostApis.connections ?? unavailableConnections,

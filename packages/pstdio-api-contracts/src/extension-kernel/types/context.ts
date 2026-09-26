@@ -2,6 +2,7 @@ import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extens
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
 import type { Skill } from "../../skills";
+import type { ExtensionAutomationApi } from "./automation";
 import type {
   CommandHelpersApi,
   CommandMiddlewareResult,
@@ -301,6 +302,7 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   events: ExtensionEventsApi;
   activity: ExtensionActivityApi;
   notify: ExtensionNotifyApi;
+  automation: ExtensionAutomationApi;
   process: ExtensionProcessApi;
   /** Interactive PTY sessions. Present only where the host wires a terminal supervisor (e.g. the workbench panel). */
   terminal?: ExtensionTerminalApi;
