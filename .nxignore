@@ -1,0 +1,2 @@
+# .ignore keeps build output searchable; Nx must only hash source inputs.
+**/dist/**

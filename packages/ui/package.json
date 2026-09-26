@@ -17,6 +17,17 @@
   "sideEffects": [
     "**/*.css"
   ],
+  "nx": {
+    "targets": {
+      "build": {
+        "outputs": [
+          "{projectRoot}/dist",
+          "{projectRoot}/dist-monaco",
+          "{projectRoot}/.publish"
+        ]
+      }
+    }
+  },
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {

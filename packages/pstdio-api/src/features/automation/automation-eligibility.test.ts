@@ -18,6 +18,7 @@ for (const automation of [true, false]) {
         ({
           activityEventsService: { create: async () => {} },
           repoService: { listByProject: async () => [] },
+          workspaceService: { getDefault: async () => null },
           eventBus: new EventBus(),
           extensionRuntimeCatalog: {
             get: async () => ({
