@@ -14,7 +14,7 @@ import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-co
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
 export interface RegisterWorkbenchExtensionFileRenderersInput {
-  executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
   workbench: WorkbenchModuleContext;
@@ -35,6 +35,7 @@ const executeFileCommand = async (
   resource: ResourceRef | undefined,
   extra: Record<string, unknown> = {},
   metadata?: CommandExecuteRequest["metadata"],
+  signal?: AbortSignal,
 ) => {
   const ext = resource;
   return executeWorkbenchExtensionCommand(input, commandId, {
@@ -48,6 +49,7 @@ const executeFileCommand = async (
       ...extra,
     },
     resource: ext,
+    signal,
     slot: slotContext({ projectId: input.projectId, rendererId, resource: ext }),
     ...(metadata ? { metadata } : {}),
   });
@@ -96,8 +98,16 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
     body: {
       kind: "file",
       resourceKind: record.resourceKind,
-      load: async (resource) => {
-        const result = await executeFileCommand(input, record.id, record.loadHandlerId, resource);
+      load: async (resource, signal) => {
+        const result = await executeFileCommand(
+          input,
+          record.id,
+          record.loadHandlerId,
+          resource,
+          {},
+          undefined,
+          signal,
+        );
         return (result ?? {}) as FileRendererContent;
       },
       save: record.saveHandlerId

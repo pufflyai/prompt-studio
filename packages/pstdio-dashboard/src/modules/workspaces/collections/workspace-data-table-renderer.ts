@@ -24,7 +24,10 @@ const workspaceColumns: DataTableRendererColumn[] = [
 ];
 
 const subscribeWorkspaceData = (ctx: WorkbenchModuleContext, listener: () => void) => {
-  const unsubscribeData = subscribeDashboardData(listener);
+  const unsubscribeData = subscribeDashboardData((change) => {
+    if (!change || ["workspaces", "sessions", "workspace_sessions", "repos", "project_repos"].includes(change.table))
+      listener();
+  });
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, listener);
   const unsubscribeDiffSummaries = subscribeDashboardWorkspaceDiffSummaries(listener);
 
@@ -35,13 +38,14 @@ const subscribeWorkspaceData = (ctx: WorkbenchModuleContext, listener: () => voi
   };
 };
 
-const executeWorkspaceQuery = (ctx: WorkbenchModuleContext) => {
+const executeWorkspaceQuery = async (ctx: WorkbenchModuleContext, signal: AbortSignal) => {
   const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx), { includeArchived: true });
 
-  void requestDashboardWorkspaceDiffSummaries(
+  await requestDashboardWorkspaceDiffSummaries(
     workspaces
       .filter((workspace) => !workspace.archived && workspace.type === "worktree")
       .map((workspace) => workspace.id),
+    signal,
   );
 
   return { rows: workspaces.map(toWorkspaceDataTableRow) };
@@ -59,7 +63,7 @@ export const registerWorkspaceDataTableView = (ctx: WorkbenchModuleContext) => {
         emptyTitle: "No workspaces yet",
         emptyDescription: "Create a workspace to start an isolated attempt for this project.",
         subscribe: (listener) => subscribeWorkspaceData(ctx, listener),
-        executeQuery: () => executeWorkspaceQuery(ctx),
+        executeQuery: (_context, signal) => executeWorkspaceQuery(ctx, signal),
         onRowActivate: (row) => {
           if (!row.resource) return;
           openWorkspacesPage(ctx, row.resource);

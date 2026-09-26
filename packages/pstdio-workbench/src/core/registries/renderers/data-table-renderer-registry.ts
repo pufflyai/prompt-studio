@@ -80,6 +80,7 @@ export interface DataTableRendererContribution {
   emptyDescription?: string;
   executeQuery(
     context: DataTableRendererQueryContext,
+    signal: AbortSignal,
   ): Promise<DataTableRendererQueryResult> | DataTableRendererQueryResult;
   subscribe?: (listener: () => void) => Disposable | (() => void);
   onRowActivate?: (row: DataTableRendererRow) => Promise<void> | void;

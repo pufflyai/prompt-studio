@@ -19,6 +19,7 @@ import {
   getProjectExtensionAppearance,
   getProjectExtensionMetadata,
 } from "@/shared/extensions/api";
+import { subscribeCoreViewDataEvents } from "@/shared/extensions/core-view-data-events";
 import {
   localizeExtensionMetadata,
   type ResolvedWorkbenchExtensionMetadata,
@@ -42,7 +43,6 @@ import {
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
 import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
-import { refreshExtensionRenderers } from "./extension-module-setup";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
@@ -223,13 +223,13 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       refreshProject();
       i18n.on("languageChanged", reapplyLocale);
       const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refreshProject);
+      const unsubscribeViewData = subscribeCoreViewDataEvents();
       const unsubscribeSync = subscribeCollections((change) => {
         if (!change) return;
         if (extensionSyncTables.has(change.table)) {
           refreshProject();
           return;
         }
-        refreshExtensionRenderers(ctx, metadata);
       });
 
       return {
@@ -247,6 +247,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           activityRail.dispose();
           unsubscribeProject();
           unsubscribeSync();
+          unsubscribeViewData();
         },
       };
     },

@@ -8,6 +8,7 @@ import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
 export interface TreeQueryContext {
+  signal?: AbortSignal;
   filter?: string;
   resource?: ResourceRef;
   /** Widget/view contribution id for trees rendered through a view-backed widget. */

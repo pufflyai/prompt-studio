@@ -22,10 +22,9 @@ describe("createCommandRunner: repo threading", () => {
     const runner = createCommandRunner(runtime, {
       buildEnvironment: (input) => {
         seenRepoPath = input.repo?.path;
-        return {
-          ...stubEnvironment(storage),
+        return stubEnvironment(storage, {
           repoFiles: input.repo ? ({} as CommandRunnerEnvironment["repoFiles"]) : undefined,
-        };
+        });
       },
     });
 
@@ -56,10 +55,10 @@ describe("createCommandRunner: repo threading", () => {
     const { api: storage } = makeStorage();
 
     const runner = createCommandRunner(runtime, {
-      buildEnvironment: (input) => ({
-        ...stubEnvironment(storage),
-        repoFiles: input.repo ? ({} as CommandRunnerEnvironment["repoFiles"]) : undefined,
-      }),
+      buildEnvironment: (input) =>
+        stubEnvironment(storage, {
+          repoFiles: input.repo ? ({} as CommandRunnerEnvironment["repoFiles"]) : undefined,
+        }),
     });
 
     const outcome = await runner.execute({ commandId: "pstdio.lab.command.files.peek", projectId: "p1" });

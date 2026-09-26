@@ -2,7 +2,7 @@ import { Box, Button, Center, Flex, Spinner, Text } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
-import { getWorkbenchRenderers } from "../../../core";
+import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
 import {
   getFileSectionNavigation,
   resolveFileSectionTargetId,
@@ -75,6 +75,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   } | null>(null);
   const [editState, setEditState] = useState<FileEditControllerState>({ dirty: false, saving: false });
   const controllerRef = useRef<FileEditController | null>(null);
+  const retryReadRef = useRef<(() => void) | undefined>(undefined);
   const rendererRef = useRef<HTMLDivElement>(null);
   const previousSectionNavigationRef = useRef<{
     resourceKey?: string;
@@ -120,49 +121,65 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   });
   const contributionId = contribution.id;
   const hasSave = Boolean(contribution.save);
+  const ownerKey = props.placement
+    ? rendererReadKey(props.placement)
+    : JSON.stringify(["file", contributionId, loadKey]);
+  const instanceId = props.placement?.instanceId ?? contributionId;
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useEffect(() => {
     let cancelled = false;
     let removed = false;
+    const boundResource = resourceRef.current;
+    const boundContribution = contributionRef.current;
+    const read = workbench.views.reads.bind(ownerKey);
+    let controller: FileEditController | null = null;
     setError(null);
     // A recently viewed document mounts immediately from the cache; the load
     // below reconciles it (unchanged content keeps the editor mounted).
     const cached = readCachedFileContent(loadKey);
     setLoaded(cached ? { ...cached, editorRevision: 1, loadKey } : null);
-    const load = () => {
-      Promise.resolve(contributionRef.current.load(resourceRef.current))
-        .then((next) => {
-          if (cancelled || removed) return;
-          const updateLoaded = acceptFileRendererLoad(next, loadKey, controllerRef.current);
-          if (!updateLoaded) return;
-          setError(null);
-          setLoaded(updateLoaded);
-        })
-        .catch((loadError) => {
-          if (cancelled || removed) return;
-          setError({ loadKey, message: describeError(loadError) });
-        });
+    const load = (reason: "refresh" | "retry" = "refresh") => {
+      read.request(
+        {
+          queryKey: loadKey,
+          load: (signal) => boundContribution.load(boundResource, signal),
+          onValue: (next) => {
+            if (cancelled || removed) return;
+            const updateLoaded = acceptFileRendererLoad(next, loadKey, controller);
+            if (!updateLoaded) return;
+            setError(null);
+            setLoaded(updateLoaded);
+          },
+          onError: (loadError) => {
+            if (cancelled || removed) return;
+            setError({ loadKey, message: describeError(loadError) });
+          },
+        },
+        reason,
+      );
     };
-    controllerRef.current = hasSave
+    retryReadRef.current = () => load("retry");
+    controller = hasSave
       ? createFileEditController({
           binding: {
             rendererId: contributionId,
-            instanceId: props.placement?.instanceId ?? contributionId,
+            instanceId,
             resourceKey: resourceKey(resourceRef.current),
           },
           debounceMs: SAVE_DEBOUNCE_MS,
-          load,
+          load: () => load(),
           onStateChange: (state) => {
             if (!cancelled) setEditState(state);
           },
           save: (value, origin) =>
-            Promise.resolve(contributionRef.current.save?.(resourceRef.current, value, origin)).then((result) => {
+            Promise.resolve(boundContribution.save?.(boundResource, value, origin)).then((result) => {
               const current = readCachedFileContent(loadKey);
               if (current && !removed) storeCachedFileContent(loadKey, { ...current, content: value });
               return result ?? undefined;
             }),
         })
       : null;
+    controllerRef.current = controller;
     if (cached) controllerRef.current?.setBaseline(cached.content, cached.revision);
     setEditState({ dirty: false, saving: false });
     load();
@@ -181,14 +198,16 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     });
     return () => {
       cancelled = true;
+      read.dispose();
+      retryReadRef.current = undefined;
       refreshSubscription.dispose();
       removalSubscription.dispose();
       // Flush the last keystrokes on unbind; the load callback above is
       // cancelled, so a deferred refresh cannot resurrect the old binding.
-      controllerRef.current?.flush();
-      controllerRef.current = null;
+      controller?.flush();
+      if (controllerRef.current === controller) controllerRef.current = null;
     };
-  }, [contributionId, hasSave, workbench, loadKey, props.placement?.instanceId]);
+  }, [contributionId, hasSave, workbench, loadKey, ownerKey, instanceId]);
   // The last keystrokes are also flushed when the tab is hidden or closed.
   useEffect(() => {
     const flush = () => controllerRef.current?.flush();
@@ -223,7 +242,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     });
   }, [scrollResetKey, sectionNavigation]);
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
-  const retryLoad = () => controllerRef.current?.retryLoad();
+  const retryLoad = () => retryReadRef.current?.();
   const retrySave = () => controllerRef.current?.retry();
   if (loadError && !currentLoaded) {
     return (

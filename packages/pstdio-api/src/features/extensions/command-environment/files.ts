@@ -1,8 +1,12 @@
-import { readFileSync } from "node:fs";
-import type { CommandRunnerEnvironment } from "pstdio-extensions";
+import { readFile } from "node:fs/promises";
+import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 
-export const createFilesApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRunnerEnvironment["files"] => {
+export const createFilesApi = (
+  deps: ExtensionsRouteDeps,
+  projectId: string,
+  signal?: AbortSignal,
+): CommandRunnerEnvironment["files"] => {
   const requireProjectFile = async (fileId: string) => {
     const file = await deps.fileService.get(fileId);
     if (!file || file.project_id !== projectId) throw new Error(`File not found: ${fileId}`);
@@ -11,8 +15,8 @@ export const createFilesApi = (deps: ExtensionsRouteDeps, projectId: string): Co
 
   return {
     async readText(fileId) {
-      const file = await requireProjectFile(fileId);
-      return readFileSync(file.storage_path, "utf8");
+      const file = await createReadBoundary(signal)(() => requireProjectFile(fileId));
+      return readFile(file.storage_path, { encoding: "utf8", signal });
     },
     async writeText(fileId, value) {
       await requireProjectFile(fileId);

@@ -21,7 +21,12 @@ const registerControlsRenderer = (
     projectId: context.projectId,
     context: { controlsRendererId: record.id },
   });
-  const run = (commandId: string | undefined, params: Record<string, unknown>, resource?: ResourceRef) =>
+  const run = (
+    commandId: string | undefined,
+    params: Record<string, unknown>,
+    resource?: ResourceRef,
+    signal?: AbortSignal,
+  ) =>
     commandId
       ? executeWorkbenchExtensionCommand(context, commandId, {
           params: {
@@ -34,6 +39,7 @@ const registerControlsRenderer = (
             ...params,
           },
           resource,
+          signal,
           slot,
           metadata: { controlsRendererId: record.id },
         })
@@ -47,8 +53,8 @@ const registerControlsRenderer = (
       emptyTitle: localize(record.emptyTitle, ""),
       emptyDescription: localize(record.emptyDescription, ""),
       defaultValues: record.defaultValues,
-      executeQuery: async (resource) => {
-        const value = await run(record.queryHandlerId, {}, resource ?? adapter.resolveResource?.(record));
+      executeQuery: async (resource, signal) => {
+        const value = await run(record.queryHandlerId, {}, resource ?? adapter.resolveResource?.(record), signal);
         const result = controlsQueryResultSchema.safeParse(value);
         if (!result.success) {
           const fields = result.error.issues

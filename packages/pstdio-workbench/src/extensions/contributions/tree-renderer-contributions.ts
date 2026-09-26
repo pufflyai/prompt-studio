@@ -223,6 +223,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
           record,
           record.headerHandlerId,
           createQueryParams(input, record, ctx),
+          ctx.signal,
         );
         const extensionHeader = isTreeSectionArray(result) ? mapper.mapSections(result, ctx) : [];
         return [...hostNodeSection(`${record.id}:host-header`, hostHeader), ...extensionHeader];
@@ -233,6 +234,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
           record,
           record.bodyHandlerId,
           createQueryParams(input, record, ctx),
+          ctx.signal,
         );
         if (!isTreeSectionArray(result)) return [];
         return mapper.mapSections(result, ctx);
@@ -250,6 +252,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
           record,
           record.footerHandlerId,
           createQueryParams(input, record, ctx),
+          ctx.signal,
         );
         const extensionFooter = isTreeSectionArray(result) ? mapper.mapSections(result, ctx) : [];
         return [...extensionFooter, ...hostNodeSection(`${record.id}:host-footer`, hostFooter)];
@@ -263,6 +266,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
           record,
           record.childrenHandlerId,
           createQueryParams(input, record, ctx, originalNode),
+          ctx.signal,
         );
         return isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
       },

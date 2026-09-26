@@ -62,7 +62,10 @@ describe("workspace file contributions", () => {
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const workspace = workspaceResource({ workspaceType: "current_branch", workspaceView: "files" });
     const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, { resource: workspace });
-    const file = await fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(workspace);
+    const file = await fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(
+      workspace,
+      new AbortController().signal,
+    );
     expect(sections[0]?.nodes).toEqual([
       expect.objectContaining({
         id: "README.md",
@@ -136,7 +139,7 @@ describe("workspace file contributions", () => {
       .getLayout()
       .regions.main.widgets.find((widget) => widget.viewId === dashboardWidgetIds.workspaceFiles)?.resource;
     const fileView = fileViewBody(workbench, dashboardWidgetIds.workspaceFiles);
-    const loaded = await fileView.load(opened);
+    const loaded = await fileView.load(opened, new AbortController().signal);
     await fileView.save?.(opened, "# Updated");
     expect(resourceKey(opened)).toBe(resourceKey(workspace));
     expect(opened?.metadata?.workspaceFilePath).toBe("README.md");

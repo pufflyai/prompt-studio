@@ -21,14 +21,14 @@ describe("createCommandRunner: hooks and nesting", () => {
       ],
     });
     const runner = createCommandRunner(runtime, {
-      buildEnvironment: () => ({
-        ...stubEnvironment(storage),
-        workspaceFiles: {
-          syncDir: async (dir: string, files: unknown) => {
-            syncs.push({ dir, files });
-          },
-        } as never,
-      }),
+      buildEnvironment: () =>
+        stubEnvironment(storage, {
+          workspaceFiles: {
+            syncDir: async (dir: string, files: unknown) => {
+              syncs.push({ dir, files });
+            },
+          } as never,
+        }),
     });
 
     const provisionResult = await runner.dispatchEvent({
@@ -141,17 +141,17 @@ describe("createCommandRunner: hooks and nesting", () => {
     const { api: storage } = makeStorage();
     const writes: unknown[] = [];
     const runner = createCommandRunner(runtime, {
-      buildEnvironment: (input: BuildEnvironmentInput) => ({
-        ...stubEnvironment(storage),
-        workspaceId: input.workspaceId,
-        workspaceFiles: input.workspaceDir
-          ? ({
-              writeText: async (path: string, value: string) => {
-                writes.push({ path, value });
-              },
-            } as never)
-          : undefined,
-      }),
+      buildEnvironment: (input: BuildEnvironmentInput) =>
+        stubEnvironment(storage, {
+          workspaceId: input.workspaceId,
+          workspaceFiles: input.workspaceDir
+            ? ({
+                writeText: async (path: string, value: string) => {
+                  writes.push({ path, value });
+                },
+              } as never)
+            : undefined,
+        }),
     });
 
     const outcome = await runner.execute({

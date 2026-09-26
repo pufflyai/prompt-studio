@@ -2,7 +2,6 @@ import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
 import { workbenchPanels } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import {
-  type Disposable,
   type MenuPath,
   type ResourceRef,
   resourceContextMenuPath,
@@ -11,7 +10,6 @@ import {
 } from "@pstdio/workbench";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/extensions";
 import { apiRequest } from "@/lib/api";
-import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
@@ -206,15 +204,5 @@ export const createDashboardKanbanAdapter = (input: {
       }
     },
   };
-  const rendererIds = metadata.views.filter((view) => view.body.kind === "kanban").map((view) => view.id);
-  const sessionTables = new Set<CollectionChange["table"]>(["sessions", "workspace_sessions"]);
-  const disposable: Disposable = {
-    dispose: subscribeCollections((change) => {
-      if (!change || !sessionTables.has(change.table)) return;
-      for (const rendererId of rendererIds) {
-        if (ctx.views.getView(rendererId)) ctx.views.refreshView(rendererId);
-      }
-    }),
-  };
-  return { adapter, disposable };
+  return adapter;
 };

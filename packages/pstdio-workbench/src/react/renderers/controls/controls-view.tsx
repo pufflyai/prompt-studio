@@ -1,15 +1,19 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { ControlValueMap } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { ScrollArea } from "@pstdio/ui";
 import { type InputGroup, type Param, ParamEditor, type ParamValue } from "@pstdio/ui/param-editor";
 import { controlValueSchema } from "pstdio-api-contracts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getWorkbenchRenderers,
   type RegisteredControlsRendererContribution,
+  rendererReadKey,
   type WorkbenchCore,
   type WorkbenchPanelInstance,
 } from "../../../core";
+import { RendererReadNotice } from "../renderer-read-notice";
+import { useRendererRead } from "../use-renderer-read";
 
 interface WorkbenchControlsViewProps {
   workbench: WorkbenchCore;
@@ -29,44 +33,38 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
   const { workbench, contribution, placement } = props;
   const resource = placement.resource;
   const [state, setState] = useState<ControlsViewState>(initialState);
-  const requestRef = useRef(0);
+  const read = useRendererRead({
+    workbench,
+    ownerKey: rendererReadKey(placement),
+    queryKey: JSON.stringify([contribution.id, resourceKey(resource)]),
+
+    load: (signal) => contribution.executeQuery(resource, signal),
+    subscribe: (refresh) => {
+      const subscription = contribution.subscribe?.(refresh);
+      const events = getWorkbenchRenderers(workbench).onDidRefreshControlsRenderer((event) => {
+        if (event.controlsRendererId === contribution.id) refresh();
+      });
+      return () => {
+        if (typeof subscription === "function") subscription();
+        else subscription?.dispose();
+        events.dispose();
+      };
+    },
+  });
   useEffect(() => {
-    let cancelled = false;
-    setState(initialState);
-    const runQuery = () => {
-      requestRef.current += 1;
-      const requestId = requestRef.current;
-      Promise.resolve()
-        .then(() => contribution.executeQuery(resource))
-        .then((result) => {
-          if (cancelled || requestRef.current !== requestId) return;
-          const values = { ...(contribution.defaultValues ?? {}), ...(result.values ?? {}) };
-          const next = {
-            params: result.params ?? [],
-            groups: result.groups ?? [],
-            values,
-            readOnly: Boolean(result.readOnly),
-            loading: false,
-          };
-          setState(next);
-        })
-        .catch((error: unknown) => {
-          if (cancelled || requestRef.current !== requestId) return;
-          setState({ ...initialState, loading: false, error: error instanceof Error ? error.message : String(error) });
-        });
-    };
-    runQuery();
-    const subscription = contribution.subscribe?.(runQuery);
-    const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshControlsRenderer((event) => {
-      if (event.controlsRendererId === contribution.id) runQuery();
+    if (!read.value) {
+      setState(initialState);
+      return;
+    }
+    const result = read.value;
+    setState({
+      params: result.params ?? [],
+      groups: result.groups ?? [],
+      values: { ...(contribution.defaultValues ?? {}), ...(result.values ?? {}) },
+      readOnly: Boolean(result.readOnly),
+      loading: false,
     });
-    return () => {
-      cancelled = true;
-      if (typeof subscription === "function") subscription();
-      else subscription?.dispose();
-      refreshSubscription.dispose();
-    };
-  }, [contribution, resource, workbench]);
+  }, [read.value, contribution.defaultValues]);
   const readOnly = state.readOnly || (!contribution.updateValue && !contribution.apply);
   const showFooter = !readOnly && (Boolean(contribution.apply) || Boolean(contribution.reset));
   const handleChange = (id: string, input: ParamValue) => {
@@ -79,8 +77,11 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
   };
   return (
     <Stack h="full" minH="0" gap="0" bg="bg" overflow="hidden">
+      {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs">
-        <ControlsContent state={state} contribution={contribution} readOnly={readOnly} onChange={handleChange} />
+        {read.value || read.loading ? (
+          <ControlsContent state={state} contribution={contribution} readOnly={readOnly} onChange={handleChange} />
+        ) : null}
       </ScrollArea>
       {showFooter ? (
         <Flex borderTopWidth="1px" borderColor="border.muted" px="sm" py="xs" gap="xs" justifyContent="flex-end">

@@ -123,3 +123,33 @@ The Planner browser regression holds a non-collapsed DOM selection, waits beyond
 - Extension adapter and host refresh: `packages/pstdio-workbench/src/extensions`
 - Dashboard event feed: `packages/pstdio-dashboard/src/shared/extensions/extension-webview-broadcast.ts`
 - Real consumer: Planner ticket-content file view
+
+## Read ownership and cancellation
+
+The workbench owns read slots by stable placement, resource, and read lane. Each slot permits one active load and one latest pending refresh. Repeated events coalesce. Replacing a query, retrying, or unmounting aborts the active signal. The slot remains occupied until the actual load and its children settle, including across remounts and reopening the same placement.
+
+A 30-second runtime deadline aborts a stalled read and shows a recoverable error. It does not free an uncooperative request's slot or restart it automatically. Workbench disposal aborts all reads and drains them.
+
+Kanban, table, controls, tree, and file reads pass the signal through extension commands to host I/O. Workspace file and diff reads pass it to HTTP and response-body readers. Tree header, body, and footer reads drain together; expanded children use at most four concurrent loads. Composed navigation passes the same signal and stops starting contributions after cancellation.
+
+Command scopes bind their host readers to the invocation signal. Reads check cancellation before dispatch and after each awaited operation; file reads also pass the signal into filesystem I/O. Cancellation cannot start the next child read, but already running work stays counted until it settles. Save operations and their path and permission checks do not inherit renderer read cancellation. Session and workspace creation keep their explicit lifecycle cancellation.
+
+Refresh failures retain the last successful value for the same query. A first failure shows an error and Retry. A different query has its own initial loading state. File reads never clear a dirty draft, and saves retain their original binding when the user switches resources.
+
+Tree queries include the current project, mode, page resource, and the page's navigation contribution owner when present. Shell navigation can change its actions across these boundaries even when its own placement has no resource. Actions from the previous scope disappear while the new query loads. Aggregate pages without owned navigation in the same mode share a query scope, which keeps global navigation links mounted during refresh.
+
+## Declared data dependencies
+
+Extensions use public `viewDataEvents` for host-owned session, workspace, and repository data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. File and notification churn does not broadcast a view refresh. Each renderer also declares its own extension data events.
+
+| Native view | Dependencies |
+| --- | --- |
+| Planner ticket board | `tickets.changed`, sessions, workspaces |
+| Planner ticket tree | `tickets.changed`, sessions, workspaces |
+| Planner editor and properties | `tickets.changed` |
+| Notes tree, editor, and tab title | `notes.changed`, repositories |
+| Lab example board | Its storage collection event |
+| Host session list and selected session | Sessions, workspace links, and linked workspaces |
+| Host workspace table | Workspaces, project repositories, repositories, and workspace diff summaries |
+
+The core collection bridge owns the before/after project lookup. Selected-session metadata uses keyed rows and a collection-owned workspace-link index. Recent menus read session rows only. Neither path copies unrelated file collections.

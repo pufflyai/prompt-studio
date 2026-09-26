@@ -56,7 +56,10 @@ export const executeExtensionCommandHandler = (
     const body = (await c.req.json()) as CommandExecuteBody;
 
     try {
-      return c.json(await executeProjectExtensionCommand(deps, { projectId, commandId, body }), 200);
+      return c.json(
+        await executeProjectExtensionCommand(deps, { projectId, commandId, body, signal: c.req.raw.signal }),
+        200,
+      );
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       if (error instanceof ExtensionCommandNotFoundError) {

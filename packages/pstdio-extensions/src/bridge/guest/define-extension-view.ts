@@ -24,7 +24,9 @@ export const createGuestHost = (
 ): GuestHost => ({
   call: async <Capability extends WebviewHostCapability, Params extends WebviewHostCapabilityParams[Capability]>(
     method: Capability,
-    ...args: {} extends WebviewHostCapabilityParams[Capability] ? [params?: Params] : [params: Params]
+    ...args: Record<string, never> extends WebviewHostCapabilityParams[Capability]
+      ? [params?: Params]
+      : [params: Params]
   ) => {
     try {
       return (await call({ method, params: args[0] })) as WebviewHostCapabilityResult<Capability, Params>;

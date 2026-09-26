@@ -8,10 +8,12 @@ import type {
 import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import {
   type CommandRunnerEnvironment,
+  createReadBoundary,
   createWorkspaceFilesMount,
   type InvocationScope,
   type RuntimeArtifactMount,
   type RuntimeExtensionSettingRecord,
+  type ScopedHostApis,
 } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
@@ -64,16 +66,6 @@ export const createCommandEnvironment = (
   const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
 
-  const storage = createStorageApi(deps, {
-    extensionInstanceId: enabledSource.instance.id,
-    projectId: input.projectId,
-  });
-  const settings = createSettingsApi(deps, {
-    extensionId: input.extensionId,
-    extensionInstanceId: enabledSource.instance.id,
-    installedExtensionId: enabledSource.installedSource.id,
-    settings: input.settings,
-  });
   const hostTerminal = deps.terminal;
   const terminal =
     hostTerminal && input.workspaceDir && !input.workspaceId
@@ -86,65 +78,86 @@ export const createCommandEnvironment = (
     projectId: input.projectId,
     extensionId: input.extensionId,
   });
-  const scopedHostApis = (scope?: InvocationScope) =>
-    createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope);
-  const hostApis = scopedHostApis();
-  const provisioningWorkspaceId = input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined;
-  const resolveWorkingPath = (access: FileAccess) =>
-    resolveWorkspaceFilesPath(
-      deps,
-      {
-        projectId: input.projectId,
-        workspaceId: input.workspaceId,
-        provisioningWorkspaceId,
-        eventId: input.eventId,
-        repo: input.repo,
-      },
-      access,
-    );
-  const workingFiles = input.workspaceDir
-    ? createWorkspaceFilesMount(input.workspaceDir, {
-        syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir: input.workspaceDir }),
-      })
-    : undefined;
-  const resolveRepoPath = () => resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext);
   const manifest = (enabledSource.installedSource.manifest_json ?? {}) as {
     pstdio?: { repoFiles?: { tracked?: boolean } };
   };
 
+  const scopedHostApis = (scope?: InvocationScope) => {
+    const signal = scope?.signal;
+    const provisioningWorkspaceId = input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined;
+    const resolveWorkingPath = (access: FileAccess) =>
+      resolveWorkspaceFilesPath(
+        deps,
+        {
+          projectId: input.projectId,
+          workspaceId: input.workspaceId,
+          provisioningWorkspaceId,
+          eventId: input.eventId,
+          repo: input.repo,
+        },
+        access,
+      );
+    const workingFiles = input.workspaceDir
+      ? createWorkspaceFilesMount(input.workspaceDir, {
+          signal,
+          syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir: input.workspaceDir }),
+        })
+      : undefined;
+
+    const resolveRepoPath = (readSignal?: AbortSignal) =>
+      resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext, readSignal);
+    const storage = createStorageApi(deps, {
+      extensionInstanceId: enabledSource.instance.id,
+      projectId: input.projectId,
+      signal,
+    });
+    const settings = createSettingsApi(deps, {
+      extensionId: input.extensionId,
+      extensionInstanceId: enabledSource.instance.id,
+      installedExtensionId: enabledSource.installedSource.id,
+      settings: input.settings,
+      signal,
+    });
+
+    return {
+      storage,
+      artifacts: createArtifactsApi(deps, { ...input, signal }),
+      repoFiles: input.repo ? createRepoFilesApi(resolveRepoPath, signal) : undefined,
+      projectFiles: createProjectFilesApi(deps, input.projectId, provisioningWorkspaceId, signal),
+      workspaceFiles:
+        input.workspaceId && workingFiles
+          ? {
+              ...createWorkspaceFileMount(resolveWorkingPath, signal),
+              syncDir: async (dir, files) => {
+                const workspaceDir = await resolveWorkingPath("write");
+                return createWorkspaceFilesMount(workspaceDir, {
+                  syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir }),
+                }).syncDir(dir, files);
+              },
+            }
+          : workingFiles,
+      packageFiles: createExtensionPackageFilesApi(enabledSource.installedSource.source_path, signal),
+      extensionFiles: input.repo
+        ? createExtensionFilesApi({
+            extensionId: input.extensionId,
+            signal,
+            resolveRepoPath,
+            tracked: manifest.pstdio?.repoFiles?.tracked === true,
+          })
+        : undefined,
+      files: createFilesApi(deps, input.projectId, signal),
+      skills: { list: () => createReadBoundary(signal)(() => deps.skillService.list(input.projectId)) },
+      repos: createReposApi(deps, input.projectId, signal),
+      settings,
+      ...createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope),
+    } satisfies ScopedHostApis;
+  };
+  const hostApis = scopedHostApis();
   return {
     project: input.project,
     workspaceId: input.workspaceId,
-    storage,
+    ...hostApis,
     resources: createResourcesApi(deps, input),
-    artifacts: createArtifactsApi(deps, input),
-    repoFiles: input.repo ? createRepoFilesApi(resolveRepoPath) : undefined,
-    projectFiles: createProjectFilesApi(deps, input.projectId, provisioningWorkspaceId),
-    workspaceFiles:
-      input.workspaceId && workingFiles
-        ? {
-            ...createWorkspaceFileMount(resolveWorkingPath),
-            syncDir: async (dir, files) => {
-              const workspaceDir = await resolveWorkingPath("write");
-              return createWorkspaceFilesMount(workspaceDir, {
-                syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir }),
-              }).syncDir(dir, files);
-            },
-          }
-        : workingFiles,
-    packageFiles: createExtensionPackageFilesApi(enabledSource.installedSource.source_path),
-    extensionFiles: input.repo
-      ? createExtensionFilesApi({
-          extensionId: input.extensionId,
-          resolveRepoPath,
-          tracked: manifest.pstdio?.repoFiles?.tracked === true,
-        })
-      : undefined,
-    files: createFilesApi(deps, input.projectId),
-    skills: { list: () => deps.skillService.list(input.projectId) },
-    sessions: hostApis.sessions,
-    workspaces: hostApis.workspaces,
-    repos: createReposApi(deps, input.projectId),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
     automation: createAutomationApi(() => deps.automationService, {
@@ -155,7 +168,6 @@ export const createCommandEnvironment = (
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
     connections: hostApis.connections,
     terminal: hostApis.terminal,
-    settings,
     withScope: (scope) => scopedHostApis(scope),
   };
 };
