@@ -8,6 +8,12 @@
     "build": {
       "cache": true,
       "dependsOn": ["^build"],
+      "inputs": [
+        "default",
+        "^default",
+        "{workspaceRoot}/scripts/build/mark-dts-modules.ts",
+        "{workspaceRoot}/scripts/release/stage-package.ts"
+      ],
       "outputs": ["{projectRoot}/dist", "{projectRoot}/.publish"]
     },
     "test": {
