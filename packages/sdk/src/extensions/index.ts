@@ -1,5 +1,8 @@
 export type {
   CreateNotificationInput,
+  HistoryProjection,
+  HistoryRecoveryInput,
+  HistoryRecoveryResult,
   ListNotificationsQuery,
   ListNotificationsResponse,
   Notification,
@@ -43,6 +46,7 @@ export {
   qualifyNavigationTarget,
   sessionEvents,
   sessionSlots,
+  viewDataEvents,
   WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
@@ -60,6 +64,16 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
+export {
+  HistoryConflict,
+  historyMessageKey,
+  historyValueKey,
+  mergeHistoryMetadata,
+  mergeOrderedHistory,
+  reconcileMessageHistory,
+  splitHistoryTurns,
+  submittedPrompt,
+} from "pstdio-api-contracts/history-reconciliation";
 export { SDK_VERSION } from "../version";
 export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
 export { defineCommand, defineHook, defineMiddleware } from "./define-command";

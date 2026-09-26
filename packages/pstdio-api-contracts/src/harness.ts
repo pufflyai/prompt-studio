@@ -4,6 +4,7 @@
 // they emit JSON patches and settle `done`.
 
 import type { WorkspaceExecutionTarget } from "./extension-kernel/types/extension";
+import type { SessionMessage } from "./session-messages";
 
 export type JsonPatch = {
   op: "add" | "replace" | "remove";
@@ -126,3 +127,14 @@ export type HarnessMessagesInput = {
   cwd?: string;
   workspace?: HarnessWorkspaceContext;
 };
+
+export type HarnessRecoveryInput = {
+  knownMessages: readonly SessionMessage[];
+  nativeMessages: readonly SessionMessage[];
+  cwd?: string;
+  workspace?: HarnessWorkspaceContext;
+};
+
+export type HarnessRecoveryResult =
+  | { kind: "recovered"; messages: SessionMessage[] }
+  | { kind: "conflict"; category: string };
