@@ -1,6 +1,6 @@
 {
   "name": "extension-lab",
-  "version": "0.9.6",
+  "version": "0.35.0",
   "displayName": "Extension Lab",
   "description": "Five complete example tools built with public extension pages, resources, modes, and themes.",
   "publisher": "pstdio",
