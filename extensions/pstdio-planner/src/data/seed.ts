@@ -135,8 +135,8 @@ export const DEFAULT_TAGS: TagSeed[] = [
     sortOrder: 0,
     options: [
       option("default-priority-low", "Low", "gray", 0, "level-low"),
-      option("default-priority-medium", "Medium", "blue", 1, "level-high"),
-      option("default-priority-high", "High", "orange", 2, "level-xhigh"),
+      option("default-priority-medium", "Medium", "blue", 1, "level-mid"),
+      option("default-priority-high", "High", "orange", 2, "level-high"),
       option("default-priority-urgent", "Urgent", "red", 3, "flame"),
     ],
   }),
@@ -212,9 +212,11 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
       return ensureHumanRequestedTag(storage, existing);
     }
 
-    await Promise.all(DEFAULT_TAGS.map((seed) => putTag(storage, seed())));
+    const existingIds = new Set(existing.map((tag) => tag.id));
+    const missing = DEFAULT_TAGS.map((seed) => seed()).filter((tag) => !existingIds.has(tag.id));
+    await Promise.all(missing.map((tag) => putTag(storage, tag)));
     await storage.set(TAG_SEED_MARKER, true);
-    return sortedBySortOrder(await tagsCollection(storage).list());
+    return ensureHumanRequestedTag(storage, sortedBySortOrder(await tagsCollection(storage).list()));
   })();
   tagSeedPromises.set(storage, promise);
   try {

@@ -2,12 +2,12 @@ import { spawn } from "node:child_process";
 import type { AgentModel, HarnessParamDescriptor } from "@pstdio/sdk/extensions";
 
 const effortMetadata: Record<string, { label: string; icon: string }> = {
-  minimal: { label: "Minimal", icon: "CircleDot" },
-  low: { label: "Low", icon: "Gauge" },
-  medium: { label: "Medium", icon: "Brain" },
-  high: { label: "High", icon: "Zap" },
-  xhigh: { label: "XHigh", icon: "Flame" },
-  max: { label: "Max", icon: "Sparkles" },
+  minimal: { label: "Minimal", icon: "level-low" },
+  low: { label: "Low", icon: "level-low" },
+  medium: { label: "Medium", icon: "level-mid" },
+  high: { label: "High", icon: "level-high" },
+  xhigh: { label: "XHigh", icon: "level-xhigh" },
+  max: { label: "Max", icon: "level-xhigh" },
 };
 
 const reasoningEffortParam = (efforts: string[], defaultValue?: string): HarnessParamDescriptor => ({

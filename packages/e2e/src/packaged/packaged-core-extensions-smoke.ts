@@ -163,6 +163,14 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
               value: {
                 tags: expect.arrayContaining([
                   expect.objectContaining({
+                    id: "default-priority",
+                    options: expect.arrayContaining([
+                      expect.objectContaining({ id: "default-priority-low", icon: "level-low" }),
+                      expect.objectContaining({ id: "default-priority-medium", icon: "level-mid" }),
+                      expect.objectContaining({ id: "default-priority-high", icon: "level-high" }),
+                    ]),
+                  }),
+                  expect.objectContaining({
                     id: "default-human-requested",
                     options: [
                       expect.objectContaining({ id: "default-human-requested-true", color: "gray", icon: "bell" }),

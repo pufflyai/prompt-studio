@@ -2,12 +2,12 @@ import type { AgentModel, HarnessParamDescriptor } from "@pstdio/sdk/extensions"
 
 const variantMetadata: Record<string, { label: string; icon: string }> = {
   none: { label: "None", icon: "CircleSlash" },
-  minimal: { label: "Minimal", icon: "CircleDot" },
-  low: { label: "Low", icon: "Gauge" },
-  medium: { label: "Medium", icon: "Brain" },
-  high: { label: "High", icon: "Zap" },
-  xhigh: { label: "XHigh", icon: "Flame" },
-  max: { label: "Max", icon: "Sparkles" },
+  minimal: { label: "Minimal", icon: "level-low" },
+  low: { label: "Low", icon: "level-low" },
+  medium: { label: "Medium", icon: "level-mid" },
+  high: { label: "High", icon: "level-high" },
+  xhigh: { label: "XHigh", icon: "level-xhigh" },
+  max: { label: "Max", icon: "level-xhigh" },
 };
 
 const variantParam = (variants: string[]): HarnessParamDescriptor => {

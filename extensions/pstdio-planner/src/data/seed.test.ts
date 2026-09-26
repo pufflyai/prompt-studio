@@ -173,20 +173,40 @@ describe("seedDefaultTags", () => {
     expect(seeded.map((tag) => tag.id)).toContain("default-human-requested");
   });
 
-  test("completes a partial default seed before the seeded marker is written", async () => {
+  test("completes a partial tag seed without replacing customized records", async () => {
     const storage = createMemoryStorage();
-    const first = DEFAULT_TAGS[0]();
-    await tagsCollection(storage).put(first.id, first);
+    const priority = DEFAULT_TAGS[0]();
+    const customized = {
+      ...priority,
+      name: "Urgency",
+      options: priority.options.map((option) => ({ ...option, color: "purple", icon: "star" })),
+    };
+    await tagsCollection(storage).put(customized.id, customized);
 
-    const seeded = await seedDefaultTags(storage);
+    const results = await Promise.all([seedDefaultTags(storage), seedDefaultTags(storage)]);
 
-    expect(first.id).toBe("default-priority");
-    expect(seeded.map((tag) => tag.id)).toEqual([
+    expect(results[0].map((tag) => tag.id)).toEqual([
       "default-priority",
       "default-type",
       "default-complexity",
       "default-human-requested",
     ]);
+    for (const seeded of results) expect(seeded.find((tag) => tag.id === customized.id)).toEqual(customized);
+    expect(await tagsCollection(storage).get(customized.id)).toEqual(customized);
+    expect(await seedDefaultTags(storage)).toEqual(results[0]);
+  });
+
+  test("repairs the required handoff option during an incomplete tag seed", async () => {
+    const storage = createMemoryStorage();
+    const flags = { ...HUMAN_REQUESTED_TAG(), name: "Workflow", options: [] };
+    await tagsCollection(storage).put(flags.id, flags);
+
+    const seeded = await seedDefaultTags(storage);
+
+    expect(seeded.find((tag) => tag.id === flags.id)).toEqual({
+      ...flags,
+      options: HUMAN_REQUESTED_TAG().options,
+    });
   });
 
   test("draws the default complexity options with level glyphs", () => {
