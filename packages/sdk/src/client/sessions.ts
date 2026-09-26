@@ -9,6 +9,9 @@ import type {
   ResolveSessionIdResponse,
   SessionAttachment,
   SessionConversationResponse,
+  SessionConversationSources,
+  SessionHistoryIssue,
+  SessionQueuedMessagesResponse,
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
 import {
@@ -40,7 +43,9 @@ export type SessionClient = {
   archive(sessionId: string): Promise<void>;
   followUp(sessionId: string, input: FollowUpInput): Promise<FollowUpResponse>;
   approve(sessionId: string, input: ApprovalInput): Promise<void>;
-  getConversation(sessionId: string): Promise<SessionConversationResponse>;
+  getConversation(sessionId: string, signal?: AbortSignal): Promise<SessionConversationResponse>;
+  getConversationSources(sessionId: string, signal?: AbortSignal): Promise<SessionConversationSources>;
+  getQueuedMessages(sessionId: string, options?: { signal?: AbortSignal }): Promise<SessionQueuedMessagesResponse>;
   resolveSessionId(input: ResolveSessionIdInput): Promise<ResolveSessionIdResponse>;
   updateStatus(sessionId: string, status: string): Promise<Session>;
   listActivity(sessionId: string, input?: ListSessionActivityInput): Promise<ListSessionActivityResponse>;
@@ -56,6 +61,8 @@ export type SessionStreamHandlers = {
   onReady?: (data: unknown) => void;
   onPatch?: (data: unknown) => void;
   onApprovalRequest?: (data: unknown) => void;
+  onHistoryIssue?: (data: SessionHistoryIssue) => void;
+  onQueuedMessages?: (data: SessionQueuedMessagesResponse | { error: string }) => void;
   onEnd?: (data: unknown) => void;
   onError?: (error: unknown) => void;
 };
@@ -113,6 +120,16 @@ const dispatchSessionStreamEvent = (event: SseEvent, handlers: SessionStreamHand
     return;
   }
 
+  if (event.event === "history_issue") {
+    handlers.onHistoryIssue?.(parseEventData(event.data) as SessionHistoryIssue);
+    return;
+  }
+
+  if (event.event === "queued_messages") {
+    handlers.onQueuedMessages?.(parseEventData(event.data) as SessionQueuedMessagesResponse | { error: string });
+    return;
+  }
+
   if (event.event === "end") {
     handlers.onEnd?.(parseEventData(event.data));
   }
@@ -148,7 +165,9 @@ export const createSessionClient = (request: RequestFn, clientOptions: ClientOpt
   archive: (sessionId) => request(`/v1/sessions/${sessionId}/archive`, { method: "POST" }),
   followUp: (sessionId, input) => request(`/v1/sessions/${sessionId}/follow-up`, { method: "POST", body: input }),
   approve: (sessionId, input) => request(`/v1/sessions/${sessionId}/approve`, { method: "POST", body: input }),
-  getConversation: (sessionId) => request(`/v1/sessions/${sessionId}/conversation`),
+  getConversation: (sessionId, signal) => request(`/v1/sessions/${sessionId}/conversation`, { signal }),
+  getConversationSources: (sessionId, signal) => request(`/v1/sessions/${sessionId}/conversation/sources`, { signal }),
+  getQueuedMessages: (sessionId, options) => request(`/v1/sessions/${sessionId}/queued-messages`, options),
   resolveSessionId: (input) => request("/v1/sessions/resolve-session-id", { method: "POST", body: input }),
   updateStatus: (sessionId, status) =>
     request(`/v1/sessions/${sessionId}/status`, { method: "PATCH", body: { status } }),

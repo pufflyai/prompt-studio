@@ -22,10 +22,14 @@ export type WorkspaceClient = {
   create(input: CreateWorkspaceInput): Promise<Workspace>;
   rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
   listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
-  listFiles(workspaceId: string, input?: ListWorkspaceFilesInput): Promise<WorkspaceFilesResponse>;
+  listFiles(
+    workspaceId: string,
+    input?: ListWorkspaceFilesInput,
+    options?: { signal?: AbortSignal },
+  ): Promise<WorkspaceFilesResponse>;
   createDirectory(workspaceId: string, path: string): Promise<WorkspaceFileEntry>;
   createFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
-  readFile(workspaceId: string, path: string): Promise<WorkspaceFileContent>;
+  readFile(workspaceId: string, path: string, options?: { signal?: AbortSignal }): Promise<WorkspaceFileContent>;
   writeFile(workspaceId: string, path: string, input: WriteWorkspaceFileInput): Promise<WorkspaceFileContent>;
   moveEntry(workspaceId: string, path: string, destinationPath: string): Promise<void>;
   deleteEntry(workspaceId: string, path: string): Promise<void>;
@@ -35,17 +39,17 @@ export type WorkspaceClient = {
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
   listProviders: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers`),
-  listFiles: (workspaceId, input = {}) => {
+  listFiles: (workspaceId, input = {}, options) => {
     const params = new URLSearchParams();
     if (input.path !== undefined) params.append("path", input.path);
     if (input.query !== undefined) params.append("query", input.query);
     if (input.limit !== undefined) params.append("limit", String(input.limit));
     const query = params.toString();
-    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/files${query ? `?${query}` : ""}`);
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/files${query ? `?${query}` : ""}`, options);
   },
-  readFile: (workspaceId, path) => {
+  readFile: (workspaceId, path, options) => {
     const params = new URLSearchParams({ path });
-    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`);
+    return request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/file?${params.toString()}`, options);
   },
   createDirectory: (workspaceId, path) => {
     const params = new URLSearchParams({ path });

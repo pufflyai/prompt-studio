@@ -103,6 +103,13 @@ export const projectEvents = {
   opened: hostEventRef<{ projectId: string }>("project.opened"),
 };
 
+/** View dependencies delivered by the host when synced project data changes. */
+export const viewDataEvents = {
+  sessionsChanged: hostEventRef<{ projectId: string }>("view.sessions.changed"),
+  workspacesChanged: hostEventRef<{ projectId: string }>("view.workspaces.changed"),
+  repositoriesChanged: hostEventRef<{ projectId: string }>("view.repositories.changed"),
+};
+
 export const sessionEvents = {
   started: hostEventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.started"),
   resumed: hostEventRef<SessionLifecyclePayload>("session.resumed"),
