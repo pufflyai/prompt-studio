@@ -1,5 +1,21 @@
 # @pstdio/workbench
 
+## 0.13.0
+
+_2026-09-26_
+
+### Minor Changes
+
+- 8bf80ba: Add workspace APIs and provider-based creation while preserving existing extension contracts during staged releases.
+
+### Patch Changes
+
+- b893c60: Render shared level glyphs in workbench icon controls.
+- f585ab6: Build published type declarations with rolldown-plugin-dts, cutting type build time from about 38 seconds to under 5 seconds.
+- ffe4aa8: Fix native desktop runtime lifetime, extension loading and refresh, live table menus, and harness paths; defer diff and chart loading to speed up startup.
+- 3c08334: Build with Vite 8 (Rolldown), which cuts a cold monorepo build to about 30 seconds.
+- Updated internal dependencies: `@pstdio/sdk@0.26.0`, `@pstdio/ui@0.26.1`
+
 ## 0.12.0
 
 _2026-09-25_

@@ -1,5 +1,18 @@
 # pstdio-planner
 
+## 0.16.0
+
+_2026-09-26_
+
+### Minor Changes
+
+- 539bf21: Add project settings for adversarial reviews, draft PRs, and remote target branches with reusable ticket links.
+
+### Patch Changes
+
+- 539bf21: Tell implement-ticket agents to use a Prompt Studio workspace when asked for a worktree.
+- Updated internal dependencies: `@pstdio/sdk@0.26.0`, `@pstdio/ui@0.26.1`
+
 ## 0.15.1
 
 _2026-09-26_

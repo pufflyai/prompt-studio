@@ -1,5 +1,27 @@
 # pstdio
 
+## 0.35.0
+
+_2026-09-26_
+
+### Minor Changes
+
+- ab79d8d: Add atomic workspace and session resource anchor mutation APIs.
+- 3964c0d: Add extension-owned durable automation runs and status events.
+- ffe4aa8: Publish the desktop app for Intel Macs.
+- 8bf80ba: Add workspace APIs and provider-based creation while preserving existing extension contracts during staged releases.
+
+### Patch Changes
+
+- 446835a: Persist saved kanban views across desktop restarts using host storage.
+- 6d9346a: Restore Nx build cache hits and cache prebuilt Monaco assets.
+- b893c60: Show provider icons and trailing selection checks, disable inactive choices, and reveal help from compact information icons.
+- 1019654: Build Monaco and its workers once and ship them with @pstdio/ui, so apps no longer bundle Monaco on every build.
+- f585ab6: Build published type declarations with rolldown-plugin-dts, cutting type build time from about 38 seconds to under 5 seconds.
+- 3433dad: Keep failed repository registration out of project state and reject invalid directory paths.
+- ffe4aa8: Fix native desktop runtime lifetime, extension loading and refresh, live table menus, and harness paths; defer diff and chart loading to speed up startup.
+- 3c08334: Build with Vite 8 (Rolldown), which cuts a cold monorepo build to about 30 seconds.
+
 ## 0.34.0
 
 _2026-09-25_

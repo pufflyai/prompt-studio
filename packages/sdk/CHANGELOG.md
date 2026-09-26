@@ -1,5 +1,20 @@
 # @pstdio/sdk
 
+## 0.26.0
+
+_2026-09-26_
+
+### Minor Changes
+
+- ab79d8d: Add atomic workspace and session resource anchor mutation APIs.
+- 3964c0d: Add extension-owned durable automation runs and status events.
+- b893c60: Show provider icons and trailing selection checks, disable inactive choices, and reveal help from compact information icons.
+- 8bf80ba: Add workspace APIs and provider-based creation while preserving existing extension contracts during staged releases.
+
+### Patch Changes
+
+- f585ab6: Build published type declarations with rolldown-plugin-dts, cutting type build time from about 38 seconds to under 5 seconds.
+
 ## 0.25.0
 
 _2026-09-25_
