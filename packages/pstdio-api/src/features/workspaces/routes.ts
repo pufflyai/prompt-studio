@@ -37,6 +37,12 @@ import {
   writeWorkspaceFileHandler,
   writeWorkspaceFileRoute,
 } from "./endpoints/workspace-files";
+import {
+  cancelWorkspaceHandler,
+  cancelWorkspaceRoute,
+  getWorkspaceReferenceHandler,
+  getWorkspaceReferenceRoute,
+} from "./endpoints/workspace-reference";
 
 export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
@@ -45,6 +51,8 @@ export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   routes.openapi(listWorkspaceProvidersRoute, listWorkspaceProvidersHandler(deps));
   routes.openapi(listWorkspacesRoute, listWorkspacesHandler(deps));
   routes.openapi(getWorkspaceRoute, getWorkspaceHandler(deps));
+  routes.openapi(getWorkspaceReferenceRoute, getWorkspaceReferenceHandler(deps));
+  routes.openapi(cancelWorkspaceRoute, cancelWorkspaceHandler(deps));
   routes.openapi(renameWorkspaceRoute, renameWorkspaceHandler(deps));
   routes.openapi(listWorkspaceActivityRoute, listWorkspaceActivityHandler(deps));
   routes.openapi(getWorkspaceDiffRoute, getWorkspaceDiffHandler(deps));

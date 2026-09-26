@@ -38,8 +38,9 @@ describe("runReviewCommand", () => {
     await runReviewCommand.run(
       ...makeCommandArgs({
         storage,
-        params: { workspaceId: "workspace-1" },
+        params: { workspaceId: "PS_WS-7" },
         overrides: {
+          workspaces: { get: async () => ({ id: "workspace-1", workspace_shorthand: "PS_WS-7" }) } as never,
           sessions: {
             create: async (input: unknown) => {
               creates.push(input);

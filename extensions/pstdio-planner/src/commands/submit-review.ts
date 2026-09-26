@@ -5,12 +5,12 @@ import { deriveRevisionVerdict } from "../data/attempt-state";
 import {
   appendAttemptEvent,
   putAttempt,
-  readAttempt,
   reviewCommentsCollection,
   reviewThreadsCollection,
 } from "../data/attempt-storage";
 import type { AttemptReview, ReviewComment, ReviewThread } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
+import { readWorkspaceAttempt } from "../data/workspace-attempt";
 import { readReport, workspaceHead } from "./change-requests";
 import { requestHuman } from "./human-requests";
 
@@ -146,7 +146,7 @@ export const submitReviewCommand = defineCommand({
       throw new Error(`Unknown review verdict "${commandParams.verdict}"`);
     }
     const reviewFindings = validateReviewFindings(commandParams.threads, commandParams.verdict);
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    const attempt = await readWorkspaceAttempt(ctx, commandParams.workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
     const revision = attempt.revisions.find((candidate) => candidate.revision === commandParams.expectedRevision);
     if (!revision || revision !== attempt.revisions.at(-1))

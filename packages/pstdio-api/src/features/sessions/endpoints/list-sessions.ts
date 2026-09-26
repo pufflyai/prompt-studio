@@ -34,8 +34,10 @@ export const listSessionsHandler = (deps: SessionsRouteDeps): AppRouteHandler<ty
   return async (c) => {
     const query = c.req.valid("query");
 
-    const sessions = query.workspace_id
-      ? (await deps.workspaceSessionService.listByWorkspace(query.workspace_id)).filter(
+    const workspace = query.workspace_id ? await deps.workspaceService.get(query.workspace_id, query.project_id) : null;
+    if (query.workspace_id && !workspace) return c.json([], 200);
+    const sessions = workspace
+      ? (await deps.workspaceSessionService.listByWorkspace(workspace.id)).filter(
           (session) =>
             session.project_id === query.project_id &&
             (!query.status || session.status === query.status) &&

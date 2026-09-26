@@ -26,5 +26,7 @@ export {
   listWorktrees,
   removeWorktree,
   removeWorktreeAndBranch,
+  restoreWorktree,
+  WorkspaceCollisionError,
   worktreePath,
 } from "./worktree";

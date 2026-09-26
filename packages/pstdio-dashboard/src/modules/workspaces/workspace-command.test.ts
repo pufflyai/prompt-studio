@@ -13,7 +13,7 @@ test("the public workspace command opens the provider form with resource anchors
   const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  const params = { anchors: [{ type: "ticket", id: "ticket-1", role: "primary" as const }], shorthand_base: "T-1" };
+  const params = { anchors: [{ type: "ticket", id: "ticket-1", role: "primary" as const }] };
   await workbench.commands.executeCommand(command.id, params);
   const overlay = workbench.layout.getActivePanel("overlay");
   expect(overlay?.viewId).toBe(dashboardWidgetIds.createWorkspace);

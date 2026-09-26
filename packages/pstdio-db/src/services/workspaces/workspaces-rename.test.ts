@@ -33,7 +33,6 @@ describe("createWorkspacesDBService rename", () => {
   test("trims the display name and preserves stable workspace fields", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
       branch: "workspace/PS-1_A1",
       worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
@@ -53,14 +52,12 @@ describe("createWorkspacesDBService rename", () => {
   test("returns null for missing, archived, or deleted workspaces", async () => {
     const archived = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     await workspacesService.archive(archived.id);
 
     const deleted = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     await workspacesService.softDelete(deleted.id);
@@ -73,12 +70,10 @@ describe("createWorkspacesDBService rename", () => {
   test("rejects blank, too long, and duplicate active names without mutating", async () => {
     const first = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     const second = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     await workspacesService.rename(first.id, "Spike - API only");
@@ -100,7 +95,6 @@ describe("createWorkspacesDBService rename", () => {
   test("allows reusing an archived workspace name", async () => {
     const archived = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     await workspacesService.rename(archived.id, "Spike - API only");
@@ -108,7 +102,6 @@ describe("createWorkspacesDBService rename", () => {
 
     const active = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
 

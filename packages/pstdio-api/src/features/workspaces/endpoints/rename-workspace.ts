@@ -46,7 +46,9 @@ export const renameWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
     const { name } = c.req.valid("json");
 
     try {
-      const workspace = await deps.workspaceService.rename(id, name);
+      const resolved = await deps.workspaceService.get(id);
+      if (!resolved) return c.json({ error: `Workspace not found: ${id}` }, 404);
+      const workspace = await deps.workspaceService.rename(resolved.id, name);
       if (!workspace) return c.json({ error: `Workspace not found: ${id}` }, 404);
 
       return c.json(workspace, 200);

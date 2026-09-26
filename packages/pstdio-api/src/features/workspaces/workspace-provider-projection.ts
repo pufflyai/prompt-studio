@@ -1,4 +1,5 @@
 import type { WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
+import { WorkspaceCollisionError } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
 
 export type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
@@ -71,9 +72,10 @@ export const failedOperationPatch = (
   provider_operation_id: input.operationId,
   provider_operation_kind: input.kind,
   provider_error_json: providerError({
-    code: `provider_${input.kind}_failed`,
-    message: `Workspace provider ${input.kind} failed.`,
-    retryable: true,
+    code: input.error instanceof WorkspaceCollisionError ? "workspace_collision" : `provider_${input.kind}_failed`,
+    message:
+      input.error instanceof WorkspaceCollisionError ? input.error.message : `Workspace provider ${input.kind} failed.`,
+    retryable: !(input.error instanceof WorkspaceCollisionError),
   }),
 });
 

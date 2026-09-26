@@ -130,6 +130,7 @@ describe("human request commands", () => {
         },
         overrides: {
           source: "automation",
+          workspaces: { get: async () => ({ id: "workspace-1", workspace_shorthand: "PS_WS-1" }) } as never,
           sessions: {
             get: async () => ({
               id: "unrelated-session",

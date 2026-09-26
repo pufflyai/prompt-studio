@@ -1,97 +1,30 @@
 # Worktrees
 
-## What is pstdio-wt?
+`pstdio-wt` wraps Git operations for worktree creation, restoration, removal, commits, merges, rebases, and diffs. Product code owns workspace records and provider lifecycle. The Git package owns Git commands.
 
-`pstdio-wt` is a low-level Git worktree SDK. It wraps Git commands behind a typed API so the rest of the app never shells out to Git directly. It has **zero external dependencies** — only Bun's native `spawn`.
+## Ownership
 
-## Where it fits
+| Layer | Responsibility |
+| --- | --- |
+| Core database | Allocate project prefixes and workspace references; retain UUID relationships |
+| Workspace provider | Create or restore backing resources; persist their branch, path, and provider reference; clean them up |
+| CLI, SDK, and extensions | Request operations through the workspace API |
+| `pstdio-wt` | Run Git operations on the recorded branch and path |
 
-```
-┌─────────────────────────────────────────────────────┐
-│  pstdio (CLI)                                       │
-│                                                     │
-│  ┌─────────────────────┐  ┌──────────────────────┐  │
-│  │ workspace/create.ts │  │ delete-workspace.ts  │  │
-│  │                     │  │ removeWorktreeAnd-   │  │
-│  │ createWorktree()    │  │ Branch()             │  │
-│  └────────┬────────────┘  └──────────┬───────────┘  │
-│           │                          │              │
-│  ┌────────┴──────────────────────────┴───────────┐  │
-│  │ merge-workspace.ts                            │  │
-│  │                                               │  │
-│  │ git(), mergeWorktree(), removeWorktreeAnd-    │  │
-│  │ Branch()                                      │  │
-│  └───────────────────────┬───────────────────────┘  │
-└──────────────────────────┼──────────────────────────┘
-                           │
-                           ▼
-┌──────────────────────────────────────────────────────┐
-│  pstdio-wt (SDK)                                     │
-│                                                      │
-│  git.ts ─────────── single entry point for all       │
-│  │                  git commands (Bun.spawn)          │
-│  │                                                   │
-│  ├─ worktree.ts ─── create / remove / list / find    │
-│  ├─ commit.ts ───── stage + commit (staging policy)  │
-│  ├─ merge.ts ────── ff-only or squash merge          │
-│  ├─ rebase.ts ───── rebase onto target               │
-│  ├─ status.ts ───── dirty / conflicts / ahead-behind │
-│  ├─ hooks.ts ────── lifecycle hook resolution + exec  │
-│  ├─ setup.ts ────── run scripts inside a worktree    │
-│  ├─ default-branch.ts ── detect main/master          │
-│  └─ copy-ignored.ts ─── copy node_modules etc.       │
-│                                                      │
-│  types.ts ─────────── shared type definitions        │
-└──────────────────────────────────────────────────────┘
-                           │
-                           ▼
-                        Git CLI
-```
+The core allocator gives every project an immutable, globally unique prefix of at most 16 uppercase letters and digits. Duplicate candidates receive a numeric suffix. Deleted projects reserve their prefixes. Every workspace uses `<prefix>_WS-<n>`; the root checkout reserves zero and isolated workspaces share one increasing sequence starting at one. Archived and deleted records reserve their numbers. UUIDs remain internal relationship keys. Resource anchors link Planner tickets to workspaces; ticket IDs do not name workspaces.
 
-## How the app uses it
+## Creation and restoration
 
-The main `pstdio` package has three workspace operations that all delegate to `pstdio-wt`:
+New built-in worktrees use `workspace/<reference>` and `$PSTDIO_HOME/workspaces/<reference>`. `createWorktree` refuses an occupied directory or an existing branch. `restoreWorktree` is for a workspace's recorded branch and path. It retains commits and edits and returns Git's actual path.
 
-| Operation        | CLI module                                    | SDK functions used                                |
-| ---------------- | --------------------------------------------- | ------------------------------------------------- |
-| Create workspace | `workspace/create.ts` / planner `run-attempt` | `createWorktree`                                  |
-| Delete workspace | `delete-workspace.ts`                         | `removeWorktreeAndBranch`                         |
-| Merge workspace  | `merge-workspace.ts`                          | `git`, `mergeWorktree`, `removeWorktreeAndBranch` |
+Cleanup uses recorded ownership; it never guesses a branch from a public reference. The API provider owns deletion, so the CLI does not repeat local Git cleanup. Extension providers own their remote layouts. `removeWorktree` refuses dirty worktrees unless the caller explicitly requests force removal.
 
-The CLI/API/planner modules handle the **application logic** (API calls, core
-workspace records, planner ticket links, user prompts) while `pstdio-wt` handles
-the **git plumbing**.
+The CLI returns the created path; it cannot change the parent shell's directory. Base branch selection is resolved at runtime. Product lifecycle automation runs through extension events and commands, outside the Git package.
 
-## Worktree lifecycle
+## Identity migration
 
-```
-  create          work           commit          merge          cleanup
-    │               │               │               │              │
-    ▼               ▼               ▼               ▼              ▼
-┌────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌────────┐
-│ create │───▶│  agent   │───▶│  commit  │───▶│  merge   │───▶│ remove │
-│Worktree│    │  works   │    │ Changes  │    │Worktree  │    │Worktree│
-└────────┘    └──────────┘    └──────────┘    └──────────┘    └────────┘
-  ▲     │                      ▲     │         ▲     │        ▲     │
-  │     │                      │     │         │     │        │     │
- pre   post                   pre   post      pre   post     pre   post
-create create                commit commit   merge  merge   remove remove
-                                              │
-                                           on-conflict
-```
+Migration 0032 assigns references in creation-time and UUID order before adding database uniqueness constraints. It preserves valid unique references when possible. It leaves UUIDs, anchors, sessions, names, branches, paths, provider references, and execution targets unchanged. The database directory receives `workspace-identity-migration.json` before data changes, with old/new references and duplicate recorded paths. Shared historical directories require deliberate inspection and repair; renaming references does not separate their files. No old-reference aliases are retained.
 
-### Lifecycle Automation
+Extension resource sequences retain their existing prefixes and counters, so existing ticket references remain valid. A newly allocated extension sequence uses the project's current prefix. Planner derives its current workspace display reference from core when reading an attempt; the next normal write stores it. Historical attempts whose workspace was deleted retain their last display snapshot and UUID linkage.
 
-Worktree lifecycle automation is handled through extensions. `pstdio-wt` exposes Git worktree operations and accepts injected callbacks from callers, while product-level behavior is dispatched by the API through extension events and command middleware.
-
-## Key design choices
-
-- **Branch name = stable identifier.** Worktree paths are derived from branch names, not the other way around.
-- **Dependency injection.** All consumer modules accept a `deps` parameter defaulting to real implementations, making tests simple.
-- **No shell directory switching.** The CLI returns paths — it never tries to `cd` the parent shell.
-- **Default branch resolved at runtime.** Never hardcoded to `main` or `master`.
-- **Safety by default.** `removeWorktree` refuses to delete dirty worktrees unless `force: true`.
-
-## Full PRD
-
-See `packages/pstdio-wt/readme.md` for the complete feature PRD, implementation status table, and Worktrunk references.
+See `packages/pstdio-wt/readme.md` for the low-level Git API.

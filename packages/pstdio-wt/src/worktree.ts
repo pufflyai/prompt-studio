@@ -1,5 +1,6 @@
+import { existsSync } from "node:fs";
 import { posix, win32 } from "node:path";
-import { GitError, git } from "./git";
+import { git } from "./git";
 import type { WorktreeInfo } from "./types";
 
 type ListEntry = {
@@ -48,12 +49,26 @@ export const findWorktreeByBranch = async (repoRoot: string, branch: string) => 
   return entries.find((e) => e.branch === branch) ?? null;
 };
 
-export const createWorktree = async (opts: {
+type WorktreeInput = {
   repoRoot: string;
   branch: string;
   path: string;
   base?: string;
-}): Promise<WorktreeInfo> => {
+};
+
+export class WorkspaceCollisionError extends Error {}
+
+export const createWorktree = async (opts: WorktreeInput) => {
+  if (existsSync(opts.path)) throw new WorkspaceCollisionError(`Workspace directory is occupied: ${opts.path}`);
+  if (await branchExists(opts.repoRoot, opts.branch))
+    throw new WorkspaceCollisionError(`Workspace branch already exists: ${opts.branch}`);
+  const base = opts.base ?? "HEAD";
+  await git(opts.repoRoot, ["worktree", "add", "-b", opts.branch, opts.path, base]);
+  return { branch: opts.branch, path: opts.path, base, created: true } satisfies WorktreeInfo;
+};
+
+// Restoration is only for a branch already recorded as owned by the workspace.
+export const restoreWorktree = async (opts: WorktreeInput) => {
   const base = opts.base ?? "HEAD";
 
   // check if worktree already exists for this branch
@@ -67,17 +82,12 @@ export const createWorktree = async (opts: {
     };
   }
 
-  try {
+  if (existsSync(opts.path)) throw new WorkspaceCollisionError(`Workspace directory is occupied: ${opts.path}`);
+  await git(opts.repoRoot, ["worktree", "prune"]);
+  if (await branchExists(opts.repoRoot, opts.branch)) {
+    await git(opts.repoRoot, ["worktree", "add", opts.path, opts.branch]);
+  } else {
     await git(opts.repoRoot, ["worktree", "add", "-b", opts.branch, opts.path, base]);
-  } catch (err) {
-    // branch exists but no worktree — stale leftover from a previous cleanup
-    if (err instanceof GitError && err.stderr.includes("already exists")) {
-      await git(opts.repoRoot, ["worktree", "prune"]);
-      await git(opts.repoRoot, ["branch", "-D", opts.branch]);
-      await git(opts.repoRoot, ["worktree", "add", "-b", opts.branch, opts.path, base]);
-    } else {
-      throw err;
-    }
   }
 
   return {

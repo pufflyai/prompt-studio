@@ -61,9 +61,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
 
     let resolvedWorkspaceId: string | undefined;
     if (input.workspace_id) {
-      const workspace =
-        (await deps.workspaceService.get(input.workspace_id)) ??
-        (await deps.workspaceService.getByShorthand(input.project_id, input.workspace_id));
+      const workspace = await deps.workspaceService.get(input.workspace_id, input.project_id);
       if (!workspace) {
         return c.json({ error: `Workspace not found: ${input.workspace_id}` }, 404);
       }

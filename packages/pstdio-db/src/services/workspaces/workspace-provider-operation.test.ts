@@ -23,7 +23,6 @@ describe("workspace provider operations", () => {
   test("atomically replaces a referenced pending create with a cleanup operation", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       provider_id: "example.remote",
       provider_state: "provisioning",
       provider_operation_id: "op-create",
@@ -48,7 +47,6 @@ describe("workspace provider operations", () => {
   test("rejects a create projection after a lifecycle operation takes ownership", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       provider_id: "example.remote",
       provider_state: "provisioning",
       provider_operation_id: "op-create",

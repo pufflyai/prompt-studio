@@ -26,8 +26,8 @@ afterAll(async () => {
 
 describe("GET /v1/sessions", () => {
   test("filters sessions by linked workspace", async () => {
-    const firstWorkspace = await handle.deps.workspaceService.createStandalone({ project_id: projectId });
-    const secondWorkspace = await handle.deps.workspaceService.createStandalone({ project_id: projectId });
+    const firstWorkspace = await handle.deps.workspaceService.create({ project_id: projectId });
+    const secondWorkspace = await handle.deps.workspaceService.create({ project_id: projectId });
     const firstSession = await handle.deps.sessionService.create({
       project_id: projectId,
       title: "First workspace session",

@@ -37,3 +37,7 @@ to submit, or **Cancel** to close the dialog.
 During the alpha.10 release bridge, Git choices use the first linked repository,
 matching workspace creation without an explicit legacy repository ID. Cloud
 providers supply their own fields and do not require Git.
+
+Workspace references are globally unique, for example `PS_WS-1`. The root workspace is `PS_WS-0`. Commands accept either that canonical reference or the internal UUID. Display-name changes do not change the reference. API and extension workspace operations use the same resolver and enforce project scope where supplied.
+
+Creation prints the canonical reference and path. A failed provider operation exits with an error; a directory or branch collision names the occupied resource and leaves it untouched. Existing workspaces retain their recorded Git branch and path after migration.

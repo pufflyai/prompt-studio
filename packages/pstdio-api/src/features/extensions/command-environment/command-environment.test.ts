@@ -540,7 +540,6 @@ describe("createCommandEnvironment workspaces", () => {
     );
 
     const workspace = await env.workspaces.create({
-      shorthand_base: "T-1",
       provider_id: "pstdio.root",
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
@@ -549,7 +548,6 @@ describe("createCommandEnvironment workspaces", () => {
     expect(created).toEqual([
       expect.objectContaining({
         project_id: "project-1",
-        shorthand_base: "T-1",
         provider_id: "pstdio.root",
         provider_operation_kind: "create",
         anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
@@ -1202,7 +1200,6 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
     );
 
     await env.workspaces.create({
-      shorthand_base: "T-1",
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
 

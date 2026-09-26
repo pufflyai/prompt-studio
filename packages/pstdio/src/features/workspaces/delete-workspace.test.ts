@@ -1,59 +1,41 @@
 import { describe, expect, mock, test } from "bun:test";
-import { homedir } from "node:os";
 import { deleteWorkspaceWithWorktree } from "./delete-workspace";
 import { makeWorkspace } from "./workspace.test-fixture";
 
-const baseDeps = {
-  getWorkspace: async () => makeWorkspace({ workspace_shorthand: "PS-1_A1" }),
-  deleteWorkspace: async () => {},
-  removeWorktreeAndBranch: async () => {},
-  log: () => {},
-};
+const workspace = makeWorkspace({ workspace_shorthand: "PS_WS-1" });
+const input = { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS_WS-1" };
+const baseDeps = { getWorkspace: async () => workspace, deleteWorkspace: async () => {}, log: () => {} };
 
-describe("deleteWorkspaceWithWorktree", () => {
-  test("deletes workspace and removes worktree with branch", async () => {
+describe("workspace deletion", () => {
+  test("waits for provider deletion before reporting success", async () => {
+    const deleted: string[] = [];
     const log = mock();
-    const deleteWorkspace = mock(async () => {});
-    const removeWorktreeAndBranch = mock(async () => {});
-
-    await deleteWorkspaceWithWorktree(
-      { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
-      { ...baseDeps, deleteWorkspace, removeWorktreeAndBranch, log },
-    );
-
-    expect(deleteWorkspace).toHaveBeenCalledTimes(1);
-    expect(removeWorktreeAndBranch).toHaveBeenCalledTimes(1);
-    expect(removeWorktreeAndBranch).toHaveBeenCalledWith({
-      repoRoot: "/repo",
-      path: `${homedir()}/.pstdio/workspaces/PS-1_A1`,
-      branch: "workspace/PS-1_A1",
-      force: true,
+    await deleteWorkspaceWithWorktree(input, {
+      ...baseDeps,
+      deleteWorkspace: async (id) => {
+        deleted.push(id);
+      },
+      log,
     });
-    expect(log).toHaveBeenCalledWith("Deleted workspace PS-1_A1");
+    expect(deleted).toEqual([workspace.id]);
+    expect(log).toHaveBeenCalledWith("Deleted workspace PS_WS-1");
   });
-
-  test("throws when workspace not found", async () => {
+  test("reports provider cleanup failure", async () => {
+    const log = mock();
     await expect(
-      deleteWorkspaceWithWorktree(
-        { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A99" },
-        { ...baseDeps, getWorkspace: async () => null },
-      ),
-    ).rejects.toThrow("Workspace not found: PS-1_A99");
+      deleteWorkspaceWithWorktree(input, {
+        ...baseDeps,
+        deleteWorkspace: async () => {
+          throw new Error("worktree locked");
+        },
+        log,
+      }),
+    ).rejects.toThrow("worktree locked");
+    expect(log).not.toHaveBeenCalled();
   });
-
-  test("logs error and continues when removeWorktreeAndBranch rejects", async () => {
-    const log = mock();
-    const removeWorktreeAndBranch = mock(async () => {
-      throw new Error("worktree locked");
-    });
-
-    await deleteWorkspaceWithWorktree(
-      { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
-      { ...baseDeps, removeWorktreeAndBranch, log },
+  test("reports an unknown workspace", async () => {
+    await expect(deleteWorkspaceWithWorktree(input, { ...baseDeps, getWorkspace: async () => null })).rejects.toThrow(
+      "Workspace not found: PS_WS-1",
     );
-
-    const messages = log.mock.calls.map((call) => String(call[0]));
-    expect(messages.some((msg) => msg.includes("worktree locked"))).toBe(true);
-    expect(messages).toContain("Deleted workspace PS-1_A1");
   });
 });

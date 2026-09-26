@@ -64,20 +64,7 @@ afterAll(async () => {
 });
 
 describe("POST /v1/workspaces", () => {
-  test("rejects unsafe shorthand identifiers without storing a workspace", async () => {
-    const before = await (await app.request(`/v1/workspaces?project_id=${projectId}`)).json();
-    for (const shorthand of ["../outside", "foo/../../outside", "foo\\outside", "bad name", "bad~ref"]) {
-      const response = await app.request("/v1/workspaces", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, provider_id: "cloud.remote", shorthand_base: shorthand }),
-      });
-      expect(response.status).toBe(400);
-    }
-    expect(await (await app.request(`/v1/workspaces?project_id=${projectId}`)).json()).toEqual(before);
-  });
-
-  test("creates a provider workspace with caller anchors and shorthand", async () => {
+  test("creates a provider workspace with caller anchors and a project workspace reference", async () => {
     const repoRoot = createGitRepo("anchored-workspace-repo");
     await registerRepo(repoRoot);
     const anchor = { type: "ticket", id: "ticket-1", label: "PS-391", role: "primary" };
@@ -89,13 +76,12 @@ describe("POST /v1/workspaces", () => {
         provider_id: "pstdio.worktree",
         params: { base: "HEAD" },
         anchors: [anchor],
-        shorthand_base: "BRIDGE",
       }),
     });
     expect(response.status).toBe(201);
     const workspace = await response.json();
     expect(workspace.anchors_json).toEqual([anchor]);
-    expect(workspace.workspace_shorthand).toStartWith("BRIDGE");
+    expect(workspace.workspace_shorthand).toMatch(/^[A-Z0-9]+_WS-\d+$/);
   });
 
   test("creates a worktree-backed workspace without a ticket", async () => {
@@ -111,8 +97,8 @@ describe("POST /v1/workspaces", () => {
     expect(res.status).toBe(201);
     const workspace = await res.json();
 
-    expect(workspace.workspace_shorthand).toBe("WS-1");
-    expect(workspace.branch).toBe("workspace/WS-1");
+    expect(workspace.workspace_shorthand).toBe("CWP_WS-2");
+    expect(workspace.branch).toBe("workspace/CWP_WS-2");
     expect(workspace.worktree_path).not.toBeNull();
     expect(existsSync(workspace.worktree_path)).toBe(true);
 

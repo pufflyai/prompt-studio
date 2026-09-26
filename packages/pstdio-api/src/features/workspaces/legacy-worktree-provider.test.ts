@@ -79,6 +79,7 @@ const api = (removed?: Workspace[]) =>
   );
 
 test("legacy managed Git worktrees expose their actual provider and source without changing stored rows", async () => {
+  workspace.workspace_shorthand = "PS_WS-7";
   const unrelated = join(root, "unrelated");
   await createRepo(unrelated);
   folders.unshift({ id: "unrelated", path: unrelated });

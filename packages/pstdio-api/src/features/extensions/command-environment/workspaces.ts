@@ -63,12 +63,9 @@ export const createExtensionWorkspace = async (
   }
   const projectId = input.projectId;
   const anchors = input.workspaceInput.anchors ?? [];
-  const shorthandBase = input.workspaceInput.shorthand_base;
-  if (!shorthandBase) throw new Error("Workspace creation requires shorthand_base");
 
   const workspace = await createProviderBackedWorkspace(deps, {
     projectId,
-    shorthandBase,
     anchors,
     providerId: input.workspaceInput.provider_id,
     params: input.workspaceInput.params,
@@ -87,7 +84,7 @@ export const createWorkspacesApi = (
   runtimeDeps: CommandEnvironmentRuntimeDeps,
 ): CommandRunnerEnvironment["workspaces"] => {
   const getScopedWorkspace = async (id: string) => {
-    const workspace = await deps.workspaceService.get(id);
+    const workspace = await deps.workspaceService.get(id, input.projectId);
     return workspace?.project_id === input.projectId ? workspace : null;
   };
   const requireScopedWorkspace = async (id: string) => {
@@ -123,12 +120,12 @@ export const createWorkspacesApi = (
       return projectWorkspace(workspace as WorkspaceRecord);
     },
     addAnchors: async (id, anchors) => {
-      await requireScopedWorkspace(id);
-      await deps.workspaceService.addAnchors(id, anchors);
+      const workspace = await requireScopedWorkspace(id);
+      await deps.workspaceService.addAnchors(workspace.id, anchors);
     },
     removeAnchors: async (id, refs) => {
-      await requireScopedWorkspace(id);
-      await deps.workspaceService.removeAnchors(id, refs);
+      const workspace = await requireScopedWorkspace(id);
+      await deps.workspaceService.removeAnchors(workspace.id, refs);
     },
     resolve: async (id) => {
       const workspace = await projectLegacyWorktreeProvider(deps, await requireScopedWorkspace(id));
@@ -180,7 +177,7 @@ export const createWorkspacesApi = (
       assertWorkspaceDeleteAllowed(workspace);
       const remove = runtimeDeps.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
       const removed = await remove(deps, workspace);
-      await deps.workspaceService.softDelete(id);
+      await deps.workspaceService.softDelete(workspace.id);
       if (removed && workspace.worktree_path) {
         const { anchors_json: _anchors, ...eventWorkspace } = workspace;
         const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;

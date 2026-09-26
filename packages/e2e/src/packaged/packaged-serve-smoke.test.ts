@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -12,6 +12,7 @@ import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { registerProjectBootstrapSmokeTest } from "./packaged-project-bootstrap-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -103,113 +104,7 @@ test(
   SMOKE_TEST_TIMEOUT,
 );
 
-test(
-  "creates an empty project with repo bootstrap artifacts and preserves it after restart",
-  async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-    let child: ChildProcess | null = null;
-
-    try {
-      const started = await startPackagedServe(tempRoot);
-      child = started.child;
-
-      const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-        method: "POST",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ name: "packaged-serve-project" }),
-      });
-      expect(createRes.status).toBe(201);
-
-      const project = (await createRes.json()) as { id: string };
-      const providersRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/workspace-providers`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(providersRes.status).toBe(200);
-      expect(await providersRes.json()).toEqual([]);
-      const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(extensionsRes.status).toBe(200);
-      const extensionCatalog = (await extensionsRes.json()) as {
-        marketplace: Array<{
-          installName: string;
-          origin: { kind: "git"; path: string; ref: string; url: string };
-          publisher?: string;
-        }>;
-      };
-      expect(extensionCatalog.marketplace).toContainEqual(
-        expect.objectContaining({
-          installName: "pstdio-notes",
-          origin: {
-            kind: "git",
-            path: "extensions/pstdio-notes",
-            ref: "{hostRelease}",
-            url: "https://github.com/pufflyai/prompt-studio",
-          },
-          publisher: "pstdio",
-        }),
-      );
-      expect(extensionCatalog.marketplace).toContainEqual(
-        expect.objectContaining({
-          installName: "pstdio-planner",
-          origin: {
-            kind: "git",
-            path: "extensions/pstdio-planner",
-            ref: "{hostRelease}",
-            url: "https://github.com/pufflyai/prompt-studio",
-          },
-          publisher: "pufflyai",
-        }),
-      );
-
-      const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(skillsRes.status).toBe(200);
-
-      const skills = (await skillsRes.json()) as {
-        name: string;
-        files: { path: string; content: string; encoding: "utf8" }[];
-      }[];
-      expect(skills).toEqual([]);
-
-      const repoPath = join(tempRoot, "repo");
-      const directoryRes = await fetch(`${started.baseUrl}/v1/filesystem/directories`, {
-        method: "POST",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ parent_path: tempRoot, name: "repo" }),
-      });
-      expect(directoryRes.status).toBe(201);
-      expect(await directoryRes.json()).toEqual({ path: realpathSync(repoPath) });
-
-      const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
-        method: "POST",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ name: "repo", path: repoPath }),
-      });
-      expect(repoRes.status).toBe(201);
-
-      expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
-
-      await stopProcess(child);
-      const restarted = await startPackagedServe(tempRoot);
-      child = restarted.child;
-      const projectsRes = await fetch(`${restarted.baseUrl}/v1/projects`, {
-        headers: runtimeAuthorization(restarted.descriptor),
-      });
-      expect(projectsRes.status).toBe(200);
-      expect(await projectsRes.json()).toEqual([
-        expect.objectContaining({ id: project.id, name: "packaged-serve-project" }),
-      ]);
-    } finally {
-      if (child) {
-        await stopProcess(child);
-      }
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  },
-  SMOKE_TEST_TIMEOUT,
-);
+registerProjectBootstrapSmokeTest(SMOKE_TEST_TIMEOUT);
 
 test(
   "loads a default extension that imports an on-disk node_modules dependency",

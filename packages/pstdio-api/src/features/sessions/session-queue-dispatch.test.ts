@@ -23,7 +23,7 @@ test.each(["start", "follow_up", "resume"])("keeps a queued %s for retry when st
   const app = await createTestApp({ harnessRegistry: registry });
   try {
     const project = await app.deps.projectService.create({ name: "Retry queued work" });
-    const workspace = await app.deps.workspaceService.createStandalone({
+    const workspace = await app.deps.workspaceService.create({
       project_id: project.id,
       provider_state: "provisioning",
     });

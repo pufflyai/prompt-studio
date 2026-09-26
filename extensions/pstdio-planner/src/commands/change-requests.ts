@@ -2,9 +2,10 @@ import { type CommandContext, commandRef, defineCommand, params } from "@pstdio/
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { appendRevision } from "../data/attempt-state";
-import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } from "../data/attempt-storage";
+import { appendAttemptEvent, putAttempt, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
+import { readWorkspaceAttempt } from "../data/workspace-attempt";
 
 const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-reports" });
 const readReportCommand = reportsCommand<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>(
@@ -91,7 +92,7 @@ export const submitChangeRequestCommand = defineCommand({
     }),
   },
   async run(ctx, commandParams) {
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    const attempt = await readWorkspaceAttempt(ctx, commandParams.workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
     const implementationSessionId = commandParams.implementationSessionId ?? commandParams.sessionId;
     if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {

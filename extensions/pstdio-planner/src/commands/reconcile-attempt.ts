@@ -1,16 +1,11 @@
 import { type CommandContext, defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
-import {
-  appendAttemptEvent,
-  listAttempts,
-  putAttempt,
-  readAttempt,
-  reviewLaunchClaimsCollection,
-} from "../data/attempt-storage";
+import { appendAttemptEvent, putAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptBlocker, AttemptRecord, AttemptReview } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
 import { renderOwnedTemplate } from "../data/template-store";
+import { listWorkspaceAttempts, readWorkspaceAttempt } from "../data/workspace-attempt";
 import { requestHuman } from "./human-requests";
 
 const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
@@ -313,7 +308,7 @@ export const reconcileAttemptCommand = defineCommand({
   cli: true,
   params: { workspaceId: params.text({ required: true }) },
   async run(ctx, commandParams) {
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    const attempt = await readWorkspaceAttempt(ctx, commandParams.workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
     if (attempt.state === "implementing" || attempt.state === "changes_requested") {
       return reconcileImplementation(ctx, attempt);
@@ -329,6 +324,6 @@ export const listAttemptsCommand = defineCommand({
   cli: true,
   params: {},
   async run(ctx, _commandParams) {
-    return listAttempts(ctx.storage);
+    return listWorkspaceAttempts(ctx);
   },
 });

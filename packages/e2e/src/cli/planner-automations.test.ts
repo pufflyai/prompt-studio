@@ -166,7 +166,7 @@ describe("planner automations", () => {
         session: { id: string } | null;
         workspace: { id: string; workspace_shorthand: string };
       };
-      expect(value.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
+      expect(value.workspace.workspace_shorthand).toBe("PA_WS-1");
       expect(value.session?.id).toBeString();
 
       const movedToInProgress = await waitFor(
@@ -200,7 +200,11 @@ describe("planner automations", () => {
       });
       expect(workspaces.outcome.ok).toBe(true);
       expect(workspaces.outcome.value).toEqual([
-        expect.objectContaining({ id: value.workspace.id, workspace: `${ticket.shorthand}_A1`, active: false }),
+        expect.objectContaining({
+          id: value.workspace.id,
+          workspace: value.workspace.workspace_shorthand,
+          active: false,
+        }),
       ]);
     },
     TEST_TIMEOUT,
@@ -232,7 +236,7 @@ describe("planner automations", () => {
         workspace: { workspace_shorthand: string; anchors_json?: { type: string; label?: string }[] };
       };
       expect(workspaceValue.session).toBeNull();
-      expect(workspaceValue.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
+      expect(workspaceValue.workspace.workspace_shorthand).toBe("PTA_WS-1");
       expect(
         workspaceValue.workspace.anchors_json?.some(
           (anchor) => anchor.type === "ticket" && anchor.label === ticket.shorthand,

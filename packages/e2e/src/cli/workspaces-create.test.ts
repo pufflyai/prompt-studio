@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
+import { cleanupDirs, createCliRunner, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -39,6 +39,18 @@ const readProjectId = (repo: string) => {
 };
 
 describe("pstdio workspaces create", () => {
+  test("exits unsuccessfully on a branch collision and preserves its commit", async () => {
+    const repo = createInitializedRepo("collision-owner");
+    const branch = execSync("git branch --show-current", { cwd: repo, encoding: "utf8" }).trim();
+    execSync("git checkout -b workspace/CO_WS-1", { cwd: repo, stdio: "pipe" });
+    execSync("git commit --allow-empty -m private-work", { cwd: repo, stdio: "pipe" });
+    const head = execSync("git rev-parse HEAD", { cwd: repo, encoding: "utf8" }).trim();
+    execSync(`git checkout ${branch}`, { cwd: repo, stdio: "pipe" });
+    const result = createCliRunner(api.url).runSafe("workspaces create", repo);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("Workspace branch already exists: workspace/CO_WS-1");
+    expect(execSync("git rev-parse workspace/CO_WS-1", { cwd: repo, encoding: "utf8" }).trim()).toBe(head);
+  });
   test(
     "creates and deletes a worktree-backed workspace without a ticket",
     async () => {
@@ -46,21 +58,21 @@ describe("pstdio workspaces create", () => {
       const projectId = readProjectId(repo);
 
       const createOutput = run("workspaces create", repo);
-      expect(createOutput).toContain("Created workspace WS-1");
+      expect(createOutput).toContain("Created workspace WCT_WS-1");
 
-      const worktreePath = createOutput.match(/Created workspace WS-1 at (\S+)/)?.[1];
+      const worktreePath = createOutput.match(/Created workspace WCT_WS-1 at (\S+)/)?.[1];
       expect(worktreePath).toBeTruthy();
       expect(existsSync(worktreePath!)).toBe(true);
 
-      const byShorthandUrl = `${api.url}/v1/workspaces/by-shorthand?project_id=${encodeURIComponent(projectId)}&shorthand=WS-1`;
+      const byShorthandUrl = `${api.url}/v1/workspaces/by-shorthand?project_id=${encodeURIComponent(projectId)}&shorthand=WCT_WS-1`;
       const createdRes = await fetch(byShorthandUrl);
       expect(createdRes.status).toBe(200);
       const created = (await createdRes.json()) as { branch: string | null; worktree_path: string | null };
-      expect(created.branch).toBe("workspace/WS-1");
+      expect(created.branch).toBe("workspace/WCT_WS-1");
       expect(created.worktree_path).toBe(worktreePath);
 
-      const deleteOutput = run("workspaces delete --id WS-1", repo);
-      expect(deleteOutput).toContain("Deleted workspace WS-1");
+      const deleteOutput = run("workspaces delete --id WCT_WS-1", repo);
+      expect(deleteOutput).toContain("Deleted workspace WCT_WS-1");
 
       const afterDeleteRes = await fetch(byShorthandUrl);
       expect(afterDeleteRes.status).toBe(404);

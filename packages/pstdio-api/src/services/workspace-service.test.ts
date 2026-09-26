@@ -67,7 +67,7 @@ describe("WorkspaceService", () => {
       const { deps, workspacesDb, emitted } = buildDeps();
       const service = createWorkspaceService(deps);
 
-      const input = { project_id: "p1", shorthand_base: "T-1" };
+      const input = { project_id: "p1" };
       const result = await service.create(input);
 
       expect(result).toMatchObject({ id: "ws_1" });

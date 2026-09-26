@@ -34,49 +34,45 @@ describe("createWorkspacesDBService", () => {
   test("creates a workspace with auto-generated shorthand", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
-      branch: "workspace/PS-1_A1",
-      worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
+      branch: "workspace/PS_WS-1",
+      worktree_path: "/repo/.pstdio/workspaces/PS_WS-1",
     });
 
-    expect(ws.workspace_shorthand).toBe("PS-1_A1");
-    expect(ws.name).toBe("PS-1_A1");
+    expect(ws.workspace_shorthand).toBe("PS_WS-1");
+    expect(ws.name).toBe("PS_WS-1");
     expect(ws.archived).toBe(false);
   });
 
-  test("increments shorthand for multiple workspaces on same ticket", async () => {
+  test("increments shorthand for multiple workspaces on same project", async () => {
     const ws1 = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     const ws2 = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
 
-    expect(ws1.workspace_shorthand).toBe("PS-1_A1");
-    expect(ws2.workspace_shorthand).toBe("PS-1_A2");
+    expect(ws1.workspace_shorthand).toBe("PS_WS-1");
+    expect(ws2.workspace_shorthand).toBe("PS_WS-2");
   });
 
   test("lists active workspaces with their resource anchors", async () => {
     await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
 
     const list = await workspacesService.list(projectId);
 
     expect(list.length).toBe(1);
-    expect(list[0].workspace_shorthand).toBe("PS-1_A1");
+    expect(list[0].workspace_shorthand).toBe("PS_WS-1");
     expect(list[0].anchors_json).toEqual([ticketAnchor]);
   });
 
   test("lists standalone and default workspaces without resource anchors", async () => {
-    const standalone = await workspacesService.createStandalone({ project_id: projectId });
+    const standalone = await workspacesService.create({ project_id: projectId });
     const defaultWorkspace = await workspacesService.createDefault({
       project_id: projectId,
       name: "prompt-studio",
@@ -85,30 +81,30 @@ describe("createWorkspacesDBService", () => {
 
     const list = await workspacesService.list(projectId);
 
-    expect(list.map((workspace) => workspace.workspace_shorthand).sort()).toEqual(["WS-1", "default"]);
+    expect(list.map((workspace) => workspace.workspace_shorthand).sort()).toEqual(["PS_WS-0", "PS_WS-1"]);
     expect(list.find((workspace) => workspace.id === standalone.id)?.anchors_json).toEqual([]);
     expect(list.find((workspace) => workspace.id === defaultWorkspace.id)?.anchors_json).toEqual([]);
   });
 
-  test("createStandalone creates a ticketless workspace with a WS- shorthand", async () => {
-    const ws = await workspacesService.createStandalone({
+  test("create creates a ticketless workspace with a WS- shorthand", async () => {
+    const ws = await workspacesService.create({
       project_id: projectId,
       name: "T-1 attempt",
       branch: "workspace/WS-1",
       worktree_path: "/repo/.pstdio/workspaces/WS-1",
     });
 
-    expect(ws.workspace_shorthand).toBe("WS-1");
+    expect(ws.workspace_shorthand).toBe("PS_WS-1");
     expect(ws.name).toBe("T-1 attempt");
     expect(ws.branch).toBe("workspace/WS-1");
   });
 
-  test("createStandalone increments the WS- shorthand per project", async () => {
-    const ws1 = await workspacesService.createStandalone({ project_id: projectId });
-    const ws2 = await workspacesService.createStandalone({ project_id: projectId });
+  test("create increments the WS- shorthand per project", async () => {
+    const ws1 = await workspacesService.create({ project_id: projectId });
+    const ws2 = await workspacesService.create({ project_id: projectId });
 
-    expect(ws1.workspace_shorthand).toBe("WS-1");
-    expect(ws2.workspace_shorthand).toBe("WS-2");
+    expect(ws1.workspace_shorthand).toBe("PS_WS-1");
+    expect(ws2.workspace_shorthand).toBe("PS_WS-2");
   });
 
   test("createDefault creates a single root workspace marked is_default", async () => {
@@ -163,22 +159,20 @@ describe("createWorkspacesDBService lookups and mutations", () => {
   test("getByShorthand returns workspace or null", async () => {
     await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
 
-    const found = await workspacesService.getByShorthand(projectId, "PS-1_A1");
+    const found = await workspacesService.getByShorthand(projectId, "PS_WS-1");
     expect(found).not.toBeNull();
-    expect(found!.workspace_shorthand).toBe("PS-1_A1");
+    expect(found!.workspace_shorthand).toBe("PS_WS-1");
 
-    const notFound = await workspacesService.getByShorthand(projectId, "PS-1_A99");
+    const notFound = await workspacesService.getByShorthand(projectId, "PS_WS-99");
     expect(notFound).toBeNull();
   });
 
   test("softDelete hides workspace from list", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
 
@@ -194,7 +188,6 @@ describe("createWorkspacesDBService lookups and mutations", () => {
   test("archive marks workspace as archived and hides it from list", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
 
@@ -214,18 +207,16 @@ describe("createWorkspacesDBService lookups and mutations", () => {
   test("deleted workspaces count toward shorthand sequence", async () => {
     const ws1 = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     await workspacesService.softDelete(ws1.id);
 
     const ws2 = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
 
-    expect(ws2.workspace_shorthand).toBe("PS-1_A2");
+    expect(ws2.workspace_shorthand).toBe("PS_WS-2");
   });
 
   test("orphaned workspaces count toward shorthand sequence", async () => {
@@ -233,11 +224,11 @@ describe("createWorkspacesDBService lookups and mutations", () => {
     await db.insert(workspaces).values({
       id: crypto.randomUUID(),
       project_id: projectId,
-      name: "PS-1_A1",
+      name: "PS_WS-1",
       branch: null,
       worktree_path: null,
       archived: false,
-      workspace_shorthand: "PS-1_A1",
+      workspace_shorthand: "PS_WS-1",
       initializing: false,
       setup_error: null,
       startup_log_file_id: null,
@@ -249,17 +240,15 @@ describe("createWorkspacesDBService lookups and mutations", () => {
 
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
 
-    expect(ws.workspace_shorthand).toBe("PS-1_A2");
+    expect(ws.workspace_shorthand).toBe("PS_WS-2");
   });
 
   test("provider projections preserve omitted references and operations", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       provider_id: "example.remote",
       provider_state: "provisioning",
       provider_operation_id: "op-create-1",
@@ -287,7 +276,6 @@ describe("createWorkspacesDBService lookups and mutations", () => {
   test("provider reconciliation reads archived rows with pending operations", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       provider_id: "example.remote",
       provider_state: "archiving",
       provider_operation_id: "op-archive-1",
@@ -302,7 +290,6 @@ describe("createWorkspacesDBService lookups and mutations", () => {
   test("atomically reuses one provider operation id for concurrent cleanup", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       provider_id: "example.remote",
       provider_state: "ready",
     });

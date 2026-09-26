@@ -8,7 +8,7 @@ describe("extension tree renderer contributions", () => {
   test("runs a host tree action in the workbench with its parameters", async () => {
     const workbench = createWorkbench();
     const calls: unknown[] = [];
-    const params = { anchors: [{ type: "ticket", id: "ticket-1" }], shorthand_base: "T-1" };
+    const params = { anchors: [{ type: "ticket", id: "ticket-1" }] };
     workbench.commands.registerCommand(
       { id: "workbench.workspace.create", label: "Create workspace" },
       { execute: (args) => calls.push(args) },

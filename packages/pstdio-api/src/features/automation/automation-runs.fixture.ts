@@ -151,7 +151,6 @@ const writeAutomationExtension = (root: string) => {
           async run(ctx) {
             const workspace = await ctx.workspaces.create({
               project_id: ctx.projectId,
-              shorthand_base: "remote",
               provider_id: "pstdio.automation-test.workspace-type.remote",
             });
             await ctx.sessions.create({

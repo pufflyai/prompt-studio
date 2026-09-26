@@ -14,7 +14,6 @@ test("creates a provider workspace with its resource anchors and shorthand prefi
     provider_id: "example.cloud",
     params: { image: "documents" },
     anchors: [{ type: "document", id: "doc-7" }],
-    shorthand_base: "DOC-7",
   } satisfies CreateWorkspaceInput;
 
   await client.create(input);

@@ -55,7 +55,6 @@ describe("dashboard workspace actions", () => {
       providerId: "cloud.environment",
       params: { image: "notes" },
       anchors: [{ type: "ticket", id: "ticket-1", role: "primary" }],
-      shorthand_base: "T-1",
     });
 
     expect(calls).toEqual([
@@ -67,7 +66,6 @@ describe("dashboard workspace actions", () => {
           provider_id: "cloud.environment",
           params: { image: "notes" },
           anchors: [{ type: "ticket", id: "ticket-1", role: "primary" }],
-          shorthand_base: "T-1",
         }),
       },
     ]);

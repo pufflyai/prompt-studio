@@ -12,12 +12,11 @@ import { createWorkspaceAnchorMutations } from "./workspace-anchors";
 import {
   buildWorkspaceRecord,
   type CreateInput,
+  getProjectPrefix,
   insertDefaultWorkspace,
-  nextStandaloneWorkspaceShorthand,
   nextWorkspaceShorthand,
   nowTimestamp,
   selectDefaultWorkspace,
-  standalonePrefix,
 } from "./workspace-record";
 
 interface ProviderProjectionInput {
@@ -122,75 +121,24 @@ const beginProviderOperation = async (
 
 export const createWorkspacesDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
-    const shorthandBase = input.shorthand_base;
-    if (!shorthandBase) throw new Error("Workspace creation requires shorthand_base");
-
-    const existingWorkspaces = await db
-      .select({ workspace_shorthand: workspaces.workspace_shorthand })
-      .from(workspaces)
-      .where(
-        and(
-          eq(workspaces.project_id, input.project_id),
-          sql`${workspaces.workspace_shorthand} like ${`${shorthandBase}_A%`}`,
-        ),
+    const prefix = await getProjectPrefix(db, input.project_id);
+    for (;;) {
+      const existing = await db
+        .select({ shorthand: workspaces.workspace_shorthand })
+        .from(workspaces)
+        .where(eq(workspaces.project_id, input.project_id));
+      const shorthand = nextWorkspaceShorthand(
+        prefix,
+        existing.map((row) => row.shorthand),
       );
-
-    const shorthand = nextWorkspaceShorthand(
-      shorthandBase,
-      existingWorkspaces.map((workspace) => workspace.workspace_shorthand),
-    );
-
-    const record = buildWorkspaceRecord({
-      project_id: input.project_id,
-      shorthand,
-      name: input.name,
-      branch: input.branch,
-      worktree_path: input.worktree_path,
-      anchors: input.anchors,
-      provider_id: input.provider_id,
-      provider_params_json: input.provider_params_json,
-      provider_state: input.provider_state,
-      provider_operation_id: input.provider_operation_id,
-      provider_operation_kind: input.provider_operation_kind,
-    });
-
-    await db.insert(workspaces).values(record);
-    return record;
-  };
-
-  // Standalone workspaces use project-scoped `WS-<n>` shorthands.
-  const createStandalone = async (input: Omit<CreateInput, "shorthand_base">) => {
-    const existingWorkspaces = await db
-      .select({ workspace_shorthand: workspaces.workspace_shorthand })
-      .from(workspaces)
-      .where(
-        and(
-          eq(workspaces.project_id, input.project_id),
-          sql`${workspaces.workspace_shorthand} like ${`${standalonePrefix}%`}`,
-        ),
-      );
-
-    const shorthand = nextStandaloneWorkspaceShorthand(
-      existingWorkspaces.map((workspace) => workspace.workspace_shorthand),
-    );
-
-    const record = buildWorkspaceRecord({
-      project_id: input.project_id,
-      shorthand,
-      anchors: input.anchors,
-      name: input.name,
-      branch: input.branch,
-      worktree_path: input.worktree_path,
-      provider_id: input.provider_id,
-      provider_params_json: input.provider_params_json,
-      provider_state: input.provider_state,
-      provider_operation_id: input.provider_operation_id,
-      provider_operation_kind: input.provider_operation_kind,
-    });
-
-    await db.insert(workspaces).values(record);
-
-    return record;
+      const record = buildWorkspaceRecord({ ...input, shorthand });
+      const [created] = await db
+        .insert(workspaces)
+        .values(record)
+        .onConflictDoNothing({ target: workspaces.workspace_shorthand })
+        .returning();
+      if (created) return created;
+    }
   };
 
   const list = async (projectId: string) => {
@@ -216,24 +164,21 @@ export const createWorkspacesDBService = (db: DbClient) => {
       .where(and(eq(workspaces.project_id, projectId), sql`${workspaces.deleted_at} is null`))
       .orderBy(workspaces.created_at);
 
-  const get = async (id: string) => {
-    const [row] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    return row ?? null;
-  };
-
-  const getByShorthand = async (projectId: string, shorthand: string) => {
+  const get = async (reference: string, projectId?: string) => {
     const [row] = await db
       .select()
       .from(workspaces)
       .where(
         and(
-          eq(workspaces.project_id, projectId),
-          eq(workspaces.workspace_shorthand, shorthand),
-          sql`${workspaces.deleted_at} is null`,
+          or(eq(workspaces.id, reference), eq(workspaces.workspace_shorthand, reference)),
+          isNull(workspaces.deleted_at),
+          projectId ? eq(workspaces.project_id, projectId) : undefined,
         ),
       );
     return row ?? null;
   };
+
+  const getByShorthand = (projectId: string, shorthand: string) => get(shorthand, projectId);
 
   const softDelete = async (id: string) => {
     const timestamp = nowTimestamp();
@@ -293,7 +238,6 @@ export const createWorkspacesDBService = (db: DbClient) => {
 
   return {
     create,
-    createStandalone,
     createDefault: (input: { project_id: string; name: string; branch: string | null }) =>
       insertDefaultWorkspace(db, input),
     getDefault: (projectId: string) => selectDefaultWorkspace(db, projectId),

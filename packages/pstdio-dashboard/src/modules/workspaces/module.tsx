@@ -38,7 +38,6 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContext, options: CreateWorkspa
       type: "workspace-draft",
       id: projectId,
       metadata: {
-        ...(options.shorthand_base ? { shorthand_base: options.shorthand_base } : {}),
         ...(options.anchors ? { anchors: options.anchors.map((anchor) => ({ ...anchor })) } : {}),
       },
     },

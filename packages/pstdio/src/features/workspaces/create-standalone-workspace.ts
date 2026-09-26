@@ -25,6 +25,15 @@ export const createStandaloneWorkspace = async (input: CreateStandaloneWorkspace
     params: input.params,
   });
 
+  if (
+    workspace.provider_state === "failed" ||
+    workspace.provider_state === "cancelled" ||
+    workspace.provider_state === "provider_missing"
+  ) {
+    throw new Error(
+      `Workspace ${workspace.workspace_shorthand} creation ${workspace.provider_state}: ${workspace.provider_error_json?.message ?? "Provider did not create a usable workspace"}`,
+    );
+  }
   const location = workspace.worktree_path ?? workspace.display_path ?? `(${workspace.provider_state})`;
   deps.log(`Created workspace ${workspace.workspace_shorthand} at ${location}`);
 

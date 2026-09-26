@@ -97,7 +97,6 @@ describe("runAttemptCommand", () => {
         base: "main-sha",
         provider_id: "pstdio.worktree",
         project_id: "proj-1",
-        shorthand_base: "T-1",
       },
     ]);
     expect(sessions).toEqual([
@@ -172,7 +171,6 @@ describe("runAttemptCommand", () => {
         provider_id: "pstdio.root",
         project_id: "proj-1",
         repo_id: "repo-1",
-        shorthand_base: "PS-304",
       },
     ]);
     expect(sessions).toEqual([
@@ -242,7 +240,6 @@ describe("runAttemptCommand guarded launches", () => {
         base: "main-sha",
         provider_id: "pstdio.worktree",
         project_id: "proj-1",
-        shorthand_base: "T-1",
       },
     ]);
   });
@@ -345,7 +342,6 @@ describe("createWorkspaceCommand", () => {
         ],
         provider_id: "pstdio.worktree",
         project_id: "proj-1",
-        shorthand_base: "T-1",
       },
     ]);
     expect(sessions).toEqual([]);

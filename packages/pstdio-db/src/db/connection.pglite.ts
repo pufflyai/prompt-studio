@@ -15,6 +15,7 @@ import { openPglite } from "./open-pglite";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
+import { needsWorkspaceIdentityMigration, normalizeWorkspaceIdentities } from "./workspace-identity-migration";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -28,7 +29,7 @@ const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
 const PGLITE_INITIAL_DATABASE_SUFFIX = "/pstdio-db/vendor/pglite/initial-database.tar.gz";
 const LEGACY_TEMPLATE_STORAGE_MIGRATION = 17;
 
-const migrateThroughLegacyTemplateStorage = async (db: PgliteDatabase<typeof schema>, migrationsFolder: string) => {
+const migrateThrough = async (db: PgliteDatabase<typeof schema>, migrationsFolder: string, lastIndex: number) => {
   const stageRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-template-migrations-"));
   const stageMeta = path.join(stageRoot, "meta");
   fs.mkdirSync(stageMeta);
@@ -37,7 +38,7 @@ const migrateThroughLegacyTemplateStorage = async (db: PgliteDatabase<typeof sch
     const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as {
       entries: Array<{ idx: number; tag: string }>;
     };
-    const entries = journal.entries.filter((entry) => entry.idx <= LEGACY_TEMPLATE_STORAGE_MIGRATION);
+    const entries = journal.entries.filter((entry) => entry.idx <= lastIndex);
     fs.writeFileSync(path.join(stageMeta, "_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const entry of entries) {
       fs.copyFileSync(path.join(migrationsFolder, `${entry.tag}.sql`), path.join(stageRoot, `${entry.tag}.sql`));
@@ -137,11 +138,20 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
           "SELECT to_regclass('public.extension_files')::text AS extension_files",
         );
         if (!storage.rows[0]?.extension_files) {
-          await migrateThroughLegacyTemplateStorage(db, migrationsFolder);
+          await migrateThrough(db, migrationsFolder, LEGACY_TEMPLATE_STORAGE_MIGRATION);
         }
         await ensureLegacyTemplateOwners(openedPglite);
       }
       await migrateLegacyTemplates(openedPglite);
+      if (await needsWorkspaceIdentityMigration(openedPglite)) {
+        await migrateThrough(db, migrationsFolder, 31);
+        await normalizeWorkspaceIdentities(openedPglite, (evidence) => {
+          if (dbPath !== ":memory:") {
+            const evidencePath = path.join(dbPath, "workspace-identity-migration.json");
+            if (!fs.existsSync(evidencePath)) fs.writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
+          }
+        });
+      }
       await migrate(db, { migrationsFolder });
     }
 
