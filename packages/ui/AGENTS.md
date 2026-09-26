@@ -1,6 +1,6 @@
 # @pstdio/ui Agent Instructions
 
-Pencil `.pen` designs are the source of truth for this library's **visuals** (colors, typography, spacing, radii, component states, layout); the code and stories must follow them. The canonical design system is `design/prompt-studio-design-system.pen` at the repo root — open it with the Pencil MCP tools, never by hand. When the design and an implementation disagree, the design wins; when the design itself is wrong, fix it in Pencil first, then the code.
+Pencil `.pen` designs are the source of truth for this library's **visuals** (colors, typography, spacing, radii, component states, layout); the code and stories must follow them. The canonical design system is `design/prompt-studio-design-system.pen` at the repo root — open it with the Pencil MCP tools, never by hand. Website frames live in `design/prompt-studio-website.pen`. When the design and an implementation disagree, the design wins; when the design itself is wrong, fix it in Pencil first, then the code.
 
 Use Storybook as the source of truth for component **APIs and prop usage** before composing UI with this package.
 
