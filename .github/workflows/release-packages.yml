@@ -203,7 +203,8 @@ jobs:
           elif [ "$RELEASE_DRAFT" = "false" ]; then
             echo "Release $TAG already exists, skipping."
           else
-            gh release create "$TAG" --title "v$VERSION" --notes-file "$NOTES_FILE" --generate-notes --draft --verify-tag
+            PREVIOUS_TAG=$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq 'map(select(.tagName | startswith("pstdio@")))[0].tagName')
+            gh release create "$TAG" --title "v$VERSION" --notes-file "$NOTES_FILE" --generate-notes --notes-start-tag "$PREVIOUS_TAG" --draft --verify-tag
             gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/*
           fi
         env:

@@ -29,7 +29,7 @@ The workflow publishes generated `@pstdio/cli-*` platform packages at the host v
 Publishing creates local npm package tags, but CI pushes only `pstdio@<version>`. It creates one draft GitHub release titled `v<version>` with:
 
 - Combined package notes from `bun run --cwd scripts release:notes <version>`, in fixed-group order. Empty sections and date stamps are omitted.
-- GitHub's generated PR list, contributor notes and comparison link.
+- GitHub's generated PR list, contributor notes and comparison link, starting at the previous published non-prerelease `pstdio@` tag.
 - CLI binaries, checksums and `install.sh`.
 
 The desktop workflow builds, signs and verifies native artifacts, attaches them to that draft and publishes it only after its checks pass. Desktop assets and updater URLs retain the `pstdio@` prefix. Core extension catalog entries use `{hostRelease}` to install from that same tag. No separate extension tags, tarballs or GitHub releases are produced.
@@ -38,7 +38,7 @@ The desktop workflow builds, signs and verifies native artifacts, attaches them 
 
 Run `bun run validate` and `bun run --cwd scripts verify:packages`. For changes to release logic, use a disposable Prompt Studio workspace to run `bun changeset status --verbose` and `bun run --cwd scripts release:version`. Check that all group versions agree, extension dependency ranges remain unchanged and `release:notes <version>` contains only actual entries. Do not publish from the disposable workspace.
 
-The first combined release must be checked for the expected previous `pstdio@` tag in GitHub's generated comparison link and for the `pstdio` entry in Changesets' published package output.
+The first combined release must be checked for the `pstdio` entry in Changesets' published package output.
 
 ## One-time historical cleanup
 
