@@ -28,6 +28,7 @@ import { createNotificationService } from "./services/notification-service";
 import { createProjectService } from "./services/project-service";
 import { createRepoRegistration } from "./services/repo-registration";
 import { createRepoService } from "./services/repo-service";
+import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
 import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
@@ -123,13 +124,17 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     extensionStorageService,
     installedExtensionSourcesService,
     notificationsDbService,
-    sessionQueueEntriesService,
+    sessionQueueEntriesService: rawSessionQueueEntriesService,
     sessionsDBService,
     settingsDBService,
     skillsDBService,
   } = dbs;
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
+  const sessionQueueEntriesService = createSessionQueueService(rawSessionQueueEntriesService, async (id) => {
+    const session = await sessionsDBService.update(id, {});
+    if (session) eventBus.emit("sessions", "set", session);
+  });
   const extensionAutomationPreferencesService = createExtensionAutomationPreferencesService({
     db: extensionAutomationPreferencesDBService,
     eventBus,
@@ -219,7 +224,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
 
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,
-    sessionQueueEntriesService,
     eventBus,
     onSessionStarted: (session) => {
       fireSessionLifecycleEventAsync(sessionHookDeps(), sessionEvents.started, session);

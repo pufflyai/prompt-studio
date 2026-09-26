@@ -1,13 +1,8 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ResourceRef, WorkbenchPanelInstance } from "@pstdio/workbench";
-import type { SyncedRow } from "@/lib/sync/collections";
+import { getCollection, getIndexedRows, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
-import {
-  type DashboardRows,
-  isDashboardProjectRow,
-  isVisibleDashboardRow,
-  readDashboardRows,
-} from "@/shared/sync/dashboard-rows";
+import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
 import { type DashboardResourceAnchor, listResourceAnchors } from "@/shared/sync/resource-anchors";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 export interface DashboardSession {
@@ -68,7 +63,7 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
   };
 };
 export const buildDashboardSessionsFromRows = (
-  rows: DashboardRows,
+  rows: Pick<DashboardRows, "sessions" | "workspaces" | "workspaceSessions">,
   options: {
     projectId?: string;
   } = {},
@@ -89,9 +84,24 @@ export const buildDashboardSessionsFromRows = (
     .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
 };
 export const createDashboardSessions = (projectId?: string) =>
-  buildDashboardSessionsFromRows(readDashboardRows(), { projectId });
-export const findDashboardSession = (sessionId: string | undefined) =>
-  createDashboardSessions().find((session) => session.id === sessionId);
+  buildDashboardSessionsFromRows(
+    {
+      sessions: [...getCollection("sessions").values()],
+      workspaces: [...getCollection("workspaces").values()],
+      workspaceSessions: [...getCollection("workspace_sessions").values()],
+    },
+    { projectId },
+  );
+export const findDashboardSession = (sessionId: string | undefined) => {
+  if (!sessionId) return undefined;
+  const session = getCollection("sessions").get(sessionId);
+  if (!session || !isVisibleDashboardRow(session)) return undefined;
+  const workspaces = getIndexedRows("workspace_sessions", "session_id", sessionId).flatMap((link) => {
+    const workspace = getCollection("workspaces").get(String(link.workspace_id));
+    return workspace && isVisibleDashboardRow(workspace) ? [workspace] : [];
+  });
+  return createSession(session, workspaces.at(-1));
+};
 export const draftSessionViewId = "draft";
 const draftSessionView: DashboardSessionView = {
   id: draftSessionViewId,
@@ -125,16 +135,11 @@ const createUnsyncedSessionView = (sessionId: string): DashboardSessionView => (
   draftKey: sessionId,
   sessionId,
 });
-const findWorkspaceRow = (rows: DashboardRows, workspaceId: string | null | undefined) => {
-  if (!workspaceId) return undefined;
-  return rows.workspaces.find((workspace) => isVisibleDashboardRow(workspace) && workspace.id === workspaceId);
-};
 export const resolveDashboardSessionView = (sessionId: string | undefined): DashboardSessionView => {
   if (!sessionId) return draftSessionView;
   const session = findDashboardSession(sessionId);
   if (!session) return createUnsyncedSessionView(sessionId);
-  const rows = readDashboardRows();
-  const workspace = findWorkspaceRow(rows, session.workspaceId);
+  const workspace = session.workspaceId ? getCollection("workspaces").get(session.workspaceId) : undefined;
   const summary = session.workspaceId ? getDashboardWorkspaceDiffSummary(session.workspaceId) : undefined;
   return {
     id: session.id,

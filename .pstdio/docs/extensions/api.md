@@ -32,7 +32,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.10"
+    "pstdio": "1.0.0-alpha.12"
   },
   "pstdio": {
     "scope": "user"
@@ -43,7 +43,7 @@ Every extension package must include a `package.json` next to its entry file.
 Required fields:
 
 - `engines.pstdio`: the exact extension API version this extension was built against. While the API
-  is in alpha this is a plain version such as `1.0.0-alpha.10`, never a range: `^1.0.0-alpha.10` also
+  is in alpha this is a plain version such as `1.0.0-alpha.12`, never a range: `^1.0.0-alpha.12` also
   admits other prereleases with the same base version, so a range would accept hosts the extension was never tested on. The host
   refuses an extension whose value does not match its own `EXTENSION_API_VERSION`, with a single
   diagnostic instead of per-contribution errors. Expect to update this on most releases while the
@@ -956,3 +956,11 @@ package `planner`, the theme ID is `acme.planner.theme.monokai`.
 Diagnostics should include the extension id when known, the source path, and project/repo context where relevant. If the entry module fails to import, the package still loads with empty contributions and an `extension_import_failed` diagnostic so the dashboard can show the package identity and error.
 
 Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `invalid_placement` (a placement has an invalid shape) and `invalid_page_slot` (a page slot has an invalid shape) drop the invalid contribution and keep the rest of the extension loading. Invalid declarations report the extension, contribution, field path, and expected contract. Nested unknown fields are rejected.
+
+## Migrating to extension API alpha.12
+
+Native-history harnesses must implement `recoverMessages(ctx, { knownMessages, nativeMessages, cwd, workspace })`. Return `{ kind: "recovered", messages }` or `{ kind: "conflict", category }`. A failed native read must throw; returning `[]` declares a successful empty history. Use the SDK's pure ordered-history helpers and keep provider-specific comparisons in the harness.
+
+Every harness event sink now provides `getMessages()`. Full-snapshot providers must read it after asynchronous polling and compose any harness-generated metadata before synchronously publishing the replacement. Root replacements remain authoritative. A provider can publish `/history_issue` with the public history issue shape when a snapshot cannot be composed safely; it must leave the readable messages unchanged.
+
+Renderer read callbacks receive an AbortSignal. Forward it through command execution and all child I/O, and do not resolve a load before its children settle. Native renderers declare their refresh dependencies explicitly with extension events and the public `viewDataEvents` references. The host no longer reloads every extension view on unrelated sync changes.

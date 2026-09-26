@@ -2,8 +2,8 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createEventStore } from "pstdio-api-runtime-host";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
+import { createTrackedSessionStore } from "../session-store.test-utils";
 import { createSessionHandler } from "./create-session";
 
 const FAKE_ID = testHarnessId("fake");
@@ -85,17 +85,10 @@ const createDeps = () => {
           title: "Session",
           agent: FAKE_ID,
         }),
+        get: async () => ({ id: "session-1", project_id: "project-1", status: "in_progress", agent: FAKE_ID }),
         countActive: mock(async () => 0),
         transitionStatus,
-        store: {
-          create: mock(() => ({
-            eventStore: createEventStore(),
-            approvalService: { handleResponse: () => {}, dispose: () => {} },
-          })),
-          get: mock(() => null),
-          setSession: mock(() => true),
-          remove: mock(() => {}),
-        },
+        store: createTrackedSessionStore(),
       },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
@@ -166,6 +159,6 @@ describe("createSessionHandler logging", () => {
       model: "fake-model",
     });
     expect((entry?.err as { message?: string } | undefined)?.message).toBe("startup boom");
-    expect(transitionStatus).toHaveBeenCalledWith("session-1", "failed");
+    expect(transitionStatus).toHaveBeenCalledWith("session-1", "failed", expect.anything());
   });
 });

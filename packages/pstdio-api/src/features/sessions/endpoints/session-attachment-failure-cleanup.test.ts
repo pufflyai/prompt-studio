@@ -54,7 +54,7 @@ describe("session attachment failure cleanup", () => {
     }
   });
 
-  test("allows deleting a start attachment after message persistence fails on session exit", async () => {
+  test("retains attachments referenced by a failed checkpoint", async () => {
     const isolated = await createIsolatedApp();
     try {
       const project = await createProject(isolated.app, "Persist Failure Attachment Cleanup Project");
@@ -65,8 +65,7 @@ describe("session attachment failure cleanup", () => {
       });
       const uploadedFile = await isolated.deps.fileService.get(attachment.file_id);
 
-      // Force message persistence to fail on exit so the dispatch-started guard entry
-      // must be released by the exit cleanup rather than by the persist handoff.
+      // A failed checkpoint must retain the only readable messages and their attachments.
       const originalUpload = isolated.deps.fileService.upload;
       isolated.deps.fileService.upload = (async () => {
         throw new Error("persist failed");
@@ -88,15 +87,15 @@ describe("session attachment failure cleanup", () => {
 
       await waitForSessionStatus(isolated.app, created.id, "completed");
       isolated.deps.fileService.upload = originalUpload;
-      expect(await isolated.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
+      expect(await isolated.deps.sessionQueueEntriesService.listDispatchStarted()).toHaveLength(1);
 
       const deleteRes = await isolated.app.request(
         `/v1/projects/${project.id}/session-attachments/${attachment.file_id}`,
         { method: "DELETE" },
       );
-      expect(deleteRes.status).toBe(204);
-      expect(await isolated.deps.fileService.get(attachment.file_id)).toBeNull();
-      expect(existsSync(uploadedFile!.storage_path)).toBe(false);
+      expect(deleteRes.status).toBe(409);
+      expect(await isolated.deps.fileService.get(attachment.file_id)).not.toBeNull();
+      expect(existsSync(uploadedFile!.storage_path)).toBe(true);
     } finally {
       await isolated.close();
     }

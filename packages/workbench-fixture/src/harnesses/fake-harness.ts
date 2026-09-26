@@ -9,7 +9,7 @@ import type {
   SessionMessage,
   SessionMessagePart,
 } from "@pstdio/sdk/extensions";
-import { l10n } from "@pstdio/sdk/extensions";
+import { l10n, reconcileMessageHistory } from "@pstdio/sdk/extensions";
 
 const EXIT_DELAY_MS = 50;
 const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
@@ -192,6 +192,7 @@ export const createFakeHarness = () => {
     },
 
     getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],
+    recoverMessages: (_ctx, input) => reconcileMessageHistory(input),
   } satisfies Omit<HarnessProvider, "ref">;
 
   return provider;

@@ -49,6 +49,7 @@ export type TimeoutStrategy = "activity" | "provider";
 
 export type HarnessEventSink = {
   push(patch: JsonPatch): void;
+  getMessages(): readonly SessionMessage[];
 };
 
 export type HarnessAttachment = {

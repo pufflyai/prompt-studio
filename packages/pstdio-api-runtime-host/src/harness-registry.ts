@@ -5,6 +5,8 @@ import type {
   HarnessMessagesInput,
   HarnessParams,
   HarnessReattachInput,
+  HarnessRecoveryInput,
+  HarnessRecoveryResult,
   HarnessResumeInput,
   HarnessSession,
   HarnessStartInput,
@@ -43,6 +45,7 @@ export type HarnessHandle = {
   params: HarnessParamsSchema | null;
   cwdRequirement: "required" | "optional";
   supportsReattach: boolean;
+  supportsHistory: boolean;
   capabilities(options?: HarnessCallOptions): Promise<AgentCapability[]>;
   detect(options?: HarnessCallOptions): Promise<HarnessDetectionResult>;
   listModels(options?: HarnessCallOptions): Promise<AgentModel[]>;
@@ -50,6 +53,7 @@ export type HarnessHandle = {
   resume(input: HarnessResumeInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   reattach(input: HarnessReattachInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   getMessages(input: HarnessMessagesInput, options?: HarnessCallOptions): Promise<SessionMessage[]>;
+  recoverMessages(input: HarnessRecoveryInput, options?: HarnessCallOptions): Promise<HarnessRecoveryResult>;
 };
 
 export type HarnessRegistry = {
@@ -138,6 +142,9 @@ const validateDeclaredHarnessParams = (schema: HarnessParamsSchema, params: Harn
 const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFactory): HarnessHandle => {
   const ctx = (options?: HarnessCallOptions) => Promise.resolve(buildContext(record, options));
   const provider = record.provider;
+  if (provider.getMessages && !provider.recoverMessages) {
+    throw new Error(`Harness with native history must provide recoverMessages: ${record.id}`);
+  }
   const params = provider.params ?? null;
 
   const validateInputParams = async (input: HarnessStartInput | HarnessResumeInput, options?: HarnessCallOptions) => {
@@ -160,6 +167,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     params,
     cwdRequirement: provider.cwdRequirement ?? "required",
     supportsReattach: typeof provider.reattach === "function",
+    supportsHistory: typeof provider.getMessages === "function",
     capabilities: async (options) => provider.capabilities(await ctx(options)),
     detect: async (options) => (provider.detect ? provider.detect(await ctx(options)) : { available: true }),
     listModels: async (options) => (provider.listModels ? provider.listModels(await ctx(options)) : []),
@@ -177,6 +185,10 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     },
     getMessages: async (input, options) =>
       provider.getMessages ? provider.getMessages(await ctx(options), input) : [],
+    recoverMessages: async (input, options) =>
+      provider.recoverMessages
+        ? provider.recoverMessages(await ctx(options), input)
+        : { kind: "recovered", messages: [...input.knownMessages] },
   };
 };
 

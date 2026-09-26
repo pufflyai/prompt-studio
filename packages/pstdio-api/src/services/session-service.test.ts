@@ -163,7 +163,8 @@ describe("SessionService", () => {
     });
 
     test("stops the active harness session and transitions the session to cancelled", async () => {
-      const { deps, mocks } = buildDeps();
+      const { deps, mocks, sessionsDb } = buildDeps();
+      sessionsDb.get.mockImplementation(async () => ({ id: "s1", last_request_started: null }) as never);
       const service = createSessionService(deps);
       const stop = mock(() => {});
 
@@ -177,13 +178,17 @@ describe("SessionService", () => {
       const result = await service.cancel("s1");
 
       expect(stop).toHaveBeenCalledTimes(1);
-      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled");
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled", { expectedLastRequestStarted: null });
       expect(result).toMatchObject({ id: "s1", status: "cancelled" });
     });
 
     test("falls back to active cancellation when queued cancellation loses the dispatch race", async () => {
       const { deps, sessionsDb, mocks } = buildDeps();
-      (sessionsDb.get as ReturnType<typeof mock>).mockImplementation(async () => ({ id: "s1", status: "queued" }));
+      (sessionsDb.get as ReturnType<typeof mock>).mockImplementation(async () => ({
+        id: "s1",
+        status: "queued",
+        last_request_started: null,
+      }));
       const service = createSessionService(deps);
       const stop = mock(() => {});
 
@@ -198,7 +203,7 @@ describe("SessionService", () => {
 
       expect(mocks.cancelQueued).toHaveBeenCalledWith("s1");
       expect(stop).toHaveBeenCalledTimes(1);
-      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled");
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled", { expectedLastRequestStarted: null });
       expect(result).toMatchObject({ id: "s1", status: "cancelled" });
     });
   });

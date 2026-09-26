@@ -55,10 +55,24 @@ const record = (overrides?: Partial<HarnessProvider>, id = "fake"): RuntimeHarne
 const startInput: HarnessStartInput = {
   prompt: "hello",
   sessionId: "session-1",
-  events: { push: () => {} },
+  events: { push: () => {}, getMessages: () => [] },
 };
 
 describe("createHarnessRegistry", () => {
+  it("requires provider recovery before exposing native history", () => {
+    expect(() => createHarnessRegistry([record({ getMessages: () => [] })], buildContext)).toThrow("recoverMessages");
+    const recovery = mock(
+      (_ctx: HarnessContext, input: { knownMessages: readonly import("pstdio-api-contracts").SessionMessage[] }) => ({
+        kind: "recovered" as const,
+        messages: [...input.knownMessages],
+      }),
+    );
+    const registry = createHarnessRegistry(
+      [record({ getMessages: () => [], recoverMessages: recovery })],
+      buildContext,
+    );
+    expect(registry.list()[0].supportsHistory).toBe(true);
+  });
   it("resolves handles by namespaced id and lists them", async () => {
     const registry = createHarnessRegistry([record()], buildContext);
 
@@ -129,9 +143,9 @@ describe("createHarnessRegistry", () => {
     const handle = registry.get("pstdio.pstdio-fake.harness.fake")!;
 
     expect(handle.supportsReattach).toBe(false);
-    expect(handle.reattach({ sessionId: "s", agentSessionId: "a", events: { push: () => {} } })).rejects.toThrow(
-      "does not support reattach",
-    );
+    expect(
+      handle.reattach({ sessionId: "s", agentSessionId: "a", events: { push: () => {}, getMessages: () => [] } }),
+    ).rejects.toThrow("does not support reattach");
   });
 
   it("keeps the last record and reports duplicates on namespaced id collisions", async () => {

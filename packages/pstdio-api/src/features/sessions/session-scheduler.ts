@@ -1,19 +1,20 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
+import { getSessionHistory, SessionHistoryError } from "./session-history";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
   createSubmittedDispatchEntry,
   type DispatchContext,
-  dispatchExisting,
   dispatchQueuedEntry,
   type ExistingSession,
   hasCreateCapacity,
   insertFollowUpEntry,
-  logStartupFailure,
+  prepareExistingDispatch,
   type StartExistingInput,
   withSchedulingLock,
 } from "./session-scheduler-internals";
+import { logStartupFailure } from "./session-startup-failure";
 import { spawnAgentSession } from "./spawn-agent";
 
 type CreateAndStartInput = {
@@ -108,6 +109,7 @@ const startScheduledSession = async (
     },
     deps,
   );
+  const owner = deps.sessionService.store.get(session.id);
   const fail = (error: unknown) =>
     logStartupFailure(deps, {
       error,
@@ -116,6 +118,7 @@ const startScheduledSession = async (
       cwd: input.cwd,
       model: input.model,
       submittedQueuePosition,
+      entry: owner,
     });
   if (!input.signal) {
     void spawning.catch(fail);
@@ -139,12 +142,7 @@ const startScheduledSession = async (
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   const maybeRequeueReleasedSession = async (sessionId: string) => {
     const session = await deps.sessionService.get(sessionId);
-    if (!session || !isTerminal(session.status)) return;
-
-    if (session.status === "cancelled") {
-      await deps.sessionQueueEntriesService.removeBySession(sessionId);
-      return;
-    }
+    if (!session || !isTerminal(session.status) || session.status === "cancelled") return;
 
     const pending = await deps.sessionQueueEntriesService.listPendingBySession(sessionId);
     if (pending.length === 0) return;
@@ -257,34 +255,51 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     return session;
   };
 
+  const reserveExistingDispatch = async (input: StartExistingInput, checkedHistoryKey: string | undefined) => {
+    input.signal?.throwIfAborted();
+    // Re-read session status inside the lock so we don't race a terminal transition that landed
+    // between endpoint entry and lock acquisition.
+    const fresh = (await deps.sessionService.get(input.session.id)) ?? input.session;
+    const context = resolveDispatchContext(input, fresh);
+    const status = fresh.status;
+    const fastPathQuestion = status === "awaiting_input" && input.questionResponse != null;
+    const historyKey = JSON.stringify([fresh.agent, fresh.agent_session_id]);
+    const needsHistory = !context.switchingAgent && fresh.agent_session_id && historyKey !== checkedHistoryKey;
+
+    if (fastPathQuestion) {
+      input.signal?.throwIfAborted();
+      if (needsHistory) return { historyKey };
+      return prepareExistingDispatch(deps, context);
+    }
+
+    if (status === "in_progress" || status === "awaiting_input" || status === "queued") {
+      return insertAbortAwareFollowUp(deps, context, false);
+    }
+
+    if (input.respectCapacity && !(await hasCreateCapacity(deps))) {
+      return insertAbortAwareFollowUp(deps, context, true);
+    }
+
+    input.signal?.throwIfAborted();
+    if (needsHistory) return { historyKey };
+    return prepareExistingDispatch(deps, context);
+  };
+
   const startOrQueueExisting = async (input: StartExistingInput): Promise<StartOrQueueResult> => {
-    return withSchedulingLock(async () => {
-      input.signal?.throwIfAborted();
-      // Re-read session status inside the lock so we don't race a terminal transition that landed
-      // between endpoint entry and lock acquisition.
-      const fresh = (await deps.sessionService.get(input.session.id)) ?? input.session;
-      const context = resolveDispatchContext(input, fresh);
-      const status = fresh.status;
-      const fastPathQuestion = status === "awaiting_input" && input.questionResponse != null;
-
-      if (fastPathQuestion) {
-        input.signal?.throwIfAborted();
-        await dispatchExisting(deps, context);
-        return { status: "dispatched" } as const;
+    let checkedHistoryKey: string | undefined;
+    while (true) {
+      const result = await withSchedulingLock(() => reserveExistingDispatch(input, checkedHistoryKey));
+      if (typeof result !== "function" && "historyKey" in result) {
+        const history = await getSessionHistory(input.session.id, deps);
+        if (history.historyIssue && history.historyIssue.code !== "native_unavailable")
+          throw new SessionHistoryError(history.historyIssue);
+        checkedHistoryKey = result.historyKey;
+        continue;
       }
-
-      if (status === "in_progress" || status === "awaiting_input" || status === "queued") {
-        return insertAbortAwareFollowUp(deps, context, false);
-      }
-
-      if (input.respectCapacity && !(await hasCreateCapacity(deps))) {
-        return insertAbortAwareFollowUp(deps, context, true);
-      }
-
-      input.signal?.throwIfAborted();
-      await dispatchExisting(deps, context);
-      return { status: "dispatched" } as const;
-    });
+      if (typeof result !== "function") return result;
+      await result();
+      return { status: "dispatched" };
+    }
   };
 
   const resumeForApproval = async (sessionId: string) => {

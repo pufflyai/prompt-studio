@@ -20,7 +20,12 @@ export const SYNCED_TABLES = [
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
 
 export type SyncedRow = { id: string; [key: string]: unknown };
-export type CollectionChange = { table: SyncedTable };
+export interface CollectionRowChange {
+  key: string;
+  value?: SyncedRow;
+  previousValue?: SyncedRow;
+}
+export type CollectionChange = { table: SyncedTable; changes: readonly CollectionRowChange[] };
 
 export interface CollectionWriter {
   truncateAndWrite: (rows: SyncedRow[]) => void;
@@ -32,12 +37,29 @@ const collections = new Map<string, Collection<SyncedRow, string>>();
 const writers = new Map<string, CollectionWriter>();
 const listeners = new Set<(change?: CollectionChange) => void>();
 const syncedTableSet = new Set<string>(SYNCED_TABLES);
+const indexes = new Map<SyncedTable, Map<string, Map<unknown, Set<string>>>>();
 let collectionsVersion = 0;
 let initialCollectionsSyncComplete = false;
 
-const notifyCollectionsChanged = (table?: SyncedTable) => {
+const notifyCollectionsChanged = (change?: CollectionChange) => {
+  if (change) {
+    for (const [field, index] of indexes.get(change.table) ?? []) {
+      for (const row of change.changes) {
+        const previous = row.previousValue?.[field];
+        const ids = index.get(previous);
+        ids?.delete(row.key);
+        if (ids?.size === 0) index.delete(previous);
+        if (row.value) {
+          const value = row.value[field];
+          const next = index.get(value) ?? new Set<string>();
+          next.add(row.key);
+          index.set(value, next);
+        }
+      }
+    }
+  }
   collectionsVersion += 1;
-  for (const listener of listeners) listener(table ? { table } : undefined);
+  for (const listener of listeners) listener(change);
 };
 
 export const getCollectionsVersion = () => collectionsVersion;
@@ -73,6 +95,13 @@ const getOrCreate = (table: string) => {
 
         writers.set(table, {
           truncateAndWrite: (rows) => {
+            const next = new Map(rows.map((row) => [row.id, row]));
+            const changes: CollectionRowChange[] = [...syncedIds].map((key) => ({
+              key,
+              previousValue: collections.get(table)?.get(key),
+              value: next.get(key),
+            }));
+            for (const row of rows) if (!syncedIds.has(row.id)) changes.push({ key: row.id, value: row });
             begin();
             for (const id of syncedIds) write({ type: "delete", key: id });
             syncedIds.clear();
@@ -81,22 +110,27 @@ const getOrCreate = (table: string) => {
               syncedIds.add(row.id);
             }
             commit();
-            notifyCollectionsChanged(table as SyncedTable);
+            notifyCollectionsChanged({ table: table as SyncedTable, changes });
           },
           upsert: (row) => {
+            const previousValue = collections.get(table)?.get(row.id);
             begin({ immediate: true });
             const type = syncedIds.has(row.id) ? "update" : "insert";
             write({ type, value: row });
             syncedIds.add(row.id);
             commit();
-            notifyCollectionsChanged(table as SyncedTable);
+            notifyCollectionsChanged({
+              table: table as SyncedTable,
+              changes: [{ key: row.id, previousValue, value: row }],
+            });
           },
           remove: (id) => {
+            const previousValue = collections.get(table)?.get(id);
             begin({ immediate: true });
             write({ type: "delete", key: id });
             syncedIds.delete(id);
             commit();
-            notifyCollectionsChanged(table as SyncedTable);
+            notifyCollectionsChanged({ table: table as SyncedTable, changes: [{ key: id, previousValue }] });
           },
         });
 
@@ -114,6 +148,29 @@ const getOrCreate = (table: string) => {
 };
 
 export const getCollection = (table: SyncedTable) => getOrCreate(table);
+
+export const getIndexedRows = (table: SyncedTable, field: string, value: unknown) => {
+  const collection = getCollection(table);
+  let fields = indexes.get(table);
+  if (!fields) {
+    fields = new Map();
+    indexes.set(table, fields);
+  }
+  let index = fields.get(field);
+  if (!index) {
+    index = new Map();
+    fields.set(field, index);
+    for (const row of collection.values()) {
+      const ids = index.get(row[field]) ?? new Set<string>();
+      ids.add(row.id);
+      index.set(row[field], ids);
+    }
+  }
+  return [...(index.get(value) ?? [])].flatMap((id) => {
+    const row = collection.get(id);
+    return row ? [row] : [];
+  });
+};
 
 export const getWriter = (table: string): CollectionWriter | undefined => {
   if (!syncedTableSet.has(table)) return undefined;

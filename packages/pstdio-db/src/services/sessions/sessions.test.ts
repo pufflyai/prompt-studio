@@ -28,6 +28,23 @@ afterEach(async () => {
 });
 
 describe("sessions service", () => {
+  test("an old run cannot finish a resumed session", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "Resume", agent: "test" });
+    await sessionsService.update(session.id, { last_request_started: "2000-01-01T00:00:00.000Z" });
+    const resumed = await sessionsService.updateStatus(session.id, "in_progress");
+    expect(resumed!.last_request_started).not.toBe("2000-01-01T00:00:00.000Z");
+    expect(
+      await sessionsService.updateStatus(session.id, "failed", {
+        expectedLastRequestStarted: "2000-01-01T00:00:00.000Z",
+      }),
+    ).toBeNull();
+    expect((await sessionsService.get(session.id))!.status).toBe("in_progress");
+    expect(
+      await sessionsService.updateStatus(session.id, "completed", {
+        expectedLastRequestStarted: resumed!.last_request_started,
+      }),
+    ).toMatchObject({ status: "completed" });
+  });
   test("creates a session", async () => {
     const session = await sessionsService.create({
       project_id: projectId,
@@ -188,7 +205,7 @@ describe("sessions service", () => {
     expect(claimed?.last_request_started).toEqual(expect.any(String));
   });
 
-  test("clears start timestamp when recovering a queued dispatch claim", async () => {
+  test("preserves run identity when recovering a queued dispatch claim", async () => {
     const sessionQueueEntriesService = createSessionQueueEntriesDBService(db);
     const queued = await sessionsService.createQueuedWithEntry({
       project_id: projectId,
@@ -199,11 +216,15 @@ describe("sessions service", () => {
     });
 
     const [entry] = await sessionQueueEntriesService.listPendingBySession(queued.id);
-    await sessionsService.claimQueuedForDispatch(queued.id, entry!.queue_position);
+    const claimed = await sessionsService.claimQueuedForDispatch(queued.id, entry!.queue_position);
 
     const recovered = await sessionsService.recoverQueuedDispatchClaim(queued.id, entry!.queue_position);
 
-    expect(recovered).toMatchObject({ id: queued.id, status: "queued", last_request_started: null });
+    expect(recovered).toMatchObject({
+      id: queued.id,
+      status: "queued",
+      last_request_started: claimed!.last_request_started,
+    });
   });
 
   test("list filters by agent", async () => {
