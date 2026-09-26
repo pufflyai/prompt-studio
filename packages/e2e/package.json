@@ -5,7 +5,7 @@
   "scripts": {
     "test": "bun run test:scripts && bun run test:cli && bun run test:ui && bun run test:vite-terminal",
     "test:cli": "bun test src/cli --timeout 30000 --silent",
-    "test:scripts": "bun test src/scripts --timeout 30000 --silent",
+    "test:scripts": "bun test src/scripts src/local-workspace-registry.test.ts --timeout 30000 --silent",
     "test:packaged": "bun run test:packaged:cli && bun run test:packaged:browser",
     "test:packaged:cli": "bun test src/packaged --timeout 30000 --silent --path-ignore-patterns='**/*.spec.ts'",
     "test:packaged:browser": "playwright test --config playwright.packaged.config.ts",

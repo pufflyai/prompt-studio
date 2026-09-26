@@ -17,6 +17,18 @@ type PackedWorkspacePackage = {
   tarballName: string;
 };
 
+type RegistryMetadata = {
+  "dist-tags"?: Record<string, string>;
+  versions?: Record<string, unknown>;
+};
+
+const readPublishedMetadata = async (name: string, origin: string) => {
+  const response = await fetch(new URL(encodeURIComponent(name), `${origin}/`));
+  if (response.status === 404) return {};
+  if (!response.ok) throw new Error(`Could not read published versions of ${name}: ${response.status}`);
+  return (await response.json()) as RegistryMetadata;
+};
+
 const safePackageName = (name: string) => name.replaceAll("@", "").replaceAll("/", "-");
 
 const packWorkspacePackage = (packagePath: string, outputRoot: string): PackedWorkspacePackage => {
@@ -43,7 +55,7 @@ export const packWorkspacePackageTarball = (packagePath: string, outputRoot: str
   return join(outputRoot, pkg.tarballName);
 };
 
-const packageMetadata = (pkg: PackedWorkspacePackage, origin: string) => {
+const packageMetadata = (pkg: PackedWorkspacePackage, origin: string, published: RegistryMetadata) => {
   const integrity = createHash("sha512").update(pkg.tarball).digest("base64");
   const shasum = createHash("sha1").update(pkg.tarball).digest("hex");
   const version = {
@@ -57,8 +69,8 @@ const packageMetadata = (pkg: PackedWorkspacePackage, origin: string) => {
 
   return {
     name: pkg.manifest.name,
-    "dist-tags": { latest: pkg.manifest.version },
-    versions: { [pkg.manifest.version]: version },
+    "dist-tags": { ...published["dist-tags"], latest: pkg.manifest.version },
+    versions: { ...published.versions, [pkg.manifest.version]: version },
   };
 };
 
@@ -66,20 +78,31 @@ export const startLocalWorkspaceRegistry = async (input: {
   configPath: string;
   outputRoot: string;
   packagePaths: string[];
+  upstreamOrigin?: string;
 }) => {
   const registryRoot = join(input.outputRoot, "workspace-registry");
   mkdirSync(registryRoot, { recursive: true });
   const packages = input.packagePaths.map((packagePath) => packWorkspacePackage(packagePath, registryRoot));
+  const publishedByName = new Map<string, Promise<RegistryMetadata>>();
+  const publishedMetadata = (name: string) => {
+    let metadata = publishedByName.get(name);
+    if (!metadata) {
+      // Published versions supplement local tarballs; npm availability must not block the local registry.
+      metadata = readPublishedMetadata(name, input.upstreamOrigin ?? "https://registry.npmjs.org").catch(() => ({}));
+      publishedByName.set(name, metadata);
+    }
+    return metadata;
+  };
   const packagesByName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
   const tarballsByPath = new Map(packages.map((pkg) => [`${pkg.manifest.name}/-/${pkg.tarballName}`, pkg.tarball]));
 
   let origin = "";
-  const server = createServer((request, response) => {
+  const server = createServer(async (request, response) => {
     const requestPath = decodeURIComponent(new URL(request.url ?? "/", origin).pathname).replace(/^\/+/, "");
     const pkg = packagesByName.get(requestPath);
     if (pkg) {
       response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify(packageMetadata(pkg, origin)));
+      response.end(JSON.stringify(packageMetadata(pkg, origin, await publishedMetadata(pkg.manifest.name))));
       return;
     }
 

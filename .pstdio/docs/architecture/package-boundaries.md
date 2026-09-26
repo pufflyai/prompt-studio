@@ -71,6 +71,7 @@ layer-map change.
 - Every workspace package import must be declared in the importer's
   `package.json`.
 - Extensions may only depend on `@pstdio/sdk` and `@pstdio/ui`.
+- Extensions pin `@pstdio/ui` to an exact published version. The pin does not have to match an unreleased workspace version; extension dependency updates ship after the public package release.
 - `@pstdio/ui` may not import or declare router or React Query dependencies.
 - E2E tests use package exports and declare every workspace dependency they
   import.
