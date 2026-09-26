@@ -21,7 +21,8 @@ export interface SelectionMenuProps {
   options: SelectionMenuOption[];
   selectedIds: string[];
   multiSelect: boolean;
-  clearable?: boolean;
+  /** Selecting the active item can clear a value or repeat an action. */
+  reselectable?: boolean;
   disabled?: boolean;
   searchable?: boolean;
   searchPlaceholder?: string;
@@ -68,7 +69,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
     options,
     selectedIds,
     multiSelect,
-    clearable = false,
+    reselectable = false,
     disabled,
     searchable = false,
     searchPlaceholder = "Search options…",
@@ -88,7 +89,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
       group.options.some((option) => !option.disabled && option.id !== group.defaultValue),
   );
   const canChangeValue = options.some(
-    (option) => !option.disabled && (multiSelect || clearable || !selectedIds.includes(option.id)),
+    (option) => !option.disabled && (multiSelect || reselectable || !selectedIds.includes(option.id)),
   );
   const isDisabled = disabled || (!canChangeValue && !canChangeGroup);
   const trigger =

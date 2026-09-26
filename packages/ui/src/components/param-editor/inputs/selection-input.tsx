@@ -138,7 +138,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
       options={options}
       selectedIds={selectedIds}
       multiSelect={multiSelect}
-      clearable={clearable}
+      reselectable={clearable}
       disabled={disabled}
       searchable={searchable}
       searchPlaceholder={searchPlaceholder}

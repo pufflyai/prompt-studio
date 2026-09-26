@@ -93,7 +93,7 @@ const ResourceSelectMenu = (props: ResourceSelectMenuProps) => {
       options={options}
       selectedIds={selectedIds}
       multiSelect={multiSelect}
-      clearable
+      reselectable
       triggerVariant={triggerVariant}
       triggerAriaLabel={triggerAriaLabel}
       size={size}
