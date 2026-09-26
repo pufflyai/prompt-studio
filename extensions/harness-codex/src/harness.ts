@@ -1,5 +1,6 @@
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { recoverCodexMessages } from "./history-reconciliation";
 import { discoverCodexModels } from "./models";
 import { normalizeRollout, readRollout } from "./rollout";
 import { resumeCodexSession, startCodexSession } from "./spawn";
@@ -101,5 +102,6 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
       }),
 
     getMessages: async (_ctx, input) => normalizeRollout(await deps.readTranscript(input.agentSessionId)),
+    recoverMessages: (_ctx, input) => recoverCodexMessages(input),
   };
 };

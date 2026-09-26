@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import type { HarnessEventSink, JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
+import type { JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
 import { createCodexStreamPipeline } from "./normalize-stream";
 
 const recordingSink = () => {
   const patches: JsonPatch[] = [];
-  const sink: HarnessEventSink = { push: (patch) => patches.push(patch) };
+  const sink = { getMessages: () => [], push: (patch: JsonPatch) => patches.push(patch) };
   return { patches, sink };
 };
 

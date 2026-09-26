@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { recoverClaudeMessages } from "./history-reconciliation";
 import { discoverClaudeModels } from "./models";
 import { normalizeClaudeCodeMessages } from "./normalize-transcript";
 import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
@@ -13,11 +14,7 @@ export const buildTranscriptPath = (agentSessionId: string, cwd?: string) => {
 };
 
 const defaultReadTranscript = async (agentSessionId: string, cwd?: string) => {
-  try {
-    return readFileSync(buildTranscriptPath(agentSessionId, cwd), "utf8");
-  } catch {
-    return "";
-  }
+  return readFileSync(buildTranscriptPath(agentSessionId, cwd), "utf8");
 };
 
 const isValidEntry = (parsed: unknown): parsed is ClaudeCodeTranscriptEntry => {
@@ -163,5 +160,6 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       const content = await deps.readTranscript(input.agentSessionId, input.cwd);
       return normalizeClaudeCodeMessages(parseTranscript(content));
     },
+    recoverMessages: (_ctx, input) => recoverClaudeMessages(input),
   };
 };

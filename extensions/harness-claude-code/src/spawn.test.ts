@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PassThrough, Writable } from "node:stream";
-import type { HarnessEventSink, JsonPatch } from "@pstdio/sdk/extensions";
+import type { JsonPatch } from "@pstdio/sdk/extensions";
 import {
   buildResumeArgs,
   buildStartSessionArgs,
@@ -11,7 +11,7 @@ import {
 
 const recordingSink = () => {
   const patches: JsonPatch[] = [];
-  const sink: HarnessEventSink = { push: (patch) => patches.push(patch) };
+  const sink = { getMessages: () => [], push: (patch: JsonPatch) => patches.push(patch) };
   return { patches, sink };
 };
 

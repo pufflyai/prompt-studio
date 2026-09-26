@@ -7,6 +7,7 @@ import {
   eventRef,
   l10n,
   type ResourceRef,
+  viewDataEvents,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
@@ -36,7 +37,7 @@ export const editor = defineView({
   title: l10n("views.noteEditor", "Note"),
   body: {
     kind: "file",
-    refreshEvents: [notesChanged],
+    refreshEvents: [notesChanged, viewDataEvents.repositoriesChanged],
     load: async (ctx, { renderer }) => {
       const id = renderer.resource?.id;
       const mount = notesMount(ctx);
@@ -83,7 +84,7 @@ export const notesPage = definePage({
       order: 0,
       mountStrategy: "keep-mounted",
       tab: {
-        refreshEvents: [notesChanged],
+        refreshEvents: [notesChanged, viewDataEvents.repositoriesChanged],
         query: async (ctx, { renderer }) => {
           const id = renderer.resource?.id;
           const mount = notesMount(ctx);

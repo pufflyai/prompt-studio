@@ -43,13 +43,8 @@ export const findRolloutPath = (agentSessionId: string, root = codexSessionsRoot
 
 export const readRollout = async (agentSessionId: string) => {
   const path = findRolloutPath(agentSessionId);
-  if (!path) return "";
-
-  try {
-    return readFileSync(path, "utf8");
-  } catch {
-    return "";
-  }
+  if (!path) throw new Error("Native transcript unavailable");
+  return readFileSync(path, "utf8");
 };
 
 const contentText = (content: RolloutMessageContent[] | undefined) =>
