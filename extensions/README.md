@@ -176,20 +176,13 @@ Host compatibility should be `verified` against the bundled dashboard. If a chec
 
 ## Release an extension
 
-Extensions are versioned and tagged by Changesets. The flow:
+Core extensions share one version with pstdio, SDK, UI, workbench and desktop.
 
-```bash
-# 1. Author writes a changeset for the extension(s) they touched
-bun changeset
+1. Run `bun changeset` and select the extensions you changed.
+2. Merge the change into `main`. CI opens or updates the Version Packages PR.
+3. Merge the version PR. CI publishes one `pstdio@<version>` tag and one GitHub release titled `v<version>`. Its notes group summaries by package.
 
-# 2. When ready to release, version + changelog
-bun changeset version
-git commit -am "chore: version packages"
-
-# 3. Create per-package git tags (e.g. pstdio-planner@0.2.0) and push
-bun changeset tag
-git push --follow-tags
-```
+Add new core extensions to the fixed group in `.changeset/config.json`. The highest pending bump sets the next shared version. SDK and UI dependency ranges only change in extension PRs after those dependencies publish. Third-party extensions keep their own repository, versions and release refs.
 
 Users install the catalog release with:
 

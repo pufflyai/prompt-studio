@@ -106,27 +106,38 @@ export const collectChangesetConfigIssues = async (cwd = process.cwd()) => {
   try {
     const config = await readChangesetsConfig(cwd);
     const rootManifest = (await Bun.file(join(cwd, "package.json")).json()) as RootManifest;
-    const repoLocalWorkspaceNames = new Set<string>();
+    const issues: ChangesetValidationIssue[] = [];
+    const releasedNames = new Set(config.fixed[0] ?? []);
+    if (config.fixed.length !== 1) {
+      issues.push({
+        filePath: changesetConfigPath,
+        message: `expected exactly one fixed version group, found ${config.fixed.length}`,
+      });
+    }
+    const workspaces = new Map<string, boolean>();
 
     for (const workspace of rootManifest.workspaces ?? []) {
       const manifests = new Bun.Glob(`${workspace.replace(/\/$/, "")}/package.json`);
       for await (const manifestPath of manifests.scan({ cwd, dot: true, onlyFiles: true })) {
         const manifestFullPath = resolve(cwd, manifestPath);
         const pathFromRoot = relative(cwd, manifestFullPath);
-        if (pathFromRoot.split(sep)[0] !== ".pstdio") continue;
 
         const manifest = (await Bun.file(manifestFullPath).json()) as WorkspaceManifest;
-        if (manifest.name) repoLocalWorkspaceNames.add(manifest.name);
+        if (manifest.name) workspaces.set(manifest.name, pathFromRoot.split(sep)[0] === ".pstdio");
       }
     }
 
-    return [...repoLocalWorkspaceNames]
-      .filter((name) => !config.ignore.includes(name))
-      .sort()
-      .map((name) => ({
-        filePath: changesetConfigPath,
-        message: `repo-local workspace "${name}" must be ignored`,
-      }));
+    for (const [name, repoLocal] of [...workspaces].sort(([a], [b]) => a.localeCompare(b))) {
+      if (config.ignore.includes(name)) continue;
+      if (repoLocal)
+        issues.push({ filePath: changesetConfigPath, message: `repo-local workspace "${name}" must be ignored` });
+      if (!releasedNames.has(name))
+        issues.push({
+          filePath: changesetConfigPath,
+          message: `released workspace "${name}" must be in the fixed version group`,
+        });
+    }
+    return issues;
   } catch (error) {
     return [
       {

@@ -156,6 +156,8 @@ Do not add:
 
 - Changesets for changes that only affect tests or code structure.
 
+All released workspace packages share one Changesets fixed version group. Add new core extensions to that group in `.changeset/config.json`. The highest requested bump sets the next version for the whole group. The named packages still decide where summaries appear in release notes. Extension SDK and UI dependency ranges remain owned by extension PRs.
+
 ### 7. Migrations
 
 A pull request may contain only one migration entry. If the tools create more than one, combine them into one.

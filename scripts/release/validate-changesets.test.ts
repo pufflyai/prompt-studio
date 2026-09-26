@@ -34,7 +34,7 @@ const writeWorkspace = (dependencyField: "dependencies" | "devDependencies") => 
   writeJson(join(root, ".changeset", "config.json"), {
     changelog: false,
     commit: false,
-    fixed: [],
+    fixed: [["public-package"]],
     linked: [],
     access: "public",
     baseBranch: "main",
@@ -62,6 +62,29 @@ const writeWorkspace = (dependencyField: "dependencies" | "devDependencies") => 
 };
 
 describe("collectChangesetConfigIssues", () => {
+  test("reports a released workspace missing from the fixed group", async () => {
+    const root = writeWorkspace("devDependencies");
+    const dir = join(root, "packages", "new-extension");
+    mkdirSync(dir);
+    writeJson(join(dir, "package.json"), { name: "new-extension", version: "0.1.0", private: true });
+    expect(await collectChangesetConfigIssues(root)).toEqual([
+      {
+        filePath: join(".changeset", "config.json"),
+        message: 'released workspace "new-extension" must be in the fixed version group',
+      },
+    ]);
+  });
+
+  test("requires exactly one fixed version group", async () => {
+    const root = writeWorkspace("devDependencies");
+    const path = join(root, ".changeset", "config.json");
+    const config = await Bun.file(path).json();
+    writeJson(path, { ...config, fixed: [] });
+    expect(await collectChangesetConfigIssues(root)).toContainEqual({
+      filePath: join(".changeset", "config.json"),
+      message: "expected exactly one fixed version group, found 0",
+    });
+  });
   test("reports repo-local workspaces that are not ignored", async () => {
     const root = makeTempDir();
     const packageDir = join(root, ".pstdio", "extensions", "repo-local-extension");
@@ -75,7 +98,7 @@ describe("collectChangesetConfigIssues", () => {
     writeJson(join(root, ".changeset", "config.json"), {
       changelog: false,
       commit: false,
-      fixed: [],
+      fixed: [["repo-local-extension"]],
       linked: [],
       access: "public",
       baseBranch: "main",

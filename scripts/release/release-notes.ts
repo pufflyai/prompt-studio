@@ -1,4 +1,5 @@
 import { dirname, join } from "node:path";
+import { read as readChangesetsConfig } from "@changesets/config";
 
 type RootManifest = {
   workspaces?: string[];
@@ -39,34 +40,28 @@ export const extractSection = (changelog: string, version: string) => {
 };
 
 const main = async () => {
-  const [name, version] = process.argv.slice(2);
-  if (!name || !version) {
-    console.error("usage: extract-changelog.ts <package-name> <version>");
-    process.exit(1);
+  const [version] = process.argv.slice(2);
+  if (!version) throw new Error("usage: release-notes.ts <version>");
+  const config = await readChangesetsConfig(process.cwd());
+  const sections: string[] = [];
+  for (const name of config.fixed[0] ?? []) {
+    const dir = await findPackageDir(name);
+    if (!dir) throw new Error(`package not found: ${name}`);
+    const file = Bun.file(join(dir, "CHANGELOG.md"));
+    if (!(await file.exists())) continue;
+    const section = extractSection(await file.text(), version);
+    if (section === null) throw new Error(`no changelog section for ${name}@${version}`);
+    const notes = section.replace(/^_\d{4}-\d{2}-\d{2}_\s*$/gm, "").trim();
+    if (notes) sections.push(`## ${name}\n\n${notes}\n\n`);
   }
-
-  const dir = await findPackageDir(name);
-  if (!dir) {
-    console.error(`package not found: ${name}`);
-    process.exit(1);
-  }
-
-  const changelogFile = Bun.file(join(dir, "CHANGELOG.md"));
-  if (!(await changelogFile.exists())) {
-    process.stdout.write("_No changelog entry._\n");
-    return;
-  }
-
-  const changelog = await changelogFile.text();
-  const section = extractSection(changelog, version);
-  if (section === null) {
-    console.error(`no changelog section for ${name}@${version}`);
-    process.exit(1);
-  }
-
-  process.stdout.write(section.length > 0 ? `${section}\n` : "_No changelog entry._\n");
+  process.stdout.write(sections.length ? sections.join("") : "_No changelog entries._\n");
 };
 
 if (import.meta.main) {
-  await main();
+  try {
+    await main();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
 }
