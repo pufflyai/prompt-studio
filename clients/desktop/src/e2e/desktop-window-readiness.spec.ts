@@ -1,11 +1,12 @@
 import { spawn, spawnSync } from "node:child_process";
 import { on, once } from "node:events";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { removeTestDirectory } from "../testing/remove-test-directory";
 
 const require = createRequire(import.meta.url);
 
@@ -86,6 +87,6 @@ test("loads the workbench after the startup window shows while lifecycle resourc
     }
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
-    rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });

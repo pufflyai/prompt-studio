@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { removeTestDirectory } from "../testing/remove-test-directory";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { acceptFocusedButton } from "./lifecycle-actions";
@@ -43,7 +44,7 @@ test("recovers from refused shutdown and closes each quit confirmation", async (
   const eventResponses = new Set<ServerResponse>();
   const shutdownForces: boolean[] = [];
   let refuseForcedShutdown = true;
-  cleanup.push(() => rmSync(home, { recursive: true, force: true }));
+  cleanup.push(() => removeTestDirectory(home));
   cleanup.push(() => stopProcess(runtimeProcess));
 
   const server = createServer(async (request, response) => {

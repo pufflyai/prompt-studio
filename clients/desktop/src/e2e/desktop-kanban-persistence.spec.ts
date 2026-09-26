@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
+import { removeTestDirectory } from "../testing/remove-test-directory";
 
 // Run against the isolated Docker dashboard. Retain the Electron profile while
 // replacing its memory-only renderer session, just as a desktop restart does.
@@ -76,6 +77,6 @@ test("restores named ticket views across desktop process restarts", async () => 
     await expect(page.getByRole("tab", { name: "Desktop restart check", exact: true })).toHaveCount(0);
   } finally {
     await app.close();
-    rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });

@@ -7,7 +7,7 @@ import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { registerPackagedCleanup, spawnPackagedProcess, stopPackagedProcess } from "../testing/packaged-fixture";
-import { removePackagedDirectory } from "../testing/remove-packaged-directory";
+import { removeTestDirectory } from "../testing/remove-test-directory";
 import { stopPackagedRuntime } from "../testing/stop-packaged-runtime";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
@@ -258,5 +258,5 @@ export const disposePackagedApp = async (app: PackagedWindow | null) => {
 export const removePackagedHome = async (home: string) => {
   const runtime = readDescriptor(home);
   if (runtime) await stopPackagedRuntime(runtime.pid);
-  await removePackagedDirectory(home);
+  await removeTestDirectory(home);
 };

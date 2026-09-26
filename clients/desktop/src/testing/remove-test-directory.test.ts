@@ -10,7 +10,7 @@ test("removes a home after a transient native directory handle is released", asy
   const home = join(root, "home");
   const script = join(root, "remove.mts");
   mkdirSync(home);
-  const helper = new URL("./remove-packaged-directory.ts", import.meta.url).href;
+  const helper = new URL("./remove-test-directory.ts", import.meta.url).href;
   const holder = `import { tmpdir } from "node:os";
 process.on("message", () => setTimeout(() => process.chdir(tmpdir()), 200));
 process.send("ready");`;
@@ -20,14 +20,14 @@ process.send("ready");`;
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync } from "node:fs";
-import { removePackagedDirectory } from ${JSON.stringify(helper)};
+import { removeTestDirectory } from ${JSON.stringify(helper)};
 const child = spawn(process.execPath, ["-e", ${JSON.stringify(holder)}], {
   cwd: ${JSON.stringify(home)}, stdio: ["ignore", "ignore", "ignore", "ipc"],
 });
 try {
   await once(child, "message");
   child.send("release");
-  await removePackagedDirectory(${JSON.stringify(home)});
+  await removeTestDirectory(${JSON.stringify(home)});
   if (existsSync(${JSON.stringify(home)})) throw new Error("Home was not removed");
 } finally {
   const exited = once(child, "exit");

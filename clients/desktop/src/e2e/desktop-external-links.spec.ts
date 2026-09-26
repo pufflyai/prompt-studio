@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { _electron as electron, expect, test } from "@playwright/test";
+import { removeTestDirectory } from "../testing/remove-test-directory";
 
 const require = createRequire(import.meta.url);
 
@@ -56,6 +57,6 @@ test("opens chat website links in the external browser without creating app wind
   } finally {
     output.close();
     await application.close();
-    rmSync(root, { recursive: true, force: true });
+    await removeTestDirectory(root);
   }
 });
