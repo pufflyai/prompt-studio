@@ -71,6 +71,11 @@ The queue entry is the durable intent to run the session. The session row is the
 
 ## Dispatch Safety
 
+Queue dispatch keeps the claimed entry while resolving the harness and waiting for its
+workspace. Entries without attachments are removed only when start or resume accepts
+the run. Retryable workspace readiness failures release the claim and keep the prompt
+queued for the next drain. Attachment entries retain their existing transcript guard.
+
 Queue claiming is intentionally two phase:
 
 1. The scheduler claims a queued session by moving the session to `in_progress` and setting `dispatch_started_at` on the queue entry.

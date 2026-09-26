@@ -52,6 +52,46 @@ const waitForInitialOutput = async (events: TerminalEvent[]) => {
 };
 
 describe("terminal supervisor", () => {
+  posixOnlyTest.each([
+    ["/bin/sh", "-lc", "sleep 5"],
+    ["/bin/bash", "-lc", "sleep 5; echo complete"],
+  ])("counts shell command flags as foreground work (%s)", async (shell, flag, script) => {
+    const command = [shell, flag, script];
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const terminal = supervisor.api.openSession({ command, cols: 80, rows: 24 });
+    try {
+      await Bun.sleep(100);
+      expect(supervisor.activity()).toEqual([{ id: terminal.id, label: basename(command[0]) }]);
+    } finally {
+      await supervisor.dispose();
+    }
+  });
+
+  posixOnlyTest("counts a program that replaces the interactive shell", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const terminal = supervisor.api.openSession({ command: ["/bin/bash", "--norc", "-i"], cols: 80, rows: 24 });
+    try {
+      terminal.write("exec sleep 5\n");
+      await Bun.sleep(100);
+      expect(supervisor.activity()).toEqual([{ id: terminal.id, label: "bash" }]);
+    } finally {
+      await supervisor.dispose();
+    }
+  });
+
+  posixOnlyTest("counts a directly launched foreground program as work", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const terminal = supervisor.api.openSession({ command: ["/bin/sleep", "5"], cols: 80, rows: 24 });
+    try {
+      expect(supervisor.activity()).toEqual([{ id: terminal.id, label: "sleep" }]);
+    } finally {
+      await supervisor.dispose();
+    }
+  });
+
   test("reports a missing working directory before spawning the shell", () => {
     const { logger } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });
@@ -183,7 +223,7 @@ describe("terminal supervisor", () => {
     expect(() => process.kill(pid, 0)).toThrow(/ESRCH/);
   });
 
-  test("reports live terminal activity with a stable id and display label", async () => {
+  posixOnlyTest("reports foreground work with a stable id and clears activity at the prompt", async () => {
     const { logger, records } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });
     const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
@@ -191,11 +231,18 @@ describe("terminal supervisor", () => {
       for await (const _event of handle.events()) void _event;
     })();
 
-    expect(supervisor.activity()).toEqual([{ id: handle.id, label: basename(shellCommand()[0]) }]);
+    try {
+      await Bun.sleep(100);
+      expect(supervisor.activity()).toEqual([]);
+      handle.write(line("sleep 0.5"));
+      for (let attempt = 0; attempt < 30 && supervisor.activity().length === 0; attempt += 1) await Bun.sleep(10);
+      expect(supervisor.activity()).toEqual([{ id: handle.id, label: basename(shellCommand()[0]) }]);
+      await Bun.sleep(600);
+      expect(supervisor.activity()).toEqual([]);
+    } finally {
+      await handle.kill("SIGKILL");
+    }
 
-    // Interactive shells may ignore SIGTERM while they own a PTY. This test
-    // verifies activity cleanup, so use the unconditional cleanup signal.
-    await handle.kill("SIGKILL");
     expect(supervisor.activity()).toEqual([]);
     expect(records).toContainEqual({
       message: "terminal session kill",

@@ -1,6 +1,7 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
+import { isWorkspaceDispatchPending } from "./session-queue-readiness";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
   createSubmittedDispatchEntry,
@@ -169,6 +170,8 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
           continue;
         }
 
+        const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
+        if (isWorkspaceDispatchPending(workspace)) continue;
         await dispatchQueuedEntry(deps, session, entry);
       }
     });

@@ -1,12 +1,12 @@
 import { realpath, stat } from "node:fs/promises";
 import { createRoute, z } from "@hono/zod-openapi";
-import { listBranches } from "pstdio-wt";
 import type { AppRouteHandler } from "../../../types";
 import { syncRepoExtensionsForProject } from "../../extensions/repo-extensions";
 import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { prepareProjectRepo, RepoLinkConflictError } from "../prepare-project-repo";
+import { resolveCurrentBranch } from "../resolve-current-branch";
 
 const registerRepoBodySchema = z
   .object({
@@ -61,17 +61,6 @@ export const registerRepoRoute = createRoute({
   },
 });
 
-// The repo path may not be a git repo yet (e.g. not initialized), so branch
-// resolution falls back to null rather than failing repo registration.
-const resolveCurrentBranch = async (repoPath: string) => {
-  try {
-    const branches = await listBranches(repoPath);
-    return branches.find((branch) => branch.isCurrent)?.name ?? null;
-  } catch {
-    return null;
-  }
-};
-
 export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof registerRepoRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -95,7 +84,12 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
         { name, path },
         {
           prepare: async () => {
-            const restoreConfig = await prepareProjectRepo(deps.projectService, id, path);
+            const restoreConfig = await prepareProjectRepo(
+              deps.projectService,
+              id,
+              path,
+              deps.extensionUpgradeService?.releaseRef,
+            );
             branch = await resolveCurrentBranch(path);
             return restoreConfig;
           },

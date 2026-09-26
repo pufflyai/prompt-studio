@@ -4,6 +4,7 @@ import type { RouteDeps } from "./features/deps";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import type { RuntimeHost } from "./features/runtime/routes";
+import { watchSessionQueueReadiness } from "./features/sessions/session-queue-readiness";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { apiLogger } from "./lib/logger";
 import type { createNotificationService } from "./services/notification-service";
@@ -96,11 +97,13 @@ const createAppCloser = (input: {
   automationService: { close(): Promise<void> };
   terminalSupervisor: { dispose(): Promise<void> };
   closeDb: () => Promise<void>;
+  stopQueueReadiness: () => Promise<void>;
 }) => {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
       input.startupAbort.abort();
+      await input.stopQueueReadiness();
       await input.startupDone;
       await input.getStartupBackgroundDone();
       clearInterval(input.notificationWakeTimer);
@@ -126,6 +129,9 @@ export const startAppLifecycle = async (input: {
   closeDb: () => Promise<void>;
 }) => {
   const startupAbort = new AbortController();
+  const stopQueueReadiness = watchSessionQueueReadiness(input.deps, () =>
+    createSessionScheduler(input.deps).drainQueue(),
+  );
   const startupBackgroundTasks: Promise<void>[] = [];
   const startupDone = runStartupTasks(input.deps, startupAbort.signal, {
     onBackgroundTask: (task) => {
@@ -143,6 +149,7 @@ export const startAppLifecycle = async (input: {
   return createAppCloser({
     ...input,
     startupAbort,
+    stopQueueReadiness,
     startupDone,
     getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
   });

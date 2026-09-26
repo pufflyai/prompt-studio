@@ -292,6 +292,7 @@ export { registerInstalledExtensionSources } from "./register-installed-extensio
 type InstallRepoDefaultExtensionsInput = {
   defaultExtensions: DefaultExtensionEntry[];
   repoPath: string;
+  releaseRef?: string;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
 };
 
@@ -314,6 +315,7 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
     await withResolvedDefaultEntries(
       {
         config: { defaultExtensions: input.defaultExtensions },
+        releaseRef: input.releaseRef,
         prepareSharedCheckout: input.prepareSharedCheckout,
         sourceMode: true,
       },
@@ -327,7 +329,7 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
             continue;
           }
 
-          const installInput = toInstallInput(resolved.entry);
+          const installInput = toInstallInput(resolved.entry, input.releaseRef);
           await installExtensionSource({
             ...installInput,
             existsOk: false,
