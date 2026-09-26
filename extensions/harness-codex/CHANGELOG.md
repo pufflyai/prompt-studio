@@ -1,5 +1,14 @@
 # harness-codex
 
+## 0.3.6
+
+_2026-09-26_
+
+### Patch Changes
+
+- ffe4aa8: Fix native desktop runtime lifetime, extension loading and refresh, live table menus, and harness paths; defer diff and chart loading to speed up startup.
+- Updated internal dependencies: `@pstdio/sdk@0.26.0`
+
 ## 0.3.5
 
 _2026-09-26_
