@@ -1,4 +1,4 @@
-import type { HarnessRecoveryInput, SessionMessage } from "@pstdio/sdk/extensions";
+import type { HarnessEventSink, HarnessRecoveryInput, SessionMessage } from "@pstdio/sdk/extensions";
 import {
   HistoryConflict,
   mergeHistoryMetadata,
@@ -56,4 +56,19 @@ export const composeOpencodeSnapshot = (known: readonly SessionMessage[], native
     const ids = new Set(merged.map((message) => message.id));
     return [...merged, ...previous.filter((message) => isGenerated(message) && !ids.has(message.id))];
   });
+};
+
+export const composeOwnedOpencodeSnapshot = (events: HarnessEventSink, native: readonly SessionMessage[]) => {
+  try {
+    return composeOpencodeSnapshot(events.getMessages(), native);
+  } catch (error) {
+    if (error instanceof HistoryConflict) {
+      events.push({
+        op: "replace",
+        path: "/history_issue",
+        value: { code: "reconciliation_conflict", category: error.message },
+      });
+    }
+    throw error;
+  }
 };
