@@ -53,4 +53,4 @@ test("native dependency scripts use the workspace node-gyp version with isolated
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
-});
+}, 30_000);

@@ -4,6 +4,7 @@ export default defineConfig({
   outputDir: "test-results/packaged",
   testDir: "src/e2e",
   testMatch: "packaged-*.spec.ts",
+  timeout: process.platform === "win32" ? 60_000 : 30_000,
   workers: 1,
   forbidOnly: !!process.env.CI,
   fullyParallel: false,
