@@ -1,6 +1,6 @@
 {
   "name": "harness-open-code",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "displayName": "OpenCode",
   "description": "Contributes the OpenCode agent harness.",
   "publisher": "pstdio",
