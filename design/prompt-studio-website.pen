@@ -20441,7 +20441,7 @@
                               "fill": "$ds-fg-muted",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Address: Gamla Enköpingsvägen 134 Lgh1201, 174 61 Sundbyberg, Sweden",
+                              "content": "Address: Gamla Enköpingsvägen 134, 174 61 Sundbyberg, Sweden",
                               "lineHeight": 1.7,
                               "fontFamily": "$font-body",
                               "fontSize": 14,
