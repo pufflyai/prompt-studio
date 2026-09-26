@@ -50,6 +50,10 @@ jobs:
       - name: Build monorepo
         run: bun run build
 
+      # Some build outputs, such as the webview runtime bundle, are committed. A stale copy ships old code.
+      - name: Check committed build outputs are up to date
+        run: git diff --exit-code
+
       - name: Check translations
         run: bun run verify:translations
 
