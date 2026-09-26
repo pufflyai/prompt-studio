@@ -135,8 +135,8 @@ export const DEFAULT_TAGS: TagSeed[] = [
     sortOrder: 0,
     options: [
       option("default-priority-low", "Low", "gray", 0, "level-low"),
-      option("default-priority-medium", "Medium", "blue", 1, "level-high"),
-      option("default-priority-high", "High", "orange", 2, "level-xhigh"),
+      option("default-priority-medium", "Medium", "blue", 1, "level-mid"),
+      option("default-priority-high", "High", "orange", 2, "level-high"),
       option("default-priority-urgent", "Urgent", "red", 3, "flame"),
     ],
   }),

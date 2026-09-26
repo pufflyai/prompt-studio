@@ -75,12 +75,12 @@ describe("createOpencodeHarness", () => {
         defaultValue: "medium",
         options: [
           { label: "None", value: "none", icon: "CircleSlash" },
-          { label: "Minimal", value: "minimal", icon: "CircleDot" },
-          { label: "Low", value: "low", icon: "Gauge" },
-          { label: "Medium", value: "medium", icon: "Brain" },
-          { label: "High", value: "high", icon: "Zap" },
-          { label: "XHigh", value: "xhigh", icon: "Flame" },
-          { label: "Max", value: "max", icon: "Sparkles" },
+          { label: "Minimal", value: "minimal", icon: "level-low" },
+          { label: "Low", value: "low", icon: "level-low" },
+          { label: "Medium", value: "medium", icon: "level-mid" },
+          { label: "High", value: "high", icon: "level-high" },
+          { label: "XHigh", value: "xhigh", icon: "level-xhigh" },
+          { label: "Max", value: "max", icon: "level-xhigh" },
         ],
       },
     });

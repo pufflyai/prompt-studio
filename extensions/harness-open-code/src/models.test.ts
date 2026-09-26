@@ -29,9 +29,9 @@ openai/gpt-5.5
             label: "Thinking",
             defaultValue: "medium",
             options: [
-              { label: "Low", value: "low", icon: "Gauge" },
-              { label: "Medium", value: "medium", icon: "Brain" },
-              { label: "High", value: "high", icon: "Zap" },
+              { label: "Low", value: "low", icon: "level-low" },
+              { label: "Medium", value: "medium", icon: "level-mid" },
+              { label: "High", value: "high", icon: "level-high" },
             ],
           },
         },
@@ -45,8 +45,8 @@ openai/gpt-5.5
             label: "Thinking",
             defaultValue: "low",
             options: [
-              { label: "Low", value: "low", icon: "Gauge" },
-              { label: "High", value: "high", icon: "Zap" },
+              { label: "Low", value: "low", icon: "level-low" },
+              { label: "High", value: "high", icon: "level-high" },
             ],
           },
         },
