@@ -70,6 +70,7 @@ Clearly describe it as a temporary workaround, not the intended design.
 
 - Pencil `.pen` designs define how the `@pstdio/ui` component library must look. This includes colors, text styles, spacing, corner roundness, component states, and layout. Make the code match the design.
 - The main design system file is [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only with the Pencil CLI. Never edit them by hand.
+- Website and landing page frames live in [`design/prompt-studio-website.pen`](design/prompt-studio-website.pen). Pencil cannot share components between files, so this file keeps copies of the design-system components it uses. Update those copies when the design system changes.
 - If the design and code do not match, update the code to match the design. If the design is wrong, fix it in Pencil first, then update the code.
 - Storybook defines component **APIs and props**. Pencil defines how components **look**.
 
