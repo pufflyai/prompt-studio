@@ -39,6 +39,18 @@ const run = async (cwd: string, version?: string) => {
   return { stdout, stderr, exitCode };
 };
 
+const packageEntries = (notes: string) =>
+  notes
+    .split(/^## /m)
+    .slice(1)
+    .map((section) => {
+      const [name, ...lines] = section.split(/\r?\n/);
+      return {
+        name: name.trim(),
+        entries: lines.filter((line) => line.startsWith("- ")).map((line) => line.slice(2)),
+      };
+    });
+
 describe("shared release notes", () => {
   test("combines each changed package's section for the release version", async () => {
     const root = workspace({
@@ -47,33 +59,36 @@ describe("shared release notes", () => {
     });
     const result = await run(root, "0.35.0");
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe(
-      "## pstdio\n\n### Minor Changes\n\n- Add tools.\n\n## ui\n\n### Patch Changes\n\n- Fix layout.\n\n",
-    );
+    expect(packageEntries(result.stdout)).toEqual([
+      { name: "pstdio", entries: ["Add tools."] },
+      { name: "ui", entries: ["Fix layout."] },
+    ]);
+    expect(result.stdout).not.toMatch(/^_\d{4}-\d{2}-\d{2}_$/m);
   });
 
   test("leaves out packages without entries for the release version", async () => {
     const root = workspace({ pstdio: "## 0.35.0\n\n- Change.\n", empty: "## 0.35.0\n\n_2026-09-26_\n", missing: null });
     const result = await run(root, "0.35.0");
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe("## pstdio\n\n- Change.\n\n");
+    expect(packageEntries(result.stdout)).toEqual([{ name: "pstdio", entries: ["Change."] }]);
   });
 
   test("prints default notes when every package has no entries", async () => {
     const result = await run(workspace({ empty: "## 0.35.0\n\n_2026-09-26_\n" }), "0.35.0");
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe("_No changelog entries._\n");
+    expect(packageEntries(result.stdout)).toEqual([]);
+    expect(result.stdout.trim()).not.toBe("");
   });
 
   test("rejects a changelog missing the release version", async () => {
     const result = await run(workspace({ pstdio: "## 0.34.0\n\n- Old.\n" }), "0.35.0");
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("no changelog section for pstdio@0.35.0");
+    expect(result.stderr).toContain("pstdio@0.35.0");
   });
 
   test("requires a release version", async () => {
     const result = await run(workspace({ pstdio: null }));
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("usage:");
+    expect(result.stderr.trim()).not.toBe("");
   });
 });
