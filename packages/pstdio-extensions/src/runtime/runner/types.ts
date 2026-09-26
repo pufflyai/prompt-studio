@@ -89,6 +89,8 @@ export interface BuildEnvironmentInput {
 
 export interface CommandRunnerHostDeps {
   buildEnvironment: (input: BuildEnvironmentInput) => Promise<CommandRunnerEnvironment> | CommandRunnerEnvironment;
+  /** Receives each transient extension event before its hooks run. */
+  onWillDispatchEvent?: (eventId: string) => void;
   /** Receives each transient extension event after its hooks have run. */
   onDidDispatchEvent?: (eventId: string) => void;
   /** Optional logger forwarded to extension contexts. */

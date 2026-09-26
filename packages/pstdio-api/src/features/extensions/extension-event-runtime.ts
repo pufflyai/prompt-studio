@@ -83,7 +83,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
   const context = await resolveEventContext(deps, projectId, payload);
   const runner = createCommandRunner(snapshot.runtime, {
     logger: extensionEventLogger,
-    onDidDispatchEvent: (eventId) =>
+    onWillDispatchEvent: (eventId) =>
       deps.eventBus.emit("extension_events", "set", { id: crypto.randomUUID(), projectId, eventId }),
     buildEnvironment: (input) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {

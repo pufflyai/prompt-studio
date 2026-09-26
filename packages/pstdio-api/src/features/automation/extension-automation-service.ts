@@ -35,22 +35,13 @@ export const createExtensionAutomationService = (options: {
     if (!parsed.success || automationTextEncoder.encode(canonicalJson(parsed.data)).byteLength > MAX_INPUT_BYTES) {
       throw new AutomationRequestError("invalid_automation_input", "Invalid automation input.", 400);
     }
-    const snapshot = await deps.getCommandDeps().extensionRuntimeCatalog.get(input.projectId);
-    const command = snapshot.runtime.commands.find((candidate) => candidate.id === input.commandId);
-    if (!command?.automation || command.extensionId !== input.extensionId) {
-      throw new AutomationRequestError(
-        "automation_scope_denied",
-        "Command must belong to this extension and enable automation.",
-        403,
-      );
-    }
     const principal = await deps.automationDBService.getOrCreateExtensionPrincipal(input);
     if (principal.disabled_at)
       throw new AutomationRequestError("automation_scope_denied", "Automation principal is disabled.", 403);
     return options.withAdmissionLock(`${principal.id}:${input.projectId}`, () =>
       admitAutomationRun({
         deps,
-        auth: { principal, token: null },
+        auth: { principal, token: null, extensionId: input.extensionId },
         projectId: input.projectId,
         body: parsed.data,
         idempotencyKey: input.key,

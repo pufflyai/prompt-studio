@@ -22,8 +22,6 @@ metadata:
    - Use middlewares to validate, reject, or rewrite command invocations before a command runs.
    - Use hooks to react to project, ticket, workspace, worktree, git, session, attempt-status, or command lifecycle events.
    - Use schedules for cron-triggered command execution.
-   - Use `ctx.automation.enqueue({ command, input, key })` for work that lasts longer than a request. Mark the same-extension worker `automation: true`. Use `ctx.process` for work the caller awaits. Read and cancel runs through `ctx.automation`; keep checkpoints and progress in extension storage.
-   - Refresh run views with `<extension-id>.event.automation-run-changed`. Input accepts `{ workspaceId?, params?, resource?, metadata? }`. Input and result are limited to 64 KB, errors to 8 KB, and keys to 200 characters. The default limit is 60 new runs per minute per extension and project; terminal runs expire after 30 days. Queued runs restart; interrupted runs fail with retryable `host_restarted`.
    - Use templates, skills, themes, file icon themes, and template types for packaged static catalog assets.
    - Use `views` for webview, Kanban, data table, file, tree, and controls bodies. A view never owns geometry or a resource kind.
    - Use `resourceKinds` for domain resource identity and resource menus.

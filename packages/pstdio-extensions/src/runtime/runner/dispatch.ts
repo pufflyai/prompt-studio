@@ -46,6 +46,7 @@ const findExtension = (runtime: ExtensionRuntime, id: string): NormalizedExtensi
 
 export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher => {
   const dispatch = async (eventId: string, payload: Struct): Promise<EventDeliveryResult> => {
+    input.deps.onWillDispatchEvent?.(eventId);
     const subs = input.runtime.hooks.filter((h) => h.eventId === eventId);
     let delivered = 0;
     const diagnostics: NonNullable<EventDeliveryResult["diagnostics"]> = [];

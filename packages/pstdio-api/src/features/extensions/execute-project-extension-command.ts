@@ -88,10 +88,22 @@ export const executeProjectExtensionCommand = async (
 ) => {
   const { body, commandId, projectId } = input;
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  const handler =
-    snapshot.runtime.commands.find((candidate) => candidate.id === commandId) ??
-    snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
+  const command = snapshot.runtime.commands.find((candidate) => candidate.id === commandId);
+  const handler = command ?? snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
   if (!handler) throw new ExtensionCommandNotFoundError(commandId);
+  if (body.source === "automation" && !command?.automation) {
+    return {
+      commandId,
+      extensionId: handler.extensionId,
+      eventIds: [],
+      outcome: {
+        ok: false as const,
+        status: "rejected" as const,
+        code: "automation_scope_denied",
+        reason: "Command is no longer exposed to automation.",
+      },
+    };
+  }
 
   const invocation = await resolveCommandInvocationContext(deps, projectId, body);
 

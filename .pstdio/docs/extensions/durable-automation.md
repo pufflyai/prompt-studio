@@ -20,7 +20,7 @@ await ctx.automation.cancel(run.id);
 
 The host stores the run before returning. Closing a panel or reloading the dashboard does not cancel it. `get`, `list`, and `cancel` use the caller's extension and project. `get` returns `undefined` for an unknown or foreign run. `cancel` rejects unknown or foreign runs. `list()` includes all statuses; an empty status array matches no runs.
 
-The required `key` is unique within the extension, project, and command. Repeating a key with the same input returns the existing run, including a finished run. Different input rejects with `idempotency_conflict`. Use a new key for new work or a retry of a finished run.
+The required `key` is unique within the extension, project, and command. Repeating a key with the same input returns the existing run, including a finished run or a run whose worker is no longer available. Different input rejects with `idempotency_conflict`. Use a new key for new work or a retry of a finished run.
 
 ## Refreshing a view
 
@@ -34,7 +34,7 @@ The host emits this event for queued, running, succeeded, failed, rejected, and 
 
 ## Recovery and limits
 
-After a host restart, queued runs execute. Interrupted running runs become `failed` with `{ code: "host_restarted", retryable: true }`. They do not resume automatically. Keep domain checkpoints, progress, and large outputs in extension storage or artifact mounts. The extension decides which work a new run can skip.
+After a host restart, queued runs execute. Before dispatch, the host checks that the current worker still declares `automation: true`; otherwise, the run is rejected. A removed worker fails command lookup. Interrupted running runs become `failed` with `{ code: "host_restarted", retryable: true }`. They do not resume automatically. Keep domain checkpoints, progress, and large outputs in extension storage or artifact mounts. The extension decides which work a new run can skip.
 
 Cancellation aborts `ctx.signal` and waits for command cleanup. A cancelled worker settles as `cancelled`. If cleanup is still pending, cancellation returns `automation_cancellation_pending`; read the run again to see when it finishes. Graceful host shutdown also cancels active runs.
 

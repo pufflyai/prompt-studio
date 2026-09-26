@@ -11,6 +11,8 @@ let projectId: string;
 let started: Promise<void>;
 let observedAbort: boolean;
 let eventBus: EventBus;
+let workerAvailable: boolean;
+let workerAutomation: boolean;
 const extensionId = "example.worker";
 const commandId = "example.worker.command.run";
 
@@ -23,6 +25,8 @@ beforeEach(async () => {
     signalStarted = resolve;
   });
   observedAbort = false;
+  workerAvailable = true;
+  workerAutomation = true;
   eventBus = new EventBus();
   service = createAutomationService({
     automationDBService: db,
@@ -33,7 +37,7 @@ beforeEach(async () => {
             runtime: {
               hooks: [],
               commands: [
-                { id: commandId, extensionId, automation: true, params: {} },
+                ...(workerAvailable ? [{ id: commandId, extensionId, automation: workerAutomation, params: {} }] : []),
                 { id: "peer.command.run", extensionId: "peer", automation: true, params: {} },
                 { id: "example.worker.command.private", extensionId, automation: false, params: {} },
               ],
@@ -164,3 +168,18 @@ test("cancelling a terminal run does not emit another status transition", async 
   await Bun.sleep(0);
   expect(eventBus.getSince(cursor)).toEqual([]);
 });
+
+for (const change of ["removed", "disabled"]) {
+  test(`returns an existing run after its worker is ${change}`, async () => {
+    const first = await enqueue();
+    await started;
+    await service.cancelForExtension({ projectId, extensionId }, first.id);
+    if (change === "removed") workerAvailable = false;
+    else workerAutomation = false;
+    expect((await enqueue()).id).toBe(first.id);
+    await expect(enqueue("run", { metadata: { changed: true } })).rejects.toMatchObject({
+      code: "idempotency_conflict",
+    });
+    await expect(enqueue("new")).rejects.toMatchObject({ code: "automation_scope_denied" });
+  });
+}
