@@ -62,7 +62,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     onNavigate,
   } = props;
 
-  if (error) return <EmptyState title="Could not load files" description={error} />;
+  if (error && sections.length === 0) return null;
   if (loading) return null;
   if (moduleLoading) return <TreeViewSkeleton />;
 

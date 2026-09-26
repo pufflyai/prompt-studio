@@ -1,6 +1,6 @@
 import type { ResourceContextAction } from "@pstdio/ui";
 import { createElement } from "react";
-import { getWorkbenchRenderers, type WorkbenchCore } from "../../../core";
+import { getWorkbenchRenderers, rendererReadKey, type WorkbenchCore } from "../../../core";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { WorkbenchTreeView } from "./tree-view";
 
@@ -49,6 +49,7 @@ export const installWorkbenchTreeRenderer = (
     createElement(WorkbenchTreeView, {
       workbench: scope,
       treeViewId: treeId,
+      readOwnerKey: rendererReadKey(instance),
       resource: instance.resource,
       viewId: viewContextId(scope, instance.panelId, instance.viewId),
       renderParamField: installation.renderParamField,

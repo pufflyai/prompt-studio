@@ -26,12 +26,13 @@ export const getMarketplaceExtensionContributions = (projectId: string, installN
 export const getProjectExtensionAppearance = (projectId: string) =>
   apiRequest<ListExtensionAppearanceResponse>(`/v1/projects/${projectId}/extensions/appearance`);
 
-export const executeExtensionCommand = (projectId: string, commandId: string, body: unknown) =>
+export const executeExtensionCommand = (projectId: string, commandId: string, body: unknown, signal?: AbortSignal) =>
   apiRequest<CommandExecuteResponse>(
     `/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/execute`,
     {
       method: "POST",
       body,
+      signal,
     },
   );
 

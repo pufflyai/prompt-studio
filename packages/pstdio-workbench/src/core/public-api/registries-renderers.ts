@@ -129,3 +129,4 @@ export type {
   RendererReadRequest,
 } from "../registries/views/renderer-read-registry";
 export { createRendererReadRegistry } from "../registries/views/renderer-read-registry";
+export { settleReadBatch } from "../registries/views/settle-read-batch";

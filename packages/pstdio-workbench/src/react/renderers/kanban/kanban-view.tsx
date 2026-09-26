@@ -1,4 +1,4 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Box, Skeleton, Stack } from "@chakra-ui/react";
 import { type ResourceContextAction, ScrollArea } from "@pstdio/ui";
 import {
   type AttributeDescriptor,
@@ -8,18 +8,18 @@ import {
   type KanbanRendererRow,
   useKanbanRendererStore,
 } from "@pstdio/ui/kanban-renderer";
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useSyncExternalStore } from "react";
 import type {
-  KanbanRendererQueryState,
   RegisteredKanbanRendererContribution,
   ResourceRef,
   WorkbenchCore,
   WorkbenchPanelInstance,
 } from "../../../core";
-import { getWorkbenchRenderers } from "../../../core";
+import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
+import { RendererReadNotice } from "../renderer-read-notice";
+import { useRendererRead } from "../use-renderer-read";
 import { bindReactKanbanPresentation } from "./kanban-presentation";
-import { createKanbanViewQuerySequencer, executeKanbanViewQuery } from "./kanban-view-query";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 
 interface WorkbenchKanbanViewProps {
@@ -106,36 +106,25 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
   const filters = useKanbanRendererStore(storageKey, (state) => state.filters, initialState);
 
-  const [rows, setRows] = useState<KanbanRendererRow[]>([]);
-  const querySequencer = useRef(createKanbanViewQuerySequencer());
+  const read = useRendererRead({
+    workbench,
+    ownerKey: rendererReadKey(placement),
+    queryKey: JSON.stringify([contribution.id, settings, filters]),
 
-  // Run executeQuery whenever settings/filters change.
-  useEffect(() => {
-    let cancelled = false;
-    const runQuery = () => {
-      const queryId = querySequencer.current.next();
-      const state: KanbanRendererQueryState = { settings, filters };
-      void executeKanbanViewQuery(() => contribution.executeQuery(state)).then((next) => {
-        if (cancelled || !querySequencer.current.isLatest(queryId)) return;
-        setRows(next);
+    load: (signal) => contribution.executeQuery({ settings, filters }, signal),
+    subscribe: (refresh) => {
+      const subscription = contribution.subscribe?.(refresh);
+      const events = getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {
+        if (event.kanbanRendererId === contribution.id) refresh();
       });
-    };
-    runQuery();
-
-    const subscription = contribution.subscribe?.(runQuery);
-    const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {
-      if (event.kanbanRendererId === contribution.id) runQuery();
-    });
-    return () => {
-      cancelled = true;
-      if (typeof subscription === "function") {
-        subscription();
-      } else {
-        subscription?.dispose();
-      }
-      refreshSubscription.dispose();
-    };
-  }, [contribution, filters, settings, workbench]);
+      return () => {
+        if (typeof subscription === "function") subscription();
+        else subscription?.dispose();
+        events.dispose();
+      };
+    },
+  });
+  const rows = read.value ?? [];
 
   const handleOpenRow = (row: KanbanRendererRow) => {
     if (contribution.onRowActivate) void Promise.resolve(contribution.onRowActivate(row)).catch(() => undefined);
@@ -146,11 +135,18 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     const contributionActions = contribution.getRowContextMenuActions?.(row) ?? [];
     return mergeKanbanViewRowActions(resourceActions, contributionActions);
   };
+  const contentPlaceholder = read.error ? (
+    <RendererReadNotice error={read.error} retry={read.retry} />
+  ) : (
+    <Skeleton minH="12rem" w="full" />
+  );
 
   return (
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
+      {read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <KanbanRenderer
         rows={rows}
+        contentPlaceholder={read.value ? undefined : contentPlaceholder}
         storageKey={storageKey}
         attributes={attributes}
         defaultSettings={contribution.defaultSettings}

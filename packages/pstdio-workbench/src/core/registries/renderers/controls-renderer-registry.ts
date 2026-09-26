@@ -45,7 +45,10 @@ export interface ControlsRendererContribution {
   defaultValues?: ControlValueMap;
 
   /** Load the control declarations + current values for the active resource. */
-  executeQuery(resource?: ResourceRef): Promise<ControlsQueryResult> | ControlsQueryResult;
+  executeQuery(
+    resource: ResourceRef | undefined,
+    signal: AbortSignal,
+  ): Promise<ControlsQueryResult> | ControlsQueryResult;
   /** Live-save a single control edit. Omit for explicit-apply or read-only panels. */
   updateValue?(input: ControlsUpdateValueInput): Promise<void> | void;
   /** Commit the full value map from a sticky footer. */

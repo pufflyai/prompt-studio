@@ -32,6 +32,7 @@ const makeScopedRunner = (definition: Parameters<typeof buildRuntime>[0]) => {
     buildEnvironment: () => ({
       ...base,
       withScope: (scope) => ({
+        ...base,
         sessions: base.sessions,
         workspaces: base.workspaces,
         connections: base.connections,

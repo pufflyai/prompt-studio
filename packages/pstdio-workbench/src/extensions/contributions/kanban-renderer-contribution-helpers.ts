@@ -200,6 +200,7 @@ export const executeKanbanRendererCommand = (
   commandId: string,
   params: Record<string, unknown>,
   resource?: ResourceRef,
+  signal?: AbortSignal,
 ) => {
   const commandResource = resource ?? context.workbench.getPrimaryResource();
   return executeWorkbenchExtensionCommand(context, commandId, {
@@ -213,6 +214,7 @@ export const executeKanbanRendererCommand = (
       ...params,
     },
     resource: commandResource,
+    signal,
     slot: createKanbanRendererSlot(context, record),
     metadata: { kanbanRendererId: record.id },
   });

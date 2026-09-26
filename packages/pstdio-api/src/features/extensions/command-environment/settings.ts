@@ -1,5 +1,9 @@
 import type { ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
-import type { CommandRunnerEnvironment, RuntimeExtensionSettingRecord } from "pstdio-extensions";
+import {
+  type CommandRunnerEnvironment,
+  createReadBoundary,
+  type RuntimeExtensionSettingRecord,
+} from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 
 const toSettingDefinition = (setting: RuntimeExtensionSettingRecord): ExtensionSettingDefinitionRecord => ({
@@ -19,6 +23,7 @@ export const createSettingsApi = (
     extensionId: string;
     extensionInstanceId: string;
     installedExtensionId: string;
+    signal?: AbortSignal;
     settings?: RuntimeExtensionSettingRecord[];
   },
 ): CommandRunnerEnvironment["settings"] => {
@@ -31,11 +36,13 @@ export const createSettingsApi = (
 
   return {
     async all() {
-      const records = await deps.extensionSettingsService.list(context);
+      const records = await createReadBoundary(input.signal)(() => deps.extensionSettingsService.list(context));
       return Object.fromEntries(records.map((record) => [record.key, record.value]));
     },
     async get(key) {
-      const record = await deps.extensionSettingsService.get(context, String(key));
+      const record = await createReadBoundary(input.signal)(() =>
+        deps.extensionSettingsService.get(context, String(key)),
+      );
       return record.value as never;
     },
     async set(key, value) {

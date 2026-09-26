@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { createFileMount } from "pstdio-extensions";
+import { createFileMount, createReadBoundary } from "pstdio-extensions";
 
 const ignoreEntry = (extensionId: string) => `/ext/${extensionId}/`;
 const ignoreMarker = (extensionId: string) => `# pstdio:ignore-owned ${ignoreEntry(extensionId)}`;
@@ -61,31 +61,33 @@ const updateIgnore = async (repoPath: string, extensionId: string, tracked: bool
 
 export const createExtensionFilesApi = (input: {
   extensionId: string;
-  resolveRepoPath: () => Promise<string>;
+  resolveRepoPath: (signal?: AbortSignal) => Promise<string>;
   tracked: boolean;
+  signal?: AbortSignal;
 }): ArtifactMount => {
   let mount: ArtifactMount | undefined;
-  const mountFor = async () => {
+  const mountFor = async (signal?: AbortSignal) => {
     if (!mount) {
-      const repoPath = await input.resolveRepoPath();
-      mount = createFileMount(join(repoPath, ".pstdio", "ext", input.extensionId));
+      const repoPath = await input.resolveRepoPath(signal);
+      mount = createFileMount(join(repoPath, ".pstdio", "ext", input.extensionId), input.signal);
     }
     return mount;
   };
+  const readMount = () => createReadBoundary(input.signal)(() => mountFor(input.signal));
   const beforeWrite = async () => {
     const repoPath = await input.resolveRepoPath();
     await updateIgnore(repoPath, input.extensionId, input.tracked);
     return mountFor();
   };
   return {
-    exists: async (path) => (await mountFor()).exists(path),
-    readText: async (path) => (await mountFor()).readText(path),
+    exists: async (path) => (await readMount()).exists(path),
+    readText: async (path) => (await readMount()).readText(path),
     writeText: async (path, value) => (await beforeWrite()).writeText(path, value),
     updateText: async (path, value) => (await beforeWrite()).updateText(path, value),
-    readBytes: async (path) => (await mountFor()).readBytes(path),
+    readBytes: async (path) => (await readMount()).readBytes(path),
     writeBytes: async (path, value) => (await beforeWrite()).writeBytes(path, value),
-    list: async (pattern) => (await mountFor()).list(pattern),
-    listDirs: async (path) => (await mountFor()).listDirs(path),
+    list: async (pattern) => (await readMount()).list(pattern),
+    listDirs: async (path) => (await readMount()).listDirs(path),
     delete: async (path) => (await mountFor()).delete(path),
   };
 };

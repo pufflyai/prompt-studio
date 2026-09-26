@@ -54,6 +54,8 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   emptyState?: ReactNode;
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Replaces the data area while a query is unavailable, keeping its controls mounted. */
+  contentPlaceholder?: ReactNode;
   defaultSettings?: Partial<KanbanRendererSettings>;
   defaultFilters?: KanbanRendererFilterState;
   defaultViews?: KanbanRendererSavedView[];
@@ -86,6 +88,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     emptyState,
     emptyTitle = "No rows found",
     emptyDescription = "Try changing filters or display settings.",
+    contentPlaceholder,
     defaultSettings,
     defaultFilters,
     defaultViews,
@@ -228,22 +231,26 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         />
       )}
 
-      <KanbanRendererContent
-        viewMode={settings.viewMode}
-        boardColumns={boardColumns}
-        listItems={listItems}
-        listExpandedGroups={expandedGroups}
-        selectedRowId={selectedRowId}
-        emptyState={emptyState}
-        emptyTitle={emptyTitle}
-        emptyDescription={emptyDescription}
-        onBoardMoveItem={handleBoardMoveItem}
-        onBoardMoveToGroup={handleBoardMoveToGroup}
-        onCreateRow={createRow && onCreateRow ? setCreateColumnId : undefined}
-        onColumnAction={onColumnAction}
-        onListExpandedGroupChange={setExpandedGroup}
-        listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
-      />
+      {contentPlaceholder !== undefined ? (
+        contentPlaceholder
+      ) : (
+        <KanbanRendererContent
+          viewMode={settings.viewMode}
+          boardColumns={boardColumns}
+          listItems={listItems}
+          listExpandedGroups={expandedGroups}
+          selectedRowId={selectedRowId}
+          emptyState={emptyState}
+          emptyTitle={emptyTitle}
+          emptyDescription={emptyDescription}
+          onBoardMoveItem={handleBoardMoveItem}
+          onBoardMoveToGroup={handleBoardMoveToGroup}
+          onCreateRow={createRow && onCreateRow ? setCreateColumnId : undefined}
+          onColumnAction={onColumnAction}
+          onListExpandedGroupChange={setExpandedGroup}
+          listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
+        />
+      )}
       {createRow && onCreateRow && createColumnId ? (
         <KanbanRendererCreateDialog
           open

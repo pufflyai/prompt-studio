@@ -37,7 +37,9 @@ export const checkFileRendererLifecycle = async (canvasElement: HTMLElement, wor
   selection?.addRange(range);
   const selectedText = selection?.toString();
   await expect(selectedText).toContain("Changed while the document was open.");
-  await waitFor(async () => expect((await body.load(undefined)).content).toContain("Saved marker."));
+  await waitFor(async () =>
+    expect((await body.load(undefined, new AbortController().signal)).content).toContain("Saved marker."),
+  );
 
   workbench.views.refreshView(viewId);
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));

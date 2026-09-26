@@ -50,7 +50,7 @@ export const createScopedHostApis = (
   hosts: { connections: ExtensionConnectionsApi; terminal?: ExtensionTerminalApi },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
   scope?: InvocationScope,
-): ScopedHostApis => {
+): Pick<ScopedHostApis, "sessions" | "workspaces" | "connections" | "process" | "terminal"> => {
   const signal = scope?.signal;
   const resolveCwd = input.workspaceId
     ? async () => {

@@ -115,6 +115,7 @@ export const stubEnvironment = (
     },
     ...overrides,
     withScope: () => ({
+      ...environment,
       sessions: environment.sessions,
       workspaces: environment.workspaces,
       connections: environment.connections,
