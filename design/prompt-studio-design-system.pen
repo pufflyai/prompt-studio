@@ -39185,46 +39185,30 @@
                               }
                             },
                             {
-                              "id": "jePoE",
-                              "type": "ref",
-                              "ref": "nbn0J",
+                              "type": "frame",
+                              "id": "mXhv9",
                               "name": "Folder path",
                               "width": "fill_container",
-                              "theme": {
-                                "size": "sm"
-                              },
                               "height": 32,
-                              "descendants": {
-                                "hcIyD": {
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "KlD5y",
+                                  "name": "Path",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
                                   "content": "/Users/alex/Documents",
-                                  "fill": "$ds-fg"
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
                                 }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "e3c889",
-                          "name": "Folder actions",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "children": [
-                            {
-                              "id": "T9klK",
-                              "type": "ref",
-                              "ref": "nbn0J",
-                              "name": "Filter folders",
-                              "width": "fill_container",
-                              "theme": {
-                                "size": "sm"
-                              },
-                              "height": 32,
-                              "descendants": {
-                                "hcIyD": {
-                                  "content": "Filter folders"
-                                }
-                              }
+                              ]
                             },
                             {
                               "id": "nZbUt",
@@ -39250,6 +39234,60 @@
                                     "kbd": "raised",
                                     "size": "md"
                                   }
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "e3c889",
+                          "name": "Folder actions",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "id": "auHNh",
+                              "type": "ref",
+                              "ref": "nbn0J",
+                              "name": "Filter folders",
+                              "width": "fill_container",
+                              "theme": {
+                                "size": "sm"
+                              },
+                              "height": 32,
+                              "descendants": {
+                                "hcIyD": {
+                                  "type": "frame",
+                                  "id": "dJ61W",
+                                  "name": "Content",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "m8khzw",
+                                      "name": "Search icon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "search",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "q3FxhR",
+                                      "name": "Placeholder",
+                                      "fill": "$ds-fg-subtle",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Filter folders",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": "$input-fs",
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               }
                             }
@@ -106916,28 +106954,6 @@
                     "size": "sm"
                   }
                 },
-                "jePoE": {
-                  "theme": {
-                    "size": "sm"
-                  }
-                },
-                "T9klK": {
-                  "theme": {
-                    "size": "sm"
-                  }
-                },
-                "nZbUt": {
-                  "theme": {
-                    "btn": "outline",
-                    "size": "sm"
-                  }
-                },
-                "nZbUt/khvEs": {
-                  "theme": {
-                    "kbd": "raised",
-                    "size": "md"
-                  }
-                },
                 "U5wtCV": {
                   "theme": {
                     "row": "default"
@@ -107024,28 +107040,6 @@
                   "theme": {
                     "btn": "outline",
                     "size": "sm"
-                  }
-                },
-                "jePoE": {
-                  "theme": {
-                    "size": "sm"
-                  }
-                },
-                "T9klK": {
-                  "theme": {
-                    "size": "sm"
-                  }
-                },
-                "nZbUt": {
-                  "theme": {
-                    "btn": "outline",
-                    "size": "sm"
-                  }
-                },
-                "nZbUt/khvEs": {
-                  "theme": {
-                    "kbd": "raised",
-                    "size": "md"
                   }
                 },
                 "num3Q": {
@@ -107140,28 +107134,6 @@
                   "theme": {
                     "btn": "outline",
                     "size": "sm"
-                  }
-                },
-                "jePoE": {
-                  "theme": {
-                    "size": "sm"
-                  }
-                },
-                "T9klK": {
-                  "theme": {
-                    "size": "sm"
-                  }
-                },
-                "nZbUt": {
-                  "theme": {
-                    "btn": "outline",
-                    "size": "sm"
-                  }
-                },
-                "nZbUt/khvEs": {
-                  "theme": {
-                    "kbd": "raised",
-                    "size": "md"
                   }
                 },
                 "num3Q": {
