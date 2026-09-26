@@ -8,8 +8,10 @@ on:
   merge_group:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only a newer push to the same pull request replaces a run. Every main and merge queue
+  # commit keeps its own run until it finishes, so a red commit can always be traced.
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test_and_build:
@@ -58,10 +60,10 @@ jobs:
         run: bunx lerna run test --ignore e2e
 
   # Windows counterpart of `test_and_build`. Kept as a separate, non-blocking job
-  # (rather than an `os` matrix leg) so the existing `test_and_build` required
-  # check keeps its name, and so the known pre-existing Windows-only failures in
-  # `packages/pstdio-api` don't gate merges while they're being burned down.
-  # Flip `continue-on-error` off once the Windows suite is green.
+  # (rather than an `os` matrix leg) and out of `ci_passed`, so the known
+  # pre-existing Windows-only failures don't gate merges while they're being
+  # burned down. Flip `continue-on-error` off and add it to `ci_passed` once the
+  # Windows suite is green.
   windows_test_and_build:
     runs-on: windows-latest
     timeout-minutes: 25
@@ -319,3 +321,16 @@ jobs:
       - name: Verify API runtime imports
         if: matrix.image == 'pstdio/api'
         run: docker run --rm --entrypoint bun pstdio/api:${{ github.sha }} -e 'await import("./src/app.ts");'
+
+  # The one status check the main ruleset and merge queue require. Job and matrix names
+  # can change without touching the ruleset. It must always run: GitHub treats a skipped
+  # required check as passing, and jobs are skipped when a job they need fails.
+  ci_passed:
+    if: always()
+    needs: [test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, desktop_e2e, build_docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every blocking job to succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1

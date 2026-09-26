@@ -5,12 +5,16 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { AppBindings } from "../../types";
 
 export const RUNTIME_TOKEN = "runtime-test-token";
+export const EXTENSION_ID = "pstdio.automation-test";
 export const COMMAND_ID = "pstdio.automation-test.command.launch";
 export const BLOCKING_COMMAND_ID = "pstdio.automation-test.command.blocking";
 export const INSPECT_COMMAND_ID = "pstdio.automation-test.command.inspect";
 export const LARGE_RESULT_COMMAND_ID = "pstdio.automation-test.command.large-result";
 export const LARGE_ERROR_COMMAND_ID = "pstdio.automation-test.command.large-error";
 export const PROVISION_COMMAND_ID = "pstdio.automation-test.command.provision";
+export const PRIVATE_COMMAND_ID = "pstdio.automation-test.command.private";
+
+type AppRequest = (path: string, init?: RequestInit) => Response | Promise<Response>;
 
 export const requestWithToken = (app: OpenAPIHono<AppBindings>, token: string, path: string, init: RequestInit = {}) =>
   app.request(path, {
@@ -18,11 +22,7 @@ export const requestWithToken = (app: OpenAPIHono<AppBindings>, token: string, p
     headers: { authorization: `Bearer ${token}`, ...Object.fromEntries(new Headers(init.headers).entries()) },
   });
 
-export const issueAutomationToken = async (
-  request: (path: string, init?: RequestInit) => Response | Promise<Response>,
-  projectId: string,
-  commandScopes = [COMMAND_ID],
-) => {
+export const issueAutomationToken = async (request: AppRequest, projectId: string, commandScopes = [COMMAND_ID]) => {
   const response = await request("/v1/auth/tokens", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -32,7 +32,7 @@ export const issueAutomationToken = async (
   return response.json() as Promise<{ token: string }>;
 };
 
-export const writeAutomationExtension = (root: string) => {
+const writeAutomationExtension = (root: string) => {
   const extensionRoot = join(root, "extensions", "automation-test");
   mkdirSync(extensionRoot, { recursive: true });
   writeFileSync(
@@ -199,4 +199,31 @@ export const writeAutomationExtension = (root: string) => {
     };`,
   );
   return extensionRoot;
+};
+
+export const createAutomationProject = async (request: AppRequest, root: string) => {
+  const projectResponse = await request("/v1/projects", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "Automation Project" }),
+  });
+  if (projectResponse.status !== 201) throw new Error(`Project creation failed with HTTP ${projectResponse.status}.`);
+  const projectId = ((await projectResponse.json()) as { id: string }).id;
+  const enableResponse = await request(`/v1/projects/${projectId}/extensions/installed/automation-test/enable`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      displayName: "Automation Test",
+      extensionId: EXTENSION_ID,
+      manifest: { id: EXTENSION_ID, name: "automation-test" },
+      name: "automation-test",
+      sourceHash: null,
+      sourceKind: "local_path",
+      sourcePath: writeAutomationExtension(root),
+      sourceRef: null,
+      version: null,
+    }),
+  });
+  if (enableResponse.status !== 200) throw new Error(`Extension enable failed with HTTP ${enableResponse.status}.`);
+  return projectId;
 };
