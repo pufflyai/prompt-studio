@@ -1,13 +1,12 @@
 import { Spinner } from "@chakra-ui/react";
-import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
-import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import { type CreateWorkspaceCommandParams, resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
@@ -18,6 +17,7 @@ import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
+import { registerWorkspaceSidenavContributions } from "./workspace-navigation";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 import { watchOpenWorkspaceResource } from "./workspace-resource-sync";
 
@@ -25,37 +25,23 @@ const WorkspaceDiffsPanel = lazy(() =>
   import("./components/workspace-widget").then((module) => ({ default: module.WorkspaceDiffsPanel })),
 );
 
-const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
+const openCreateWorkspace = (ctx: WorkbenchModuleContext, options: CreateWorkspaceCommandParams = {}) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   if (!projectId) {
     ctx.pageLocations.clearProject();
     ctx.modes.setActiveMode("project-selection");
     return;
   }
-  return ctx.overlays.openOverlay(dashboardWidgetIds.createWorkspace, { title: "Create workspace" });
-};
-const workspaceNavigationNode = (): TreeNode => ({
-  id: dashboardViews.workspaces.id,
-  label: "Workspaces",
-  icon: dashboardViews.workspaces.icon,
-  canHide: true,
-  hiddenByDefault: true,
-  commandId: dashboardCommandIds.openWorkspaces,
-  target: { kind: "page", page: workbenchPages.workspaces },
-  actions: [
-    {
-      id: "new-workspace",
-      label: "New workspace",
-      icon: "Plus",
-      commandId: dashboardCommandIds.createWorkspace,
+  return ctx.overlays.openOverlay(dashboardWidgetIds.createWorkspace, {
+    title: "Create workspace",
+    resource: {
+      type: "workspace-draft",
+      id: projectId,
+      metadata: {
+        ...(options.shorthand_base ? { shorthand_base: options.shorthand_base } : {}),
+        ...(options.anchors ? { anchors: options.anchors.map((anchor) => ({ ...anchor })) } : {}),
+      },
     },
-  ],
-});
-const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
-  registerDashboardNavigationContribution(ctx, {
-    id: "dashboard.workspaces.project-nav",
-    modes: ["project"],
-    getSections: () => [{ id: "navigation.root", nodes: [workspaceNavigationNode()] }],
   });
 };
 const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
@@ -274,7 +260,7 @@ export const createWorkspacesModule = () =>
       );
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Dashboard", icon: "Plus" },
-        { execute: () => openCreateWorkspace(ctx) },
+        { execute: (options: CreateWorkspaceCommandParams | undefined) => openCreateWorkspace(ctx, options) },
       );
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openWorkspaces,

@@ -1,5 +1,5 @@
 import { Box, Center, Flex, Text } from "@chakra-ui/react";
-import { resolveFileIconElement, useFileIconThemePreference } from "@pstdio/ui";
+import { EmptyState, resolveFileIconElement, useFileIconThemePreference } from "@pstdio/ui";
 import { type Diff, DiffViewer } from "@pstdio/ui/diff";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import {
   workspaceDiffFileQueryOptions,
   workspaceDiffFilesQueryOptions,
 } from "../data/workspace-queries";
+import { workspaceMetadataString } from "../workspace-file-resource";
 import { resolveDefaultWorkspaceDiffPath, resolveWorkspaceDiffRequest } from "./workspace-widget-state";
 
 const toDiff = (summary: WorkspaceDiffSummaryFile, body?: WorkspaceDiffSummaryFile | null): Diff => ({
@@ -70,11 +71,31 @@ export const WorkspaceDiffsPanel = (props: { input: WorkbenchPanelRenderInput })
   });
   const { diffs, paths, defaultSelectedPath, loading, error, loadDiff } = useWorkspaceDiffs(request);
   const { activeFileIconTheme } = useFileIconThemePreference();
+  const workspaceError = workspaceMetadataString(input.instance.resource, "workspaceError");
+  const providerState = workspaceMetadataString(input.instance.resource, "workspaceProviderState");
 
-  if (error) {
+  if (workspaceError || error) {
     return (
       <Center h="full" minH="0" bg="bg" p="md">
-        <Text color="fg.error">{error instanceof Error ? error.message : "Failed to load workspace changes."}</Text>
+        <Text color="fg.error">
+          {workspaceError || (error instanceof Error ? error.message : "Failed to load workspace changes.")}
+        </Text>
+      </Center>
+    );
+  }
+
+  if (!request) {
+    const preparing = !providerState || providerState === "provisioning";
+    return (
+      <Center h="full" minH="0" bg="bg" p="md">
+        <EmptyState
+          title={preparing ? "Preparing workspace" : "Changes unavailable"}
+          description={
+            preparing
+              ? "Changes will appear when the workspace is ready."
+              : "This workspace is not available for reviewing changes."
+          }
+        />
       </Center>
     );
   }

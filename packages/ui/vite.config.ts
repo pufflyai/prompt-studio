@@ -1,9 +1,7 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import dts from "vite-plugin-dts";
-import { externalizeDeps } from "vite-plugin-externalize-deps";
-import svgr from "vite-plugin-svgr";
+import { entries, isExternal } from "./build-entries.ts";
 
 export default defineConfig({
   resolve: {
@@ -13,29 +11,12 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: {
-        index: path.resolve(import.meta.dirname, "src/index.ts"),
-        "rich-text": path.resolve(import.meta.dirname, "src/components/rich-text/index.ts"),
-        theme: path.resolve(import.meta.dirname, "src/theme/index.ts"),
-        "chat-ui": path.resolve(import.meta.dirname, "src/components/chat-ui/index.ts"),
-        diff: path.resolve(import.meta.dirname, "src/components/diff-viewer/index.ts"),
-        "kanban-renderer": path.resolve(import.meta.dirname, "src/components/kanban-renderer/index.ts"),
-        "param-editor": path.resolve(import.meta.dirname, "src/components/param-editor/index.ts"),
-        "data-table": path.resolve(import.meta.dirname, "src/components/data-table/index.ts"),
-        mermaid: path.resolve(import.meta.dirname, "src/components/mermaid-renderer/index.ts"),
-        terminal: path.resolve(import.meta.dirname, "src/components/terminal/index.ts"),
-      },
+      entry: entries,
       formats: ["es"],
       cssFileName: "style",
     },
-    rollupOptions: {
-      output: {
-        globals: {
-          react: "React",
-          "react-dom": "ReactDOM",
-          "react/jsx-runtime": "jsxRuntime",
-        },
-      },
+    rolldownOptions: {
+      external: isExternal,
     },
     sourcemap: true,
     emptyOutDir: true,
@@ -46,13 +27,5 @@ export default defineConfig({
         plugins: [["babel-plugin-react-compiler"]],
       },
     }),
-    dts({
-      tsconfigPath: "./tsconfig.json",
-      insertTypesEntry: true,
-      exclude: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.stories.tsx"],
-      afterDiagnostic: () => {},
-    }),
-    svgr(),
-    externalizeDeps(),
   ],
 });

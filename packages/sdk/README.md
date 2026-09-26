@@ -63,3 +63,32 @@ The host delivers only events matching the view's project. Projectless events re
 Development and installed consumers both load built SDK entries. Repository development builds this package before starting the source CLI. Builds stage release files under `.publish` through the shared release script. Package verification installs those same staged artifacts into a temporary directory outside the monorepo and checks every entry point.
 
 Host authors should use the [workbench guide](https://github.com/pufflyai/prompt-studio/blob/main/packages/pstdio-workbench/README.md). Extension authors should use this SDK and public UI packages.
+
+## Workspace contract release bridge
+
+The alpha.10 host now provides workspace APIs alongside its existing repository APIs.
+Use `ctx.projectFiles` for the project's default workspace and `ctx.workspaceFiles`
+for the invocation's working files. Project file operations check the current workspace
+readiness and file capabilities. Remote workspaces never fall back to local files.
+
+`ctx.workspaces.getDefault()` returns the project workspace.
+`ctx.workspaces.listProviders()` returns available providers and their parameters.
+Render these declared parameters after the user selects a workspace type. The Git
+provider supplies a **Base branch** selection; cloud providers supply their own fields.
+Local setup failures reject creation with the saved workspace ID and setup error.
+The workspace remains available for diagnosis and retry.
+Workspace context records expose `root_path` for a local directory and retain
+`worktree_path` during this release bridge.
+
+The SDK client exposes `client.workspaces.listProviders(projectId)` and
+`client.filesystem.createDirectory({ parent_path, name })`.
+Directory creation accepts one child name under an existing parent.
+
+Webviews can set `workspaceId` in `createWebviewClient(host, { workspaceId })`
+to run commands in that workspace. The host validates project ownership.
+
+Extensions that work with both host contracts can declare the exact versions
+`1.0.0-alpha.10 || 1.0.0-alpha.11` in `engines.pstdio`.
+General version ranges and wildcards remain unsupported.
+This declaration requires the bridge host; older alpha.10 hosts accept only one version.
+See [the staged release ADR](../../.pstdio/docs/adrs/0030-temporary-workspace-contract-release-bridge.md).

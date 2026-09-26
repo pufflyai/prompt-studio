@@ -10,7 +10,8 @@
     "directory": ".publish"
   },
   "files": [
-    "dist"
+    "dist",
+    "dist-monaco"
   ],
   "type": "module",
   "sideEffects": [
@@ -24,52 +25,57 @@
     },
     "./rich-text": {
       "import": "./dist/rich-text.js",
-      "types": "./dist/components/rich-text/index.d.ts"
+      "types": "./dist/rich-text.d.ts"
     },
     "./theme": {
       "import": "./dist/theme.js",
-      "types": "./dist/theme/index.d.ts"
+      "types": "./dist/theme.d.ts"
     },
     "./chat-ui": {
       "import": "./dist/chat-ui.js",
-      "types": "./dist/components/chat-ui/index.d.ts"
+      "types": "./dist/chat-ui.d.ts"
     },
     "./diff": {
       "import": "./dist/diff.js",
-      "types": "./dist/components/diff-viewer/index.d.ts"
+      "types": "./dist/diff.d.ts"
     },
     "./kanban-renderer": {
       "import": "./dist/kanban-renderer.js",
-      "types": "./dist/components/kanban-renderer/index.d.ts"
+      "types": "./dist/kanban-renderer.d.ts"
     },
     "./param-editor": {
       "import": "./dist/param-editor.js",
-      "types": "./dist/components/param-editor/index.d.ts"
+      "types": "./dist/param-editor.d.ts"
     },
     "./data-table": {
       "import": "./dist/data-table.js",
-      "types": "./dist/components/data-table/index.d.ts"
+      "types": "./dist/data-table.d.ts"
     },
     "./mermaid": {
       "import": "./dist/mermaid.js",
-      "types": "./dist/components/mermaid-renderer/index.d.ts"
+      "types": "./dist/mermaid.d.ts"
     },
     "./terminal": {
       "import": "./dist/terminal.js",
-      "types": "./dist/components/terminal/index.d.ts"
+      "types": "./dist/terminal.d.ts"
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./monaco/*": "./dist-monaco/*"
   },
   "scripts": {
-    "build": "bun run typegen:tokens && vite build && bun ../../scripts/release/stage-package.ts .",
+    "build": "bun run typegen:tokens && bun run build:monaco && vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
+    "build:monaco": "vite build --config vite.monaco.config.ts",
     "visualize-bundle": "bunx vite-bundle-visualizer",
-    "lint": "biome check .",
+    "lint": "bun run typecheck && biome check .",
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts && rm -f chakra-config.json",
     "test": "bun test --conditions production --silent",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
     "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
     "test-storybook": "test-storybook",
+    "prestorybook": "bun run build:monaco",
     "storybook": "storybook dev -p 6006",
+    "prebuild-storybook": "bun run build:monaco",
     "build-storybook": "storybook build",
     "prepublishOnly": "bun run build"
   },
@@ -133,25 +139,24 @@
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
     "@playwright/test": "^1.60.0",
-    "@storybook/addon-docs": "^10.1.9",
+    "@storybook/addon-docs": "^10.6.0",
     "@storybook/addon-mcp": "^0.6.0",
-    "@storybook/addon-themes": "^10.1.10",
-    "@storybook/react": "^10.1.9",
-    "@storybook/react-vite": "^10.1.9",
-    "@storybook/test-runner": "^0.22.0",
+    "@storybook/addon-themes": "^10.6.0",
+    "@storybook/react": "^10.6.0",
+    "@storybook/react-vite": "^10.6.0",
+    "@storybook/test-runner": "^0.24.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "pstdio-file-types": "workspace:*",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-test-renderer": "19.2.4",
-    "storybook": "^10.1.9",
+    "rolldown": "^1.2.11",
+    "rolldown-plugin-dts": "^0.28.6",
+    "storybook": "^10.6.0",
     "typescript": "6.0.2",
-    "vite": "^7.2.4",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-plugin-externalize-deps": "^0.8.0",
-    "vite-plugin-svgr": "^4.3.0"
+    "vite": "^8.3.1"
   }
 }

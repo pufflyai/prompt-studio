@@ -3,6 +3,7 @@ import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
 import { createMemoryResources } from "@pstdio/sdk/testing";
 import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
+import { stubEnvironment } from "./test-helpers.test";
 
 const storage: CommandRunnerEnvironment["storage"] = {
   scope: () => storage,
@@ -27,6 +28,7 @@ const createSessionResource = () => ({ type: "session" as const, id: "", title: 
 const environment: CommandRunnerEnvironment = {
   project: { id: "project-1", name: "Project One", shorthand: "PO" },
   storage,
+  automation: stubEnvironment(storage).automation,
   resources: createMemoryResources({}),
   artifacts: { mount: () => ({}) as never },
   packageFiles: {
@@ -49,8 +51,13 @@ const environment: CommandRunnerEnvironment = {
     create: async () => createSessionResource(),
     followup: async () => {},
     addAnchors: async () => {},
+    removeAnchors: async () => {},
   },
   workspaces: {
+    addAnchors: async () => {},
+    removeAnchors: async () => {},
+    listProviders: async () => [],
+    getDefault: async () => null,
     list: async () => [],
     get: async () => null,
     getByShorthand: async () => null,

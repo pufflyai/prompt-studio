@@ -27,3 +27,10 @@ Use the editor patterns for markdown, prompt input, and rich-message rendering. 
 ## Diff
 
 Use the diff patterns for changed-file navigation, file summaries, and drawer-based review flows. Prefer documented diff components over building ad hoc file-change cards.
+
+## Dialogs and parameter help
+
+Use `Dialog.Title`, the shared `CloseButton`, and `Dialog.Footer` with grouped actions for creation dialogs.
+The workbench overlay owns its close button; widgets supply the header, body, and footer.
+Put parameter explanations in `description`. `ParamEditorLabel` shows them through an info button and popover,
+including keyboard focus and Escape handling. Labels do not add an asterisk; required validation stays in the form.

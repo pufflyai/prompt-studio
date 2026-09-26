@@ -54,7 +54,7 @@
   "scripts": {
     "build": "rm -rf ./dist && bun run build:js && bun run build:types && bun ../../scripts/release/stage-package.ts .",
     "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/extensions/index.ts ./src/extensions/react/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts ./src/testing/index.ts ./src/data/index.ts --outdir ./dist --root ./src --target node --format esm --external mustache --external react --external @tanstack/react-query",
-    "build:types": "vite build --config vite.types.config.ts",
+    "build:types": "rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist",
     "prepack": "bun run build",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
@@ -85,8 +85,8 @@
     "@types/react": "^19.2.0",
     "pstdio-api-contracts": "workspace:*",
     "react": "^19.0.0",
-    "typescript": "6.0.2",
-    "vite": "^7.2.4",
-    "vite-plugin-dts": "^4.5.4"
+    "rolldown": "^1.2.11",
+    "rolldown-plugin-dts": "^0.28.6",
+    "typescript": "6.0.2"
   }
 }

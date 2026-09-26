@@ -181,7 +181,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
           onKeyDownCapture={(event) => handleDialogAcceptShortcut(event, () => void submit(), valid && !submitting)}
         >
           <Dialog.Header>
-            <Text textStyle="heading/M/semibold">{config.title}</Text>
+            <Dialog.Title>{config.title}</Dialog.Title>
             <Dialog.CloseTrigger asChild>
               <CloseButton size="sm" disabled={submitting} />
             </Dialog.CloseTrigger>

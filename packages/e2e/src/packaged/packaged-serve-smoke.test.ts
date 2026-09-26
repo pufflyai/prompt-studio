@@ -9,6 +9,7 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
+import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
@@ -120,6 +121,11 @@ test(
       expect(createRes.status).toBe(201);
 
       const project = (await createRes.json()) as { id: string };
+      const providersRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/workspace-providers`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(providersRes.status).toBe(200);
+      expect(await providersRes.json()).toEqual([]);
       const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });
@@ -168,7 +174,13 @@ test(
       expect(skills).toEqual([]);
 
       const repoPath = join(tempRoot, "repo");
-      mkdirSync(repoPath, { recursive: true });
+      const directoryRes = await fetch(`${started.baseUrl}/v1/filesystem/directories`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ parent_path: tempRoot, name: "repo" }),
+      });
+      expect(directoryRes.status).toBe(201);
+      expect(await directoryRes.json()).toEqual({ path: realpathSync(repoPath) });
 
       const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
         method: "POST",
@@ -206,7 +218,7 @@ test(
     let child: ChildProcess | null = null;
 
     try {
-      const extensionSource = writeExtensionWithDependency(tempRoot);
+      const extensionSource = writeExtensionWithDependency(tempRoot, "1.0.0-alpha.10 || 1.0.0-alpha.11");
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
       const navigationProbe = writeNavigationExtension(tempRoot);
       const started = await startPackagedServe(tempRoot, {
@@ -355,3 +367,5 @@ test("packaged CLI includes automation and machine authentication", () => {
   expect(result.stdout).toContain("pstdio automation [command]");
   expect(result.stdout).toContain("pstdio auth [command]");
 });
+
+registerExtensionAutomationSmokeTests();

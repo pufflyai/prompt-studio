@@ -5,8 +5,10 @@ import type {
   WorkspaceProviderRef,
   WorkspaceProviderState,
 } from "./extension-kernel/types/extension";
+import type { ResourceRole } from "./extension-kernel/types/resources";
 import { extensionResourceRefSchema } from "./extensions";
-import { jsonObjectSchema } from "./extensions/common";
+import { extensionParamObjectSchema } from "./extensions/commands";
+import { jsonObjectSchema, localizableStringSchema } from "./extensions/common";
 
 const workspaceProviderRefShape = {
   version: z.number().int().positive(),
@@ -46,6 +48,10 @@ export const workspaceProviderErrorSchema = z.object({
   occurred_at: z.string(),
 });
 
+const workspaceAnchorSchema = extensionResourceRefSchema.extend({
+  role: z.enum(["primary", "context", "source", "result"] satisfies ResourceRole[]).optional(),
+});
+
 export const workspaceSchema = z.object({
   id: z.string(),
   project_id: z.string(),
@@ -66,7 +72,7 @@ export const workspaceSchema = z.object({
   archived: z.boolean(),
   workspace_shorthand: z.string(),
   startup_log_file_id: z.string().nullable(),
-  anchors_json: z.array(extensionResourceRefSchema),
+  anchors_json: z.array(workspaceAnchorSchema),
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable(),
@@ -86,6 +92,8 @@ export const createWorkspaceInputSchema = z.object({
   repo_id: z.string().optional(),
   /** Base branch/ref for the new worktree. Defaults to HEAD. */
   base: z.string().optional(),
+  anchors: z.array(workspaceAnchorSchema).optional(),
+  shorthand_base: z.string().trim().min(1).optional(),
 });
 
 export const renameWorkspaceInputSchema = z.object({
@@ -162,3 +170,11 @@ export type MoveWorkspaceEntryInput = z.infer<typeof moveWorkspaceEntryInputSche
 export type ListWorkspaceFilesInput = z.infer<typeof listWorkspaceFilesInputSchema>;
 export type ListWorkspaceActivityInput = z.infer<typeof listWorkspaceActivityInputSchema>;
 export type ListWorkspaceActivityResponse = z.infer<typeof listWorkspaceActivityResponseSchema>;
+
+export const workspaceProviderDescriptorSchema = z.object({
+  id: z.string(),
+  label: localizableStringSchema,
+  description: localizableStringSchema.optional(),
+  params: extensionParamObjectSchema,
+});
+export type WorkspaceProviderDescriptor = z.infer<typeof workspaceProviderDescriptorSchema>;

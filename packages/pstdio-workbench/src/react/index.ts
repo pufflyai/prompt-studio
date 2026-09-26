@@ -7,10 +7,14 @@ export type {
   CommandParamValue,
 } from "./command-palette/command-palette-params";
 export {
+  buildCommandParamInitialValues,
   createCommandFilesParamValue,
   isCommandFilesParamValue,
+  listCommandParamEntries,
+  normalizeCommandParamValues,
 } from "./command-palette/command-palette-params";
 export { commandParamName, readCommandParamValue } from "./command-palette/command-param-descriptors";
+export { CommandParamField } from "./command-palette/command-param-field";
 export type {
   CommandParamFieldProps,
   CommandParamFieldRenderer,

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { getWriter } from "@/lib/sync/collections";
 import {
   getDashboardWorkspaceDiffSummary,
   requestDashboardWorkspaceDiffSummaries,
@@ -24,9 +25,16 @@ describe("workspace diff summary data", () => {
   afterEach(() => {
     delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
     globalThis.fetch = originalFetch;
+    getWriter("workspaces")!.remove("workspace-first-load");
   });
 
   test("resolves requested summaries for initial render updates", async () => {
+    getWriter("workspaces")!.upsert({
+      id: "workspace-first-load",
+      provider_state: "ready",
+      worktree_path: "/project",
+      provider_capabilities_json: { diff: true },
+    });
     (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "http://localhost:19840" };
 
     const calls: string[] = [];
@@ -59,4 +67,78 @@ describe("workspace diff summary data", () => {
       fileCount: 2,
     });
   });
+});
+
+test("defers background diff requests until the synced workspace is ready", async () => {
+  const workspaceId = "workspace-diff-readiness";
+  const requests: string[] = [];
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      requests.push(new URL(request.url).pathname);
+      return Response.json({ workspace_id: workspaceId, additions: 1, deletions: 0, file_count: 1 });
+    },
+  });
+  (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: server.url.toString() };
+  const writer = getWriter("workspaces")!;
+  const row = {
+    id: workspaceId,
+    initializing: false,
+    setup_error: null,
+    provider_error_json: null,
+    provider_state: "ready",
+    execution_kind: "local",
+    worktree_path: "/project",
+    provider_capabilities_json: { diff: true },
+  };
+  try {
+    expect(await requestDashboardWorkspaceDiffSummaries([workspaceId])).toEqual(new Map());
+    expect(requests).toEqual([]);
+    for (const state of [
+      { initializing: true },
+      { setup_error: "Setup failed" },
+      { provider_error_json: { message: "Provider failed" } },
+      { provider_state: "provisioning" },
+    ]) {
+      writer.upsert({ ...row, ...state });
+      expect(await requestDashboardWorkspaceDiffSummaries([workspaceId])).toEqual(new Map());
+      expect(requests).toEqual([]);
+    }
+    writer.upsert(row);
+    expect((await requestDashboardWorkspaceDiffSummaries([workspaceId])).get(workspaceId)).toMatchObject({
+      additions: 1,
+      fileCount: 1,
+    });
+    expect(requests).toEqual([`/v1/workspaces/${workspaceId}/diff-summary`]);
+    writer.upsert({ ...row, initializing: true });
+    expect(await requestDashboardWorkspaceDiffSummaries([workspaceId])).toEqual(new Map());
+    expect(requests).toHaveLength(1);
+  } finally {
+    writer.remove(workspaceId);
+    server.stop(true);
+    delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
+  }
+});
+
+test("does not request a summary when workspace diff support is explicitly disabled", async () => {
+  const workspaceId = "disabled-diff-workspace";
+  const requests: string[] = [];
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      requests.push(new URL(request.url).pathname);
+      return Response.json({ workspace_id: workspaceId, additions: 1, deletions: 0, file_count: 1 });
+    },
+  });
+  (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: server.url.toString() };
+  const writer = getWriter("workspaces")!;
+  try {
+    writer.upsert({ id: workspaceId, provider_state: "ready", provider_capabilities_json: { diff: false } });
+    expect(await requestDashboardWorkspaceDiffSummaries([workspaceId])).toEqual(new Map());
+    expect(requests).toEqual([]);
+  } finally {
+    writer.remove(workspaceId);
+    server.stop(true);
+    delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
+  }
 });

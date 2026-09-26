@@ -1,3 +1,4 @@
+export type * from "./automation";
 export type * from "./commands";
 export * from "./composition";
 export type * from "./connections";

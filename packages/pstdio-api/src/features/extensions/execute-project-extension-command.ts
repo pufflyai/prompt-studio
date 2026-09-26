@@ -1,6 +1,7 @@
 import type { CommandExecuteBody, JsonObject } from "pstdio-api-contracts";
 import type { RepoContext } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRunner } from "pstdio-extensions";
+import { resolveWorkspaceLocation } from "../workspaces/workspace-provider-execution-target";
 import { createCommandEnvironment } from "./command-environment";
 import { resolveWorkspaceRepoId } from "./command-environment/repos";
 import type { ExtensionsRouteDeps } from "./deps";
@@ -49,37 +50,43 @@ const resolveCommandInvocationContext = async (
   projectId: string,
   body: CommandExecuteBody,
 ) => {
-  const repos = body.repo || body.workspaceId ? await deps.repoService.listByProject(projectId) : [];
+  const repos = body.repo ? await deps.repoService.listByProject(projectId) : [];
   const registeredRepo = body.repo
     ? repos.find((candidate) => candidate.id === body.repo?.repoId && body.repo.projectId === projectId)
     : undefined;
   if (body.repo && !registeredRepo) throw new CommandRepoNotFoundError(body.repo.repoId);
 
-  if (!body.workspaceId) {
+  if (!body.workspaceId && body.repo) {
     const repo: RepoContext | undefined = registeredRepo
       ? { projectId, repoId: registeredRepo.id, path: registeredRepo.path, role: "selected" }
       : undefined;
-    return { repo, workspaceDir: undefined };
+    return { repo, workspaceDir: undefined, workspaceId: undefined };
   }
 
-  const workspace = await deps.workspaceService.get(body.workspaceId);
-  if (!workspace || workspace.project_id !== projectId) throw new CommandWorkspaceNotFoundError(body.workspaceId);
+  const workspace = body.workspaceId
+    ? await deps.workspaceService.get(body.workspaceId)
+    : await deps.workspaceService.getDefault(projectId);
+  if (!workspace && !body.workspaceId) return { repo: undefined, workspaceDir: undefined, workspaceId: undefined };
+  if (!workspace || workspace.project_id !== projectId)
+    throw new CommandWorkspaceNotFoundError(body.workspaceId ?? workspace!.id);
 
   const workspaceRepoId = resolveWorkspaceRepoId(workspace);
   if (body.repo && workspace.worktree_path && workspaceRepoId !== body.repo.repoId) {
-    throw new CommandWorkspaceRepoMismatchError(body.workspaceId, body.repo.repoId);
+    throw new CommandWorkspaceRepoMismatchError(workspace.id, body.repo.repoId);
   }
 
-  const workspaceDir = resolveCommandWorkspaceDir({
-    worktreePath: workspace.worktree_path,
-    repos,
-    repoId: workspaceRepoId ?? body.repo?.repoId,
-    executionKind: workspace.execution_kind,
-  });
+  const workspaceDir = body.repo
+    ? resolveCommandWorkspaceDir({
+        worktreePath: workspace.worktree_path,
+        repos,
+        repoId: workspaceRepoId ?? body.repo?.repoId,
+        executionKind: workspace.execution_kind,
+      })
+    : (await resolveWorkspaceLocation(deps, workspace))?.root;
   const repo: RepoContext | undefined = registeredRepo
     ? { projectId, repoId: registeredRepo.id, path: workspaceDir ?? registeredRepo.path, role: "workspace" }
     : undefined;
-  return { repo, workspaceDir };
+  return { repo, workspaceDir, workspaceId: workspace.id };
 };
 
 export const executeProjectExtensionCommand = async (
@@ -88,10 +95,22 @@ export const executeProjectExtensionCommand = async (
 ) => {
   const { body, commandId, projectId } = input;
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  const handler =
-    snapshot.runtime.commands.find((candidate) => candidate.id === commandId) ??
-    snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
+  const command = snapshot.runtime.commands.find((candidate) => candidate.id === commandId);
+  const handler = command ?? snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
   if (!handler) throw new ExtensionCommandNotFoundError(commandId);
+  if (body.source === "automation" && !command?.automation) {
+    return {
+      commandId,
+      extensionId: handler.extensionId,
+      eventIds: [],
+      outcome: {
+        ok: false as const,
+        status: "rejected" as const,
+        code: "automation_scope_denied",
+        reason: "Command is no longer exposed to automation.",
+      },
+    };
+  }
 
   const invocation = await resolveCommandInvocationContext(deps, projectId, body);
 
@@ -115,7 +134,7 @@ export const executeProjectExtensionCommand = async (
   const outcome = await runner.execute({
     commandId,
     projectId,
-    workspaceId: body.workspaceId,
+    workspaceId: invocation.workspaceId,
     workspaceDir: invocation.workspaceDir,
     params: body.params as JsonObject | undefined,
     resource: body.resource as never,

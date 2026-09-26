@@ -1,7 +1,7 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { createDashboardRuntimeConfigPlugin, resolveTerminalWebSocketUrl } from "./vite-runtime-config";
+import { createDashboardRuntimeConfigPlugin, resolveTerminalWebSocketUrl } from "./vite-runtime-config.ts";
 
 const apiProxyTarget = process.env.PSTDIO_API_URL ?? "http://localhost:19841";
 const terminalWebSocketUrl = resolveTerminalWebSocketUrl({
@@ -32,8 +32,8 @@ export default defineConfig({
       "@emotion/styled",
     ],
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      $fonts: path.resolve(__dirname, "public/font"),
+      "@": path.resolve(import.meta.dirname, "./src"),
+      $fonts: path.resolve(import.meta.dirname, "public/font"),
     },
   },
   plugins: [

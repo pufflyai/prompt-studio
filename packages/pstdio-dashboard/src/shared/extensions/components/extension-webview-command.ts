@@ -7,6 +7,7 @@ interface ExtensionCommandInput {
   params?: Record<string, unknown>;
   resource?: ResourceRef;
   repo?: Record<string, unknown>;
+  workspaceId?: string;
   metadata?: Record<string, unknown>;
 }
 interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
@@ -15,12 +16,12 @@ interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
   projectId?: string;
 }
 export const executeWebviewCommand = (input: ExecuteWebviewCommandInput) => {
-  const { commandId, executeExtensionCommand, metadata, params, repo, resource, workbench } = input;
+  const { commandId, executeExtensionCommand, metadata, params, repo, resource, workbench, workspaceId } = input;
   const isExtensionCommand = commandId.includes(".command.");
   if (!isExtensionCommand && workbench?.commands.getCommand(commandId)) {
     return workbench.commands.executeCommand(commandId, params, { resource });
   }
-  const execute = () => executeExtensionCommand({ commandId, metadata, params, repo, resource });
+  const execute = () => executeExtensionCommand({ commandId, metadata, params, repo, resource, workspaceId });
   if (workbench && input.projectId) {
     return executeWorkbenchExtensionCommandResponse(
       { projectId: input.projectId, workbench, executeCommand: execute },

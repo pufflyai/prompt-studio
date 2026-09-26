@@ -20,7 +20,7 @@ export const createAutomationRunExecutor = (deps: AutomationExecutionDeps) => {
   const cancelStoredRun = async (runId: string) => {
     const cancelled = await deps.automationDBService.transitionRun(runId, { status: "cancelled" });
     if (cancelled?.status === "cancelled") await recordRunActivity(deps, cancelled);
-    return cancelled;
+    return cancelled ?? deps.automationDBService.getRunById(runId);
   };
 
   const settleResponse = async (

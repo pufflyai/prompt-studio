@@ -2,6 +2,7 @@ import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extens
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
 import type { Skill } from "../../skills";
+import type { ExtensionAutomationApi } from "./automation";
 import type {
   CommandHelpersApi,
   CommandMiddlewareResult,
@@ -179,6 +180,7 @@ export interface ExtensionSessionsApi {
   followup(input: { sessionId: string; prompt?: string; attachments?: SessionAttachmentRef[] }): Promise<void>;
 
   addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
+  removeAnchors(sessionId: string, refs: Pick<ResourceRef, "type" | "id">[]): Promise<void>;
 }
 
 export interface ExtensionHarnessInput {
@@ -282,6 +284,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   artifacts: ExtensionArtifactApi;
   /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
   repoFiles?: ArtifactMount;
+  /** Project files through its default workspace, independent of the invocation workspace. */
+  projectFiles?: ArtifactMount;
   /** Files of the workspace this context targets, scoped to its working dir. */
   workspaceFiles?: WorkspaceFilesMount;
   /** Read-only files packaged with the installed extension, scoped to its package root. */
@@ -298,6 +302,7 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   events: ExtensionEventsApi;
   activity: ExtensionActivityApi;
   notify: ExtensionNotifyApi;
+  automation: ExtensionAutomationApi;
   process: ExtensionProcessApi;
   /** Interactive PTY sessions. Present only where the host wires a terminal supervisor (e.g. the workbench panel). */
   terminal?: ExtensionTerminalApi;

@@ -9,12 +9,14 @@ import type {
   WorkspaceFileContent,
   WorkspaceFileEntry,
   WorkspaceFilesResponse,
+  WorkspaceProviderDescriptor,
   WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
 import type { Workspace, WorkspaceListItem } from "../resources";
 import type { RequestFn } from "./request";
 
 export type WorkspaceClient = {
+  listProviders(projectId: string): Promise<WorkspaceProviderDescriptor[]>;
   list(projectId: string): Promise<WorkspaceListItem[]>;
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
   create(input: CreateWorkspaceInput): Promise<Workspace>;
@@ -32,6 +34,7 @@ export type WorkspaceClient = {
 };
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
+  listProviders: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers`),
   listFiles: (workspaceId, input = {}) => {
     const params = new URLSearchParams();
     if (input.path !== undefined) params.append("path", input.path);

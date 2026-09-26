@@ -1,4 +1,4 @@
-import { Center, Dialog, Portal } from "@chakra-ui/react";
+import { Center, CloseButton, Dialog, Portal } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
@@ -216,23 +216,8 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
           >
             {body}
             {canCloseOverlay ? (
-              <Dialog.CloseTrigger
-                aria-label={`Close ${closeLabel}`}
-                alignItems="center"
-                borderRadius="sm"
-                color="fg.muted"
-                cursor="pointer"
-                display="inline-flex"
-                h="5"
-                insetEnd="1"
-                justifyContent="center"
-                position="absolute"
-                top={closeTriggerTop ?? "1"}
-                w="5"
-                zIndex="1"
-                _hover={{ bg: "bg.subtle", color: "fg" }}
-              >
-                <WorkbenchIcon name="x" size={16} />
+              <Dialog.CloseTrigger asChild top={closeTriggerTop}>
+                <CloseButton size="sm" aria-label={`Close ${closeLabel}`} />
               </Dialog.CloseTrigger>
             ) : null}
           </Dialog.Content>

@@ -40,7 +40,7 @@
     }
   },
   "scripts": {
-    "build": "vite build && bun ../../scripts/release/stage-package.ts .",
+    "build": "vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
@@ -60,8 +60,8 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@pstdio/sdk": "^0.25.0",
-    "@pstdio/ui": "^0.26.0",
+    "@pstdio/sdk": "workspace:^",
+    "@pstdio/ui": "workspace:^",
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.556.0",
     "rimless": "0.8.2",
@@ -71,24 +71,24 @@
   "devDependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
-    "@storybook/addon-docs": "10.1.9",
-    "@storybook/react": "^10.1.9",
-    "@storybook/react-vite": "^10.1.9",
+    "@storybook/addon-docs": "10.6.0",
+    "@storybook/react": "^10.6.0",
+    "@storybook/react-vite": "^10.6.0",
     "@types/bun": "1.4.2",
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
     "@types/three": "^0.185.4",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "storybook": "^10.1.9",
+    "rolldown": "^1.2.11",
+    "rolldown-plugin-dts": "^0.28.6",
+    "storybook": "^10.6.0",
     "three": "^0.185.1",
     "typescript": "6.0.2",
-    "vite": "^7.2.4",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-plugin-externalize-deps": "^0.8.0"
+    "vite": "^8.3.1"
   }
 }
