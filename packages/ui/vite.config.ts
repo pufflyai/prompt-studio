@@ -36,6 +36,7 @@ export default defineConfig({
       },
     }),
     svgr(),
-    externalizeDeps(),
+    // The prebuilt Monaco files stay separate, so apps copy them instead of bundling Monaco again.
+    externalizeDeps({ include: [/^@pstdio\/ui\/monaco\//] }),
   ],
 });
