@@ -101,6 +101,7 @@ describe("prepareDesktopReleaseArtifacts", () => {
 
 test("parseDesktopReleaseTarget accepts supported targets and rejects invalid input", () => {
   expect(parseDesktopReleaseTarget("darwin-arm64")).toBe("darwin-arm64");
+  expect(parseDesktopReleaseTarget("darwin-x64")).toBe("darwin-x64");
   expect(parseDesktopReleaseTarget("linux-x64")).toBe("linux-x64");
   expect(() => parseDesktopReleaseTarget("invalid-target")).toThrow(
     "Unsupported desktop release target invalid-target",
@@ -110,7 +111,7 @@ test("parseDesktopReleaseTarget accepts supported targets and rejects invalid in
 test("verifyDesktopReleaseSet requires one version and the complete native matrix", () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-desktop-release-set-"));
   roots.push(root);
-  const targets = ["darwin-arm64", "linux-x64"] as const;
+  const targets = ["darwin-arm64", "darwin-x64", "linux-x64"] as const;
   for (const target of targets) {
     const manifest: DesktopReleaseManifest = {
       schemaVersion: 1,
@@ -131,6 +132,6 @@ test("verifyDesktopReleaseSet requires one version and the complete native matri
   }
 
   expect(verifyDesktopReleaseSet(root)).toEqual({ version: "1.2.3", releaseTag: "pstdio@1.2.3" });
-  rmSync(join(root, "linux-x64"), { recursive: true });
-  expect(() => verifyDesktopReleaseSet(root)).toThrow("Missing desktop release target linux-x64");
+  rmSync(join(root, "darwin-x64"), { recursive: true });
+  expect(() => verifyDesktopReleaseSet(root)).toThrow("Missing desktop release target darwin-x64");
 });

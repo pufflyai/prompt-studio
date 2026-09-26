@@ -4,34 +4,39 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    paths:
-      - ".github/workflows/release-desktop.yml"
-      - ".github/workflows/release-packages.yml"
-      - "bun.lock"
-      - "clients/desktop/**"
-      - "package.json"
-      - "extensions/**"
-      - "packages/e2e/package.json"
-      - "packages/e2e/src/packaged/**"
-      - "packages/pstdio/**"
-      - "packages/pstdio-*/**"
-      - "packages/sdk/**"
-      - "scripts/build/**"
-      - "scripts/embed.json"
-      - "scripts/release/**"
-      - "scripts/verify/**"
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  # Native runners are slow and costly, so native checks run only when this commit
+  # publishes a new pstdio version. The publish scripts use the same npm check.
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pstdio_release: ${{ steps.pstdio.outputs.release }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check for an unpublished pstdio version
+        id: pstdio
+        run: |
+          VERSION=$(jq -r .version packages/pstdio/package.json)
+          if npm view "pstdio@$VERSION" version > /dev/null 2>&1; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
   verify_packaged_bun_toolchain:
+    needs: plan
+    if: needs.plan.outputs.pstdio_release == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -70,8 +75,12 @@ jobs:
         run: bun run --cwd scripts verify:packages
 
   release:
-    if: github.ref == 'refs/heads/main'
-    needs: verify_packaged_bun_toolchain
+    # Every main commit keeps the version PR current. A skipped native check means
+    # there is no pstdio version to publish.
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.plan.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.verify_packaged_bun_toolchain.result) }}
+    needs: [plan, verify_packaged_bun_toolchain]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

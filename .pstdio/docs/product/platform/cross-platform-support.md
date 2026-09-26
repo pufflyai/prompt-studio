@@ -8,10 +8,10 @@ created: "2026-03-25T07:17:32.006Z"
 
 ## Summary
 
-Prompt Studio's CLI and runtime are tested on Windows, macOS, and Linux. Desktop
-CI also builds and launches the native Intel macOS and Windows applications.
-Publication remains separate from these development checks: a target needs
-passing packaged tests and trusted installer signatures before release.
+Prompt Studio's CLI and runtime are tested on Windows, macOS, and Linux. The
+release workflow builds, signs, and launches the native desktop applications
+before it publishes them. A target needs passing packaged tests and trusted
+installer signatures before release.
 
 ## Problem
 
@@ -110,11 +110,13 @@ and verifies it before the packaged suite. The production app does not use it.
 
 ### Operational Requirements
 
-- CI builds and launches desktop distributions on native Linux x64, Apple
-  Silicon macOS arm64, Intel macOS x64, and Windows x64 runners. The macOS release job verifies signing and
-  notarization before publication. Intel macOS desktop distribution is deferred.
-  Windows desktop distribution is deferred until its trusted signing lane is
-  available. Intel macOS and Windows CLI validation remains active.
+- The release workflow builds and launches desktop distributions on native
+  Linux x64, Apple Silicon macOS arm64, and Intel macOS x64 runners. The macOS
+  jobs verify signing and notarization before publication. Windows desktop
+  distribution is deferred until its trusted signing lane is available.
+- Native CLI packages for Linux x64, Intel macOS x64, and Windows x64 are verified
+  on their own runners before each `pstdio` release. Pull requests run no native
+  desktop or CLI builds.
 
 ## Rules & Constraints
 

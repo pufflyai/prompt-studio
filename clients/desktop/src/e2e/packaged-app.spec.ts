@@ -18,7 +18,11 @@ import {
 import { openPackagedProject } from "./packaged-project-helpers";
 import { waitForVisibleElement } from "./visible-element-timing";
 
-const startupWindowBudgetMs = process.platform === "darwin" ? 1_500 : 1_000;
+// Hosted Intel Mac runners start the packaged app two to three times slower than Apple Silicon.
+const isIntelMac = process.platform === "darwin" && process.arch === "x64";
+const coldStartBudgetMs = isIntelMac ? 20_000 : 8_000;
+const macStartupWindowBudgetMs = isIntelMac ? 3_000 : 1_500;
+const startupWindowBudgetMs = process.platform === "darwin" ? macStartupWindowBudgetMs : 1_000;
 
 const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
   app.page.evaluate(async (projectName) => {
@@ -30,62 +34,64 @@ const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
     return { body: (await response.json()) as { id?: string; name?: string }, status: response.status };
   }, name);
 
-test("proves cold packaged startup and both authenticated transport paths", async ({
-  browserName: _browserName,
-}, testInfo) => {
-  const home = createPackagedHome();
-  let app: PackagedApp | null = null;
-  try {
-    app = await launchPackagedApp(home);
-    testInfo.annotations.push({ type: "cold-start-ms", description: String(app.readyInMs) });
-    const startupWindowInMs = await attachStartupTimings(app);
-    testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
-    expect(startupWindowInMs).toBeLessThan(startupWindowBudgetMs);
-    expect(app.readyInMs).toBeLessThan(8_000);
-    const startupEditors = await app.page.evaluate(() =>
-      performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
-    );
-    expect(startupEditors).toEqual([]);
-    expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
-    expect(app.runtime.ownerType).toBe("desktop");
+test(
+  "proves cold packaged startup and both authenticated transport paths",
+  { tag: "@essential" },
+  async ({ browserName: _browserName }, testInfo) => {
+    const home = createPackagedHome();
+    let app: PackagedApp | null = null;
+    try {
+      app = await launchPackagedApp(home);
+      testInfo.annotations.push({ type: "cold-start-ms", description: String(app.readyInMs) });
+      const startupWindowInMs = await attachStartupTimings(app);
+      testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
+      expect(startupWindowInMs).toBeLessThan(startupWindowBudgetMs);
+      expect(app.readyInMs).toBeLessThan(coldStartBudgetMs);
+      const startupEditors = await app.page.evaluate(() =>
+        performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
+      );
+      expect(startupEditors).toEqual([]);
+      expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
+      expect(app.runtime.ownerType).toBe("desktop");
 
-    expect((await fetch(`${app.runtime.origin}/runtime/ready`)).status).toBe(401);
-    expect(
-      (
-        await fetch(`${app.runtime.origin}/v1/projects`, {
-          headers: { authorization: `Bearer ${app.runtime.token}`, origin: "https://example.invalid" },
-        })
-      ).status,
-    ).toBe(403);
+      expect((await fetch(`${app.runtime.origin}/runtime/ready`)).status).toBe(401);
+      expect(
+        (
+          await fetch(`${app.runtime.origin}/v1/projects`, {
+            headers: { authorization: `Bearer ${app.runtime.token}`, origin: "https://example.invalid" },
+          })
+        ).status,
+      ).toBe(403);
 
-    expect(await createProjectThroughBrowser(app, "Packaged transport project")).toEqual({
-      body: expect.objectContaining({ name: "Packaged transport project" }),
-      status: 201,
-    });
-    expect(await app.page.evaluate(() => document.cookie)).toBe("");
-    expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
-    expect(app.page.url().includes(app.runtime.token)).toBe(false);
-    expect(
-      await app.page.evaluate(() => {
-        const encodedConfig = document.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
-        return encodedConfig ? (JSON.parse(decodeURIComponent(encodedConfig)) as { version?: string }).version : null;
-      }),
-    ).toBe(desktopVersion);
+      expect(await createProjectThroughBrowser(app, "Packaged transport project")).toEqual({
+        body: expect.objectContaining({ name: "Packaged transport project" }),
+        status: 201,
+      });
+      expect(await app.page.evaluate(() => document.cookie)).toBe("");
+      expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
+      expect(app.page.url().includes(app.runtime.token)).toBe(false);
+      expect(
+        await app.page.evaluate(() => {
+          const encodedConfig = document.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
+          return encodedConfig ? (JSON.parse(decodeURIComponent(encodedConfig)) as { version?: string }).version : null;
+        }),
+      ).toBe(desktopVersion);
 
-    const list = await runPackagedCli(home, ["projects", "list"]);
-    expect(list.exitCode).toBe(0);
-    expect(list.stdout).toContain("Packaged transport project");
+      const list = await runPackagedCli(home, ["projects", "list"]);
+      expect(list.exitCode).toBe(0);
+      expect(list.stdout).toContain("Packaged transport project");
 
-    await app.finishTrace();
-    const close = runPackagedCli(home, ["close"]);
-    await waitForExit(app.child);
-    expect(await close).toMatchObject({ exitCode: 0, stdout: expect.stringContaining("Runtime stopped.") });
-    expect(existsSync(join(home, "runtime.json"))).toBe(false);
-  } finally {
-    await disposePackagedApp(app);
-    await removePackagedHome(home);
-  }
-});
+      await app.finishTrace();
+      const close = runPackagedCli(home, ["close"]);
+      await waitForExit(app.child);
+      expect(await close).toMatchObject({ exitCode: 0, stdout: expect.stringContaining("Runtime stopped.") });
+      expect(existsSync(join(home, "runtime.json"))).toBe(false);
+    } finally {
+      await disposePackagedApp(app);
+      await removePackagedHome(home);
+    }
+  },
+);
 
 test("promotes ownership, detaches, and preserves data through a warm relaunch", async ({
   browserName: _browserName,

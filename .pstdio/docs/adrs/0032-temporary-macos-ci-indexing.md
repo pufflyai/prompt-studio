@@ -48,9 +48,17 @@ while a user's machine is busy indexing. Manual checks still use normal OS
 settings. The command must stay in hosted CI workflows; do not add it to local
 validation, packaging, installation, or application startup.
 
+## Update: release-only Intel checks (2026-09-26)
+
+Native desktop tests now run only in `.github/workflows/release-desktop.yml`, so
+the indexing step lives in its Intel job. The user approved looser Intel limits:
+20 seconds for cold startup and 3 seconds for the startup window. The Intel job
+runs only the two packaged tests tagged `@essential`. These limits describe
+hosted runner speed; they are not a product target for Intel users.
+
 ## Removal
 
 Remove the setup when the hosted image provides a quiet indexing state before
 jobs start, or a dedicated native runner provides that isolation. Verify the
-unchanged full packaged suite and its original performance limits, and retain
-system-load evidence when removing it.
+Intel essential packaged tests within their limits, and retain system-load
+evidence when removing it.
