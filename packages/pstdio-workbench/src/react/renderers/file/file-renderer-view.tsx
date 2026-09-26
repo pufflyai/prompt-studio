@@ -142,7 +142,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       read.request(
         {
           queryKey: loadKey,
-          load: (signal) => boundContribution.load(boundResource, signal),
+          load: (signal) => contributionRef.current.load(resourceRef.current, signal),
           onValue: (next) => {
             if (cancelled || removed) return;
             const updateLoaded = acceptFileRendererLoad(next, loadKey, controller);

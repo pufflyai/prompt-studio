@@ -142,3 +142,31 @@ test("does not request a summary when workspace diff support is explicitly disab
     delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
   }
 });
+
+test("one unavailable diff summary does not hide other workspaces", async () => {
+  const ids = ["diff-unavailable", "diff-available"];
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      if (new URL(request.url).pathname.includes(ids[0])) return new Response("Diff unavailable", { status: 500 });
+      return Response.json({ workspace_id: ids[1], additions: 2, deletions: 1, file_count: 1 });
+    },
+  });
+  (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: server.url.toString() };
+  const writer = getWriter("workspaces")!;
+  try {
+    for (const id of ids) writer.upsert({ id, provider_state: "ready", worktree_path: "/project" });
+    const summaries = await requestDashboardWorkspaceDiffSummaries(ids);
+    expect(summaries.has(ids[0])).toBe(false);
+    expect(summaries.get(ids[1])).toMatchObject({ additions: 2, deletions: 1, fileCount: 1 });
+    const abort = new AbortController();
+    abort.abort();
+    await expect(requestDashboardWorkspaceDiffSummaries(ids, abort.signal)).rejects.toMatchObject({
+      name: "AbortError",
+    });
+  } finally {
+    for (const id of ids) writer.remove(id);
+    server.stop(true);
+    delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
+  }
+});

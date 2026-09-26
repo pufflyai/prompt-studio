@@ -1,13 +1,10 @@
 import type { DataTableRendererColumn, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createDashboardWorkspaces, toWorkspaceDataTableRow } from "@/shared/workspaces/dashboard-workspaces";
-import {
-  requestDashboardWorkspaceDiffSummaries,
-  subscribeDashboardWorkspaceDiffSummaries,
-} from "@/shared/workspaces/workspace-diff-summary-data";
+import { requestDashboardWorkspaceDiffSummaries } from "@/shared/workspaces/workspace-diff-summary-data";
+import { subscribeWorkspaceDataChanges } from "./workspace-data-subscription";
 
 const workspaceColumns: DataTableRendererColumn[] = [
   { id: "attempt", label: "Attempt", stat: { type: "unique" } },
@@ -24,17 +21,12 @@ const workspaceColumns: DataTableRendererColumn[] = [
 ];
 
 const subscribeWorkspaceData = (ctx: WorkbenchModuleContext, listener: () => void) => {
-  const unsubscribeData = subscribeDashboardData((change) => {
-    if (!change || ["workspaces", "sessions", "workspace_sessions", "repos", "project_repos"].includes(change.table))
-      listener();
-  });
+  const unsubscribeData = subscribeWorkspaceDataChanges(() => getDashboardSelectedProjectId(ctx), listener);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, listener);
-  const unsubscribeDiffSummaries = subscribeDashboardWorkspaceDiffSummaries(listener);
 
   return () => {
     unsubscribeData();
     unsubscribeProject();
-    unsubscribeDiffSummaries();
   };
 };
 

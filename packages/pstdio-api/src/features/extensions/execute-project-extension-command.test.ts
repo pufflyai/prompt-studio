@@ -46,3 +46,40 @@ test("explicit legacy repository commands keep their repository context", async 
     (await execute({ repo: { projectId: "project-1", repoId: "repo-1", path: "/forged" } })).outcome,
   ).toMatchObject({ status: "success", value: { workspaceId: null, repoPath: fixture.root, text: null } });
 });
+
+test("cancelling a workspace lookup prevents subsequent repository reads and command execution", async () => {
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  let repoReads = 0;
+  const deps = {
+    ...fixture.deps,
+    workspaceService: {
+      ...fixture.deps.workspaceService,
+      getDefault: async () => {
+        entered.resolve();
+        await release.promise;
+        return fixture.workspace;
+      },
+    },
+    repoService: {
+      ...fixture.deps.repoService,
+      listByProject: async (id: string) => {
+        repoReads++;
+        return fixture.deps.repoService.listByProject(id);
+      },
+    },
+  };
+  const executing = executeProjectExtensionCommand(deps, {
+    projectId: "project-1",
+    commandId: "example.context.command.inspect",
+    body: {},
+    signal: controller.signal,
+  });
+  await entered.promise;
+  controller.abort();
+  release.resolve();
+  await executing.catch(() => undefined);
+  expect(repoReads).toBe(0);
+  await expect(executing).rejects.toMatchObject({ name: "AbortError" });
+});

@@ -66,7 +66,8 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
     });
   }, [read.value, contribution.defaultValues]);
   const readOnly = state.readOnly || (!contribution.updateValue && !contribution.apply);
-  const showFooter = !readOnly && (Boolean(contribution.apply) || Boolean(contribution.reset));
+  const showFooter =
+    Boolean(read.value) && !state.loading && !readOnly && (Boolean(contribution.apply) || Boolean(contribution.reset));
   const handleChange = (id: string, input: ParamValue) => {
     const value = controlValueSchema.parse(input);
     // The command runs outside the setState updater: React may invoke updaters
@@ -80,7 +81,12 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs">
         {read.value || read.loading ? (
-          <ControlsContent state={state} contribution={contribution} readOnly={readOnly} onChange={handleChange} />
+          <ControlsContent
+            state={read.value ? state : initialState}
+            contribution={contribution}
+            readOnly={readOnly}
+            onChange={handleChange}
+          />
         ) : null}
       </ScrollArea>
       {showFooter ? (

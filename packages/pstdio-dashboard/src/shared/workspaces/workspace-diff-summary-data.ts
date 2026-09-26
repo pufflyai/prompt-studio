@@ -18,7 +18,7 @@ export interface DashboardWorkspaceDiffSummary {
 }
 
 const workspaceDiffSummariesById = new Map<string, DashboardWorkspaceDiffSummary>();
-const workspaceDiffSummaryListeners = new Set<() => void>();
+const workspaceDiffSummaryListeners = new Set<(workspaceId: string) => void>();
 
 export const formatDashboardWorkspaceDiffOverview = (summary: DashboardWorkspaceDiffSummary) =>
   `+${summary.additions} -${summary.deletions}`;
@@ -30,8 +30,8 @@ const toDashboardWorkspaceDiffSummary = (response: DashboardWorkspaceDiffSummary
   fileCount: response.file_count,
 });
 
-const notifyWorkspaceDiffSummaryListeners = () => {
-  for (const listener of workspaceDiffSummaryListeners) listener();
+const notifyWorkspaceDiffSummaryListeners = (workspaceId: string) => {
+  for (const listener of workspaceDiffSummaryListeners) listener(workspaceId);
 };
 
 const fetchDashboardWorkspaceDiffSummary = async (workspaceId: string, signal?: AbortSignal) => {
@@ -46,7 +46,7 @@ const fetchDashboardWorkspaceDiffSummary = async (workspaceId: string, signal?: 
 const writeDashboardWorkspaceDiffSummary = (summary: DashboardWorkspaceDiffSummary | null) => {
   if (!summary) return summary;
   workspaceDiffSummariesById.set(summary.workspaceId, summary);
-  notifyWorkspaceDiffSummaryListeners();
+  notifyWorkspaceDiffSummaryListeners(summary.workspaceId);
   return summary;
 };
 
@@ -81,8 +81,14 @@ export const requestDashboardWorkspaceDiffSummaries = async (workspaceIds: strin
   for (let index = 0; index < ids.length; index += 4) {
     const loaded = await settleReadBatch(
       ids.slice(index, index + 4).map((id) => async (signal) => {
-        const summary = await resolveDashboardWorkspaceDiffSummary(id, signal);
-        return [id, summary] as const;
+        try {
+          const summary = await resolveDashboardWorkspaceDiffSummary(id, signal);
+          return [id, summary] as const;
+        } catch (error) {
+          signal.throwIfAborted();
+          if (error instanceof Error && error.name === "AbortError") throw error;
+          return [id, null] as const;
+        }
       }),
       signal,
     );
@@ -92,7 +98,7 @@ export const requestDashboardWorkspaceDiffSummaries = async (workspaceIds: strin
   return summaries;
 };
 
-export const subscribeDashboardWorkspaceDiffSummaries = (listener: () => void) => {
+export const subscribeDashboardWorkspaceDiffSummaries = (listener: (workspaceId: string) => void) => {
   workspaceDiffSummaryListeners.add(listener);
   return () => {
     workspaceDiffSummaryListeners.delete(listener);
