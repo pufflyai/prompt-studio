@@ -18,11 +18,11 @@ export const loadLatestWorkspaceSessions = async (
   const entries = await Promise.all(
     [...linkedWorkspaceIds(workspaces)].map(async (workspaceId) => {
       const all = await sessions.listByWorkspace(workspaceId);
-      const latest =
-        all.findLast(
-          (session) =>
-            session.status === "queued" || session.status === "in_progress" || session.status === "awaiting_input",
-        ) ?? all.at(-1);
+      const ongoing = all.filter(
+        (session) =>
+          session.status === "queued" || session.status === "in_progress" || session.status === "awaiting_input",
+      );
+      const latest = ongoing.at(-1) ?? all.at(-1);
       return latest ? ([workspaceId, { id: latest.id, status: latest.status }] as const) : null;
     }),
   );
