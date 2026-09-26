@@ -175234,7 +175234,7 @@
         "mode": "dark"
       },
       "width": 1900,
-      "height": 1100,
+      "height": 1300,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 32,
@@ -175653,7 +175653,7 @@
               "id": "C05i76",
               "name": "Create workspace · Git worktree",
               "width": 584,
-              "height": 320,
+              "height": 280,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border",
@@ -175738,14 +175738,42 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "hx0JV",
-                          "name": "Label",
-                          "fill": "$ds-fg",
-                          "content": "Workspace type",
-                          "fontFamily": "$font-body",
-                          "fontSize": 13,
-                          "fontWeight": "normal"
+                          "type": "frame",
+                          "id": "K4XVlk",
+                          "name": "Parameter label with info popover",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "hx0JV",
+                              "name": "Label",
+                              "fill": "$ds-fg",
+                              "content": "Workspace type",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "gDMzx",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Workspace type information",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "info",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
                         },
                         {
                           "id": "H1RUU",
@@ -175762,18 +175790,6 @@
                           }
                         }
                       ]
-                    },
-                    {
-                      "type": "text",
-                      "id": "B99TbM",
-                      "name": "Provider description",
-                      "fill": "$ds-fg-subtle",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container",
-                      "content": "Git review and merge cover the entire repository.",
-                      "fontFamily": "$font-body",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
                     },
                     {
                       "type": "frame",
@@ -175856,7 +175872,7 @@
                           "id": "lGLk1",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Create ticket",
+                          "name": "Create workspace",
                           "theme": {
                             "btn": "primary",
                             "size": "sm"
@@ -175881,7 +175897,7 @@
               "id": "Kg0ti",
               "name": "Create workspace · Remote environment",
               "width": 584,
-              "height": 320,
+              "height": 280,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border",
@@ -175966,14 +175982,42 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "RrItg",
-                          "name": "Label",
-                          "fill": "$ds-fg",
-                          "content": "Workspace type",
-                          "fontFamily": "$font-body",
-                          "fontSize": 13,
-                          "fontWeight": "normal"
+                          "type": "frame",
+                          "id": "N8yocY",
+                          "name": "Parameter label with info popover",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "RrItg",
+                              "name": "Label",
+                              "fill": "$ds-fg",
+                              "content": "Workspace type",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "thrSI",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Workspace type information",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "info",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
                         },
                         {
                           "id": "SRwbs",
@@ -175990,18 +176034,6 @@
                           }
                         }
                       ]
-                    },
-                    {
-                      "type": "text",
-                      "id": "ksKyh",
-                      "name": "Provider description",
-                      "fill": "$ds-fg-subtle",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container",
-                      "content": "The provider supplies its files. Local files are not uploaded.",
-                      "fontFamily": "$font-body",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
                     },
                     {
                       "id": "TP7Di",
@@ -176065,7 +176097,7 @@
                           "id": "TrXMl",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Create ticket",
+                          "name": "Create workspace",
                           "theme": {
                             "btn": "primary",
                             "size": "sm"
@@ -176086,6 +176118,45 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "S77Jg",
+          "name": "Parameter info popover · open",
+          "width": 320,
+          "fill": "$ds-bg",
+          "cornerRadius": "$overlay-radius",
+          "stroke": "$ds-border",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "MPXTU",
+              "name": "Provider explanation",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Create an isolated branch. Git review and merge cover the entire repository, including paths outside the project folder.",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "No5df",
+          "name": "Shared dialog and parameter conventions",
+          "fill": "$ds-fg-subtle",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Use the shared dialog heading, close button, and footer actions. Parameter labels have no required asterisk. Explanations open from an info icon; Escape closes the popover and returns focus. Required fields still validate before submission.",
+          "fontFamily": "$font-body",
+          "fontSize": 13,
+          "fontWeight": "normal"
         }
       ]
     }

@@ -1,4 +1,4 @@
-import { Button, Dialog, Stack, Text } from "@chakra-ui/react";
+import { Button, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { isLocalizedString } from "@pstdio/sdk/extensions";
 import { ParamEditorRow } from "@pstdio/ui/param-editor";
@@ -65,9 +65,6 @@ const ProviderParameters = (props: ProviderParametersProps) => {
       <Dialog.Body>
         <Stack gap="sm">
           {children}
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {label(provider.description)}
-          </Text>
           {listCommandParamEntries(schema).map((entry) => (
             <CommandParamField
               key={entry.key}
@@ -84,13 +81,15 @@ const ProviderParameters = (props: ProviderParametersProps) => {
           )}
         </Stack>
       </Dialog.Body>
-      <Dialog.Footer>
-        <Button variant="ghost" disabled={busy} onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button variant="primary" loading={busy} onClick={submit}>
-          Create workspace
-        </Button>
+      <Dialog.Footer justifyContent="end">
+        <HStack gap="2">
+          <Button variant="ghost" disabled={busy} onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="primary" loading={busy} onClick={submit}>
+            Create workspace
+          </Button>
+        </HStack>
       </Dialog.Footer>
     </>
   );
@@ -106,13 +105,15 @@ export const WorkspaceProviderForm = (props: WorkspaceProviderFormProps) => {
         <Dialog.Body>
           <Text color="fg.muted">Attach a project folder or enable a workspace provider in settings.</Text>
         </Dialog.Body>
-        <Dialog.Footer>
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button variant="primary" disabled>
-            Create workspace
-          </Button>
+        <Dialog.Footer justifyContent="end">
+          <HStack gap="2">
+            <Button variant="ghost" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button variant="primary" disabled>
+              Create workspace
+            </Button>
+          </HStack>
         </Dialog.Footer>
       </>
     );
@@ -124,6 +125,7 @@ export const WorkspaceProviderForm = (props: WorkspaceProviderFormProps) => {
           id: "workspace-type",
           type: "selection",
           name: "Workspace type",
+          description: label(selected.description),
           options: providers.map((provider) => ({ id: provider.id, name: label(provider.label) })),
           defaultValue: selected.id,
           clearable: false,

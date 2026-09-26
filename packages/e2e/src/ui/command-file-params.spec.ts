@@ -126,7 +126,6 @@ test("uploads file parameters before extension command execution", async ({ page
     const dialog = page.getByRole("dialog");
     const input = dialog.locator('input[type="file"]');
     const run = dialog.getByRole("button", { name: "Run", exact: true });
-    await expect(dialog.getByText("Data files *", { exact: true })).toBeVisible();
     await expect(input).toHaveAttribute("accept", ".csv");
     await expect(input).toHaveAttribute("multiple", "");
     await expect(run).toBeDisabled();

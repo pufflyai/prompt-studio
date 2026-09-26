@@ -4,6 +4,9 @@ import { dialogAnatomy } from "@chakra-ui/react/anatomy";
 export const dialogSlotRecipe = defineSlotRecipe({
   slots: dialogAnatomy.keys(),
   base: {
+    title: {
+      textStyle: "heading/dialog",
+    },
     content: {
       bg: "bg",
       borderRadius: "xs",

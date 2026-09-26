@@ -1,4 +1,4 @@
-import { Button, Dialog, Text } from "@chakra-ui/react";
+import { Button, Dialog, HStack, Text } from "@chakra-ui/react";
 import type { CreateWorkspaceCommandParams } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -29,13 +29,15 @@ export const CreateWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput 
               <Text>Loading workspace providers...</Text>
             )}
           </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="ghost" onClick={close}>
-              Cancel
-            </Button>
-            <Button variant="primary" disabled>
-              Create workspace
-            </Button>
+          <Dialog.Footer justifyContent="end">
+            <HStack gap="2">
+              <Button variant="ghost" onClick={close}>
+                Cancel
+              </Button>
+              <Button variant="primary" disabled>
+                Create workspace
+              </Button>
+            </HStack>
           </Dialog.Footer>
         </>
       ) : (

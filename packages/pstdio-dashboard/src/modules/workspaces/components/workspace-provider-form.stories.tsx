@@ -1,4 +1,4 @@
-import { Dialog } from "@chakra-ui/react";
+import { CloseButton, Dialog } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { WorkspaceProviderForm } from "./workspace-provider-form";
 
@@ -31,13 +31,17 @@ const meta = {
   args: { providers: [git, remote], onSubmit: async () => {}, onCancel: () => {} },
   decorators: [
     (Story) => (
-      <Dialog.Root open>
+      <Dialog.Root open size="sm" placement="center" scrollBehavior="inside" closeOnInteractOutside={false}>
+        <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
               <Dialog.Title>Create workspace</Dialog.Title>
             </Dialog.Header>
             <Story />
+            <Dialog.CloseTrigger asChild>
+              <CloseButton size="sm" aria-label="Close Create workspace" />
+            </Dialog.CloseTrigger>
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>
