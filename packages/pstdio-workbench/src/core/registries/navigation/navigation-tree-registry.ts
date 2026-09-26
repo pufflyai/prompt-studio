@@ -12,6 +12,7 @@ export interface NavigationTreeOwner {
 
 export interface NavigationTreeContext {
   resource?: ResourceRef;
+  signal?: AbortSignal;
 }
 
 export interface NavigationTreeContribution {
@@ -146,9 +147,11 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       const sections: TreeViewSection[] = [];
       const moveScope = ownerId(owner);
       for (const contribution of matching(owner, slot)) {
+        context.signal?.throwIfAborted();
         const sourceSections = contribution.viewId
           ? await input.getViewSections?.(contribution.viewId, context)
           : await contribution.getSections?.(context);
+        context.signal?.throwIfAborted();
         for (const section of sourceSections ?? []) {
           mergeSection(sections, projectSection(section, contribution, moveScope));
         }
@@ -157,6 +160,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     },
 
     async getChildren(node, context = {}) {
+      context.signal?.throwIfAborted();
       const source = nodeSources.get(node);
       if (!source) return node.children ?? [];
       const moveScope = node.moveScope ?? ownerId(source.contribution.owner);

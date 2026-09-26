@@ -1,5 +1,5 @@
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { createFileMount } from "pstdio-extensions";
+import { createFileMount, createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolveLocalWorkspaceTarget, type WorkspaceTargetInput } from "./workspace-target";
 
@@ -17,8 +17,15 @@ export const resolveWorkspaceFilesPath = async (
   return target.root;
 };
 
-export const createWorkspaceFileMount = (resolvePath: (access: FileAccess) => Promise<string>): ArtifactMount => {
-  const mount = async (access: FileAccess) => createFileMount(await resolvePath(access));
+export const createWorkspaceFileMount = (
+  resolvePath: (access: FileAccess) => Promise<string>,
+  signal?: AbortSignal,
+): ArtifactMount => {
+  const mount = async (access: FileAccess) =>
+    createFileMount(
+      access === "read" ? await createReadBoundary(signal)(() => resolvePath(access)) : await resolvePath(access),
+      signal,
+    );
   return {
     exists: async (path) => (await mount("read")).exists(path),
     readText: async (path) => (await mount("read")).readText(path),

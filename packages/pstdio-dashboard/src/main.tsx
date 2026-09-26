@@ -26,7 +26,13 @@ const renderDashboard = async () => {
   (window as unknown as Record<string, unknown>).__pstdioDashboardWorkbench = dashboardWorkbench;
   const renderParamField = createDashboardParamFieldRenderer(dashboardWorkbench);
 
-  createRoot(document.getElementById("root")!).render(
+  const root = createRoot(document.getElementById("root")!);
+  window.addEventListener("pagehide", (event) => {
+    if (event.persisted) return;
+    root.unmount();
+    void dashboardWorkbench.dispose();
+  });
+  root.render(
     <StrictMode>
       <QueryClientProvider client={dashboardQueryClient}>
         <KanbanRendererStorageProvider storage={storage}>

@@ -32,13 +32,13 @@ export const workspaceDiffFileQueryKey = (workspaceId: string, mode: WorkspaceDi
 export const workspaceFilesQueryOptions = (workspaceId: string, input: ListWorkspaceFilesInput) =>
   queryOptions({
     queryKey: workspaceFilesQueryKey(workspaceId, input),
-    queryFn: () => getApiClient().workspaces.listFiles(workspaceId, input),
+    queryFn: ({ signal }) => getApiClient().workspaces.listFiles(workspaceId, input, { signal }),
   });
 
 export const workspaceFileQueryOptions = (workspaceId: string, path: string) =>
   queryOptions({
     queryKey: workspaceFileQueryKey(workspaceId, path),
-    queryFn: () => getApiClient().workspaces.readFile(workspaceId, path),
+    queryFn: ({ signal }) => getApiClient().workspaces.readFile(workspaceId, path, { signal }),
   });
 
 export const workspaceDiffFilesQueryOptions = (workspaceId: string, mode: WorkspaceDiffMode) =>

@@ -58,7 +58,13 @@ const registerRenderer = (
     projectId: context.projectId,
     context: { dataTableRendererId: record.id },
   });
-  const run = (commandId: string, params: Record<string, unknown>, resource?: ResourceRef, modeId?: string) =>
+  const run = (
+    commandId: string,
+    params: Record<string, unknown>,
+    resource?: ResourceRef,
+    modeId?: string,
+    signal?: AbortSignal,
+  ) =>
     executeWorkbenchExtensionCommand(context, commandId, {
       params: {
         renderer: {
@@ -71,6 +77,7 @@ const registerRenderer = (
         ...params,
       },
       resource,
+      signal,
       slot,
       metadata: { dataTableRendererId: record.id },
     });
@@ -94,8 +101,8 @@ const registerRenderer = (
       })),
       emptyTitle: record.emptyTitle ? localize(record.emptyTitle) : undefined,
       emptyDescription: record.emptyDescription ? localize(record.emptyDescription) : undefined,
-      executeQuery: async ({ resource, modeId }) => {
-        const value = await run(record.queryHandlerId, {}, resource, modeId);
+      executeQuery: async ({ resource, modeId }, signal) => {
+        const value = await run(record.queryHandlerId, {}, resource, modeId, signal);
         if (!isQueryResult(value)) return { rows: [] };
         const rows = value.rows.map((row) => {
           const mapped = toRow(row);

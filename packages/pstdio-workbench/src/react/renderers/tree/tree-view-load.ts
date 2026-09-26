@@ -1,4 +1,5 @@
 import type { TreeNode, TreeQueryContext, TreeRendererRegistry, TreeViewSection } from "../../../core";
+import { settleReadBatch } from "../../../core/registries/views/settle-read-batch";
 
 const isUnregisteredTreeError = (trees: TreeRendererRegistry, treeId: string, error: unknown) =>
   error instanceof Error &&
@@ -28,19 +29,26 @@ export const loadExpandedTreeChildren = async (
   const visited = new Set<string>();
   const childrenByNodeId: Record<string, TreeNode[]> = {};
 
-  const loadNodes = async (nodes: TreeNode[]) => {
-    await Promise.all(
-      nodes.map(async (node) => {
-        if (!expanded.has(node.id) || visited.has(node.id)) return;
-        visited.add(node.id);
-        const children = node.children ?? (await trees.getChildren(treeId, node, ctx));
+  const queue = listTreeNodes(data);
+  while (queue.length) {
+    ctx.signal?.throwIfAborted();
+    const batch: TreeNode[] = [];
+    while (queue.length && batch.length < 4) {
+      const node = queue.shift()!;
+      if (!expanded.has(node.id) || visited.has(node.id)) continue;
+      visited.add(node.id);
+      batch.push(node);
+    }
+    const children = await settleReadBatch(
+      batch.map((node) => async (signal: AbortSignal) => {
+        const children = node.children ?? (await trees.getChildren(treeId, node, { ...ctx, signal }));
         if (!node.children) childrenByNodeId[node.id] = children;
-        await loadNodes(children);
+        return children;
       }),
+      ctx.signal,
     );
-  };
-
-  await loadNodes(listTreeNodes(data));
+    queue.push(...children.flat());
+  }
   return childrenByNodeId;
 };
 
@@ -60,11 +68,14 @@ export const loadTreeData = async (
   if (!trees.getTreeRenderer(treeId)) return null;
 
   try {
-    const [header, body, footer] = await Promise.all([
-      trees.getHeader(treeId, ctx),
-      trees.getBody(treeId, ctx),
-      trees.getFooter(treeId, ctx),
-    ]);
+    const [header, body, footer] = await settleReadBatch(
+      [
+        (signal) => trees.getHeader(treeId, { ...ctx, signal }),
+        (signal) => trees.getBody(treeId, { ...ctx, signal }),
+        (signal) => trees.getFooter(treeId, { ...ctx, signal }),
+      ],
+      ctx.signal,
+    );
     return { header, body, footer };
   } catch (error) {
     if (isUnregisteredTreeError(trees, treeId, error)) return null;

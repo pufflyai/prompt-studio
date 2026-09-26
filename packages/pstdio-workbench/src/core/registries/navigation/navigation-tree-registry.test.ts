@@ -4,6 +4,40 @@ import { createNavigationTreeRegistry } from "./navigation-tree-registry";
 const project = { kind: "mode" as const, id: "project", extensionId: "pstdio" };
 
 describe("navigation tree registry", () => {
+  test("cancelling composed navigation prevents later contribution reads", async () => {
+    const controller = new AbortController();
+    const entered = Promise.withResolvers<void>();
+    const released = Promise.withResolvers<void>();
+    const registry = createNavigationTreeRegistry();
+    let laterReads = 0;
+    registry.registerContribution({
+      id: "first",
+      owner: project,
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: async () => {
+        entered.resolve();
+        await released.promise;
+        return [];
+      },
+    });
+    registry.registerContribution({
+      id: "later",
+      owner: project,
+      sourceExtensionId: "pstdio",
+      declarationIndex: 1,
+      getSections: () => {
+        laterReads++;
+        return [];
+      },
+    });
+    const result = registry.getSections(project, "content", { signal: controller.signal });
+    await entered.promise;
+    controller.abort();
+    released.resolve();
+    await expect(result).rejects.toThrow();
+    expect(laterReads).toBe(0);
+  });
   test("keeps owner declarations first and sorts foreign extensions by fully qualified id", async () => {
     const registry = createNavigationTreeRegistry();
     registry.registerContribution({

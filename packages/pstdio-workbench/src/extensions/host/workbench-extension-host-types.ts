@@ -42,7 +42,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   createWebviewHostCapabilityOverrides?: CreateBridgeWebviewHostCapabilities;
   createWebviewProps?: CreateBridgeWebviewProps;
   createWebviewTheme?: CreateBridgeWebviewTheme;
-  executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   kanbanAdapter?: WorkbenchExtensionKanbanRendererAdapter;
   menuSlotsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuTargetsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;

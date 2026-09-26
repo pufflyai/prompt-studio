@@ -60,7 +60,7 @@ export interface KanbanRendererContribution<
    * / filter / sort. The renderer re-applies filter / sort / group locally,
    * so this can return unfiltered rows in simple cases.
    */
-  executeQuery(state: KanbanRendererQueryState): Promise<TRow[]> | TRow[];
+  executeQuery(state: KanbanRendererQueryState, signal: AbortSignal): Promise<TRow[]> | TRow[];
   subscribe?: (listener: () => void) => Disposable | (() => void);
 
   /** Row activation surfaced by the renderer (mirrored from <KanbanRenderer>). */

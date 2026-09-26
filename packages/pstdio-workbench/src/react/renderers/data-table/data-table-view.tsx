@@ -9,15 +9,17 @@ import {
   DataTableSkeleton,
   type RowData,
 } from "@pstdio/ui/data-table";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type {
   DataTableRendererQueryResult,
   RegisteredDataTableRendererContribution,
   WorkbenchCore,
   WorkbenchPanelInstance,
 } from "../../../core";
-import { getWorkbenchRenderers } from "../../../core";
+import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
+import { RendererReadNotice } from "../renderer-read-notice";
+import { useRendererRead } from "../use-renderer-read";
 import {
   buildDataTableRendererData,
   resolveDataTableRendererColumns,
@@ -32,46 +34,32 @@ interface WorkbenchDataTableViewProps {
   placement: WorkbenchPanelInstance;
 }
 const initialResult: DataTableRendererQueryResult = { rows: [] };
-// Tabs unmount when they deactivate, so without a cache every revisit flashes a
-// loading state. The last result renders instantly while the fresh query runs.
-const lastResults = new Map<string, DataTableRendererQueryResult>();
-const resultCacheKey = (contributionId: string, placement: WorkbenchPanelInstance) =>
-  `${contributionId} ${resourceKey(placement.resource) ?? ""}`;
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
-  const cacheKey = resultCacheKey(contribution.id, placement);
-  const [result, setResult] = useState(() => lastResults.get(cacheKey) ?? initialResult);
-  const [loading, setLoading] = useState(() => !lastResults.has(cacheKey));
-  const requestRef = useRef(0);
-  useEffect(() => {
-    let cancelled = false;
-    const runQuery = () => {
-      requestRef.current += 1;
-      const requestId = requestRef.current;
-      Promise.resolve(
-        contribution.executeQuery({ resource: placement.resource, modeId: workbench.modes.getActiveModeId() }),
-      ).then((next) => {
-        if (cancelled || requestRef.current !== requestId) return;
-        lastResults.set(cacheKey, next);
-        setResult(next);
-        setLoading(false);
+  const read = useRendererRead({
+    workbench,
+    ownerKey: rendererReadKey(placement),
+    queryKey: JSON.stringify([contribution.id, resourceKey(placement.resource), workbench.modes.getActiveModeId()]),
+
+    load: (signal) =>
+      contribution.executeQuery({ resource: placement.resource, modeId: workbench.modes.getActiveModeId() }, signal),
+    subscribe: (refresh) => {
+      const subscription = contribution.subscribe?.(refresh);
+      const events = getWorkbenchRenderers(workbench).onDidRefreshDataTableRenderer((event) => {
+        if (event.dataTableRendererId === contribution.id) refresh();
       });
-    };
-    runQuery();
-    const subscription = contribution.subscribe?.(runQuery);
-    const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshDataTableRenderer((event) => {
-      if (event.dataTableRendererId === contribution.id) runQuery();
-    });
-    return () => {
-      cancelled = true;
-      if (typeof subscription === "function") subscription();
-      else subscription?.dispose();
-      refreshSubscription.dispose();
-    };
-  }, [cacheKey, contribution, placement.resource, workbench]);
+      return () => {
+        if (typeof subscription === "function") subscription();
+        else subscription?.dispose();
+        events.dispose();
+      };
+    },
+  });
+  const result = read.value ?? initialResult;
+  const loading = read.loading && !read.value;
   const columns = resolveDataTableRendererColumns(result, contribution.columns);
-  const model = useMemo(() => buildDataTableRendererData(result.rows, columns), [columns, result.rows]);
+  const model = buildDataTableRendererData(result.rows, columns);
   const labels = Object.fromEntries(
     columns.filter((column) => column.label).map((column) => [column.id, column.label!]),
   );
@@ -119,13 +107,18 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       </Stack>
     );
   }
+  if (!read.value && read.error) return <RendererReadNotice error={read.error} retry={read.retry} />;
   if (result.rows.length === 0) {
     return (
-      <EmptyState h="full" title={contribution.emptyTitle ?? "No rows"} description={contribution.emptyDescription} />
+      <Stack h="full" gap="0">
+        {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
+        <EmptyState h="full" title={contribution.emptyTitle ?? "No rows"} description={contribution.emptyDescription} />
+      </Stack>
     );
   }
   return (
     <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
+      {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <DataTable
         data={model.data}
         getRowId={(data) => model.rowByData.get(data)?.id ?? ""}

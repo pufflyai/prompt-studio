@@ -76,6 +76,6 @@ export {
 } from "./runtime";
 export { collectConventionDiagnostics } from "./runtime/conventions";
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
+export { createReadBoundary } from "./runtime/read-boundary";
 export { workbenchIconNames } from "./runtime/workbench-icon-names";
-
 export type * from "./types";

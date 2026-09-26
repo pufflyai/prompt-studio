@@ -281,13 +281,20 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               localize,
             ),
           onRowActivate,
-          executeQuery: async (state: KanbanRendererQueryState) => {
+          executeQuery: async (state: KanbanRendererQueryState, signal) => {
             latestQueryId += 1;
             const queryId = latestQueryId;
-            const value = await executeKanbanRendererCommand(context, record, record.queryHandlerId, {
-              settings: state.settings,
-              filters: state.filters,
-            });
+            const value = await executeKanbanRendererCommand(
+              context,
+              record,
+              record.queryHandlerId,
+              {
+                settings: state.settings,
+                filters: state.filters,
+              },
+              undefined,
+              signal,
+            );
             const mapRows = (rows: unknown[]) =>
               rows.map((row) => {
                 const mapped = toWorkbenchRow(row, rowResource);

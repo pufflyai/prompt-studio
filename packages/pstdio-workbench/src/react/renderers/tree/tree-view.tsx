@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type ResourceContextAction, ScrollArea, TreeList, TreeListDragProvider } from "@pstdio/ui";
-import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   NavigationTarget,
   ResourceRef,
@@ -14,6 +14,7 @@ import type { CommandParamFieldRenderer } from "../../command-palette/command-pa
 import { WorkbenchIcon } from "../../shared/icon";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
+import { RendererReadNotice } from "../renderer-read-notice";
 import type { TreeActionParamsRequest } from "./tree-actions";
 import {
   filterTreeListSelection,
@@ -30,6 +31,7 @@ import { useTreeData } from "./use-tree-data";
 import { useTreeViewCustomization } from "./use-tree-view-customization";
 
 interface WorkbenchTreeViewProps {
+  readOwnerKey?: string;
   workbench: WorkbenchCore;
   treeViewId: string;
   activeNodeId?: string | null;
@@ -105,7 +107,6 @@ interface ToggleTreeNodeContext {
   footer: TreeViewSection[];
   childrenByNodeId: Record<string, TreeNode[]>;
   expandedNodeIds: string[];
-  setChildrenByNodeId: Dispatch<SetStateAction<Record<string, TreeNode[]>>>;
 }
 
 const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string) => {
@@ -118,11 +119,7 @@ const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string
   getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded);
   if (expanded || context.childrenByNodeId[nodeId] || node.children) return;
 
-  void getWorkbenchRenderers(context.workbench)
-    .getChildren(context.treeViewId, node, { resource: context.resource, viewId: context.viewId })
-    .then((children) => {
-      context.setChildrenByNodeId((current) => ({ ...current, [nodeId]: children }));
-    });
+  getWorkbenchRenderers(context.workbench).refresh(context.treeViewId);
 };
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
@@ -145,12 +142,13 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const activeLocation = useWorkbenchStore(workbench.pages.store, (state) => state.location);
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) => resolveTreeActiveResource(state.layout));
-  const { body, childrenByNodeId, error, footer, header, loading, setChildrenByNodeId } = useTreeData(
+  const { body, childrenByNodeId, error, footer, header, loading, retry } = useTreeData(
     workbench,
     treeViewId,
     resource,
     viewId,
     treeRenderer?.searchable ? filter.trim() || undefined : undefined,
+    props.readOwnerKey,
   );
   const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
 
@@ -204,7 +202,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     footer,
     childrenByNodeId,
     expandedNodeIds: treeState.expandedNodeIds,
-    setChildrenByNodeId,
   });
 
   const toggleSection = (sectionId: string) => {
@@ -278,6 +275,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           value={filter}
           onChange={setFilter}
         />
+        {error ? <RendererReadNotice error={error} retry={retry} /> : null}
         <ScrollArea
           flex="1"
           minH="0"

@@ -4,7 +4,7 @@ import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleCont
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 export interface WorkbenchExtensionCommandContext {
-  executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   prepareCommandArgs?(
     commandId: string,
     args: unknown,
@@ -16,6 +16,7 @@ export interface WorkbenchExtensionCommandContext {
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
   workspaceId?: string;
+  signal?: AbortSignal;
   metadata?: Record<string, unknown>;
   params?: Record<string, unknown>;
   resource?: ResourceRef;
@@ -55,15 +56,19 @@ export const executeWorkbenchExtensionCommandResponse = async (
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
   const resource = input.resource;
-  const response = await context.executeCommand(commandId, {
-    projectId: context.projectId,
-    ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
-    ...(input.params ? { params: input.params } : {}),
-    ...(resource ? { resource } : {}),
-    ...(input.slot ? { slot: input.slot } : {}),
-    source: "dashboard",
-    ...(input.metadata ? { metadata: input.metadata } : {}),
-  });
+  const response = await context.executeCommand(
+    commandId,
+    {
+      projectId: context.projectId,
+      ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
+      ...(input.params ? { params: input.params } : {}),
+      ...(resource ? { resource } : {}),
+      ...(input.slot ? { slot: input.slot } : {}),
+      source: "dashboard",
+      ...(input.metadata ? { metadata: input.metadata } : {}),
+    },
+    input.signal,
+  );
   unwrapCommandValue(response);
   const outcome = (response as Partial<CommandExecuteResponse> | undefined)?.outcome;
   if (outcome?.status === "success") {

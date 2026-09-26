@@ -61,11 +61,14 @@ test("keeps rows and query metadata from the latest overlapping request", async 
   );
 
   const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("recipes")!;
-  const workflowQuery = renderer.executeQuery(queryState);
-  const reviewQuery = renderer.executeQuery({
-    ...queryState,
-    settings: { ...queryState.settings, columnGrouping: "review" },
-  });
+  const workflowQuery = renderer.executeQuery(queryState, new AbortController().signal);
+  const reviewQuery = renderer.executeQuery(
+    {
+      ...queryState,
+      settings: { ...queryState.settings, columnGrouping: "review" },
+    },
+    new AbortController().signal,
+  );
   review.resolve({
     rows: [{ id: "latest", title: "Latest", attributes: {} }],
     attributes: [
