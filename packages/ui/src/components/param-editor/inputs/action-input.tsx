@@ -38,6 +38,7 @@ export const ActionInput = (props: ActionInputProps) => {
         options={options}
         selectedIds={active ? [active] : []}
         multiSelect={false}
+        reselectable
         disabled={readOnly}
         onToggle={run}
       />

@@ -33,6 +33,18 @@ const survivors = async (marker: string) => {
 };
 
 describe("createProcessApi", () => {
+  for (const method of ["run", "spawnDetached"] as const) {
+    test(`does not ${method} after cleanup queued between target lookup and spawn`, async () => {
+      const scope = createInvocationScope({ logger: silentLogger });
+      const api = createProcessApi({ scope, resolveCwd: async () => process.cwd() });
+      const pending = api[method]({ command: [process.execPath, "-e", "console.log('finished')"] });
+      queueMicrotask(() => {
+        void scope.close();
+      });
+      await expect(pending).rejects.toThrow("Invocation ended");
+    });
+  }
+
   test("hides Windows consoles for command probes", async () => {
     const calls: unknown[] = [];
     const api = createProcessApi({

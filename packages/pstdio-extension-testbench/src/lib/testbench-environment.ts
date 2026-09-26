@@ -155,6 +155,7 @@ export const createBenchEnvironment = (
     },
     sessions: {
       addAnchors: async () => {},
+      removeAnchors: async () => {},
       get: async () => null,
       list: async () => [],
       listByWorkspace: async () => [],
@@ -167,6 +168,10 @@ export const createBenchEnvironment = (
       followup: async () => {},
     },
     workspaces: {
+      addAnchors: async () => {},
+      removeAnchors: async () => {},
+      listProviders: async () => [],
+      getDefault: async () => seed?.workspaces?.find((workspace) => workspace.is_default) ?? null,
       list: async () => seed?.workspaces ?? [],
       archive: async (id) => ({ id }),
       cancel: async (id) => ({ id }),
@@ -189,6 +194,16 @@ export const createBenchEnvironment = (
       dismiss: async () => [],
       resolve: async () => [],
       toast: async () => {},
+    },
+    automation: {
+      enqueue: async () => {
+        throw new Error("Durable automation requires the host runtime.");
+      },
+      get: async () => undefined,
+      list: async () => [],
+      cancel: async () => {
+        throw new Error("Durable automation requires the host runtime.");
+      },
     },
     process: {
       run: async () => ({ exitCode: 0, stderr: "", stdout: "" }),

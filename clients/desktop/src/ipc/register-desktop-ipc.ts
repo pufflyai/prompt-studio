@@ -25,6 +25,7 @@ type DesktopIpcOptions = {
   quitApp: () => Promise<void>;
   retryRuntime: () => Promise<void>;
   runtimeOrigin: () => string | null;
+  setKanbanView: (key: string, value: string | null) => void;
   setPageLocation: (projectId: string, value: string | null) => void;
   setSelectedProjectId: (projectId: string | null) => void;
   webContents: () => WebContents[];
@@ -77,6 +78,16 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   handle(DESKTOP_CHANNELS.getWorkbenchState, options.getWorkbenchState);
   handle(DESKTOP_CHANNELS.getProjectTabs, options.getProjectTabs);
   handle(DESKTOP_CHANNELS.setProjectTabs, options.setProjectTabs);
+  handle(DESKTOP_CHANNELS.setKanbanView, (key, value) => {
+    if (
+      typeof key !== "string" ||
+      !key.startsWith("pstdio/ui/kanban-renderer/") ||
+      (typeof value !== "string" && value !== null)
+    ) {
+      throw new Error("Invalid desktop kanban view update");
+    }
+    options.setKanbanView(key, value);
+  });
   handle(DESKTOP_CHANNELS.setPageLocation, (projectId, value) => {
     if (typeof projectId !== "string" || !projectId || (typeof value !== "string" && value !== null)) {
       throw new Error("Invalid desktop page location update");

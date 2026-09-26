@@ -1,7 +1,6 @@
 import type { CreateAutomationRunInput } from "pstdio-api-contracts";
 import { validateCommandParams } from "pstdio-extensions";
 import {
-  type AutomationAuth,
   type AutomationPolicyDeps,
   AutomationRequestError,
   inputHash,
@@ -12,7 +11,7 @@ import {
 
 export const admitAutomationRun = async (input: {
   deps: AutomationPolicyDeps;
-  auth: AutomationAuth;
+  auth: { principal: { id: string } } & ({ token: { id: string } } | { token: null; extensionId: string });
   projectId: string;
   idempotencyKey: string;
   body: CreateAutomationRunInput;
@@ -52,16 +51,19 @@ export const admitAutomationRun = async (input: {
   const commandDeps = deps.getCommandDeps();
   const snapshot = await commandDeps.extensionRuntimeCatalog.get(projectId);
   const command = snapshot.runtime.commands.find(
-    (candidate) => candidate.id === body.commandId && candidate.automation,
+    (candidate) =>
+      candidate.id === body.commandId &&
+      candidate.automation &&
+      (auth.token !== null || candidate.extensionId === auth.extensionId),
   );
-  if (!command) throw new AutomationRequestError("automation_scope_denied", "Machine token scope denied.", 403);
+  if (!command) throw new AutomationRequestError("automation_scope_denied", "Automation command scope denied.", 403);
   const validation = validateCommandParams(command.params, body.input.params ?? {});
   if (!validation.ok) throw new AutomationRequestError("invalid_automation_input", validation.reason, 400);
 
   const stored = await deps.automationDBService.createRun({
     projectId,
     principalId: auth.principal.id,
-    tokenId: auth.token.id,
+    tokenId: auth.token?.id ?? null,
     commandId: body.commandId,
     idempotencyKey,
     inputHash: hash,

@@ -5,6 +5,7 @@ import { loadEmbedConfig } from "../build/embed-manifest";
 import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./compiled-bun-smoke";
 import { preparePackagedSmokeBrowser, resolvePackagedRuntimeTestArgs } from "./packaged-runtime-smoke";
 import { verifyPublicPackages } from "./public-package-consumer";
+import { verifyPublishedTypeExports } from "./published-type-exports";
 
 const config = loadEmbedConfig();
 const platformPackage = getHostPlatformPackage(config.platformBinaries);
@@ -27,6 +28,7 @@ if (build.status !== 0) {
   process.exit(build.status ?? 1);
 }
 
+await verifyPublishedTypeExports(process.cwd());
 verifyPublicPackages(process.cwd());
 
 let failed = false;

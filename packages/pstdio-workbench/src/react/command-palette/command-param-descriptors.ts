@@ -11,8 +11,7 @@ const asText = (value: CommandParamValue) => (typeof value === "string" ? value 
 
 const asList = (value: CommandParamValue) => (Array.isArray(value) ? value : []);
 
-/** Required params carry the marker in their name — the editor has no required state. */
-export const commandParamName = (entry: CommandParamEntry) => `${entry.label}${entry.required ? " *" : ""}`;
+export const commandParamName = (entry: CommandParamEntry) => entry.label;
 
 const commandParamOptions = (entry: CommandParamEntry): SelectionOption[] =>
   (entry.options ?? []).map((option) => ({ id: option.value, name: option.label, icon: option.icon }));

@@ -51,7 +51,7 @@
     "@electron/fuses": "2",
     "@electron/windows-sign": "1.2.2",
     "@playwright/test": "1.60.0",
-    "@storybook/react-vite": "^10.1.9",
+    "@storybook/react-vite": "^10.6.0",
     "@types/bun": "1.4.2",
     "@types/node": "25.5.2",
     "@types/react": "19.2.14",
@@ -60,7 +60,7 @@
     "@vitejs/plugin-react": "5.1.1",
     "electron": "43.6.0",
     "fflate": "0.8.3",
-    "storybook": "^10.1.9",
+    "storybook": "^10.6.0",
     "typescript": "6.0.2",
     "vite": "7.3.5",
     "workbench-fixture": "workspace:*"

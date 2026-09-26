@@ -29,8 +29,8 @@ describe("parseCodexModels", () => {
             label: "Reasoning effort",
             defaultValue: "high",
             options: [
-              { label: "Low", value: "low", icon: "Gauge" },
-              { label: "High", value: "high", icon: "Zap" },
+              { label: "Low", value: "low", icon: "level-low" },
+              { label: "High", value: "high", icon: "level-high" },
             ],
           },
         },

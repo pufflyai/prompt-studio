@@ -1,6 +1,7 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray, ne } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { type ResourceRef, session_queue_entries, sessions } from "../../db/schemas.pg";
+import { mergeResourceAnchors, removeResourceAnchors } from "../resource-anchors";
 import {
   archiveQueued,
   cancelQueued,
@@ -275,6 +276,25 @@ export const createSessionsDBService = (db: DbClient) => {
     requeueAfterTerminal: (id: string) => requeueAfterTerminal(db, id),
     cancelQueued: (id: string) => cancelQueued(db, id),
     archiveQueued: (id: string) => archiveQueued(db, id),
+    addAnchors: async (id: string, anchors: ResourceRef[]) => {
+      const [updated] = await db
+        .update(sessions)
+        .set({
+          anchors_json: mergeResourceAnchors(sessions.anchors_json, anchors),
+          updated_at: new Date().toISOString(),
+        })
+        .where(eq(sessions.id, id))
+        .returning();
+      return updated ?? null;
+    },
+    removeAnchors: async (id: string, refs: Pick<ResourceRef, "type" | "id">[]) => {
+      const [updated] = await db
+        .update(sessions)
+        .set({ anchors_json: removeResourceAnchors(sessions.anchors_json, refs), updated_at: new Date().toISOString() })
+        .where(and(eq(sessions.id, id), ne(sessions.anchors_json, removeResourceAnchors(sessions.anchors_json, refs))))
+        .returning();
+      return updated ?? null;
+    },
     get,
     list,
     listByStatus,

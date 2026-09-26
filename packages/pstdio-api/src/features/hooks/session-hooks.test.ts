@@ -10,6 +10,7 @@ const resolve = (...args: Parameters<typeof resolveSessionLifecyclePayload>) =>
 const depsWithWorkspace = (workspace: unknown): SessionHookDeps =>
   ({
     workspaceSessionService: { getWorkspaceBySessionId: async () => workspace },
+    repoService: { listByProject: async () => [{ id: "repo-1", path: "/project" }] },
   }) as unknown as SessionHookDeps;
 
 describe("resolveSessionLifecyclePayload", () => {
@@ -27,9 +28,48 @@ describe("resolveSessionLifecyclePayload", () => {
 
     expect(payload.workspaceId).toBe("ws-1");
     expect(payload.worktreePath).toBe("/wt/1");
+    expect(payload.workspaceDir).toBe("/wt/1");
+    expect(payload.workspace?.root_path).toBe("/wt/1");
     expect(payload.branch).toBe("feature/t-1");
     expect(payload.anchors).toEqual([ticketAnchor]);
     expect(payload.workspace?.anchors_json).toEqual([ticketAnchor]);
+  });
+
+  test("reports the project folder for a default workspace without a stored worktree path", async () => {
+    const payload = await resolve(
+      depsWithWorkspace({
+        id: "ws-default",
+        project_id: session.project_id,
+        provider_id: "pstdio.root",
+        is_default: true,
+        execution_kind: "local",
+        worktree_path: null,
+      }),
+      session,
+    );
+
+    expect(payload.workspaceDir).toBe("/project");
+    expect(payload.workspace?.root_path).toBe("/project");
+    expect(payload.worktreePath).toBeUndefined();
+  });
+
+  test("keeps a remote session without a local directory even when the project has a repository", async () => {
+    const providerRef = { version: 1, data: { environmentId: "remote-1" } };
+    const payload = await resolve(
+      depsWithWorkspace({
+        id: "ws-remote",
+        project_id: session.project_id,
+        provider_id: "cloud.environment",
+        provider_ref_json: providerRef,
+        execution_kind: "remote",
+        worktree_path: null,
+      }),
+      session,
+    );
+
+    expect(payload.workspaceDir).toBeUndefined();
+    expect(payload.workspace).toMatchObject({ root_path: null, provider_ref_json: providerRef });
+    expect(payload.worktreePath).toBeUndefined();
   });
 
   test("returns only the base payload when the session has no workspace", async () => {

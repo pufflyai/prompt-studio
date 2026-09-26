@@ -60,6 +60,9 @@ export const menuSlotRecipe = defineSlotRecipe({
 
     itemIndicator: {
       color: "fg",
+      marginInlineStart: "auto",
+      order: 1,
+      flexShrink: 0,
     },
 
     separator: {

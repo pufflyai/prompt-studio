@@ -16544,7 +16544,7 @@
                       "type": "frame",
                       "id": "sgbRV",
                       "name": "cmp/MenuRow",
-                      "context": "@pstdio/ui ListRow variant='full-width' as rendered inside SearchableMenu. h 28 (auto when Description is on, py 8), px 12, gap 8. Label label/S/regular 12/400 Onest; Description label/XS 10/400 fg.muted. Icon 14px fg.muted (16px for compact empty-state rows, which also use cornerRadius 4). Selection is a bg.active fill - there is no check mark. menu theme axis: default | hover | selected | disabled.",
+                      "context": "Shared dropdown row. Leading icon and label; selected items show a checkmark at the far right. Checkmarks never replace the leading icon.",
                       "theme": {
                         "menu": "default"
                       },
@@ -16625,11 +16625,11 @@
                           "id": "OxQag",
                           "x": 0,
                           "y": 0,
-                          "name": "End",
+                          "name": "Selection checkmark",
                           "enabled": false,
                           "width": 14,
                           "height": 14,
-                          "icon": "chevron-down",
+                          "icon": "check",
                           "library": "lucide",
                           "fill": "$ds-fg-muted"
                         }
@@ -137811,8 +137811,8 @@
                               "type": "icon",
                               "id": "T0trq",
                               "name": "Temperature help icon",
-                              "width": 13,
-                              "height": 13,
+                              "width": 12,
+                              "height": 12,
                               "icon": "circle-help",
                               "library": "lucide",
                               "fill": "#8B9099"
@@ -137902,7 +137902,7 @@
                               "fill": "#8B9099",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "One source description powers stacked and horizontal editors.",
+                              "content": "Compact information icons have no button background. Hover or focus reveals the description.",
                               "fontFamily": "Inter",
                               "fontSize": 10,
                               "fontWeight": "normal"
@@ -175221,6 +175221,937 @@
               "fontWeight": "normal"
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "LmcML",
+      "x": 40909,
+      "y": -11572,
+      "name": "Folder onboarding and workspace providers",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1900,
+      "height": 1300,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 32,
+      "padding": 32,
+      "children": [
+        {
+          "type": "frame",
+          "id": "Wk3EM",
+          "name": "Folder picker states",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "I2wLw",
+              "name": "cmp/FolderPicker",
+              "reusable": true,
+              "width": 584,
+              "height": 496,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "WCuXU",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "height": 52,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "p47wy",
+                      "name": "Title",
+                      "fill": "$ds-fg",
+                      "content": "Open project folder",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jWHZa",
+                  "name": "Body",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nm5fu",
+                      "name": "Navigation",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "id": "D5TnMu",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Home",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "house"
+                            }
+                          }
+                        },
+                        {
+                          "id": "zsgoJ",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Parent",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up"
+                            }
+                          }
+                        },
+                        {
+                          "id": "jePoE",
+                          "type": "ref",
+                          "ref": "nbn0J",
+                          "name": "Folder path",
+                          "width": "fill_container",
+                          "descendants": {
+                            "hcIyD": {
+                              "content": "/Users/alex/Documents",
+                              "fill": "$ds-fg"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e3c889",
+                      "name": "Folder actions",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "id": "T9klK",
+                          "type": "ref",
+                          "ref": "nbn0J",
+                          "name": "Filter folders",
+                          "width": "fill_container",
+                          "descendants": {
+                            "hcIyD": {
+                              "content": "Filter folders"
+                            }
+                          }
+                        },
+                        {
+                          "id": "nZbUt",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "New folder",
+                          "theme": {
+                            "btn": "outline",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "icon": "folder-plus"
+                            },
+                            "Hf4GT": {
+                              "content": "New folder"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "num3Q",
+                      "name": "Folders",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "U5wtCV",
+                          "type": "ref",
+                          "ref": "hIyB7",
+                          "name": ".research",
+                          "width": "fill_container",
+                          "descendants": {
+                            "vsjz1": {
+                              "icon": "folder"
+                            },
+                            "h0cJn": {
+                              "content": ".research"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Z7pc3",
+                          "type": "ref",
+                          "ref": "hIyB7",
+                          "name": "1234",
+                          "width": "fill_container",
+                          "descendants": {
+                            "vsjz1": {
+                              "icon": "folder"
+                            },
+                            "h0cJn": {
+                              "content": "1234"
+                            }
+                          }
+                        },
+                        {
+                          "id": "lQgUD",
+                          "type": "ref",
+                          "ref": "hIyB7",
+                          "name": "Drafts",
+                          "width": "fill_container",
+                          "descendants": {
+                            "vsjz1": {
+                              "icon": "folder"
+                            },
+                            "h0cJn": {
+                              "content": "Drafts"
+                            }
+                          }
+                        },
+                        {
+                          "id": "uBpQq",
+                          "type": "ref",
+                          "ref": "hIyB7",
+                          "name": "研究",
+                          "width": "fill_container",
+                          "descendants": {
+                            "vsjz1": {
+                              "icon": "folder"
+                            },
+                            "h0cJn": {
+                              "content": "研究"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "vzzEL",
+                      "name": "Shared folder guidance",
+                      "fill": "$ds-fg-subtle",
+                      "content": "Sessions work directly in this folder and share its files.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e0HMZ3",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$ds-border",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "z28bu",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Cancel",
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Cancel"
+                        }
+                      }
+                    },
+                    {
+                      "id": "U5CKl9",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Open folder",
+                      "theme": {
+                        "btn": "primary",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Open folder"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "rPCqj",
+              "type": "ref",
+              "ref": "I2wLw",
+              "name": "New folder entry",
+              "descendants": {
+                "num3Q": {
+                  "type": "frame",
+                  "id": "vGgQA",
+                  "name": "Folder state",
+                  "width": "fill_container",
+                  "height": 180,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "tJ9Hz",
+                      "type": "ref",
+                      "ref": "nbn0J",
+                      "name": "Folder name",
+                      "width": "fill_container",
+                      "descendants": {
+                        "hcIyD": {
+                          "content": "New folder name"
+                        }
+                      }
+                    },
+                    {
+                      "id": "YHNoW",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Create folder",
+                      "theme": {
+                        "btn": "primary",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Create folder"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "Q6BAgT",
+              "type": "ref",
+              "ref": "I2wLw",
+              "name": "Empty folder and error",
+              "descendants": {
+                "num3Q": {
+                  "type": "frame",
+                  "id": "vsTEk",
+                  "name": "Folder state",
+                  "width": "fill_container",
+                  "height": 180,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FzzvS",
+                      "name": "Empty directory",
+                      "fill": "$ds-fg-subtle",
+                      "content": "This folder is empty.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "G5cYq",
+                      "name": "Creation error",
+                      "fill": "$ds-fg",
+                      "content": "A folder with that name already exists.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "os1DB",
+          "name": "Project workspace and available creation providers",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "lbQ1M",
+              "name": "Project workspace · Files only",
+              "width": 584,
+              "height": 300,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nlwxf",
+                  "name": "Provider title",
+                  "fill": "$ds-fg",
+                  "content": "Project workspace",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "Sjce7",
+                  "name": "Provider description",
+                  "fill": "$ds-fg-subtle",
+                  "content": "Files only: no empty tab bar. Show create only when an additional workspace provider is available.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "C05i76",
+              "name": "Create workspace · Git worktree",
+              "width": 584,
+              "height": 280,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "f8e15",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "height": 52,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Tpfoi",
+                      "name": "Title group",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Q9GBNh",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Create workspace",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "BGoSz",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Close",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "x",
+                          "width": 14,
+                          "height": 14
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ue65v",
+                  "name": "Body",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yd2Vd",
+                      "name": "Workspace type",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "K4XVlk",
+                          "name": "Parameter label with help tooltip",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "hx0JV",
+                              "name": "Label",
+                              "fill": "$ds-fg",
+                              "content": "Workspace type",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "WLN6v",
+                              "name": "Workspace type information · hover or focus",
+                              "context": "Plain information icon, not a button. No hover or selected background. Tooltip appears on hover or keyboard focus.",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "H1RUU",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Only available workspace type · disabled",
+                          "theme": {
+                            "trig": "disabled"
+                          },
+                          "descendants": {
+                            "xr1ec": {
+                              "enabled": true,
+                              "icon": "git-branch"
+                            },
+                            "sefGB": {
+                              "content": "Git worktree"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rvpdo",
+                      "name": "Base branch",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eK0u0",
+                          "name": "Label",
+                          "fill": "$ds-fg",
+                          "content": "Base branch",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "c9Jvpu",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Base branch selector",
+                          "descendants": {
+                            "xr1ec": {
+                              "icon": "git-commit-horizontal"
+                            },
+                            "sefGB": {
+                              "content": "main"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "DIzsj",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tNkBJ",
+                      "name": "Actions",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "duhhx",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Cancel",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Cancel"
+                            }
+                          }
+                        },
+                        {
+                          "id": "lGLk1",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Create workspace",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Create workspace"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Kg0ti",
+              "name": "Create workspace · Remote environment",
+              "width": 584,
+              "height": 280,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ivc69",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "height": 52,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "g8TQQs",
+                      "name": "Title group",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pD2ci",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Create workspace",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "acpyW",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Close",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "x",
+                          "width": 14,
+                          "height": 14
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "oVzx1",
+                  "name": "Body",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "k33Vm",
+                      "name": "Workspace type",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N8yocY",
+                          "name": "Parameter label with help tooltip",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "RrItg",
+                              "name": "Label",
+                              "fill": "$ds-fg",
+                              "content": "Workspace type",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "SsPO3",
+                              "name": "Workspace type information · hover or focus",
+                              "context": "Plain information icon, not a button. No hover or selected background. Tooltip appears on hover or keyboard focus.",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "SRwbs",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Workspace type selector",
+                          "descendants": {
+                            "xr1ec": {
+                              "enabled": true,
+                              "icon": "rocket"
+                            },
+                            "sefGB": {
+                              "content": "Remote environment"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "TP7Di",
+                      "type": "ref",
+                      "ref": "nbn0J",
+                      "name": "Provider parameter",
+                      "width": "fill_container",
+                      "descendants": {
+                        "hcIyD": {
+                          "content": "Environment: research"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ksK26",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "L71AJ",
+                      "name": "Actions",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "YKOaG",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Cancel",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Cancel"
+                            }
+                          }
+                        },
+                        {
+                          "id": "TrXMl",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Create workspace",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Create workspace"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "S77Jg",
+          "name": "Parameter help tooltip · hover or focus",
+          "context": "Use the shared Tooltip. Open on pointer hover or keyboard focus of the info button; keep focus on the trigger. Close on leave or Escape.",
+          "width": 320,
+          "fill": "$ds-bg-inverted",
+          "cornerRadius": 4,
+          "stroke": "$ds-border",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            7,
+            10
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "MPXTU",
+              "name": "Provider explanation",
+              "fill": "$ds-fg-inverted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Create an isolated branch. Git review and merge cover the entire repository, including paths outside the project folder.",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "No5df",
+          "name": "Shared dialog and parameter conventions",
+          "fill": "$ds-fg-subtle",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Use shared dialog title, close button and footer actions. Labels have no required asterisk. Info shows a tooltip on hover or focus; use the shared overlay keyboard behavior, including dialog dismissal with Escape. Disable dropdowns only when no enabled choice, clear action or group change can change the value. Branches use the commit icon; Git worktrees use the branch icon. Low / Medium / High / Extra high use the existing level-low / level-mid / level-high / level-xhigh bars.",
+          "fontFamily": "$font-body",
+          "fontSize": 13,
+          "fontWeight": "normal"
         }
       ]
     }

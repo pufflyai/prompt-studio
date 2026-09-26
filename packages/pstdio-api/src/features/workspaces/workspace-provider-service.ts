@@ -8,6 +8,7 @@ import {
   worktreeProviderId,
 } from "./workspace-provider-identity";
 import type { WorkspaceRecord } from "./workspace-provider-projection";
+import { assertWorkspaceShorthand } from "./workspace-shorthand";
 import { setupWorkspaceWorktree } from "./worktree-setup";
 
 export { resolveWorkspaceExecutionTarget } from "./workspace-provider-execution-target";
@@ -48,6 +49,7 @@ export const createProviderBackedWorkspace = async (
     signal?: AbortSignal;
   },
 ) => {
+  if (input.shorthandBase !== undefined) assertWorkspaceShorthand(input.shorthandBase);
   const providerId = input.providerId ?? worktreeProviderId;
   const params = mergeProviderParams(input);
   const repo = isBuiltInProviderId(providerId)
@@ -59,6 +61,7 @@ export const createProviderBackedWorkspace = async (
   const operationId = crypto.randomUUID();
   const createInput = {
     project_id: input.projectId,
+    anchors: input.anchors,
     name: input.name,
     provider_id: providerId,
     provider_params_json: params,
@@ -94,7 +97,11 @@ export const createProviderBackedWorkspace = async (
     updated.worktree_path &&
     provisioningRepoPath
   ) {
-    return input.provision(updated, provisioningRepoPath);
+    const provisioned = await input.provision(updated, provisioningRepoPath);
+    if (provisioned.setup_error) {
+      throw new Error(`Workspace ${provisioned.id} setup failed: ${provisioned.setup_error}`);
+    }
+    return provisioned;
   }
   return updated;
 };

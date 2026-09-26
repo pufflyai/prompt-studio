@@ -47,15 +47,16 @@ export const productionAppDependencies: AppDependencies = {
 export const wireAppExtensionServices = async (input: WireExtensionServicesInput) => {
   let refreshInstalledExtensionProcesses: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> =
     async () => {};
+  const refreshInstalledSources = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
+    harnessRegistry.invalidate();
+    await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
+  };
   const extensionService = createExtensionService({
     extensionInstancesService: input.extensionInstancesService,
     installedExtensionSourcesService: input.installedExtensionSourcesService,
     extensionUserDataService: createExtensionUserDataDBService(input.db),
     eventBus: input.eventBus,
-    onInstalledSourcesChanged: async (sourcePath, validatedSource) => {
-      harnessRegistry.invalidate();
-      await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
-    },
+    onInstalledSourcesChanged: refreshInstalledSources,
     projectService: input.projectService,
     validateResourcePrefixes: (projectId, source) =>
       extensionRuntimeCatalog.validateResourcePrefixes(projectId, source),
@@ -140,6 +141,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
 
   return {
     extensionRuntime,
+    refreshInstalledSources,
     extensionRuntimeCatalog,
     extensionConnectionService,
     extensionService,

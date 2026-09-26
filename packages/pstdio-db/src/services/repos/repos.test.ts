@@ -91,3 +91,17 @@ describe("repos service", () => {
     expect(linkedB).toHaveLength(1);
   });
 });
+
+test("a failed project link rolls back the repository insert", async () => {
+  const result = await createDb({ path: ":memory:" });
+  try {
+    const service = createReposDBService(result.db);
+    await expect(
+      service.registerForProject("missing-project", { name: "repo", path: "/failed-link" }),
+    ).rejects.toThrow();
+    const { repos: table } = await import("../../db/schemas.pg");
+    expect(await result.db.select().from(table)).toEqual([]);
+  } finally {
+    await result.close();
+  }
+});

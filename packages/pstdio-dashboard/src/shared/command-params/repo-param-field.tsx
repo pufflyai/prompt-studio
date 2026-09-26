@@ -77,10 +77,15 @@ export const RepoParamField = (props: RepoParamFieldProps) => {
   const workspaceOptions: SelectionOption[] = branchOptions.map((option) => ({
     id: option.value,
     name: option.label,
-    icon: "GitBranch",
+    icon: "git-commit-horizontal",
   }));
   if (isBranchesLoading && workspaceOptions.length === 0) {
-    workspaceOptions.push({ id: "branch-loading", name: "Loading workspaces…", icon: "GitBranch", disabled: true });
+    workspaceOptions.push({
+      id: "branch-loading",
+      name: "Loading workspaces…",
+      icon: "git-commit-horizontal",
+      disabled: true,
+    });
   }
   const workspaceParam: SelectionParam = {
     id: "branch",

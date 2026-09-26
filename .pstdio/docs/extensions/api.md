@@ -15,6 +15,10 @@ Identity is not declared in code. The runtime reads package identity before impo
 - [Extension cookbook](./cookbook.md): small authoring recipes for common extension tasks.
 - [Remote execution migration](./remote-execution-migration.md): named connections, remote workspaces, harnesses, and automation.
 
+## Durable background work
+
+Use `ctx.automation.enqueue({ command, input, key })` for work that lasts longer than a request. Read runs with `get` and `list`, and cancel them with `cancel`. Runs are scoped to the calling extension and project. Use `ctx.process` only for work the caller awaits. See [durable extension work](./durable-automation.md) for command flags, status events, restart behavior, and limits.
+
 ## Package Manifest
 
 Every extension package must include a `package.json` next to its entry file.

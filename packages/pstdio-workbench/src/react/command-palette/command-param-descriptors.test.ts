@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandParamEntry } from "./command-palette-params";
 import { createCommandFilesParamValue } from "./command-palette-params";
-import { buildCommandParam, commandParamName, readCommandParamValue } from "./command-param-descriptors";
+import { buildCommandParam, readCommandParamValue } from "./command-param-descriptors";
 
 const entry = (overrides: Partial<CommandParamEntry> & { key: string; type: string }): CommandParamEntry => ({
   label: overrides.key,
@@ -9,11 +9,6 @@ const entry = (overrides: Partial<CommandParamEntry> & { key: string; type: stri
 });
 
 describe("command param descriptors", () => {
-  test("marks required params in the control name", () => {
-    expect(commandParamName(entry({ key: "title", type: "text", label: "Title" }))).toBe("Title");
-    expect(commandParamName(entry({ key: "title", type: "text", label: "Title", required: true }))).toBe("Title *");
-  });
-
   test("maps declared param types onto editor controls", () => {
     expect(buildCommandParam(entry({ key: "flag", type: "boolean" }), true).type).toBe("boolean");
     expect(buildCommandParam(entry({ key: "amount", type: "number" }), "3")).toMatchObject({

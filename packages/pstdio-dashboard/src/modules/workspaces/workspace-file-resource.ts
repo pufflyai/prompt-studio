@@ -8,6 +8,17 @@ export const workspaceMetadataString = (resource: ResourceRef | undefined, key: 
 export const workspaceIdOf = (resource: ResourceRef | undefined) =>
   workspaceMetadataString(resource, "workspaceId") ?? resource?.id;
 
+export const workspaceFilesUnavailableState = (resource: ResourceRef | undefined) => {
+  const error = workspaceMetadataString(resource, "workspaceError");
+  if (error) throw new Error(error);
+  const state = workspaceMetadataString(resource, "workspaceProviderState");
+  if (state === "ready") return undefined;
+  if (!state || state === "provisioning") {
+    return { title: "Preparing workspace", description: "Files will appear when the workspace is ready." };
+  }
+  return { title: "Files unavailable", description: "This workspace is not available for file access." };
+};
+
 export const workspaceFileResource = (resource: ResourceRef, path: string): ResourceRef => ({
   ...resource,
   metadata: {

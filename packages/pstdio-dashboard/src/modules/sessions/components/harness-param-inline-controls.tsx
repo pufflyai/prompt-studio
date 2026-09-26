@@ -1,4 +1,5 @@
-import { Box, Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
+import { Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
+import { ListRow } from "@pstdio/ui";
 import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
@@ -124,27 +125,21 @@ const SelectParamControl = (
                 <Menu.Item
                   key={option.value}
                   value={option.value}
+                  asChild
                   onSelect={() =>
                     onOverridesChange(updateHarnessParamOverride(overrides, defaults, paramKey, option.value))
                   }
                 >
-                  <Box
-                    display="grid"
-                    gridTemplateColumns="14px 14px minmax(0, 1fr)"
-                    alignItems="center"
-                    gap="2xs"
-                    w="full"
-                  >
-                    <Box display="flex" justifyContent="flex-start">
-                      {option.value === selectedValue ? <Check size={14} /> : null}
-                    </Box>
-                    <Box display="flex" justifyContent="center">
-                      <WorkbenchIcon name={option.icon} size={14} />
-                    </Box>
-                    <Text textStyle="label/XS/medium" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-                      {option.label}
-                    </Text>
-                  </Box>
+                  <ListRow
+                    asChild
+                    variant="full-width"
+                    role="menuitemradio"
+                    aria-checked={option.value === selectedValue}
+                    id={option.value}
+                    label={option.label}
+                    icon={<WorkbenchIcon name={option.icon} size={14} />}
+                    endContent={option.value === selectedValue ? <Check size={14} /> : undefined}
+                  />
                 </Menu.Item>
               ))}
             </Menu.ItemGroup>

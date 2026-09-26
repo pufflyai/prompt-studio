@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
 
 const run = (cwd: string, args: string[]) => {
@@ -15,6 +16,9 @@ const nativeEntries: Record<string, readonly string[]> = {
   "@pstdio/sdk": ["./resources", "./api", "./client", "./extensions", "./prompts", "./hooks", "./testing", "./data"],
   "@pstdio/workbench": [".", "./storage", "./webview-runtime"],
 };
+
+// CSS files and subpath patterns (such as `./monaco/*`) are not importable type entries.
+const isTypeEntry = (entry: string) => !entry.endsWith(".css") && !entry.includes("*");
 
 const consumerDependencies = (packages: { path: string; archive: string }[], react: boolean) => {
   const dependencies: Record<string, string> = { typescript: "6.0.2" };
@@ -31,13 +35,13 @@ const consumerDependencies = (packages: { path: string; archive: string }[], rea
       }
     }
     for (const entry of Object.keys(manifest.exports)) {
-      if (entry.endsWith(".css") || (!react && !nativeEntries[manifest.name]?.includes(entry))) continue;
+      if (!isTypeEntry(entry) || (!react && !nativeEntries[manifest.name]?.includes(entry))) continue;
       imports.push(`${manifest.name}${entry === "." ? "" : entry.slice(1)}`);
     }
   }
   if (react)
     Object.assign(dependencies, {
-      vite: "^7.2.4",
+      vite: "^8.3.1",
       "@types/react": "^19.0.0",
       "@types/react-dom": "^19.0.0",
       "@types/node": "^25.0.0",
@@ -106,6 +110,10 @@ void [invalidAttribute, invalidColumn];
 export default defineConfig({ build: { lib: { entry: "consumer.ts", formats: ["es"] } } });`,
     );
     run(directory, ["node_modules/vite/bin/vite.js", "build"]);
+    if (dependencies["@pstdio/ui"]) {
+      const monaco = verifyMonacoPackageAssets(directory);
+      console.log(`Resolved @pstdio/ui Monaco files with ${monaco.workers} workers and ${monaco.fonts} fonts.`);
+    }
   } else {
     for (const condition of [[], ["--conditions=source"]]) {
       run(directory, [...condition, "consumer.ts"]);

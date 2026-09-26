@@ -117,6 +117,10 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     updateProviderProjection,
     updateProviderOperationProjection,
     beginProviderOperation,
+    addAnchors: async (id: string, anchors: Parameters<typeof raw.addAnchors>[1]) =>
+      emitOrLog("set", id, await raw.addAnchors(id, anchors)),
+    removeAnchors: async (id: string, refs: Parameters<typeof raw.removeAnchors>[1]) =>
+      emitOrLog("set", id, await raw.removeAnchors(id, refs)),
     rename,
   };
 };

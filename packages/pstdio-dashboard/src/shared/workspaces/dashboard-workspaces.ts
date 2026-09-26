@@ -16,6 +16,7 @@ import {
   getDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
 import { createDashboardWorkspaceCapabilityMetadata } from "@/shared/workspaces/workspace-options";
+import { workspaceState } from "./workspace-state";
 export interface DashboardWorkspace {
   id: string;
   title: string;
@@ -64,7 +65,7 @@ const createWorkspaceResourceMetadata = (input: {
 }) => {
   const branch = input.workspace.branch as string | null;
   const executionKind = input.workspace.execution_kind === "remote" ? "remote" : "local";
-  const providerState = (input.workspace.provider_state as string | undefined) ?? "ready";
+  const providerState = workspaceState(input.workspace);
   const providerError = input.workspace.provider_error_json as
     | {
         message?: string;
@@ -94,7 +95,7 @@ const createWorkspaceResourceMetadata = (input: {
     }),
     ...(input.workspace.provider_id ? { workspaceProviderId: input.workspace.provider_id } : {}),
     ...(input.workspace.display_path ? { workspaceDisplayPath: input.workspace.display_path } : {}),
-    ...(providerError?.message ? { workspaceError: providerError.message } : {}),
+    workspaceError: input.workspace.setup_error ?? providerError?.message ?? null,
     // Resource-scoped action menus (header overflow, tree context menu) gate the
     // rename/archive/delete actions on this flag so the default workspace stays permanent.
     workspaceIsDefault: Boolean(input.workspace.is_default),
@@ -153,7 +154,7 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
         setupError: (workspace.setup_error as string | null) ?? providerError?.message ?? null,
         displayPath: (workspace.display_path as string | null) ?? null,
         provider: (workspace.provider_id as string | undefined) ?? "pstdio.root",
-        providerState: (workspace.provider_state as string | undefined) ?? "ready",
+        providerState: workspaceState(workspace),
         resource: createDashboardResource(
           "workspace",
           workspace.id,

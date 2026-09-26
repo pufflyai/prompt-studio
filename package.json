@@ -25,7 +25,7 @@
     "lint": "lerna run lint",
     "format": "biome check --write .",
     "format:check": "biome check .",
-    "clean": "find . -type d \\( -name node_modules -o -name dist -o -name .cache -o -name storybook-static -o -name __test-tmp__ -o -name .nx -o -name .publish -o -name .temp -o -name coverage -o -name .nyc_output -o -name test-results -o -name playwright-report -o -name .astro -o -name .playwright-mcp \\) -prune -exec rm -rf '{}' + && rm -rf packages/e2e/screenshots clients/desktop/out clients/desktop/.sidecar packages/pstdio-db/vendor",
+    "clean": "find . -type d \\( -name node_modules -o -name dist -o -name dist-monaco -o -name .cache -o -name storybook-static -o -name __test-tmp__ -o -name .nx -o -name .publish -o -name .temp -o -name coverage -o -name .nyc_output -o -name test-results -o -name playwright-report -o -name .astro -o -name .playwright-mcp \\) -prune -exec rm -rf '{}' + && rm -rf packages/e2e/screenshots clients/desktop/out clients/desktop/.sidecar packages/pstdio-db/vendor",
     "reset": "bun run clean && bun install && bun run build",
     "knip": "knip --no-config-hints",
     "pstdio:local:add": "bun run --cwd packages/pstdio local:add",

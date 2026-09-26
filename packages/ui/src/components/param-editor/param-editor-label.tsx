@@ -1,6 +1,6 @@
 import { HStack, Icon, Text } from "@chakra-ui/react";
-import { CircleHelp } from "lucide-react";
-import { Tooltip } from "@/components/primitives/tooltip";
+import { Info } from "lucide-react";
+import { Tooltip } from "../primitives/tooltip";
 
 interface ParamEditorLabelProps {
   name: string;
@@ -23,8 +23,24 @@ export const ParamEditorLabel = (props: ParamEditorLabelProps) => {
         {name}
       </Text>
       {description ? (
-        <Tooltip content={description}>
-          <Icon as={CircleHelp} boxSize="12px" color="fg.muted" opacity={0.6} cursor="help" flexShrink={0} />
+        <Tooltip
+          content={description}
+          portalled={false}
+          positioning={{ placement: "bottom-start", strategy: "fixed", hideWhenDetached: true }}
+        >
+          <Icon
+            asChild
+            role="img"
+            aria-label={`About ${name}`}
+            aria-hidden={false}
+            focusable="true"
+            tabIndex={0}
+            boxSize="3"
+            color="fg.muted"
+            flexShrink={0}
+          >
+            <Info />
+          </Icon>
         </Tooltip>
       ) : null}
     </HStack>

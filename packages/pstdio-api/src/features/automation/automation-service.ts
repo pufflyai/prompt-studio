@@ -17,9 +17,11 @@ import {
   digestTokenSecret,
   MAX_IDEMPOTENCY_KEY_LENGTH,
   MAX_INPUT_BYTES,
+  recordRunActivity,
   toRunRecord,
   toTokenRecord,
 } from "./automation-policy";
+import { createExtensionAutomationService } from "./extension-automation-service";
 
 const TOKEN_PREFIX = "pst_at";
 
@@ -227,7 +229,11 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
 
   const cancelRun = async (rawToken: string | null, projectId: string, runId: string) => {
     const run = await getAuthorizedRun(rawToken, projectId, runId);
-    const active = activeRuns.get(run.id);
+    return cancelOwnedRun(run.id);
+  };
+
+  const cancelOwnedRun = async (runId: string) => {
+    const active = activeRuns.get(runId);
     if (active) {
       active.controller.abort(new DOMException("Automation run cancelled.", "AbortError"));
       if (!(await waitForExecutions([active.execution]))) {
@@ -240,11 +246,11 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
           409,
         );
       }
-      const settled = await runExecutor.cancelStoredRun(run.id);
+      const settled = await runExecutor.cancelStoredRun(runId);
       if (!settled) throw new AutomationRequestError("automation_run_not_found", "Automation run not found.", 404);
       return toRunRecord(settled);
     }
-    return toRunRecord((await runExecutor.cancelStoredRun(run.id))!);
+    return toRunRecord((await runExecutor.cancelStoredRun(runId))!);
   };
 
   const close = async () => {
@@ -261,6 +267,7 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
   };
 
   return {
+    ...createExtensionAutomationService({ deps, withAdmissionLock, maxRunsPerMinute, startExecution, cancelOwnedRun }),
     auditDeniedRoute,
     cancelRun,
     close,
@@ -269,6 +276,8 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     issueToken,
     listRunEvents,
     listTokens,
+    recoverInterruptedRuns: () =>
+      deps.automationDBService.recoverInterruptedRuns((run) => recordRunActivity(deps, run)),
     recoverQueuedRuns,
     revokeToken,
   };

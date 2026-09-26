@@ -3,6 +3,7 @@ import { apiLogger } from "../../lib/logger";
 import type { RouteDeps } from "../deps";
 import { fireExtensionEvent } from "../extensions/extension-event-runtime";
 import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
+import { resolveWorkspaceLocation } from "../workspaces/workspace-provider-execution-target";
 
 type SessionStatus =
   | "in_progress"
@@ -23,6 +24,7 @@ type SessionRecord = {
 
 export type SessionHookDeps = Pick<
   RouteDeps,
+  | "automationService"
   | "activityEventsService"
   | "eventBus"
   | "extensionAutomationPreferencesService"
@@ -63,11 +65,13 @@ export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, sess
 
   const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
   if (!workspace) return base;
+  const location = await resolveWorkspaceLocation(deps, workspace);
 
   return {
     ...base,
-    workspace,
+    workspace: { ...workspace, root_path: location?.root ?? null },
     workspaceId: workspace.id,
+    workspaceDir: location?.root,
     worktreePath: workspace.worktree_path ?? undefined,
     branch: workspace.branch ?? undefined,
     anchors: [...sessionAnchors, ...((workspace.anchors_json ?? []) as ResourceAnchor[])],

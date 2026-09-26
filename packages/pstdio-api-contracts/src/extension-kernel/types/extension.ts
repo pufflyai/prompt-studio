@@ -36,9 +36,9 @@ import type {
   ViewMenuContribution,
 } from "./views";
 
-/** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
-// While the API is unstable the version carries an `-alpha.N` suffix and extensions must
-// declare it exactly. Bump the alpha in the same change that breaks an extension contract.
+/** Current host API version. `engines.pstdio` must list it as an exact version, optionally among others joined by `||`. */
+// While the API is unstable, explicit versions prevent ranges from implying alpha compatibility.
+// Bump the alpha in the same change that breaks an extension contract.
 export const EXTENSION_API_VERSION = "1.0.0-alpha.10";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
@@ -174,6 +174,7 @@ export interface ScheduleContribution<TParams extends Struct = Struct> extends C
 
 export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace-type"> {
   label: Localizable<string>;
+  icon?: string;
   params?: ParamObjectSchema;
   create(ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput): MaybePromise<WorkspaceProviderResult>;
   resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;

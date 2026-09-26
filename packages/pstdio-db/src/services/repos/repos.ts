@@ -5,44 +5,41 @@ import { project_repos, repos } from "../../db/schemas.pg";
 const nowTimestamp = () => new Date().toISOString();
 
 export const createReposDBService = (db: DbClient) => {
-  const findByPath = async (path: string) => {
-    const [repo] = await db.select().from(repos).where(eq(repos.path, path));
-    return repo ?? null;
-  };
+  const registerForProject = async (projectId: string, input: { name: string; path: string }) =>
+    db.transaction(async (tx) => {
+      const timestamp = nowTimestamp();
 
-  const registerForProject = async (projectId: string, input: { name: string; path: string }) => {
-    const timestamp = nowTimestamp();
+      const [existingRepo] = await tx.select().from(repos).where(eq(repos.path, input.path));
+      let repo = existingRepo;
 
-    let repo = await findByPath(input.path);
+      if (!repo) {
+        repo = {
+          id: crypto.randomUUID(),
+          name: input.name,
+          display_name: null,
+          path: input.path,
+          created_at: timestamp,
+          updated_at: timestamp,
+        };
+        await tx.insert(repos).values(repo);
+      }
 
-    if (!repo) {
-      repo = {
-        id: crypto.randomUUID(),
-        name: input.name,
-        display_name: null,
-        path: input.path,
-        created_at: timestamp,
-        updated_at: timestamp,
-      };
-      await db.insert(repos).values(repo);
-    }
+      const [existingLink] = await tx
+        .select()
+        .from(project_repos)
+        .where(and(eq(project_repos.project_id, projectId), eq(project_repos.repo_id, repo.id)));
 
-    const [existingLink] = await db
-      .select()
-      .from(project_repos)
-      .where(and(eq(project_repos.project_id, projectId), eq(project_repos.repo_id, repo.id)));
+      if (!existingLink) {
+        await tx.insert(project_repos).values({
+          id: crypto.randomUUID(),
+          project_id: projectId,
+          repo_id: repo.id,
+          created_at: timestamp,
+        });
+      }
 
-    if (!existingLink) {
-      await db.insert(project_repos).values({
-        id: crypto.randomUUID(),
-        project_id: projectId,
-        repo_id: repo.id,
-        created_at: timestamp,
-      });
-    }
-
-    return repo;
-  };
+      return repo;
+    });
 
   const listByProject = async (projectId: string) => {
     const rows = await db
@@ -75,5 +72,7 @@ export const createReposDBService = (db: DbClient) => {
     return removed ?? null;
   };
 
-  return { get, registerForProject, listByProject, getProjectRepoLink, removeFromProject };
+  const list = () => db.select().from(repos);
+
+  return { get, registerForProject, listByProject, getProjectRepoLink, removeFromProject, list };
 };

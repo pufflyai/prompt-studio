@@ -3,6 +3,30 @@ import { createWorkbench } from "../../core";
 import { createExtensionWebviewHostCapabilities } from "./webview-command-capabilities";
 
 describe("createExtensionWebviewHostCapabilities", () => {
+  test("preserves the requested workspace and command metadata", async () => {
+    const requests: unknown[] = [];
+    const capabilities = createExtensionWebviewHostCapabilities({
+      executeCommand: (commandId, body) => {
+        requests.push({ commandId, body });
+        return { outcome: { ok: true, status: "success" } };
+      },
+      extensionIdForWebview: () => "notes",
+      projectId: "project",
+      slotKind: "panel",
+    })({ placement: {}, webviewId: "notes", workbench: createWorkbench() } as never);
+    await capabilities["commands.execute"]?.({
+      commandId: "notes.command.read",
+      workspaceId: "remote-workspace",
+      metadata: { sourcePanel: "notes" },
+    });
+    expect(requests).toMatchObject([
+      {
+        commandId: "notes.command.read",
+        body: { workspaceId: "remote-workspace", metadata: { sourcePanel: "notes" } },
+      },
+    ]);
+  });
+
   test("navigation.open resolves page refs against the webview extension", async () => {
     const workbench = createWorkbench();
     const page = { extensionId: "pstdio.lab", kind: "page" as const, id: "tickets" };

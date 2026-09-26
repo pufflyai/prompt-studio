@@ -23,7 +23,7 @@ describe("dashboard workspace actions", () => {
     globalThis.fetch = originalFetch;
   });
 
-  test("passes the selected repository and base branch when creating a workspace", async () => {
+  test("passes the selected provider parameters when creating a workspace", async () => {
     (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "http://localhost:19840" };
 
     const calls: Array<{ method: string; url: string; body?: string }> = [];
@@ -52,8 +52,10 @@ describe("dashboard workspace actions", () => {
 
     await createDashboardWorkspace({
       projectId: "project-1",
-      repoId: "repo-1",
-      base: "feature/custom-base",
+      providerId: "cloud.environment",
+      params: { image: "notes" },
+      anchors: [{ type: "ticket", id: "ticket-1", role: "primary" }],
+      shorthand_base: "T-1",
     });
 
     expect(calls).toEqual([
@@ -62,8 +64,10 @@ describe("dashboard workspace actions", () => {
         url: "http://localhost:19840/v1/workspaces",
         body: JSON.stringify({
           project_id: "project-1",
-          repo_id: "repo-1",
-          base: "feature/custom-base",
+          provider_id: "cloud.environment",
+          params: { image: "notes" },
+          anchors: [{ type: "ticket", id: "ticket-1", role: "primary" }],
+          shorthand_base: "T-1",
         }),
       },
     ]);

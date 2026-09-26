@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { apiLogger } from "../../lib/logger";
+import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
@@ -13,6 +14,7 @@ const withRuntimeCatalog = <T extends { extensionService: object; projectService
   deps: T,
 ) => ({
   ...deps,
+  eventBus: new EventBus(),
   extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
     extensionService: deps.extensionService as never,
     projectService: deps.projectService as never,

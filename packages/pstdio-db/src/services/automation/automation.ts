@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gt, gte, inArray, isNull, lt } from "drizzle-orm";
+import { and, asc, count, eq, gt, gte, inArray, lt } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   type AutomationRunError,
@@ -8,6 +8,8 @@ import {
   automation_runs,
   automation_tokens,
 } from "../../db/schemas.pg";
+import { createAutomationTokenDBService } from "./automation-tokens";
+import { createExtensionAutomationDBService } from "./extension-automation";
 
 const nowTimestamp = () => new Date().toISOString();
 const terminalStatuses = new Set<AutomationRunStatus>(["succeeded", "failed", "cancelled", "rejected"]);
@@ -30,106 +32,6 @@ const transitionEventPayload = (error?: AutomationRunError) => {
   return textEncoder.encode(JSON.stringify(payload)).byteLength > MAX_EVENT_PAYLOAD_BYTES
     ? { truncated: true }
     : payload;
-};
-
-const createAutomationTokenDBService = (db: DbClient) => {
-  const createToken = async (input: {
-    name: string;
-    createdBy: string;
-    principalId?: string;
-    tokenId: string;
-    tokenPrefix: string;
-    tokenDigest: string;
-    projectId: string;
-    commandScopes: string[];
-    expiresAt: string;
-  }) => {
-    const createdAt = nowTimestamp();
-    return db.transaction(async (tx) => {
-      const [existingPrincipal] = input.principalId
-        ? await tx
-            .select()
-            .from(automation_principals)
-            .where(
-              and(
-                eq(automation_principals.id, input.principalId),
-                eq(automation_principals.project_id, input.projectId),
-              ),
-            )
-        : [];
-      if (input.principalId && !existingPrincipal) throw new Error("Automation principal not found for project.");
-      const principal =
-        existingPrincipal ??
-        (
-          await tx
-            .insert(automation_principals)
-            .values({
-              id: crypto.randomUUID(),
-              project_id: input.projectId,
-              name: input.name,
-              created_by: input.createdBy,
-              created_at: createdAt,
-              disabled_at: null,
-            })
-            .returning()
-        )[0];
-      const [token] = await tx
-        .insert(automation_tokens)
-        .values({
-          id: input.tokenId,
-          principal_id: principal.id,
-          token_prefix: input.tokenPrefix,
-          token_digest: input.tokenDigest,
-          project_id: input.projectId,
-          command_scopes_json: input.commandScopes,
-          expires_at: input.expiresAt,
-          last_used_at: null,
-          revoked_at: null,
-          created_at: createdAt,
-        })
-        .returning();
-      return { principal, token };
-    });
-  };
-
-  const getToken = async (id: string) => {
-    const [row] = await db
-      .select({ principal: automation_principals, token: automation_tokens })
-      .from(automation_tokens)
-      .innerJoin(automation_principals, eq(automation_tokens.principal_id, automation_principals.id))
-      .where(eq(automation_tokens.id, id));
-    return row ?? null;
-  };
-
-  const getPrincipal = async (projectId: string, principalId: string) => {
-    const [principal] = await db
-      .select()
-      .from(automation_principals)
-      .where(and(eq(automation_principals.id, principalId), eq(automation_principals.project_id, projectId)));
-    return principal ?? null;
-  };
-
-  const listTokens = (projectId: string) =>
-    db
-      .select({ principal: automation_principals, token: automation_tokens })
-      .from(automation_tokens)
-      .innerJoin(automation_principals, eq(automation_tokens.principal_id, automation_principals.id))
-      .where(eq(automation_tokens.project_id, projectId))
-      .orderBy(asc(automation_tokens.created_at));
-
-  const markTokenUsed = (id: string) =>
-    db.update(automation_tokens).set({ last_used_at: nowTimestamp() }).where(eq(automation_tokens.id, id));
-
-  const revokeToken = async (id: string) => {
-    const [row] = await db
-      .update(automation_tokens)
-      .set({ revoked_at: nowTimestamp() })
-      .where(and(eq(automation_tokens.id, id), isNull(automation_tokens.revoked_at)))
-      .returning();
-    return row ?? (await getToken(id))?.token ?? null;
-  };
-
-  return { createToken, getPrincipal, getToken, listTokens, markTokenUsed, revokeToken };
 };
 
 const createAutomationRunDBService = (db: DbClient) => {
@@ -180,7 +82,7 @@ const createAutomationRunDBService = (db: DbClient) => {
   const createRun = async (input: {
     projectId: string;
     principalId: string;
-    tokenId: string;
+    tokenId: string | null;
     commandId: string;
     idempotencyKey: string;
     inputHash: string;
@@ -189,23 +91,25 @@ const createAutomationRunDBService = (db: DbClient) => {
     return db.transaction(async (tx) => {
       const createdAt = nowTimestamp();
       const [owner] = await tx
-        .select({ tokenId: automation_tokens.id })
-        .from(automation_tokens)
-        .innerJoin(
-          automation_principals,
-          and(
-            eq(automation_tokens.principal_id, automation_principals.id),
-            eq(automation_tokens.project_id, automation_principals.project_id),
-          ),
-        )
+        .select()
+        .from(automation_principals)
         .where(
-          and(
-            eq(automation_tokens.id, input.tokenId),
-            eq(automation_principals.id, input.principalId),
-            eq(automation_principals.project_id, input.projectId),
-          ),
+          and(eq(automation_principals.id, input.principalId), eq(automation_principals.project_id, input.projectId)),
         );
       if (!owner) throw new Error("Automation run ownership does not match.");
+      if (input.tokenId !== null) {
+        const [token] = await tx
+          .select()
+          .from(automation_tokens)
+          .where(
+            and(
+              eq(automation_tokens.id, input.tokenId),
+              eq(automation_tokens.principal_id, input.principalId),
+              eq(automation_tokens.project_id, input.projectId),
+            ),
+          );
+        if (!token) throw new Error("Automation run ownership does not match.");
+      }
       const [created] = await tx
         .insert(automation_runs)
         .values({
@@ -284,7 +188,7 @@ const createAutomationRunDBService = (db: DbClient) => {
   ) => {
     return db.transaction(async (tx) => {
       const [current] = await tx.select().from(automation_runs).where(eq(automation_runs.id, runId));
-      if (!current || terminalStatuses.has(current.status)) return current ?? null;
+      if (!current || terminalStatuses.has(current.status) || current.status === input.status) return null;
       const changedAt = nowTimestamp();
       const [updated] = await tx
         .update(automation_runs)
@@ -299,9 +203,7 @@ const createAutomationRunDBService = (db: DbClient) => {
           created_at: changedAt,
         });
       }
-      if (updated) return updated;
-      const [settled] = await tx.select().from(automation_runs).where(eq(automation_runs.id, runId));
-      return settled ?? null;
+      return updated ?? null;
     });
   };
 
@@ -312,13 +214,14 @@ const createAutomationRunDBService = (db: DbClient) => {
       .where(and(eq(automation_run_events.run_id, runId), gt(automation_run_events.cursor, after)))
       .orderBy(asc(automation_run_events.cursor));
 
-  const recoverInterruptedRuns = async () => {
+  const recoverInterruptedRuns = async (onRecovered?: (run: typeof automation_runs.$inferSelect) => Promise<void>) => {
     const running = await db.select().from(automation_runs).where(eq(automation_runs.status, "running"));
     for (const run of running) {
-      await transitionRun(run.id, {
+      const recovered = await transitionRun(run.id, {
         status: "failed",
         error: { code: "host_restarted", message: "The host restarted during command execution.", retryable: true },
       });
+      if (recovered) await onRecovered?.(recovered);
     }
     return running.length;
   };
@@ -349,5 +252,6 @@ const createAutomationRunDBService = (db: DbClient) => {
 
 export const createAutomationDBService = (db: DbClient) => ({
   ...createAutomationTokenDBService(db),
+  ...createExtensionAutomationDBService(db),
   ...createAutomationRunDBService(db),
 });

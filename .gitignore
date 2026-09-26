@@ -49,6 +49,9 @@ web_modules/
 # TypeScript cache
 *.tsbuildinfo
 
+# Generated Chakra theme metadata
+chakra-config.json
+
 # Optional npm cache directory
 .npm
 
@@ -84,6 +87,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+dist-monaco
 
 # Gatsby files
 .cache/
