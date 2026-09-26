@@ -53,6 +53,15 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       const socket = await socketOpened;
       expect(new URL(socket.url()).origin).toBe(app.runtime.origin.replace(/^http/, "ws"));
       const readTerminals = async () => (await readRuntimeActivity(app!.runtime)).terminals;
+      const input = app.page.getByRole("textbox", { name: "Terminal input" });
+      await expect(input).toBeVisible();
+      if (process.platform !== "win32") {
+        await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(0);
+      }
+      await input.pressSequentially(
+        process.platform === "win32" ? 'powershell.exe -NoProfile -Command "Start-Sleep -Seconds 300"' : "sleep 300",
+      );
+      await input.press("Enter");
       await expect.poll(readTerminals).toHaveLength(1);
       const [activeTerminal] = await readTerminals();
 
