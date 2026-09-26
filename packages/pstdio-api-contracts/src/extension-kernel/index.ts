@@ -8,6 +8,7 @@
  * consume it directly.
  */
 
+export { parseExtensionApiVersions, supportsExtensionApiVersion } from "./api-versions";
 export {
   workbenchModeDefinitions,
   workbenchModes,

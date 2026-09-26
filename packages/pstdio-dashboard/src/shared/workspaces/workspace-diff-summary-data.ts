@@ -1,4 +1,6 @@
 import { apiRequest } from "@/lib/api";
+import { getCollection } from "@/lib/sync/collections";
+import { workspaceState } from "./workspace-state";
 
 interface DashboardWorkspaceDiffSummaryResponse {
   workspace_id: string;
@@ -62,6 +64,10 @@ export const getDashboardWorkspaceDiffSummaries = (workspaceIds: string[]) => {
 };
 
 export const resolveDashboardWorkspaceDiffSummary = async (workspaceId: string) => {
+  const workspace = getCollection("workspaces").state.get(workspaceId);
+  if (!workspace || workspaceState(workspace) !== "ready") return null;
+  const capabilities = workspace.provider_capabilities_json as { diff?: boolean } | undefined;
+  if (capabilities?.diff === false) return null;
   const cached = workspaceDiffSummariesById.get(workspaceId);
   if (cached) return cached;
 

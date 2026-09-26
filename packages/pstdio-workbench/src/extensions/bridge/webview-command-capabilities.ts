@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { NavigationTarget } from "@pstdio/sdk/extensions";
+import type { NavigationTarget, WebviewCommandsExecuteParams } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import { createExtensionSlot, executeWorkbenchExtensionCommandResponse } from "../host/workbench-extension-command";
@@ -28,11 +28,6 @@ interface CreateExtensionWebviewHostCapabilitiesInput {
   projectId: string;
   slotKind: ExtensionWebviewSlotKind;
 }
-type WebviewCommandExecuteParams = {
-  commandId: string;
-  params?: Record<string, unknown>;
-  resource?: CommandExecuteRequest["resource"];
-};
 export const createExtensionWebviewHostCapabilities =
   (input: CreateExtensionWebviewHostCapabilitiesInput): CreateBridgeWebviewHostCapabilities =>
   (context) => {
@@ -56,10 +51,12 @@ export const createExtensionWebviewHostCapabilities =
         );
       },
       "commands.execute": async (params) => {
-        const request = params as WebviewCommandExecuteParams;
+        const request = params as WebviewCommandsExecuteParams;
         const resource = request.resource ?? context.placement.resource;
         return executeWorkbenchExtensionCommandResponse({ ...input, workbench: context.workbench }, request.commandId, {
           ...(request.params ? { params: request.params } : {}),
+          ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+          ...(request.metadata ? { metadata: request.metadata } : {}),
           ...(resource ? { resource } : {}),
           slot: createExtensionSlot({
             id: context.webviewId,

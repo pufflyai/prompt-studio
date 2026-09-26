@@ -1,6 +1,14 @@
 import { defineTextStyles } from "@chakra-ui/react";
 
 export const textStyles = defineTextStyles({
+  "heading/dialog": {
+    value: {
+      fontFamily: "heading",
+      fontSize: "0.9375rem",
+      fontWeight: "600",
+      lineHeight: "140%",
+    },
+  },
   brand: {
     value: {
       fontFamily: "brand",

@@ -1,6 +1,26 @@
 import { describe, expect, test } from "bun:test";
+import type { CreateWorkspaceInput } from "../api/workspaces";
 import type { RequestFn } from "./request";
 import { createWorkspaceClient } from "./workspaces";
+
+test("creates a provider workspace with its resource anchors and shorthand prefix", async () => {
+  const calls: Array<{ path: string; options?: unknown }> = [];
+  const client = createWorkspaceClient(((path, options) => {
+    calls.push({ path, options });
+    return Promise.resolve({ id: "cloud-workspace" });
+  }) as RequestFn);
+  const input = {
+    project_id: "project-1",
+    provider_id: "example.cloud",
+    params: { image: "documents" },
+    anchors: [{ type: "document", id: "doc-7" }],
+    shorthand_base: "DOC-7",
+  } satisfies CreateWorkspaceInput;
+
+  await client.create(input);
+
+  expect(calls).toEqual([{ path: "/v1/workspaces", options: { method: "POST", body: input } }]);
+});
 
 describe("workspace file client", () => {
   test("lists files with encoded browse and search inputs", async () => {

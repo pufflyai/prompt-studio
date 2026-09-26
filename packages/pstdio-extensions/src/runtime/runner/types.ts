@@ -52,6 +52,7 @@ export interface CommandRunnerEnvironment {
   resources: ExtensionResourcesApi;
   artifacts: ExtensionArtifactApi;
   repoFiles?: ArtifactMount;
+  projectFiles?: ArtifactMount;
   workspaceFiles?: WorkspaceFilesMount;
   packageFiles: ExtensionPackageFilesApi;
   extensionFiles?: ArtifactMount;

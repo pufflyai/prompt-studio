@@ -58,6 +58,7 @@ export interface WebviewCommandsExecuteParams {
   params?: JsonObject;
   resource?: ResourceRef;
   repo?: RepoContext;
+  workspaceId?: string;
   metadata?: JsonObject;
 }
 

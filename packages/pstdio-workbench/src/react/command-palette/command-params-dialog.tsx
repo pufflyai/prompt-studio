@@ -121,7 +121,7 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
         >
           <Dialog.Header>
             <Stack gap="2xs" minW="0">
-              <Text textStyle="heading/M/semibold">{request?.label ?? "Run command"}</Text>
+              <Dialog.Title>{request?.label ?? "Run command"}</Dialog.Title>
               {request?.record.command.description ? (
                 <Text textStyle="paragraph/XS/regular" color="fg.muted" truncate>
                   {request.record.command.description}

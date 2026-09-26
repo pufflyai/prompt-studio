@@ -6,7 +6,7 @@ describe("resolveWorkspaceDiffRequest", () => {
     expect(
       resolveWorkspaceDiffRequest({
         resourceId: "workspace-current",
-        metadata: { workspaceType: "current_branch" },
+        metadata: { workspaceProviderState: "ready", workspaceType: "current_branch" },
       }),
     ).toEqual({ workspaceId: "workspace-current", mode: "current" });
   });
@@ -15,7 +15,7 @@ describe("resolveWorkspaceDiffRequest", () => {
     expect(
       resolveWorkspaceDiffRequest({
         resourceId: "workspace-worktree",
-        metadata: { workspaceType: "worktree" },
+        metadata: { workspaceProviderState: "ready", workspaceType: "worktree" },
       }),
     ).toEqual({ workspaceId: "workspace-worktree", mode: "fork_point" });
   });
@@ -24,7 +24,7 @@ describe("resolveWorkspaceDiffRequest", () => {
     expect(
       resolveWorkspaceDiffRequest({
         resourceId: "workspace-resource",
-        metadata: { workspaceId: "workspace-metadata", workspaceType: "worktree" },
+        metadata: { workspaceProviderState: "ready", workspaceId: "workspace-metadata", workspaceType: "worktree" },
       }),
     ).toEqual({ workspaceId: "workspace-metadata", mode: "fork_point" });
   });
@@ -40,4 +40,34 @@ describe("resolveDefaultWorkspaceDiffPath", () => {
       ]),
     ).toBe("changed.ts");
   });
+});
+
+test.each([
+  undefined,
+  "provisioning",
+  "failed",
+])("does not request diffs before workspace readiness: %s", (workspaceProviderState) => {
+  expect(
+    resolveWorkspaceDiffRequest({
+      resourceId: "preparing-workspace",
+      metadata: { workspaceSupportsDiff: true, workspaceProviderState },
+    }),
+  ).toBeUndefined();
+});
+test("does not request diffs when workspace setup has failed", () => {
+  expect(
+    resolveWorkspaceDiffRequest({
+      resourceId: "failed-workspace",
+      metadata: { workspaceSupportsDiff: true, workspaceProviderState: "ready", workspaceError: "Setup failed" },
+    }),
+  ).toBeUndefined();
+});
+
+test("does not request diffs when workspace support is explicitly disabled", () => {
+  expect(
+    resolveWorkspaceDiffRequest({
+      resourceId: "cloud-workspace",
+      metadata: { workspaceProviderState: "ready", workspaceSupportsDiff: false },
+    }),
+  ).toBeUndefined();
 });

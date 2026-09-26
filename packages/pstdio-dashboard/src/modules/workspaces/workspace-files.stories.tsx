@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button } from "@chakra-ui/react";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -9,6 +9,7 @@ import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import {
   workspaceDiffFileQueryKey,
   workspaceDiffFilesQueryKey,
@@ -18,14 +19,38 @@ import {
 import { createWorkspacesModule } from "./module";
 
 const WORKSPACE_ID = "PS-118_A5";
-type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed" | "remote";
+type WorkspaceStoryState =
+  | "diffs"
+  | "changes-setup-failed"
+  | "changes-provider-failed"
+  | "changes-unavailable"
+  | "changes-preparing"
+  | "changes-recovery"
+  | "files"
+  | "text"
+  | "image"
+  | "default"
+  | "collapsed"
+  | "provider-failed"
+  | "preparing"
+  | "remote"
+  | "failed";
 const selectedPathForStory = (state: WorkspaceStoryState) => {
-  if (state === "text" || state === "default" || state === "collapsed") return "README.md";
+  if (
+    state === "text" ||
+    state === "default" ||
+    state === "collapsed" ||
+    state === "preparing" ||
+    state === "failed" ||
+    state === "provider-failed"
+  )
+    return "README.md";
   if (state === "image") return "assets/logo.png";
   return undefined;
 };
 const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
   const selectedPath = selectedPathForStory(state);
+  const changesSelected = state === "diffs" || state.startsWith("changes-");
   return {
     type: "workspace",
     id: WORKSPACE_ID,
@@ -34,9 +59,31 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
     metadata: {
       projectId: "prompt-studio",
       workspaceId: WORKSPACE_ID,
+      workspaceProviderState: state === "preparing" ? "provisioning" : "ready",
       workspaceShorthand: WORKSPACE_ID,
       workspaceType: state === "default" || state === "remote" ? "current_branch" : "worktree",
-      workspaceView: state === "diffs" ? "diffs" : "files",
+      workspaceView: changesSelected ? "diffs" : "files",
+      ...(state === "changes-setup-failed"
+        ? { workspaceProviderState: "failed", workspaceError: "Workspace configuration could not be written." }
+        : {}),
+      ...(state === "changes-provider-failed"
+        ? {
+            workspaceProviderState: "failed",
+            workspaceError: "The workspace provider could not start the environment.",
+          }
+        : {}),
+      ...(state === "changes-unavailable" ? { workspaceProviderState: "failed" } : {}),
+      ...(state === "changes-preparing" || state === "changes-recovery"
+        ? { workspaceProviderState: "provisioning" }
+        : {}),
+      ...(state === "provider-failed" ? { workspaceProviderState: "failed", workspaceSupportsDiff: false } : {}),
+      ...(state === "failed"
+        ? {
+            workspaceProviderState: "failed",
+            workspaceError: "The project folder does not exist at revision HEAD.",
+            workspaceSupportsDiff: false,
+          }
+        : {}),
       ...(state === "remote"
         ? {
             workspaceExecutionKind: "remote",
@@ -133,8 +180,15 @@ const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
   const [workbench] = useState(() => createStoryWorkbench(state));
   return (
     <QueryClientProvider client={dashboardQueryClient}>
-      <Box h="100dvh" w="full">
-        <Workbench workbench={workbench} />
+      <Box h="100dvh" w="full" display="flex" flexDirection="column">
+        {state === "changes-recovery" ? (
+          <Button onClick={() => setResourceBreadcrumb(workbench, workspaceResource("diffs"))}>
+            Finish workspace setup
+          </Button>
+        ) : null}
+        <Box flex="1" minH="0">
+          <Workbench workbench={workbench} />
+        </Box>
       </Box>
     </QueryClientProvider>
   );
@@ -167,3 +221,15 @@ export const ImagePreview: Story = { args: { state: "image" } };
 export const DefaultWorkspace: Story = { args: { state: "default" } };
 export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
 export const RemoteWithoutFileViews: Story = { args: { state: "remote" } };
+
+export const PreparingWorkspace: Story = { args: { state: "preparing" } };
+
+export const FailedWorkspaceSetup: Story = { args: { state: "failed" } };
+
+export const FailedWorkspaceProvider: Story = { args: { state: "provider-failed" } };
+
+export const ChangesSetupFailure: Story = { args: { state: "changes-setup-failed" } };
+export const ChangesProviderFailure: Story = { args: { state: "changes-provider-failed" } };
+export const ChangesUnavailable: Story = { args: { state: "changes-unavailable" } };
+export const ChangesPreparing: Story = { args: { state: "changes-preparing" } };
+export const ChangesRecovery: Story = { args: { state: "changes-recovery" } };

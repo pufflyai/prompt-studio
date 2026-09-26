@@ -23,6 +23,7 @@ const workspace: ResourceRef = {
   id: "workspace-1",
   label: "PS-118_A5",
   metadata: {
+    workspaceProviderState: "ready",
     workspaceId: "workspace-1",
     workspaceType: "worktree",
     workspacePath: "/repo/worktree",

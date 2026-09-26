@@ -6,6 +6,7 @@ import {
   isVisibleDashboardRow,
   readDashboardRows,
 } from "@/shared/sync/dashboard-rows";
+import { workspaceState } from "./workspace-state";
 
 export interface DashboardWorkspaceOption {
   id: string;
@@ -59,7 +60,7 @@ const toWorkspaceOption = (
     type: workspace.worktree_path ? "worktree" : "current_branch",
     isDefault: Boolean(workspace.is_default),
     executionKind,
-    providerState: (workspace.provider_state as string | undefined) ?? "ready",
+    providerState: workspaceState(workspace),
     supportsFiles: capabilities ? capabilities.files !== "none" : executionKind === "local",
     supportsDiff: capabilities ? capabilities.diff === true : executionKind === "local",
     supportsArchive: capabilities?.archive === true,

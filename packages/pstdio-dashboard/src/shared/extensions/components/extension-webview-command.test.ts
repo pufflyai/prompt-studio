@@ -43,6 +43,7 @@ describe("executeWebviewCommand", () => {
       metadata: { sourcePanel: "lab" },
       params: { amount: 1 },
       resource: { type: "counter", id: "main" },
+      workspaceId: "remote-workspace",
       workbench,
       executeExtensionCommand: async (input) => {
         extensionCalls.push(input);
@@ -54,6 +55,7 @@ describe("executeWebviewCommand", () => {
         metadata: { sourcePanel: "lab" },
         params: { amount: 1 },
         resource: { type: "counter", id: "main" },
+        workspaceId: "remote-workspace",
       },
     ]);
   });

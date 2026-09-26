@@ -15,6 +15,7 @@ export interface WorkbenchExtensionCommandContext {
   workbench: WorkbenchModuleContext;
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
+  workspaceId?: string;
   metadata?: Record<string, unknown>;
   params?: Record<string, unknown>;
   resource?: ResourceRef;
@@ -56,6 +57,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
   const resource = input.resource;
   const response = await context.executeCommand(commandId, {
     projectId: context.projectId,
+    ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
     ...(input.params ? { params: input.params } : {}),
     ...(resource ? { resource } : {}),
     ...(input.slot ? { slot: input.slot } : {}),

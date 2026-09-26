@@ -7,6 +7,36 @@ import { checkExtensionApiVersions, readExtensionManifests } from "./verify-exte
 const HOST_VERSION = "1.0.0-alpha.1";
 
 describe("checkExtensionApiVersions", () => {
+  test.each([
+    "1.0.0-alpha.10",
+    "1.0.0-alpha.11",
+  ])("accepts an explicitly declared compatible host %s", (hostVersion) => {
+    expect(
+      checkExtensionApiVersions(
+        [{ file: "extensions/planner/package.json", enginesPstdio: "1.0.0-alpha.10 || 1.0.0-alpha.11" }],
+        hostVersion,
+      ),
+    ).toEqual([]);
+  });
+
+  test.each([
+    "1.0.0-alpha.10",
+    "1.0.0-alpha.10 || 1.0.0-alpha.12",
+  ])("rejects an extension that does not explicitly support alpha.11: %s", (enginesPstdio) => {
+    expect(
+      checkExtensionApiVersions([{ file: "extensions/planner/package.json", enginesPstdio }], "1.0.0-alpha.11"),
+    ).toHaveLength(1);
+  });
+
+  test("rejects a wildcard even when the current version is also listed", () => {
+    expect(
+      checkExtensionApiVersions(
+        [{ file: "extensions/planner/package.json", enginesPstdio: `${HOST_VERSION} || *` }],
+        HOST_VERSION,
+      ),
+    ).toHaveLength(1);
+  });
+
   test("accepts manifests declaring the host version", () => {
     const errors = checkExtensionApiVersions(
       [

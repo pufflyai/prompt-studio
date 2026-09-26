@@ -6,6 +6,7 @@ import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { invalidateWorkspaceFileData, workspaceFileQueryOptions } from "./data/workspace-queries";
 import {
   workspaceFileResource,
+  workspaceFilesUnavailableState,
   workspaceIdOf,
   workspaceMetadataString,
   workspaceRootResource,
@@ -190,6 +191,8 @@ const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
       load: async (resource) => {
         const workspaceId = workspaceIdOf(resource);
         const path = workspaceMetadataString(resource, "workspaceFilePath");
+        const unavailable = workspaceId ? workspaceFilesUnavailableState(resource) : undefined;
+        if (unavailable) return { editable: false, emptyState: unavailable };
         if (!workspaceId || !path) {
           return {
             editable: false,

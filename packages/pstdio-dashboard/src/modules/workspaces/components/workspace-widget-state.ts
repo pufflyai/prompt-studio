@@ -7,6 +7,8 @@ interface WorkspaceDiffInput {
 }
 
 export const resolveWorkspaceDiffRequest = (input: WorkspaceDiffInput) => {
+  if (input.metadata?.workspaceProviderState !== "ready" || input.metadata.workspaceError) return undefined;
+  if (input.metadata.workspaceSupportsDiff === false) return undefined;
   const metadataWorkspaceId = input.metadata?.workspaceId;
   const workspaceId = typeof metadataWorkspaceId === "string" ? metadataWorkspaceId : input.resourceId;
   if (!workspaceId) return undefined;

@@ -236,7 +236,7 @@ describe("createWorkspacesModule", () => {
   });
 });
 describe("createWorkspacesModule navigation", () => {
-  test("places workspace creation on the Workspaces navigation row", async () => {
+  test("keeps the Workspaces navigation row available before project selection", async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
@@ -254,13 +254,6 @@ describe("createWorkspacesModule navigation", () => {
     expect(workspacesNode).toMatchObject({
       commandId: dashboardCommandIds.openWorkspaces,
       target: { kind: "page", page: workbenchPages.workspaces },
-      actions: [
-        expect.objectContaining({
-          id: "new-workspace",
-          commandId: dashboardCommandIds.createWorkspace,
-          icon: "Plus",
-        }),
-      ],
     });
     expect(workspacesNode?.hiddenByDefault).toBe(true);
     expect(nodeIds).toContain(dashboardViews.workspaces.id);

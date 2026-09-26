@@ -283,6 +283,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   artifacts: ExtensionArtifactApi;
   /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
   repoFiles?: ArtifactMount;
+  /** Project files through its default workspace, independent of the invocation workspace. */
+  projectFiles?: ArtifactMount;
   /** Files of the workspace this context targets, scoped to its working dir. */
   workspaceFiles?: WorkspaceFilesMount;
   /** Read-only files packaged with the installed extension, scoped to its package root. */

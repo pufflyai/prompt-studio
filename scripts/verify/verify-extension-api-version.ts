@@ -1,14 +1,14 @@
 /**
- * Every extension manifest in the repo must target the exact host extension API version.
+ * Every extension manifest must explicitly include the host extension API version.
  *
  * While the API is in alpha, EXTENSION_API_VERSION moves on every breaking contract change.
- * A manifest left on the previous version ships an extension the host refuses to load, so the
- * whole set has to move together. This check makes a half-migrated release fail here instead.
+ * An extension can certify several exact versions during a staged release. Ranges must not
+ * turn an API bump into implicit compatibility. Use the same declaration parser as the host.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, supportsExtensionApiVersion } from "pstdio-api-contracts/extension-kernel";
 
 const ROOT = path.resolve(import.meta.dir, "../..");
 
@@ -48,10 +48,10 @@ export const readExtensionManifests = (root: string, files: string[]) => {
 
 export const checkExtensionApiVersions = (manifests: ExtensionManifest[], hostVersion: string) =>
   manifests
-    .filter((manifest) => manifest.enginesPstdio !== hostVersion)
+    .filter((manifest) => !supportsExtensionApiVersion(manifest.enginesPstdio, hostVersion))
     .map(
       (manifest) =>
-        `${manifest.file}: engines.pstdio is "${manifest.enginesPstdio}" but must be exactly "${hostVersion}"`,
+        `${manifest.file}: engines.pstdio is "${manifest.enginesPstdio}" but must explicitly list "${hostVersion}" using exact versions separated by "||"`,
     );
 
 const main = () => {
