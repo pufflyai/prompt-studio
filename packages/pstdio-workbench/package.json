@@ -80,6 +80,7 @@
     "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
+    "cross-env": "10.1.0",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "react": "19.2.4",
