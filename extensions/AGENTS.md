@@ -16,6 +16,10 @@ When a change requires both SDK updates and extension updates:
 - After the new SDK package is available, update the extension dependency to point to that SDK version and open a separate extension PR.
 - Do not combine SDK and extension release changes in one PR unless explicitly requested.
 
+## Core extension releases
+
+Core extensions share the host version through the fixed group in `.changeset/config.json`. Add each new core extension to that group. Continue naming changed extensions in changesets. One `pstdio@<version>` tag supplies all core extension code; do not create extension tags or releases. Shared versions do not update published SDK or UI dependency ranges.
+
 ## Extension Translations
 
 - Use `l10n("stable.key", "Default copy")` from `@pstdio/sdk/extensions` for user-facing contribution text.

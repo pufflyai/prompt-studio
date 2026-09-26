@@ -265,7 +265,7 @@
     },
     "extensions/remote-workspaces": {
       "name": "remote-workspaces",
-      "version": "2.0.2",
+      "version": "0.34.0",
       "dependencies": {
         "@pstdio/sdk": "^0.25.0",
       },

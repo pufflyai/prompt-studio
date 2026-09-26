@@ -79,9 +79,9 @@ jobs:
       pull-requests: write
       id-token: write
     outputs:
-      pstdio_published: ${{ steps.desktop_release.outputs.published }}
-      pstdio_version: ${{ steps.desktop_release.outputs.version }}
-      pstdio_tag: ${{ steps.desktop_release.outputs.tag }}
+      pstdio_published: ${{ steps.release.outputs.published }}
+      pstdio_version: ${{ steps.release.outputs.version }}
+      pstdio_tag: ${{ steps.release.outputs.tag }}
     env:
       NPM_CONFIG_PROVENANCE: true
     steps:
@@ -143,15 +143,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push release tags
-        id: release-packages
-        if: steps.changesets.outputs.published == 'true'
-        env:
-          PSTDIO_PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
-        run: bun run --cwd scripts release:tags:push
-
-      - name: Resolve desktop release
-        id: desktop_release
+      - name: Resolve release
+        id: release
         if: steps.changesets.outputs.published == 'true'
         env:
           PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
@@ -161,76 +154,51 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "published=true" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=pstdio@$VERSION" >> "$GITHUB_OUTPUT"
+          {
+            echo "published=true"
+            echo "version=$VERSION"
+            echo "tag=pstdio@$VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push release tag
+        if: steps.release.outputs.published == 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: git push origin "refs/tags/pstdio@${VERSION}"
 
       - name: Create pstdio GitHub Release
-        if: steps.changesets.outputs.published == 'true'
+        if: steps.release.outputs.published == 'true'
         run: |
-          VERSION=$(echo '${{ steps.release-packages.outputs.packages }}' | jq -r '.[] | select(.name == "pstdio") | .version')
-          if [ -n "$VERSION" ]; then
-            TAG="pstdio@${VERSION}"
-            RELEASE_ASSETS_DIR="packages/pstdio/dist/release-assets"
-            NOTES_FILE="$(mktemp)"
-            bun run --cwd scripts release:changelog -- pstdio "$VERSION" > "$NOTES_FILE"
+          TAG="pstdio@${VERSION}"
+          RELEASE_ASSETS_DIR="packages/pstdio/dist/release-assets"
+          NOTES_FILE="$(mktemp)"
+          bun run --cwd scripts release:notes "$VERSION" > "$NOTES_FILE"
 
-            rm -rf "$RELEASE_ASSETS_DIR"
-            mkdir -p "$RELEASE_ASSETS_DIR"
+          rm -rf "$RELEASE_ASSETS_DIR"
+          mkdir -p "$RELEASE_ASSETS_DIR"
 
-            install -m 755 packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-arm64"
-            install -m 755 packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-x64"
-            install -m 755 packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-x64"
-            install -m 755 packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-arm64"
-            install -m 755 packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-x64.exe"
-            install -m 755 packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-arm64.exe"
-            install -m 644 packages/pstdio/dist/platforms/checksums.sha256 "$RELEASE_ASSETS_DIR/checksums.sha256"
-            install -m 755 packages/pstdio/install.sh "$RELEASE_ASSETS_DIR/install.sh"
+          install -m 755 packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-arm64"
+          install -m 755 packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-x64"
+          install -m 755 packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-x64"
+          install -m 755 packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-arm64"
+          install -m 755 packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-x64.exe"
+          install -m 755 packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-arm64.exe"
+          install -m 644 packages/pstdio/dist/platforms/checksums.sha256 "$RELEASE_ASSETS_DIR/checksums.sha256"
+          install -m 755 packages/pstdio/install.sh "$RELEASE_ASSETS_DIR/install.sh"
 
-            RELEASE_DRAFT=$(gh release view "$TAG" --json isDraft -q '.isDraft' 2>/dev/null || true)
+          RELEASE_DRAFT=$(gh release view "$TAG" --json isDraft -q '.isDraft' 2>/dev/null || true)
 
-            if [ "$RELEASE_DRAFT" = "true" ]; then
-              echo "Release $TAG exists as a draft, refreshing CLI assets."
-              gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/* --clobber
-            elif [ "$RELEASE_DRAFT" = "false" ]; then
-              echo "Release $TAG already exists, skipping."
-            else
-              gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE" --draft --verify-tag
-              gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/*
-            fi
+          if [ "$RELEASE_DRAFT" = "true" ]; then
+            echo "Release $TAG exists as a draft, refreshing CLI assets."
+            gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/* --clobber
+          elif [ "$RELEASE_DRAFT" = "false" ]; then
+            echo "Release $TAG already exists, skipping."
+          else
+            gh release create "$TAG" --title "v$VERSION" --notes-file "$NOTES_FILE" --generate-notes --draft --verify-tag
+            gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/*
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create GitHub Releases for other packages
-        if: steps.changesets.outputs.published == 'true'
-        run: |
-          set -euo pipefail
-          tmp_root="$(mktemp -d)"
-          echo '${{ steps.release-packages.outputs.packages }}' \
-            | jq -c '.[] | select(.name != "pstdio")' \
-            | while read -r entry; do
-            name=$(echo "$entry" | jq -r '.name')
-            version=$(echo "$entry" | jq -r '.version')
-            tag="${name}@${version}"
-
-            if gh release view "$tag" > /dev/null 2>&1; then
-              echo "Release $tag already exists, skipping."
-              continue
-            fi
-
-            notes_file="${tmp_root}/${tag//\//_}.notes.md"
-            bun run --cwd scripts release:changelog -- "$name" "$version" > "$notes_file"
-
-            if [ -d "extensions/${name}" ]; then
-              archive="${tmp_root}/${name}-${version}.tar.gz"
-              git archive --format=tar.gz --prefix="${name}/" -o "$archive" "HEAD:extensions/${name}"
-              gh release create "$tag" --title "$tag" --notes-file "$notes_file" "$archive"
-            else
-              gh release create "$tag" --title "$tag" --notes-file "$notes_file"
-            fi
-          done
-        env:
+          VERSION: ${{ steps.release.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   desktop_release:

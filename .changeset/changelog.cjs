@@ -16,11 +16,7 @@ const getReleaseLine = async (changeset) => {
   return `${head}\n${rest.map((line) => `  ${line}`).join("\n")}`;
 };
 
-const getDependencyReleaseLine = async (_changesets, dependenciesUpdated) => {
-  if (dependenciesUpdated.length === 0) return "";
-  const list = dependenciesUpdated.map((dep) => `\`${dep.name}@${dep.newVersion}\``).join(", ");
-  return `- Updated internal dependencies: ${list}`;
-};
+const getDependencyReleaseLine = async () => "";
 
 module.exports = { getReleaseLine, getDependencyReleaseLine };
 module.exports.default = module.exports;

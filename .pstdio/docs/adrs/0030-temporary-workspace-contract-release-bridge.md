@@ -29,6 +29,6 @@ Migration 0026 gave older Git worktrees the root provider identity. The bridge p
 
 The bridge briefly exposes old and new interfaces and needs compatibility tests for both.
 
-Changesets propagates dependency releases only through `workspace:` dependencies. Core packages use those dependencies and ship together. Extensions keep published SDK version ranges, so a core release cannot silently update or release them. Their separate PRs update those ranges after publication. This dependency ownership rule remains after the bridge is removed.
+Changesets propagates dependency releases only through `workspace:` dependencies. Core packages use those dependencies and ship together. Extensions keep published SDK version ranges, so a core release cannot silently update those ranges. Core extensions now share the host version through the Changesets fixed group (ADR 0031). Their separate PRs still update SDK and UI ranges after publication. This dependency ownership rule remains after the bridge is removed.
 
 The PS-391 host cutover PR owns removal of repository aliases and projections once the bridge SDK and compatible extension releases are available. It must preserve IDs and history through the one migration. A following extension-only cleanup removes alpha.10 from declarations when bridge-host support ends. Explicit version enumeration can remain as the public declaration format; it grants no compatibility beyond the versions listed by the author.

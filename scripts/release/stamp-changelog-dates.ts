@@ -22,7 +22,7 @@ const blameDate = (file: string, line: number) => {
 
 const findChangelogs = async () => {
   const found: string[] = [];
-  for (const root of ["packages", "extensions"] as const) {
+  for (const root of ["packages", "extensions", "clients"] as const) {
     const entries = await readdir(root, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
