@@ -17,7 +17,7 @@ COPY scripts scripts
 
 RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/landing-page
 
-RUN cd packages/ui && bun run build:monaco && bun run build
+RUN cd packages/ui && bun run build
 RUN cd clients/landing-page && bun run build
 
 FROM nginx:1.27-alpine AS runner
