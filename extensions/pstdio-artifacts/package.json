@@ -1,6 +1,6 @@
 {
   "name": "pstdio-artifacts",
-  "version": "0.2.4",
+  "version": "0.35.0",
   "displayName": "Artifacts",
   "description": "Publish interactive HTML pages and browse their saved revisions.",
   "publisher": "pstdio",
