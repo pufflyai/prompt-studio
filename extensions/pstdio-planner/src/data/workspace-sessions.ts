@@ -10,14 +10,19 @@ export type TicketWorkspaceSessionLookup = Map<string, TicketWorkspaceSession>;
 const linkedWorkspaceIds = (workspaces: ExtensionWorkspace[]) =>
   new Set(workspaces.filter((workspace) => ticketShorthandFromWorkspace(workspace)).map((workspace) => workspace.id));
 
-// `listByWorkspace` is oldest-first, so the last entry is the workspace's latest session.
+// Sessions are oldest-first. Prefer ongoing work before falling back to the latest result.
 export const loadLatestWorkspaceSessions = async (
   sessions: Pick<ExtensionSessionsApi, "listByWorkspace">,
   workspaces: ExtensionWorkspace[],
 ): Promise<TicketWorkspaceSessionLookup> => {
   const entries = await Promise.all(
     [...linkedWorkspaceIds(workspaces)].map(async (workspaceId) => {
-      const latest = (await sessions.listByWorkspace(workspaceId)).at(-1);
+      const all = await sessions.listByWorkspace(workspaceId);
+      const latest =
+        all.findLast(
+          (session) =>
+            session.status === "queued" || session.status === "in_progress" || session.status === "awaiting_input",
+        ) ?? all.at(-1);
       return latest ? ([workspaceId, { id: latest.id, status: latest.status }] as const) : null;
     }),
   );

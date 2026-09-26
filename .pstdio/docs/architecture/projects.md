@@ -34,6 +34,14 @@ A project can have zero or more repos. The `project_repos` junction table uses c
 
 ## Creation Flow
 
+Repository defaults resolve catalog `{hostRelease}` refs at the running host's release.
+An explicit extension ref takes precedence. Required default installation failures fail
+registration and roll back its changes; they are not silently ignored.
+
+Startup also repairs older partial registrations. A project with a linked repository
+and no default workspace receives one root workspace using that repository's current
+branch. Repeated reconciliation preserves existing roots. Unlinked projects are unchanged.
+
 When a project is created (`pst projects create`), the following happens in order:
 
 ```

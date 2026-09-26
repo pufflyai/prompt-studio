@@ -120,16 +120,27 @@ export const createRuntimeRoutes = (deps: RuntimeRouteDeps) => {
 
   routes.get("/events", (c) => {
     const encoder = new TextEncoder();
+    let cleanup = () => {};
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         let unsubscribe = () => {};
+        const keepalive = () => controller.enqueue(encoder.encode(": keepalive\n\n"));
+        const timer = setInterval(keepalive, 1000);
+        cleanup = () => {
+          clearInterval(timer);
+          unsubscribe();
+          c.req.raw.signal.removeEventListener("abort", cleanup);
+        };
+        keepalive();
         unsubscribe = deps.host.subscribe((event) => {
           controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`));
           controller.close();
-          unsubscribe();
+          cleanup();
         });
-        c.req.raw.signal.addEventListener("abort", unsubscribe, { once: true });
+        c.req.raw.signal.addEventListener("abort", cleanup, { once: true });
+        if (c.req.raw.signal.aborted) cleanup();
       },
+      cancel: () => cleanup(),
     });
 
     return new Response(stream, {

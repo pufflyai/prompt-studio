@@ -1,4 +1,6 @@
+import { setTimeout as delay } from "node:timers/promises";
 import type { RuntimeActivitySummary } from "pstdio-api/runtime";
+import { createLogger } from "pstdio-logging";
 import { isRuntimePidAlive, type RuntimeDescriptor, readRuntimeDescriptor } from "./runtime-descriptor";
 
 type RuntimeFetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
@@ -44,12 +46,7 @@ const parseRuntimeEvent = (block: string) => {
   }
 };
 
-export const observeRuntimeShutdown = async (
-  descriptor: RuntimeDescriptor,
-  onShutdown: () => void,
-  fetcher: RuntimeFetcher = fetch,
-  signal?: AbortSignal,
-) => {
+const readRuntimeShutdown = async (descriptor: RuntimeDescriptor, fetcher: RuntimeFetcher, signal?: AbortSignal) => {
   const response = await fetcher(`${descriptor.origin}/runtime/events`, {
     headers: { authorization: `Bearer ${descriptor.token}` },
     signal,
@@ -59,19 +56,52 @@ export const observeRuntimeShutdown = async (
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    buffer += decoder.decode(value, { stream: !done });
-    const blocks = buffer.split("\n\n");
-    buffer = blocks.pop() ?? "";
-    for (const block of blocks) {
-      const event = parseRuntimeEvent(block);
-      if (event?.type === "intentional_shutdown" && event.instanceId === descriptor.instanceId) {
-        onShutdown();
-        return;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      const blocks = buffer.split("\n\n");
+      buffer = blocks.pop() ?? "";
+      for (const block of blocks) {
+        const event = parseRuntimeEvent(block);
+        if (event?.type === "intentional_shutdown" && event.instanceId === descriptor.instanceId) {
+          return true;
+        }
       }
+      if (done) return false;
     }
-    if (done) return;
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+};
+
+export const observeRuntimeShutdown = async (
+  descriptor: RuntimeDescriptor,
+  onShutdown: () => void,
+  fetcher: RuntimeFetcher = fetch,
+  signal?: AbortSignal,
+) => {
+  let failures = 0;
+  while (!signal?.aborted) {
+    let observed = false;
+    try {
+      observed = await readRuntimeShutdown(descriptor, fetcher, signal);
+    } catch {
+      if (signal?.aborted) return;
+    }
+    if (observed) {
+      onShutdown();
+      return;
+    }
+    failures += 1;
+    if (failures === 2) {
+      createLogger({ service: "pstdio", component: "runtime-events" }).error(
+        { event: "runtime.events.disconnected", instanceId: descriptor.instanceId },
+        "Runtime control stream disconnected repeatedly; reconnecting",
+      );
+    }
+    await delay(Math.min(failures * 250, 5000), undefined, { signal }).catch(() => {});
   }
 };
 

@@ -143,10 +143,10 @@ const prepareDefaultCheckouts = async (
   return sharedByRef;
 };
 
-const createPreparedSourceResolver = (sharedByRef: Map<string | undefined, SharedCheckout>, releaseRef?: string) => {
+const createPreparedSourceResolver = (sharedByRef: Map<string | undefined, SharedCheckout>) => {
   const prepareNamedSource: SharedCheckout["prepareNamedSource"] = async (name, _tempDir, ref, signal) => {
     signal?.throwIfAborted();
-    const shared = sharedByRef.get(ref) ?? (ref === releaseRef ? sharedByRef.get(undefined) : undefined);
+    const shared = sharedByRef.get(ref);
     if (!shared) throw new Error(`No prepared checkout for extension: ${name}`);
     return shared.prepareNamedSource(name, "", ref, signal);
   };
@@ -177,7 +177,7 @@ const withResolvedDefaultEntries = async <T>(
       )
     : input.config.defaultExtensions;
   const sharedByRef = await prepareDefaultCheckouts(entries, input);
-  const prepareNamedSource = createPreparedSourceResolver(sharedByRef, input.releaseRef);
+  const prepareNamedSource = createPreparedSourceResolver(sharedByRef);
 
   try {
     const resolved: ResolvedDefaultEntry[] = [];
@@ -187,7 +187,7 @@ const withResolvedDefaultEntries = async <T>(
       try {
         const sourcePath = isLocalExtensionSource(source)
           ? resolveLocalSource(source)
-          : (await prepareNamedSource(source, "", entryRef(entry) ?? input.releaseRef, input.signal)).path;
+          : (await prepareNamedSource(source, "", entryRef(entry), input.signal)).path;
         if (!sourcePath) continue;
 
         resolved.push({
@@ -292,6 +292,7 @@ export { registerInstalledExtensionSources } from "./register-installed-extensio
 type InstallRepoDefaultExtensionsInput = {
   defaultExtensions: DefaultExtensionEntry[];
   repoPath: string;
+  releaseRef?: string;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
 };
 
@@ -314,6 +315,7 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
     await withResolvedDefaultEntries(
       {
         config: { defaultExtensions: input.defaultExtensions },
+        releaseRef: input.releaseRef,
         prepareSharedCheckout: input.prepareSharedCheckout,
         sourceMode: true,
       },
@@ -327,7 +329,7 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
             continue;
           }
 
-          const installInput = toInstallInput(resolved.entry);
+          const installInput = toInstallInput(resolved.entry, input.releaseRef);
           await installExtensionSource({
             ...installInput,
             existsOk: false,

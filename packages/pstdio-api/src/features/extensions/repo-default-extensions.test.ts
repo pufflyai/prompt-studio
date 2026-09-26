@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +6,33 @@ import { installRepoDefaultExtensions } from "./default-extensions";
 import { writeExtension } from "./default-extensions-test-fixtures";
 
 describe("installRepoDefaultExtensions", () => {
+  test.each([undefined, "explicit-ref"])("resolves named repo defaults at the selected ref (%s)", async (ref) => {
+    const root = mkdtempSync(join(tmpdir(), "repo-release-ref-"));
+    const source = join(root, "source");
+    writeExtension(source, "release-test", "repo");
+    const prepareNamedSource = mock(async (_name: string, _tempDir: string, _ref?: string) => ({
+      path: source,
+      ref: "resolved-commit",
+    }));
+    const prepareSharedCheckout = mock(async () => ({ prepareNamedSource, cleanup: () => {} }));
+    try {
+      await installRepoDefaultExtensions({
+        repoPath: join(root, "repo"),
+        defaultExtensions: [{ source: "release-test", installName: "release-test", skipInstall: true, ref }],
+        releaseRef: "pstdio@0.34.0",
+        prepareSharedCheckout,
+      });
+      expect(prepareSharedCheckout).toHaveBeenCalledWith(["release-test"], {
+        hostReleaseRef: "pstdio@0.34.0",
+        ...(ref ? { ref } : {}),
+      });
+      expect(prepareNamedSource.mock.calls[0]?.[2]).toBe(ref);
+      expect(existsSync(join(root, "repo/.pstdio/extensions/release-test/extension.ts"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("materializes only repo-scoped defaults without overwriting existing folders", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-repo-defaults-"));
     const source = join(root, "source-extension");

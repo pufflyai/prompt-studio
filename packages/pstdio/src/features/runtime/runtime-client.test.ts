@@ -21,6 +21,44 @@ const descriptor: RuntimeDescriptor = {
 };
 
 describe("runtime client", () => {
+  test("stops reconnecting when the attachment is aborted", async () => {
+    const abort = new AbortController();
+    let requests = 0;
+    await observeRuntimeShutdown(
+      descriptor,
+      () => {
+        throw new Error("Unexpected shutdown");
+      },
+      async () => {
+        requests += 1;
+        abort.abort();
+        return new Response(": keepalive\n\n");
+      },
+      abort.signal,
+    );
+    expect(requests).toBe(1);
+  });
+  test.each(["closed", "failed"])("reconnects a %s control stream until shutdown arrives", async (failure) => {
+    let requests = 0;
+    let observed = 0;
+    await observeRuntimeShutdown(
+      descriptor,
+      () => {
+        observed += 1;
+      },
+      async () => {
+        requests += 1;
+        if (requests === 1) {
+          if (failure === "failed") throw new Error("connection reset");
+          return new Response(": keepalive\n\n");
+        }
+        return new Response('data: {"type":"intentional_shutdown","instanceId":"runtime-one"}\n\n');
+      },
+    );
+    expect(requests).toBe(2);
+    expect(observed).toBe(1);
+  });
+
   test("authenticates promotion and targets the expected instance", async () => {
     let request: Request | undefined;
 

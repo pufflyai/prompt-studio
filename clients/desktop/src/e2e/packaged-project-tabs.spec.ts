@@ -41,6 +41,15 @@ test("opens and closes project tabs while preserving pages and terminals", async
       .locator('[data-workbench-panel-header="secondary"]')
       .getByRole("button", { name: "Add panel" })
       .click();
+    const input = app.page.getByRole("textbox", { name: "Terminal input" });
+    await expect(input).toBeVisible();
+    if (process.platform !== "win32") {
+      await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(0);
+    }
+    await input.pressSequentially(
+      process.platform === "win32" ? 'powershell.exe -NoProfile -Command "Start-Sleep -Seconds 300"' : "sleep 300",
+    );
+    await input.press("Enter");
     await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(1);
     const terminal = (await readRuntimeActivity(app.runtime)).terminals[0];
     await app.page.getByRole("option", { name: "Sessions", exact: true }).click();

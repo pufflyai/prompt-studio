@@ -1,12 +1,13 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
+import { dispatchQueuedEntry } from "./session-queue-dispatch";
+import { isWorkspaceDispatchPending } from "./session-queue-readiness";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
   createSubmittedDispatchEntry,
   type DispatchContext,
   dispatchExisting,
-  dispatchQueuedEntry,
   type ExistingSession,
   hasCreateCapacity,
   insertFollowUpEntry,
@@ -153,7 +154,8 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   const drainQueue = async (input?: { releasedSessionId?: string }) => {
-    return withSchedulingLock(async () => {
+    const dispatches: (Promise<unknown> | undefined)[] = [];
+    await withSchedulingLock(async () => {
       if (input?.releasedSessionId) {
         await maybeRequeueReleasedSession(input.releasedSessionId);
       }
@@ -169,8 +171,16 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
           continue;
         }
 
-        await dispatchQueuedEntry(deps, session, entry);
+        const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
+        if (isWorkspaceDispatchPending(workspace)) continue;
+        const dispatch = await dispatchQueuedEntry(deps, session, entry);
+        dispatches.push(dispatch?.settled);
       }
+    }).finally(async () => {
+      // Failed startups can drain released capacity, so settle outside the scheduling lock.
+      const results = await Promise.allSettled(dispatches);
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed) throw failed.reason;
     });
   };
 
