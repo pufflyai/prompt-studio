@@ -330,8 +330,8 @@ describe("pstdio planner workspace contributions", () => {
       command: { id: "create-workspace", kind: "command" },
     });
   });
-  test("keeps tag and board rule settings separate from shared status fields", () => {
-    expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["ticket-tags"]);
+  test("keeps implementation and tag settings separate from shared status fields", () => {
+    expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["implementation", "ticket-tags"]);
     expect(extension.settingsSections).toEqual([
       expect.objectContaining({ id: "planner", order: 40, title: expect.objectContaining({ default: "Planner" }) }),
     ]);

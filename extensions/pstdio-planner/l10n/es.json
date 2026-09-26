@@ -17,5 +17,17 @@
   "displayMenu.propertyOptions.updatedAt": "Actualizado",
   "settingsPanels.ticketTags.title": "Etiquetas",
   "ticketDetail.none": "Ninguno",
-  "ticketDetail.parent": "Padre"
+  "ticketDetail.parent": "Padre",
+  "settings.implementation.adversarialReview.title": "Revisión adversarial",
+  "settings.implementation.adversarialReview.description": "Realizar una revisión adversarial antes de terminar la implementación del ticket.",
+  "settings.implementation.openPr.title": "Abrir PR",
+  "settings.implementation.openPr.description": "Abrir una solicitud de cambios en borrador cuando el cambio esté listo y vincularla al ticket.",
+  "commands.implementationPolicy.title": "Consultar las opciones de implementación de tickets",
+  "commands.implementationTargets.title": "Listar ramas de destino de implementación",
+  "commands.setImplementationTarget.title": "Establecer la rama de destino predeterminada",
+  "settingsPanels.implementation.title": "Implementación",
+  "settings.implementation.defaultTargetBranch.title": "Rama de destino predeterminada",
+  "settings.implementation.repositoryDefault": "Predeterminada del repositorio",
+  "settings.implementation.noGitFolder": "Las ramas remotas requieren una carpeta Git local.",
+  "settings.implementation.error": "No se pudo actualizar la configuración de implementación"
 }

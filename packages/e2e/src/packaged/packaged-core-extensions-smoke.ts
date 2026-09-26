@@ -7,6 +7,7 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
 import { expectPlannerProperties } from "./packaged-planner-properties-smoke";
+import { expectPlannerWorkflow } from "./packaged-planner-workflow-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 // The macOS Intel release runner can spend over a minute extracting and loading all bundled core extensions.
@@ -21,6 +22,40 @@ const CORE_DEFAULT_EXTENSION_NAMES = [
   "pstdio-reports",
   "pstdio-skills",
 ];
+
+const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Record<string, string>) => {
+  const skillsRes = await fetch(`${baseUrl}/v1/projects/${projectId}/skills`, {
+    headers: headers,
+  });
+  expect(skillsRes.status).toBe(200);
+  const skills = (await skillsRes.json()) as Array<{
+    files: Array<{ path: string }>;
+    name: string;
+  }>;
+  expect(skills).toContainEqual(
+    expect.objectContaining({
+      name: "implement-ticket",
+      files: expect.arrayContaining([expect.objectContaining({ path: "SKILL.md" })]),
+    }),
+  );
+  expect(skills).toContainEqual(
+    expect.objectContaining({
+      name: "create-pstdio-extension",
+      files: expect.arrayContaining([
+        expect.objectContaining({ path: "SKILL.md" }),
+        expect.objectContaining({ path: "references/extension-api.md" }),
+        expect.objectContaining({ path: "references/examples.md" }),
+        expect.objectContaining({ path: "references/examples/scribble.ts" }),
+        expect.objectContaining({ path: "references/examples/zipline.ts" }),
+        expect.objectContaining({ path: "references/examples/pigeon.ts" }),
+        expect.objectContaining({ path: "references/examples/controls.ts" }),
+        expect.objectContaining({ path: "references/examples/table-navigation.ts" }),
+        expect.objectContaining({ path: "references/pages.md" }),
+        expect.objectContaining({ path: "references/validation.md" }),
+      ]),
+    }),
+  );
+};
 
 export const registerCoreDefaultExtensionSmokeTests = () => {
   describe("packaged pstdio — core default extensions", () => {
@@ -70,7 +105,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
           expect(extensionsRes.status).toBe(200);
 
           const body = (await extensionsRes.json()) as {
-            extensions: Array<{ canUpgrade: boolean; enabled: boolean; installName: string; name: string }>;
+            extensions: Array<{ canUpgrade: boolean; enabled: boolean; id: string; installName: string; name: string }>;
           };
 
           expect(body.extensions).toEqual(
@@ -85,31 +120,17 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
             ]),
           );
 
-          const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
-            headers: runtimeAuthorization(started.descriptor),
-          });
-          expect(skillsRes.status).toBe(200);
-          const skills = (await skillsRes.json()) as Array<{
-            files: Array<{ path: string }>;
-            name: string;
-          }>;
-          expect(skills).toContainEqual(
-            expect.objectContaining({
-              name: "create-pstdio-extension",
-              files: expect.arrayContaining([
-                expect.objectContaining({ path: "SKILL.md" }),
-                expect.objectContaining({ path: "references/extension-api.md" }),
-                expect.objectContaining({ path: "references/examples.md" }),
-                expect.objectContaining({ path: "references/examples/scribble.ts" }),
-                expect.objectContaining({ path: "references/examples/zipline.ts" }),
-                expect.objectContaining({ path: "references/examples/pigeon.ts" }),
-                expect.objectContaining({ path: "references/examples/controls.ts" }),
-                expect.objectContaining({ path: "references/examples/table-navigation.ts" }),
-                expect.objectContaining({ path: "references/pages.md" }),
-                expect.objectContaining({ path: "references/validation.md" }),
-              ]),
-            }),
+          const planner = body.extensions.find((extension) => extension.installName === "pstdio-planner");
+          expect(planner).toBeDefined();
+          await expectPlannerWorkflow(
+            started.baseUrl,
+            project.id,
+            planner!.id,
+            runtimeAuthorization(started.descriptor),
+            tempRoot,
           );
+
+          await expectCoreSkills(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
 
           const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
             headers: runtimeAuthorization(started.descriptor),

@@ -50,6 +50,9 @@ Every CLI-enabled Planner command is available under `pst pstdio-planner`. Globa
 The following workflow commands only use the Planner namespace:
 
 ```sh
+pst pstdio-planner implementation-policy
+pst pstdio-planner implementation-targets
+pst pstdio-planner set-implementation-target --branch origin/main
 pst pstdio-planner attempt-readiness
 pst pstdio-planner submit-change-request
 pst pstdio-planner submit-review

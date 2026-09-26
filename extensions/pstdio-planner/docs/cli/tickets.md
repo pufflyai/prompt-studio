@@ -60,6 +60,6 @@ pst tickets save --id PS-12
 
 `implement` starts a managed implementation attempt. Use `workspaces` or `worktrees list` to inspect the work linked to a ticket. `worktrees remove-all` removes every linked worktree.
 
-`link-review` attaches a review URL, such as a pull request, to the ticket. `proposal-refined` marks a proposal as ready for a person to review.
+`link-review` attaches a review URL, such as a pull request, to the ticket. Repeating the command with the same URL keeps the existing link and its metadata. `proposal-refined` marks a proposal as ready for a person to review.
 
 See the [Planner CLI index](./index.md) for namespaced attempt and review commands.

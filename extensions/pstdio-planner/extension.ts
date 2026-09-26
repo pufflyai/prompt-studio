@@ -31,12 +31,38 @@ const templateCommandRefs = {
 export default defineExtension({
   settings: {
     properties: {
+      "implementation.adversarialReview": {
+        type: "boolean",
+        scope: "project",
+        default: true,
+        title: l10n("settings.implementation.adversarialReview.title", "Adversarial review"),
+        description: l10n(
+          "settings.implementation.adversarialReview.description",
+          "Run an adversarial review before finishing ticket implementation.",
+        ),
+      },
+      "implementation.openPr": {
+        type: "boolean",
+        scope: "project",
+        default: true,
+        title: l10n("settings.implementation.openPr.title", "Open PR"),
+        description: l10n(
+          "settings.implementation.openPr.description",
+          "Open a draft pull request when the change is ready and link it to the ticket.",
+        ),
+      },
       "automation.maxInProgress": {
         type: "number",
         scope: "project",
         default: 2,
         title: "Maximum in-progress tickets",
         description: "Hard cap used by autonomous planner implementation automation.",
+      },
+      "implementation.defaultTargetBranch": {
+        type: "string",
+        scope: "project",
+        default: "",
+        title: l10n("settings.implementation.defaultTargetBranch.title", "Default target branch"),
       },
     },
   },
