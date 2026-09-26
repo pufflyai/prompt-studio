@@ -12,10 +12,10 @@ const codexSchema = {
     label: "Reasoning effort",
     defaultValue: "medium",
     options: [
-      { label: "Minimal", value: "minimal", icon: "CircleDot" },
-      { label: "Low", value: "low", icon: "Gauge" },
-      { label: "Medium", value: "medium", icon: "Brain" },
-      { label: "High", value: "high", icon: "Zap" },
+      { label: "Minimal", value: "minimal", icon: "level-low" },
+      { label: "Low", value: "low", icon: "level-low" },
+      { label: "Medium", value: "medium", icon: "level-mid" },
+      { label: "High", value: "high", icon: "level-high" },
     ],
   },
   model_reasoning_summary: {
@@ -83,8 +83,8 @@ const runAttemptMode: SelectionParam = {
   type: "selection",
   defaultValue: "worktree",
   options: [
-    { id: "worktree", name: "Worktree", icon: "GitFork" },
-    { id: "current_branch", name: "Current branch", icon: "GitBranch" },
+    { id: "worktree", name: "Worktree", icon: "git-branch" },
+    { id: "current_branch", name: "Current branch", icon: "git-commit-horizontal" },
   ],
 };
 
@@ -140,9 +140,9 @@ export const ModelSpecificEffortLevels: Story = {
         ...codexSchema.model_reasoning_effort,
         defaultValue: "high",
         options: [
-          { label: "Low", value: "low", icon: "Gauge" },
-          { label: "Medium", value: "medium", icon: "Brain" },
-          { label: "High", value: "high", icon: "Zap" },
+          { label: "Low", value: "low", icon: "level-low" },
+          { label: "Medium", value: "medium", icon: "level-mid" },
+          { label: "High", value: "high", icon: "level-high" },
         ],
       },
     },

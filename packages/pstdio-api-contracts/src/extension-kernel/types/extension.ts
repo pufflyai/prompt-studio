@@ -174,6 +174,7 @@ export interface ScheduleContribution<TParams extends Struct = Struct> extends C
 
 export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace-type"> {
   label: Localizable<string>;
+  icon?: string;
   params?: ParamObjectSchema;
   create(ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput): MaybePromise<WorkspaceProviderResult>;
   resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;

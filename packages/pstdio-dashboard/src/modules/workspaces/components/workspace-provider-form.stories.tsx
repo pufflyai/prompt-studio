@@ -5,6 +5,7 @@ import { WorkspaceProviderForm } from "./workspace-provider-form";
 const git = {
   id: "pstdio.worktree",
   label: "Git worktree",
+  icon: "git-branch",
   description: "Git review and merge cover the entire repository, including paths outside the project folder.",
   params: {
     base: {
@@ -12,13 +13,18 @@ const git = {
       label: "Base branch",
       defaultValue: "main",
       required: true,
-      options: ["main", "develop", "feature/documents"].map((value) => ({ label: value, value })),
+      options: ["main", "develop", "feature/documents"].map((value) => ({
+        label: value,
+        value,
+        icon: "git-commit-horizontal",
+      })),
     },
   },
 };
 const remote = {
   id: "cloud.environment",
   label: "Remote environment",
+  icon: "rocket",
   description: "The provider supplies its files. Local files are not uploaded or synchronized.",
   params: {
     image: { type: "text" as const, label: "Environment image", required: true },

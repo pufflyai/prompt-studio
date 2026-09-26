@@ -39,6 +39,7 @@ export interface CreateExtensionWorkspaceInput {
 export interface ExtensionWorkspaceProvider {
   id: string;
   label: Localizable<string>;
+  icon?: string;
   description?: Localizable<string>;
   params: ParamObjectSchema;
 }

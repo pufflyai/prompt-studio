@@ -175740,7 +175740,7 @@
                         {
                           "type": "frame",
                           "id": "K4XVlk",
-                          "name": "Parameter label with info popover",
+                          "name": "Parameter label with help tooltip",
                           "gap": 4,
                           "alignItems": "center",
                           "children": [
@@ -175779,10 +175779,14 @@
                           "id": "H1RUU",
                           "type": "ref",
                           "ref": "clw66",
-                          "name": "Workspace type selector",
+                          "name": "Only available workspace type · disabled",
+                          "theme": {
+                            "trig": "disabled"
+                          },
                           "descendants": {
                             "xr1ec": {
-                              "enabled": false
+                              "enabled": true,
+                              "icon": "git-branch"
                             },
                             "sefGB": {
                               "content": "Git worktree"
@@ -175815,6 +175819,9 @@
                           "ref": "clw66",
                           "name": "Base branch selector",
                           "descendants": {
+                            "xr1ec": {
+                              "icon": "git-commit-horizontal"
+                            },
                             "sefGB": {
                               "content": "main"
                             }
@@ -175984,7 +175991,7 @@
                         {
                           "type": "frame",
                           "id": "N8yocY",
-                          "name": "Parameter label with info popover",
+                          "name": "Parameter label with help tooltip",
                           "gap": 4,
                           "alignItems": "center",
                           "children": [
@@ -176026,7 +176033,8 @@
                           "name": "Workspace type selector",
                           "descendants": {
                             "xr1ec": {
-                              "enabled": false
+                              "enabled": true,
+                              "icon": "rocket"
                             },
                             "sefGB": {
                               "content": "Remote environment"
@@ -176122,26 +176130,29 @@
         {
           "type": "frame",
           "id": "S77Jg",
-          "name": "Parameter info popover · open",
+          "name": "Parameter help tooltip · hover or focus",
+          "context": "Use the shared Tooltip. Open on pointer hover or keyboard focus of the info button; keep focus on the trigger. Close on leave or Escape.",
           "width": 320,
-          "fill": "$ds-bg",
-          "cornerRadius": "$overlay-radius",
+          "fill": "$ds-bg-inverted",
+          "cornerRadius": 4,
           "stroke": "$ds-border",
-          "strokeWidth": 1,
           "layout": "vertical",
           "gap": 8,
-          "padding": 16,
+          "padding": [
+            7,
+            10
+          ],
           "children": [
             {
               "type": "text",
               "id": "MPXTU",
               "name": "Provider explanation",
-              "fill": "$ds-fg",
+              "fill": "$ds-fg-inverted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
               "content": "Create an isolated branch. Git review and merge cover the entire repository, including paths outside the project folder.",
               "fontFamily": "$font-body",
-              "fontSize": 14,
+              "fontSize": 12,
               "fontWeight": "normal"
             }
           ]
@@ -176153,7 +176164,7 @@
           "fill": "$ds-fg-subtle",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Use the shared dialog heading, close button, and footer actions. Parameter labels have no required asterisk. Explanations open from an info icon; Escape closes the popover and returns focus. Required fields still validate before submission.",
+          "content": "Use shared dialog title, close button and footer actions. Labels have no required asterisk. Info shows a tooltip on hover or focus; use the shared overlay keyboard behavior, including dialog dismissal with Escape. Disable dropdowns only when no enabled choice, clear action or group change can change the value. Branches use the commit icon; Git worktrees use the branch icon. Low / Medium / High / Extra high use the existing level-low / level-mid / level-high / level-xhigh bars.",
           "fontFamily": "$font-body",
           "fontSize": 13,
           "fontWeight": "normal"

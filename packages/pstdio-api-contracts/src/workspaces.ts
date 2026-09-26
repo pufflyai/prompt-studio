@@ -174,6 +174,7 @@ export type ListWorkspaceActivityResponse = z.infer<typeof listWorkspaceActivity
 export const workspaceProviderDescriptorSchema = z.object({
   id: z.string(),
   label: localizableStringSchema,
+  icon: z.string().optional(),
   description: localizableStringSchema.optional(),
   params: extensionParamObjectSchema,
 });

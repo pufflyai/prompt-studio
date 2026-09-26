@@ -72,7 +72,7 @@ for the invocation's working files. Project file operations check the current wo
 readiness and file capabilities. Remote workspaces never fall back to local files.
 
 `ctx.workspaces.getDefault()` returns the project workspace.
-`ctx.workspaces.listProviders()` returns available providers and their parameters.
+`ctx.workspaces.listProviders()` returns available providers, their optional `icon`, and their parameters.
 Render these declared parameters after the user selects a workspace type. The Git
 provider supplies a **Base branch** selection; cloud providers supply their own fields.
 Local setup failures reject creation with the saved workspace ID and setup error.

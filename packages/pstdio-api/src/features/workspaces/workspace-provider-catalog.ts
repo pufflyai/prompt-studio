@@ -13,11 +13,14 @@ const discoverGitProvider = async (path: string) => {
     const defaultValue = currentBranch ? (branches.find((branch) => branch.isCurrent)?.name ?? currentBranch) : "HEAD";
     const options = branches
       .filter((branch) => Boolean(currentBranch) || !branch.isCurrent)
-      .map((branch) => ({ label: branch.name, value: branch.name }));
-    if (!currentBranch) options.unshift({ label: "Current checkout (no branch)", value: "HEAD" });
+      .map((branch) => ({ label: branch.name, value: branch.name, icon: "git-commit-horizontal" }));
+    if (!currentBranch) {
+      options.unshift({ label: "Current checkout (no branch)", value: "HEAD", icon: "git-commit-horizontal" });
+    }
     return {
       id: worktreeProviderId,
       label: "Git worktree",
+      icon: "git-branch",
       description: "Create an isolated branch in the project repository.",
       params: {
         base: { type: "select", label: "Base branch", required: true, defaultValue, options },
@@ -40,6 +43,7 @@ export const listWorkspaceProviders = async (deps: WorkspacesRouteDeps, projectI
     providers.push({
       id: entry.id,
       label: entry.provider.label,
+      icon: entry.provider.icon,
       description:
         "The provider supplies this environment and its files. Local files are not uploaded or synchronized.",
       params: entry.provider.params ?? {},

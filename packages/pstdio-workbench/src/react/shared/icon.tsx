@@ -1,4 +1,5 @@
 import { Icon, type IconProps } from "@chakra-ui/react";
+import { optionIcons } from "@pstdio/ui";
 import type { LucideIcon } from "lucide-react";
 import * as lucideIcons from "lucide-react";
 
@@ -32,8 +33,10 @@ export const WorkbenchIcon = (props: WorkbenchIconProps) => {
   const { name, size = 14, ...rest } = props;
   if (!name) return null;
 
-  const LucideIcon = resolveLucideIcon(name);
-  if (!LucideIcon) return null;
+  const IconComponent = optionIcons.find((option) => option.value === name)?.icon ?? resolveLucideIcon(name);
+  if (!IconComponent) return null;
 
-  return <Icon as={LucideIcon} boxSize={typeof size === "number" ? `${size}px` : size} aria-hidden="true" {...rest} />;
+  return (
+    <Icon as={IconComponent} boxSize={typeof size === "number" ? `${size}px` : size} aria-hidden="true" {...rest} />
+  );
 };
