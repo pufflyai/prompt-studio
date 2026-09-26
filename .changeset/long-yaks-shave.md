@@ -5,4 +5,4 @@
 "harness-codex": patch
 ---
 
-Use consistent level bars for agent effort choices and default ticket priorities.
+Use consistent level bars for agent effort and default priorities while preserving customized tags during setup.
