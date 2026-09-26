@@ -7,6 +7,7 @@ import {
   type HarnessSession,
   type HarnessStartInput,
   l10n,
+  reconcileMessageHistory,
 } from "@pstdio/sdk/extensions";
 import { pollAgent } from "./agent-poller";
 import { getMessages, readAgentMessages } from "./messages";
@@ -111,4 +112,5 @@ export const remoteHarness = defineHarness({
   getMessages(ctx, input) {
     return getMessages(ctx, workspaceId(ctx, input.workspace, input.agentSessionId));
   },
+  recoverMessages: (_ctx, input) => reconcileMessageHistory(input),
 });
