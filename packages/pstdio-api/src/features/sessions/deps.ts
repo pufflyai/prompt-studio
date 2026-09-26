@@ -10,6 +10,7 @@ export type SessionsRouteDeps = Pick<
   | "projectService"
   | "repoService"
   | "sessionQueueEntriesService"
+  | "sessionQueueLifecycle"
   | "sessionService"
   | "settingsService"
   | "workspaceService"

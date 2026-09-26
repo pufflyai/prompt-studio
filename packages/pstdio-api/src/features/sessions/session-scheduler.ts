@@ -1,12 +1,12 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
+import { createSessionQueueDrain } from "./session-queue-drain";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
   createSubmittedDispatchEntry,
   type DispatchContext,
   dispatchExisting,
-  dispatchQueuedEntry,
   type ExistingSession,
   hasCreateCapacity,
   insertFollowUpEntry,
@@ -50,9 +50,6 @@ const insertAbortAwareFollowUp = async (
   }
   return queuedResult(queuePosition);
 };
-
-const isTerminal = (status: string) =>
-  status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
 
 const runBeforeStartedHook = async (
   deps: SessionsRouteDeps,
@@ -137,42 +134,7 @@ const startScheduledSession = async (
 };
 
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
-  const maybeRequeueReleasedSession = async (sessionId: string) => {
-    const session = await deps.sessionService.get(sessionId);
-    if (!session || !isTerminal(session.status)) return;
-
-    if (session.status === "cancelled") {
-      await deps.sessionQueueEntriesService.removeBySession(sessionId);
-      return;
-    }
-
-    const pending = await deps.sessionQueueEntriesService.listPendingBySession(sessionId);
-    if (pending.length === 0) return;
-
-    await deps.sessionService.requeueAfterTerminal(sessionId);
-  };
-
-  const drainQueue = async (input?: { releasedSessionId?: string }) => {
-    return withSchedulingLock(async () => {
-      if (input?.releasedSessionId) {
-        await maybeRequeueReleasedSession(input.releasedSessionId);
-      }
-
-      const pending = await deps.sessionQueueEntriesService.listPending();
-      for (const entry of pending) {
-        if (!(await hasCreateCapacity(deps))) return;
-
-        const session = await deps.sessionService.get(entry.session_id);
-        if (!session || session.status !== "queued") {
-          // Pending entries can coexist with non-queued sessions (multi-pending follow-ups).
-          // Skip without side-effect; markDispatchStarted would permanently orphan the entry.
-          continue;
-        }
-
-        await dispatchQueuedEntry(deps, session, entry);
-      }
-    });
-  };
+  const drainQueue = createSessionQueueDrain(deps);
 
   const createAndStartSession = async (input: CreateAndStartInput) => {
     input.signal?.throwIfAborted();

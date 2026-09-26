@@ -817,6 +817,12 @@ const saveStatus = useCommandMutation({
 
 ## Terminal Sessions
 
+On Linux and macOS, supported interactive Bash and Zsh shells report activity while
+running commands, including builtins such as `read`. Waiting or editing at the prompt
+is idle. Background and stopped jobs do not count as foreground work. A directly
+launched program counts as active until it exits. Custom shell invocations, shells with
+unavailable prompt hooks, and unknown process state conservatively report activity.
+
 Terminals are layered: the workbench-native terminal surface is the product UI, and `terminal.session` is the low-level host service behind it.
 
 - **Runtime contexts** get `ctx.terminal` (an `ExtensionTerminalApi`) when the host wires a PTY supervisor. `ctx.terminal.openSession(request)` returns a host-side `TerminalSessionHandle` with `write`, `resize`, `kill`, and a single-consumer `events()` iterable. The handle never crosses into renderer code.

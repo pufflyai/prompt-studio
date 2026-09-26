@@ -19,6 +19,7 @@ import type { RouteDeps } from "./features/deps";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
+import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
@@ -188,6 +189,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     maxRunsPerMinute: input.config.automation.runsPerMinute,
   });
 
+  const sessionQueueLifecycle = createSessionQueueLifecycle();
   const sessionHookDeps = (): SessionHookDeps => ({
     automationService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesService,
@@ -207,6 +209,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     projectService,
     repoService,
     sessionQueueEntriesService,
+    sessionQueueLifecycle,
     sessionService,
     skillService,
     notificationService,
@@ -255,6 +258,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     projectService,
     repoService,
     sessionQueueEntriesService,
+    sessionQueueLifecycle,
     sessionService,
     settingsService,
     workspaceService,

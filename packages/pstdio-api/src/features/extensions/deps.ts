@@ -14,6 +14,7 @@ export type ExtensionsRouteDeps = Pick<
   | "extensionSettingsService"
   | "notificationService"
   | "sessionQueueEntriesService"
+  | "sessionQueueLifecycle"
   | "settingsService"
   | "skillService"
   | "workspaceSessionService"

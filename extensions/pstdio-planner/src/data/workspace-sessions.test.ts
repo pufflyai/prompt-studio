@@ -18,6 +18,24 @@ const sessionsApi = (byWorkspace: Record<string, Array<ReturnType<typeof makeSes
 });
 
 describe("loadLatestWorkspaceSessions", () => {
+  test.each([
+    "queued",
+    "in_progress",
+    "awaiting_input",
+  ])("prefers the latest %s session over newer finished sessions", async (status) => {
+    const lookup = await loadLatestWorkspaceSessions(
+      sessionsApi({
+        workspace: [
+          makeSession("older-active", "in_progress"),
+          makeSession("active", status),
+          makeSession("finished", "completed"),
+        ],
+      }),
+      [makeWorkspace("workspace")],
+    );
+    expect(lookup.get("workspace")).toEqual({ id: "active", status });
+  });
+
   test("selects the last session of each linked workspace", async () => {
     const lookup = await loadLatestWorkspaceSessions(
       sessionsApi({

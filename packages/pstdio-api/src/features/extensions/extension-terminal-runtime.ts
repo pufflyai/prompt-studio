@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { basename } from "node:path";
 import type {
   ExtensionLoggerApi,
@@ -9,6 +9,9 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionProcessEnvironment } from "pstdio-extensions";
 import { exitedWithin, signalProcessTree } from "./process-group";
+import { readTerminalForeground } from "./terminal-foreground";
+import { prepareTerminalShell } from "./terminal-shell-integration";
+import { createTerminalShellState } from "./terminal-shell-state";
 
 // Single-consumer async queue bridging Bun.Terminal callbacks to events().
 // `exit` is pushed last, then close() ends iteration.
@@ -76,27 +79,6 @@ const TITLE_POLL_INTERVAL_MS = 1000;
 /** How long a session may take to honour its stop signal before the host force-kills it. */
 const KILL_ESCALATION_MS = 500;
 
-// The PTY tab title tracks the foreground process like VSCode. On Linux the
-// controlling terminal's foreground process group leader (`tpgid` in
-// /proc/<pid>/stat) is the running program; its `comm` is the name to show.
-// Elsewhere (or when /proc is unavailable) we keep the launched command name.
-const readForegroundProcessName = (shellPid: number, fallback: string) => {
-  try {
-    const stat = readFileSync(`/proc/${shellPid}/stat`, "utf8");
-    // Fields after the parenthesised comm: state ppid pgrp session tty_nr tpgid ...
-    const fields = stat
-      .slice(stat.lastIndexOf(")") + 1)
-      .trim()
-      .split(/\s+/);
-    const foregroundGroupId = Number.parseInt(fields[5] ?? "", 10);
-    if (!Number.isInteger(foregroundGroupId) || foregroundGroupId <= 0) return fallback;
-    const name = readFileSync(`/proc/${foregroundGroupId}/comm`, "utf8").trim();
-    return name.length > 0 ? name : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
 const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
   const env = createExtensionProcessEnvironment(process.env, requestEnv);
   const hasExplicitTerm = Boolean(requestEnv?.TERM);
@@ -111,6 +93,7 @@ const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
 interface TerminalSession {
   label: string;
   pid: number;
+  atPrompt(): boolean;
   kill(signal?: NodeJS.Signals): Promise<void>;
 }
 
@@ -130,21 +113,34 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       const env = createTerminalEnv(request.env);
       const id = crypto.randomUUID();
       const queue = createEventQueue();
+      const shellState = createTerminalShellState(id);
+      const shell = prepareTerminalShell(command, env, id);
 
-      const child = Bun.spawn(command, {
-        cwd,
-        env,
-        terminal: {
-          cols: request.cols,
-          rows: request.rows,
-          name: env.TERM ?? "xterm-256color",
-          data: (_terminal, chunk) => queue.push({ kind: "data", chunk: new Uint8Array(chunk) }),
-        },
-        windowsHide: true,
-      });
+      const child = (() => {
+        try {
+          return Bun.spawn(shell.command, {
+            cwd,
+            env: shell.env,
+            terminal: {
+              cols: request.cols,
+              rows: request.rows,
+              name: env.TERM ?? "xterm-256color",
+              data: (_terminal, chunk) => {
+                const output = shellState.onData(chunk);
+                if (output.length > 0) queue.push({ kind: "data", chunk: output });
+              },
+            },
+            windowsHide: true,
+          });
+        } catch (error) {
+          shell.dispose();
+          throw error;
+        }
+      })();
       const terminal = child.terminal;
       if (!terminal) {
         child.kill();
+        shell.dispose();
         throw new Error("TerminalSessionOpenFailed: PTY was not attached");
       }
 
@@ -159,13 +155,14 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       // the PTY foreground-group race at spawn — then track the live foreground.
       publishTitle(fallbackTitle);
       const titlePoll = setInterval(
-        () => publishTitle(readForegroundProcessName(child.pid, fallbackTitle)),
+        () => publishTitle(readTerminalForeground(child.pid)?.name || fallbackTitle),
         TITLE_POLL_INTERVAL_MS,
       );
 
       void child.exited.then((code) => {
         clearInterval(titlePoll);
         sessions.delete(id);
+        shell.dispose();
         logger.info("terminal session exited", { id, code });
         queue.push({ kind: "exit", code, signal: child.signalCode });
         queue.close();
@@ -189,6 +186,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       const handle: TerminalSessionHandle = {
         id,
         write: (data) => {
+          shellState.onInput(data);
           terminal.write(data);
         },
         resize: (cols, rows) => {
@@ -202,7 +200,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         },
       };
 
-      sessions.set(id, { label: fallbackTitle, pid: child.pid, kill });
+      sessions.set(id, { label: fallbackTitle, pid: child.pid, atPrompt: shellState.atPrompt, kill });
       logger.info("terminal session opened", { id, pid: child.pid });
       return handle;
     },
@@ -213,7 +211,10 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
     sessions.clear();
   };
 
-  const activity = () => [...sessions].map(([id, session]) => ({ id, label: session.label }));
+  const activity = () =>
+    [...sessions]
+      .filter(([, session]) => !session.atPrompt() || readTerminalForeground(session.pid)?.group !== session.pid)
+      .map(([id, session]) => ({ id, label: session.label }));
 
   return { activity, api, dispose };
 };

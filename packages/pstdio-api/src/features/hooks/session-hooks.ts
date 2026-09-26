@@ -43,6 +43,7 @@ export type SessionHookDeps = Pick<
   | "projectService"
   | "repoService"
   | "sessionQueueEntriesService"
+  | "sessionQueueLifecycle"
   | "sessionService"
   | "skillService"
   | "settingsService"

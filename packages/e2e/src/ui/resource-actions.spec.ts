@@ -106,6 +106,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     await workspaceRow.getByRole("button", { name: "Row actions" }).click();
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);
     await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu", { name: "Row actions", exact: true })).toBeHidden();
 
     await workspaceRow.getByRole("cell", { name: "Worktree", exact: true }).click();
     await expect(breadcrumbAction).toBeVisible();

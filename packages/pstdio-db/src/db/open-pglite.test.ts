@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { cpSync, mkdtempSync, readFileSync, unlinkSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,7 +16,7 @@ const createHome = () => {
 };
 
 beforeAll(async () => {
-  existingHome = createHome();
+  existingHome = mkdtempSync(join(tmpdir(), "pstdio-bootstrap-seed-"));
   const source = await PGlite.create();
   try {
     await source.exec("CREATE TABLE bootstrap_probe (value text); INSERT INTO bootstrap_probe VALUES ('image');");
@@ -30,9 +30,12 @@ beforeAll(async () => {
   }
 });
 
-afterAll(async () => {
-  await Promise.all(homes.map((home) => rm(home, { recursive: true, force: true })));
+// Release each test's database before the next one creates another file tree.
+afterEach(async () => {
+  for (const home of homes.splice(0)) await rm(home, { recursive: true, force: true });
 });
+
+afterAll(() => rm(existingHome, { recursive: true, force: true }));
 
 test("initializes an empty database directory from its packaged image", async () => {
   const db = openPglite(createHome(), { loadDataDir: image });

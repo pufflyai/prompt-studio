@@ -6,6 +6,7 @@ import type { SessionMessage } from "pstdio-api-contracts";
 import { createEventStore } from "pstdio-api-runtime-host";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { getSessionMessages } from "./get-session-messages";
+import { createSessionQueueLifecycle } from "./session-queue-lifecycle";
 import { createSessionScheduler } from "./session-scheduler";
 import { resolveOrphanedSessions } from "./startup";
 
@@ -90,6 +91,7 @@ describe("project-scoped session harness reads", () => {
     };
     const deps = {
       harnessRegistry: registry,
+      sessionQueueLifecycle: createSessionQueueLifecycle(),
       sessionQueueEntriesService: {
         listDispatchStarted: async () => [{ session_id: session.id, queue_position: 4 }],
         listPending: async () => [],
