@@ -8245,7 +8245,9 @@
                             "btn": "outline",
                             "mode": "dark",
                             "size": "lg"
-                          }
+                          },
+                          "width": 48,
+                          "height": 48
                         }
                       ]
                     },
@@ -8994,6 +8996,9 @@
                           "type": "ref",
                           "ref": "KPHF7",
                           "name": "Python",
+                          "theme": {
+                            "radio": "off"
+                          },
                           "descendants": {
                             "aAkIM": {
                               "content": "Python"
@@ -9005,6 +9010,9 @@
                           "type": "ref",
                           "ref": "KPHF7",
                           "name": "Go",
+                          "theme": {
+                            "radio": "off"
+                          },
                           "descendants": {
                             "aAkIM": {
                               "content": "Go"
@@ -12613,7 +12621,21 @@
                           "type": "ref",
                           "ref": "sciZq",
                           "name": "InfoCard",
-                          "width": "fill_container"
+                          "width": "fill_container",
+                          "descendants": {
+                            "gqn3y": {
+                              "theme": {
+                                "btn": "primary",
+                                "size": "sm"
+                              }
+                            },
+                            "gqn3y/khvEs": {
+                              "theme": {
+                                "kbd": "raised",
+                                "size": "md"
+                              }
+                            }
+                          }
                         }
                       ]
                     }
@@ -14110,7 +14132,24 @@
                           "type": "ref",
                           "ref": "TUD15",
                           "name": "Searchable menu",
-                          "width": "fill_container"
+                          "width": "fill_container",
+                          "descendants": {
+                            "Q4HI9": {
+                              "theme": {
+                                "menu": "selected"
+                              }
+                            },
+                            "WlhPY": {
+                              "theme": {
+                                "menu": "default"
+                              }
+                            },
+                            "EciFR": {
+                              "theme": {
+                                "menu": "disabled"
+                              }
+                            }
+                          }
                         }
                       ]
                     }
@@ -14222,7 +14261,24 @@
                           "type": "ref",
                           "ref": "rhikV",
                           "name": "Menu",
-                          "width": "fill_container"
+                          "width": "fill_container",
+                          "descendants": {
+                            "Q6G8L": {
+                              "theme": {
+                                "menu": "default"
+                              }
+                            },
+                            "x4Jxq3": {
+                              "theme": {
+                                "menu": "default"
+                              }
+                            },
+                            "OKKAb": {
+                              "theme": {
+                                "menu": "default"
+                              }
+                            }
+                          }
                         }
                       ]
                     }
@@ -14444,7 +14500,24 @@
                           "id": "yq9ZK",
                           "type": "ref",
                           "ref": "rhikV",
-                          "name": "Context menu"
+                          "name": "Context menu",
+                          "descendants": {
+                            "Q6G8L": {
+                              "theme": {
+                                "menu": "default"
+                              }
+                            },
+                            "x4Jxq3": {
+                              "theme": {
+                                "menu": "default"
+                              }
+                            },
+                            "OKKAb": {
+                              "theme": {
+                                "menu": "default"
+                              }
+                            }
+                          }
                         }
                       ]
                     }
@@ -14545,7 +14618,39 @@
                           "type": "ref",
                           "ref": "oEM2Q",
                           "name": "Dialog",
-                          "width": "fill_container"
+                          "width": "fill_container",
+                          "descendants": {
+                            "B3KqiA": {
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "sm"
+                              }
+                            },
+                            "baBqG": {
+                              "theme": {
+                                "btn": "outline",
+                                "size": "sm"
+                              }
+                            },
+                            "baBqG/khvEs": {
+                              "theme": {
+                                "kbd": "raised",
+                                "size": "md"
+                              }
+                            },
+                            "aWg2H": {
+                              "theme": {
+                                "btn": "destructive",
+                                "size": "sm"
+                              }
+                            },
+                            "aWg2H/khvEs": {
+                              "theme": {
+                                "kbd": "raised",
+                                "size": "md"
+                              }
+                            }
+                          }
                         }
                       ]
                     }
@@ -14693,7 +14798,15 @@
                           "type": "ref",
                           "ref": "T7x2S8",
                           "name": "Header",
-                          "width": "fill_container"
+                          "width": "fill_container",
+                          "descendants": {
+                            "MoLLs": {
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            }
+                          }
                         }
                       ]
                     }
@@ -14919,7 +15032,10 @@
                           "type": "ref",
                           "ref": "S9mjlP",
                           "name": "Item section",
-                          "width": "fill_container"
+                          "width": "fill_container",
+                          "theme": {
+                            "section": "open"
+                          }
                         }
                       ]
                     }
@@ -21148,6 +21264,11 @@
                                 "trow": "header"
                               }
                             },
+                            "j0KkY": {
+                              "theme": {
+                                "check": "on"
+                              }
+                            },
                             "mo9nn": {
                               "theme": {
                                 "trow": "header"
@@ -21179,6 +21300,11 @@
                                 "trow": "data"
                               }
                             },
+                            "ZFQe8/kcrwI": {
+                              "theme": {
+                                "check": "off"
+                              }
+                            },
                             "ZFQe8/sAG7Q": {
                               "theme": {
                                 "trow": "data"
@@ -21203,6 +21329,11 @@
                             "QclIG": {
                               "theme": {
                                 "trow": "data"
+                              }
+                            },
+                            "QclIG/kcrwI": {
+                              "theme": {
+                                "check": "off"
                               }
                             },
                             "QclIG/sAG7Q": {
@@ -21237,6 +21368,11 @@
                                 "trow": "data"
                               }
                             },
+                            "oXFEc/kcrwI": {
+                              "theme": {
+                                "check": "off"
+                              }
+                            },
                             "oXFEc/sAG7Q": {
                               "theme": {
                                 "trow": "data"
@@ -21261,6 +21397,11 @@
                             "OgtYJ": {
                               "theme": {
                                 "trow": "data"
+                              }
+                            },
+                            "OgtYJ/kcrwI": {
+                              "theme": {
+                                "check": "off"
                               }
                             },
                             "OgtYJ/sAG7Q": {
@@ -22903,6 +23044,11 @@
                             "O4LlR": {
                               "content": "1"
                             },
+                            "kcrwI": {
+                              "theme": {
+                                "check": "off"
+                              }
+                            },
                             "sAG7Q": {
                               "theme": {
                                 "trow": "data"
@@ -22951,6 +23097,11 @@
                           "descendants": {
                             "O4LlR": {
                               "content": "2"
+                            },
+                            "kcrwI": {
+                              "theme": {
+                                "check": "off"
+                              }
                             },
                             "sAG7Q": {
                               "theme": {
@@ -23022,6 +23173,11 @@
                             "O4LlR": {
                               "content": "3"
                             },
+                            "kcrwI": {
+                              "theme": {
+                                "check": "off"
+                              }
+                            },
                             "sAG7Q": {
                               "theme": {
                                 "trow": "data"
@@ -23070,6 +23226,11 @@
                           "descendants": {
                             "O4LlR": {
                               "content": "4"
+                            },
+                            "kcrwI": {
+                              "theme": {
+                                "check": "off"
+                              }
                             },
                             "sAG7Q": {
                               "theme": {
@@ -24409,14 +24570,15 @@
                       "context": "Shown when the session side panel is closed and no floating session panel is open.",
                       "theme": {
                         "btn": "outline",
-                        "size": "lg"
+                        "size": "lg",
+                        "bubble": "closed"
                       },
                       "reusable": true,
-                      "width": 44,
-                      "height": 44,
+                      "width": 48,
+                      "height": 48,
                       "fill": "$btn-fill",
                       "cornerRadius": 999,
-                      "stroke": "$btn-stroke",
+                      "stroke": "$bubble-stroke",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "justifyContent": "center",
@@ -28577,6 +28739,9 @@
                           "ref": "sgbRV",
                           "name": "Rename",
                           "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
                           "descendants": {
                             "UEgTp": {
                               "icon": "pencil"
@@ -28592,6 +28757,9 @@
                           "ref": "sgbRV",
                           "name": "Duplicate",
                           "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
                           "descendants": {
                             "UEgTp": {
                               "icon": "copy"
@@ -28615,6 +28783,9 @@
                           "ref": "sgbRV",
                           "name": "Delete",
                           "width": "fill_container",
+                          "theme": {
+                            "menu": "default"
+                          },
                           "descendants": {
                             "UEgTp": {
                               "icon": "trash-2"
@@ -28844,6 +29015,12 @@
                                 },
                                 "Hf4GT": {
                                   "content": "Close"
+                                },
+                                "khvEs": {
+                                  "theme": {
+                                    "kbd": "raised",
+                                    "size": "md"
+                                  }
                                 }
                               }
                             },
@@ -28863,6 +29040,12 @@
                                 },
                                 "Hf4GT": {
                                   "content": "Delete"
+                                },
+                                "khvEs": {
+                                  "theme": {
+                                    "kbd": "raised",
+                                    "size": "md"
+                                  }
                                 }
                               }
                             }
@@ -29058,6 +29241,12 @@
                                 },
                                 "Hf4GT": {
                                   "content": "Run"
+                                },
+                                "khvEs": {
+                                  "theme": {
+                                    "kbd": "raised",
+                                    "size": "md"
+                                  }
                                 }
                               }
                             }
@@ -29259,6 +29448,12 @@
                             },
                             "Hf4GT": {
                               "content": "Connect"
+                            },
+                            "khvEs": {
+                              "theme": {
+                                "kbd": "raised",
+                                "size": "md"
+                              }
                             }
                           }
                         }
@@ -29599,6 +29794,1520 @@
                               "fontWeight": "normal"
                             }
                           ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "prbFy",
+                  "name": "Row · navigation & search",
+                  "width": "fill_container",
+                  "gap": 32,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tTb8M",
+                      "name": "cmp/Sidenav",
+                      "context": "sidenav/sidenav.tsx: 240 wide (200–480 when resizable), bg, right border.subtle; sticky header and footer; body is a TreeList with compact rows (28px, 14px icons, 12px labels), 16px between sections, 1px between rows. Section headers: 28px, px 12, label/XS uppercase fg.muted.",
+                      "reusable": true,
+                      "clip": true,
+                      "width": 240,
+                      "height": 520,
+                      "fill": "$ds-bg",
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "PuNhp",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "height": 40,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "ZkJUp",
+                              "type": "ref",
+                              "ref": "mO4LW",
+                              "name": "Project"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Jo84c",
+                          "name": "Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 4,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "McjAv",
+                              "name": "Section Project",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 1,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "JkrRs",
+                                  "name": "Section header",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "gap": 4,
+                                  "padding": [
+                                    4,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "D9gbx",
+                                      "name": "Label",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "PROJECT",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 0.8
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "yVXBC",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Start",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "selected"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "house"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Start"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "a7QxG",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Sessions",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "messages-square"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Sessions"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "B540T",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Workspaces",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "git-branch"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Workspaces"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "eKbrE",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "Tickets",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "ticket"
+                                    },
+                                    "UTbhN": {
+                                      "content": "Tickets"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Lx9fr",
+                              "name": "Section Workspaces",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 1,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "q0F6l",
+                                  "name": "Section header",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "gap": 4,
+                                  "padding": [
+                                    4,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "DgSgP",
+                                      "name": "Label",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "WORKSPACES",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 0.8
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "WVpDa",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "fix-sidebar",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "git-branch"
+                                    },
+                                    "UTbhN": {
+                                      "content": "fix-sidebar"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "lNhon",
+                                  "type": "ref",
+                                  "ref": "sgbRV",
+                                  "name": "release-notes",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "menu": "default"
+                                  },
+                                  "descendants": {
+                                    "UEgTp": {
+                                      "icon": "git-branch"
+                                    },
+                                    "UTbhN": {
+                                      "content": "release-notes"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y6IeH",
+                          "name": "Footer",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 1,
+                          "padding": 4,
+                          "children": [
+                            {
+                              "id": "OA6Tj",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Settings",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "settings"
+                                },
+                                "UTbhN": {
+                                  "content": "Settings"
+                                }
+                              }
+                            },
+                            {
+                              "id": "uCFJm",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Help",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "circle-help"
+                                },
+                                "UTbhN": {
+                                  "content": "Help"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hkUeJ",
+                      "name": "cmp/CommandPalette",
+                      "context": "command-palette/palette.tsx + overlays/search-modal-content.tsx: dialog max width 704, border.subtle; 48px borderless search input with a close button; groups (label/XS/medium fg.muted, px 12) of full-width list rows; optional footer px 12 py 8 with a top border.subtle.",
+                      "reusable": true,
+                      "clip": true,
+                      "width": 704,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Ow45W",
+                          "name": "Search",
+                          "width": "fill_container",
+                          "height": 48,
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            8,
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "KDvcz",
+                              "name": "Icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "MKGHO",
+                              "name": "Placeholder",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Search commands, resources and settings",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "Amftt",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Close",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "sm"
+                              },
+                              "width": 32,
+                              "height": 32,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "x",
+                                  "width": 16,
+                                  "height": 16
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "BtzIp",
+                          "name": "Body",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            8,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "L0Kk5t",
+                              "name": "Group Resources",
+                              "width": "fill_container",
+                              "padding": [
+                                8,
+                                12,
+                                4,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "b23sVw",
+                                  "name": "Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Resources",
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "Vpiod",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Go to  fix-sidenav-shortcuts",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "selected"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "git-branch"
+                                },
+                                "UTbhN": {
+                                  "content": "Go to  fix-sidenav-shortcuts"
+                                }
+                              }
+                            },
+                            {
+                              "id": "uicCl",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Go to  PS-122 · show sidenav shortcuts",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "ticket"
+                                },
+                                "UTbhN": {
+                                  "content": "Go to  PS-122 · show sidenav shortcuts"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SLgIG",
+                              "name": "Group Panels",
+                              "width": "fill_container",
+                              "padding": [
+                                8,
+                                12,
+                                4,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "QkScE",
+                                  "name": "Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Panels",
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "rqxtp",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Add  Terminal",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "terminal"
+                                },
+                                "UTbhN": {
+                                  "content": "Add  Terminal"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "eElns",
+                              "name": "Group Settings",
+                              "width": "fill_container",
+                              "padding": [
+                                8,
+                                12,
+                                4,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "W5fOPY",
+                                  "name": "Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Settings",
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "u6OHt",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Settings  ·  Extensions",
+                              "width": "fill_container",
+                              "theme": {
+                                "menu": "default"
+                              },
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "settings"
+                                },
+                                "UTbhN": {
+                                  "content": "Settings  ·  Extensions"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "TK6pL",
+                          "name": "Footer",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Q7Vu5t",
+                              "name": "Hint",
+                              "fill": "$ds-fg-muted",
+                              "content": "↑↓ to navigate  ·  ↵ to open",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "AmksO",
+                              "type": "ref",
+                              "ref": "XpOTN",
+                              "name": "Kbd",
+                              "theme": {
+                                "kbd": "raised",
+                                "size": "md"
+                              },
+                              "height": 20
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "kbqd2",
+                      "name": "cmp/NotificationCenter",
+                      "context": "notification-center/notification-center.tsx: the search modal shell; groups (label/XS/medium fg.muted) of compact list rows with a 14px bell, title and description; trailing priority badge (sm), a solid blue New badge and a 2xs outline action.",
+                      "reusable": true,
+                      "clip": true,
+                      "width": 704,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "QPSz2",
+                          "name": "Search",
+                          "width": "fill_container",
+                          "height": 48,
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            8,
+                            0,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "nhV3i",
+                              "name": "Icon",
+                              "width": 14,
+                              "height": 14,
+                              "icon": "search",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "o3ZGW",
+                              "name": "Placeholder",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Search notifications",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "B68CP",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Close",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "sm"
+                              },
+                              "width": 32,
+                              "height": 32,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "x",
+                                  "width": 16,
+                                  "height": 16
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Kx4lg",
+                          "name": "Body",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            0,
+                            0,
+                            8,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yPH10",
+                              "name": "Group Today",
+                              "width": "fill_container",
+                              "padding": [
+                                8,
+                                12,
+                                4,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "gsUjs",
+                                  "name": "Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Today",
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 10,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xr5ND",
+                              "name": "Row · Agent finished PS-122",
+                              "width": "fill_container",
+                              "height": 44,
+                              "cornerRadius": 4,
+                              "gap": 8,
+                              "padding": [
+                                4,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "ieZ0K",
+                                  "name": "Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "bell",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "k4QBZ5",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "OodAO",
+                                      "name": "Title",
+                                      "fill": "$ds-fg",
+                                      "content": "Agent finished PS-122",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "cTpX2",
+                                      "name": "Description",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "Workspace fix-sidebar is ready for review",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "WS4WN",
+                                  "name": "End",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "yqB57",
+                                      "type": "ref",
+                                      "ref": "dbK8Z",
+                                      "name": "Priority",
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "orange",
+                                        "size": "sm"
+                                      },
+                                      "height": 20,
+                                      "descendants": {
+                                        "ohhQY": {
+                                          "enabled": false
+                                        },
+                                        "FaaBK": {
+                                          "content": "High"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "ss2lv",
+                                      "type": "ref",
+                                      "ref": "dbK8Z",
+                                      "name": "New",
+                                      "theme": {
+                                        "badge": "solid",
+                                        "palette": "blue",
+                                        "size": "sm"
+                                      },
+                                      "height": 20,
+                                      "descendants": {
+                                        "ohhQY": {
+                                          "enabled": false
+                                        },
+                                        "FaaBK": {
+                                          "content": "New"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "fCQRk",
+                                      "type": "ref",
+                                      "ref": "c24zV7",
+                                      "name": "Open",
+                                      "theme": {
+                                        "btn": "outline",
+                                        "size": "2xs"
+                                      },
+                                      "height": 24,
+                                      "descendants": {
+                                        "DsEVd": {
+                                          "enabled": false
+                                        },
+                                        "Hf4GT": {
+                                          "content": "Open"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "A9NCC",
+                              "name": "Row · Checks passed on main",
+                              "width": "fill_container",
+                              "height": 44,
+                              "cornerRadius": 4,
+                              "gap": 8,
+                              "padding": [
+                                4,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "dIwV6",
+                                  "name": "Icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "bell",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "MoR90",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Bdgak",
+                                      "name": "Title",
+                                      "fill": "$ds-fg",
+                                      "content": "Checks passed on main",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "xVOxT",
+                                      "name": "Description",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "3 of 3 checks",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "k3Kfp",
+                                  "name": "End",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "f4q4RR",
+                                      "type": "ref",
+                                      "ref": "dbK8Z",
+                                      "name": "Priority",
+                                      "theme": {
+                                        "badge": "subtle",
+                                        "palette": "gray",
+                                        "size": "sm"
+                                      },
+                                      "height": 20,
+                                      "descendants": {
+                                        "ohhQY": {
+                                          "enabled": false
+                                        },
+                                        "FaaBK": {
+                                          "content": "Low"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "L3rDs6",
+                                      "type": "ref",
+                                      "ref": "c24zV7",
+                                      "name": "Open",
+                                      "theme": {
+                                        "btn": "outline",
+                                        "size": "2xs"
+                                      },
+                                      "height": 24,
+                                      "descendants": {
+                                        "DsEVd": {
+                                          "enabled": false
+                                        },
+                                        "Hf4GT": {
+                                          "content": "Open"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "bKmYv",
+                  "name": "Row · activity",
+                  "width": "fill_container",
+                  "gap": 32,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "gcEve",
+                      "name": "cmp/ActivityHeader",
+                      "context": "activity/activity-root.tsx: title label/M/medium fg with actions on the right; the feed stacks sections 16px apart.",
+                      "reusable": true,
+                      "width": 420,
+                      "gap": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zKI9C",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Activity",
+                          "fontFamily": "$font-label",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "id": "luvT8",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Filter",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "width": 24,
+                          "height": 24,
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "list-filter",
+                              "width": 12,
+                              "height": 12
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Va4r9",
+                      "name": "cmp/ActivityEvent",
+                      "context": "activity/activity-event.tsx: timeline item min h 24, px 16, gap 8; 18px icon avatar (bg.muted, fg.muted) over a 1px border separator; label/S/regular fg.muted text with the actor in fg 500, 3px fg.subtle dot separators.",
+                      "reusable": true,
+                      "width": 420,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "IuLnD",
+                          "name": "Indicator",
+                          "width": 18,
+                          "height": 32,
+                          "layout": "vertical",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yN5gY",
+                              "name": "Avatar",
+                              "width": 18,
+                              "height": 18,
+                              "fill": "$ds-surface",
+                              "cornerRadius": 999,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "FgdWS",
+                                  "name": "Icon",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-dot",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "rectangle",
+                              "id": "D4Ah7",
+                              "name": "Separator",
+                              "fill": "$ds-border",
+                              "width": 1,
+                              "height": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "W2vXnR",
+                          "name": "Text",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            1,
+                            0,
+                            0,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "s3U68",
+                              "name": "Actor",
+                              "fill": "$ds-fg",
+                              "content": "Aurelien",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "L3axod",
+                              "name": "Action",
+                              "fill": "$ds-fg-muted",
+                              "content": "moved this to In Review",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "JXv4L",
+                              "name": "Dot",
+                              "fill": "$ds-fg-subtle",
+                              "width": 3,
+                              "height": 3
+                            },
+                            {
+                              "type": "text",
+                              "id": "nhZis",
+                              "name": "Time",
+                              "fill": "$ds-fg-muted",
+                              "content": "2h ago",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JKMfq",
+                      "name": "cmp/ActivityComment",
+                      "context": "activity/activity-comment.tsx: px 16 py 12; header with ActivityAvatar (24), name label/S/medium, dot, timestamp label/S/regular fg.muted; content label/S/regular fg indented 32px; replies below a border.subtle rule.",
+                      "reusable": true,
+                      "width": 420,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "oUV6v",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "Y8TkZZ",
+                              "type": "ref",
+                              "ref": "Rt8F5",
+                              "name": "Avatar",
+                              "width": 24,
+                              "height": 24
+                            },
+                            {
+                              "type": "text",
+                              "id": "fP1CY",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Aurelien",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "ellipse",
+                              "id": "skT65",
+                              "name": "Dot",
+                              "fill": "$ds-fg-subtle",
+                              "width": 3,
+                              "height": 3
+                            },
+                            {
+                              "type": "text",
+                              "id": "e5Rc2",
+                              "name": "Time",
+                              "fill": "$ds-fg-muted",
+                              "content": "12 min ago",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "SwUCM",
+                          "name": "Content",
+                          "width": "fill_container",
+                          "padding": [
+                            0,
+                            0,
+                            0,
+                            32
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "rIXGH",
+                              "name": "Text",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "The sidebar shortcut conflicts with the editor. Can we move it to ⌘⇧B?",
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rjgil",
+                      "name": "cmp/ActivityComposer",
+                      "context": "activity/activity-composer.tsx: boxed variant border 1px border, radius sm, p 16 (inline: no border, p 12); textarea label/S/regular min h 64; 2xs ghost attach and 2xs subtle submit.",
+                      "reusable": true,
+                      "width": 420,
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ZhOn6",
+                          "name": "Placeholder",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Leave a comment…",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XToH6",
+                          "name": "Actions",
+                          "gap": 4,
+                          "padding": [
+                            36,
+                            0,
+                            0,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "id": "msGy2",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Attach",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "paperclip",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            },
+                            {
+                              "id": "Yg2s7",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Submit",
+                              "theme": {
+                                "btn": "subtle",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "arrow-up",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pYRji",
+                  "name": "Row · panels & editing",
+                  "width": "fill_container",
+                  "gap": 32,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "MXmR5",
+                      "name": "cmp/BubblePanel",
+                      "context": "overlays/bubble-panel.tsx: fixed 448 × 608 at bottom/right 12, radius xs, border.subtle, bg; main Header (40px) with title and 2xs ghost pop-out and minimize buttons; body gap 12.",
+                      "reusable": true,
+                      "clip": true,
+                      "width": 448,
+                      "height": 608,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "IBXDe",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "height": 40,
+                          "gap": 12,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "v6zTn",
+                              "name": "Title",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Session",
+                              "fontFamily": "$font-label",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "id": "Uqyfp",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Pop out",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "square-arrow-out-up-right",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            },
+                            {
+                              "id": "f3mS6h",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Minimize",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "minus",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cLS8o",
+                          "name": "Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "hR3Il",
+                              "name": "Text",
+                              "fill": "$ds-fg-muted",
+                              "content": "Panel content",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VA9mn",
+                      "name": "cmp/AttachedPanel",
+                      "context": "overlays/attached-panel.tsx: full-height bg column at a fixed width, clipped, with a flex column body. AttachedMenu is the same aside at full width.",
+                      "reusable": true,
+                      "clip": true,
+                      "width": 320,
+                      "height": 320,
+                      "fill": "$ds-bg",
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "left": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "RkPf7",
+                          "name": "Header",
+                          "width": "fill_container",
+                          "height": 40,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "R2Kp2C",
+                              "name": "Title",
+                              "fill": "$ds-fg",
+                              "content": "Attached panel",
+                              "fontFamily": "$font-label",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QylI1",
+                      "name": "cmp/Editable",
+                      "context": "recipes/editable.ts: label/L/medium (16/500), line height 24, radius 2xs; preview hover bg.hover; input bg with a 2px border outline. Sizes sm 12 / md 14. editable axis: preview | hover | editing.",
+                      "theme": {
+                        "editable": "preview"
+                      },
+                      "reusable": true,
+                      "height": 24,
+                      "fill": "$editable-fill",
+                      "cornerRadius": 2,
+                      "stroke": "$editable-stroke",
+                      "strokeWidth": 2,
+                      "strokeAlignment": "outer",
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YsEIa",
+                          "name": "Value",
+                          "fill": "$ds-fg",
+                          "content": "Release notes",
+                          "fontFamily": "$font-label",
+                          "fontSize": 16,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "lo7Uy",
+                      "type": "ref",
+                      "ref": "QylI1",
+                      "name": "Editable · hover",
+                      "theme": {
+                        "editable": "hover"
+                      }
+                    },
+                    {
+                      "id": "P3qWmd",
+                      "type": "ref",
+                      "ref": "QylI1",
+                      "name": "Editable · editing",
+                      "theme": {
+                        "editable": "editing"
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "U4oLZb",
+                      "name": "cmp/ColorPicker",
+                      "context": "recipes/color-picker.ts: control h 32, bg, border 1px border (accent-light on hover/focus), radius xs; swatch trigger px 8; channel input px 12 label/S/regular.",
+                      "theme": {
+                        "palette": "blue",
+                        "field": "default"
+                      },
+                      "reusable": true,
+                      "clip": true,
+                      "width": 200,
+                      "height": 32,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$field-stroke",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "b0OtJ",
+                          "name": "Trigger",
+                          "height": "fill_container",
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "M2f17l",
+                              "name": "Swatch",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "$pal-500",
+                              "cornerRadius": 2
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "G7ZgLL",
+                          "name": "Channel input",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "#5098FF",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -68875,7 +70584,9 @@
                             "btn": "outline",
                             "mode": "dark",
                             "size": "lg"
-                          }
+                          },
+                          "width": 48,
+                          "height": 48
                         },
                         {
                           "type": "text",
@@ -85485,6 +87196,11 @@
                     "trow": "data"
                   },
                   "descendants": {
+                    "kcrwI": {
+                      "theme": {
+                        "check": "off"
+                      }
+                    },
                     "sAG7Q": {
                       "theme": {
                         "trow": "data"
@@ -85556,6 +87272,11 @@
                         "trow": "header"
                       }
                     },
+                    "j0KkY": {
+                      "theme": {
+                        "check": "on"
+                      }
+                    },
                     "mo9nn": {
                       "theme": {
                         "trow": "header"
@@ -85587,6 +87308,11 @@
                         "trow": "data"
                       }
                     },
+                    "ZFQe8/kcrwI": {
+                      "theme": {
+                        "check": "off"
+                      }
+                    },
                     "ZFQe8/sAG7Q": {
                       "theme": {
                         "trow": "data"
@@ -85611,6 +87337,11 @@
                     "QclIG": {
                       "theme": {
                         "trow": "data"
+                      }
+                    },
+                    "QclIG/kcrwI": {
+                      "theme": {
+                        "check": "off"
                       }
                     },
                     "QclIG/sAG7Q": {
@@ -85645,6 +87376,11 @@
                         "trow": "data"
                       }
                     },
+                    "oXFEc/kcrwI": {
+                      "theme": {
+                        "check": "off"
+                      }
+                    },
                     "oXFEc/sAG7Q": {
                       "theme": {
                         "trow": "data"
@@ -85669,6 +87405,11 @@
                     "OgtYJ": {
                       "theme": {
                         "trow": "data"
+                      }
+                    },
+                    "OgtYJ/kcrwI": {
+                      "theme": {
+                        "check": "off"
                       }
                     },
                     "OgtYJ/sAG7Q": {
@@ -86030,6 +87771,11 @@
                         "trow": "header"
                       }
                     },
+                    "znFLI/j0KkY": {
+                      "theme": {
+                        "check": "on"
+                      }
+                    },
                     "znFLI/mo9nn": {
                       "theme": {
                         "trow": "header"
@@ -86061,6 +87807,11 @@
                         "trow": "data"
                       }
                     },
+                    "znFLI/ZFQe8/kcrwI": {
+                      "theme": {
+                        "check": "off"
+                      }
+                    },
                     "znFLI/ZFQe8/sAG7Q": {
                       "theme": {
                         "trow": "data"
@@ -86085,6 +87836,11 @@
                     "znFLI/QclIG": {
                       "theme": {
                         "trow": "data"
+                      }
+                    },
+                    "znFLI/QclIG/kcrwI": {
+                      "theme": {
+                        "check": "off"
                       }
                     },
                     "znFLI/QclIG/sAG7Q": {
@@ -86119,6 +87875,11 @@
                         "trow": "data"
                       }
                     },
+                    "znFLI/oXFEc/kcrwI": {
+                      "theme": {
+                        "check": "off"
+                      }
+                    },
                     "znFLI/oXFEc/sAG7Q": {
                       "theme": {
                         "trow": "data"
@@ -86143,6 +87904,11 @@
                     "znFLI/OgtYJ": {
                       "theme": {
                         "trow": "data"
+                      }
+                    },
+                    "znFLI/OgtYJ/kcrwI": {
+                      "theme": {
+                        "check": "off"
                       }
                     },
                     "znFLI/OgtYJ/sAG7Q": {
@@ -88926,6 +90692,11 @@
                         "trow": "header"
                       }
                     },
+                    "j0KkY": {
+                      "theme": {
+                        "check": "on"
+                      }
+                    },
                     "mo9nn": {
                       "theme": {
                         "trow": "header"
@@ -88966,6 +90737,11 @@
                         "trow": "data"
                       }
                     },
+                    "ZFQe8/kcrwI": {
+                      "theme": {
+                        "check": "off"
+                      }
+                    },
                     "ZFQe8/sAG7Q": {
                       "theme": {
                         "trow": "data"
@@ -88999,6 +90775,11 @@
                     "QclIG": {
                       "theme": {
                         "trow": "data"
+                      }
+                    },
+                    "QclIG/kcrwI": {
+                      "theme": {
+                        "check": "off"
                       }
                     },
                     "QclIG/sAG7Q": {
@@ -89045,6 +90826,11 @@
                         "trow": "data"
                       }
                     },
+                    "oXFEc/kcrwI": {
+                      "theme": {
+                        "check": "off"
+                      }
+                    },
                     "oXFEc/sAG7Q": {
                       "theme": {
                         "trow": "data"
@@ -89078,6 +90864,11 @@
                     "OgtYJ": {
                       "theme": {
                         "trow": "data"
+                      }
+                    },
+                    "OgtYJ/kcrwI": {
+                      "theme": {
+                        "check": "off"
                       }
                     },
                     "OgtYJ/sAG7Q": {
@@ -115456,6 +117247,15 @@
     "section": [
       "open",
       "closed"
+    ],
+    "editable": [
+      "preview",
+      "hover",
+      "editing"
+    ],
+    "bubble": [
+      "closed",
+      "open"
     ]
   },
   "variables": {
@@ -124524,6 +126324,69 @@
           "value": "chevron-right",
           "theme": {
             "section": "closed"
+          }
+        }
+      ]
+    },
+    "editable-fill": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#00000000",
+          "theme": {
+            "editable": "preview"
+          }
+        },
+        {
+          "value": "$ds-surface-hover",
+          "theme": {
+            "editable": "hover"
+          }
+        },
+        {
+          "value": "$ds-bg",
+          "theme": {
+            "editable": "editing"
+          }
+        }
+      ]
+    },
+    "editable-stroke": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#00000000",
+          "theme": {
+            "editable": "preview"
+          }
+        },
+        {
+          "value": "#00000000",
+          "theme": {
+            "editable": "hover"
+          }
+        },
+        {
+          "value": "$ds-border",
+          "theme": {
+            "editable": "editing"
+          }
+        }
+      ]
+    },
+    "bubble-stroke": {
+      "type": "color",
+      "value": [
+        {
+          "value": "$ds-border",
+          "theme": {
+            "bubble": "closed"
+          }
+        },
+        {
+          "value": "$ds-border-accent",
+          "theme": {
+            "bubble": "open"
           }
         }
       ]
