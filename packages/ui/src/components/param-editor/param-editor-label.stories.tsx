@@ -19,7 +19,7 @@ export const WithInformation: Story = {
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
-    const trigger = canvas.getByRole("button", { name: "About Workspace type" });
+    const trigger = canvas.getByRole("img", { name: "About Workspace type" });
     await user.tab();
     await waitFor(() => expect(canvas.getByRole("tooltip")).toBeVisible());
     await user.keyboard("{Escape}");
@@ -58,7 +58,7 @@ export const InformationInDialog: Story = {
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
     const page = within(canvasElement.ownerDocument.body);
-    const trigger = page.getByRole("button", { name: "About Workspace type" });
+    const trigger = page.getByRole("img", { name: "About Workspace type" });
     await waitFor(() => expect(page.getByRole("dialog", { name: "Create workspace" })).toHaveStyle({ opacity: "1" }));
     page.getByRole("button", { name: "Close workspace dialog" }).focus();
     await waitFor(() => expect(page.queryByRole("tooltip")).not.toBeInTheDocument());

@@ -1,5 +1,5 @@
 import { Box, Icon, Menu, Portal } from "@chakra-ui/react";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { type ElementType, type ReactNode, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { ListRow } from "@/components/list-row/list-row";
@@ -288,6 +288,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
                       role="presentation"
                       variant={item.variant ?? "full-width"}
                       isSelected={item.isSelected}
+                      endContent={item.isSelected ? <Icon as={Check} boxSize="3.5" /> : undefined}
                     />
                   </Box>
                 </Menu.Item>

@@ -16544,7 +16544,7 @@
                       "type": "frame",
                       "id": "sgbRV",
                       "name": "cmp/MenuRow",
-                      "context": "@pstdio/ui ListRow variant='full-width' as rendered inside SearchableMenu. h 28 (auto when Description is on, py 8), px 12, gap 8. Label label/S/regular 12/400 Onest; Description label/XS 10/400 fg.muted. Icon 14px fg.muted (16px for compact empty-state rows, which also use cornerRadius 4). Selection is a bg.active fill - there is no check mark. menu theme axis: default | hover | selected | disabled.",
+                      "context": "Shared dropdown row. Leading icon and label; selected items show a checkmark at the far right. Checkmarks never replace the leading icon.",
                       "theme": {
                         "menu": "default"
                       },
@@ -16625,11 +16625,11 @@
                           "id": "OxQag",
                           "x": 0,
                           "y": 0,
-                          "name": "End",
+                          "name": "Selection checkmark",
                           "enabled": false,
                           "width": 14,
                           "height": 14,
-                          "icon": "chevron-down",
+                          "icon": "check",
                           "library": "lucide",
                           "fill": "$ds-fg-muted"
                         }
@@ -137811,8 +137811,8 @@
                               "type": "icon",
                               "id": "T0trq",
                               "name": "Temperature help icon",
-                              "width": 13,
-                              "height": 13,
+                              "width": 12,
+                              "height": 12,
                               "icon": "circle-help",
                               "library": "lucide",
                               "fill": "#8B9099"
@@ -137902,7 +137902,7 @@
                               "fill": "#8B9099",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "One source description powers stacked and horizontal editors.",
+                              "content": "Compact information icons have no button background. Hover or focus reveals the description.",
                               "fontFamily": "Inter",
                               "fontSize": 10,
                               "fontWeight": "normal"
@@ -175755,23 +175755,15 @@
                               "fontWeight": "normal"
                             },
                             {
-                              "id": "gDMzx",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Workspace type information",
-                              "width": 24,
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "info",
-                                  "width": 12,
-                                  "height": 12
-                                }
-                              }
+                              "type": "icon",
+                              "id": "WLN6v",
+                              "name": "Workspace type information · hover or focus",
+                              "context": "Plain information icon, not a button. No hover or selected background. Tooltip appears on hover or keyboard focus.",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
                             }
                           ]
                         },
@@ -176006,23 +175998,15 @@
                               "fontWeight": "normal"
                             },
                             {
-                              "id": "thrSI",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Workspace type information",
-                              "width": 24,
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "info",
-                                  "width": 12,
-                                  "height": 12
-                                }
-                              }
+                              "type": "icon",
+                              "id": "SsPO3",
+                              "name": "Workspace type information · hover or focus",
+                              "context": "Plain information icon, not a button. No hover or selected background. Tooltip appears on hover or keyboard focus.",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "info",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
                             }
                           ]
                         },

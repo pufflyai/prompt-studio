@@ -1,4 +1,4 @@
-import { HStack, IconButton, Text } from "@chakra-ui/react";
+import { HStack, Icon, Text } from "@chakra-ui/react";
 import { Info } from "lucide-react";
 import { Tooltip } from "../primitives/tooltip";
 
@@ -28,9 +28,19 @@ export const ParamEditorLabel = (props: ParamEditorLabelProps) => {
           portalled={false}
           positioning={{ placement: "bottom-start", strategy: "fixed", hideWhenDetached: true }}
         >
-          <IconButton type="button" aria-label={`About ${name}`} variant="ghost" size="2xs">
+          <Icon
+            asChild
+            role="img"
+            aria-label={`About ${name}`}
+            aria-hidden={false}
+            focusable="true"
+            tabIndex={0}
+            boxSize="3"
+            color="fg.muted"
+            flexShrink={0}
+          >
             <Info />
-          </IconButton>
+          </Icon>
         </Tooltip>
       ) : null}
     </HStack>

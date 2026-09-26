@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Show provider icons, disable inactive parameter choices, and reveal help on hover or focus.
+Show provider icons and trailing selection checks, disable inactive choices, and reveal help from compact information icons.
