@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
 
 const run = (cwd: string, args: string[]) => {
@@ -109,6 +110,10 @@ void [invalidAttribute, invalidColumn];
 export default defineConfig({ build: { lib: { entry: "consumer.ts", formats: ["es"] } } });`,
     );
     run(directory, ["node_modules/vite/bin/vite.js", "build"]);
+    if (dependencies["@pstdio/ui"]) {
+      const monaco = verifyMonacoPackageAssets(directory);
+      console.log(`Resolved @pstdio/ui Monaco files with ${monaco.workers} workers and ${monaco.fonts} fonts.`);
+    }
   } else {
     for (const condition of [[], ["--conditions=source"]]) {
       run(directory, [...condition, "consumer.ts"]);

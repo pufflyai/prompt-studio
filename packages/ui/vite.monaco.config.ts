@@ -1,7 +1,7 @@
 import path from "node:path";
 import { defineConfig } from "vite";
 
-// Builds Monaco and its workers once. Nx caches the output until `monaco-editor` changes.
+// Builds Monaco and its workers once per ui build, so apps copy the finished files instead of bundling Monaco.
 // This is an app build, not a library build, because library builds do not minify whitespace,
 // and a smaller file is faster for every consuming app to bundle.
 export default defineConfig({
