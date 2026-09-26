@@ -126,7 +126,7 @@ export const WorkspaceProviderForm = (props: WorkspaceProviderFormProps) => {
           type: "selection",
           name: "Workspace type",
           description: label(selected.description),
-          options: providers.map((provider) => ({ id: provider.id, name: label(provider.label) })),
+          options: providers.map((provider) => ({ id: provider.id, name: label(provider.label), icon: provider.icon })),
           defaultValue: selected.id,
           clearable: false,
         }}

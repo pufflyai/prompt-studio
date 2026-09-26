@@ -1,6 +1,6 @@
 import { Box, Button, Icon, Menu, Text } from "@chakra-ui/react";
 import { ListRow, SearchableMenu, type SearchableMenuItem, Tooltip } from "@pstdio/ui";
-import { ChevronDown, FolderGit2, GitBranch } from "lucide-react";
+import { ChevronDown, FolderGit2, GitCommitHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export interface WorkspacePanelMenuOption {
@@ -107,14 +107,19 @@ const buildBranchMenuItems = (
 ) => {
   if (isBranchesLoading) {
     const loadingItems: RepoBrowserMenuItem[] = [
-      { id: "branch-loading", label: t("chatInput.branch.loading"), icon: GitBranch, isDisabled: true },
+      { id: "branch-loading", label: t("chatInput.branch.loading"), icon: GitCommitHorizontal, isDisabled: true },
     ];
     return loadingItems;
   }
 
   if (branchOptions.length === 0) {
     const emptyItems: RepoBrowserMenuItem[] = [
-      { id: "branch-none-available", label: t("chatInput.branch.noneAvailable"), icon: GitBranch, isDisabled: true },
+      {
+        id: "branch-none-available",
+        label: t("chatInput.branch.noneAvailable"),
+        icon: GitCommitHorizontal,
+        isDisabled: true,
+      },
     ];
     return emptyItems;
   }
@@ -123,7 +128,7 @@ const buildBranchMenuItems = (
     id: option.value,
     label: option.label,
     searchText: option.value,
-    icon: option.icon ?? GitBranch,
+    icon: option.icon ?? GitCommitHorizontal,
     isSelected: option.value === selectedBranch,
     onSelect: () => onSelectBranch(option.value),
   }));
@@ -165,7 +170,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
               aria-label={t("chatInput.branch.selectLabel")}
               disabled={isMenuDisabled}
             >
-              <GitBranch size={14} data-testid="workspace-panel-menu-branch-icon" />
+              <GitCommitHorizontal size={14} data-testid="workspace-panel-menu-branch-icon" />
               <Text textStyle="label/XS/medium" color="fg" ml="2xs">
                 {selectedBranchLabel}
               </Text>
@@ -188,7 +193,7 @@ export const RepoBrowser = (props: RepoBrowserProps) => {
             variant="compact"
             id="empty"
             label={t("chatInput.branch.noSearchResults")}
-            icon={<Icon as={GitBranch} boxSize="16px" />}
+            icon={<Icon as={GitCommitHorizontal} boxSize="16px" />}
             disabled
           />
         </Menu.Item>

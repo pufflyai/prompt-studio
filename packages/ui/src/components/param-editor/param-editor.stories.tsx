@@ -784,9 +784,9 @@ export const SelectionsWithIcons: Story = {
         defaultValue: ["high"],
         multiSelect: true,
         options: [
-          { id: "low", name: "Low Priority", icon: "arrow-down" },
-          { id: "medium", name: "Medium Priority", icon: "minus" },
-          { id: "high", name: "High Priority", icon: "arrow-up-3" },
+          { id: "low", name: "Low Priority", icon: "level-low" },
+          { id: "medium", name: "Medium Priority", icon: "level-mid" },
+          { id: "high", name: "High Priority", icon: "level-high" },
           { id: "urgent", name: "Urgent", icon: "danger" },
         ],
       },

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { workspaceProviderDescriptorSchema } from "pstdio-api-contracts";
 import { createWorktree, git, listBranches, resolveLatestBase } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
 import { listWorkspaceProviders } from "./workspace-provider-catalog";
@@ -41,14 +42,15 @@ describe("workspace provider branch choices", () => {
     const [provider] = await listWorkspaceProviders(providerCatalog([repo]), "project-1");
 
     expect(provider.id).toBe("pstdio.worktree");
+    expect(workspaceProviderDescriptorSchema.parse(provider).icon).toBe("git-branch");
     expect(provider.params.base).toMatchObject({
       type: "select",
       required: true,
       defaultValue: "feature/notes",
       options: [
-        { label: "feature/notes", value: "feature/notes" },
-        { label: "main", value: "main" },
-        { label: "origin/review", value: "origin/review" },
+        { label: "feature/notes", value: "feature/notes", icon: "git-commit-horizontal" },
+        { label: "main", value: "main", icon: "git-commit-horizontal" },
+        { label: "origin/review", value: "origin/review", icon: "git-commit-horizontal" },
       ],
     });
   });
@@ -166,12 +168,15 @@ describe("workspace provider branch choices", () => {
       extensionRuntimeCatalog: {
         get: async () => ({
           runtime: {
-            workspaceTypes: [{ id: "example.cloud", provider: { label: "Cloud", params } }],
+            workspaceTypes: [{ id: "example.cloud", provider: { label: "Cloud", icon: "rocket", params } }],
           },
         }),
       },
     } as unknown as WorkspacesRouteDeps;
 
-    expect(await listWorkspaceProviders(deps, "project-1")).toMatchObject([{ id: "example.cloud", params }]);
+    const providers = await listWorkspaceProviders(deps, "project-1");
+    expect(providers.map((provider) => workspaceProviderDescriptorSchema.parse(provider))).toMatchObject([
+      { id: "example.cloud", icon: "rocket", params },
+    ]);
   });
 });

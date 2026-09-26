@@ -2,11 +2,10 @@ import { Box, Flex, Icon, Stack } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { getIconComponent } from "../../primitives/icon-options";
 import type { ResourceOption, ResourceRefValue } from "../param-editor.types";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ResourceChipList } from "./resource-input-chips";
-import { SelectionMenu } from "./selection-menu";
+import { SelectionMenu, selectionOptionIcon } from "./selection-menu";
 
 interface ResourceInputProps {
   id: string;
@@ -94,6 +93,7 @@ const ResourceSelectMenu = (props: ResourceSelectMenuProps) => {
       options={options}
       selectedIds={selectedIds}
       multiSelect={multiSelect}
+      reselectable
       triggerVariant={triggerVariant}
       triggerAriaLabel={triggerAriaLabel}
       size={size}
@@ -207,11 +207,7 @@ export const ResourceInput = (props: ResourceInputProps) => {
   const selected = selectedOptions[0];
   const triggerLabel = selected ? (
     <Flex align="center" gap="2xs" minW="0">
-      <Icon
-        as={getIconComponent(selected.icon)}
-        boxSize="14px"
-        color={selected.color ? `${selected.color}.500` : "fg.muted"}
-      />
+      {selectionOptionIcon(selected, "14px")}
       {selected.name}
     </Flex>
   ) : (

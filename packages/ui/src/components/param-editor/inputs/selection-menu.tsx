@@ -21,6 +21,8 @@ export interface SelectionMenuProps {
   options: SelectionMenuOption[];
   selectedIds: string[];
   multiSelect: boolean;
+  /** Selecting the active item can clear a value or repeat an action. */
+  reselectable?: boolean;
   disabled?: boolean;
   searchable?: boolean;
   searchPlaceholder?: string;
@@ -40,11 +42,14 @@ export const selectionIndicator = (multiSelect: boolean, selected: boolean) => {
   return selected ? <Icon as={Check} boxSize="14px" color="fg" /> : null;
 };
 
+const selectionIconComponent = (option: SelectionMenuOption | undefined) =>
+  option?.icon ? getIconComponent(option.icon) : undefined;
+
 export const selectionOptionIcon = (option: SelectionMenuOption | undefined, boxSize: string) => {
-  if (!option) return null;
+  if (!option?.icon) return null;
   return (
     <Icon
-      as={getIconComponent(option.icon ?? null)}
+      as={getIconComponent(option.icon)}
       boxSize={boxSize}
       color={option.color ? `${option.color}.500` : "fg.muted"}
     />
@@ -56,8 +61,7 @@ export const selectionOptionIcon = (option: SelectionMenuOption | undefined, box
  * params and editable resource params alike. Sharing it is what keeps a
  * resource attribute and a command param from drifting into two looks.
  *
- * Single-selects clear by re-picking the selected option; a dedicated "none"
- * row would read as just another value to choose.
+ * Clearable single-selects clear by re-picking the selected option.
  */
 export const SelectionMenu = (props: SelectionMenuProps) => {
   const {
@@ -65,6 +69,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
     options,
     selectedIds,
     multiSelect,
+    reselectable = false,
     disabled,
     searchable = false,
     searchPlaceholder = "Search options…",
@@ -77,9 +82,19 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
     onToggle,
     onGroupChange,
   } = props;
+  const canChangeGroup = Boolean(
+    onGroupChange &&
+      group &&
+      !group.disabled &&
+      group.options.some((option) => !option.disabled && option.id !== group.defaultValue),
+  );
+  const canChangeValue = options.some(
+    (option) => !option.disabled && (multiSelect || reselectable || !selectedIds.includes(option.id)),
+  );
+  const isDisabled = disabled || (!canChangeValue && !canChangeGroup);
   const trigger =
     triggerVariant === "icon" ? (
-      <IconButton aria-label={triggerAriaLabel ?? "Open options"} size="2xs" variant="ghost" disabled={disabled}>
+      <IconButton aria-label={triggerAriaLabel ?? "Open options"} size="2xs" variant="ghost" disabled={isDisabled}>
         {triggerLabel}
       </IconButton>
     ) : (
@@ -88,7 +103,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
         borderWidth="1px"
         borderStyle="solid"
         borderColor="border"
-        disabled={disabled}
+        disabled={isDisabled}
         textStyle={size === "xs" ? "label/XS" : "label/S/regular"}
         width={fullWidth ? "100%" : undefined}
         _hover={{ bg: "bg.hover", borderColor: "border.accent-light" }}
@@ -111,7 +126,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
       label: option.name,
       searchText: [option.id, option.description].filter(Boolean).join(" "),
       secondaryLabel: option.description,
-      icon: getIconComponent(option.icon),
+      icon: selectionIconComponent(option),
       isDisabled: option.disabled,
       isSelected: selectedIds.includes(option.id),
       onSelect: () => onToggle(option.id),
@@ -139,14 +154,14 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
                   label: option.name,
                   searchText: [option.id, option.description].filter(Boolean).join(" "),
                   secondaryLabel: option.description,
-                  icon: getIconComponent(option.icon),
+                  icon: selectionIconComponent(option),
                   isDisabled: option.disabled,
                   isSelected: option.id === group.defaultValue,
                 })),
                 selectedLabel: selectedGroup?.name ?? group.placeholder ?? `Select ${group.name.toLowerCase()}`,
-                selectedIcon: selectedGroup ? getIconComponent(selectedGroup.icon) : undefined,
+                selectedIcon: selectionIconComponent(selectedGroup),
                 ariaLabel: group.name,
-                disabled: group.disabled || group.options.length <= 1,
+                disabled: !canChangeGroup,
                 showSearch: group.searchable,
                 searchPlaceholder: group.searchPlaceholder ?? `Search ${group.name.toLowerCase()}…`,
                 emptyState: (

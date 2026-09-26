@@ -90,11 +90,11 @@ export const RunAttemptForm: Story = {
         type: "selection",
         defaultValue: "medium",
         options: [
-          { id: "minimal", name: "Minimal", icon: "CircleDot" },
-          { id: "low", name: "Low", icon: "Gauge" },
-          { id: "medium", name: "Medium", icon: "Brain" },
-          { id: "high", name: "High", icon: "Zap" },
-          { id: "xhigh", name: "Extra high", icon: "Flame" },
+          { id: "minimal", name: "Minimal", icon: "level-low" },
+          { id: "low", name: "Low", icon: "level-low" },
+          { id: "medium", name: "Medium", icon: "level-mid" },
+          { id: "high", name: "High", icon: "level-high" },
+          { id: "xhigh", name: "Extra high", icon: "level-xhigh" },
         ],
       },
       {
@@ -103,8 +103,8 @@ export const RunAttemptForm: Story = {
         type: "selection",
         defaultValue: "worktree",
         options: [
-          { id: "worktree", name: "Worktree", icon: "GitFork" },
-          { id: "current-branch", name: "Current branch", icon: "GitBranch" },
+          { id: "worktree", name: "Worktree", icon: "git-branch" },
+          { id: "current-branch", name: "Current branch", icon: "git-commit-horizontal" },
         ],
       },
     ],

@@ -1,5 +1,6 @@
-import { HStack, IconButton, Popover, Text } from "@chakra-ui/react";
+import { HStack, Icon, Text } from "@chakra-ui/react";
 import { Info } from "lucide-react";
+import { Tooltip } from "../primitives/tooltip";
 
 interface ParamEditorLabelProps {
   name: string;
@@ -22,18 +23,25 @@ export const ParamEditorLabel = (props: ParamEditorLabelProps) => {
         {name}
       </Text>
       {description ? (
-        <Popover.Root positioning={{ placement: "bottom-start", strategy: "fixed", hideWhenDetached: true }}>
-          <Popover.Trigger asChild>
-            <IconButton type="button" aria-label={`About ${name}`} variant="ghost" size="2xs">
-              <Info />
-            </IconButton>
-          </Popover.Trigger>
-          <Popover.Positioner>
-            <Popover.Content aria-label={`About ${name}`}>
-              <Popover.Body>{description}</Popover.Body>
-            </Popover.Content>
-          </Popover.Positioner>
-        </Popover.Root>
+        <Tooltip
+          content={description}
+          portalled={false}
+          positioning={{ placement: "bottom-start", strategy: "fixed", hideWhenDetached: true }}
+        >
+          <Icon
+            asChild
+            role="img"
+            aria-label={`About ${name}`}
+            aria-hidden={false}
+            focusable="true"
+            tabIndex={0}
+            boxSize="3"
+            color="fg.muted"
+            flexShrink={0}
+          >
+            <Info />
+          </Icon>
+        </Tooltip>
       ) : null}
     </HStack>
   );
