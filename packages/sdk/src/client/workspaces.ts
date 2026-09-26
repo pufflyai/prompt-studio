@@ -18,6 +18,9 @@ import type { RequestFn } from "./request";
 export type WorkspaceClient = {
   listProviders(projectId: string): Promise<WorkspaceProviderDescriptor[]>;
   list(projectId: string): Promise<WorkspaceListItem[]>;
+  get(reference: string, projectId?: string): Promise<Workspace>;
+  cancel(reference: string): Promise<Workspace>;
+  archive(reference: string): Promise<Workspace>;
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
   create(input: CreateWorkspaceInput): Promise<Workspace>;
   rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
@@ -92,6 +95,12 @@ export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
     return request(`/v1/workspaces/${workspaceId}/activity${query ? `?${query}` : ""}`);
   },
   list: (projectId) => request(`/v1/workspaces?project_id=${projectId}`),
+  get: (reference, projectId) =>
+    request(
+      `/v1/workspaces/${encodeURIComponent(reference)}${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`,
+    ),
+  cancel: (reference) => request(`/v1/workspaces/${encodeURIComponent(reference)}/cancel`, { method: "POST" }),
+  archive: (reference) => request(`/v1/workspaces/${encodeURIComponent(reference)}/archive`, { method: "POST" }),
   getByShorthand: (projectId, shorthand) =>
     request(
       `/v1/workspaces/by-shorthand?project_id=${encodeURIComponent(projectId)}&shorthand=${encodeURIComponent(shorthand)}`,

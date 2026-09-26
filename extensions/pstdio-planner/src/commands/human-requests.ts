@@ -1,10 +1,11 @@
 import { type CommandContext, defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
-import { humanRequestsCollection, readAttempt } from "../data/attempt-storage";
+import { humanRequestsCollection } from "../data/attempt-storage";
 import type { AttemptRecord, AttemptState, HumanRequestReason, HumanRequestRecord } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { seedDefaultTags } from "../data/seed";
+import { readWorkspaceAttempt } from "../data/workspace-attempt";
 
 const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
 
@@ -58,7 +59,7 @@ const ticketAnchor = (
 
 const readExpectedAttempt = async (ctx: CommandContext, input: RequestHumanInput, ticketId: string) => {
   if (!input.workspaceId || !input.expectedAttemptState) return null;
-  const attempt = await readAttempt(ctx.storage, input.workspaceId);
+  const attempt = await readWorkspaceAttempt(ctx, input.workspaceId);
   if (!attempt || attempt.ticketId !== ticketId || attempt.state !== input.expectedAttemptState) {
     throw new Error("Attempt state changed before the handoff.");
   }
@@ -201,7 +202,9 @@ export const requestHumanCommand = defineCommand({
     }),
   },
   async run(ctx, commandParams) {
-    return requestHuman(ctx, commandParams as RequestHumanInput);
+    const workspace = commandParams.workspaceId ? await ctx.workspaces.get(commandParams.workspaceId) : null;
+    if (commandParams.workspaceId && !workspace) throw new Error(`Workspace not found: ${commandParams.workspaceId}`);
+    return requestHuman(ctx, { ...commandParams, workspaceId: workspace?.id } as RequestHumanInput);
   },
 });
 

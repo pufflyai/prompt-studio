@@ -50,6 +50,8 @@ const builtInCreate = async (input: {
     repoPath: repo.path,
     workspaceShorthand: input.workspace.workspace_shorthand,
     base: asString(input.params.base) ?? "HEAD",
+    branch: input.workspace.branch,
+    worktreePath: input.workspace.worktree_path,
   });
 
   return {

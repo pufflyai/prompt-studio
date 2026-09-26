@@ -52,7 +52,6 @@ export const CreateWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput 
               providerId,
               params,
               anchors: options?.anchors,
-              shorthand_base: options?.shorthand_base,
             });
             close();
           }}

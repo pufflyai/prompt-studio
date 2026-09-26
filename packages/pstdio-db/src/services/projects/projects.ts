@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
 import { deriveShorthand } from "./derive-shorthand";
+import { projectPrefixCandidate } from "./project-prefix";
 
 type ProjectRecord = typeof projects.$inferSelect;
 
@@ -32,9 +33,15 @@ export const createProjectsDBService = (db: DbClient) => {
       deleted_at: null,
     };
 
-    await db.insert(projects).values(project);
-
-    return project;
+    for (let number = 1; ; number += 1) {
+      project.shorthand = projectPrefixCandidate(deriveShorthand(input.name), number);
+      const [created] = await db
+        .insert(projects)
+        .values(project)
+        .onConflictDoNothing({ target: projects.shorthand })
+        .returning();
+      if (created) return created;
+    }
   };
 
   const update = async (id: string, input: { name: string }) => {

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { removeWorktreeAndBranch } from "pstdio-wt";
+import { removeWorktree, removeWorktreeAndBranch } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
 import { resolveWorkspacesRoot } from "./worktree-setup";
 
@@ -38,16 +38,11 @@ export const cleanupWorkspaceWorktree = async (
     }
   }
 
-  const branch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
-
   for (const repo of repos) {
     try {
-      await removeWorktreeAndBranch({
-        repoRoot: repo.path,
-        path: workspace.worktree_path,
-        branch,
-        force: true,
-      });
+      const input = { repoRoot: repo.path, path: workspace.worktree_path, force: true };
+      if (workspace.branch) await removeWorktreeAndBranch({ ...input, branch: workspace.branch });
+      else await removeWorktree(input);
       return true;
     } catch {
       // Ignore and try the next repo.

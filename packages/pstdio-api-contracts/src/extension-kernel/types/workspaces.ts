@@ -27,8 +27,6 @@ export interface ExtensionWorkspace {
 
 export interface CreateExtensionWorkspaceInput {
   project_id?: string;
-  /** Identifier prefix: starts with a letter or number; letters, numbers, hyphens, and underscores only. */
-  shorthand_base: string;
   provider_id?: string;
   params?: JsonObject;
   anchors?: ResourceAnchor[];
@@ -63,8 +61,6 @@ export interface ExtensionWorkspacesApi {
 /** Opens the host provider selection form with optional resource linkage. */
 export interface CreateWorkspaceCommandParams {
   anchors?: ResourceAnchor[];
-  /** Identifier prefix: starts with a letter or number; letters, numbers, hyphens, and underscores only. */
-  shorthand_base?: string;
 }
 
 import type { Localizable } from "../l10n";

@@ -58,7 +58,7 @@ export const setStartupLogHandler = (deps: WorkspacesRouteDeps): AppRouteHandler
       mime_type: "text/plain",
     });
 
-    await deps.workspaceService.setStartupLogFileId(id, file.id);
+    await deps.workspaceService.setStartupLogFileId(workspace.id, file.id);
 
     return c.json({ file_id: file.id }, 200);
   };

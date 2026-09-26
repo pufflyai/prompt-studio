@@ -70,7 +70,7 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
       }
     }
 
-    await deps.workspaceService.softDelete(id);
+    if (workspace) await deps.workspaceService.softDelete(workspace.id);
 
     if (workspace && removed) fireWorkspaceRemovedEvent(deps, workspace);
 

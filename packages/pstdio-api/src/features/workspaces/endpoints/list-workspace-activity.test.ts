@@ -36,7 +36,7 @@ afterAll(async () => {
 
 describe("GET /v1/workspaces/:id/activity", () => {
   test("supports pagination and filters", async () => {
-    const workspace = await appHandle.deps.workspaceService.createStandalone({ project_id: projectId });
+    const workspace = await appHandle.deps.workspaceService.create({ project_id: projectId });
 
     await appHandle.deps.activityEventsService.create({
       projectId,

@@ -9,6 +9,7 @@ import {
   listWorktrees,
   removeWorktree,
   removeWorktreeAndBranch,
+  restoreWorktree,
   worktreePath,
 } from "./worktree";
 
@@ -44,6 +45,24 @@ describe("listWorktrees", () => {
 });
 
 describe("createWorktree", () => {
+  test("refuses a new workspace whose branch belongs to another worktree", async () => {
+    const other = join(repo.dir, "other");
+    await createWorktree({ repoRoot: repo.dir, branch: "workspace/PS_WS-1", path: other });
+    await Bun.write(join(other, "private.txt"), "keep private");
+    await expect(
+      createWorktree({ repoRoot: repo.dir, branch: "workspace/PS_WS-1", path: join(repo.dir, "new") }),
+    ).rejects.toThrow("already exists");
+    expect(await Bun.file(join(other, "private.txt")).text()).toBe("keep private");
+  });
+  test("leaves an occupied directory and existing branch untouched", async () => {
+    const path = join(repo.dir, "occupied");
+    await Bun.write(join(path, "marker"), "keep");
+    await git(repo.dir, ["branch", "task/keep"]);
+    const sha = await git(repo.dir, ["rev-parse", "task/keep"]);
+    await expect(createWorktree({ repoRoot: repo.dir, branch: "task/keep", path })).rejects.toThrow();
+    expect(await Bun.file(join(path, "marker")).text()).toBe("keep");
+    expect(await git(repo.dir, ["rev-parse", "task/keep"])).toBe(sha);
+  });
   test("recreates worktree when previous one was prunable", async () => {
     const wtPath = join(repo.dir, "wt-prunable-recreate");
     await createWorktree({ repoRoot: repo.dir, branch: "task/prunable-recreate", path: wtPath });
@@ -54,7 +73,7 @@ describe("createWorktree", () => {
 
     // Creating a worktree with the same branch should create a fresh one
     const newPath = join(repo.dir, "wt-prunable-new");
-    const result = await createWorktree({
+    const result = await restoreWorktree({
       repoRoot: repo.dir,
       branch: "task/prunable-recreate",
       path: newPath,
@@ -81,7 +100,7 @@ describe("createWorktree", () => {
     const wtPath = join(repo.dir, "wt-test");
     await createWorktree({ repoRoot: repo.dir, branch: "task/test-1", path: wtPath });
 
-    const result = await createWorktree({
+    const result = await restoreWorktree({
       repoRoot: repo.dir,
       branch: "task/test-1",
       path: join(repo.dir, "wt-test-2"),
@@ -91,7 +110,7 @@ describe("createWorktree", () => {
     expect(result.path).toBe(wtPath);
   });
 
-  test("deletes stale branch and creates fresh worktree from requested base", async () => {
+  test("preserves the existing branch when recreating its worktree", async () => {
     // Create a branch at the initial commit, then add a new commit to main
     const initialSha = await git(repo.dir, ["rev-parse", "HEAD"]);
     await git(repo.dir, ["branch", "task/stale"]);
@@ -99,7 +118,6 @@ describe("createWorktree", () => {
     await Bun.write(join(repo.dir, "new-file.txt"), "new");
     await git(repo.dir, ["add", "new-file.txt"]);
     await git(repo.dir, ["commit", "-m", "advance main"]);
-    const advancedSha = await git(repo.dir, ["rev-parse", "HEAD"]);
 
     // Stale branch is behind main
     const staleSha = await git(repo.dir, ["rev-parse", "task/stale"]);
@@ -107,7 +125,7 @@ describe("createWorktree", () => {
 
     // Creating a worktree with the stale branch name should recreate from the new base
     const wtPath = join(repo.dir, "wt-stale");
-    const result = await createWorktree({
+    const result = await restoreWorktree({
       repoRoot: repo.dir,
       branch: "task/stale",
       path: wtPath,
@@ -118,7 +136,7 @@ describe("createWorktree", () => {
 
     // The worktree HEAD should be at the advanced main commit, not the stale one
     const worktreeHead = await git(wtPath, ["rev-parse", "HEAD"]);
-    expect(worktreeHead).toBe(advancedSha);
+    expect(worktreeHead).toBe(initialSha);
   });
 
   test("creates from a specific base", async () => {

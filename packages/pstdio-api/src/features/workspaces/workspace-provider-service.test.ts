@@ -11,7 +11,7 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
     provider_operation_id: "op-create-1",
     provider_operation_kind: "create",
   }) as WorkspaceRecord;
-  const createStandalone = mock(async (input: Record<string, unknown>) => {
+  const create = mock(async (input: Record<string, unknown>) => {
     workspace = { ...workspace, ...input };
     return workspace;
   });
@@ -53,7 +53,7 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
   return {
     deps: {
       workspaceService: {
-        createStandalone,
+        create,
         updateProviderProjection,
         updateProviderOperationProjection,
         beginProviderOperation,
@@ -73,7 +73,7 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
       },
     } as never,
     beginProviderOperation,
-    createStandalone,
+    create,
     updateProviderProjection,
   };
 };
@@ -109,7 +109,6 @@ describe("createProviderBackedWorkspace", () => {
       projectId: "project-1",
       providerId: "pocketcoder.remote",
       params: { repository: "repo" },
-      standalone: true,
     });
 
     expect(workspace).toMatchObject({
@@ -121,7 +120,7 @@ describe("createProviderBackedWorkspace", () => {
   });
 
   test("keeps retry metadata when provider create throws", async () => {
-    const { deps, createStandalone } = makeCreateDeps({
+    const { deps, create } = makeCreateDeps({
       create: mock(async () => {
         throw new Error("remote API unavailable");
       }),
@@ -133,12 +132,11 @@ describe("createProviderBackedWorkspace", () => {
     const workspace = await createProviderBackedWorkspace(deps, {
       projectId: "project-1",
       providerId: "pocketcoder.remote",
-      standalone: true,
     });
 
     expect(workspace).toMatchObject({
       provider_state: "failed",
-      provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
+      provider_operation_id: create.mock.calls[0]?.[0].provider_operation_id,
       provider_operation_kind: "create",
       provider_error_json: { retryable: true },
     });
@@ -157,7 +155,6 @@ describe("createProviderBackedWorkspace", () => {
     const workspace = await createProviderBackedWorkspace(deps, {
       projectId: "project-1",
       providerId: "pocketcoder.remote",
-      standalone: true,
     });
 
     expect(resolve).toHaveBeenCalledTimes(1);
@@ -173,7 +170,7 @@ describe("createProviderBackedWorkspace", () => {
       executionKind: "remote",
       capabilities: remoteWorkspaceCapabilities,
     };
-    const { deps, beginProviderOperation, createStandalone } = makeCreateDeps({
+    const { deps, beginProviderOperation, create } = makeCreateDeps({
       create: mock(async () => {
         providerStarted.resolve();
         return providerResult.promise;
@@ -183,7 +180,6 @@ describe("createProviderBackedWorkspace", () => {
     const creating = createProviderBackedWorkspace(deps, {
       projectId: "project-1",
       providerId: "pocketcoder.remote",
-      standalone: true,
     });
     await providerStarted.promise;
     await beginProviderOperation("ws-1", {
@@ -197,7 +193,7 @@ describe("createProviderBackedWorkspace", () => {
     expect(workspace).toMatchObject({
       provider_ref_json: ready.providerRef,
       provider_state: "deleting",
-      provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
+      provider_operation_id: create.mock.calls[0]?.[0].provider_operation_id,
       provider_operation_kind: "delete",
     });
   });
@@ -208,7 +204,7 @@ describe("createProviderBackedWorkspace", () => {
       executionKind: "remote",
       capabilities: remoteWorkspaceCapabilities,
     };
-    const { deps, createStandalone } = makeCreateDeps({
+    const { deps, create } = makeCreateDeps({
       create: mock(async () => result),
       resolve: mock(async () => result),
     });
@@ -216,11 +212,10 @@ describe("createProviderBackedWorkspace", () => {
     const workspace = await createProviderBackedWorkspace(deps, {
       projectId: "project-1",
       providerId: "pocketcoder.remote",
-      standalone: true,
     });
 
     expect(workspace).toMatchObject({
-      provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
+      provider_operation_id: create.mock.calls[0]?.[0].provider_operation_id,
       provider_operation_kind: "create",
       provider_state: "failed",
       provider_error_json: { code: "provider_ref_missing", retryable: true },
@@ -229,7 +224,7 @@ describe("createProviderBackedWorkspace", () => {
 
   test("keeps an aborted accepted create recoverable when its response is lost", async () => {
     const controller = new AbortController();
-    const { deps, createStandalone } = makeCreateDeps({
+    const { deps, create } = makeCreateDeps({
       create: mock(async (_ctx: unknown, input: { signal?: AbortSignal }) => {
         await new Promise<void>((resolve) => input.signal?.addEventListener("abort", () => resolve(), { once: true }));
         throw new DOMException("The response was lost after acceptance.", "AbortError");
@@ -239,7 +234,6 @@ describe("createProviderBackedWorkspace", () => {
     const creating = createProviderBackedWorkspace(deps, {
       projectId: "project-1",
       providerId: "pocketcoder.remote",
-      standalone: true,
       signal: controller.signal,
     });
     await Bun.sleep(0);
@@ -249,7 +243,7 @@ describe("createProviderBackedWorkspace", () => {
     expect(workspace).toMatchObject({
       provider_ref_json: null,
       provider_state: "provisioning",
-      provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
+      provider_operation_id: create.mock.calls[0]?.[0].provider_operation_id,
       provider_operation_kind: "cancel",
       provider_error_json: { retryable: true },
     });
@@ -273,7 +267,6 @@ describe("createProviderBackedWorkspace", () => {
     const workspace = await createProviderBackedWorkspace(deps, {
       projectId: "project-1",
       providerId: "pocketcoder.remote",
-      standalone: true,
       signal: controller.signal,
     });
 

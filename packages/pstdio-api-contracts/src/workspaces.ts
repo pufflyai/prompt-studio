@@ -93,7 +93,6 @@ export const createWorkspaceInputSchema = z.object({
   /** Base branch/ref for the new worktree. Defaults to HEAD. */
   base: z.string().optional(),
   anchors: z.array(workspaceAnchorSchema).optional(),
-  shorthand_base: z.string().trim().min(1).optional(),
 });
 
 export const renameWorkspaceInputSchema = z.object({

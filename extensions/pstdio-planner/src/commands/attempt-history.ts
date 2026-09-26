@@ -8,13 +8,13 @@ import {
   attemptSelectionsCollection,
   humanRequestsCollection,
   putAttempt,
-  readAttempt,
   reviewCommentsCollection,
   reviewLaunchClaimsCollection,
   reviewThreadsCollection,
 } from "../data/attempt-storage";
 import type { ReviewComment } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
+import { readWorkspaceAttempt } from "../data/workspace-attempt";
 
 export const readAttemptHistoryCommand = defineCommand({
   id: "read-attempt-history",
@@ -26,7 +26,7 @@ export const readAttemptHistoryCommand = defineCommand({
     limit: params.number(),
   },
   async run(ctx, commandParams) {
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    const attempt = await readWorkspaceAttempt(ctx, commandParams.workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
     const events = (await attemptEventsCollection(ctx.storage).list()).filter(
       (event) => event.workspaceId === attempt.workspaceId,
@@ -77,7 +77,8 @@ export const addReviewCommentCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const thread = await reviewThreadsCollection(ctx.storage).get(commandParams.threadId);
-    if (!thread || thread.workspaceId !== commandParams.workspaceId || thread.reviewId !== commandParams.reviewId) {
+    const attempt = await readWorkspaceAttempt(ctx, commandParams.workspaceId);
+    if (!thread || thread.workspaceId !== attempt?.workspaceId || thread.reviewId !== commandParams.reviewId) {
       throw new Error("Review thread does not belong to this review.");
     }
     if (commandParams.replyToCommentId) {
@@ -123,7 +124,8 @@ export const resolveReviewThreadCommand = defineCommand({
   async run(ctx, commandParams) {
     const collection = reviewThreadsCollection(ctx.storage);
     const thread = await collection.get(commandParams.threadId);
-    if (!thread || thread.workspaceId !== commandParams.workspaceId || thread.reviewId !== commandParams.reviewId) {
+    const attempt = await readWorkspaceAttempt(ctx, commandParams.workspaceId);
+    if (!thread || thread.workspaceId !== attempt?.workspaceId || thread.reviewId !== commandParams.reviewId) {
       throw new Error("Review thread does not belong to this review.");
     }
     const actor = actorFromSource(ctx.source, ctx.invocationId);
@@ -155,7 +157,7 @@ export const dismissReviewCommand = defineCommand({
     reason: params.longText({ required: true }),
   },
   async run(ctx, commandParams) {
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    const attempt = await readWorkspaceAttempt(ctx, commandParams.workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
     const revision = attempt.revisions.find((candidate) =>
       candidate.reviews.some((review) => review.id === commandParams.reviewId),
@@ -208,7 +210,7 @@ export const selectAttemptCommand = defineCommand({
       throw new Error("Automation cannot select an attempt.");
     }
     const ticket = await findTicket(ctx.storage, commandParams.ticket);
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    const attempt = await readWorkspaceAttempt(ctx, commandParams.workspaceId);
     if (!ticket || !attempt || attempt.ticketId !== ticket.id)
       throw new Error("Workspace is not an attempt for this ticket.");
     if (commandParams.humanRequestId) {

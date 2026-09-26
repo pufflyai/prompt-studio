@@ -39,7 +39,6 @@ describe("createWorkspaceSessionsDBService", () => {
   test("link creates a workspace-session association", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     const session = await sessionsService.create({ project_id: projectId, title: "Session 1", agent: "claude-code" });
@@ -55,7 +54,6 @@ describe("createWorkspaceSessionsDBService", () => {
   test("getWorkspaceBySessionId returns the linked workspace", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     const session = await sessionsService.create({ project_id: projectId, title: "Session 1", agent: "claude-code" });
@@ -76,7 +74,6 @@ describe("createWorkspaceSessionsDBService", () => {
   test("listByWorkspace returns all sessions for a workspace", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     const s1 = await sessionsService.create({ project_id: projectId, title: "Session 1", agent: "claude-code" });
@@ -93,7 +90,6 @@ describe("createWorkspaceSessionsDBService", () => {
   test("allows concurrent sessions on the same workspace", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     const s1 = await sessionsService.create({ project_id: projectId, title: "Implement", agent: "claude-code" });
@@ -109,7 +105,6 @@ describe("createWorkspaceSessionsDBService", () => {
   test("rejects duplicate workspace-session link", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
-      shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
     const session = await sessionsService.create({ project_id: projectId, title: "Session 1", agent: "claude-code" });

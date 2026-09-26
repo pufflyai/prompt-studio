@@ -7,9 +7,10 @@ import {
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
-import { appendAttemptEvent, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
+import { appendAttemptEvent, putAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptReview } from "../data/attempt-types";
 import { renderOwnedTemplate } from "../data/template-store";
+import { readWorkspaceAttempt } from "../data/workspace-attempt";
 
 const workspaceIdFrom = (
   ctx: {
@@ -41,9 +42,10 @@ export const runReviewCommand = defineCommand({
     harness: params.harness({ label: "Harness", required: false }),
   },
   async run(ctx, commandParams) {
-    const workspaceId = workspaceIdFrom(ctx, commandParams);
-    const attempt = await readAttempt(ctx.storage, workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${workspaceId}"`);
+    const reference = workspaceIdFrom(ctx, commandParams);
+    const attempt = await readWorkspaceAttempt(ctx, reference);
+    if (!attempt) throw new Error(`Unknown managed attempt "${reference}"`);
+    const workspaceId = attempt.workspaceId;
     const revision = attempt.revisions.at(-1);
     if (!revision) throw new Error("The attempt has no submitted revision.");
     if (attempt.state !== "review_ready") throw new Error("The attempt revision is not ready for review.");

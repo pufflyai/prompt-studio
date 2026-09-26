@@ -53,7 +53,7 @@ describe("pstdio sessions create --workspace-id", () => {
       expect(workspaceOutput).toContain("Created workspace");
       const workspacesRes = await fetch(`${api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
       const workspaces = (await workspacesRes.json()) as Array<{ id: string; workspace_shorthand: string }>;
-      const workspace = workspaces.find((candidate) => candidate.workspace_shorthand === "WS-1");
+      const workspace = workspaces.find((candidate) => candidate.workspace_shorthand === "SWS_WS-1");
       expect(workspace).toBeTruthy();
 
       // Create a session using the workspace shorthand (not UUID) — previously returned 404

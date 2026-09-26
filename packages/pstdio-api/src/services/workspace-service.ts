@@ -39,12 +39,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     return workspace;
   };
 
-  const createStandalone = async (input: Parameters<typeof raw.createStandalone>[0]) => {
-    const workspace = await raw.createStandalone(input);
-    deps.eventBus.emit("workspaces", "set", workspace);
-    return workspace;
-  };
-
   // Idempotent: a project has at most one default workspace (root repo, current
   // branch). Returns the existing one or creates and announces a new one.
   const ensureDefault = async (input: Parameters<typeof raw.createDefault>[0]) => {
@@ -106,7 +100,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     list,
     listForProviderReconciliation,
     create,
-    createStandalone,
     ensureDefault,
     archive,
     clearWorktree,

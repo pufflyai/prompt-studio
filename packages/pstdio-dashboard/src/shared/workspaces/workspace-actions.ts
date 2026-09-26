@@ -21,7 +21,6 @@ export const createDashboardWorkspace = (input: CreateDashboardWorkspaceInput) =
       provider_id: input.providerId,
       params: input.params,
       anchors: input.anchors,
-      shorthand_base: input.shorthand_base,
     },
   });
 

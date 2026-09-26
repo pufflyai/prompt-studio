@@ -37,7 +37,6 @@ describe("command environment project scope", () => {
     await expect(
       workspaces.create({
         project_id: "project-other",
-        shorthand_base: "remote",
         provider_id: "example.remote",
       }),
     ).rejects.toThrow("project");

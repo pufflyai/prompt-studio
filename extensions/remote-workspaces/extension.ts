@@ -21,7 +21,6 @@ const launch = defineCommand({
     const { prompt, ...workspaceInput } = input;
     const workspace = await ctx.workspaces.create({
       project_id: ctx.projectId,
-      shorthand_base: "remote",
       provider_id: `${ctx.extensionId}.workspace-type.${remoteWorkspace.id}`,
       params: Object.fromEntries(Object.entries(workspaceInput).filter(([, value]) => value !== undefined)),
     });

@@ -38,7 +38,7 @@ for (const target of ["workspace", "session"] as const) {
     const env = await setup();
     const create = async (projectId: string) =>
       target === "workspace"
-        ? env.workspaceService.createStandalone({ project_id: projectId })
+        ? env.workspaceService.create({ project_id: projectId })
         : env.sessionService.create({ project_id: projectId, title: "Anchors", agent: "test" });
     const api = target === "workspace" ? env.workspaces : env.sessions;
     const owned = await create(env.project.id);
@@ -70,7 +70,7 @@ for (const target of ["workspace", "session"] as const) {
     const env = await setup();
     const resource =
       target === "workspace"
-        ? await env.workspaceService.createStandalone({ project_id: env.project.id })
+        ? await env.workspaceService.create({ project_id: env.project.id })
         : await env.sessionService.create({ project_id: env.project.id, title: "Concurrent", agent: "test" });
     const api = target === "workspace" ? env.workspaces : env.sessions;
     const one = { type: "ticket", id: "one" };
@@ -92,7 +92,7 @@ for (const target of ["workspace", "session"] as const) {
     const env = await setup();
     const resource =
       target === "workspace"
-        ? await env.workspaceService.createStandalone({ project_id: env.project.id })
+        ? await env.workspaceService.create({ project_id: env.project.id })
         : await env.sessionService.create({ project_id: env.project.id, title: "Unchanged", agent: "test" });
     const api = target === "workspace" ? env.workspaces : env.sessions;
     const service = target === "workspace" ? env.workspaceService : env.sessionService;

@@ -75,7 +75,6 @@ describe("local provider creation setup failures", () => {
           body: JSON.stringify({
             project_id: fixture.projectId,
             provider_id: "pstdio.worktree",
-            shorthand_base: "HTTP",
           }),
         });
       } else {
@@ -85,7 +84,7 @@ describe("local provider creation setup failures", () => {
           { setupWorkspaceWorktree, runWorkspaceProvisioning },
         );
         try {
-          await workspaces.create({ provider_id: "pstdio.worktree", shorthand_base: "EXTENSION" });
+          await workspaces.create({ provider_id: "pstdio.worktree" });
         } catch (error) {
           failure = error;
         }

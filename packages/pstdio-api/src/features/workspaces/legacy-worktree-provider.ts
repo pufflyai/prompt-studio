@@ -1,5 +1,5 @@
 import { realpath } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { resolvePstdioWorkspacesPath } from "pstdio-paths";
 import { findWorktreeByBranch, git } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
@@ -27,16 +27,18 @@ export const projectLegacyWorktreeProvider = async (
     workspace.provider_id !== rootProviderId ||
     workspace.is_default ||
     !workspace.worktree_path ||
-    workspace.branch !== `workspace/${workspace.workspace_shorthand}`
+    !workspace.branch
   ) {
     return workspace;
   }
 
   const [root, managedRoot] = await Promise.all([
     canonicalPath(workspace.worktree_path),
-    canonicalPath(join(resolvePstdioWorkspacesPath(), workspace.workspace_shorthand)),
+    canonicalPath(resolvePstdioWorkspacesPath()),
   ]);
-  if (!root || root !== managedRoot) return workspace;
+  if (!root || !managedRoot) return workspace;
+  const path = relative(managedRoot, root);
+  if (!path || path === ".." || path.startsWith(`..${sep}`) || isAbsolute(path)) return workspace;
   const folders = await deps.repoService.listByProject(workspace.project_id);
   const sources = await Promise.all(folders.map((folder) => canonicalPath(folder.path)));
   if (sources.includes(root)) return workspace;

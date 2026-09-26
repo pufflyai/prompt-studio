@@ -8,7 +8,6 @@ import {
   worktreeProviderId,
 } from "./workspace-provider-identity";
 import type { WorkspaceRecord } from "./workspace-provider-projection";
-import { assertWorkspaceShorthand } from "./workspace-shorthand";
 import { setupWorkspaceWorktree } from "./worktree-setup";
 
 export { resolveWorkspaceExecutionTarget } from "./workspace-provider-execution-target";
@@ -36,20 +35,17 @@ export const createProviderBackedWorkspace = async (
   deps: WorkspacesRouteDeps,
   input: {
     projectId: string;
-    shorthandBase?: string;
     name?: string;
     anchors?: WorkspaceRecord["anchors_json"];
     providerId?: string;
     params?: JsonObject;
     repoId?: string;
     base?: string;
-    standalone?: boolean;
     setupWorktree?: typeof setupWorkspaceWorktree;
     provision?: (workspace: WorkspaceRecord, repoPath: string) => Promise<WorkspaceRecord>;
     signal?: AbortSignal;
   },
 ) => {
-  if (input.shorthandBase !== undefined) assertWorkspaceShorthand(input.shorthandBase);
   const providerId = input.providerId ?? worktreeProviderId;
   const params = mergeProviderParams(input);
   const repo = isBuiltInProviderId(providerId)
@@ -69,14 +65,7 @@ export const createProviderBackedWorkspace = async (
     provider_operation_id: operationId,
     provider_operation_kind: "create" as const,
   };
-  const workspace =
-    input.standalone === true
-      ? await deps.workspaceService.createStandalone(createInput)
-      : await deps.workspaceService.create({
-          ...createInput,
-          shorthand_base: input.shorthandBase ?? "",
-          anchors: input.anchors,
-        });
+  const workspace = await deps.workspaceService.create(createInput);
 
   const updated = await provisionProviderWorkspace(deps, {
     operationId,

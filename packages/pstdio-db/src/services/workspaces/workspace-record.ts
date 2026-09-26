@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   defaultLocalWorkspaceCapabilities,
+  projects,
   type ResourceRef,
   type WorkspaceCapabilities,
   type WorkspaceProviderError,
@@ -15,7 +16,6 @@ export type JsonObject = Record<string, unknown>;
 
 export type CreateInput = {
   project_id: string;
-  shorthand_base: string;
   anchors?: ResourceRef[];
   name?: string;
   branch?: string;
@@ -29,33 +29,19 @@ export type CreateInput = {
 
 export const nowTimestamp = () => new Date().toISOString();
 
-const getAttemptNumber = (shorthandBase: string, workspaceShorthand: string) => {
-  const prefix = `${shorthandBase}_A`;
-  if (!workspaceShorthand.startsWith(prefix)) return null;
-  const suffix = workspaceShorthand.slice(prefix.length);
-  return /^\d+$/.test(suffix) ? Number(suffix) : null;
+export const nextWorkspaceShorthand = (prefix: string, existing: string[]) => {
+  const start = prefix + "_WS-";
+  const max = existing.reduce((value, ref) => {
+    const number = ref.startsWith(start) ? Number(ref.slice(start.length)) : 0;
+    return Math.max(value, Number.isSafeInteger(number) ? number : 0);
+  }, 0);
+  return start + (max + 1);
 };
 
-export const nextWorkspaceShorthand = (shorthandBase: string, existingShorthands: string[]) => {
-  const maxAttempt = existingShorthands.reduce(
-    (max, shorthand) => Math.max(max, getAttemptNumber(shorthandBase, shorthand) ?? 0),
-    0,
-  );
-  return `${shorthandBase}_A${maxAttempt + 1}`;
-};
-
-export const standalonePrefix = "WS-";
-const defaultShorthand = "default";
-
-const getStandaloneNumber = (shorthand: string) => {
-  if (!shorthand.startsWith(standalonePrefix)) return null;
-  const suffix = shorthand.slice(standalonePrefix.length);
-  return /^\d+$/.test(suffix) ? Number(suffix) : null;
-};
-
-export const nextStandaloneWorkspaceShorthand = (existingShorthands: string[]) => {
-  const max = existingShorthands.reduce((value, shorthand) => Math.max(value, getStandaloneNumber(shorthand) ?? 0), 0);
-  return `${standalonePrefix}${max + 1}`;
+export const getProjectPrefix = async (db: DbClient, projectId: string) => {
+  const [project] = await db.select({ shorthand: projects.shorthand }).from(projects).where(eq(projects.id, projectId));
+  if (!project) throw new Error("Project not found: " + projectId);
+  return project.shorthand;
 };
 
 export const buildWorkspaceRecord = (input: {
@@ -113,13 +99,17 @@ export const insertDefaultWorkspace = async (
 ) => {
   const record = buildWorkspaceRecord({
     project_id: input.project_id,
-    shorthand: defaultShorthand,
+    shorthand: `${await getProjectPrefix(db, input.project_id)}_WS-0`,
     name: input.name,
     branch: input.branch ?? undefined,
     is_default: true,
   });
-  await db.insert(workspaces).values(record);
-  return record;
+  const [created] = await db
+    .insert(workspaces)
+    .values(record)
+    .onConflictDoNothing({ target: workspaces.workspace_shorthand })
+    .returning();
+  return created ?? (await selectDefaultWorkspace(db, input.project_id))!;
 };
 
 export const selectDefaultWorkspace = async (db: DbClient, projectId: string) => {

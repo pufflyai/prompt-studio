@@ -29,7 +29,6 @@ describe("PocketCoder launch", () => {
     expect(workspaces).toEqual([
       {
         project_id: "project-1",
-        shorthand_base: "remote",
         provider_id: "pstdio.remote-workspaces.workspace-type.remote",
         params: { template: "pi-harness" },
       },

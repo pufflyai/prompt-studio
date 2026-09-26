@@ -77,3 +77,5 @@ Regardless of which mode a project uses:
 3. **Workspace creation is target-dependent.** The `target` field on workspace creation determines how the environment is provisioned:
    - `worktree` (local): `git worktree add` against local clones.
    - Future targets (e.g. `vm`, `container`): clone from `remote` in a cloud environment.
+
+Public workspace identity is allocated by core as `<project-prefix>_WS-<n>` for both local and remote providers. It is separate from provider references and execution locations. UUIDs remain relationship keys. Providers cannot choose a shorthand prefix; `shorthand_base` has been removed from HTTP, SDK, and extension creation inputs.

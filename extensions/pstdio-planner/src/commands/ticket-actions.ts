@@ -145,11 +145,10 @@ export const createAnchoredWorkspace = async (
 ) => {
   const { mode, repo } = commandParams;
   const ticketRef = resolveTicket(ctx, commandParams);
-  const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
+  const { anchor, ticket } = await resolveTicketAnchor(ctx, ticketRef);
   const attemptMode = mode === "current_branch" ? mode : "worktree";
   const workspace = await ctx.workspaces.create({
     project_id: ctx.projectId,
-    shorthand_base: shorthand,
     anchors: [anchor],
     provider_id: attemptMode === "current_branch" ? "pstdio.root" : "pstdio.worktree",
     ...(repo ? { repo_id: repo.repoId } : {}),

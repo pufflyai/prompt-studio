@@ -50,7 +50,6 @@ test("workspace setup failure rolls back extension sources, instances, and event
   const project = await handle.deps.projectService.create({ name: "Workspace conflict" });
   const existingWorkspace = await handle.deps.workspaceService.create({
     project_id: project.id,
-    shorthand_base: "existing",
     name: "repo",
   });
   const path = join(root, "workspace-conflict");
@@ -82,7 +81,7 @@ test("workspace setup failure rolls back extension sources, instances, and event
 test("failed setup releases the config claim so another project can retry", async () => {
   const first = await handle.deps.projectService.create({ name: "Failed owner" });
   const second = await handle.deps.projectService.create({ name: "Retry owner" });
-  await handle.deps.workspaceService.create({ project_id: first.id, shorthand_base: "existing", name: "repo" });
+  await handle.deps.workspaceService.create({ project_id: first.id, name: "repo" });
   const path = join(root, "claim-retry");
   mkdirSync(path);
   expect((await register(first.id, path)).status).toBe(500);
@@ -92,7 +91,7 @@ test("failed setup releases the config claim so another project can retry", asyn
 
 test("failed relinking restores the previous config bytes", async () => {
   const project = await handle.deps.projectService.create({ name: "Failed relink" });
-  await handle.deps.workspaceService.create({ project_id: project.id, shorthand_base: "existing", name: "repo" });
+  await handle.deps.workspaceService.create({ project_id: project.id, name: "repo" });
   const path = join(root, "restore-config");
   mkdirSync(join(path, ".pstdio"), { recursive: true });
   const configPath = join(path, ".pstdio", "config.json");
@@ -104,7 +103,7 @@ test("failed relinking restores the previous config bytes", async () => {
 
 test("failed setup preserves existing extension registrations and settings", async () => {
   const project = await handle.deps.projectService.create({ name: "Existing extension" });
-  await handle.deps.workspaceService.create({ project_id: project.id, shorthand_base: "existing", name: "repo" });
+  await handle.deps.workspaceService.create({ project_id: project.id, name: "repo" });
   const path = join(root, "existing-extension");
   const sourcePath = join(path, ".pstdio", "extensions", "existing");
   mkdirSync(sourcePath, { recursive: true });
@@ -153,7 +152,7 @@ test("re-registering a stored directory alias preserves repository identity", as
 
 test("failed setup removes new defaults and retry installs the current source", async () => {
   const project = await handle.deps.projectService.create({ name: "Default rollback" });
-  await handle.deps.workspaceService.create({ project_id: project.id, shorthand_base: "existing", name: "repo" });
+  await handle.deps.workspaceService.create({ project_id: project.id, name: "repo" });
   const path = join(root, "default-rollback");
   const source = join(root, "default-source");
   mkdirSync(path);

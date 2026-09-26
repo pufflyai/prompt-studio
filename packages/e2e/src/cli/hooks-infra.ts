@@ -37,6 +37,7 @@ type WorkspaceRecord = {
   id: string;
   workspace_shorthand: string;
   branch: string | null;
+  anchors_json: { type: string; id: string }[];
   worktree_path: string | null;
 };
 
@@ -67,7 +68,9 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
 
   const workspacesRes = await fetch(`${ctx.api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
   const workspaces = (await workspacesRes.json()) as WorkspaceRecord[];
-  const workspace = workspaces.find((candidate) => candidate.workspace_shorthand.startsWith(`${ticket.shorthand}_A`));
+  const workspace = workspaces.find((candidate) =>
+    candidate.anchors_json.some((anchor) => anchor.type === "ticket" && anchor.id === ticket.id),
+  );
 
   if (!workspace) {
     throw new Error(`Workspace not found for ticket ${ticket.shorthand}`);
