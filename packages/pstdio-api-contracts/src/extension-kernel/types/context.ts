@@ -179,6 +179,7 @@ export interface ExtensionSessionsApi {
   followup(input: { sessionId: string; prompt?: string; attachments?: SessionAttachmentRef[] }): Promise<void>;
 
   addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
+  removeAnchors(sessionId: string, refs: Pick<ResourceRef, "type" | "id">[]): Promise<void>;
 }
 
 export interface ExtensionHarnessInput {
