@@ -9,7 +9,6 @@ import type {
   ResolveSessionIdResponse,
   SessionAttachment,
   SessionConversationResponse,
-  SessionConversationSources,
   SessionHistoryIssue,
   SessionQueuedMessagesResponse,
 } from "pstdio-api-contracts";
@@ -44,8 +43,6 @@ export type SessionClient = {
   followUp(sessionId: string, input: FollowUpInput): Promise<FollowUpResponse>;
   approve(sessionId: string, input: ApprovalInput): Promise<void>;
   getConversation(sessionId: string, signal?: AbortSignal): Promise<SessionConversationResponse>;
-  getConversationSources(sessionId: string, signal?: AbortSignal): Promise<SessionConversationSources>;
-  getQueuedMessages(sessionId: string, options?: { signal?: AbortSignal }): Promise<SessionQueuedMessagesResponse>;
   resolveSessionId(input: ResolveSessionIdInput): Promise<ResolveSessionIdResponse>;
   updateStatus(sessionId: string, status: string): Promise<Session>;
   listActivity(sessionId: string, input?: ListSessionActivityInput): Promise<ListSessionActivityResponse>;
@@ -166,8 +163,6 @@ export const createSessionClient = (request: RequestFn, clientOptions: ClientOpt
   followUp: (sessionId, input) => request(`/v1/sessions/${sessionId}/follow-up`, { method: "POST", body: input }),
   approve: (sessionId, input) => request(`/v1/sessions/${sessionId}/approve`, { method: "POST", body: input }),
   getConversation: (sessionId, signal) => request(`/v1/sessions/${sessionId}/conversation`, { signal }),
-  getConversationSources: (sessionId, signal) => request(`/v1/sessions/${sessionId}/conversation/sources`, { signal }),
-  getQueuedMessages: (sessionId, options) => request(`/v1/sessions/${sessionId}/queued-messages`, options),
   resolveSessionId: (input) => request("/v1/sessions/resolve-session-id", { method: "POST", body: input }),
   updateStatus: (sessionId, status) =>
     request(`/v1/sessions/${sessionId}/status`, { method: "PATCH", body: { status } }),

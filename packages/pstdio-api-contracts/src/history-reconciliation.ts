@@ -53,7 +53,7 @@ export const mergeOrderedHistory = <T>(
   key: (item: T) => string,
   merge: (known: T, native: T) => T,
   refineKey?: (known: T[], native: T[]) => (item: T) => string,
-): T[] => {
+) => {
   if (!known.length) return native;
   if (!native.length) return known;
   const knownPositions = positions(known, key);
@@ -64,7 +64,10 @@ export const mergeOrderedHistory = <T>(
     if (indices.length === 1 && other?.length === 1) anchors.push([indices[0], other[0]]);
   }
   if (!anchors.length) {
-    if (refineKey) return mergeOrderedHistory(known, native, refineKey(known, native), merge);
+    if (refineKey) {
+      const refined: T[] = mergeOrderedHistory(known, native, refineKey(known, native), merge);
+      return refined;
+    }
     if (known.length === native.length && known.every((item, index) => key(item) === key(native[index]))) {
       return known.map((item, index) => merge(item, native[index]));
     }
@@ -93,7 +96,7 @@ export const splitHistoryTurns = (messages: readonly SessionMessage[]) => {
   return turns;
 };
 
-export const mergeHistoryMetadata = (known: SessionMessage, native: SessionMessage): SessionMessage => {
+export const mergeHistoryMetadata = (known: SessionMessage, native: SessionMessage) => {
   const files = native.parts.filter((part) => part.type === "file");
   const fileKeys = new Set(files.map((part) => part.fileId ?? part.url));
   const missing = known.parts.filter((part) => part.type === "file" && !fileKeys.has(part.fileId ?? part.url));
@@ -127,10 +130,7 @@ const combineTextRuns = (messages: SessionMessage[]) => {
   return runs;
 };
 
-export const reconcileMessageHistory = (
-  input: HistoryRecoveryInput,
-  projection: HistoryProjection = {},
-): HistoryRecoveryResult => {
+export const reconcileMessageHistory = (input: HistoryRecoveryInput, projection: HistoryProjection = {}) => {
   const key = projection.key ?? historyMessageKey;
   const merge = projection.merge ?? mergeHistoryMetadata;
   const generated = projection.isGenerated ?? isUsage;
@@ -168,9 +168,10 @@ export const reconcileMessageHistory = (
     const messages = turns
       .flat()
       .map((message, index) => (message.index === undefined ? message : { ...message, index }));
-    return { kind: "recovered", messages };
+    return { kind: "recovered", messages } satisfies HistoryRecoveryResult;
   } catch (error) {
-    if (error instanceof HistoryConflict) return { kind: "conflict", category: error.message };
+    if (error instanceof HistoryConflict)
+      return { kind: "conflict", category: error.message } satisfies HistoryRecoveryResult;
     throw error;
   }
 };
