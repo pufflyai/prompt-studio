@@ -1,6 +1,6 @@
 {
   "name": "remote-workspaces",
-  "version": "2.0.2",
+  "version": "0.34.0",
   "displayName": "Remote Workspaces",
   "description": "Run agent sessions in PocketCoder workspaces on another machine.",
   "private": true,
