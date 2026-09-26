@@ -37,7 +37,7 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
 
   const drain = async (input?: { releasedSessionId?: string }) => {
     const dispatches: (Promise<unknown> | undefined)[] = [];
-    try {
+    const dispatchPending = async () => {
       const pending = await withSchedulingLock(async () => {
         if (input?.releasedSessionId) {
           await maybeRequeueReleasedSession(input.releasedSessionId);
@@ -63,12 +63,13 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
         });
         if (!hasCapacity) return;
       }
-    } finally {
+    };
+    await dispatchPending().finally(async () => {
       // Failed startups can drain released capacity, so settle outside the scheduling lock.
       const results = await Promise.allSettled(dispatches);
       const failed = results.find((result) => result.status === "rejected");
       if (failed) throw failed.reason;
-    }
+    });
   };
 
   return (input?: { releasedSessionId?: string }) => deps.sessionQueueLifecycle.run(() => drain(input));
