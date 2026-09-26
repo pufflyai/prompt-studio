@@ -1,8 +1,7 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
-import { resolveSessionAttachments } from "./session-attachments";
-import { resumeAgentSession, spawnAgentSession, WorkspaceSessionNotReadyError } from "./spawn-agent";
+import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 export type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["sessionService"]["get"]>>>;
 export type PendingQueueEntry = Awaited<
@@ -162,108 +161,6 @@ export const createSubmittedDispatchEntry = async (
   });
 
   return entry?.queue_position;
-};
-
-export const dispatchQueuedEntry = async (
-  deps: SessionsRouteDeps,
-  session: ExistingSession,
-  entry: PendingQueueEntry,
-) => {
-  const agentId = session.agent!;
-  const model = session.last_selected_model ?? undefined;
-  const cwd = session.cwd ?? undefined;
-  const params = entry.params_json ?? session.params_json ?? undefined;
-  const dispatchSession = await deps.sessionService.claimQueuedForDispatch(session.id, entry.queue_position);
-
-  if (!dispatchSession) return;
-
-  const submittedQueuePosition = hasAttachmentRefs(entry.attachments_json) ? entry.queue_position : undefined;
-  const fail = async (error: unknown) => {
-    if (error instanceof WorkspaceSessionNotReadyError && error.retryable) {
-      deps.sessionService.store.remove(session.id);
-      await deps.sessionService.recoverQueuedDispatchClaim(session.id, entry.queue_position);
-      return;
-    }
-    await deps.sessionQueueEntriesService.remove(entry.queue_position);
-    await logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model });
-  };
-  const removeEntry = () =>
-    submittedQueuePosition === undefined ? deps.sessionQueueEntriesService.remove(entry.queue_position) : undefined;
-
-  let attachments: HarnessAttachment[];
-  try {
-    attachments = await resolveSessionAttachments(deps, session.project_id!, entry.attachments_json ?? []);
-  } catch (error) {
-    // A corrupted attachment ref must fail only this entry, not abort the whole drain loop.
-    // fail() transitions to "failed" which re-enters the scheduling lock via the capacity-release
-    // drain, so it runs detached rather than awaited to avoid deadlocking the current drain.
-    await removeEntry();
-    void fail(error);
-    return;
-  }
-
-  if (entry.request_kind === "start") {
-    spawnAgentSession(
-      {
-        sessionId: session.id,
-        projectId: projectIdForAgentEnv(session),
-        agentId,
-        prompt: entry.prompt,
-        attachments,
-        title: session.title,
-        model,
-        params,
-        cwd,
-        submittedQueuePosition,
-      },
-      deps,
-    )
-      .then(removeEntry)
-      .catch(fail);
-    deps.sessionService.emitStartedHook?.(dispatchSession);
-    return;
-  }
-
-  if (session.agent_session_id) {
-    resumeAgentSession(
-      {
-        sessionId: session.id,
-        projectId: projectIdForAgentEnv(session),
-        agentSessionId: session.agent_session_id,
-        agentId,
-        prompt: entry.prompt,
-        attachments,
-        model,
-        params,
-        cwd,
-        questionResponse: entry.question_response_json as { answers: string[][] } | undefined,
-        submittedQueuePosition,
-      },
-      deps,
-    )
-      .then(removeEntry)
-      .catch(fail);
-    deps.sessionService.emitResumedHook?.(dispatchSession);
-    return;
-  }
-
-  spawnAgentSession(
-    {
-      sessionId: session.id,
-      projectId: projectIdForAgentEnv(session),
-      agentId,
-      prompt: entry.prompt,
-      attachments,
-      model,
-      params,
-      cwd,
-      submittedQueuePosition,
-    },
-    deps,
-  )
-    .then(removeEntry)
-    .catch(fail);
-  deps.sessionService.emitResumedHook?.(dispatchSession);
 };
 
 export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchContext) => {

@@ -26,7 +26,7 @@ describe("installRepoDefaultExtensions", () => {
         hostReleaseRef: "pstdio@0.34.0",
         ...(ref ? { ref } : {}),
       });
-      expect(prepareNamedSource.mock.calls[0]?.[2]).toBe(ref ?? "pstdio@0.34.0");
+      expect(prepareNamedSource.mock.calls[0]?.[2]).toBe(ref);
       expect(existsSync(join(root, "repo/.pstdio/extensions/release-test/extension.ts"))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
