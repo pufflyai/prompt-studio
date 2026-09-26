@@ -10,7 +10,8 @@ test("Node cleanup terminates a packaged process and its descendants", async () 
   const pidFile = join(root, "children.json");
   const script = join(root, "cleanup.mts");
   const helper = new URL("./stop-packaged-process.ts", import.meta.url).href;
-  const descendant = `import { writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(pidFile)}, JSON.stringify([process.ppid, process.pid])); setInterval(() => {}, 1000);`;
+  // Rename into place so the waiting script never reads a created but still empty file.
+  const descendant = `import { renameSync, writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(`${pidFile}.tmp`)}, JSON.stringify([process.ppid, process.pid])); renameSync(${JSON.stringify(`${pidFile}.tmp`)}, ${JSON.stringify(pidFile)}); setInterval(() => {}, 1000);`;
   const parent = `import { spawn } from "node:child_process"; spawn(process.execPath, ["-e", ${JSON.stringify(descendant)}], { detached: process.platform === "win32", stdio: "ignore" }); setInterval(() => {}, 1000);`;
   writeFileSync(
     script,
