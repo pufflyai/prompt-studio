@@ -10,6 +10,7 @@ const VIEW_SEARCH_TEXT: Record<LandingView, string> = {
   features: "features search notifications navigation extension management themes plumbing",
   privacy: "privacy policy legal data",
   terms: "terms of service legal",
+  imprint: "imprint company contact address legal",
 };
 
 interface CommandPaletteModalProps {

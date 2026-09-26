@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
-import { Scale, ShieldCheck } from "lucide-react";
+import { Building2, Scale, ShieldCheck } from "lucide-react";
 import type { LandingView } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { landingPathForView } from "../../services/landing-route";
@@ -8,6 +8,7 @@ import { StockholmIcon } from "../icons/stockholm-icon";
 const LEGAL_LINKS = [
   { label: "Privacy", view: "privacy" as const, icon: ShieldCheck },
   { label: "Terms", view: "terms" as const, icon: Scale },
+  { label: "Imprint", view: "imprint" as const, icon: Building2 },
 ];
 
 interface WorkbenchStatusBarProps {

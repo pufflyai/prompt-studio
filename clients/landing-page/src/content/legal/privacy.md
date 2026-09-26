@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Current as of March 21, 2025_
+_Current as of September 26, 2026_
 
 Your privacy is important to us.
 We respect your privacy regarding any information we may collect from you across our website.
@@ -79,10 +79,10 @@ Our privacy policy applies only to our website, so if you click on a link to ano
 
 If we change our terms of use we will post those changes on this page.
 Registered users will be sent an email that outlines changes made to the privacy policy.
-This privacy policy was last updated on March 21, 2025.
+This privacy policy was last updated on September 26, 2026.
 
 ## How to contact us
 
 If you have any questions about Pufflig AB's privacy policy, the data we hold on you, or you would like to exercise one of your data protection rights, please do not hesitate to contact us.
 Email us at: [hello@prompt.studio](mailto:hello@prompt.studio).
-Or write us at: Pufflig AB, Rissneleden 10, 174 53 Sundbyberg, Sweden.
+Or write us at: Pufflig AB, Gamla Enköpingsvägen 134, 174 61 Sundbyberg, Sweden.
