@@ -45,4 +45,10 @@ export const LANDING_PAGES: LandingPage[] = [
     title: "Terms of service | Prompt Studio",
     description: "Read the terms that apply to using Prompt Studio and its website, provided by Pufflig AB.",
   },
+  {
+    path: "/imprint/",
+    view: "imprint",
+    title: "Imprint | Prompt Studio",
+    description: "Company and contact details for Pufflig AB, the publisher of Prompt Studio.",
+  },
 ];

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgeCheck, LayoutGrid, PanelsTopLeft, Scale, Sparkles } from "lucide-react";
+import { BadgeCheck, Building2, LayoutGrid, PanelsTopLeft, Scale, Sparkles } from "lucide-react";
 
 export const SITE_LINKS = {
   github: "https://github.com/pufflyai/prompt-studio",
@@ -12,7 +12,7 @@ export const SITE_LINKS = {
 };
 
 /** In-app views rendered inside the workbench main area. */
-export type LandingView = "start" | "what-is-prompt-studio" | "examples" | "features" | "privacy" | "terms";
+export type LandingView = "start" | "what-is-prompt-studio" | "examples" | "features" | "privacy" | "terms" | "imprint";
 
 export interface ViewMeta {
   label: string;
@@ -20,7 +20,7 @@ export interface ViewMeta {
 }
 
 /** Legal pages come from markdown in `src/content/legal` and read as one column in the workbench. */
-export const DOCUMENT_VIEWS = ["privacy", "terms"] as const satisfies LandingView[];
+export const DOCUMENT_VIEWS = ["privacy", "terms", "imprint"] as const satisfies LandingView[];
 export type DocumentView = (typeof DOCUMENT_VIEWS)[number];
 /** Compiled HTML of each legal document, keyed by its view. */
 export type LegalDocuments = Record<DocumentView, string>;
@@ -35,6 +35,7 @@ export const VIEW_META: Record<LandingView, ViewMeta> = {
   features: { label: "Features", icon: LayoutGrid },
   privacy: { label: "Privacy policy", icon: Scale },
   terms: { label: "Terms of service", icon: Scale },
+  imprint: { label: "Imprint", icon: Building2 },
 };
 
 /** Views the sidebar lists, in order. */
