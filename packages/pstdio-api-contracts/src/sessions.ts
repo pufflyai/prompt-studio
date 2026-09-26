@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
 import { extensionResourceRefSchema } from "./extensions";
+import { sessionMessageSchema } from "./session-messages";
 
 export const sessionStatusSchema = z.enum([
   "in_progress",
@@ -93,9 +94,29 @@ export const followUpResponseSchema = sessionSchema.extend({
   follow_up: followUpDecisionSchema,
 });
 
+export const sessionHistoryIssueSchema = z.object({
+  code: z.enum(["reconciliation_conflict", "checkpoint_unreadable", "native_unavailable"]),
+  category: z.string(),
+});
+
+export type SessionHistoryIssue = z.infer<typeof sessionHistoryIssueSchema>;
+
+export const sessionQueuedMessagesResponseSchema = z.object({ messages: z.array(sessionMessageSchema) });
+export type SessionQueuedMessagesResponse = z.infer<typeof sessionQueuedMessagesResponseSchema>;
+
+export const sessionConversationSourcesSchema = z.object({
+  checkpoint: z.array(sessionMessageSchema).nullable(),
+  native: z.array(sessionMessageSchema).nullable(),
+  checkpointError: z.string().nullable(),
+  nativeError: z.string().nullable(),
+});
+
+export type SessionConversationSources = z.infer<typeof sessionConversationSourcesSchema>;
+
 export const sessionConversationResponseSchema = z.object({
+  historyIssue: sessionHistoryIssueSchema.optional(),
   session: sessionSchema,
-  messages: z.array(z.unknown()),
+  messages: z.array(sessionMessageSchema),
 });
 
 export const resolveSessionIdInputSchema = z.object({

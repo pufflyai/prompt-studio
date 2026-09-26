@@ -41,6 +41,7 @@ export {
   projectSlots,
   sessionEvents,
   sessionSlots,
+  viewDataEvents,
   workspaceEvents,
   workspaceSlots,
   worktreeEvents,

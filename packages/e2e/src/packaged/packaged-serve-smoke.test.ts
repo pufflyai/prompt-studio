@@ -16,6 +16,7 @@ import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
@@ -311,6 +312,7 @@ test(
 
       const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
       expectExamplePages(metadata);
+      await expectPackagedWebviewRuntime(started.baseUrl, metadata);
       await expectPackagedArtifacts({
         baseUrl: started.baseUrl,
         projectId: project.id,
