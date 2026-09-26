@@ -4,8 +4,8 @@
     {
       "type": "frame",
       "id": "J7Xsii",
-      "x": 1613,
-      "y": -702,
+      "x": 0,
+      "y": 0,
       "name": "Prompt Studio — Design System",
       "theme": {
         "mode": "dark"
@@ -5965,8 +5965,8 @@
     {
       "type": "frame",
       "id": "GikG1",
-      "x": 3433,
-      "y": -702,
+      "x": 1800,
+      "y": 0,
       "name": "Components",
       "theme": {
         "mode": "dark"
@@ -15912,6 +15912,7 @@
                       "fill": "$btn-fill",
                       "cornerRadius": "$btn-radius",
                       "stroke": "$btn-stroke",
+                      "strokeWidth": "$btn-stroke-w",
                       "strokeAlignment": "inner",
                       "gap": "$btn-gap",
                       "padding": [
@@ -16480,6 +16481,7 @@
                       "fill": "$btn-fill",
                       "cornerRadius": "$btn-radius",
                       "stroke": "$btn-stroke",
+                      "strokeWidth": "$btn-stroke-w",
                       "strokeAlignment": "inner",
                       "justifyContent": "center",
                       "alignItems": "center",
@@ -16594,6 +16596,7 @@
                       "fill": "$btn-fill",
                       "cornerRadius": "$btn-radius",
                       "stroke": "$btn-stroke",
+                      "strokeWidth": "$btn-stroke-w",
                       "strokeAlignment": "inner",
                       "alignItems": "center",
                       "children": [
@@ -29839,7 +29842,21 @@
                               "id": "ZkJUp",
                               "type": "ref",
                               "ref": "mO4LW",
-                              "name": "Project"
+                              "name": "Project",
+                              "descendants": {
+                                "El0v0": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "xs"
+                                  }
+                                },
+                                "Jq4g3": {
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "xs"
+                                  }
+                                }
+                              }
                             }
                           ]
                         },
@@ -30600,6 +30617,12 @@
                                         },
                                         "Hf4GT": {
                                           "content": "Open"
+                                        },
+                                        "khvEs": {
+                                          "theme": {
+                                            "kbd": "raised",
+                                            "size": "md"
+                                          }
                                         }
                                       }
                                     }
@@ -30703,6 +30726,12 @@
                                         },
                                         "Hf4GT": {
                                           "content": "Open"
+                                        },
+                                        "khvEs": {
+                                          "theme": {
+                                            "kbd": "raised",
+                                            "size": "md"
+                                          }
                                         }
                                       }
                                     }
@@ -31322,8 +31351,8 @@
     {
       "type": "frame",
       "id": "gCqZO",
-      "x": 5653,
-      "y": -702,
+      "x": 4000,
+      "y": 0,
       "name": "Composites",
       "theme": {
         "mode": "dark"
@@ -33351,7 +33380,7 @@
                               "id": "ryhaG",
                               "name": "Count",
                               "height": 20,
-                              "fill": "#000000",
+                              "fill": "$annotation-subtle",
                               "cornerRadius": 2,
                               "padding": [
                                 0,
@@ -33364,7 +33393,7 @@
                                   "type": "text",
                                   "id": "NpWRr",
                                   "name": "N",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "2",
                                   "fontFamily": "$font-body",
                                   "fontSize": 10,
@@ -39431,8 +39460,8 @@
     {
       "type": "frame",
       "id": "UNoEp",
-      "x": 8052,
-      "y": -702,
+      "x": 6400,
+      "y": 0,
       "name": "Chat Component",
       "theme": {
         "mode": "dark"
@@ -44151,8 +44180,8 @@
     {
       "type": "frame",
       "id": "X4RjQ",
-      "x": 8052,
-      "y": 11666,
+      "x": 19360,
+      "y": 0,
       "name": "Selectors · pstdio-dashboard",
       "theme": {
         "mode": "dark"
@@ -45285,8 +45314,8 @@
     {
       "type": "frame",
       "id": "pibMt",
-      "x": 14662,
-      "y": -792,
+      "x": 12000,
+      "y": 16750,
       "name": "Workbench Architecture and mockups",
       "layout": "vertical",
       "gap": 12,
@@ -45394,7 +45423,7 @@
                               "cornerRadius": 2,
                               "id": "XskUf",
                               "name": "Accent",
-                              "fill": "#000000",
+                              "fill": "$annotation",
                               "width": 3,
                               "height": 38
                             },
@@ -45465,7 +45494,7 @@
                                   "type": "text",
                                   "id": "VJlkN",
                                   "name": "V",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "scopes everything below",
                                   "fontFamily": "$font-body",
                                   "fontSize": 12,
@@ -46119,7 +46148,7 @@
                                       "type": "ellipse",
                                       "id": "i6YMl",
                                       "name": "Dot",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "width": 8,
                                       "height": 8
                                     }
@@ -46342,7 +46371,7 @@
                                       "type": "text",
                                       "id": "hixn9",
                                       "name": "T",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "project",
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
@@ -46425,7 +46454,7 @@
                                       "type": "text",
                                       "id": "Ex8J5",
                                       "name": "T",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "project",
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
@@ -46649,7 +46678,7 @@
                                       "type": "text",
                                       "id": "w7wNZ4",
                                       "name": "T",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
                                       "content": "side panel",
@@ -46674,7 +46703,7 @@
                                       "type": "text",
                                       "id": "OdU67",
                                       "name": "T",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "project",
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
@@ -46732,7 +46761,7 @@
                                       "type": "text",
                                       "id": "I9TYO8",
                                       "name": "T",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
                                       "content": "status tray",
@@ -46757,7 +46786,7 @@
                                       "type": "text",
                                       "id": "iUJ0u",
                                       "name": "T",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "project",
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
@@ -47149,7 +47178,7 @@
                                   "type": "text",
                                   "id": "lv5H4",
                                   "name": "O",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "project · outside the breadcrumb",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
@@ -47407,7 +47436,7 @@
                                   "type": "text",
                                   "id": "wbTEd",
                                   "name": "T",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "side panel",
                                   "fontFamily": "JetBrains Mono",
                                   "fontSize": 12,
@@ -47417,7 +47446,7 @@
                                   "type": "text",
                                   "id": "ocIGU",
                                   "name": "O",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "project-stable",
                                   "fontFamily": "$font-body",
                                   "fontSize": 10,
@@ -47570,7 +47599,7 @@
                               "type": "text",
                               "id": "YOzUL",
                               "name": "L",
-                              "fill": "#000000",
+                              "fill": "$annotation",
                               "content": "status tray · project-owned · full width",
                               "fontFamily": "$font-body",
                               "fontSize": 9,
@@ -48601,7 +48630,7 @@
                   "width": "fill_container",
                   "fill": "$ds-bg-subtle",
                   "cornerRadius": 12,
-                  "stroke": "#000000",
+                  "stroke": "$annotation",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "layout": "vertical",
@@ -48620,7 +48649,7 @@
                           "type": "text",
                           "id": "m0kgCU",
                           "name": "T",
-                          "fill": "#000000",
+                          "fill": "$annotation",
                           "content": "kept-open glossary in the side panel",
                           "fontFamily": "$font-heading",
                           "fontSize": 15,
@@ -48837,7 +48866,7 @@
                                   "type": "text",
                                   "id": "mTRot",
                                   "name": "T",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "Glossary",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
@@ -49055,7 +49084,7 @@
                                   "type": "text",
                                   "id": "oyG5u",
                                   "name": "T",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "Glossary",
                                   "fontFamily": "$font-body",
                                   "fontSize": 9,
@@ -49259,7 +49288,7 @@
                                           "type": "text",
                                           "id": "X6g66w",
                                           "name": "Preview Session Tab",
-                                          "fill": "#000000",
+                                          "fill": "$annotation",
                                           "content": "Session",
                                           "fontFamily": "$font-body",
                                           "fontSize": 9,
@@ -49315,13 +49344,13 @@
                               "height": 17,
                               "icon": "pin",
                               "library": "lucide",
-                              "fill": "#000000"
+                              "fill": "$annotation"
                             },
                             {
                               "type": "text",
                               "id": "C1l7t",
                               "name": "T",
-                              "fill": "#000000",
+                              "fill": "$annotation",
                               "content": "Keep Open",
                               "fontFamily": "$font-body",
                               "fontSize": 10,
@@ -49351,7 +49380,7 @@
                               "type": "text",
                               "id": "znm76",
                               "name": "L",
-                              "fill": "#000000",
+                              "fill": "$annotation",
                               "content": "same Side Panel · kept open",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -49461,7 +49490,7 @@
                                           "type": "text",
                                           "id": "SDJ6p",
                                           "name": "Kept-open Session Tab",
-                                          "fill": "#000000",
+                                          "fill": "$annotation",
                                           "content": "Session",
                                           "fontFamily": "$font-body",
                                           "fontSize": 9,
@@ -49921,7 +49950,7 @@
                           "type": "text",
                           "id": "YJO6R",
                           "name": "L",
-                          "fill": "#000000",
+                          "fill": "$annotation",
                           "content": "both menus attached · no icons in the strip",
                           "fontFamily": "$font-body",
                           "fontSize": 11,
@@ -50057,7 +50086,7 @@
                                   "width": 110,
                                   "height": "fill_container",
                                   "fill": "$ds-bg-subtle",
-                                  "stroke": "#000000",
+                                  "stroke": "$annotation",
                                   "strokeWidth": {
                                     "right": 1
                                   },
@@ -50210,7 +50239,7 @@
                                   "width": 110,
                                   "height": "fill_container",
                                   "fill": "$ds-bg-subtle",
-                                  "stroke": "#000000",
+                                  "stroke": "$annotation",
                                   "strokeWidth": {
                                     "left": 1
                                   },
@@ -50476,7 +50505,7 @@
                                   "width": 110,
                                   "height": "fill_container",
                                   "fill": "$ds-bg-subtle",
-                                  "stroke": "#000000",
+                                  "stroke": "$annotation",
                                   "strokeWidth": {
                                     "right": 1
                                   },
@@ -50778,7 +50807,7 @@
                                   "height": 18,
                                   "fill": "$ds-bg-active",
                                   "cornerRadius": 3,
-                                  "stroke": "#000000",
+                                  "stroke": "$annotation",
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
                                   "justifyContent": "center",
@@ -50792,7 +50821,7 @@
                                       "height": 10,
                                       "icon": "paperclip",
                                       "library": "lucide",
-                                      "fill": "#000000"
+                                      "fill": "$annotation"
                                     }
                                   ]
                                 },
@@ -50877,7 +50906,7 @@
                               "width": 178,
                               "fill": "$ds-bg",
                               "cornerRadius": "$overlay-radius",
-                              "stroke": "#000000",
+                              "stroke": "$annotation",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "layout": "vertical",
@@ -50905,13 +50934,13 @@
                                       "height": 9,
                                       "icon": "paperclip",
                                       "library": "lucide",
-                                      "fill": "#000000"
+                                      "fill": "$annotation"
                                     },
                                     {
                                       "type": "text",
                                       "id": "Trgqk",
                                       "name": "T",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "CONTEXT FILES",
                                       "fontFamily": "$font-heading",
                                       "fontSize": 7,
@@ -52453,7 +52482,7 @@
                                   "type": "text",
                                   "id": "Rmojw",
                                   "name": "T",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "side panel",
                                   "fontFamily": "JetBrains Mono",
                                   "fontSize": 10,
@@ -52627,7 +52656,7 @@
                                       "type": "text",
                                       "id": "VJkTg",
                                       "name": "L",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "RESOURCES",
                                       "fontFamily": "$font-heading",
                                       "fontSize": 8,
@@ -52676,7 +52705,7 @@
                                       "height": 12,
                                       "icon": "git-branch",
                                       "library": "lucide",
-                                      "fill": "#000000"
+                                      "fill": "$annotation"
                                     },
                                     {
                                       "type": "text",
@@ -53295,7 +53324,7 @@
                                       "cornerRadius": 1,
                                       "id": "bzZYM",
                                       "name": "B",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "width": 3,
                                       "height": 11
                                     }
@@ -53313,7 +53342,7 @@
                                       "type": "text",
                                       "id": "Y7MfN",
                                       "name": "N",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "Project",
                                       "fontFamily": "$font-body",
                                       "fontSize": 12,
@@ -53789,7 +53818,7 @@
                                   "type": "text",
                                   "id": "x7aXs",
                                   "name": "T",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "resource modal · notifications",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -53855,7 +53884,7 @@
                                       "height": 9,
                                       "icon": "bell",
                                       "library": "lucide",
-                                      "fill": "#000000"
+                                      "fill": "$annotation"
                                     },
                                     {
                                       "type": "text",
@@ -53973,8 +54002,8 @@
     {
       "type": "frame",
       "id": "qTOXK",
-      "x": 10244,
-      "y": -702,
+      "x": 14300,
+      "y": 16750,
       "name": "Extension Detail · Production",
       "theme": {
         "mode": "dark"
@@ -59873,8 +59902,8 @@
     {
       "type": "frame",
       "id": "PEdfq",
-      "x": 8052,
-      "y": 4688,
+      "x": 8560,
+      "y": 0,
       "name": "Kanban Renderer · Component",
       "theme": {
         "mode": "dark"
@@ -61735,8 +61764,8 @@
     {
       "type": "frame",
       "id": "e85E4",
-      "x": 20379,
-      "y": -715,
+      "x": 0,
+      "y": 16750,
       "name": "Workbench Production Frames · Canonical and Placement",
       "theme": {
         "mode": "dark"
@@ -63374,7 +63403,7 @@
                       "type": "text",
                       "id": "yfg85",
                       "name": "Full Width Note",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "project-owned · viewport width",
                       "fontFamily": "$font-body",
                       "fontSize": 10,
@@ -64330,7 +64359,7 @@
                       "type": "text",
                       "id": "FQmez",
                       "name": "Frame Label",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "F04 · SIDE PANEL",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -65184,7 +65213,7 @@
                       "type": "text",
                       "id": "l23OgT",
                       "name": "State Label",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "CLOSED · recovery buttons remain in Nav Chrome",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -65320,8 +65349,8 @@
     {
       "type": "frame",
       "id": "xXFUp",
-      "x": 20379,
-      "y": 1828,
+      "x": 2400,
+      "y": 16750,
       "name": "Workbench Production Frames · Panel Interactions",
       "theme": {
         "mode": "dark"
@@ -65719,7 +65748,7 @@
                       "type": "text",
                       "id": "e9w3Zn",
                       "name": "Panel Name",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "Side Panel",
                       "fontFamily": "$font-heading",
                       "fontSize": 11,
@@ -65871,7 +65900,7 @@
                   "type": "text",
                   "id": "iVQMX",
                   "name": "Demo Label",
-                  "fill": "#000000",
+                  "fill": "$annotation",
                   "content": "SIDE PANEL · ADD MENU OPEN",
                   "fontFamily": "$font-heading",
                   "fontSize": 10,
@@ -66227,20 +66256,20 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "AGtyy",
+                              "id": "q7lgJ",
                               "name": "Count Badge",
                               "width": 20,
                               "height": 16,
-                              "fill": "#1E0050",
+                              "fill": "$annotation-subtle",
                               "cornerRadius": 999,
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "zi83V",
+                                  "id": "AiXkx",
                                   "name": "Count",
-                                  "fill": "#A36DFF",
+                                  "fill": "$annotation",
                                   "content": "4",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 10,
@@ -66645,7 +66674,7 @@
                           "type": "text",
                           "id": "BcBXf",
                           "name": "Right-click behavior label",
-                          "fill": "#000000",
+                          "fill": "$annotation",
                           "content": "RIGHT-CLICK TAB · CONTEXT MENU",
                           "fontFamily": "$font-heading",
                           "fontSize": 10,
@@ -66820,7 +66849,7 @@
               "type": "text",
               "id": "iddtz",
               "name": "Section Label",
-              "fill": "#000000",
+              "fill": "$annotation",
               "content": "F09 · WIDE PANEL MENU STATES",
               "fontFamily": "$font-heading",
               "fontSize": 12,
@@ -66907,7 +66936,7 @@
                           "type": "text",
                           "id": "YQM5y",
                           "name": "L",
-                          "fill": "#000000",
+                          "fill": "$annotation",
                           "content": "both menus attached · no icons in the strip",
                           "fontFamily": "$font-body",
                           "fontSize": 11,
@@ -67043,7 +67072,7 @@
                                   "width": 110,
                                   "height": "fill_container",
                                   "fill": "$ds-bg-subtle",
-                                  "stroke": "#000000",
+                                  "stroke": "$annotation",
                                   "strokeWidth": {
                                     "right": 1
                                   },
@@ -67196,7 +67225,7 @@
                                   "width": 110,
                                   "height": "fill_container",
                                   "fill": "$ds-bg-subtle",
-                                  "stroke": "#000000",
+                                  "stroke": "$annotation",
                                   "strokeWidth": {
                                     "left": 1
                                   },
@@ -67455,7 +67484,7 @@
                                   "width": 110,
                                   "height": "fill_container",
                                   "fill": "$ds-bg-subtle",
-                                  "stroke": "#000000",
+                                  "stroke": "$annotation",
                                   "strokeWidth": {
                                     "right": 1
                                   },
@@ -67842,7 +67871,7 @@
                               "width": 178,
                               "fill": "$ds-bg",
                               "cornerRadius": "$overlay-radius",
-                              "stroke": "#000000",
+                              "stroke": "$annotation",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
                               "layout": "vertical",
@@ -67870,13 +67899,13 @@
                                       "height": 9,
                                       "icon": "paperclip",
                                       "library": "lucide",
-                                      "fill": "#000000"
+                                      "fill": "$annotation"
                                     },
                                     {
                                       "type": "text",
                                       "id": "UP9PT",
                                       "name": "T",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "CONTEXT FILES",
                                       "fontFamily": "$font-heading",
                                       "fontSize": 7,
@@ -68047,7 +68076,7 @@
               "type": "text",
               "id": "lnOur",
               "name": "Section Label",
-              "fill": "#000000",
+              "fill": "$annotation",
               "content": "F10 · NARROW PANELS COLLAPSE MENUS INTO THEIR OWN HEADERS",
               "fontFamily": "$font-heading",
               "fontSize": 12,
@@ -68603,7 +68632,7 @@
                       "type": "text",
                       "id": "Y8pH4n",
                       "name": "Panel Label",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "Side Panel · available width < menu threshold",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -68774,7 +68803,7 @@
                           "width": 190,
                           "fill": "$ds-bg",
                           "cornerRadius": "$overlay-radius",
-                          "stroke": "#000000",
+                          "stroke": "$annotation",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "layout": "vertical",
@@ -68797,7 +68826,7 @@
                                   "height": 11,
                                   "icon": "panel-right",
                                   "library": "lucide",
-                                  "fill": "#000000"
+                                  "fill": "$annotation"
                                 },
                                 {
                                   "type": "text",
@@ -69357,7 +69386,7 @@
                   "height": "fill_container",
                   "fill": "$ds-bg-subtle",
                   "cornerRadius": 8,
-                  "stroke": "#000000",
+                  "stroke": "$annotation",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "layout": "vertical",
@@ -69368,7 +69397,7 @@
                       "type": "text",
                       "id": "g6dWs",
                       "name": "State Name",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "4 · Closed",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -69594,7 +69623,7 @@
               "type": "text",
               "id": "j6Vpk",
               "name": "Section Label",
-              "fill": "#000000",
+              "fill": "$annotation",
               "content": "F12–F14 · SIDE PANEL DOCKED, FLOATING, AND NO-SESSION LAUNCHER",
               "fontFamily": "$font-heading",
               "fontSize": 12,
@@ -69628,7 +69657,7 @@
                       "type": "text",
                       "id": "u1hTe",
                       "name": "Frame Label",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "F12 · DOCKED / CLOSED",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -69949,7 +69978,7 @@
                       "type": "text",
                       "id": "i47kv",
                       "name": "Frame Label",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "F13 · Floating with active session",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -70404,7 +70433,7 @@
                       "type": "text",
                       "id": "jKSFc",
                       "name": "Frame Label",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "F14 · Floating with no active session",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -70613,8 +70642,8 @@
     {
       "type": "frame",
       "id": "enh0U",
-      "x": 20379,
-      "y": 5091,
+      "x": 4800,
+      "y": 16750,
       "name": "Workbench Production Frames · Sidenav and Resource Journeys",
       "theme": {
         "mode": "dark"
@@ -71273,7 +71302,7 @@
                       "type": "text",
                       "id": "hQzjd",
                       "name": "Frame Label",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "F17 · TICKET SELECTED",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -71445,13 +71474,13 @@
                               "height": 12,
                               "icon": "component",
                               "library": "lucide",
-                              "fill": "#000000"
+                              "fill": "$annotation"
                             },
                             {
                               "type": "text",
                               "id": "M4O4zD",
                               "name": "Ticket Kind",
-                              "fill": "#000000",
+                              "fill": "$annotation",
                               "content": "TICKET",
                               "fontFamily": "$font-heading",
                               "fontSize": 9,
@@ -72764,7 +72793,7 @@
                                       "type": "text",
                                       "id": "aLqp5",
                                       "name": "Continuity Label",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "existing Side Panel",
                                       "fontFamily": "$font-body",
                                       "fontSize": 9,
@@ -72812,7 +72841,7 @@
                       "type": "text",
                       "id": "q6plEP",
                       "name": "Frame Label",
-                      "fill": "#000000",
+                      "fill": "$annotation",
                       "content": "F20 · TICKETS AGGREGATE",
                       "fontFamily": "$font-heading",
                       "fontSize": 10,
@@ -73184,7 +73213,7 @@
                                           "height": 16,
                                           "icon": "list-checks",
                                           "library": "lucide",
-                                          "fill": "#000000"
+                                          "fill": "$annotation"
                                         },
                                         {
                                           "type": "text",
@@ -73405,7 +73434,7 @@
                                       "type": "text",
                                       "id": "i5jop",
                                       "name": "Continuity Label",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "existing Side Panel",
                                       "fontFamily": "$font-body",
                                       "fontSize": 9,
@@ -74733,7 +74762,7 @@
                   "type": "text",
                   "id": "opFeq",
                   "name": "Journey Label",
-                  "fill": "#000000",
+                  "fill": "$annotation",
                   "content": "F22 · TICKET NAVIGATION",
                   "fontFamily": "$font-heading",
                   "fontSize": 10,
@@ -74973,7 +75002,7 @@
                                   "type": "text",
                                   "id": "xxgZm",
                                   "name": "Selected Resource",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
                                   "content": "Parent ticket",
@@ -75299,7 +75328,7 @@
                                   "type": "text",
                                   "id": "kDkow",
                                   "name": "Selected Resource",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
                                   "content": "Child ticket",
@@ -75645,7 +75674,7 @@
                                   "type": "text",
                                   "id": "Z4rcNz",
                                   "name": "Selected Resource",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
                                   "content": "Linked workspace",
@@ -75733,7 +75762,7 @@
                       "height": "fill_container",
                       "fill": "$ds-bg",
                       "cornerRadius": 6,
-                      "stroke": "#000000",
+                      "stroke": "$annotation",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -75971,7 +76000,7 @@
                                   "type": "text",
                                   "id": "A0OFg",
                                   "name": "Selected Resource",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
                                   "content": "Back",
@@ -76040,8 +76069,8 @@
     {
       "type": "frame",
       "id": "jV2OQ",
-      "x": 20379,
-      "y": 7533,
+      "x": 7200,
+      "y": 16750,
       "name": "Workbench Production Frames · Modes and Global Surfaces",
       "theme": {
         "mode": "dark"
@@ -77717,7 +77746,7 @@
                           "type": "text",
                           "id": "Z22VZn",
                           "name": "Full Width Note",
-                          "fill": "#000000",
+                          "fill": "$annotation",
                           "content": "project-owned · viewport width",
                           "fontFamily": "$font-body",
                           "fontSize": 10,
@@ -79589,7 +79618,7 @@
                           "type": "text",
                           "id": "m1EpN",
                           "name": "Full Width Note",
-                          "fill": "#000000",
+                          "fill": "$annotation",
                           "content": "project-owned · viewport width",
                           "fontFamily": "$font-body",
                           "fontSize": 10,
@@ -81008,8 +81037,8 @@
     {
       "type": "frame",
       "id": "B5M3w",
-      "x": 8052,
-      "y": 7383,
+      "x": 12880,
+      "y": 0,
       "name": "Tree Navigation · Component",
       "context": "TreeList (packages/ui/src/components/tree-list) — sectioned, keyboard-navigable tree used for sidenavs, file trees and changed-file lists. Data: sections[{id,label?,collapsible?,actions?,emptyState?,nodes}] with nodes = ListRowItem + children. The composite has 8px padding on both axes. Rows render through cmp/TreeListRow (ListRow variant tree|compact): h 30, radius 4, px 8, gap 7, indent $tree-pl (8/26/44) per depth. Row states use the tree theme axis default|active|hover; depth uses 0|1|2. Controlled props: expandedSectionIds / expandedNodeIds / activeNodeId + onToggleSection / onToggleNode / onNavigate. Virtualizes long trees (32px row estimate). In the Sidenav, right-clicking anywhere opens one customize menu for hideable header, main, and footer items. Drag ordering persists per tree id and stays inside the item's region and group; canReorder=false locks exceptions. Visibility and order reset independently.",
       "theme": {
@@ -86506,8 +86535,8 @@
     {
       "type": "frame",
       "id": "k7UDtb",
-      "x": 8052,
-      "y": 10655,
+      "x": 15040,
+      "y": 0,
       "name": "Sessions List · Component",
       "theme": {
         "mode": "dark"
@@ -87047,8 +87076,8 @@
     {
       "type": "frame",
       "id": "IIdYV",
-      "x": 10117,
-      "y": 4688,
+      "x": 10720,
+      "y": 0,
       "name": "DataTable · Component",
       "theme": {
         "mode": "dark"
@@ -90932,8 +90961,8 @@
     {
       "type": "frame",
       "id": "QF8AP",
-      "x": 12504,
-      "y": -702,
+      "x": 21520,
+      "y": 0,
       "name": "Patterns / Param Editor",
       "theme": {
         "mode": "dark"
@@ -97192,8 +97221,8 @@
     {
       "type": "frame",
       "id": "wQigN",
-      "x": 20379,
-      "y": 11569,
+      "x": 9600,
+      "y": 16750,
       "name": "Workbench Production Frames · Workspace View",
       "theme": {
         "mode": "dark"
@@ -102560,8 +102589,8 @@
     {
       "type": "frame",
       "id": "l9tlGP",
-      "x": 10117,
-      "y": 9020,
+      "x": 17200,
+      "y": 0,
       "name": "Tag Editor · Component",
       "theme": {
         "mode": "dark"
@@ -104135,8 +104164,8 @@
     {
       "type": "frame",
       "id": "xQ2tm",
-      "x": 10117,
-      "y": 11666,
+      "x": 16600,
+      "y": 16750,
       "name": "Ticket Status Panel · Production",
       "theme": {
         "mode": "dark"
@@ -106129,8 +106158,8 @@
     {
       "type": "frame",
       "id": "iGFTr",
-      "x": 39561,
-      "y": -11572,
+      "x": 18760,
+      "y": 16750,
       "name": "Desktop title bars",
       "theme": {
         "mode": "light"
@@ -106849,8 +106878,8 @@
     {
       "type": "frame",
       "id": "LmcML",
-      "x": 40909,
-      "y": -11572,
+      "x": 20208,
+      "y": 16750,
       "name": "Folder onboarding and workspace providers",
       "theme": {
         "mode": "dark"
@@ -107801,8 +107830,8 @@
     {
       "type": "frame",
       "id": "b39KPj",
-      "x": 43009,
-      "y": -11572,
+      "x": 0,
+      "y": 23009,
       "name": "Exploration",
       "theme": {
         "mode": "dark"
@@ -108457,7 +108486,7 @@
                               "type": "text",
                               "id": "a4zPv",
                               "name": "Label",
-                              "fill": "#000000",
+                              "fill": "$annotation",
                               "content": "2 · triage list",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -108467,7 +108496,7 @@
                               "type": "frame",
                               "id": "c4QaBh",
                               "name": "S",
-                              "fill": "#000000",
+                              "fill": "$annotation-subtle",
                               "cornerRadius": 999,
                               "padding": [
                                 3,
@@ -108479,7 +108508,7 @@
                                   "type": "text",
                                   "id": "ROjcU",
                                   "name": "T",
-                                  "fill": "#000000",
+                                  "fill": "$annotation",
                                   "content": "EXPLORING",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 9,
@@ -108525,7 +108554,7 @@
                       "width": "fill_container",
                       "fill": "$ds-bg",
                       "cornerRadius": 10,
-                      "stroke": "#000000",
+                      "stroke": "$annotation",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "effect": {
@@ -108767,7 +108796,7 @@
                                   "height": 16,
                                   "icon": "circle-pause",
                                   "library": "lucide",
-                                  "fill": "#000000"
+                                  "fill": "$annotation"
                                 },
                                 {
                                   "type": "frame",
@@ -109503,7 +109532,7 @@
                                       "height": 14,
                                       "icon": "circle-pause",
                                       "library": "lucide",
-                                      "fill": "#000000"
+                                      "fill": "$annotation"
                                     },
                                     {
                                       "type": "text",
@@ -110220,7 +110249,7 @@
                                       "height": 15,
                                       "icon": "circle-pause",
                                       "library": "lucide",
-                                      "fill": "#000000"
+                                      "fill": "$annotation"
                                     },
                                     {
                                       "type": "frame",
@@ -111104,7 +111133,7 @@
                               "type": "text",
                               "id": "b8KVob",
                               "name": "L",
-                              "fill": "#000000",
+                              "fill": "$annotation",
                               "content": "2 · triage list",
                               "fontFamily": "$font-body",
                               "fontSize": 11,
@@ -114671,7 +114700,7 @@
                               "height": 14,
                               "icon": "component",
                               "library": "lucide",
-                              "fill": "#000000"
+                              "fill": "$annotation"
                             },
                             {
                               "type": "text",
@@ -115474,7 +115503,7 @@
                               "height": 14,
                               "icon": "component",
                               "library": "lucide",
-                              "fill": "#000000"
+                              "fill": "$annotation"
                             },
                             {
                               "type": "text",
@@ -116309,7 +116338,7 @@
                               "height": 14,
                               "icon": "component",
                               "library": "lucide",
-                              "fill": "#000000"
+                              "fill": "$annotation"
                             },
                             {
                               "type": "text",
@@ -116383,7 +116412,7 @@
                                       "type": "text",
                                       "id": "l8ICF",
                                       "name": "Panel Menu Ticket ID",
-                                      "fill": "#000000",
+                                      "fill": "$annotation",
                                       "content": "PS-276",
                                       "fontFamily": "$font-heading",
                                       "fontSize": 10,
@@ -121938,23 +121967,6 @@
         }
       ]
     },
-    "trow-h": {
-      "type": "number",
-      "value": [
-        {
-          "value": 38,
-          "theme": {
-            "trow": "header"
-          }
-        },
-        {
-          "value": 46,
-          "theme": {
-            "trow": "data"
-          }
-        }
-      ]
-    },
     "trow-fill": {
       "type": "color",
       "value": [
@@ -122608,17 +122620,9 @@
       "type": "number",
       "value": 12
     },
-    "crumb-px": {
-      "type": "number",
-      "value": 0
-    },
     "crumb-gap": {
       "type": "number",
       "value": 4
-    },
-    "crumb-radius": {
-      "type": "number",
-      "value": 0
     },
     "ds-info-border": {
       "type": "color",
@@ -122992,10 +122996,6 @@
         }
       ]
     },
-    "menu-row-h": {
-      "type": "number",
-      "value": 28
-    },
     "trig-fill": {
       "type": "color",
       "value": [
@@ -123053,10 +123053,6 @@
           }
         }
       ]
-    },
-    "card-radius": {
-      "type": "number",
-      "value": 8
     },
     "ds-accent-subtle": {
       "type": "color",
@@ -123430,10 +123426,6 @@
     "font-mono": {
       "type": "string",
       "value": "Menlo"
-    },
-    "track-tight": {
-      "type": "number",
-      "value": -0.2
     },
     "tree-fg": {
       "type": "color",
@@ -123843,10 +123835,6 @@
       "type": "color",
       "value": "#FFFFFF"
     },
-    "tag-h": {
-      "type": "number",
-      "value": 20
-    },
     "ring-filled": {
       "type": "boolean",
       "value": [
@@ -123956,23 +123944,6 @@
           "value": "#FDF6E300",
           "theme": {
             "mode": "solarized-light"
-          }
-        }
-      ]
-    },
-    "tool-stroke": {
-      "type": "color",
-      "value": [
-        {
-          "value": "$ds-border",
-          "theme": {
-            "tool": "ok"
-          }
-        },
-        {
-          "value": "$ds-error",
-          "theme": {
-            "tool": "error"
           }
         }
       ]
