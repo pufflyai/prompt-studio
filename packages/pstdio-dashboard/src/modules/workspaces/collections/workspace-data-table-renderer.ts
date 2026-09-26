@@ -1,5 +1,5 @@
 import type { DataTableRendererColumn, WorkbenchModuleContext } from "@pstdio/workbench";
-import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createDashboardWorkspaces, toWorkspaceDataTableRow } from "@/shared/workspaces/dashboard-workspaces";
@@ -19,16 +19,6 @@ const workspaceColumns: DataTableRendererColumn[] = [
   { id: "updated", label: "Updated" },
   { id: "diff", label: "Diff" },
 ];
-
-const subscribeWorkspaceData = (ctx: WorkbenchModuleContext, listener: () => void) => {
-  const unsubscribeData = subscribeWorkspaceDataChanges(() => getDashboardSelectedProjectId(ctx), listener);
-  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, listener);
-
-  return () => {
-    unsubscribeData();
-    unsubscribeProject();
-  };
-};
 
 const executeWorkspaceQuery = async (ctx: WorkbenchModuleContext, signal: AbortSignal) => {
   const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx), { includeArchived: true });
@@ -54,7 +44,8 @@ export const registerWorkspaceDataTableView = (ctx: WorkbenchModuleContext) => {
         columns: workspaceColumns,
         emptyTitle: "No workspaces yet",
         emptyDescription: "Create a workspace to start an isolated attempt for this project.",
-        subscribe: (listener) => subscribeWorkspaceData(ctx, listener),
+        contextKeys: [dashboardSelectedProjectIdContextKey],
+        subscribe: (listener) => subscribeWorkspaceDataChanges(() => getDashboardSelectedProjectId(ctx), listener),
         executeQuery: (_context, signal) => executeWorkspaceQuery(ctx, signal),
         onRowActivate: (row) => {
           if (!row.resource) return;

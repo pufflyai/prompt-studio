@@ -1,6 +1,6 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { useSyncExternalStore } from "react";
-import { getWorkbenchRenderers, type ResourceRef, type WorkbenchCore } from "../../../core";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useRendererRead } from "../use-renderer-read";
 import { expandDefaultTreeSections, loadExpandedTreeChildren, loadTreeData } from "./tree-view-load";
@@ -27,23 +27,29 @@ export const useTreeData = (
     getPageOwner,
     getPageOwner,
   );
+  // Shell trees also query the current mode and resource. Aggregate pages in
+  // the same scope share navigation, so their global links stay mounted.
+  const queryKey = JSON.stringify([
+    treeViewId,
+    resourceKey(resource),
+    viewId,
+    filter,
+    project,
+    mode,
+    pageOwner,
+    resourceKey(location?.resource),
+  ]);
+  // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
+  useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
+  const [expandedChildren, setExpandedChildren] = useState<{ queryKey: string; byNodeId: Record<string, TreeNode[]> }>({
+    queryKey,
+    byNodeId: {},
+  });
   const read = useRendererRead({
     workbench,
     ownerKey,
-    // Shell trees also query the current mode and resource. Aggregate pages in
-    // the same scope share navigation, so their global links stay mounted.
-    queryKey: JSON.stringify([
-      treeViewId,
-      resourceKey(resource),
-      viewId,
-      filter,
-      project,
-      mode,
-      pageOwner,
-      resourceKey(location?.resource),
-    ]),
+    queryKey,
     load: async (signal) => {
-      expandDefaultTreeSections(trees, treeViewId);
       const ctx = { resource, viewId, filter, signal };
       const data = await loadTreeData(trees, treeViewId, ctx);
       signal.throwIfAborted();
@@ -58,11 +64,24 @@ export const useTreeData = (
         if (event.treeId === treeViewId) refresh();
       }),
   });
+  // Expanding one folder loads only its children. The next full read already includes them.
+  const loadChildren = (node: TreeNode) => {
+    void trees.getChildren(treeViewId, node, { resource, viewId, filter }).then((children) => {
+      setExpandedChildren((current) => ({
+        queryKey,
+        byNodeId: { ...(current.queryKey === queryKey ? current.byNodeId : {}), [node.id]: children },
+      }));
+    });
+  };
   return {
     body: read.value?.body ?? [],
     header: read.value?.header ?? [],
     footer: read.value?.footer ?? [],
-    childrenByNodeId: read.value?.children ?? {},
+    childrenByNodeId: {
+      ...(expandedChildren.queryKey === queryKey ? expandedChildren.byNodeId : {}),
+      ...read.value?.children,
+    },
+    loadChildren,
     error: read.error ?? null,
     loading: read.loading && !read.value,
     retry: read.retry,

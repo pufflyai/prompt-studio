@@ -1,5 +1,4 @@
 import { Stack } from "@chakra-ui/react";
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { EmptyState } from "@pstdio/ui";
 import {
   DataTable,
@@ -18,11 +17,13 @@ import type {
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
+import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { useRendererRead } from "../use-renderer-read";
 import {
   buildDataTableRendererData,
   resolveDataTableRendererColumns,
+  resolveDataTableRendererQueryKey,
   resolveDataTableRendererResourceActions,
   resolveDataTableRendererSelectionActions,
   resolveDataTableRendererStorageKey,
@@ -37,10 +38,16 @@ const initialResult: DataTableRendererQueryResult = { rows: [] };
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
+  const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
-    queryKey: JSON.stringify([contribution.id, resourceKey(placement.resource), workbench.modes.getActiveModeId()]),
+    queryKey: resolveDataTableRendererQueryKey(
+      contribution,
+      placement.resource,
+      workbench.modes.getActiveModeId(),
+      contextValues,
+    ),
 
     load: (signal) =>
       contribution.executeQuery({ resource: placement.resource, modeId: workbench.modes.getActiveModeId() }, signal),

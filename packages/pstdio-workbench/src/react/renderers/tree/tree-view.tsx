@@ -107,6 +107,7 @@ interface ToggleTreeNodeContext {
   footer: TreeViewSection[];
   childrenByNodeId: Record<string, TreeNode[]>;
   expandedNodeIds: string[];
+  loadChildren(node: TreeNode): void;
 }
 
 const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string) => {
@@ -119,7 +120,7 @@ const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string
   getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded);
   if (expanded || context.childrenByNodeId[nodeId] || node.children) return;
 
-  getWorkbenchRenderers(context.workbench).refresh(context.treeViewId);
+  context.loadChildren(node);
 };
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
@@ -142,7 +143,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const activeLocation = useWorkbenchStore(workbench.pages.store, (state) => state.location);
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) => resolveTreeActiveResource(state.layout));
-  const { body, childrenByNodeId, error, footer, header, loading, retry } = useTreeData(
+  const { body, childrenByNodeId, error, footer, header, loadChildren, loading, retry } = useTreeData(
     workbench,
     treeViewId,
     resource,
@@ -202,6 +203,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     footer,
     childrenByNodeId,
     expandedNodeIds: treeState.expandedNodeIds,
+    loadChildren,
   });
 
   const toggleSection = (sectionId: string) => {

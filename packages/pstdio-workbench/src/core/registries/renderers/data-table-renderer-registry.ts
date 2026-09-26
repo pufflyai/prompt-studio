@@ -78,6 +78,8 @@ export interface DataTableRendererContribution {
   pageSizeOptions?: number[];
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Context keys that choose which rows the query returns. A change drops the old rows and starts a new read. */
+  contextKeys?: string[];
   executeQuery(
     context: DataTableRendererQueryContext,
     signal: AbortSignal,
