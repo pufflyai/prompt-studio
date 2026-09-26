@@ -40,7 +40,7 @@
     }
   },
   "scripts": {
-    "build": "vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
+    "build": "cross-env NODE_ENV=production vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
@@ -80,6 +80,7 @@
     "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
+    "cross-env": "10.1.0",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "react": "19.2.4",
