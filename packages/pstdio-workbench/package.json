@@ -40,7 +40,7 @@
     }
   },
   "scripts": {
-    "build": "vite build && bun ../../scripts/release/stage-package.ts .",
+    "build": "vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
@@ -84,11 +84,12 @@
     "pstdio-extensions": "workspace:*",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "rolldown": "^1.2.11",
+    "rolldown-plugin-dts": "^0.28.6",
     "storybook": "^10.1.9",
     "three": "^0.185.1",
     "typescript": "6.0.2",
     "vite": "^7.2.4",
-    "vite-plugin-dts": "^4.5.4",
     "vite-plugin-externalize-deps": "^0.8.0"
   }
 }

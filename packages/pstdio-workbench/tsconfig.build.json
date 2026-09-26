@@ -16,5 +16,14 @@
     }
   },
   "include": ["src", "../pstdio-api-contracts/src", "../pstdio-extensions/src/bridge"],
-  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.stories.tsx", "src/examples"]
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    "**/*.storybook.ts",
+    "src/examples",
+    "../pstdio-api-contracts/src/**/*.test.ts",
+    "../pstdio-extensions/src/**/*.test.ts"
+  ]
 }
