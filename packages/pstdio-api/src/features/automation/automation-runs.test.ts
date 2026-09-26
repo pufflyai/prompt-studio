@@ -8,14 +8,15 @@ import type { AppBindings } from "../../types";
 import {
   BLOCKING_COMMAND_ID,
   COMMAND_ID,
+  createAutomationProject,
   INSPECT_COMMAND_ID,
   issueAutomationToken,
   LARGE_ERROR_COMMAND_ID,
   LARGE_RESULT_COMMAND_ID,
+  PRIVATE_COMMAND_ID,
   PROVISION_COMMAND_ID,
   RUNTIME_TOKEN,
   requestWithToken,
-  writeAutomationExtension,
 } from "./automation-runs.fixture";
 
 let app: OpenAPIHono<AppBindings>;
@@ -45,29 +46,7 @@ beforeEach(async () => {
   appDeps = created.deps;
   closeApp = created.close;
 
-  const projectResponse = await runtimeRequest("/v1/projects", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "Automation Project" }),
-  });
-  projectId = (await projectResponse.json()).id;
-  const sourcePath = writeAutomationExtension(tempRoot);
-  const enableResponse = await runtimeRequest(`/v1/projects/${projectId}/extensions/installed/automation-test/enable`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      displayName: "Automation Test",
-      extensionId: "pstdio.automation-test",
-      manifest: { id: "pstdio.automation-test", name: "automation-test" },
-      name: "automation-test",
-      sourceHash: null,
-      sourceKind: "local_path",
-      sourcePath,
-      sourceRef: null,
-      version: null,
-    }),
-  });
-  expect(enableResponse.status).toBe(200);
+  projectId = await createAutomationProject(runtimeRequest, tempRoot);
 });
 
 afterEach(async () => {
@@ -324,7 +303,7 @@ describe("automation run cancellation and credentials", () => {
       method: "POST",
       headers: { "content-type": "application/json", "idempotency-key": "private-command" },
       body: JSON.stringify({
-        commandId: "pstdio.automation-test.command.private",
+        commandId: PRIVATE_COMMAND_ID,
         input: { params: {} },
       }),
     });
