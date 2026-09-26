@@ -77,9 +77,11 @@ the run. Retryable workspace readiness failures release the claim and keep the p
 queued for the next drain. Attachment entries retain their existing transcript guard.
 
 A drain waits for startup and durable queue cleanup after releasing the scheduling lock.
-The readiness listener stops accepting workspace changes and waits for those drains
-before the app closes storage. Startup failures can therefore release capacity without
-deadlocking the scheduler, and shutdown cannot close the database during dispatch.
+One app-owned lifecycle tracks every drain, including workspace readiness, released
+session capacity, and settings changes. Shutdown stops accepting new drains, unsubscribes
+from workspace changes, and waits for all active drains before closing storage. New work
+stays in the durable queue for the next app instance. Startup failures can therefore release
+capacity without deadlocking the scheduler, and shutdown cannot close the database during dispatch.
 
 Queue claiming is intentionally two phase:
 

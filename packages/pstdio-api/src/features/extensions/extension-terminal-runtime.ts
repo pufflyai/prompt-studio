@@ -9,7 +9,9 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionProcessEnvironment } from "pstdio-extensions";
 import { exitedWithin, signalProcessTree } from "./process-group";
-import { isInteractiveShell, isShellAtPrompt, readTerminalForeground } from "./terminal-foreground";
+import { readTerminalForeground } from "./terminal-foreground";
+import { prepareTerminalShell } from "./terminal-shell-integration";
+import { createTerminalShellState } from "./terminal-shell-state";
 
 // Single-consumer async queue bridging Bun.Terminal callbacks to events().
 // `exit` is pushed last, then close() ends iteration.
@@ -91,7 +93,7 @@ const createTerminalEnv = (requestEnv: TerminalSessionRequest["env"]) => {
 interface TerminalSession {
   label: string;
   pid: number;
-  interactiveShell: boolean;
+  atPrompt(): boolean;
   kill(signal?: NodeJS.Signals): Promise<void>;
 }
 
@@ -111,21 +113,34 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       const env = createTerminalEnv(request.env);
       const id = crypto.randomUUID();
       const queue = createEventQueue();
+      const shellState = createTerminalShellState(id);
+      const shell = prepareTerminalShell(command, env, id);
 
-      const child = Bun.spawn(command, {
-        cwd,
-        env,
-        terminal: {
-          cols: request.cols,
-          rows: request.rows,
-          name: env.TERM ?? "xterm-256color",
-          data: (_terminal, chunk) => queue.push({ kind: "data", chunk: new Uint8Array(chunk) }),
-        },
-        windowsHide: true,
-      });
+      const child = (() => {
+        try {
+          return Bun.spawn(shell.command, {
+            cwd,
+            env: shell.env,
+            terminal: {
+              cols: request.cols,
+              rows: request.rows,
+              name: env.TERM ?? "xterm-256color",
+              data: (_terminal, chunk) => {
+                const output = shellState.onData(chunk);
+                if (output.length > 0) queue.push({ kind: "data", chunk: output });
+              },
+            },
+            windowsHide: true,
+          });
+        } catch (error) {
+          shell.dispose();
+          throw error;
+        }
+      })();
       const terminal = child.terminal;
       if (!terminal) {
         child.kill();
+        shell.dispose();
         throw new Error("TerminalSessionOpenFailed: PTY was not attached");
       }
 
@@ -147,6 +162,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       void child.exited.then((code) => {
         clearInterval(titlePoll);
         sessions.delete(id);
+        shell.dispose();
         logger.info("terminal session exited", { id, code });
         queue.push({ kind: "exit", code, signal: child.signalCode });
         queue.close();
@@ -170,6 +186,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       const handle: TerminalSessionHandle = {
         id,
         write: (data) => {
+          shellState.onInput(data);
           terminal.write(data);
         },
         resize: (cols, rows) => {
@@ -183,7 +200,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         },
       };
 
-      sessions.set(id, { label: fallbackTitle, pid: child.pid, interactiveShell: isInteractiveShell(command), kill });
+      sessions.set(id, { label: fallbackTitle, pid: child.pid, atPrompt: shellState.atPrompt, kill });
       logger.info("terminal session opened", { id, pid: child.pid });
       return handle;
     },
@@ -196,7 +213,7 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
 
   const activity = () =>
     [...sessions]
-      .filter(([, session]) => !session.interactiveShell || !isShellAtPrompt(session.pid))
+      .filter(([, session]) => !session.atPrompt() || readTerminalForeground(session.pid)?.group !== session.pid)
       .map(([id, session]) => ({ id, label: session.label }));
 
   return { activity, api, dispose };

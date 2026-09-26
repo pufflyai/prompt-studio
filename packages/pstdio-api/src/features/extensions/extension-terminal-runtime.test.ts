@@ -226,7 +226,7 @@ describe("terminal supervisor", () => {
   posixOnlyTest("reports foreground work with a stable id and clears activity at the prompt", async () => {
     const { logger, records } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });
-    const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
+    const handle = supervisor.api.openSession({ command: ["/bin/bash", "--norc", "-i"], cols: 80, rows: 24 });
     void (async () => {
       for await (const _event of handle.events()) void _event;
     })();
@@ -236,7 +236,7 @@ describe("terminal supervisor", () => {
       expect(supervisor.activity()).toEqual([]);
       handle.write(line("sleep 0.5"));
       for (let attempt = 0; attempt < 30 && supervisor.activity().length === 0; attempt += 1) await Bun.sleep(10);
-      expect(supervisor.activity()).toEqual([{ id: handle.id, label: basename(shellCommand()[0]) }]);
+      expect(supervisor.activity()).toEqual([{ id: handle.id, label: "bash" }]);
       await Bun.sleep(600);
       expect(supervisor.activity()).toEqual([]);
     } finally {

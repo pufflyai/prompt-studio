@@ -98,12 +98,15 @@ const createAppCloser = (input: {
   terminalSupervisor: { dispose(): Promise<void> };
   closeDb: () => Promise<void>;
   stopQueueReadiness: () => Promise<void>;
+  sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
 }) => {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
       input.startupAbort.abort();
+      const queueStopped = input.sessionQueueLifecycle.close();
       await input.stopQueueReadiness();
+      await queueStopped;
       await input.startupDone;
       await input.getStartupBackgroundDone();
       clearInterval(input.notificationWakeTimer);
@@ -150,6 +153,7 @@ export const startAppLifecycle = async (input: {
     ...input,
     startupAbort,
     stopQueueReadiness,
+    sessionQueueLifecycle: input.deps.sessionQueueLifecycle,
     startupDone,
     getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
   });

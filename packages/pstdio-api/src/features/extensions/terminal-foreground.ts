@@ -1,17 +1,6 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 
-const shells = new Set(["sh", "bash", "zsh", "fish", "dash", "ksh", "csh", "tcsh"]);
-
-export const isInteractiveShell = (command: string[]) =>
-  shells.has(basename(command[0])) &&
-  command.slice(1).every((arg) => arg.startsWith("-") && !/^-[^-]*c/.test(arg) && arg !== "--command");
-
-export const isShellAtPrompt = (pid: number) => {
-  const foreground = readTerminalForeground(pid);
-  return foreground?.group === pid && shells.has(foreground.name.replace(/^-/, ""));
-};
-
 // Temporary platform probe until Bun exposes the PTY foreground group. See ADR 0031.
 export const readTerminalForeground = (pid: number) => {
   try {

@@ -51,9 +51,9 @@ const waitFor = async (condition: () => boolean) => {
 };
 
 describe("runtime control routes", () => {
-  test.skipIf(process.platform === "win32")(
-    "permits shutdown with an idle PTY and refuses foreground terminal work",
-    async () => {
+  test.skipIf(process.platform === "win32").each(["sleep 5", "read answer"])(
+    "permits shutdown with an idle PTY and refuses foreground terminal work (%s)",
+    async (command) => {
       const supervisor = createTerminalSupervisor({ logger: { info: () => {}, warn: () => {}, error: () => {} } });
       const terminal = supervisor.api.openSession({ command: ["/bin/bash", "--norc", "-i"], cols: 80, rows: 24 });
       const { request } = createHarness({ activity: () => ({ ...emptyActivity(), terminals: supervisor.activity() }) });
@@ -62,7 +62,7 @@ describe("runtime control routes", () => {
       try {
         await Bun.sleep(100);
         expect((await shutdown()).status).toBe(202);
-        terminal.write("sleep 5\n");
+        terminal.write(`${command}\n`);
         for (let attempt = 0; attempt < 50 && supervisor.activity().length === 0; attempt += 1) await Bun.sleep(10);
         const blocked = await shutdown();
         expect(blocked.status).toBe(409);
