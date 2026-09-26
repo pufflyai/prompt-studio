@@ -12,6 +12,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { parseExtensionApiVersions } from "pstdio-api-contracts/extension-kernel";
 import { sourceImports } from "./source-imports";
 
 const ROOT = path.resolve(import.meta.dir, "../..");
@@ -86,7 +87,6 @@ interface WorkspacePackage {
   declared: Set<string>;
   dependencies: Record<string, string>;
   isExtension: boolean;
-  version?: string;
 }
 
 const readJson = (file: string) => JSON.parse(readFileSync(file, "utf8"));
@@ -122,7 +122,6 @@ const discoverPackages = () => {
       declared,
       dependencies,
       isExtension: Boolean((manifest.engines as { pstdio?: unknown } | undefined)?.pstdio),
-      version: manifest.version,
     });
   }
   return packages;
@@ -188,12 +187,14 @@ const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, e
   }
 };
 
-const checkExtensionUiVersion = (pkg: WorkspacePackage, uiVersion: string, errors: string[]) => {
+export const checkExtensionUiVersion = (pkg: WorkspacePackage, errors: string[]) => {
   const declaredVersion = pkg.dependencies["@pstdio/ui"];
-  if (pkg.isExtension && declaredVersion && declaredVersion !== uiVersion) {
-    errors.push(
-      `${pkg.dir}: must pin @pstdio/ui to the workspace version "${uiVersion}" instead of "${declaredVersion}"`,
-    );
+  if (
+    pkg.isExtension &&
+    declaredVersion &&
+    (parseExtensionApiVersions(declaredVersion)?.length !== 1 || declaredVersion.trim() !== declaredVersion)
+  ) {
+    errors.push(`${pkg.dir}: must pin @pstdio/ui to an exact published version instead of "${declaredVersion}"`);
   }
 };
 
@@ -248,8 +249,6 @@ const checkSourceImports = (pkg: WorkspacePackage, workspaceNames: Set<string>, 
 const main = () => {
   const packages = discoverPackages();
   const workspaceNames = new Set(packages.map((pkg) => pkg.name));
-  const uiVersion = packages.find((pkg) => pkg.name === "@pstdio/ui")?.version;
-  if (!uiVersion) throw new Error("@pstdio/ui must declare a workspace version");
   const errors: string[] = [];
 
   for (const cycle of findCycles(packages)) {
@@ -257,7 +256,7 @@ const main = () => {
   }
   for (const pkg of packages) {
     checkDeclaredDeps(pkg, workspaceNames, errors);
-    checkExtensionUiVersion(pkg, uiVersion, errors);
+    checkExtensionUiVersion(pkg, errors);
     checkSourceImports(pkg, workspaceNames, errors);
   }
 
@@ -269,4 +268,4 @@ const main = () => {
   console.log(`Boundaries OK across ${packages.length} workspace packages.`);
 };
 
-main();
+if (import.meta.main) main();

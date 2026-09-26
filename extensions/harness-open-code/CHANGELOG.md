@@ -1,5 +1,13 @@
 # harness-open-code
 
+## 0.4.5
+
+_2026-09-26_
+
+### Patch Changes
+
+- 20276db: Use consistent level bars for agent effort and default priorities while preserving customized tags during setup.
+
 ## 0.4.4
 
 _2026-09-25_

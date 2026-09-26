@@ -39,6 +39,16 @@ export const plannerSettingsSection = defineSettingsSection({
   order: 40,
 });
 const createPlannerSettingsViews = (baseUrl: string) => ({
+  implementationSettings: defineView({
+    id: "implementation-settings",
+    title: l10n("settingsPanels.implementation.title", "Implementation"),
+    icon: "git-pull-request",
+    body: {
+      kind: "webview",
+      entry: packageAsset("./src/views/implementation-settings.tsx", baseUrl),
+      capabilities: ["commands.execute", "extension.settings.all", "extension.settings.set"],
+    },
+  }),
   tagSettings: defineView({
     id: "ticket-tags-settings",
     title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
@@ -84,7 +94,7 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
   return { ticketDetailPage, ticketsPage };
 };
 export const createPlannerUi = (baseUrl: string) => {
-  const { tagSettings } = createPlannerSettingsViews(baseUrl);
+  const { tagSettings, implementationSettings } = createPlannerSettingsViews(baseUrl);
   const tickets = defineView({
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
@@ -219,7 +229,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings],
+    views: [tickets, editor, files, properties, tagSettings, implementationSettings],
     pages: [ticketsPage, ticketDetailPage],
     viewMenus: [
       defineViewMenu({
@@ -249,6 +259,12 @@ export const createPlannerUi = (baseUrl: string) => {
       }),
     ],
     settingsPanels: [
+      defineSettingsPanel({
+        id: "implementation",
+        view: implementationSettings.ref,
+        slot: workbenchSlots.projectSettings,
+        section: plannerSettingsSection.ref,
+      }),
       defineSettingsPanel({
         id: "ticket-tags",
         view: tagSettings.ref,

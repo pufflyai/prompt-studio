@@ -18,6 +18,8 @@ import { getTicketCommand } from "./get-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
 import { requestHumanCommand, resolveHumanRequestCommand } from "./human-requests";
 import { implementTicketCommand } from "./implement-ticket";
+import { implementationPolicyCommand } from "./implementation-policy";
+import { implementationTargetsCommand, setImplementationTargetCommand } from "./implementation-targets";
 import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
@@ -93,6 +95,9 @@ export const plannerCommands = [
   deleteTemplateCommand,
   applyTicketTemplateCommand,
   automationPolicyCommand,
+  implementationPolicyCommand,
+  implementationTargetsCommand,
+  setImplementationTargetCommand,
   attemptReadinessCommand,
   submitChangeRequestCommand,
   submitReviewCommand,

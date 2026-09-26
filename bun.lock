@@ -147,7 +147,7 @@
     },
     "extensions/harness-claude-code": {
       "name": "harness-claude-code",
-      "version": "0.4.4",
+      "version": "0.4.5",
       "dependencies": {
         "@pstdio/sdk": "^0.25.0",
       },
@@ -158,7 +158,7 @@
     },
     "extensions/harness-codex": {
       "name": "harness-codex",
-      "version": "0.3.4",
+      "version": "0.3.5",
       "dependencies": {
         "@pstdio/sdk": "^0.25.0",
       },
@@ -169,7 +169,7 @@
     },
     "extensions/harness-open-code": {
       "name": "harness-open-code",
-      "version": "0.4.4",
+      "version": "0.4.5",
       "dependencies": {
         "@pstdio/sdk": "^0.25.0",
       },
@@ -222,7 +222,7 @@
     },
     "extensions/pstdio-planner": {
       "name": "pstdio-planner",
-      "version": "0.15.0",
+      "version": "0.15.1",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -255,7 +255,7 @@
     },
     "extensions/pstdio-skills": {
       "name": "pstdio-skills",
-      "version": "0.4.4",
+      "version": "0.4.5",
       "dependencies": {
         "@pstdio/sdk": "^0.25.0",
       },

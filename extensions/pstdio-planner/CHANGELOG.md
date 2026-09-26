@@ -1,5 +1,13 @@
 # pstdio-planner
 
+## 0.15.1
+
+_2026-09-26_
+
+### Patch Changes
+
+- 20276db: Use consistent level bars for agent effort and default priorities while preserving customized tags during setup.
+
 ## 0.15.0
 
 _2026-09-25_

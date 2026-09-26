@@ -17,5 +17,17 @@
   "displayMenu.propertyOptions.updatedAt": "更新日",
   "settingsPanels.ticketTags.title": "タグ",
   "ticketDetail.none": "なし",
-  "ticketDetail.parent": "親"
+  "ticketDetail.parent": "親",
+  "settings.implementation.adversarialReview.title": "批判的レビュー",
+  "settings.implementation.adversarialReview.description": "チケットの実装を完了する前に批判的レビューを実行します。",
+  "settings.implementation.openPr.title": "PRを作成",
+  "settings.implementation.openPr.description": "変更の準備ができたらドラフトのプルリクエストを作成し、チケットにリンクします。",
+  "commands.implementationPolicy.title": "チケット実装の設定を確認",
+  "commands.implementationTargets.title": "実装のターゲットブランチを一覧表示",
+  "commands.setImplementationTarget.title": "デフォルトのターゲットブランチを設定",
+  "settingsPanels.implementation.title": "実装",
+  "settings.implementation.defaultTargetBranch.title": "デフォルトのターゲットブランチ",
+  "settings.implementation.repositoryDefault": "リポジトリのデフォルト",
+  "settings.implementation.noGitFolder": "リモートブランチにはローカルの Git フォルダーが必要です。",
+  "settings.implementation.error": "実装設定を更新できませんでした"
 }
