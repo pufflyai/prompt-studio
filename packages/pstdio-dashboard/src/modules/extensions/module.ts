@@ -3,7 +3,12 @@ import type {
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import type { Disposable, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import {
+  batchWorkbenchChanges,
+  type Disposable,
+  type WorkbenchModuleContext,
+  type WorkbenchModuleContribution,
+} from "@pstdio/workbench";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
@@ -142,12 +147,16 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           return;
         }
         const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
-        replaceContributions(nextProjectId, nextResolvedMetadata);
-        restoreExtensionContributionRefreshLayout(ctx, refreshLayout);
-        if (pageLocationBeforeRefresh) {
-          const replay = ctx.pageLocations.replay(pageLocationBeforeRefresh);
-          displacedPageLocation = replay.ok ? undefined : pageLocationBeforeRefresh;
-        }
+        // Observers must see the completed refresh. A temporary missing page can
+        // otherwise restore Start's terminal and mistake its removal for a close.
+        batchWorkbenchChanges(() => {
+          replaceContributions(nextProjectId, nextResolvedMetadata);
+          restoreExtensionContributionRefreshLayout(ctx, refreshLayout);
+          if (pageLocationBeforeRefresh) {
+            const replay = ctx.pageLocations.replay(pageLocationBeforeRefresh);
+            displacedPageLocation = replay.ok ? undefined : pageLocationBeforeRefresh;
+          }
+        });
         if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) {
           ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
         }

@@ -10,7 +10,7 @@ import {
   readPerformanceFrameRateSnapshot,
 } from "@/components/internal/performance-panel";
 import type { Diff } from "./diff-card";
-import { DiffViewer } from "./diff-viewer";
+import { DiffViewer } from "./lazy-diff";
 
 type StoryFn = () => ReactNode;
 
@@ -253,8 +253,10 @@ export const CopiedFilePath: Story = {
     });
 
     const canvas = within(canvasElement);
-    await userEvent.hover(canvas.getByTestId("diff-card-header"));
-    await userEvent.click(canvas.getByLabelText("Copy file path"));
+    const header = within(await canvas.findByTestId("diff-card-header"));
+    header.getByRole("button", { name: "Collapse", exact: true }).focus();
+    await userEvent.tab();
+    await userEvent.keyboard("{Enter}");
 
     await expect(canvas.getByLabelText("Copied")).toBeVisible();
   },

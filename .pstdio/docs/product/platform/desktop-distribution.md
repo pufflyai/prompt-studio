@@ -11,6 +11,7 @@ Choose the artifact for the computer that will run Prompt Studio:
 | Platform | Install artifact | Alternative |
 | --- | --- | --- |
 | Apple Silicon macOS | `Prompt-Studio-<version>-darwin-arm64.dmg` | matching ZIP |
+| Intel macOS | `Prompt-Studio-<version>-darwin-x64.dmg` | matching ZIP |
 | Linux x64 | `Prompt-Studio-<version>-linux-x64.deb` | portable ZIP |
 
 The Linux ZIP is portable rather than system-integrated. Extract it to a stable
@@ -35,10 +36,9 @@ spctl --assess --type execute --verbose=2 "/Applications/Prompt Studio.app"
 xcrun stapler validate "/Applications/Prompt Studio.app"
 ```
 
-Intel macOS desktop distribution is deferred. Intel users can use the supported
-CLI and browser dashboard. Windows desktop distribution is deferred until its
-trusted signing lane is available. Do not distribute a development package for
-either platform as a supported desktop release.
+Windows desktop distribution is deferred until its trusted signing lane is
+available. Do not distribute a development Windows package as a supported
+desktop release.
 
 ## Updates
 
@@ -90,9 +90,11 @@ Repository administrators provision these GitHub Actions secrets:
 | `APPLE_API_KEY_ID` | App Store Connect key ID |
 | `APPLE_API_ISSUER` | App Store Connect issuer UUID |
 
-`WINDOWS_CERTIFICATE` and `WINDOWS_CERTIFICATE_PASSWORD` remain optional workflow
-inputs for the deferred Windows lane. They are not required for the active
-macOS and Linux release set.
+Windows uses Azure Artifact Signing with GitHub OIDC. The private key stays in
+Azure; no `.pfx` file or client secret is needed. The account, Public Trust profile,
+endpoint, and Azure identity IDs are repository Actions variables. See
+[Windows signing setup](../../../../clients/desktop/docs/windows-signing.md).
+These settings are not required for the active macOS and Linux release set.
 
 Credentials are decoded only into the native runner's temporary directory. The
 macOS certificate is imported into an ephemeral keychain that is deleted even
@@ -119,9 +121,14 @@ the target artifacts are eligible for publication:
 - an injected sidecar exit displays recovery within 500 milliseconds, then Retry
   starts a replacement runtime in the existing Electron process.
 
+Hosted Intel macOS runners are slow and costly. The Intel target runs only the
+packaged tests tagged `@essential`. They prove the clean start, both transport
+paths, `pst close`, and a terminal and extension page in the x64 build. The Intel
+clean start may take up to 20 seconds. The other targets run the full suite.
+
 The workflow uploads the Playwright JSON result as
 `release-readiness-<platform>-<architecture>` with 14-day retention. A release
-owner links both native job runs and their evidence artifacts from the
+owner links every native job run and their evidence artifacts from the
 ticket validation report. Contract tests in the owning packages separately
 cover active-work refusal/confirmation, indefinite graceful wait, lock and bind
 failures, corrupt PGlite recovery classification, exact instance targeting,

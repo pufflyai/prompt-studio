@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import { PassThrough } from "node:stream";
 import { DesktopRuntimeManager } from "./runtime-manager";
 
 const descriptor = {
@@ -19,8 +18,8 @@ class RuntimeChild extends EventEmitter {
   exitOnKill = false;
   killedWith: NodeJS.Signals | number | undefined;
   killedSignals: (NodeJS.Signals | number | undefined)[] = [];
-  stdout = new PassThrough();
-  stderr = new PassThrough();
+  output = "";
+  readOutput = () => this.output;
 
   kill(signal?: NodeJS.Signals | number) {
     this.killedWith = signal;
@@ -123,7 +122,7 @@ describe("DesktopRuntimeManager", () => {
     expect(child.killedSignals).toEqual(["SIGTERM", "SIGKILL"]);
     expect(settled).toBe(false);
 
-    child.stdout.write(`${JSON.stringify({ event: "db.open.failed", err: { message: "WebAssembly trap" } })}\n`);
+    child.output = `${JSON.stringify({ event: "db.open.failed", err: { message: "WebAssembly trap" } })}\n`;
     child.emit("exit", null, "SIGKILL");
     await expect(startup).rejects.toThrow("pglite_recovery_failure");
   });
@@ -154,7 +153,7 @@ describe("DesktopRuntimeManager", () => {
     );
 
     await expect(manager.start()).resolves.toMatchObject({ descriptor });
-    child.stderr.write("runtime crashed");
+    child.output = "runtime crashed";
     child.emit("exit", 1, null);
 
     expect(unexpected).toContain("runtime crashed");

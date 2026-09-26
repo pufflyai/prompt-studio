@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
@@ -7,6 +7,8 @@ import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { registerPackagedCleanup, spawnPackagedProcess, stopPackagedProcess } from "../testing/packaged-fixture";
+import { removeTestDirectory } from "../testing/remove-test-directory";
+import { stopPackagedRuntime } from "../testing/stop-packaged-runtime";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { waitForVisibleElement } from "./visible-element-timing";
@@ -38,15 +40,9 @@ export const createPackagedHome = () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-desktop-package-"));
   registerPackagedCleanup(async () => {
     try {
-      const logPath = join(home, "logs.jsonl");
-      if (existsSync(logPath)) {
-        await test.info().attach("packaged-launch-log", {
-          body: redactSensitiveText(readFileSync(logPath, "utf8").slice(-32_000), [readDescriptor(home)?.token ?? ""]),
-          contentType: "text/plain",
-        });
-      }
+      if (existsSync(home)) await attachPackagedLogs(home);
     } finally {
-      removePackagedHome(home);
+      await removePackagedHome(home);
     }
   });
   return home;
@@ -56,6 +52,25 @@ export const readDescriptor = (home: string) => {
   const path = join(home, "runtime.json");
   if (!existsSync(path)) return null;
   return JSON.parse(readFileSync(path, "utf8")) as RuntimeDescriptor;
+};
+
+const attachRuntimeOutput = async (home: string) => {
+  const path = join(home, "desktop-runtime.log");
+  if (!existsSync(path)) return;
+  await test.info().attach("runtime-output", {
+    body: redactSensitiveText(readFileSync(path, "utf8").slice(-32_000), [readDescriptor(home)?.token ?? ""]),
+    contentType: "text/plain",
+  });
+};
+
+const attachPackagedLogs = async (home: string, runtime?: RuntimeDescriptor) => {
+  const logPath = join(home, "logs.jsonl");
+  const log = existsSync(logPath) ? readFileSync(logPath, "utf8").slice(-32_000) : "No runtime log was written.";
+  await test.info().attach("runtime-log", {
+    body: redactSensitiveText(log, [runtime?.token ?? "", readDescriptor(home)?.token ?? ""]),
+    contentType: "text/plain",
+  });
+  await attachRuntimeOutput(home);
 };
 
 export const waitForDescriptor = async (home: string, predicate = (_descriptor: RuntimeDescriptor) => true) => {
@@ -160,8 +175,13 @@ const launchPackaged = async <T>(
     const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
     return { home, browser, child, lifecyclePage, startedAt, startup, finishTrace };
   } catch (error) {
-    await browser?.close().catch(() => {});
-    await stopPackagedProcess(child);
+    try {
+      // Failed startup has no app handle for the caller's normal disposal path.
+      await attachPackagedLogs(home);
+    } finally {
+      await browser?.close().catch(() => {});
+      await stopPackagedProcess(child);
+    }
     throw error;
   }
 };
@@ -230,22 +250,13 @@ export const runPackagedCli = (home: string, args: string[]) =>
 export const disposePackagedApp = async (app: PackagedWindow | null) => {
   if (!app) return;
   await app.finishTrace();
-  const logPath = join(app.home, "logs.jsonl");
-  const log = existsSync(logPath) ? readFileSync(logPath, "utf8").slice(-32_000) : "No runtime log was written.";
-  await test.info().attach("runtime-log", {
-    body: redactSensitiveText(log, [app.runtime?.token ?? "", readDescriptor(app.home)?.token ?? ""]),
-    contentType: "text/plain",
-  });
+  await attachPackagedLogs(app.home, app.runtime);
   await app.browser.close().catch(() => {});
   await stopPackagedProcess(app.child);
 };
 
-export const removePackagedHome = (home: string) => {
+export const removePackagedHome = async (home: string) => {
   const runtime = readDescriptor(home);
-  if (runtime) {
-    try {
-      process.kill(runtime.pid, "SIGKILL");
-    } catch {}
-  }
-  rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  if (runtime) await stopPackagedRuntime(runtime.pid);
+  await removeTestDirectory(home);
 };

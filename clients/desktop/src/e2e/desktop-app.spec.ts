@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createServer, type ServerResponse } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { removeTestDirectory } from "../testing/remove-test-directory";
 import { expectClipboardPermissions } from "./clipboard-permissions";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
@@ -30,8 +31,8 @@ const createHome = () => {
   return home;
 };
 
-test.afterEach(() => {
-  for (const root of roots) rmSync(root, { recursive: true, force: true });
+test.afterEach(async () => {
+  for (const root of roots) await removeTestDirectory(root);
   roots.length = 0;
 });
 

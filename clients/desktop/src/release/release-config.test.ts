@@ -39,14 +39,14 @@ describe("desktop release configuration", () => {
     });
   });
 
-  test("requires the Windows certificate and never enables signing for local builds", () => {
+  test("requires Azure signing tools and never enables signing for local builds", () => {
     expect(() =>
       resolveDesktopSigning({
         platform: "win32",
         release: true,
-        env: { WINDOWS_CERTIFICATE_FILE: "C:/temp/certificate.pfx" },
+        env: {},
       }),
-    ).toThrow("WINDOWS_CERTIFICATE_PASSWORD");
+    ).toThrow("AZURE_SIGNING_METADATA");
 
     expect(
       resolveDesktopSigning({

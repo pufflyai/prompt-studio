@@ -4,7 +4,6 @@ import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
 import { DesktopRuntimeManager } from "./runtime-manager";
 
 test.skipIf(process.platform === "win32")("detects shell-installed harnesses after a desktop launch", async () => {
@@ -39,8 +38,7 @@ test.skipIf(process.platform === "win32")("detects shell-installed harnesses aft
   let probeOutput = "";
   let runtimeHome: string | undefined;
   const child = Object.assign(new EventEmitter(), {
-    stdout: new PassThrough(),
-    stderr: new PassThrough(),
+    readOutput: () => "",
     kill: () => true,
   });
   const manager = new DesktopRuntimeManager(

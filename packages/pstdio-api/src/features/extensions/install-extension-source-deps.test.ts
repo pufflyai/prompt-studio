@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, lstatSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -89,7 +89,7 @@ export default defineExtension({
     const targetNodeModules = join(result.targetPath, "node_modules");
     expect(result.check.errorCount).toBe(0);
     expect(existsSync(targetNodeModules)).toBe(true);
-    expect(lstatSync(targetNodeModules).isSymbolicLink()).toBe(true);
+    expect(existsSync(join(targetNodeModules, "@pstdio", "sdk", "extensions.js"))).toBe(true);
   });
 
   test("does not copy partial source node_modules before linking workspace dependencies", async () => {
@@ -117,7 +117,7 @@ export default defineExtension({});
     const targetNodeModules = join(result.targetPath, "node_modules");
     expect(result.check.errorCount).toBe(0);
     expect(existsSync(targetNodeModules)).toBe(true);
-    expect(lstatSync(targetNodeModules).isSymbolicLink()).toBe(true);
+    expect(existsSync(join(targetNodeModules, "@pstdio", "sdk", "extensions.js"))).toBe(true);
   });
 
   test("reuses an existing install but reinstalls deps when a declared dependency is missing", async () => {

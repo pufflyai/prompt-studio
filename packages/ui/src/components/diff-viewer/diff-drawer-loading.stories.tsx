@@ -1,7 +1,8 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ReactNode } from "react";
-import { type Diff, DiffDrawer } from "./diff-drawer";
+import type { Diff } from "./diff-drawer";
+import { DiffDrawer } from "./lazy-diff";
 
 type StoryFn = () => ReactNode;
 

@@ -63,6 +63,7 @@ export const bundleEntry = async (entryPath: string, packagePath: string, outDir
   const result = await Bun.build({
     entrypoints: [entryPath],
     target: "bun",
+    throw: false,
     outdir: outDir,
     naming: `[name]${RUNTIME_BUNDLE_SUFFIX}`,
     plugins: [preserveImportMetaUrlPlugin(packagePath)],

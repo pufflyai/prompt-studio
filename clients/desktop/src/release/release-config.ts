@@ -1,3 +1,4 @@
+import type { HASHES, SignToolOptions } from "@electron/windows-sign/dist/esm/types";
 import { rcompare, valid } from "semver";
 
 const RELEASE_REPOSITORY = "pufflyai/prompt-studio";
@@ -38,8 +39,8 @@ type SigningInput = {
 export type DesktopSigningConfig = {
   osxSign?: { identity: string };
   osxNotarize?: { appleApiKey: string; appleApiKeyId: string; appleApiIssuer: string };
-  windowsSign?: { certificateFile: string; certificatePassword: string };
-  squirrelWindowsSign?: { certificateFile: string; certificatePassword: string };
+  windowsSign?: SignToolOptions;
+  squirrelWindowsSign?: SignToolOptions;
 };
 
 const requireValues = (env: ReleaseEnvironment, names: string[]) => {
@@ -71,10 +72,12 @@ export const resolveDesktopSigning = (input: SigningInput): DesktopSigningConfig
   }
 
   if (input.platform === "win32") {
-    const values = requireValues(input.env, ["WINDOWS_CERTIFICATE_FILE", "WINDOWS_CERTIFICATE_PASSWORD"]);
+    const values = requireValues(input.env, ["AZURE_SIGNING_METADATA", "AZURE_SIGNING_DLIB", "WINDOWS_SIGNTOOL_PATH"]);
     const windowsSign = {
-      certificateFile: values.WINDOWS_CERTIFICATE_FILE,
-      certificatePassword: values.WINDOWS_CERTIFICATE_PASSWORD,
+      signToolPath: values.WINDOWS_SIGNTOOL_PATH,
+      signWithParams: ["/v", "/dlib", values.AZURE_SIGNING_DLIB, "/dmdf", values.AZURE_SIGNING_METADATA],
+      timestampServer: "http://timestamp.acs.microsoft.com",
+      hashes: ["sha256" as HASHES],
     };
     return { windowsSign, squirrelWindowsSign: windowsSign };
   }

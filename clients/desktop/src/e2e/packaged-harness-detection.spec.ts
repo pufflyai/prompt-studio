@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { delimiter, join, resolve } from "node:path";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
 import {
@@ -12,15 +12,22 @@ import {
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
-for (const shell of ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"]) {
-  test(`selects shell-installed harnesses after a desktop launch with ${shell}`, async () => {
-    test.skip(process.platform === "win32" || !existsSync(shell), `${shell} is not available on this platform.`);
+const environments =
+  process.platform === "win32" ? ["Windows PATH"] : ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"];
+
+for (const shell of environments) {
+  test(`selects installed harnesses after a desktop launch with ${shell}`, async () => {
+    test.skip(process.platform !== "win32" && !existsSync(shell), `${shell} is not available on this platform.`);
     const home = createPackagedHome();
     const toolsPath = join(home, "agent tools");
     mkdirSync(toolsPath);
     const bunPath = execFileSync("bun", ["-e", "process.stdout.write(process.execPath)"], { encoding: "utf8" });
     for (const executable of ["codex", "claude", "opencode"]) {
-      writeFileSync(join(toolsPath, executable), `#!${bunPath}\nconsole.log("1.0.0");\n`, { mode: 0o755 });
+      if (process.platform === "win32") {
+        copyFileSync(bunPath, join(toolsPath, `${executable}.exe`));
+      } else {
+        writeFileSync(join(toolsPath, executable), `#!${bunPath}\nconsole.log("1.0.0");\n`, { mode: 0o755 });
+      }
     }
     writeFileSync(join(home, ".bash_profile"), 'source "$HOME/.bashrc"\n');
     writeFileSync(join(home, ".bashrc"), 'export PATH="$HOME/agent tools:$PATH"\n');
@@ -30,7 +37,10 @@ for (const shell of ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"]) {
     let app: PackagedApp | null = null;
     try {
       app = await launchPackagedApp(home, {
-        PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+        PATH:
+          process.platform === "win32"
+            ? `${toolsPath}${delimiter}${process.env.PATH}`
+            : "/usr/bin:/bin:/usr/sbin:/sbin",
         SHELL: shell,
         ZDOTDIR: home,
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({

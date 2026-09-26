@@ -49,6 +49,7 @@
     "@electron-forge/plugin-fuses": "^7.11.2",
     "@electron-forge/shared-types": "7.11.2",
     "@electron/fuses": "2",
+    "@electron/windows-sign": "1.2.2",
     "@playwright/test": "1.60.0",
     "@storybook/react-vite": "^10.6.0",
     "@types/bun": "1.4.2",

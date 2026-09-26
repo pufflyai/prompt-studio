@@ -119,11 +119,10 @@ resources/
 
 macOS release staging signs the Bun runtime with the release identity, hardened runtime, a secure timestamp, and the JIT entitlement before computing its checksum. Forge preserves that nested signature when signing the enclosing application. Signing the runtime again would change its bytes and invalidate the manifest. The packaged launch suite checks the final signed application, so this ordering is part of release validation.
 
-Active release targets are Apple Silicon macOS arm64 and Linux x64. Intel macOS
-desktop distribution is deferred after native startup and packaged test deadlines
-failed. Windows desktop distribution remains deferred until trusted signing is
-available. Forge retains their packaging support, but CI does not build or publish
-those desktop targets. Intel macOS and Windows CLI packages remain supported.
+Active release targets are Apple Silicon macOS arm64, Intel macOS x64, and Linux
+x64. Windows desktop distribution remains deferred until trusted signing and
+installation/update verification are available. Windows CLI packages remain
+supported.
 Forge produces ZIP and DMG artifacts on macOS and
 ZIP and DEB artifacts on Linux. The package enables ASAR integrity and an
 explicit full Electron fuse policy that disables Node execution, Node options,
@@ -142,10 +141,11 @@ update metadata.
 | Target | Native output | Release verification | Update path |
 | --- | --- | --- | --- |
 | macOS arm64 | DMG and ZIP | Developer ID signature, notarization staple, Gatekeeper, clean-home launch | Electron updater through release-owned JSON metadata |
+| macOS x64 | DMG and ZIP | Developer ID signature, notarization staple, Gatekeeper, essential packaged tests | Electron updater through release-owned JSON metadata |
 | Linux x64 | DEB and portable ZIP | DEB inspection and clean-home launch | Distribution package manager or GitHub release page |
 
 Every target audits the packaged Electron fuse wire and emits a target manifest
-plus SHA-256 checksums. The publish job requires the complete two-target set,
+plus SHA-256 checksums. The publish job requires the complete three-target set,
 revalidates every checksum and component version, uploads the artifacts to the
 existing draft release, and only then publishes it. Native jobs receive read-only
 repository access; only the final publisher receives `contents: write`.
@@ -185,6 +185,8 @@ bun run --cwd clients/desktop verify:fuses
 
 Use Node 24, the same version as CI, for Electron Forge packaging.
 
+Both desktop Playwright suites allow 60 seconds per test on Windows and 30 seconds on other platforms. The user approved the Windows limit on 2026-09-26 after packaged tests took 20 to 24 seconds and first project creation varied from 8 to 18 seconds while cloning and installing default extensions. This changes the whole-test deadline; the measured startup and recovery limits below still apply.
+
 The source Electron suite starts isolated temporary homes and a real Electron process. It checks authenticated attachment, the sandboxed/frozen preload boundary, ephemeral cookie storage, denied popups and permissions, single-instance focus, persistent-runtime detach, and actionable recovery. The packaged suite launches the produced application itself over the Chromium debugging protocol without enabling Electron's disabled Node inspector. It measures the cold-start, warm-attach, and crash-recovery budgets; creates and lists a project through the HttpOnly browser session and descriptor-bearer CLI; promotes ownership without restarting the runtime; proves persistent detach plus project and workbench-state restoration; exercises intentional `pst close`; and retries an unexpected sidecar exit without relaunching Electron.
 
 Packaged startup recovery tests start a real persistent runtime through its bundled CLI. On macOS and Linux, suspending that process proves the startup deadline reaches an actionable recovery view and preserves its descriptor. Resuming it and pressing Retry through the keyboard attaches the same runtime in the same window. A separate test repairs a mismatched instance ID after ownership recovery, then verifies attachment to the original owner. Both flows stop the runtime through `pst close` and remove their isolated homes.
@@ -193,10 +195,15 @@ Database recovery tests use temporary homes. They verify that a competing databa
 
 Detached-work tests install a small command-only fixture from `packages/workbench-fixture/fixtures/detached-work`. Its only dependency is the public SDK. Installation runs normally in each isolated home, and the tests verify that its process continues after either desktop quit or API shutdown.
 
-Workbench startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Startup-window timing uses the later of the native window's first `show` event and the lifecycle document's first contentful paint. The native event also verifies that the window is visible. The controller shows the prerendered startup document at DOM readiness, before remaining resources finish loading or the workbench view is created, so a fast attachment cannot cover the startup renderer while the window is still hidden. Runtime discovery and sidecar verification start after the lifecycle page loads, so checksum reads and process startup do not compete with the initial window display. Both timings are measured from process launch, including time before the debugger attaches. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The limits are 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds for crash recovery. The startup window must appear in less than 1.5 seconds on macOS and less than 1 second on Linux, on both cold launches and warm attachment. The supported desktop release targets are Apple Silicon and Linux; Intel desktop support remains deferred.
+Workbench startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Startup-window timing uses the later of the native window's first `show` event and the lifecycle document's first contentful paint. The native event also verifies that the window is visible. The controller shows the prerendered startup document at DOM readiness, before remaining resources finish loading or the workbench view is created, so a fast attachment cannot cover the startup renderer while the window is still hidden. Runtime discovery and sidecar verification start after the lifecycle page loads, so checksum reads and process startup do not compete with the initial window display. Both timings are measured from process launch, including time before the debugger attaches. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The limits are 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds for crash recovery. The startup window must appear in less than 1.5 seconds on Apple Silicon macOS and less than 1 second on Linux and Windows, on both cold launches and warm attachment. Hosted Intel macOS runners start the app two to three times slower, so Intel allows 20 seconds for cold startup and 10 seconds for the startup window. The Intel startup window includes macOS's first-launch check of the freshly signed app, which has taken up to 9 seconds on hosted runners. Intel CI disables hosted-runner indexing before dependency installation; [ADR 0032](../adrs/0032-temporary-macos-ci-indexing.md) records the measured contention and temporary isolation.
 
-Pull-request CI runs both Electron suites on Linux and Apple Silicon before downstream Docker
-builds can run. It configures the SUID sandbox for the source and packaged
+Native runners are slow and costly, so native desktop tests run only in
+`.github/workflows/release-desktop.yml`, before a release is published. Pull
+requests do not build native desktop apps; run the local commands above to test a
+desktop change before merging. The release workflow runs both Electron suites on
+Linux and Apple Silicon. Intel macOS runs only the packaged tests tagged
+`@essential`: cold startup with both transport paths, and project tabs with pages
+and terminals. The workflow configures the SUID sandbox for the source and packaged
 executables, verifies the packaged fuse policy, and uploads readiness results
 and browser traces. Trace export removes runtime cookies and bearer
 credentials from every text entry before artifacts are uploaded.

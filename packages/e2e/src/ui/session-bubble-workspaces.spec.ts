@@ -53,11 +53,16 @@ test.describe("Session bubble workspace selection", () => {
     projectId = project.id;
   });
 
-  test.afterEach(() => {
-    for (const dir of repoDirs) {
-      rmSync(dir, { recursive: true, force: true });
+  test.afterEach(async ({ request }) => {
+    try {
+      const response = await request.delete(`${apiBase}/v1/projects/${projectId}`);
+      expect(response.ok()).toBe(true);
+    } finally {
+      for (const dir of repoDirs) {
+        rmSync(dir, { recursive: true, force: true });
+      }
+      repoDirs.length = 0;
     }
-    repoDirs.length = 0;
   });
 
   test("changes the draft workspace without opening the workspace", async ({ page, request }) => {

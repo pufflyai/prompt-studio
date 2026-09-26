@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
@@ -9,7 +9,7 @@ import type { ExtensionDiagnostic } from "../types/runtime";
 import { bundleEntry } from "./bundle-entry";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
-import { mirrorPackageChild } from "./mirror-package-child";
+import { mirrorNodeModules } from "./mirror-node-modules";
 import { type PackageManifest, readPackageManifest } from "./package-manifest";
 import {
   collectRuntimeModulePaths,
@@ -74,26 +74,6 @@ const ensureRuntimeCachePruned = (cacheRoot: string) => {
 const safeCacheSegment = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "extension";
 
 const digest = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 16);
-
-const mirrorNodeModules = (sourceNodeModulesPath: string, targetNodeModulesPath: string) => {
-  if (!existsSync(sourceNodeModulesPath)) return;
-
-  const sourceRoot = realpathSync(sourceNodeModulesPath);
-  mkdirSync(targetNodeModulesPath, { recursive: true });
-  for (const dirent of readdirSync(sourceRoot, { withFileTypes: true })) {
-    const sourceChild = join(sourceRoot, dirent.name);
-    const targetChild = join(targetNodeModulesPath, dirent.name);
-
-    // Scopes contain packages; mirror each package so relative links resolve at
-    // their source instead of through a relocated scope directory.
-    if (dirent.name.startsWith("@")) {
-      mirrorNodeModules(sourceChild, targetChild);
-      continue;
-    }
-
-    mirrorPackageChild(sourceChild, targetChild);
-  }
-};
 
 const resolveNodeModulesPath = (packagePath: string) => {
   let currentPath = packagePath;
@@ -182,10 +162,11 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
     mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));
   }
 
+  const canonicalPackagePath = realpathSync(runtimePackagePath);
   return {
     rootPath,
-    entryPath: join(runtimePackagePath, entryRelativePath),
-    packagePath: runtimePackagePath,
+    entryPath: join(canonicalPackagePath, entryRelativePath),
+    packagePath: canonicalPackagePath,
   };
 };
 
@@ -228,7 +209,7 @@ const remapRuntimePackageAssets = (value: unknown, runtimePackagePath: string, p
 const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
   const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
   const entryPath = isPackagedRuntime()
-    ? await bundleEntry(filePath, packagePath, dirname(runtimePackage.entryPath))
+    ? await bundleEntry(runtimePackage.entryPath, runtimePackage.packagePath, dirname(runtimePackage.entryPath))
     : runtimePackage.entryPath;
   const mod = await importWithCacheKey(entryPath);
   return remapRuntimePackageAssets(mod, runtimePackage.packagePath, packagePath);

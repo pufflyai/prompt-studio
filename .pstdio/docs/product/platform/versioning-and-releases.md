@@ -56,6 +56,9 @@ The release path is:
 1. Run `bun changeset` when a publishable workspace package changes.
 2. Commit the generated `.changeset/*.md` file with the PR.
 3. On push to `main`, `.github/workflows/release-packages.yml` runs `changesets/action`.
+   When `packages/pstdio/package.json` holds a version that npm does not have yet,
+   the workflow first verifies the compiled CLI on native Linux, Intel macOS, and
+   Windows runners. Other commits skip these native checks.
 4. The action either opens or updates the version PR, or publishes packages through `bun run release`.
 5. When packages publish successfully, the workflow creates GitHub releases for each published `<name>@<version>` tag.
 6. A published `pstdio` package holds its GitHub release in draft while the native

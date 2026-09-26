@@ -1,0 +1,18 @@
+name: Set up Windows desktop tests
+description: Install the signed Microsoft process suspension tool used by recovery tests
+runs:
+  using: composite
+  steps:
+    - name: Install Windows process suspension test tool
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $tools = Join-Path $env:RUNNER_TEMP "pstools"
+        $archive = Join-Path $env:RUNNER_TEMP "PSTools.zip"
+        Invoke-WebRequest https://download.sysinternals.com/files/PSTools.zip -OutFile $archive
+        Expand-Archive $archive -DestinationPath $tools
+        $signature = Get-AuthenticodeSignature (Join-Path $tools "pssuspend64.exe")
+        if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "CN=Microsoft Corporation,") {
+          throw "PsSuspend must have a valid Microsoft signature"
+        }
+        $tools >> $env:GITHUB_PATH

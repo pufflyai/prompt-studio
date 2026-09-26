@@ -226,6 +226,7 @@ export type {
 } from "./core";
 
 export {
+  batchWorkbenchChanges,
   createStatusBarRegistry,
   createStatusRegistry,
   createViewRegistry,

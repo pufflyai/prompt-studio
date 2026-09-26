@@ -1,11 +1,29 @@
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
-import { findRolloutPath, normalizeRollout } from "./rollout";
+import { codexSessionsRoot, findRolloutPath, normalizeRollout } from "./rollout";
 
 const fixture = readFileSync(new URL("./mocks/rollout.jsonl", import.meta.url), "utf8");
+
+test("finds native user sessions when HOME is absent", () => {
+  const originalHome = process.env.HOME;
+  const originalCodexHome = process.env.CODEX_HOME;
+  delete process.env.HOME;
+  delete process.env.CODEX_HOME;
+  try {
+    expect(codexSessionsRoot()).toBe(join(homedir(), ".codex", "sessions"));
+    const configuredHome = join(tmpdir(), "custom-codex-home");
+    process.env.CODEX_HOME = configuredHome;
+    expect(codexSessionsRoot()).toBe(join(configuredHome, "sessions"));
+  } finally {
+    if (originalHome === undefined) delete process.env.HOME;
+    else process.env.HOME = originalHome;
+    if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = originalCodexHome;
+  }
+});
 
 describe("normalizeRollout", () => {
   let messages: SessionMessage[];

@@ -1,0 +1,215 @@
+import { Icon as ChakraIcon, chakra, IconButton, Menu, Portal, Text } from "@chakra-ui/react";
+import type { CellContext, HeaderContext } from "@tanstack/react-table";
+import { Check, ChevronDown, CircleHelp, Minus } from "lucide-react";
+import { type CSSProperties, cloneElement, isValidElement, type ReactNode } from "react";
+
+import { Checkbox } from "@/components/primitives/checkbox";
+import { Tooltip } from "@/components/primitives/tooltip";
+import { ListRow } from "../list-row/list-row";
+import { CategoricalColorCell, resolveCategoricalColor } from "./categorical-color-cell";
+import { ColorScaleCell, resolveColorScaleValue } from "./color-scale-cell";
+import type { DataTableColumnMeta } from "./data-table-column-meta";
+import { formatDisplayValue } from "./helpers";
+import { JsonCell } from "./json-cell";
+import type { DataTableColumnRenderer, DataTableRowAction, RowData } from "./types";
+
+const toSingleLineElement = (element: ReactNode) => {
+  if (!isValidElement<{ style?: CSSProperties }>(element)) return element;
+
+  return cloneElement(element, {
+    style: {
+      ...element.props.style,
+      flexWrap: "nowrap",
+      minWidth: 0,
+      whiteSpace: "nowrap",
+    },
+  });
+};
+
+const stopControlPropagation = (event: { stopPropagation: () => void }) => {
+  event.stopPropagation();
+};
+
+export const SelectionHeader = (props: HeaderContext<RowData, unknown>) => {
+  const { table } = props;
+  const checked = table.getIsAllRowsSelected();
+  const isIndeterminate = !checked && table.getIsSomeRowsSelected();
+
+  return (
+    <Checkbox
+      checked={checked ? true : isIndeterminate ? "indeterminate" : false}
+      aria-label="Select all"
+      icon={<ChakraIcon as={isIndeterminate ? Minus : Check} boxSize="12px" strokeWidth="3" />}
+      onClick={stopControlPropagation}
+      onCheckedChange={(details) => table.toggleAllRowsSelected(details.checked === true)}
+    />
+  );
+};
+
+export const SelectionCell = (props: CellContext<RowData, unknown>) => {
+  const { row, column } = props;
+  const { selectedRowIds } = column.columnDef.meta as DataTableColumnMeta;
+
+  return (
+    <Checkbox
+      checked={Boolean(selectedRowIds?.[row.id])}
+      aria-label="Select row"
+      icon={<ChakraIcon as={Check} boxSize="12px" strokeWidth="3" />}
+      onClick={stopControlPropagation}
+      onCheckedChange={(details) => row.toggleSelected(details.checked === true)}
+    />
+  );
+};
+
+const mergeRowActions = (rowActions: DataTableRowAction[], dynamicActions: DataTableRowAction[]) => {
+  const dynamicLabels = new Set(dynamicActions.map((action) => action.label));
+  return [...dynamicActions, ...rowActions.filter((action) => !dynamicLabels.has(action.label))];
+};
+
+export const RowActionsCell = (props: CellContext<RowData, unknown>) => {
+  const { row, column } = props;
+  const { rowActions: actions = [], getRowActions: getActions } = column.columnDef.meta as DataTableColumnMeta;
+  const resolvedActions = mergeRowActions(actions, getActions?.(row.original) ?? []);
+
+  if (resolvedActions.length === 0) return null;
+
+  return (
+    <Menu.Root>
+      <Menu.Trigger asChild>
+        <IconButton aria-label="Row actions" size="2xs" variant="ghost" onClick={stopControlPropagation}>
+          <ChakraIcon as={ChevronDown} boxSize="14px" />
+        </IconButton>
+      </Menu.Trigger>
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content zIndex="popover" bg="bg">
+            {resolvedActions.map((action) => (
+              <Menu.Item key={action.label} value={action.label} asChild>
+                <ListRow
+                  asChild
+                  variant="full-width"
+                  tone={action.destructive ? "danger" : "default"}
+                  label={action.label}
+                  icon={action.icon}
+                  onClick={stopControlPropagation}
+                  onActivate={() => action.onSelect(row.original)}
+                />
+              </Menu.Item>
+            ))}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
+  );
+};
+
+interface FormattedCellProps {
+  value: unknown;
+  wrapRows: boolean;
+}
+
+const FormattedCell = (props: FormattedCellProps) => {
+  const { value, wrapRows } = props;
+  const displayValue = formatDisplayValue(value);
+
+  if (isValidElement(displayValue)) {
+    return (
+      <chakra.span
+        display="inline-flex"
+        maxWidth="full"
+        minW="0"
+        overflow={wrapRows ? "visible" : "hidden"}
+        overflowWrap={wrapRows ? "anywhere" : undefined}
+        whiteSpace={wrapRows ? "normal" : "nowrap"}
+      >
+        {wrapRows ? displayValue : toSingleLineElement(displayValue)}
+      </chakra.span>
+    );
+  }
+
+  return (
+    <Text
+      maxWidth="full"
+      overflow={wrapRows ? "visible" : "hidden"}
+      overflowWrap={wrapRows ? "anywhere" : undefined}
+      textOverflow={wrapRows ? undefined : "ellipsis"}
+      textStyle="paragraph/S/regular"
+      whiteSpace={wrapRows ? "normal" : "nowrap"}
+    >
+      {displayValue}
+    </Text>
+  );
+};
+
+interface DataCellProps {
+  columnLabel: string;
+  renderer?: DataTableColumnRenderer;
+  value: unknown;
+  wrapRows: boolean;
+}
+
+const DataCell = (props: DataCellProps) => {
+  const { columnLabel, renderer, value, wrapRows } = props;
+
+  if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} />;
+
+  if (renderer?.type === "color-scale") {
+    const color = resolveColorScaleValue(value, renderer.stops);
+    if (color && typeof value === "number") return <ColorScaleCell value={value} />;
+  }
+
+  if (renderer?.type === "categorical-color") {
+    const color = resolveCategoricalColor(value, renderer.categories);
+    if (color) {
+      return (
+        <CategoricalColorCell>
+          <FormattedCell value={value} wrapRows={wrapRows} />
+        </CategoricalColorCell>
+      );
+    }
+  }
+
+  return <FormattedCell value={value} wrapRows={wrapRows} />;
+};
+
+export const RowIndexCell = (props: CellContext<RowData, number>) => {
+  const { getValue } = props;
+  return (
+    <chakra.span display="block" textStyle="paragraph/S/regular" textAlign="center">
+      {getValue()}
+    </chakra.span>
+  );
+};
+
+export const ColumnDataCell = (props: CellContext<RowData, unknown>) => {
+  const { column, getValue } = props;
+  const { renderer, wrapRows = false } = column.columnDef.meta as DataTableColumnMeta;
+  return <DataCell columnLabel={column.id} renderer={renderer} value={getValue()} wrapRows={wrapRows} />;
+};
+
+export const ColumnHeader = (props: HeaderContext<RowData, unknown>) => {
+  const { column } = props;
+  const { headerLabel, headerIcon, columnDescription } = column.columnDef.meta as DataTableColumnMeta;
+  return (
+    <chakra.span display="inline-flex" alignItems="center" gap="4px" minW="0" maxW="full" overflow="hidden">
+      {headerIcon}
+      <chakra.span overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+        {headerLabel}
+      </chakra.span>
+      {columnDescription ? (
+        <Tooltip content={columnDescription}>
+          <ChakraIcon
+            as={CircleHelp}
+            aria-label={`About ${headerLabel}`}
+            boxSize="12px"
+            color="fg.muted"
+            cursor="help"
+            flexShrink={0}
+            opacity={0.6}
+            tabIndex={0}
+          />
+        </Tooltip>
+      ) : null}
+    </chakra.span>
+  );
+};

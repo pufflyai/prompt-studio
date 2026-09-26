@@ -75,6 +75,7 @@ export {
   validateCommandParams,
 } from "./runtime";
 export { collectConventionDiagnostics } from "./runtime/conventions";
+export { mirrorNodeModules } from "./runtime/mirror-node-modules";
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
 export { workbenchIconNames } from "./runtime/workbench-icon-names";
 

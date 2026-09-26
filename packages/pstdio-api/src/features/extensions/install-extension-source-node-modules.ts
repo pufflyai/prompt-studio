@@ -1,7 +1,6 @@
 import {
   cpSync,
   existsSync,
-  lstatSync,
   readdirSync,
   readFileSync,
   readlinkSync,
@@ -11,6 +10,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { mirrorNodeModules } from "pstdio-extensions";
 
 const dependencyPath = (nodeModulesPath: string, dependencyName: string) =>
   dependencyName.startsWith("@")
@@ -61,7 +61,7 @@ export const linkUsableNodeModules = (sourcePath: string, targetPath: string) =>
   const targetNodeModules = join(targetPath, "node_modules");
   if (!sourceNodeModules || existsSync(targetNodeModules)) return;
 
-  symlinkSync(sourceNodeModules, targetNodeModules, lstatSync(sourceNodeModules).isDirectory() ? "junction" : "file");
+  mirrorNodeModules(sourceNodeModules, targetNodeModules);
 };
 
 const rebaseCopiedLink = (copied: string, source: string, target: string) => {
