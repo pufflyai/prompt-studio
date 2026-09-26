@@ -3,6 +3,8 @@ import type {
   AgentCapability,
   HarnessMessagesInput,
   HarnessReattachInput,
+  HarnessRecoveryInput,
+  HarnessRecoveryResult,
   HarnessResumeInput,
   HarnessSession,
   HarnessStartInput,
@@ -29,6 +31,8 @@ export type {
   HarnessParams,
   HarnessParamValue,
   HarnessReattachInput,
+  HarnessRecoveryInput,
+  HarnessRecoveryResult,
   HarnessResumeInput,
   HarnessSession,
   HarnessStartInput,
@@ -117,4 +121,5 @@ export interface HarnessProvider extends ContributionDefinition<"harness"> {
   /** Re-bind after a host restart. Throw a `RetryableHarnessReattachError` only when another attempt may succeed. */
   reattach?(ctx: HarnessContext, input: HarnessReattachInput): MaybePromise<HarnessSession>;
   getMessages?(ctx: HarnessContext, input: HarnessMessagesInput): MaybePromise<SessionMessage[]>;
+  recoverMessages?(ctx: HarnessContext, input: HarnessRecoveryInput): MaybePromise<HarnessRecoveryResult>;
 }

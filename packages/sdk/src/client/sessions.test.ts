@@ -99,7 +99,11 @@ describe("session stream client", () => {
         auth: new Headers(init?.headers).get("authorization"),
         signal: init?.signal ?? null,
       });
-      return Promise.resolve(createSseResponse(['event: ready\ndata: {"sessionId":"s_1"}\n\n']));
+      return Promise.resolve(
+        createSseResponse([
+          'event: ready\ndata: {"sessionId":"s_1"}\n\nevent: queued_messages\ndata: {"messages":[]}\n\n',
+        ]),
+      );
     }) as unknown as typeof fetch;
     const client = createClient({
       baseUrl: "http://test:1234",
@@ -111,6 +115,10 @@ describe("session stream client", () => {
       "s_1",
       {
         onReady: () => events.push("ready"),
+        onQueuedMessages: (data) => {
+          expect(data).toEqual({ messages: [] });
+          events.push("queued_messages");
+        },
       },
       { attempt: 2 },
     );
@@ -126,6 +134,6 @@ describe("session stream client", () => {
       },
     ]);
     expect(calls[0]!.signal).toBeInstanceOf(AbortSignal);
-    expect(events).toEqual(["ready"]);
+    expect(events).toEqual(["ready", "queued_messages"]);
   });
 });
