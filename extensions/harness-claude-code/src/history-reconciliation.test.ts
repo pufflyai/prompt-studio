@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
+import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { createMessageAccumulator } from "./message-accumulator";
 import { normalizeClaudeCodeStream } from "./normalize-stream";
@@ -13,15 +13,14 @@ test("actual Claude transcript tool results merge with live normalization and re
     .map((line) => JSON.parse(line) as ClaudeCodeTranscriptEntry);
   const nativeMessages = normalizeClaudeCodeMessages(entries);
   const knownMessages: SessionMessage[] = [];
-  const sink = {
+  const accumulator = createMessageAccumulator({
     getMessages: () => knownMessages,
-    push: (patch: JsonPatch) => {
+    push: (patch) => {
       const index = Number(patch.path.split("/").at(-1));
       if (patch.op === "add") knownMessages.splice(index, 0, patch.value as SessionMessage);
       else knownMessages[index] = patch.value as SessionMessage;
     },
-  };
-  const accumulator = createMessageAccumulator(sink);
+  });
   async function* stream(): AsyncIterable<RawLogEvent> {
     for (const entry of entries) {
       yield {
