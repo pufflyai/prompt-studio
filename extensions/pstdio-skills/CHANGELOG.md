@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.4.5
+
+_2026-09-26_
+
+### Patch Changes
+
+- e5e9c17: Document durable automation for extension authors.
+
 ## 0.4.4
 
 _2026-09-25_
