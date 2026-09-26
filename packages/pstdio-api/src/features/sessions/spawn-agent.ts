@@ -1,13 +1,8 @@
-import type {
-  ApprovalRequest,
-  HarnessAttachment,
-  HarnessParams,
-  HarnessSession,
-  QuestionResponse,
-} from "pstdio-api-contracts";
+import type { HarnessAttachment, HarnessParams, HarnessSession, QuestionResponse } from "pstdio-api-contracts";
 import { sessionLogger } from "../../lib/logger";
 import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
 import type { SessionsRouteDeps } from "./deps";
+import { initializeConversation } from "./initialize-conversation";
 import {
   bindSessionCancellation,
   rejectPersistedSessionCancellation,
@@ -53,13 +48,6 @@ const resolveHarness = async (deps: SpawnDeps, agentId: string, projectId?: stri
     throw new Error(`Harness not enabled for this project: ${agentId}`);
   }
   throw new Error(`Harness not found: ${agentId}`);
-};
-
-const createStoreEntry = (deps: SpawnDeps, sessionId: string) => {
-  const entry = deps.sessionService.store.create(sessionId, (request: ApprovalRequest) => {
-    entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
-  });
-  return entry;
 };
 
 const markSubmittedAttachments = (
@@ -121,12 +109,21 @@ const resolveHarnessWorkspace = async (
 // Spawns a new harness session and tracks its lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   input.signal?.throwIfAborted();
-  const harness = await resolveHarness(deps, input.agentId, input.projectId);
-  input.signal?.throwIfAborted();
-  const entry = createStoreEntry(deps, input.sessionId);
+  let harness!: Awaited<ReturnType<typeof resolveHarness>>;
+  let workspace: Awaited<ReturnType<typeof resolveHarnessWorkspace>>;
+  const entry = initializeConversation(
+    input.sessionId,
+    deps,
+    async () => {
+      harness = await resolveHarness(deps, input.agentId, input.projectId);
+      input.signal?.throwIfAborted();
+      workspace = await resolveHarnessWorkspace(deps, input, harness);
+    },
+    input.signal,
+  );
   markSubmittedAttachments(entry, input.attachments);
 
-  const workspace = await resolveHarnessWorkspace(deps, input, harness);
+  const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();
 
   const session = await harness.start(
@@ -136,29 +133,36 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
       model: input.model,
       params: input.params,
       cwd: input.cwd,
-      workspace,
+      workspace: workspace!,
       sessionId: input.sessionId,
-      events: entry.eventStore,
+      events: conversation,
       signal: input.signal,
     },
     { projectId: input.projectId },
   );
-  const throwIfCancelled = await bindSessionCancellation(input.signal, session, deps, input.sessionId);
+  const throwIfCancelled = await bindSessionCancellation(input.signal, session, deps, input.sessionId, entry);
 
   if (session.agentSessionId) {
     await deps.sessionService.update(input.sessionId, { agent_session_id: session.agentSessionId });
   }
   await throwIfCancelled();
-  await rejectPersistedSessionCancellation(session, deps, input.sessionId);
+  await rejectPersistedSessionCancellation(session, deps, input.sessionId, entry);
   await throwIfCancelled();
 
-  if (!deps.sessionService.store.setSession(input.sessionId, session)) {
-    await rejectStoreSessionCancellation(session, deps, input.sessionId);
+  if (!deps.sessionService.store.setSession(input.sessionId, session, entry)) {
+    await rejectStoreSessionCancellation(session, deps, input.sessionId, entry);
   }
-  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
-    submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
-    submittedQueuePosition: input.submittedQueuePosition,
-  });
+  trackHarnessSession(
+    input.sessionId,
+    session,
+    entry.eventStore.subscribe(),
+    deps,
+    {
+      submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
+      submittedQueuePosition: input.submittedQueuePosition,
+    },
+    entry,
+  );
 
   return session;
 };
@@ -173,7 +177,6 @@ type ResumeInput = {
   model?: string;
   params?: HarnessParams;
   cwd?: string;
-  messageOffset?: number;
   questionResponse?: QuestionResponse;
   submittedQueuePosition?: number;
   signal?: AbortSignal;
@@ -182,27 +185,22 @@ type ResumeInput = {
 // Resumes an existing harness session with a follow-up prompt
 export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) => {
   input.signal?.throwIfAborted();
-  const harness = await resolveHarness(deps, input.agentId, input.projectId);
-  input.signal?.throwIfAborted();
-  const entry = createStoreEntry(deps, input.sessionId);
+  let harness!: Awaited<ReturnType<typeof resolveHarness>>;
+  let workspace: Awaited<ReturnType<typeof resolveHarnessWorkspace>>;
+  const entry = initializeConversation(
+    input.sessionId,
+    deps,
+    async () => {
+      harness = await resolveHarness(deps, input.agentId, input.projectId);
+      input.signal?.throwIfAborted();
+      workspace = await resolveHarnessWorkspace(deps, input, harness);
+    },
+    input.signal,
+  );
   markSubmittedAttachments(entry, input.attachments);
 
-  const workspace = await resolveHarnessWorkspace(deps, input, harness);
+  const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();
-
-  // Resume streams emit index-based message patches, so we align indices with existing history.
-  let messageOffset = input.messageOffset;
-  if (messageOffset === undefined) {
-    try {
-      const messages = await harness.getMessages(
-        { agentSessionId: input.agentSessionId, cwd: input.cwd, workspace },
-        { projectId: input.projectId },
-      );
-      messageOffset = messages.length;
-    } catch {
-      messageOffset = 0;
-    }
-  }
 
   const session = await harness.resume(
     {
@@ -212,28 +210,35 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
       model: input.model,
       params: input.params,
       cwd: input.cwd,
-      workspace,
+      workspace: workspace!,
       sessionId: input.sessionId,
-      events: entry.eventStore,
-      messageOffset,
+      events: conversation,
+      messageOffset: conversation.getMessages().length,
       questionResponse: input.questionResponse,
       approvals: entry.approvalService,
       signal: input.signal,
     },
     { projectId: input.projectId },
   );
-  const throwIfCancelled = await bindSessionCancellation(input.signal, session, deps, input.sessionId);
+  const throwIfCancelled = await bindSessionCancellation(input.signal, session, deps, input.sessionId, entry);
   await throwIfCancelled();
-  await rejectPersistedSessionCancellation(session, deps, input.sessionId);
+  await rejectPersistedSessionCancellation(session, deps, input.sessionId, entry);
   await throwIfCancelled();
 
-  if (!deps.sessionService.store.setSession(input.sessionId, session)) {
-    await rejectStoreSessionCancellation(session, deps, input.sessionId);
+  if (!deps.sessionService.store.setSession(input.sessionId, session, entry)) {
+    await rejectStoreSessionCancellation(session, deps, input.sessionId, entry);
   }
-  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
-    submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
-    submittedQueuePosition: input.submittedQueuePosition,
-  });
+  trackHarnessSession(
+    input.sessionId,
+    session,
+    entry.eventStore.subscribe(),
+    deps,
+    {
+      submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
+      submittedQueuePosition: input.submittedQueuePosition,
+    },
+    entry,
+  );
 
   return session;
 };
@@ -286,22 +291,30 @@ const waitForHarnessReattach = (task: Promise<HarnessSession>, sessionId: string
 // Reattaches to a harness session that was orphaned (e.g. by a server restart)
 export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps) => {
   input.signal?.throwIfAborted();
-  const harness = await resolveHarness(deps, input.agentId, input.projectId);
-  if (!harness.supportsReattach) throw new Error(`Harness does not support reattach: ${input.agentId}`);
-
-  const entry = createStoreEntry(deps, input.sessionId);
-
-  const workspace = await resolveHarnessWorkspace(deps, input, harness);
+  let harness!: Awaited<ReturnType<typeof resolveHarness>>;
+  let workspace: Awaited<ReturnType<typeof resolveHarnessWorkspace>>;
+  const entry = initializeConversation(
+    input.sessionId,
+    deps,
+    async () => {
+      harness = await resolveHarness(deps, input.agentId, input.projectId);
+      input.signal?.throwIfAborted();
+      workspace = await resolveHarnessWorkspace(deps, input, harness);
+    },
+    input.signal,
+  );
+  const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();
 
+  if (!harness.supportsReattach) throw new Error(`Harness does not support reattach: ${input.agentId}`);
   const session = await waitForHarnessReattach(
     harness.reattach(
       {
         sessionId: input.sessionId,
         agentSessionId: input.agentSessionId,
         cwd: input.cwd,
-        workspace,
-        events: entry.eventStore,
+        workspace: workspace!,
+        events: conversation,
         signal: input.signal,
       },
       { projectId: input.projectId },
@@ -314,11 +327,20 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
     input.signal.throwIfAborted();
   }
 
-  deps.sessionService.store.setSession(input.sessionId, session);
-  trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
-    submittedAttachmentFileIds: input.submittedAttachmentFileIds ?? [],
-    submittedQueuePosition: input.submittedQueuePosition,
-  });
+  if (!deps.sessionService.store.setSession(input.sessionId, session, entry)) {
+    await rejectStoreSessionCancellation(session, deps, input.sessionId, entry);
+  }
+  trackHarnessSession(
+    input.sessionId,
+    session,
+    entry.eventStore.subscribe(),
+    deps,
+    {
+      submittedAttachmentFileIds: input.submittedAttachmentFileIds ?? [],
+      submittedQueuePosition: input.submittedQueuePosition,
+    },
+    entry,
+  );
 
   return session;
 };

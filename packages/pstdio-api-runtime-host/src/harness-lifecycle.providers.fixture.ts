@@ -17,7 +17,7 @@ const input = {
   agentSessionId: "quiet-thread",
   prompt: "finish quiet work",
   cwd: directory,
-  events,
+  events: { push: events.push, getMessages: () => [] },
 };
 const session = await record.provider[operation as "start" | "resume"](context, input);
 let deadline: ReturnType<typeof setTimeout> | undefined;

@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { HarnessSession } from "pstdio-api-contracts";
-import { createEventStore } from "pstdio-api-runtime-host";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { createSessionStore } from "./session-store";
+import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
@@ -13,16 +13,7 @@ const createSessionServiceMock = () => ({
   get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "cancelled" })),
   update: mock(async () => null),
   transitionStatus: mock(async () => null),
-  store: {
-    create: mock(() => ({
-      eventStore: createEventStore(),
-      approvalService: { handleResponse: () => {}, dispose: () => {} },
-      submittedAttachmentFileIds: new Set<string>(),
-    })),
-    get: mock(() => null),
-    setSession: mock(() => {}),
-    remove: mock(() => {}),
-  },
+  store: createTrackedSessionStore(),
 });
 
 const depsFor = (
@@ -32,6 +23,7 @@ const depsFor = (
   ({
     harnessRegistry: registry,
     sessionService,
+    fileService: checkpointFileService,
     eventBus: { emit: () => {} },
     workspaceSessionService: readyWorkspaceSession,
   }) as unknown as Parameters<typeof spawnAgentSession>[1];
@@ -89,7 +81,7 @@ describe("persisted session cancellation", () => {
     expect(sessionService.store.setSession).not.toHaveBeenCalled();
   });
 
-  test("lets a cancellation marker win after the database status snapshot was read", async () => {
+  test("a cancellation during history initialization prevents the harness from starting", async () => {
     const statusSnapshotRead = Promise.withResolvers<void>();
     const releaseStatusRead = Promise.withResolvers<void>();
     const stop = mock(async () => {});
@@ -116,7 +108,7 @@ describe("persisted session cancellation", () => {
     releaseStatusRead.resolve();
 
     await expect(spawning).rejects.toThrow("cancelled");
-    expect(stop).toHaveBeenCalledTimes(1);
+    expect(start).not.toHaveBeenCalled();
     expect(store.get("session_1")).toBeNull();
   });
 });

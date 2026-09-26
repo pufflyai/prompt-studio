@@ -68,7 +68,7 @@ describe("project-scoped session harness reads", () => {
     expect(get).toHaveBeenCalledTimes(1);
     expect(get).toHaveBeenCalledWith(AGENT_ID, { projectId: PROJECT_ID });
     expect(reattach).not.toHaveBeenCalled();
-    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected", expect.anything());
   });
 
   test("queue recovery restores claimed work without consulting orphan reattach capabilities", async () => {

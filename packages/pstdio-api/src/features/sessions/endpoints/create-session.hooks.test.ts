@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createEventStore } from "pstdio-api-runtime-host";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
+import { createTrackedSessionStore } from "../session-store.test-utils";
 import { createSessionHandler } from "./create-session";
 
 const FAKE_ID = testHarnessId("fake");
@@ -29,11 +29,6 @@ const createContext = (body: {
     response,
   };
 };
-
-const createStoreEntry = () => ({
-  eventStore: createEventStore(),
-  approvalService: { handleResponse: () => {}, dispose: () => {} },
-});
 
 const extensionSettingsDBService = {
   getValue: async () => null,
@@ -65,16 +60,11 @@ describe("createSessionHandler hooks", () => {
       },
       sessionService: {
         create: sessionCreate,
-        get: async () => null,
+        get: async () => ({ id: "session-1", project_id: "project-1", status: "in_progress", agent: FAKE_ID }),
         countActive: mock(async () => 0),
         update: mock(async () => null),
         transitionStatus: mock(async () => null),
-        store: {
-          create: mock(() => createStoreEntry()),
-          get: mock(() => null),
-          setSession: mock(() => true),
-          remove: mock(() => {}),
-        },
+        store: createTrackedSessionStore(),
       },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
@@ -153,12 +143,7 @@ describe("createSessionHandler hooks", () => {
         create: sessionCreate,
         countActive: mock(async () => 0),
         transitionStatus: mock(async () => null),
-        store: {
-          create: mock(() => createStoreEntry()),
-          get: mock(() => null),
-          setSession: mock(() => true),
-          remove: mock(() => {}),
-        },
+        store: createTrackedSessionStore(),
       },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
@@ -219,12 +204,7 @@ describe("createSessionHandler hooks", () => {
         create: sessionCreate,
         countActive: mock(async () => 0),
         transitionStatus,
-        store: {
-          create: mock(() => createStoreEntry()),
-          get: mock(() => null),
-          setSession: mock(() => true),
-          remove: mock(() => {}),
-        },
+        store: createTrackedSessionStore(),
       },
       settingsService: {
         get: async () => ({ max_concurrent_sessions: null }),
@@ -263,6 +243,6 @@ describe("createSessionHandler hooks", () => {
       await Bun.sleep(10);
     }
 
-    expect(transitionStatus).toHaveBeenCalledWith("session-1", "failed");
+    expect(transitionStatus).toHaveBeenCalledWith("session-1", "failed", expect.anything());
   });
 });

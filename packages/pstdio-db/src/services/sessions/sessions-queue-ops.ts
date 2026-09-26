@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
+import { nextSessionRunStart } from "./session-run-start";
 
 class QueueClaimFailed extends Error {}
 
@@ -14,7 +15,12 @@ export const claimQueuedForDispatch = async (db: DbClient, id: string, queuePosi
       const timestamp = nowTimestamp();
       const [updated] = await tx
         .update(sessions)
-        .set({ status: "in_progress", last_request_started: timestamp, updated_at: timestamp })
+        .set({
+          status: "in_progress",
+          last_request_started: nextSessionRunStart(timestamp),
+          last_request_ended: null,
+          updated_at: timestamp,
+        })
         .where(and(eq(sessions.id, id), eq(sessions.status, "queued")))
         .returning();
 
@@ -56,7 +62,7 @@ export const recoverQueuedDispatchClaim = async (db: DbClient, id: string, queue
 
     const [updated] = await tx
       .update(sessions)
-      .set({ status: "queued", last_request_started: null, updated_at: timestamp })
+      .set({ status: "queued", updated_at: timestamp })
       .where(and(eq(sessions.id, id), eq(sessions.status, "in_progress")))
       .returning();
 

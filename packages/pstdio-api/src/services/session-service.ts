@@ -1,9 +1,10 @@
-import type { createSessionQueueEntriesDBService, createSessionsDBService } from "pstdio-db";
+import type { createSessionsDBService } from "pstdio-db";
 import { createSessionStore } from "../features/sessions/session-store";
 import type { EventBus } from "../features/sync/event-bus";
 import { apiLogger } from "../lib/logger";
+import { releasesCapacity, type TransitionStatusOptions, writeSessionTransition } from "./session-status-transition";
 
-type SessionStatus =
+export type SessionStatus =
   | "in_progress"
   | "awaiting_input"
   | "queued"
@@ -19,7 +20,6 @@ export type CapacityAvailableInput = { releasedSessionId?: string };
 
 export type SessionServiceDeps = {
   sessionsDb: ReturnType<typeof createSessionsDBService>;
-  sessionQueueEntriesService?: ReturnType<typeof createSessionQueueEntriesDBService>;
   eventBus: EventBus;
   onSessionStarted?: (session: HookSessionRecord) => void;
   onSessionStatusChanged?: (session: HookSessionRecord) => void;
@@ -34,13 +34,6 @@ type CreateSessionOptions = {
 type ResumeSessionOptions = {
   emitResumedHook?: boolean;
 };
-
-type TransitionStatusOptions = {
-  drainCapacity?: boolean;
-};
-
-const releasesCapacity = (status: SessionStatus) =>
-  status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
 
 export const createSessionService = (deps: SessionServiceDeps) => {
   const raw = deps.sessionsDb;
@@ -85,7 +78,11 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     const entry = store.markCancellationRequested(id);
     await entry?.session?.stop();
 
-    const updated = await transitionStatus(id, "cancelled");
+    const owner = store.get(id);
+    if (owner && owner !== entry) return null;
+    const updated = await transitionStatus(id, "cancelled", {
+      expectedLastRequestStarted: existing?.last_request_started ?? null,
+    });
     if (updated) {
       entry?.eventStore.push({ op: "replace", path: "/status", value: "cancelled" });
     }
@@ -157,7 +154,9 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   };
 
   const insertEntryForActive = async (input: Parameters<typeof raw.insertEntryForActive>[0]) => {
-    return raw.insertEntryForActive(input);
+    const entry = await raw.insertEntryForActive(input);
+    if (entry) await update(input.id, {});
+    return entry;
   };
 
   const claimQueuedForDispatch = async (id: string, queuePosition: number) => {
@@ -219,21 +218,12 @@ export const createSessionService = (deps: SessionServiceDeps) => {
       throw new Error("Queued status is scheduler-owned and requires a queue entry");
     }
 
-    if (releasesCapacity(status)) {
-      // Drop pending follow-ups when:
-      //   - status === "cancelled": running queued work against a cancelled session is wrong.
-      //   - the session was "queued": a direct terminal transition (e.g. manual PATCH) would
-      //     otherwise leave the queue entry orphaned, since cancelQueued only covers cancel().
-      if (status === "cancelled" || (await raw.get(id))?.status === "queued") {
-        await deps.sessionQueueEntriesService?.removeBySession(id);
-      }
-    }
-
-    const updated = await raw.updateStatus(id, status);
+    const updated = await writeSessionTransition(deps, store, id, status, options);
     if (!updated) {
       logNoOpSet("transitionStatus", id);
       return null;
     }
+    if (options.expectedOwner !== undefined && store.get(id) !== options.expectedOwner) return updated;
 
     deps.eventBus.emit("sessions", "set", updated);
     emitStatusChanged(updated);

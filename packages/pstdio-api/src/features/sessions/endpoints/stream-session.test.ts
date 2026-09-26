@@ -136,7 +136,7 @@ const createSSEReader = (response: Response) => {
 
       for (const block of blocks) {
         const parsed = parseSSEBlock(block);
-        if (parsed) events.push(parsed);
+        if (parsed && parsed.event !== "queued_messages") events.push(parsed);
       }
     }
 
@@ -204,14 +204,14 @@ const createResumeOverlapRecord = () =>
       resume: (_ctx, input) => {
         input.events.push({
           op: "add",
-          path: "/messages/0",
+          path: `/messages/${input.messageOffset ?? 0}`,
           value: { id: "m3", role: "user", parts: [{ type: "text", text: "SECOND" }] },
         });
 
         setTimeout(() => {
           input.events.push({
             op: "add",
-            path: "/messages/1",
+            path: `/messages/${(input.messageOffset ?? 0) + 1}`,
             value: { id: "m4", role: "assistant", parts: [{ type: "text", text: "SECOND DONE" }] },
           });
         }, 50);
@@ -223,6 +223,15 @@ const createResumeOverlapRecord = () =>
       },
     },
   });
+
+const waitForMessages = async (app: OpenAPIHono<AppBindings>, id: string, count: number) => {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const res = await app.request(`/v1/sessions/${id}/conversation`);
+    if ((await res.json()).messages.length >= count) return;
+    await Bun.sleep(10);
+  }
+  throw new Error("Expected initial messages before connecting");
+};
 
 const getPatchTextParts = (patch: JsonPatch) => {
   if (!Array.isArray(patch.value)) {
@@ -344,7 +353,7 @@ describe("GET /v1/sessions/:id/stream", () => {
     expect(streamRes.status).toBe(200);
 
     const sse = createSSEReader(streamRes);
-    const events = await sse.readEvents(2);
+    const events = await sse.readEvents(3);
     sse.close();
 
     expect(events.map((event) => event.event)).toContain("ready");
@@ -413,6 +422,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     });
     const session = await createRes.json();
 
+    await waitForMessages(replayApp, session.id, 2);
     const streamRes = await replayApp.request(`/v1/sessions/${session.id}/stream`);
     expect(streamRes.status).toBe(200);
 
@@ -441,7 +451,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     rmSync(replayRoot, { recursive: true, force: true });
   });
 
-  test("shifts overlapping live indexed patches after the initial snapshot", async () => {
+  test("preserves native-unavailable resume offsets after the initial snapshot", async () => {
     const overlapRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-overlap-test-"));
     const {
       app: overlapApp,
@@ -480,6 +490,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     });
     expect(followUpRes.status).toBe(200);
 
+    await waitForMessages(overlapApp, session.id, 3);
     const streamRes = await overlapApp.request(`/v1/sessions/${session.id}/stream`);
     expect(streamRes.status).toBe(200);
 

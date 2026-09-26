@@ -3,8 +3,8 @@ import type { WorkbenchModuleContext, WorkbenchPanelInstance, WorkbenchWidgetTab
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardSessions, resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
+import { subscribeSessionListData } from "../data/session-data-subscription";
 
 const maxSessionsInMenu = 5;
 const sessionStatusIcon = (status: SessionCompletionStatus | undefined) => {
@@ -56,7 +56,7 @@ const resolveWorkspace = (ctx: WorkbenchModuleContext, instance: WorkbenchPanelI
   });
 };
 export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): WorkbenchWidgetTab => ({
-  subscribe: subscribeDashboardData,
+  subscribe: subscribeSessionListData,
   getSnapshot(instance) {
     const projectIdValue = ctx.context.get(dashboardSelectedProjectIdContextKey);
     const projectId = typeof projectIdValue === "string" ? projectIdValue : undefined;

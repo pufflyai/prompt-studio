@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { EventStore, HarnessExit, TimeoutStrategy } from "pstdio-api-contracts";
-import { createEventStore } from "pstdio-api-runtime-host";
+import type { HarnessExit, TimeoutStrategy } from "pstdio-api-contracts";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { createTrackedSessionStore } from "./session-store.test-utils";
 import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
@@ -30,9 +30,9 @@ const createRegistry = (
 };
 
 const createDeps = (
-  eventStore: EventStore & { close(): void },
+  store: ReturnType<typeof createTrackedSessionStore>,
   transitionStatus: ReturnType<typeof mock>,
-  remove: ReturnType<typeof mock>,
+  _remove: ReturnType<typeof mock>,
   options: {
     registry: ReturnType<typeof createTestHarnessRegistry>;
     processExitTimeoutMs?: number;
@@ -49,21 +49,10 @@ const createDeps = (
       update: async () => null,
     },
     sessionService: {
-      get: async () => null,
+      get: async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" }),
       update: async () => null,
       transitionStatus,
-      store: {
-        create: mock(() => ({
-          eventStore,
-          approvalService: { handleResponse: () => {}, dispose: () => {} },
-        })),
-        get: mock(() => ({
-          eventStore,
-          approvalService: { handleResponse: () => {}, dispose: () => {} },
-        })),
-        setSession: mock(() => true),
-        remove,
-      },
+      store,
     },
     processExitTimeoutMs: options.processExitTimeoutMs,
   }) as unknown as Parameters<typeof spawnAgentSession>[1];
@@ -82,7 +71,7 @@ describe("spawnAgentSession exit timeouts", () => {
     const stop = mock(() => {});
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "failed" }));
     const remove = mock(() => {});
-    const eventStore = createEventStore();
+    const store = createTrackedSessionStore();
 
     await spawnAgentSession(
       {
@@ -91,7 +80,7 @@ describe("spawnAgentSession exit timeouts", () => {
         prompt: "hello",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, {
+      createDeps(store, transitionStatus, remove, {
         registry: createRegistry(stop),
         processExitTimeoutMs: 20,
       }),
@@ -100,15 +89,15 @@ describe("spawnAgentSession exit timeouts", () => {
     await waitForTransition(transitionStatus);
 
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "failed");
-    expect(remove).toHaveBeenCalledWith("session_1");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "failed", expect.anything());
+    expect(store.get("session_1")).toBeNull();
   });
 
   test("resets the timeout when stream activity arrives", async () => {
     const stop = mock(() => {});
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "failed" }));
     const remove = mock(() => {});
-    const eventStore = createEventStore();
+    const store = createTrackedSessionStore();
 
     await spawnAgentSession(
       {
@@ -117,16 +106,16 @@ describe("spawnAgentSession exit timeouts", () => {
         prompt: "hello",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, {
+      createDeps(store, transitionStatus, remove, {
         registry: createRegistry(stop),
         processExitTimeoutMs: 20,
       }),
     );
 
     await wait(15);
-    eventStore.push({ op: "add", path: "/messages/0", value: { role: "assistant" } });
+    store.get("session_1")!.eventStore.push({ op: "add", path: "/messages/0", value: { role: "assistant" } });
     await wait(15);
-    eventStore.push({ op: "add", path: "/messages/1", value: { role: "assistant" } });
+    store.get("session_1")!.eventStore.push({ op: "add", path: "/messages/1", value: { role: "assistant" } });
     await wait(15);
 
     expect(stop).toHaveBeenCalledTimes(0);
@@ -134,14 +123,14 @@ describe("spawnAgentSession exit timeouts", () => {
     await waitForTransition(transitionStatus);
 
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "failed");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "failed", expect.anything());
   });
 
   test("activity-strategy resumed sessions still time out", async () => {
     const stop = mock(() => {});
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "failed" }));
     const remove = mock(() => {});
-    const eventStore = createEventStore();
+    const store = createTrackedSessionStore();
 
     await resumeAgentSession(
       {
@@ -151,7 +140,7 @@ describe("spawnAgentSession exit timeouts", () => {
         prompt: "continue",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, {
+      createDeps(store, transitionStatus, remove, {
         registry: createRegistry(stop, { timeoutStrategy: "activity" }),
         processExitTimeoutMs: 20,
       }) as unknown as Parameters<typeof resumeAgentSession>[1],
@@ -160,7 +149,7 @@ describe("spawnAgentSession exit timeouts", () => {
     await waitForTransition(transitionStatus);
 
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "failed");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "failed", expect.anything());
   });
 
   test("provider-strategy sessions do not use the activity timeout", async () => {
@@ -168,7 +157,7 @@ describe("spawnAgentSession exit timeouts", () => {
     const { promise: done, resolve: resolveExit } = Promise.withResolvers<HarnessExit>();
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
     const remove = mock(() => {});
-    const eventStore = createEventStore();
+    const store = createTrackedSessionStore();
 
     await spawnAgentSession(
       {
@@ -177,7 +166,7 @@ describe("spawnAgentSession exit timeouts", () => {
         prompt: "hello",
         cwd: "/repo",
       },
-      createDeps(eventStore, transitionStatus, remove, {
+      createDeps(store, transitionStatus, remove, {
         registry: createRegistry(stop, { timeoutStrategy: "provider", done }),
         processExitTimeoutMs: 20,
       }),
@@ -193,14 +182,14 @@ describe("spawnAgentSession exit timeouts", () => {
     await waitForTransition(transitionStatus);
 
     expect(stop).toHaveBeenCalledTimes(0);
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed");
-    expect(remove).toHaveBeenCalledWith("session_1");
+    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed", expect.anything());
+    expect(store.get("session_1")).toBeNull();
   });
 
   test("does not time out while new events keep arriving", async () => {
     const stop = mock(() => {});
     const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "failed" }));
-    const eventStore = createEventStore();
+    const store = createTrackedSessionStore();
 
     await spawnAgentSession(
       {
@@ -210,7 +199,7 @@ describe("spawnAgentSession exit timeouts", () => {
         cwd: "/repo",
       },
       createDeps(
-        eventStore,
+        store,
         transitionStatus,
         mock(() => {}),
         {
@@ -221,7 +210,7 @@ describe("spawnAgentSession exit timeouts", () => {
     );
 
     const interval = setInterval(() => {
-      eventStore.push({ op: "add", path: "/messages/live", value: Date.now() });
+      store.get("session_1")!.eventStore.push({ op: "add", path: "/messages/live", value: Date.now() });
     }, 10);
 
     await wait(90);

@@ -145,10 +145,18 @@ const createDelayedResumeRecord = (): RuntimeHarnessRecord => {
       },
       resume: (_ctx, input) => {
         setTimeout(() => {
-          input.events.push({ op: "add", path: "/messages/2", value: message("m3", "user", "SECOND") });
+          input.events.push({
+            op: "add",
+            path: `/messages/${input.messageOffset ?? 0}`,
+            value: message("m3", "user", "SECOND"),
+          });
         }, 50);
         setTimeout(() => {
-          input.events.push({ op: "add", path: "/messages/3", value: message("m4", "assistant", "SECOND DONE") });
+          input.events.push({
+            op: "add",
+            path: `/messages/${(input.messageOffset ?? 0) + 1}`,
+            value: message("m4", "assistant", "SECOND DONE"),
+          });
         }, 100);
 
         return {
@@ -245,7 +253,7 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
     sse.close();
   });
 
-  test("shifts the first live follow-up patch when replay history is initially empty", async () => {
+  test("uses the complete baseline offset when live replay is initially empty", async () => {
     const delayedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-delayed-offset-"));
     const delayedApp = await createTestApp({
       databasePath: ":memory:",

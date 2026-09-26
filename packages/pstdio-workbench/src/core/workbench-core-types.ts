@@ -143,6 +143,7 @@ export interface WorkbenchHost {
 }
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
+  dispose(): Promise<void>;
   host: WorkbenchHost;
   layout: WorkbenchLayoutModel;
   registerModule(module: WorkbenchModuleContribution): Disposable;

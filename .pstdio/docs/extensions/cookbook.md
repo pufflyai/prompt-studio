@@ -1,6 +1,6 @@
 # Workbench cookbook
 
-Build on the public `@pstdio/sdk/extensions` API. Install the SDK with Bun and keep `engines.pstdio` on the extension API version shipped with your host. This revision uses `1.0.0-alpha.10`.
+Build on the public `@pstdio/sdk/extensions` API. Install the SDK with Bun and keep `engines.pstdio` on the extension API version shipped with your host. This revision uses `1.0.0-alpha.12`.
 
 Start with [Extension Lab](../../../extensions/extension-lab/README.md). It contains working tools with saved data, navigation, and custom modes. Copy the extension directory when trying it outside this repository; individual example modules import its shared files. Rename the package and publisher before installing your own copy.
 

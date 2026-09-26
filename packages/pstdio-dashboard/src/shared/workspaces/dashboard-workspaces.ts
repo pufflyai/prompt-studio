@@ -7,7 +7,7 @@ import {
   type DashboardRows,
   isDashboardProjectRow,
   isVisibleDashboardRow,
-  readDashboardRows,
+  readWorkspaceRows,
 } from "@/shared/sync/dashboard-rows";
 import { listResourceAnchors } from "@/shared/sync/resource-anchors";
 import {
@@ -111,7 +111,10 @@ const createWorkspaceResourceMetadata = (input: {
   }
   return metadata;
 };
-export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: DashboardWorkspaceOptions = {}) => {
+export const buildDashboardWorkspacesFromRows = (
+  rows: Pick<DashboardRows, "projectRepos" | "repos" | "workspaces">,
+  options: DashboardWorkspaceOptions = {},
+) => {
   const repoPathByProjectId = indexFirstProjectRepoPaths(rows.projectRepos, rows.repos);
   return rows.workspaces
     .filter(
@@ -173,7 +176,7 @@ export const createDashboardWorkspaces = (
     includeArchived?: boolean;
   } = {},
 ) => {
-  const rows = readDashboardRows();
+  const rows = readWorkspaceRows();
   return buildDashboardWorkspacesFromRows(rows, {
     projectId,
     includeArchived: options.includeArchived,

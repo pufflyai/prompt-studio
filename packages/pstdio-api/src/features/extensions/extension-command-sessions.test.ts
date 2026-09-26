@@ -2,6 +2,7 @@ import { afterAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createTrackedSessionStore } from "../sessions/session-store.test-utils";
 import { createCommandEnvironment } from "./command-environment";
 
 const makeEnabledSources = () => [
@@ -161,22 +162,9 @@ describe("createCommandEnvironment sessions attachments", () => {
             cwd: input.cwd ?? null,
           }),
           update: async () => null,
-          get: async () => null,
+          get: async () => ({ id: "session-1", project_id: "project-1", status: "in_progress", agent: "fake-agent" }),
           transitionStatus: async () => null,
-          store: {
-            create: mock(() => ({
-              eventStore: {
-                push: () => {},
-                getHistory: () => [],
-                subscribe: async function* () {},
-              },
-              approvalService: { handleResponse: () => {}, dispose: () => {} },
-              submittedAttachmentFileIds: new Set<string>(),
-            })),
-            get: mock(() => null),
-            setSession: mock(() => true),
-            remove: mock(() => {}),
-          },
+          store: createTrackedSessionStore(),
         },
         eventBus: { emit: () => {} },
         activityEventsService: { create: async () => ({}) },

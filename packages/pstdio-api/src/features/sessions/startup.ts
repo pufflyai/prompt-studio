@@ -1,6 +1,8 @@
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
+import { checkpointConversation } from "./session-checkpoint";
+import type { ActiveSession } from "./session-store";
 import { reattachAgentSession } from "./spawn-agent";
 
 type Deps = Pick<
@@ -51,14 +53,23 @@ const waitForReattachRetry = (delayMs: number, signal?: AbortSignal) =>
     else signal?.addEventListener("abort", onAbort, { once: true });
   });
 
+const settleFailedReattach = async (deps: Deps, id: string, owner: ActiveSession | null) => {
+  if (!owner || deps.sessionService.store.get(id) !== owner) return;
+  const saved = await checkpointConversation(id, owner, deps)
+    .then(() => true)
+    .catch(() => false);
+  if (saved) deps.sessionService.store.remove(id, owner);
+};
+
 const reattachOrphanedSession = async (deps: Deps, session: OrphanedSession, signal?: AbortSignal) => {
   let retryDelayMs = 250;
   while (!signal?.aborted) {
+    let owner: ActiveSession | null = null;
     try {
       const dispatchEntry = await getDispatchStartedEntryForSession(deps, session.id).catch((error) => {
         throw new RetryableSessionReattachError(error);
       });
-      await reattachAgentSession(
+      const starting = reattachAgentSession(
         {
           sessionId: session.id,
           projectId: session.project_id ?? undefined,
@@ -71,9 +82,11 @@ const reattachOrphanedSession = async (deps: Deps, session: OrphanedSession, sig
         },
         deps,
       );
+      owner = deps.sessionService.store.get(session.id);
+      await starting;
       return;
     } catch (error) {
-      deps.sessionService.store.remove(session.id);
+      await settleFailedReattach(deps, session.id, owner);
       if (signal?.aborted) return;
       if (!isRetryableReattachError(error)) throw error;
       sessionLogger.warn(
@@ -94,9 +107,13 @@ const resolveOrphanedSession = async (deps: Deps, session: OrphanedSession, sign
     harness?.supportsReattach &&
     (await harness.capabilities({ projectId: session.project_id ?? undefined })).includes("SessionReattach") &&
     session.agent_session_id;
+  if (signal?.aborted || deps.sessionService.store.get(session.id)) return;
 
   if (!canReattach) {
-    await deps.sessionService.transitionStatus(session.id, "disconnected");
+    await deps.sessionService.transitionStatus(session.id, "disconnected", {
+      expectedOwner: null,
+      expectedLastRequestStarted: session.last_request_started,
+    });
     return;
   }
 
@@ -107,9 +124,11 @@ const resolveOrphanedSession = async (deps: Deps, session: OrphanedSession, sign
       { err, event: "session.reattach.permanent_failure", session_id: session.id },
       "Failed to reattach orphaned session permanently; marking it disconnected",
     );
-    deps.sessionService.store.remove(session.id);
-    await removeDispatchStartedEntriesForSession(deps, session.id);
-    await deps.sessionService.transitionStatus(session.id, "disconnected");
+    const owner = deps.sessionService.store.get(session.id);
+    if (!owner) await removeDispatchStartedEntriesForSession(deps, session.id);
+    await deps.sessionService.transitionStatus(session.id, "disconnected", {
+      expectedLastRequestStarted: session.last_request_started,
+    });
   }
 };
 

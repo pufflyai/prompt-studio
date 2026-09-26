@@ -16,11 +16,7 @@ import {
   type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
-import {
-  moveQueuedFollowUpBySteps,
-  openCreatedSessionFromDraft,
-  submitSessionMessage,
-} from "../chat/session-chat-actions";
+import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import {
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
@@ -30,22 +26,17 @@ import { type DashboardSessionView, draftSessionViewId } from "../data/dashboard
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
-import {
-  useMoveQueuedFollowUp,
-  useRemoveQueuedFollowUp,
-  useUpdateQueuedFollowUp,
-} from "../hooks/use-queued-follow-up-actions";
+import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { useStopSession } from "../hooks/use-stop-session";
 import { canSubmitSessionMessage, resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
 import type { HarnessParamValues } from "./harness-param-values";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
+import { SessionChatNotices } from "./session-chat-notices";
 import { SessionModelControls } from "./session-model-controls";
 import { SessionWorkspaceControl } from "./session-workspace-control";
 import { useSessionChatDraft } from "./use-session-chat-draft";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
-
-type QueuedFollowUpMoveDirection = "up" | "down";
 
 interface DashboardSessionChatPanelProps {
   input: WorkbenchPanelRenderInput;
@@ -99,12 +90,11 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     return typeof value === "string" ? value : undefined;
   });
 
-  const { messages, loading, streaming, reconnect } = useDashboardSessionMessages(view.sessionId);
+  const { messages, loading, streaming, reconnect, refreshQueue, retryHistory, historyIssue, error, queueError } =
+    useDashboardSessionMessages(input, view.sessionId);
+  const historyReadOnly = Boolean(historyIssue && historyIssue.code !== "native_unavailable");
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
-  const updateQueuedFollowUp = useUpdateQueuedFollowUp();
-  const removeQueuedFollowUp = useRemoveQueuedFollowUp();
-  const moveQueuedFollowUp = useMoveQueuedFollowUp();
   const stopSession = useStopSession();
 
   // Drafts start from the project's last explicit selection instead of the defaults.
@@ -158,149 +148,129 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
   );
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId);
-  const queuedFollowUpPositions = new Map(splitDisplay.queuedFollowUps.map((item) => [item.id, item.position]));
   const effectiveStreaming = streaming || view.status === "in_progress" || Boolean(pendingFollowUp);
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
 
-  const mutateQueuedFollowUp = (
-    itemId: string,
-    mutate: (input: { sessionId: string; queuePosition: number }) => void,
-  ) => {
-    const queuePosition = queuedFollowUpPositions.get(itemId);
-    if (!sessionId || queuePosition === undefined) return;
-
-    mutate({ sessionId, queuePosition });
-  };
-
-  const handleQueuedFollowUpUpdate = (itemId: string, prompt: string) => {
-    const queuePosition = queuedFollowUpPositions.get(itemId);
-    if (!sessionId || queuePosition === undefined) return;
-
-    updateQueuedFollowUp.mutate({ sessionId, queuePosition, prompt }, { onSuccess: reconnect });
-  };
-
-  const handleQueuedFollowUpRemove = (itemId: string) => {
-    mutateQueuedFollowUp(itemId, (input) => removeQueuedFollowUp.mutate(input, { onSuccess: reconnect }));
-  };
-
-  const handleQueuedFollowUpMove = (itemId: string, direction: QueuedFollowUpMoveDirection, steps = 1) => {
-    const queuePosition = queuedFollowUpPositions.get(itemId);
-    if (!sessionId || queuePosition === undefined) return;
-
-    void moveQueuedFollowUpBySteps({
-      sessionId,
-      queuePosition,
-      direction,
-      steps,
-      mutation: moveQueuedFollowUp,
-      reconnect,
-    });
-  };
+  const { handleQueuedFollowUpUpdate, handleQueuedFollowUpRemove, handleQueuedFollowUpMove } = useQueuedSessionMessages(
+    { sessionId, queuedFollowUps: splitDisplay.queuedFollowUps, refreshQueue },
+  );
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
     // to the region bounds and scrolls its messages internally instead of growing.
     <Box position="relative" h="full" w="full">
-      <Box position="absolute" inset="0" overflow="hidden">
-        <ChatPanel
-          // Keying on the session id gives each session its own draft and scroll
-          // state, so switching sessions in the bubble is a real switch.
-          conversationKey={`dashboard-workbench-session:${view.id}`}
-          messages={splitDisplay.messages}
-          queuedFollowUps={splitDisplay.queuedFollowUps}
-          onQueuedFollowUpUpdate={sessionId ? handleQueuedFollowUpUpdate : undefined}
-          onQueuedFollowUpRemove={sessionId ? handleQueuedFollowUpRemove : undefined}
-          onQueuedFollowUpMove={sessionId ? handleQueuedFollowUpMove : undefined}
-          loading={loading}
-          streaming={effectiveStreaming}
-          emptyStateTitle={emptyStateTitle}
-          emptyStateDescription={emptyStateDescription}
-          loaderComponent={<ChatSkeleton />}
-          chatInputPlaceholder="Reply to the agent..."
-          chatInputDefaultValue={chatDraft.seed}
-          onChatInputChange={chatDraft.change}
-          attachedResources={attachedResources}
-          actions={
-            <>
-              <SessionAttachmentControls
-                projectId={projectId}
-                uploading={draftAttachments.uploading}
-                onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
-              />
-              <SessionModelControls
-                view={view}
-                projectId={projectId}
-                selectedAgent={selectedAgent}
-                setSelectedAgent={setSelectedAgent}
-                selectedModel={selectedModel}
-                setSelectedModel={setSelectedModel}
-                harnessParamOverrides={harnessParamOverrides}
-                setHarnessParamOverrides={setHarnessParamOverrides}
-              />
-            </>
-          }
-          attachmentList={
-            draftAttachments.attachments.length > 0 ? (
-              <SessionAttachmentList
-                attachments={draftAttachments.attachments}
-                onRemove={draftAttachments.removeAttachment}
-              />
-            ) : undefined
-          }
-          onAttachFiles={projectId ? (files) => void draftAttachments.uploadFiles(files) : undefined}
-          onAttachText={projectId ? (text) => void draftAttachments.uploadText(text) : undefined}
-          inputDisabled={draftAttachments.uploading}
-          submitDisabled={!canSubmit}
-          workspaceHub={
-            <ChatWorkspaceHub
-              workspaceControl={
-                <SessionWorkspaceControl
+      <Box position="absolute" inset="0" overflow="hidden" display="flex" flexDirection="column">
+        <SessionChatNotices
+          input={input}
+          sessionId={sessionId}
+          historyIssue={historyIssue}
+          error={error}
+          queueError={queueError}
+          retryHistory={retryHistory}
+          refreshQueue={refreshQueue}
+        />
+        <Box flex="1" minH="0" overflow="hidden">
+          <ChatPanel
+            // Keying on the session id gives each session its own draft and scroll
+            // state, so switching sessions in the bubble is a real switch.
+            conversationKey={`dashboard-workbench-session:${view.id}`}
+            messages={splitDisplay.messages}
+            queuedFollowUps={splitDisplay.queuedFollowUps}
+            onQueuedFollowUpUpdate={sessionId ? handleQueuedFollowUpUpdate : undefined}
+            onQueuedFollowUpRemove={sessionId ? handleQueuedFollowUpRemove : undefined}
+            onQueuedFollowUpMove={sessionId ? handleQueuedFollowUpMove : undefined}
+            loading={loading}
+            streaming={effectiveStreaming}
+            emptyStateTitle={emptyStateTitle}
+            emptyStateDescription={emptyStateDescription}
+            loaderComponent={<ChatSkeleton />}
+            chatInputPlaceholder="Reply to the agent..."
+            chatInputDefaultValue={chatDraft.seed}
+            onChatInputChange={chatDraft.change}
+            attachedResources={attachedResources}
+            actions={
+              <>
+                <SessionAttachmentControls
+                  projectId={projectId}
+                  uploading={draftAttachments.uploading}
+                  onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
+                />
+                <SessionModelControls
                   view={view}
                   projectId={projectId}
-                  selectedWorkspaceId={selectedWorkspaceId}
-                  setSelectedWorkspaceId={setSelectedWorkspaceId}
-                  onSelectWorkspace={
-                    openWorkspaceOnSelection
-                      ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
-                      : undefined
-                  }
+                  selectedAgent={selectedAgent}
+                  setSelectedAgent={setSelectedAgent}
+                  selectedModel={selectedModel}
+                  setSelectedModel={setSelectedModel}
+                  harnessParamOverrides={harnessParamOverrides}
+                  setHarnessParamOverrides={setHarnessParamOverrides}
                 />
-              }
-              additions={view.additions}
-              deletions={view.deletions}
-              action={workspaceAction}
-            />
-          }
-          onSubmitMessage={(text, _attachments, questionResponse) => {
-            const submittedAttachments = draftAttachments.attachments;
-            return submitSessionMessage({
-              sessionId,
-              projectId,
-              agent: selectedAgent || null,
-              model: selectedModel || undefined,
-              params: nonEmptyHarnessParams(harnessParamOverrides),
-              workspaceId: selectedWorkspaceId || undefined,
-              text,
-              attachments: submittedAttachments,
-              questionResponse,
-              messages,
-              pendingIdRef,
-              setPendingFollowUp,
-              createSession,
-              followUp,
-              reconnect,
-              onSubmitted: () => {
-                chatDraft.clear();
-                draftAttachments.clearSubmittedAttachments();
-              },
-              onSessionCreated: (sessionId) => {
-                if (!projectId) return;
-                openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId });
-              },
-            });
-          }}
-          onInterrupt={sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined}
-        />
+              </>
+            }
+            attachmentList={
+              draftAttachments.attachments.length > 0 ? (
+                <SessionAttachmentList
+                  attachments={draftAttachments.attachments}
+                  onRemove={draftAttachments.removeAttachment}
+                />
+              ) : undefined
+            }
+            onAttachFiles={projectId ? (files) => void draftAttachments.uploadFiles(files) : undefined}
+            onAttachText={projectId ? (text) => void draftAttachments.uploadText(text) : undefined}
+            inputDisabled={draftAttachments.uploading || historyReadOnly}
+            submitDisabled={!canSubmit || historyReadOnly}
+            workspaceHub={
+              <ChatWorkspaceHub
+                workspaceControl={
+                  <SessionWorkspaceControl
+                    view={view}
+                    projectId={projectId}
+                    selectedWorkspaceId={selectedWorkspaceId}
+                    setSelectedWorkspaceId={setSelectedWorkspaceId}
+                    onSelectWorkspace={
+                      openWorkspaceOnSelection
+                        ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
+                        : undefined
+                    }
+                  />
+                }
+                additions={view.additions}
+                deletions={view.deletions}
+                action={workspaceAction}
+              />
+            }
+            onSubmitMessage={(text, _attachments, questionResponse) => {
+              if (historyReadOnly) return;
+              const submittedAttachments = draftAttachments.attachments;
+              return submitSessionMessage({
+                sessionId,
+                projectId,
+                agent: selectedAgent || null,
+                model: selectedModel || undefined,
+                params: nonEmptyHarnessParams(harnessParamOverrides),
+                workspaceId: selectedWorkspaceId || undefined,
+                text,
+                attachments: submittedAttachments,
+                questionResponse,
+                messages,
+                pendingIdRef,
+                setPendingFollowUp,
+                createSession,
+                followUp,
+                reconnect,
+                onSubmitted: () => {
+                  chatDraft.clear();
+                  draftAttachments.clearSubmittedAttachments();
+                },
+                onSessionCreated: (sessionId) => {
+                  if (!projectId) return;
+                  openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId });
+                },
+              });
+            }}
+            onInterrupt={sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined}
+          />
+        </Box>
       </Box>
     </Box>
   );
