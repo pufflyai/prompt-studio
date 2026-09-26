@@ -1,6 +1,6 @@
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
-import { entries, isExternal } from "./build-entries";
+import { entries, isExternal } from "./build-entries.ts";
 
 // Bundles one self-contained .d.ts per entry, with the private packages inlined.
 export default defineConfig({
