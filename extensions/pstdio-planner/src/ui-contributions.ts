@@ -9,6 +9,7 @@ import {
   defineViewMenu,
   l10n,
   packageAsset,
+  viewDataEvents,
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
@@ -103,7 +104,7 @@ export const createPlannerUi = (baseUrl: string) => {
       kind: "kanban",
       attributes: buildTicketAttributes(ticketStatuses.ref),
       query: queryTickets,
-      refreshEvents: [plannerTicketsChanged],
+      refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
       onRowActivate: (ctx, { row }) => {
         if (row.resource) ctx.navigation.open(ticketPageTarget(row.resource));
       },
@@ -212,7 +213,7 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "tree",
       body: listTicketFilesTree,
-      refreshEvents: [plannerTicketsChanged],
+      refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
       defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
     },
   });

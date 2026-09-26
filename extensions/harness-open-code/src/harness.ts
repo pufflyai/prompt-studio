@@ -8,6 +8,7 @@ import type {
   QuestionResponse,
 } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { recoverOpencodeMessages } from "./history-reconciliation";
 import { parseOpencodeModels } from "./models";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
@@ -259,5 +260,6 @@ export const createOpencodeHarness = (
       const messages = await opencode.getSessionMessages(input.agentSessionId, input.cwd);
       return messages.map(normalizeOpencodeMessage);
     },
+    recoverMessages: (_ctx, input) => recoverOpencodeMessages(input),
   };
 };

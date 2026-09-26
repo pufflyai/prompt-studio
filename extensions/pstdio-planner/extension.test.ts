@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import extension from "./extension";
 import { putTicket } from "./src/data/collections";
@@ -75,10 +76,17 @@ describe("pstdio planner extension contributions", () => {
       },
     });
   });
-  test("refreshes native ticket view bodies from the shared ticket event", () => {
+  test("declares each native ticket view's data dependencies", () => {
     const event = { extensionId: "pstdio.pstdio-planner", id: "tickets.changed", kind: "event" };
-    for (const id of ["ticket-files", "ticket-editor", "ticket-properties", "tickets"]) {
+    for (const id of ["ticket-editor", "ticket-properties"]) {
       expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual([event]);
+    }
+    for (const id of ["ticket-files", "tickets"]) {
+      expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual([
+        event,
+        viewDataEvents.sessionsChanged,
+        viewDataEvents.workspacesChanged,
+      ]);
     }
   });
   test("contributes shared document templates and planner skills", () => {
