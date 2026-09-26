@@ -71,6 +71,17 @@ test("conflicting intervals return a conflict instead of guessing order", () => 
   expect(recover([user("repeat"), user("repeat")], [user("repeat")]).kind).toBe("conflict");
 });
 
+test("a saved history cut short inside repeated calls keeps every native occurrence", () => {
+  const call = (id: string): SessionMessage => ({
+    id,
+    role: "assistant",
+    parts: [{ type: "tool", tool: "status", state: { input: {} } }],
+  });
+  const native = [user("run"), call("first"), call("second"), reply("done")];
+  expect(recover(native.slice(0, 2), native)).toEqual({ kind: "recovered", messages: native });
+  expect(recover(native, native.slice(0, 2))).toEqual({ kind: "recovered", messages: native });
+});
+
 test("equal repeated turns retain every occurrence and their generated usage", () => {
   const usage: SessionMessage = {
     id: "usage-0",
