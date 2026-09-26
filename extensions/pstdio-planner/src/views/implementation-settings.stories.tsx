@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ImplementationSettingsFields } from "./implementation-settings";
+import { ImplementationSettingsFields } from "./implementation-settings-panel";
 
 const meta = {
   title: "Planner/Implementation settings",
