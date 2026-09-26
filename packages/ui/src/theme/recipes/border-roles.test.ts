@@ -4,6 +4,7 @@ import { buttonRecipe } from "./button";
 import { colorPickerSlotRecipe } from "./color-picker";
 import { dividerRecipe } from "./divider";
 import { inputRecipe } from "./input";
+import { kbdRecipe } from "./kbd";
 import { menuSlotRecipe } from "./menu";
 import { numberInputSlotRecipe } from "./number-input";
 import { textareaRecipe } from "./textarea";
@@ -40,6 +41,11 @@ describe("theme recipe border roles", () => {
     expect(buttonRecipe.base).toMatchObject({ borderColor: "border" });
     expect(buttonRecipe.variants?.variant?.outline).toMatchObject({ border: "border" });
     expect(buttonRecipe.variants?.variant?.subtle).toMatchObject({ border: "1px solid {border}" });
+  });
+
+  test("uses the default border role for bordered keyboard keys", () => {
+    expect(kbdRecipe.variants?.variant?.raised).toMatchObject({ borderColor: "border" });
+    expect(kbdRecipe.variants?.variant?.outline).toMatchObject({ borderColor: "border" });
   });
 
   test("uses the subtle border role for hr and separators", () => {

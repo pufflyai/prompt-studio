@@ -23,13 +23,13 @@ export const kbdRecipe = defineRecipe({
       raised: {
         color: "fg.muted",
         bg: "bg.subtle",
-        borderColor: "border.muted",
+        borderColor: "border",
         borderBottomWidth: "2px",
       },
       outline: {
         color: "fg.muted",
         bg: "transparent",
-        borderColor: "border.muted",
+        borderColor: "border",
       },
       subtle: {
         color: "fg",
