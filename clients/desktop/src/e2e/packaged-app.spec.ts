@@ -18,10 +18,11 @@ import {
 import { openPackagedProject } from "./packaged-project-helpers";
 import { waitForVisibleElement } from "./visible-element-timing";
 
-// Hosted Intel Mac runners start the packaged app two to three times slower than Apple Silicon.
+// Hosted Intel Mac runners start the packaged app two to three times slower than Apple Silicon,
+// and the first launch of a freshly signed app waits for macOS launch checks.
 const isIntelMac = process.platform === "darwin" && process.arch === "x64";
 const coldStartBudgetMs = isIntelMac ? 20_000 : 8_000;
-const macStartupWindowBudgetMs = isIntelMac ? 3_000 : 1_500;
+const macStartupWindowBudgetMs = isIntelMac ? 10_000 : 1_500;
 const startupWindowBudgetMs = process.platform === "darwin" ? macStartupWindowBudgetMs : 1_000;
 
 const createProjectThroughBrowser = (app: PackagedApp, name: string) =>

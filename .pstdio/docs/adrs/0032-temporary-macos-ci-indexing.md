@@ -52,8 +52,9 @@ validation, packaging, installation, or application startup.
 
 Native desktop tests now run only in `.github/workflows/release-desktop.yml`, so
 the indexing step lives in its Intel job. The user approved looser Intel limits:
-20 seconds for cold startup and 3 seconds for the startup window. The Intel job
-runs only the two packaged tests tagged `@essential`. These limits describe
+20 seconds for cold startup and 10 seconds for the startup window. The Intel job
+runs only the two packaged tests tagged `@essential`, so the timed cold start is
+the first launch of the freshly signed app and includes macOS's launch checks. These limits describe
 hosted runner speed; they are not a product target for Intel users.
 
 ## Removal
