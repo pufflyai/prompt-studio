@@ -93,6 +93,22 @@ describe("link review command", () => {
     expect(updated.reviewLinks?.map((link) => link.externalId)).toEqual(["456", "789"]);
   });
 
+  test("reuses the stored link when the same PR is linked again", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Add feature" } }));
+    const url = "https://github.com/org/repo/pull/456";
+    const linked = await linkReviewCommand.run(
+      ...makeCommandArgs({ storage, params: { id: ticket.id, url, title: "Review changes" } }),
+    );
+
+    const relinked = await linkReviewCommand.run(
+      ...makeCommandArgs({ storage, params: { id: ticket.shorthand, url } }),
+    );
+
+    expect(relinked).toEqual(linked);
+    expect((await ticketsCollection(storage).get(ticket.id))?.reviewLinks).toEqual(linked.reviewLinks);
+  });
+
   test("throws for an unknown ticket", async () => {
     const storage = createMemoryStorage();
 

@@ -18,5 +18,17 @@
   "displayMenu.propertyOptions.updatedAt": "Mis à jour",
   "settingsPanels.ticketTags.title": "Étiquettes",
   "ticketDetail.none": "Aucun",
-  "ticketDetail.parent": "Parent"
+  "ticketDetail.parent": "Parent",
+  "settings.implementation.adversarialReview.title": "Revue contradictoire",
+  "settings.implementation.adversarialReview.description": "Effectuer une revue contradictoire avant de terminer la mise en œuvre du ticket.",
+  "settings.implementation.openPr.title": "Ouvrir une PR",
+  "settings.implementation.openPr.description": "Ouvrir une pull request en brouillon lorsque la modification est prête et la lier au ticket.",
+  "commands.implementationPolicy.title": "Lire les options de mise en œuvre des tickets",
+  "commands.implementationTargets.title": "Lister les branches cibles d’implémentation",
+  "commands.setImplementationTarget.title": "Définir la branche cible par défaut",
+  "settingsPanels.implementation.title": "Implémentation",
+  "settings.implementation.defaultTargetBranch.title": "Branche cible par défaut",
+  "settings.implementation.repositoryDefault": "Branche par défaut du dépôt",
+  "settings.implementation.noGitFolder": "Les branches distantes nécessitent un dossier Git local.",
+  "settings.implementation.error": "Impossible de mettre à jour les paramètres d’implémentation"
 }

@@ -17,5 +17,17 @@
   "displayMenu.propertyOptions.updatedAt": "更新時間",
   "settingsPanels.ticketTags.title": "標籤",
   "ticketDetail.none": "無",
-  "ticketDetail.parent": "父級"
+  "ticketDetail.parent": "父級",
+  "settings.implementation.adversarialReview.title": "對抗性審查",
+  "settings.implementation.adversarialReview.description": "完成工單實作前，進行對抗性審查。",
+  "settings.implementation.openPr.title": "建立 PR",
+  "settings.implementation.openPr.description": "變更準備就緒後，建立草稿拉取請求並連結至工單。",
+  "commands.implementationPolicy.title": "讀取工單實作設定",
+  "commands.implementationTargets.title": "列出實作目標分支",
+  "commands.setImplementationTarget.title": "設定預設目標分支",
+  "settingsPanels.implementation.title": "實作",
+  "settings.implementation.defaultTargetBranch.title": "預設目標分支",
+  "settings.implementation.repositoryDefault": "儲存庫預設分支",
+  "settings.implementation.noGitFolder": "遠端分支需要本機 Git 資料夾。",
+  "settings.implementation.error": "無法更新實作設定"
 }

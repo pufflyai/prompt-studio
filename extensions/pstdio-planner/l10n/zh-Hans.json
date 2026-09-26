@@ -17,5 +17,17 @@
   "displayMenu.propertyOptions.updatedAt": "更新时间",
   "settingsPanels.ticketTags.title": "标签",
   "ticketDetail.none": "无",
-  "ticketDetail.parent": "父级"
+  "ticketDetail.parent": "父级",
+  "settings.implementation.adversarialReview.title": "对抗性审查",
+  "settings.implementation.adversarialReview.description": "完成工单实现前，进行对抗性审查。",
+  "settings.implementation.openPr.title": "创建 PR",
+  "settings.implementation.openPr.description": "变更准备就绪后，创建草稿拉取请求并关联到工单。",
+  "commands.implementationPolicy.title": "读取工单实现设置",
+  "commands.implementationTargets.title": "列出实现目标分支",
+  "commands.setImplementationTarget.title": "设置默认目标分支",
+  "settingsPanels.implementation.title": "实现",
+  "settings.implementation.defaultTargetBranch.title": "默认目标分支",
+  "settings.implementation.repositoryDefault": "仓库默认分支",
+  "settings.implementation.noGitFolder": "远程分支需要本地 Git 文件夹。",
+  "settings.implementation.error": "无法更新实现设置"
 }

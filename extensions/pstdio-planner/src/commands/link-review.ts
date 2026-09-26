@@ -19,6 +19,7 @@ export const linkReviewCommand = defineCommand({
   async run(ctx, commandParams) {
     const ticket = await findTicket(ctx.storage, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
+    if (ticket.reviewLinks?.some((link) => link.url === commandParams.url)) return ticket;
 
     const now = new Date().toISOString();
     const reviewLink: StoredTicketReviewLink = {
