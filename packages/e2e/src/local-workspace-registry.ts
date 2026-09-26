@@ -83,28 +83,26 @@ export const startLocalWorkspaceRegistry = async (input: {
   const registryRoot = join(input.outputRoot, "workspace-registry");
   mkdirSync(registryRoot, { recursive: true });
   const packages = input.packagePaths.map((packagePath) => packWorkspacePackage(packagePath, registryRoot));
-  // Extensions retain published dependency versions while the next SDK/UI release is tested.
-  const publishedByName = new Map(
-    await Promise.all(
-      packages.map(
-        async (pkg) =>
-          [
-            pkg.manifest.name,
-            await readPublishedMetadata(pkg.manifest.name, input.upstreamOrigin ?? "https://registry.npmjs.org"),
-          ] as const,
-      ),
-    ),
-  );
+  const publishedByName = new Map<string, Promise<RegistryMetadata>>();
+  const publishedMetadata = (name: string) => {
+    let metadata = publishedByName.get(name);
+    if (!metadata) {
+      // Published versions supplement local tarballs; npm availability must not block the local registry.
+      metadata = readPublishedMetadata(name, input.upstreamOrigin ?? "https://registry.npmjs.org").catch(() => ({}));
+      publishedByName.set(name, metadata);
+    }
+    return metadata;
+  };
   const packagesByName = new Map(packages.map((pkg) => [pkg.manifest.name, pkg]));
   const tarballsByPath = new Map(packages.map((pkg) => [`${pkg.manifest.name}/-/${pkg.tarballName}`, pkg.tarball]));
 
   let origin = "";
-  const server = createServer((request, response) => {
+  const server = createServer(async (request, response) => {
     const requestPath = decodeURIComponent(new URL(request.url ?? "/", origin).pathname).replace(/^\/+/, "");
     const pkg = packagesByName.get(requestPath);
     if (pkg) {
       response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify(packageMetadata(pkg, origin, publishedByName.get(pkg.manifest.name) ?? {})));
+      response.end(JSON.stringify(packageMetadata(pkg, origin, await publishedMetadata(pkg.manifest.name))));
       return;
     }
 

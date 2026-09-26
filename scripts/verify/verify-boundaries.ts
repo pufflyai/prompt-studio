@@ -12,6 +12,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { parseExtensionApiVersions } from "pstdio-api-contracts/extension-kernel";
 import { sourceImports } from "./source-imports";
 
 const ROOT = path.resolve(import.meta.dir, "../..");
@@ -191,7 +192,7 @@ export const checkExtensionUiVersion = (pkg: WorkspacePackage, errors: string[])
   if (
     pkg.isExtension &&
     declaredVersion &&
-    !/^\d+\.\d+\.\d+(?:-[\da-z.-]+)?(?:\+[\da-z.-]+)?$/i.test(declaredVersion)
+    (parseExtensionApiVersions(declaredVersion)?.length !== 1 || declaredVersion.trim() !== declaredVersion)
   ) {
     errors.push(`${pkg.dir}: must pin @pstdio/ui to an exact published version instead of "${declaredVersion}"`);
   }

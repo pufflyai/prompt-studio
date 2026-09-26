@@ -22,7 +22,16 @@ describe("extension UI dependency versions", () => {
     expect(verify("0.26.1")).toEqual([]);
   });
 
-  test.each(["^0.26.1", "~0.26.1", "workspace:*", "latest", "*"])("rejects the unpinned version %s", (version) => {
+  test.each([
+    "^0.26.1",
+    "~0.26.1",
+    "workspace:*",
+    "latest",
+    "*",
+    "01.2.3",
+    "0.26.0-",
+    "0.26.0-alpha..1",
+  ])("rejects the unpinned version %s", (version) => {
     expect(verify(version)).toHaveLength(1);
   });
 
