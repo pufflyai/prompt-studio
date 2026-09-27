@@ -30,7 +30,7 @@ TypeError: socket.destroySoon is not a function
 
 The exception escapes Vite's proxy error handling and terminates the development server. The stack proves that Bun and `http-proxy-3` took the normal response cleanup path. It does not, by itself, prove that the API received a request without upgrade headers or returned a non-`101` response.
 
-## Why the Ideal Design Is Not Available
+## External limitation
 
 The missing behavior is in Bun's Node compatibility layer. Prompt Studio cannot repair the client upgrade event, raw-socket handoff, and server upgrade socket inside Vite.
 

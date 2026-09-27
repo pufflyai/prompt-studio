@@ -8,7 +8,7 @@ Accepted as a temporary workaround.
 
 The extension installer validates a prepared snapshot before replacing an installed extension. Bun resolves declared dependencies. Registry and archive dependencies remain usable after the author removes the source checkout. Local directory dependencies retain their declared filesystem ownership.
 
-## External limit
+## External limitation
 
 Bun 1.3.14 records local directory resolutions relative to the source checkout in its lockfile, including when the manifest uses an absolute `file:` path. Copying an unchanged manifest and lockfile to installation staging then running Bun fails to find the provider. The regression test in `extension-development-dependencies.test.ts` reproduces this with a real provider and consumer.
 

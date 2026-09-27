@@ -8,7 +8,7 @@ Accepted as a temporary workaround.
 
 Integration tests must exercise installation, validation, and source replacement under the same filesystem rules as the shipped Bun runtime.
 
-## External limit
+## External limitation
 
 With Bun 1.3.14 on Windows, an extension replacement scenario fails with EPERM inside `bun test` after loading dependencies. The identical scenario succeeds under `bun run`, including with active filesystem watchers. Moving only validation into a worker does not fix the test-runner failure.
 

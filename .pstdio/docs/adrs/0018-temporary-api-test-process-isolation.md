@@ -8,7 +8,7 @@ Accepted as a temporary workaround.
 
 Each API test file owns its fixtures and releases them when it finishes. The test runner must release the file's module state, including closed PGlite instances, before loading more files. Extension imports must finish top-level asynchronous initialization before their exports are read.
 
-## External limit
+## External limitation
 
 Bun 1.3.14 keeps enough state across the full API suite to exceed 11 GiB and be killed by the operating system. Closing the twelve fixtures that discarded their app handle fixes those leaks but does not bound the full process. The low-memory runtime mode also keeps growing.
 

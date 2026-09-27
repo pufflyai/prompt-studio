@@ -8,7 +8,7 @@ Accepted as a temporary workaround.
 
 PocketCoder should accept an idempotent turn ID and expose its acceptance and completion state. Prompt Studio could then reconnect to that exact turn after a lost response or host restart.
 
-## External limit
+## External limitation
 
 PocketCoder's AgentAPI relay accepts `POST /agent/message` without a caller-supplied turn ID or idempotency key. It exposes a workspace conversation and agent status. These identify a conversation, but cannot distinguish a new, unaccepted follow-up from the previous completed turn after a restart.
 
@@ -20,6 +20,10 @@ The harness owns this cursor. A new turn replaces it. A completed or canceled tu
 
 This cannot prove whether an unacknowledged prompt was accepted. If PocketCoder remains stable without any new reply, the harness waits until the workspace ends or the user stops it. That is preferable to executing a potentially destructive prompt twice. The README tells callers to inspect the conversation before manually repeating a prompt with an unknown outcome.
 
-## Isolation and removal
+## Isolation
 
-The cursor stays inside the PocketCoder extension and uses the existing public harness-state API. Core workspace and session schemas do not change. Remove the cursor when PocketCoder exposes idempotent turn submission and turn lookup, and use its remote turn reference for recovery instead.
+The cursor stays inside the PocketCoder extension and uses the existing public harness-state API. Core workspace and session schemas do not change.
+
+## Removal
+
+Remove the cursor when PocketCoder exposes idempotent turn submission and turn lookup, and use its remote turn reference for recovery instead.

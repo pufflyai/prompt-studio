@@ -8,7 +8,7 @@ Accepted as a temporary workaround.
 
 Once a sortable tab announces that a keyboard drag started, it must accept the next arrow key. Browser tests should be able to use that visible state as readiness.
 
-## External limit
+## External limitation
 
 The installed dnd-kit KeyboardSensor publishes drag state before attaching its document keydown listener. It attaches the listener in a later timer task. The public sensor API has no readiness signal and its attachment methods are private.
 
