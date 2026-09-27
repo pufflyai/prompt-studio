@@ -3,6 +3,22 @@ import extension from "./extension";
 import { remoteWorkspace, startPocketCoderTestServer, workspaceId, workspaceResource } from "./pocketcoder-test-server";
 
 const harness = extension.harnesses![0]!;
+test("recovers a missing remote turn without replacing known history", async () => {
+  const server = startPocketCoderTestServer(() => Response.json({}));
+  try {
+    const known = [{ id: "a", role: "user" as const, parts: [{ type: "text" as const, text: "first" }] }];
+    const native = [
+      ...known,
+      { id: "b", role: "assistant" as const, parts: [{ type: "text" as const, text: "reply" }] },
+    ];
+    expect(await harness.recoverMessages!(server.ctx, { knownMessages: known, nativeMessages: native })).toEqual({
+      kind: "recovered",
+      messages: native,
+    });
+  } finally {
+    server.stop();
+  }
+});
 const servers: ReturnType<typeof startPocketCoderTestServer>[] = [];
 afterEach(() => {
   for (const server of servers.splice(0)) server.stop();
