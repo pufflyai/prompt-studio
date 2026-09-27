@@ -19,6 +19,9 @@ const config: StorybookConfig = {
   framework: getAbsolutePath("@storybook/react-vite"),
   // Chakra's package.json declares a public Storybook URL. Composing it makes startup depend on the network.
   refs: { "@chakra-ui/react": { disable: true } },
+  // This Storybook has no docs pages. Docgen would parse the linked @pstdio/ui and @pstdio/workbench bundles,
+  // which made up most of the cold start time.
+  typescript: { reactDocgen: false },
   viteFinal: async (config) =>
     mergeConfig(config, {
       resolve: {
