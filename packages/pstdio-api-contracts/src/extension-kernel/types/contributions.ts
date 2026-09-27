@@ -182,7 +182,6 @@ export interface ArtifactMountContribution extends ContributionDefinition<"artif
   /** Relative path under .pstdio/<extension.name>/. */
   path: string;
   label: Localizable<string>;
-  repoRole?: "default" | "selected" | "workspace";
 }
 
 export interface TemplateTypeContribution extends ContributionDefinition<"template-type"> {

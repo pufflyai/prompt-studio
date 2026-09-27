@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -61,7 +62,7 @@ describe("POST /v1/sessions queueing", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Queue Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Queue Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -69,7 +70,7 @@ describe("POST /v1/sessions queueing", () => {
     const otherProjectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Other Queue Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Other Queue Project" })),
     });
     expect(otherProjectRes.status).toBe(201);
     const otherProject = await otherProjectRes.json();
@@ -127,7 +128,7 @@ describe("POST /v1/sessions queueing", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Generic Queue Reject Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Generic Queue Reject Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -147,7 +148,7 @@ describe("POST /v1/sessions queueing", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Cancel Queued Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Cancel Queued Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();

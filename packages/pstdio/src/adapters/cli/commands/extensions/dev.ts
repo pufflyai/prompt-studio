@@ -11,7 +11,8 @@ import {
 import type { InstalledExtensionSource } from "pstdio-api/extensions/install-extension-source";
 import type { Arguments, Argv } from "yargs";
 import { apiClient } from "@/features/api-client";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { findProjectRoot, readConfig } from "@/features/config/config";
+import { getProjectFolder } from "@/features/projects/project-folder";
 import { enableInstalledExtension } from "./shared";
 
 export type ExtensionsDevArgs = {
@@ -39,7 +40,8 @@ type Deps = {
   cwd: () => string;
   error: (message: string) => void;
   exists: (path: string) => boolean;
-  findGitRoot: typeof findGitRoot;
+  findProjectRoot: typeof findProjectRoot;
+  getProjectFolder: typeof getProjectFolder;
   hashExtensionDependencyInputs: typeof hashExtensionDependencyInputs;
   hashExtensionSource: typeof hashExtensionSource;
   log: (message: string) => void;
@@ -85,7 +87,8 @@ const defaultDeps: Deps = {
   cwd: () => process.cwd(),
   error: console.error,
   exists: existsSync,
-  findGitRoot,
+  findProjectRoot,
+  getProjectFolder,
   hashExtensionDependencyInputs,
   hashExtensionSource,
   log: console.log,
@@ -139,8 +142,8 @@ const formatHostFailure = (extensionId: string, instance: ProjectExtensionInstan
   return lines.join("\n");
 };
 
-const resolveProject = (deps: Pick<Deps, "cwd" | "findGitRoot" | "readConfig">) => {
-  const root = deps.findGitRoot(deps.cwd());
+const resolveProject = (deps: Pick<Deps, "cwd" | "findProjectRoot" | "readConfig">) => {
+  const root = deps.findProjectRoot(deps.cwd());
   if (!root) throw new Error("Run `pst extensions dev` inside a linked git project.");
   const projectId = deps.readConfig(root)?.project_id;
   if (!projectId) throw new Error("Run `pst projects create` or link this git project before starting extension dev.");
@@ -207,7 +210,8 @@ const runDevelopmentCycle = async (input: DevelopmentCycleInput) => {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsDevArgs>) => {
-    const { projectId, root: repoPath } = resolveProject(deps);
+    const { projectId } = resolveProject(deps);
+    const repoPath = await deps.getProjectFolder(projectId);
     const sourcePath = resolve(deps.cwd(), argv.source);
     if (!deps.exists(sourcePath)) throw new Error(`Extension source folder not found: ${sourcePath}`);
     const installName = argv.name ?? basename(sourcePath);

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, getPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -9,8 +10,10 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   for (const project of projects) await request.delete(`${apiBase}/v1/projects/${project.id}`);
 };
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "Ticket editor lifecycle" } });
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Ticket editor lifecycle" }, folderPath),
+  });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };

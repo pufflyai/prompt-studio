@@ -36,7 +36,7 @@ describe("createWorkspacesDBService rename", () => {
       shorthand_base: "PS-1",
       anchors: [ticketAnchor],
       branch: "workspace/PS-1_A1",
-      worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
+      root_path: "/repo/.pstdio/workspaces/PS-1_A1",
     });
 
     const renamed = await workspacesService.rename(ws.id, "  Spike - API only  ");
@@ -46,7 +46,7 @@ describe("createWorkspacesDBService rename", () => {
     expect(renamed!.id).toBe(ws.id);
     expect(renamed!.workspace_shorthand).toBe(ws.workspace_shorthand);
     expect(renamed!.branch).toBe(ws.branch);
-    expect(renamed!.worktree_path).toBe(ws.worktree_path);
+    expect(renamed!.root_path).toBe(ws.root_path);
     expect(renamed!.updated_at).not.toBe(ws.updated_at);
   });
 

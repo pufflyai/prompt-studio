@@ -7,14 +7,6 @@ import { workbenchAttachmentTargetSchema } from "./targets";
 
 export { extensionResourceRefSchema } from "./resource-ref";
 
-export const extensionRepoContextSchema = z.object({
-  projectId: z.string(),
-  repoId: z.string(),
-  path: z.string(),
-  remote: z.string().nullable().optional(),
-  role: z.enum(["default", "selected", "workspace"]).optional(),
-});
-
 export const extensionSlotInvocationSchema = z.object({
   id: z.string(),
   kind: extensionSlotKindSchema,
@@ -43,7 +35,6 @@ export const commandExecuteRequestSchema = z.object({
   resource: extensionResourceRefSchema.optional(),
   attachment: extensionAttachmentInvocationSchema.optional(),
   slot: extensionSlotInvocationSchema.optional(),
-  repo: extensionRepoContextSchema.optional(),
   source: commandSourceSchema.optional(),
   metadata: jsonObjectSchema.optional(),
 });
@@ -54,7 +45,6 @@ export const commandExecuteBodySchema = z.object({
   resource: extensionResourceRefSchema.optional(),
   attachment: extensionAttachmentInvocationSchema.optional(),
   slot: extensionSlotInvocationSchema.optional(),
-  repo: extensionRepoContextSchema.optional(),
   source: commandSourceSchema.optional(),
   metadata: jsonObjectSchema.optional(),
 });

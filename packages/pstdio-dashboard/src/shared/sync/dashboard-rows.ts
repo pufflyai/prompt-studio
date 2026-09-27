@@ -2,20 +2,16 @@ import { getCollection, getCollectionsVersion, type SyncedRow, subscribeCollecti
 
 export interface DashboardRows {
   files: SyncedRow[];
-  projectRepos: SyncedRow[];
-  repos: SyncedRow[];
   sessions: SyncedRow[];
   workspaceSessions: SyncedRow[];
   workspaces: SyncedRow[];
 }
 
-type DashboardDataTable = "files" | "project_repos" | "repos" | "sessions" | "workspace_sessions" | "workspaces";
+type DashboardDataTable = "files" | "sessions" | "workspace_sessions" | "workspaces";
 
 const readRows = (table: DashboardDataTable) => Array.from(getCollection(table).state.values()) as SyncedRow[];
 
 export const readWorkspaceRows = () => ({
-  projectRepos: readRows("project_repos"),
-  repos: readRows("repos"),
   workspaces: readRows("workspaces"),
 });
 

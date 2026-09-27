@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import {
   createPlannerTag,
   createPlannerTicket,
@@ -15,8 +16,12 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
-  const res = await request.post(`${apiBase}/v1/projects`, { data: { name } });
+const createProjectViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  name: string,
+  folderPath?: string,
+) => {
+  const res = await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name }, folderPath) });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string };
 };

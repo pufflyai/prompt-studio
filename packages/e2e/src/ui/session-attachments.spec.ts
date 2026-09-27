@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 type ConversationMessage = {
@@ -22,9 +23,13 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
+const createProjectViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  name: string,
+  folderPath?: string,
+) => {
   const res = await request.post(`${apiBase}/v1/projects`, {
-    data: { name, agents: ["pstdio.workbench-fixture.harness.fake"] },
+    data: folderProjectInput({ name, agents: ["pstdio.workbench-fixture.harness.fake"] }, folderPath),
   });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string };

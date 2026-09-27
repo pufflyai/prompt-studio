@@ -98,6 +98,7 @@ export const createExtensionRootWatcher = async (
     if (disposed) return;
 
     const roots = await input.listExtensionRoots();
+    if (disposed) return;
     const nextPaths = new Set(roots.map((root) => root.path));
 
     for (const [path, registration] of registrations) {

@@ -11,8 +11,8 @@ import {
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
-  createReposDBService,
   createSkillsDBService,
+  createWorkspacesDBService,
 } from "pstdio-db";
 import { createFilesStorageService } from "pstdio-storage";
 import { createProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
@@ -21,6 +21,7 @@ import { createExtensionService } from "./extension-service";
 import { createFileService } from "./file-service";
 import { createProjectService } from "./project-service";
 import { createSkillService } from "./skill-service";
+import { createWorkspaceService } from "./workspace-service";
 
 const emptyRuntime = {
   artifactMounts: [],
@@ -183,14 +184,17 @@ const setupServiceWithExtension = async () => {
     eventBus: new EventBus(),
     projectsDBService: createProjectsDBService(db),
   });
-  const repoService = createReposDBService(db);
+  const workspaceService = createWorkspaceService({
+    eventBus: new EventBus(),
+    workspacesDb: createWorkspacesDBService(db),
+  });
   const extensionService = createExtensionService({
     extensionInstancesService: createExtensionInstancesDBService(db),
     extensionUserDataService: createExtensionUserDataDBService(db),
     installedExtensionSourcesService: createInstalledExtensionSourcesDBService(db),
     projectService,
   });
-  const catalog = createProjectExtensionRuntimeCatalog({ extensionService, projectService, repoService });
+  const catalog = createProjectExtensionRuntimeCatalog({ extensionService, projectService, workspaceService });
   const fileService = createFileService({
     eventBus: new EventBus(),
     filesDBService: createFilesDBService(db),

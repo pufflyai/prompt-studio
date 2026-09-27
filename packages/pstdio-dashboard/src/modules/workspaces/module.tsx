@@ -146,12 +146,13 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
       kind: "panels",
       empty: {
         kind: "view",
-        id: dashboardWidgetIds.workspaceDiffs,
+        id: dashboardWidgetIds.workspaceFiles,
       },
     },
     slots: [
       {
         id: "changes",
+        isAvailable: (resource) => resource?.metadata?.workspaceSupportsDiff === true,
         region: "main",
         tab: { getSnapshot: () => ({ label: "Changes" }) },
         order: 1,
@@ -236,7 +237,7 @@ export const createWorkspacesModule = () =>
       registerWorkspaceDetailWidgets(ctx);
       registerWorkspacesPage(ctx);
       const workspaceResourceSubscription = watchOpenWorkspaceResource(ctx);
-      registerWorkspaceSidenavContributions(ctx);
+      const workspaceNavigation = registerWorkspaceSidenavContributions(ctx);
       ctx.modes.registerMode({
         id: "project",
         label: "Project",
@@ -272,6 +273,7 @@ export const createWorkspacesModule = () =>
       );
       return {
         dispose: () => {
+          workspaceNavigation.dispose();
           workspaceResourceSubscription.dispose();
           unsubscribePage();
         },

@@ -15,7 +15,7 @@ const provision = async (workspace: ReturnType<typeof makeWorkspace>) => {
     is_default: true,
     provider_id: "pstdio.root",
     execution_kind: "local",
-    worktree_path: "/project-home",
+    root_path: "/project-home",
     setup_error: "Previous setup failed",
   });
   const deps = {
@@ -28,7 +28,6 @@ const provision = async (workspace: ReturnType<typeof makeWorkspace>) => {
         initializing: false,
       }),
     },
-    repoService: { listByProject: async () => [{ id: "repo-1", path: "/first-repo" }] },
   } as unknown as ProvisionCoordinatorDeps;
   const hooks: WorkspaceProvisioningHooks = {
     fireProvision: async (_deps, _projectId, _event, payload) => {
@@ -49,13 +48,9 @@ const provision = async (workspace: ReturnType<typeof makeWorkspace>) => {
 describe("workspace provisioning locations", () => {
   test.each([
     { providerId: "pstdio.worktree", worktreePath: "/other-repo/.worktrees/attempt", type: "worktree" },
-    { providerId: "pstdio.root", worktreePath: null, type: "root" },
-  ])("emits project and workspace locations while preserving $type fields", async ({
-    providerId,
-    worktreePath,
-    type,
-  }) => {
-    const workspace = makeWorkspace({ provider_id: providerId, execution_kind: "local", worktree_path: worktreePath });
+    { providerId: "pstdio.root", worktreePath: "/other-repo", type: "root" },
+  ])("emits project and workspace locations for the $type provider", async ({ providerId, worktreePath }) => {
+    const workspace = makeWorkspace({ provider_id: providerId, execution_kind: "local", root_path: worktreePath });
     const { payloads, configured } = await provision(workspace);
     const workspaceDir = worktreePath ?? "/other-repo";
 
@@ -65,9 +60,7 @@ describe("workspace provisioning locations", () => {
         projectDir: "/project-home",
         providerId,
         workspaceDir,
-        repoPath: "/other-repo",
-        type,
-        workspace: { id: workspace.id, root_path: workspaceDir, worktree_path: worktreePath },
+        workspace: { id: workspace.id, root_path: workspaceDir },
       });
     }
     expect(configured).toEqual([workspaceDir]);
@@ -78,7 +71,7 @@ describe("workspace provisioning locations", () => {
       makeWorkspace({
         provider_id: "cloud.environment",
         execution_kind: "remote",
-        worktree_path: null,
+        root_path: null,
       }),
     );
 

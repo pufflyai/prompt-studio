@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -15,6 +15,7 @@ import {
 } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
+import { folderProjectInput } from "../helpers/folder-project";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -64,8 +65,10 @@ test.describe("packaged extension webviews", () => {
           });
           child = started.child;
 
+          const projectFolder = join(tempRoot, "project");
+          mkdirSync(projectFolder);
           const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-            body: JSON.stringify({ name: "packaged-extension-webview" }),
+            body: JSON.stringify(folderProjectInput({ name: "packaged-extension-webview" }, projectFolder)),
             headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
             method: "POST",
           });

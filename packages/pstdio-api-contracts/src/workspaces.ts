@@ -57,7 +57,7 @@ export const workspaceSchema = z.object({
   project_id: z.string(),
   name: z.string(),
   branch: z.string().nullable(),
-  worktree_path: z.string().nullable(),
+  root_path: z.string().nullable(),
   provider_id: z.string(),
   provider_params_json: jsonObjectSchema,
   provider_ref_json: workspaceProviderRefSchema.nullable(),
@@ -70,6 +70,8 @@ export const workspaceSchema = z.object({
   display_path: z.string().nullable(),
   is_default: z.boolean(),
   archived: z.boolean(),
+  initializing: z.boolean(),
+  setup_error: z.string().nullable(),
   workspace_shorthand: z.string(),
   startup_log_file_id: z.string().nullable(),
   anchors_json: z.array(workspaceAnchorSchema),
@@ -84,15 +86,13 @@ export const workspaceListItemSchema = workspaceSchema;
 
 export const createWorkspaceInputSchema = z.object({
   project_id: z.string().min(1),
-  /** Workspace provider. Defaults to pstdio.worktree. */
-  provider_id: z.string().optional(),
-  /** Provider parameters. Built-in worktree accepts repo_id and base. */
+  /** Provider responsible for creating the workspace. */
+  provider_id: z.string().min(1),
+  /** Provider parameters. The Git provider accepts a base ref. */
   params: jsonObjectSchema.optional(),
-  /** Repository to branch from. Defaults to the project's first repository. */
-  repo_id: z.string().optional(),
-  /** Base branch/ref for the new worktree. Defaults to HEAD. */
-  base: z.string().optional(),
+  /** Optional resource links owned by the requesting tool. */
   anchors: z.array(workspaceAnchorSchema).optional(),
+  /** Prefix for related workspace names; omitted workspaces use project-scoped WS-N names. */
   shorthand_base: z.string().trim().min(1).optional(),
 });
 

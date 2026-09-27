@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
@@ -35,7 +36,7 @@ const createProject = async () => {
   const response = await handle.app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "Extension Upgrade Project" }),
+    body: JSON.stringify(folderProjectInput({ name: "Extension Upgrade Project" })),
   });
   return response.json();
 };

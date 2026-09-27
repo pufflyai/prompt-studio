@@ -162,6 +162,35 @@ describe("createProjectsModule selection restoration", () => {
     }
   });
 
+  test("leaves project selection to the active folder setup command", async () => {
+    const workbench = createWorkbench();
+    getWriter("projects")?.truncateAndWrite([]);
+    markInitialCollectionsSyncComplete();
+    const projects = workbench.registerModule(createProjectsModule());
+
+    try {
+      await workbench.commands.executeCommand(dashboardCommandIds.createProject);
+      const project = { id: "project-1", name: "Prompt Studio", created_at: "2026-01-01T00:00:00.000Z" };
+      getWriter("projects")?.truncateAndWrite([project]);
+
+      expect(getDashboardSelectedProjectId(workbench)).toBeUndefined();
+      expect(
+        workbench.layout
+          .getLayout()
+          .regions.overlay.widgets.some((item) => item.viewId === dashboardWidgetIds.createProject),
+      ).toBe(true);
+
+      const setup = workbench.layout
+        .getLayout()
+        .regions.overlay.widgets.find((item) => item.viewId === dashboardWidgetIds.createProject)!;
+      workbench.layout.closeWidget(setup.widgetId);
+      expect(getDashboardSelectedProjectId(workbench)).toBe(project.id);
+    } finally {
+      projects.dispose();
+      getWriter("projects")?.truncateAndWrite([]);
+    }
+  });
+
   test("selects the only synced project when no project is selected", async () => {
     const workbench = createWorkbench();
     getWriter("projects")?.truncateAndWrite([]);

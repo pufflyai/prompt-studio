@@ -126,14 +126,16 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
   const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();
 
+  let cwd = input.cwd;
+  if (workspace) cwd = workspace.executionTarget.kind === "local" ? workspace.executionTarget.rootPath : undefined;
   const session = await harness.start(
     {
       prompt: input.prompt,
       attachments: input.attachments,
       model: input.model,
       params: input.params,
-      cwd: input.cwd,
-      workspace: workspace!,
+      cwd,
+      workspace,
       sessionId: input.sessionId,
       events: conversation,
       signal: input.signal,

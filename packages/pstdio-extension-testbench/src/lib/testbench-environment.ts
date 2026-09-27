@@ -182,12 +182,6 @@ export const createBenchEnvironment = (
       removeWorktree: async () => ({ removed: true }),
       resolve: async () => ({}) as never,
     },
-    repos: {
-      get: async () => ({}) as never,
-      getDefault: async () => undefined,
-      list: async () => [],
-      resolvePath: async (_repoId, relativePath) => relativePath,
-    },
     activity: { record: async () => ({ id: crypto.randomUUID() }) },
     notify: {
       action: async () => ({}) as never,

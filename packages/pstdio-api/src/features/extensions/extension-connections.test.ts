@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { createMemoryConnectionSecretStore } from "./connection-secret-store";
 
 const RUNTIME_TOKEN = "runtime-test-token";
@@ -88,7 +89,7 @@ describe("extension connection routes", () => {
     const projectResponse = await runtimeRequest("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Connection Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Connection Project" })),
     });
     const projectId = (await projectResponse.json()).id;
     const sourcePath = writeConnectionExtension(tempRoot);

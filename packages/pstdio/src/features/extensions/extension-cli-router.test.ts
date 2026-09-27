@@ -1,5 +1,4 @@
 import { describe, expect, mock, test } from "bun:test";
-import { resolve } from "node:path";
 import type { CommandExecuteResponse, ExtensionCommandRecord } from "@pstdio/sdk/api";
 import {
   buildExtensionCommandTable,
@@ -84,7 +83,6 @@ describe("extension CLI router", () => {
             ],
             diagnostics: [],
           })),
-          listRepos: mock(async () => []),
           log,
           resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
         },
@@ -178,7 +176,6 @@ describe("extension CLI router dispatch", () => {
           }),
         ),
         listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
-        listRepos: mock(async () => []),
         log,
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
       },
@@ -189,7 +186,7 @@ describe("extension CLI router dispatch", () => {
     expect(JSON.parse(logged)).toEqual([{ shorthand: "T-1", title: "First" }]);
   });
 
-  test("dispatches a namespace command through the API client with repo context", async () => {
+  test("dispatches a namespace command through the API client with workspace context", async () => {
     const execute = mock(async (_commandId: string, _request: unknown) => successResponse);
     const listCommands = mock(async () => ({ commands: labCommands, diagnostics: [] }));
     const log = mock();
@@ -202,16 +199,6 @@ describe("extension CLI router dispatch", () => {
         cwd: () => "/repo",
         execute,
         listCommands,
-        listRepos: async () => [
-          {
-            id: "repo-1",
-            name: "repo",
-            path: "/repo",
-            display_name: null,
-            created_at: "2026-01-01T00:00:00.000Z",
-            updated_at: "2026-01-01T00:00:00.000Z",
-          },
-        ],
         log,
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
       },
@@ -222,7 +209,7 @@ describe("extension CLI router dispatch", () => {
     expect(execute).toHaveBeenCalledWith("lab.counter.bump", {
       projectId: "project-1",
       params: { amount: 2 },
-      repo: { projectId: "project-1", repoId: "repo-1", path: resolve("/repo") },
+      workspaceId: undefined,
       source: "cli",
     });
     expect(log).toHaveBeenCalledWith(JSON.stringify({ counter: 2 }));
@@ -243,7 +230,6 @@ describe("extension CLI router dispatch", () => {
       deps: {
         execute,
         listCommands: mock(async () => ({ commands: aliasedCommands, diagnostics: [] })),
-        listRepos: mock(async () => []),
         log,
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
       },
@@ -276,7 +262,6 @@ describe("extension CLI router dispatch", () => {
         deps: {
           execute,
           listCommands: mock(async () => ({ commands: aliasedCommands, diagnostics: [] })),
-          listRepos: mock(async () => []),
           log: mock(),
           resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
         },
@@ -308,7 +293,6 @@ describe("extension CLI router dispatch", () => {
         error,
         execute: mock(async () => successResponse),
         listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
-        listRepos: mock(async () => []),
         log,
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
       },
@@ -329,7 +313,6 @@ describe("extension CLI router dispatch", () => {
         error,
         execute: mock(async () => successResponse),
         listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
-        listRepos: mock(async () => []),
         log,
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
       },
@@ -349,7 +332,6 @@ describe("extension CLI router dispatch", () => {
         error,
         execute: mock(async () => successResponse),
         listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
-        listRepos: mock(async () => []),
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
       },
     });
@@ -379,7 +361,6 @@ describe("extension CLI router dispatch", () => {
         error,
         execute,
         listCommands: mock(async () => ({ commands: requiredCommands, diagnostics: [] })),
-        listRepos: mock(async () => []),
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
       },
     });
@@ -390,8 +371,8 @@ describe("extension CLI router dispatch", () => {
   });
 });
 
-describe("extension CLI router repo context", () => {
-  test("resolves a worktree-backed workspace to its owning registered repo", async () => {
+describe("extension CLI router workspace context", () => {
+  test("passes the configured workspace identity to the host", async () => {
     const execute = mock(async (_commandId: string, _request: unknown) => successResponse);
     const worktree = "/repo/.pstdio/workspaces/PS-1_A1";
 
@@ -401,21 +382,8 @@ describe("extension CLI router repo context", () => {
         cwd: () => worktree,
         execute,
         listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
-        listRepos: async () => [
-          {
-            id: "repo-1",
-            name: "repo",
-            path: "/repo",
-            display_name: null,
-            created_at: "2026-01-01T00:00:00.000Z",
-            updated_at: "2026-01-01T00:00:00.000Z",
-          },
-        ],
-        // A worktree's .git points back at the owning repo; resolve it so the worktree
-        // maps to the registered repo while still passing its own working-tree path.
-        resolveOwningRepoRoot: () => "/repo",
         log: mock(),
-        resolveProjectId: () => ({ projectId: "project-1", root: worktree }),
+        resolveProjectId: () => ({ projectId: "project-1", root: worktree, workspaceId: "ws-1" }),
       },
     });
 
@@ -423,7 +391,7 @@ describe("extension CLI router repo context", () => {
     expect(execute).toHaveBeenCalledWith("lab.counter.bump", {
       projectId: "project-1",
       params: { amount: 2 },
-      repo: { projectId: "project-1", repoId: "repo-1", path: resolve(worktree) },
+      workspaceId: "ws-1",
       source: "cli",
     });
   });

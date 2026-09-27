@@ -13,9 +13,9 @@ export const getResizeSeparatorColors = (separator: Locator) =>
     return { actual: getComputedStyle(element).backgroundColor, expected };
   });
 
-export const prepareDashboard = async (page: Page, projectId: string, repoId: string) => {
+export const prepareDashboard = async (page: Page, projectId: string) => {
   await page.addInitScript(
-    ({ selectedProjectId, selectedRepoId }) => {
+    ({ selectedProjectId }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
       localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
@@ -25,7 +25,6 @@ export const prepareDashboard = async (page: Page, projectId: string, repoId: st
           state: {
             lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
             lastSelectedModels: [],
-            lastSelectedRepo: selectedRepoId,
             lastSelectedBranches: [],
             sessionModalState: "closed",
             selectedSessionId: null,
@@ -34,7 +33,7 @@ export const prepareDashboard = async (page: Page, projectId: string, repoId: st
         }),
       );
     },
-    { selectedProjectId: projectId, selectedRepoId: repoId },
+    { selectedProjectId: projectId },
   );
 };
 

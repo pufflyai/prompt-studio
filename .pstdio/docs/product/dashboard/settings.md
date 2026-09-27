@@ -3,11 +3,11 @@ status: "draft"
 created: "2026-03-10T20:12:05Z"
 ---
 
-# Product Requirements Document: Dashboard Settings and Project Agent Selection
+# Product Requirements Document: Dashboard Settings and Folder Projects
 
 ## Summary
 
-The dashboard ships a global settings surface plus project creation with agent selection. Global settings uses a sidenav + panel layout aligned with project settings, with Agents and Runtime panels for agent configuration and session runtime limits.
+The dashboard opens projects from folders. Global settings uses a sidenav + panel layout aligned with project settings, with Agents and Runtime panels for agent configuration and session runtime limits.
 
 ## Problem
 
@@ -19,11 +19,11 @@ The old settings PRD described richer settings behavior than the current dashboa
 - Document the global settings sidenav/panel information architecture.
 - Document manual agent add behavior and executable-path constraints.
 - Document runtime concurrency settings for queued sessions.
-- Document the project settings information architecture including the repositories panel.
+- Document the project settings information architecture including the project folder panel.
 
 ## Non-Goals
 
-- Editing, linking, or unlinking repositories from project settings.
+- Moving an existing project folder from project settings.
 - In-dashboard template editing.
 - Agent setup during first-run onboarding.
 
@@ -34,31 +34,31 @@ Current settings routes:
 - `/settings`
 - `/projects/:projectId/settings`
 
-Project creation includes a second step for selecting agents, with all installed agents selected by default. If no agents are installed on the machine, project creation is disabled and the projects page shows a warning banner with recovery guidance (Settings -> Agents and manual add/setup paths). Existing projects remain visible and accessible. The global settings page uses a sidenav with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration. The `Runtime` panel controls global session concurrency; when the active-session limit is reached, accepted session requests are queued.
+Project creation opens one selected or newly created folder. It has no agent-selection step and works without installed agents. The global settings page uses a sidenav with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration. The `Runtime` panel controls global session concurrency; when the active-session limit is reached, accepted session requests are queued.
 
 ## Requirements
 
 ### Functional Requirements
 
 1. `/projects` must always remain accessible regardless of onboarding state.
-2. Project creation must include an agent-selection step after project details/repositories.
-3. All installed agents must be pre-selected in the agent-selection step by default.
-4. If no agents are installed, project creation controls must be disabled and a warning banner must be shown on `/projects`.
-5. The warning banner must clearly explain how to add agents using Settings -> Agents, including setup/manual add paths.
+2. Project creation opens one selected folder immediately. Missing agents do not block opening.
+3. Project creation must not require an agent-selection step.
+4. Folder opening must remain enabled when no agents are installed.
+5. Users configure agents through Settings -> Agents when they want to start a session.
 6. Existing projects and project navigation must remain available when no agents are installed.
 7. Global settings must use panel-based navigation with an `Agents` section.
 8. Global settings must show available agents and current agent configs.
 9. Global settings must support enabling, disabling, and setting the default agent.
 10. Global settings must support manually adding a supported agent config with an executable path.
 11. Existing configured executable paths must be displayed but not editable.
-12. `/projects/:projectId/settings` must support a read-only repositories panel that shows linked repos with name and path, plus an empty state when none are linked.
+12. `/projects/:projectId/settings` must support a project folder panel with the default workspace location, project rename, and attachment for a project without a location.
 13. Global settings must expose a runtime setting for maximum concurrent sessions.
 14. Setting maximum concurrent sessions to empty/unlimited must disable queue capacity enforcement.
 15. Reducing maximum concurrent sessions must not cancel active sessions; it only affects new dispatches and queued drains.
 
 ### UX Requirements
 
-- Project creation should clearly separate project details (step 1) from agent selection (step 2).
+- Project creation uses one folder picker. The chosen folder supplies the initial project name.
 - Global settings should distinguish installed, enabled, and default states.
 - Global settings should expose manual-add affordance from the Agents panel.
 - Existing configured executable paths should be visible as read-only values.
@@ -66,17 +66,17 @@ Project creation includes a second step for selecting agents, with all installed
 
 ### Operational Requirements
 
-- Agent availability on the projects list is sourced from `/v1/agents/info`.
+- Agent availability in settings is sourced from `/v1/agents/info`.
 - Global settings mutations call the agent-config APIs and surface errors with toasts.
 - Runtime settings mutations call the settings APIs and trigger queue draining when capacity increases.
 
 ## Behavior
 
 1. Project routes no longer depend on onboarding completion state.
-2. Project creation runs as a two-step flow: project details/repositories, then agent selection.
-3. Installed agents are pre-selected on step 2; users can deselect before creating.
-4. If no installed agents are found, project creation is disabled and the warning banner explains how to recover.
-5. Existing projects remain visible and can still be opened when project creation is blocked.
+2. Project creation opens one chosen or newly created folder. Agent defaults remain configurable in settings.
+3. The folder opens without prompting for an agent.
+4. If no installed agents are found, folder opening and tools remain available.
+5. Existing projects remain visible and accessible regardless of agent availability.
 6. The global settings page loads available agents and configured agents, then renders toggle and default actions for each one inside the `Agents` panel.
 7. Selecting `Add agent manually` opens a flow that captures supported `agent_id` and executable path, then creates/updates the config via setup endpoint.
 8. Existing configured rows show executable path text as read-only (`Not set` when absent).
@@ -84,9 +84,9 @@ Project creation includes a second step for selecting agents, with all installed
 10. Saving an empty runtime limit stores unlimited concurrency.
 11. Saving a positive runtime limit bounds the number of active `in_progress` or `awaiting_input` sessions.
 12. Increasing the limit lets the scheduler drain queued sessions when capacity becomes available.
-13. The per-project settings route includes a read-only repositories panel showing linked repos (name and path) with an empty state when none are linked.
+13. The per-project settings route includes a project folder panel showing the default workspace, with rename and missing-location attachment.
 14. The skill detail view shows the skill name, current version badge, description, and full content.
-15. When a newer bundled version is available, an "Update to vX" button appears and propagates the updated skill to all agent directories in linked repos.
+15. When a newer bundled version is available, an "Update to vX" button appears and propagates the updated skill to all agent directories in the default workspace folder.
 16. Each skill shows per-agent installation badges (green, e.g. `claude-code`, `opencode`) indicating which agents have the skill installed locally on disk. When no agents have the skill installed, a "Not installed locally" label is shown instead.
 
 ## Interface
@@ -96,13 +96,13 @@ Project creation includes a second step for selecting agents, with all installed
 | Route | Purpose |
 | ----- | ------- |
 | `/settings` | Global settings shell with sidenav + `Agents` panel. |
-| `/projects/:projectId/settings` | Project settings with tags, repositories, hooks, skills, templates, and danger zone panels. |
+| `/projects/:projectId/settings` | Project settings with tags, project folder, hooks, skills, templates, and danger zone panels. |
 
 ### Current Actions
 
 | Action | Behavior |
 | ------ | -------- |
-| Create project (step 2) | Selects which installed agents to use, all selected by default. |
+| Open folder | Opens an existing project or creates one for the selected folder. |
 | Toggle agent | Enables or disables a configured agent. |
 | Set default agent | Marks the selected agent config as default. |
 | Add agent manually | Creates/updates a supported agent config with executable path at create time. |
@@ -111,11 +111,10 @@ Project creation includes a second step for selecting agents, with all installed
 ## Rules & Constraints
 
 - Manual add in global settings supports `claude-code` and `opencode` only.
-- Project creation is blocked when `/v1/agents/info` reports zero installed agents.
-- Project settings include tags, repositories (read-only), hooks, skills, templates, and danger zone.
-- Repository management (add/remove) is handled in global settings, not project settings.
+- Project creation works when no agent is installed.
+- Project settings include tags, project folder, hooks, skills, templates, and danger zone.
 - Existing configured executable path is read-only in global settings for this phase.
-- Skill installation badges reflect real-time filesystem checks against agent directories in linked repos.
+- Skill installation badges reflect real-time filesystem checks against agent directories in the default workspace folder.
 - Active runtime capacity counts `in_progress` and `awaiting_input` sessions.
 - `queued` sessions do not count against active runtime capacity.
 
@@ -123,12 +122,12 @@ Project creation includes a second step for selecting agents, with all installed
 
 | Error | Cause |
 | ----- | ----- |
-| No agents available | Project creation is blocked until an agent is installed/configured. |
+| No agents available | Sessions need an installed agent; folder opening and tools remain available. |
 | Failed to enable / disable / set default agent | The corresponding settings mutation failed. |
 | Failed to save runtime settings | The settings mutation failed or the value is invalid. |
 
 ## Verification & Evidence
 
 - **Commands to run**: `bun test packages/pstdio-dashboard/src/features/project-list/pages/project-list.test.ts`, `bun test packages/e2e/src/ui/projects.spec.ts`
-- **Expected evidence**: Project creation has a second agent step, no-agent state shows blocking banner, and existing project navigation remains available.
+- **Expected evidence**: A folder opens without an agent-selection step or an installed agent, and existing project navigation remains available.
 - **Where to find artifacts**: `packages/pstdio-dashboard/src/features/project-list/`, `packages/pstdio-dashboard/src/features/settings/`, `packages/pstdio-dashboard/src/features/project-settings/`

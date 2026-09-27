@@ -5,20 +5,18 @@ import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { Folder, Plus, Search } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
-import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardProjects, type DashboardProject } from "../data/project-data";
-import { resolveProjectCreationAvailability } from "./create-project-state";
 
 const filterProjects = (projects: DashboardProject[], searchTerm: string, _dataVersion: number) => {
   const query = searchTerm.trim().toLowerCase();
   if (!query) return projects;
 
   return projects.filter((project) => {
-    const repoPath = project.repoPath ?? "";
-    return project.name.toLowerCase().includes(query) || repoPath.toLowerCase().includes(query);
+    const folderPath = project.folderPath ?? "";
+    return project.name.toLowerCase().includes(query) || folderPath.toLowerCase().includes(query);
   });
 };
 
@@ -28,40 +26,6 @@ interface ProjectPickerRowsProps {
   searchTerm: string;
   onSelectProject: (project: DashboardProject) => void;
 }
-
-interface ProjectListBannersProps {
-  showAgentErrorBanner: boolean;
-  onRetryAgents: () => void;
-}
-
-const ProjectListBanners = (props: ProjectListBannersProps) => {
-  const { showAgentErrorBanner, onRetryAgents } = props;
-  const { t } = useTranslation("projects");
-
-  if (!showAgentErrorBanner) return null;
-
-  return (
-    <Stack gap="sm">
-      {showAgentErrorBanner ? (
-        <Stack borderWidth="1px" borderColor="red.300" bg="red.50" borderRadius="md" p="sm" gap="xs">
-          <Stack gap="2xs">
-            <Text textStyle="label/M/medium" color="red.900">
-              {t("list.agentLoadErrorBanner.title")}
-            </Text>
-            <Text textStyle="paragraph/S/regular" color="red.800">
-              {t("list.agentLoadErrorBanner.description")}
-            </Text>
-          </Stack>
-          <Stack direction="row" justifyContent="flex-end">
-            <Button size="xs" variant="outline" onClick={onRetryAgents}>
-              {t("list.agentLoadErrorBanner.retry")}
-            </Button>
-          </Stack>
-        </Stack>
-      ) : null}
-    </Stack>
-  );
-};
 
 const ProjectPickerRows = (props: ProjectPickerRowsProps) => {
   const { projects, selectedProjectId, searchTerm, onSelectProject } = props;
@@ -93,7 +57,7 @@ const ProjectPickerRows = (props: ProjectPickerRowsProps) => {
           variant="full-width"
           id={project.id}
           label={project.name}
-          description={project.repoPath ?? t("chatInput.repo.noneLinked")}
+          description={project.folderPath ?? "No workspace attached"}
           icon={<Icon as={Folder} boxSize="16px" />}
           isSelected={project.id === selectedProjectId}
           onActivate={() => onSelectProject(project)}
@@ -106,7 +70,6 @@ const ProjectPickerRows = (props: ProjectPickerRowsProps) => {
 export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { t } = useTranslation("projects");
-  const agentsQuery = useAgents();
   const [searchTerm, setSearchTerm] = useState("");
   const selectedProjectIdValue = useWorkbenchStore(
     input.workbench.context.store,
@@ -120,11 +83,6 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
 
   const selectedProjectId = typeof selectedProjectIdValue === "string" ? selectedProjectIdValue : undefined;
   const projects = filterProjects(createDashboardProjects(), searchTerm, dashboardDataVersion);
-  const availability = resolveProjectCreationAvailability({
-    agentInfo: agentsQuery.data ?? [],
-    isAgentsLoading: agentsQuery.isLoading,
-    isAgentsError: agentsQuery.isError,
-  });
 
   const handleSelectProject = (project: DashboardProject) => {
     void input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
@@ -142,13 +100,6 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
       searchPlaceholder={t("list.searchPlaceholder")}
       searchIcon={<Search size={14} />}
       searchAutoFocus
-      bodyBefore={
-        availability.showAgentErrorBanner ? (
-          <Box px="sm" pt="sm">
-            <ProjectListBanners showAgentErrorBanner onRetryAgents={() => void agentsQuery.refetch()} />
-          </Box>
-        ) : null
-      }
       footerEnd={
         <Button variant="outline" size="xs" onClick={handleCreateProject}>
           <Icon as={Plus} boxSize="14px" />

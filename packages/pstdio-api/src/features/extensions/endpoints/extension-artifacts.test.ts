@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { git } from "pstdio-wt";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
@@ -91,24 +90,20 @@ beforeEach(async () => {
   app = created.app;
   closeApp = created.close;
 
+  const repoDir = join(tempRoot, "documents");
+  mkdirSync(repoDir);
   const projectResponse = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "Artifacts Project", agents: [testHarnessId("opencode")] }),
+    body: JSON.stringify({
+      name: "Artifacts Project",
+      agents: [testHarnessId("opencode")],
+      initial_workspace: { provider_id: "pstdio.root", params: { path: repoDir } },
+    }),
   });
   projectId = ((await projectResponse.json()) as { id: string }).id;
   labInstanceId = await enableExtension("lab", true);
   otherInstanceId = await enableExtension("other", false);
-
-  const repoDir = join(tempRoot, "repo");
-  await Bun.write(join(repoDir, "README.md"), "# artifacts\n");
-  await git(repoDir, ["init", "-b", "main"]);
-  const repoResponse = await app.request(`/v1/projects/${projectId}/repos`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "artifacts-repo", path: repoDir }),
-  });
-  expect(repoResponse.status).toBe(201);
 
   mountRoot = join(repoDir, ".pstdio", "extension-storage", "lab", "runs");
   mkdirSync(join(mountRoot, "a"), { recursive: true });

@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
@@ -68,7 +69,7 @@ describe("POST /v1/projects/:projectId/extensions/marketplace/:installName/insta
       storageRoot: join(tempRoot, "storage"),
     });
     const createResponse = await handle.app.request("/v1/projects", {
-      body: JSON.stringify({ name: "Marketplace Install Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Marketplace Install Project" })),
       headers: { "content-type": "application/json" },
       method: "POST",
     });

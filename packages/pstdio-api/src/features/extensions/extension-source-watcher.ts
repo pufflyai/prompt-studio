@@ -270,22 +270,29 @@ export const createExtensionSourceWatcher = async (
     }
   };
 
+  const refreshSource = async (sourcePath: string, rows: InstalledSourceRegistration[]) => {
+    const registration = registrations.get(sourcePath);
+    if (registration) await refreshRegistration(sourcePath, registration, rows);
+    if (disposed) return;
+
+    const row = rows.find((candidate) => candidate.source_path === sourcePath);
+    if (row && !registrations.has(sourcePath)) addRegistration(row);
+  };
+
   const refresh = async (sourcePath?: string) => {
     if (disposed) return;
 
     const rows = await input.listInstalledSources();
+    if (disposed) return;
 
     if (sourcePath) {
-      const registration = registrations.get(sourcePath);
-      if (registration) await refreshRegistration(sourcePath, registration, rows);
-
-      const row = rows.find((candidate) => candidate.source_path === sourcePath);
-      if (row && !registrations.has(sourcePath)) addRegistration(row);
+      await refreshSource(sourcePath, rows);
       return;
     }
 
     for (const [registeredSourcePath, registration] of registrations) {
       await refreshRegistration(registeredSourcePath, registration, rows);
+      if (disposed) return;
     }
 
     for (const row of rows) {

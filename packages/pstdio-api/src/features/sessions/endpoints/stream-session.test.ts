@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessExit, HarnessSession, JsonPatch, SessionMessage } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
 import {
@@ -259,7 +260,7 @@ describe("GET /v1/sessions/:id/stream", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Stream Test Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Stream Test Project" })),
     });
     const project = await projectRes.json();
 
@@ -289,7 +290,7 @@ describe("GET /v1/sessions/:id/stream", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Failed Session Test" }),
+      body: JSON.stringify(folderProjectInput({ name: "Failed Session Test" })),
     });
     const project = await projectRes.json();
 
@@ -333,7 +334,7 @@ describe("GET /v1/sessions/:id/stream", () => {
     const projectRes = await heartbeatApp.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Heartbeat Session Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Heartbeat Session Project" })),
     });
     const project = await projectRes.json();
 
@@ -406,7 +407,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     const projectRes = await replayApp.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "History Replay Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "History Replay Project" })),
     });
     const project = await projectRes.json();
 
@@ -466,7 +467,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     const projectRes = await overlapApp.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Overlap Replay Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Overlap Replay Project" })),
     });
     const project = await projectRes.json();
 

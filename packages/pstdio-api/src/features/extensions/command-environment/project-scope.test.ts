@@ -68,7 +68,7 @@ describe("command environment project scope", () => {
         delete: false,
       },
       execution_kind: "local",
-      worktree_path: null,
+      root_path: null,
       display_path: null,
       is_default: false,
       archived: false,

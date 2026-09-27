@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const projectId = (page: Page) => new URL(page.url()).pathname.split("/")[2];
@@ -49,7 +50,7 @@ const editDocument = async (page: Page, content: string) => {
 
 test.beforeEach(async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "Public showcases" },
+    data: folderProjectInput({ name: "Public showcases" }),
   });
   expect(response.ok()).toBe(true);
   const project = await response.json();

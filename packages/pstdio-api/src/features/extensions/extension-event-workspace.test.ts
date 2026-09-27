@@ -27,13 +27,13 @@ for (const kind of ["root", "worktree", "remote"] as const) {
         is_default: false,
         provider_id: kind === "remote" ? "example.remote" : "pstdio.worktree",
         execution_kind: kind === "remote" ? "remote" : "local",
-        worktree_path: root,
+        root_path: root,
       });
     const result = await fireExtensionEvent(deps, "project-1", "session.started", {
       workspaceId: workspace.id,
       workspaceDir: "/forged",
       workspace: { root_path: "/forged" },
-      worktreePath: workspace.worktree_path,
+      worktreePath: workspace.root_path,
       sessionId: "session-1",
     });
     expect(result.delivered).toBe(1);
@@ -43,8 +43,8 @@ for (const kind of ["root", "worktree", "remote"] as const) {
       text: localRoot ? "selected folder" : null,
       event: {
         sessionId: "session-1",
-        worktreePath: workspace.worktree_path,
-        workspace: { id: workspace.id, root_path: localRoot, worktree_path: workspace.worktree_path },
+        worktreePath: workspace.root_path,
+        workspace: { id: workspace.id, root_path: workspace.root_path },
       },
     });
     const delivered = values.get("delivered") as { event: { workspaceDir?: string } };

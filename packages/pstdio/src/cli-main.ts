@@ -3,7 +3,7 @@ import { topLevelCommandModules, topLevelCommandNames } from "./adapters/cli/com
 import * as dashboardCommand from "./adapters/cli/commands/dashboard";
 import { shouldEnsureApiForCommand } from "./features/cli-api-startup";
 import { CLI_VERSION } from "./features/cli-version";
-import { findGitRoot, readConfig } from "./features/config/config";
+import { findProjectRoot, readConfig } from "./features/config/config";
 import { ensureApi } from "./features/ensure-api";
 import { dispatchExtensionCliCommand } from "./features/extensions/extension-cli-router";
 import {
@@ -25,7 +25,7 @@ type CommandTracker = ReturnType<typeof createCliCommandTracker>;
 const staticTopLevelCommands = new Set(["dashboard", ...topLevelCommandNames]);
 
 const hasProjectConfig = () => {
-  const root = findGitRoot(process.cwd());
+  const root = findProjectRoot(process.cwd());
   return Boolean(root && readConfig(root));
 };
 

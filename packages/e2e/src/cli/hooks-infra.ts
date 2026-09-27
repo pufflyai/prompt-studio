@@ -25,19 +25,11 @@ export const getProjectId = (repo: string) => {
   return (JSON.parse(readFileSync(configPath, "utf8")) as { project_id: string }).project_id;
 };
 
-export const registerRepo = async (ctx: HookTestContext, projectId: string, repo: string, name: string) => {
-  await fetch(`${ctx.api.url}/v1/projects/${projectId}/repos`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, path: repo }),
-  });
-};
-
 type WorkspaceRecord = {
   id: string;
   workspace_shorthand: string;
   branch: string | null;
-  worktree_path: string | null;
+  root_path: string | null;
 };
 
 export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) => {
@@ -57,7 +49,7 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
         source: "api",
         params: {
           ticket: ticket.id,
-          mode: "worktree",
+
           agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
         },
       }),

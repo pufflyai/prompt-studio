@@ -57,7 +57,7 @@ export type {
   WorkbenchExtensionViewBody,
   WorkbenchExtensionViewRecord,
 } from "./extensions";
-export type { CreateProjectInput, RegisterRepoInput } from "./projects";
+export type { CreateProjectInput, UpdateProjectInput } from "./projects";
 export type {
   ApprovalInput,
   CreateSessionInput,

@@ -19,18 +19,18 @@ const environment = () =>
 
 test("cancelling an already settled local or remote workspace retains its location projection", async () => {
   const api = environment().workspaces;
-  expect(await api.cancel(fixture.workspace.id)).toMatchObject({ root_path: fixture.root, worktree_path: null });
-  Object.assign(fixture.workspace, { execution_kind: "remote", worktree_path: fixture.root });
-  expect(await api.cancel(fixture.workspace.id)).toMatchObject({ root_path: null, worktree_path: fixture.root });
+  expect(await api.cancel(fixture.workspace.id)).toMatchObject({ root_path: fixture.root });
+  Object.assign(fixture.workspace, { execution_kind: "remote", root_path: null });
+  expect(await api.cancel(fixture.workspace.id)).toMatchObject({ root_path: null });
 });
 
 test("archive returns the same projected workspace contract as get", async () => {
   const { workspace, deps, root } = fixture;
-  Object.assign(workspace, { is_default: false, provider_id: "pstdio.worktree", worktree_path: root });
+  Object.assign(workspace, { is_default: false, provider_id: "pstdio.worktree", root_path: root });
   Object.assign(workspace.provider_capabilities_json, { archive: true });
   deps.workspaceService.updateProviderProjection = async (_id, patch) => Object.assign(workspace, patch) as never;
   deps.workspaceService.archive = async () => Object.assign(workspace, { archived: true }) as never;
   deps.workspaceSessionService = { listByWorkspace: async () => [] } as never;
   const result = await environment().workspaces.archive(workspace.id);
-  expect(result).toMatchObject({ id: workspace.id, archived: true, root_path: root, worktree_path: root });
+  expect(result).toMatchObject({ id: workspace.id, archived: true, root_path: root });
 });

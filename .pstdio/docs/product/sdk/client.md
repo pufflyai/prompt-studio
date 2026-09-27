@@ -55,9 +55,14 @@ forward the descriptor token into renderer JavaScript.
 ```ts
 const projects = await client.projects.list();
 const project = await client.projects.get(projectId);
-const created = await client.projects.create({ name: "My Project" });
+const created = await client.projects.create({
+  initial_workspace: { provider_id: "pstdio.root", params: { path: "/projects/notes" } },
+});
+const workspace = await client.projects.retrySetup(projectId);
 await client.projects.delete(projectId);
 ```
+
+`retrySetup` returns the existing default workspace after retrying initialization. Check its `setup_error` and `provider_state` for failures that remain. It preserves local folders and existing remote provider resources.
 
 ## Sessions
 
@@ -98,8 +103,8 @@ const workspaces = await client.workspaces.list(projectId);
 const workspace = await client.workspaces.getByShorthand(projectId, "A0001");
 const created = await client.workspaces.create({
   project_id: projectId,
-  repo_id: repoId,
   provider_id: "pstdio.worktree",
+  params: { base: "HEAD" },
 });
 await client.workspaces.delete(workspaceId);
 ```
@@ -213,3 +218,5 @@ try {
 The `fetch` option accepts a replacement compatible with the runtime's `typeof fetch`.
 See the [method reference](../../references/sdk/reference.md) for all client groups
 and links to their current request and response types.
+
+`client.projects.attachInitialWorkspace(projectId, { provider_id, params })` attaches a location to a project that has no initial workspace. It preserves the project and existing default workspace IDs.

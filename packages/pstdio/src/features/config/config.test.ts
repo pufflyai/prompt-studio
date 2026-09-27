@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { findGitRoot, readConfig, removeConfig, writeConfig } from "./config";
+import { readConfig, removeConfig, writeConfig } from "./config";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
@@ -17,24 +17,6 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(tmpBase, { recursive: true, force: true });
-});
-
-describe("findGitRoot", () => {
-  test("finds root by .git directory", () => {
-    const root = setup("git-root");
-    mkdirSync(join(root, ".git"));
-    const nested = join(root, "a", "b");
-    mkdirSync(nested, { recursive: true });
-
-    expect(findGitRoot(nested)).toBe(root);
-  });
-
-  test("finds git worktree root (.git file)", () => {
-    const root = setup("worktree-root");
-    writeFileSync(join(root, ".git"), "gitdir: /some/path");
-
-    expect(findGitRoot(root)).toBe(root);
-  });
 });
 
 describe("readConfig", () => {

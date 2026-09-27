@@ -19,7 +19,7 @@ export interface PackageManifest {
   enginesPstdio: string;
   pstdio?: {
     scope?: ExtensionLoadScope;
-    repoFiles?: { tracked: boolean };
+    projectFiles?: { tracked: boolean };
   };
   id: string;
 }
@@ -103,13 +103,13 @@ const validatePstdioMetadata = (
     return null;
   }
 
-  const repoFiles = value.repoFiles;
-  if (repoFiles !== undefined) {
-    if (!isStringRecord(repoFiles) || typeof repoFiles.tracked !== "boolean") {
+  const projectFiles = value.projectFiles;
+  if (projectFiles !== undefined) {
+    if (!isStringRecord(projectFiles) || typeof projectFiles.tracked !== "boolean") {
       diagnostics.push(
         createDiagnostic({
           code: "extension_manifest_invalid_value",
-          message: "pstdio.repoFiles.tracked must be a boolean",
+          message: "pstdio.projectFiles.tracked must be a boolean",
           sourcePath: packagePath,
         }),
       );
@@ -117,10 +117,10 @@ const validatePstdioMetadata = (
     }
   }
 
-  if (scope === undefined && repoFiles === undefined) return undefined;
+  if (scope === undefined && projectFiles === undefined) return undefined;
   return {
     ...(scope ? { scope } : {}),
-    ...(repoFiles ? { repoFiles: { tracked: repoFiles.tracked as boolean } } : {}),
+    ...(projectFiles ? { projectFiles: { tracked: projectFiles.tracked as boolean } } : {}),
   };
 };
 

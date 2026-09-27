@@ -41,8 +41,8 @@ import {
 export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
-  routes.openapi(createWorkspaceRoute, createWorkspaceHandler(deps));
   routes.openapi(listWorkspaceProvidersRoute, listWorkspaceProvidersHandler(deps));
+  routes.openapi(createWorkspaceRoute, createWorkspaceHandler(deps));
   routes.openapi(listWorkspacesRoute, listWorkspacesHandler(deps));
   routes.openapi(getWorkspaceRoute, getWorkspaceHandler(deps));
   routes.openapi(renameWorkspaceRoute, renameWorkspaceHandler(deps));

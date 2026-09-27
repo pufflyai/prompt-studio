@@ -33,7 +33,7 @@ const createHarness = (input: { listEnabledSources: (projectId: string) => Promi
   createProjectExtensionRuntimeCatalog({
     extensionService: { listEnabledSourcesForProject: input.listEnabledSources } as never,
     projectService: { get: async (id: string) => ({ id, name: "Project", shorthand: "PS" }) } as never,
-    repoService: { listByProject: async () => [] } as never,
+    workspaceService: { getDefault: async () => null } as never,
     loadSources: async () => ({ sources: [], diagnostics: [] }),
   });
 
@@ -42,7 +42,7 @@ describe("project extension runtime catalog failures", () => {
     const catalog = createProjectExtensionRuntimeCatalog({
       extensionService: { listEnabledSourcesForProject: async () => [] } as never,
       projectService: { get: async () => null } as never,
-      repoService: { listByProject: async () => [] } as never,
+      workspaceService: { getDefault: async () => null } as never,
     });
 
     expect.assertions(2);

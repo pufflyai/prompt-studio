@@ -1,31 +1,21 @@
 import { resolve } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { createFileMount, createReadBoundary } from "pstdio-extensions";
+import { createFileMount } from "pstdio-extensions";
+import type { FileAccess } from "./command-environment/workspace-files";
 
-// Generic host file primitive: the invocation repo's working tree, scoped to its
-// root. The root is resolved lazily from a trusted source (the registered repo
-// path) rather than a client-supplied path, so a forged execute request cannot
-// point repoFiles outside the project's repo.
-export const createRepoFilesApi = (
-  resolveRepoPath: (signal?: AbortSignal) => Promise<string>,
-  signal?: AbortSignal,
-): ArtifactMount => {
-  let mount: ArtifactMount | undefined;
-  const mountFor = async (readSignal?: AbortSignal) => {
-    if (!mount) mount = createFileMount(resolve(await resolveRepoPath(readSignal)), signal);
-    return mount;
-  };
-  const readMount = () => createReadBoundary(signal)(() => mountFor(signal));
+// Resolve the trusted workspace target and its current capabilities on every call.
+export const createRepoFilesApi = (resolveRepoPath: (access: FileAccess) => Promise<string>): ArtifactMount => {
+  const mountFor = async (access: FileAccess) => createFileMount(resolve(await resolveRepoPath(access)));
 
   return {
-    exists: async (path) => (await readMount()).exists(path),
-    readText: async (path) => (await readMount()).readText(path),
-    writeText: async (path, value) => (await mountFor()).writeText(path, value),
-    updateText: async (path, value) => (await mountFor()).updateText(path, value),
-    readBytes: async (path) => (await readMount()).readBytes(path),
-    writeBytes: async (path, value) => (await mountFor()).writeBytes(path, value),
-    list: async (pattern) => (await readMount()).list(pattern),
-    listDirs: async (path) => (await readMount()).listDirs(path),
-    delete: async (path) => (await mountFor()).delete(path),
+    exists: async (path) => (await mountFor("read")).exists(path),
+    readText: async (path) => (await mountFor("read")).readText(path),
+    writeText: async (path, value) => (await mountFor("write")).writeText(path, value),
+    updateText: async (path, value) => (await mountFor("write")).updateText(path, value),
+    readBytes: async (path) => (await mountFor("read")).readBytes(path),
+    writeBytes: async (path, value) => (await mountFor("write")).writeBytes(path, value),
+    list: async (pattern) => (await mountFor("read")).list(pattern),
+    listDirs: async (path) => (await mountFor("read")).listDirs(path),
+    delete: async (path) => (await mountFor("write")).delete(path),
   };
 };

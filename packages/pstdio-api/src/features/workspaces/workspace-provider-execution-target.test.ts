@@ -8,12 +8,11 @@ describe("resolveWorkspaceExecutionTarget", () => {
     const workspace = makeWorkspace({
       provider_id: "pstdio.worktree",
       execution_kind: "local",
-      worktree_path: "/worktree",
+      root_path: "/worktree",
       setup_error: "Provisioning failed",
     });
     const deps = {
       workspaceService: { get: async () => workspace },
-      repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
     } as never;
 
     expect((await resolveWorkspaceLocation(deps, workspace))?.root).toBe("/worktree");
@@ -23,7 +22,7 @@ describe("resolveWorkspaceExecutionTarget", () => {
   test("location projection does not grant file access", async () => {
     const workspace = makeWorkspace({
       execution_kind: "local",
-      worktree_path: "/provider-files",
+      root_path: "/provider-files",
       provider_capabilities_json: {
         files: "none",
         diff: false,
@@ -35,7 +34,6 @@ describe("resolveWorkspaceExecutionTarget", () => {
     });
     const deps = {
       workspaceService: { get: async () => workspace },
-      repoService: { listByProject: async () => [] },
     } as never;
 
     expect((await resolveWorkspaceLocation(deps, workspace))?.root).toBe("/provider-files");
@@ -43,32 +41,39 @@ describe("resolveWorkspaceExecutionTarget", () => {
   });
 
   test("does not project a stale local path for a remote workspace", async () => {
-    const workspace = makeWorkspace({ execution_kind: "remote", worktree_path: "/stale-local-path" });
-    const deps = { repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] } } as never;
+    const workspace = makeWorkspace({ execution_kind: "remote", root_path: "/stale-local-path" });
+    const deps = {} as never;
 
     expect(await resolveWorkspaceLocation(deps, workspace)).toBeUndefined();
   });
 
   test("does not give a custom local provider the project folder when its target is missing", async () => {
-    const workspace = makeWorkspace({ execution_kind: "local", worktree_path: null, is_default: false });
-    const deps = { repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] } } as never;
+    const workspace = makeWorkspace({ execution_kind: "local", root_path: null, is_default: false });
+    const deps = {} as never;
 
     expect(await resolveWorkspaceLocation(deps, workspace)).toBeUndefined();
   });
 
-  test("does not fall back to a project repository for remote workspaces", async () => {
+  test("does not fall back to the project folder for remote workspaces", async () => {
     const result = await resolveWorkspaceExecutionTarget(
       {
         workspaceService: {
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: "/repo",
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+          }),
           get: async () =>
             makeWorkspace({
               id: "ws-remote",
               provider_state: "ready",
               execution_kind: "remote",
-              worktree_path: null,
+              root_path: null,
             }),
         },
-        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
       } as never,
       "ws-remote",
     );

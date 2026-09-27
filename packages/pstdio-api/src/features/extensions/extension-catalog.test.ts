@@ -5,8 +5,10 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { createExtensionService } from "../../services/extension-service";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { writeProvisionHarnessExtension } from "../../test-utils/write-provision-harness-extension";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
 type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
@@ -103,7 +105,7 @@ const createProject = async (handle: AppHandle, name: string) => {
   const res = await handle.app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(folderProjectInput({ name })),
   });
   expect(res.status).toBe(201);
   return res.json() as Promise<{ id: string }>;
@@ -173,14 +175,8 @@ describe("extension-backed skill catalog", () => {
       body: JSON.stringify({ agent_id: CLAUDE_CODE_ID }),
     });
 
-    const repoPath = join(tempRoot, "repo");
-    mkdirSync(repoPath, { recursive: true });
-    const repoRes = await handle.app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "repo", path: repoPath }),
-    });
-    expect(repoRes.status).toBe(201);
+    const repoPath = (await handle.deps.workspaceService.getDefault(project.id))!.root_path!;
+    await provisionProjectWorkspaces(handle.deps, project.id);
     expect(readFileSync(join(repoPath, ".claude", "skills", "catalog-skill", "SKILL.md"), "utf8")).toBe(
       "# Lab Skill\n",
     );
@@ -200,14 +196,8 @@ describe("extension-backed skill catalog", () => {
     await enableSource(handle.deps.extensionService, project.id, sourcePath, "catalog");
     await enableProvisionHarness(handle.deps.extensionService, project.id, tempRoot);
 
-    const repoPath = join(tempRoot, "late-agent-repo");
-    mkdirSync(repoPath, { recursive: true });
-    const repoRes = await handle.app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "late-agent-repo", path: repoPath }),
-    });
-    expect(repoRes.status).toBe(201);
+    const repoPath = (await handle.deps.workspaceService.getDefault(project.id))!.root_path!;
+    await provisionProjectWorkspaces(handle.deps, project.id);
     expect(readFileSync(join(repoPath, ".claude", "skills", "catalog-skill", "SKILL.md"), "utf8")).toBe(
       "# Lab Skill\n",
     );

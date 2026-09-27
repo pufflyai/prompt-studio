@@ -6,7 +6,6 @@ import {
   createProjectViaApi,
   deleteAllProjects,
   openNewSessionPanel,
-  registerRepoViaApi,
   setProjectAgentDefaults,
   submitInitialMessage,
   submitMessage,
@@ -20,7 +19,6 @@ const claudeAgentId = "pstdio.harness-claude-code.harness.claude-code";
 test.describe("Claude follow-up completion", () => {
   let projectId: string;
   let repoDir: string;
-  let repoId: string;
 
   test.skip(!requiresClaude, "Requires E2E_AGENTS=claude-code");
 
@@ -35,8 +33,6 @@ test.describe("Claude follow-up completion", () => {
     const project = await createProjectViaApi(request, "Claude Follow-up Completion");
     projectId = project.id;
     await setProjectAgentDefaults(request, projectId, claudeAgentId);
-    const repo = await registerRepoViaApi(request, projectId, "claude-follow-up-completion-repo", repoDir);
-    repoId = repo.id;
   });
 
   test.afterEach(() => {
@@ -47,7 +43,7 @@ test.describe("Claude follow-up completion", () => {
     const firstPrompt = "Reply with exactly FIRST DONE and nothing else.";
     const followUpPrompt = "Reply with exactly SECOND DONE and nothing else.";
 
-    await bypassOnboarding(page, { projectId, repoId, branch: "main", agentId: claudeAgentId });
+    await bypassOnboarding(page, { projectId, branch: "main", agentId: claudeAgentId });
     await openNewSessionPanel(page, projectId);
     const { sessionId } = await submitInitialMessage(page, firstPrompt);
 

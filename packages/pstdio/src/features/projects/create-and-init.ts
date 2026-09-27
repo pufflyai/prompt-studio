@@ -1,29 +1,12 @@
-import { basename } from "node:path";
-import { readConfig, writeConfig } from "@/features/config/config";
-import { installDefaultSkills } from "@/features/skills/install-default-skills";
+import { apiClient } from "@/features/api-client";
 import { createProject } from "./api/create-project";
-import { registerRepo } from "./api/register-repo";
 
-type InitOptions = {
-  homedir?: string;
-  repoPaths?: string[];
-};
-
-export const createAndInitProject = async (root: string, name: string, options?: InitOptions) => {
-  if (readConfig(root)) {
-    throw new Error("Project already initialized. Use `pstdio projects link` to switch projects.");
-  }
-
-  const project = await createProject(name);
-  const repoPaths = options?.repoPaths ?? [];
-
-  for (const repoPath of repoPaths) {
-    await registerRepo(project.id, { name: basename(repoPath), path: repoPath });
-  }
-
-  if (repoPaths.includes(root)) return project;
-
-  writeConfig(root, { project_id: project.id });
-  await installDefaultSkills(root, project.id, undefined, options?.homedir);
+export const createAndInitProject = async (path: string, name?: string) => {
+  const project = await createProject(path, name);
+  const workspaces = await apiClient().workspaces.list(project.id);
+  const home = workspaces.find((workspace) => workspace.is_default);
+  if (home?.setup_error) throw new Error(home.setup_error);
+  if (!home?.root_path || home.initializing || home.provider_state !== "ready")
+    throw new Error("The project folder is not ready. Open it again to retry setup.");
   return project;
 };

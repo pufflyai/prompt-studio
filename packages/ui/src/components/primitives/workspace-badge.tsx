@@ -1,5 +1,5 @@
 import { Badge, Box, HStack, Icon, Spinner, Text } from "@chakra-ui/react";
-import { ChevronDown, CloudIcon, FolderIcon, GitBranchIcon, GitCommitIcon } from "lucide-react";
+import { ChevronDown, CloudIcon, FolderIcon, GitBranchIcon } from "lucide-react";
 import type { MouseEvent } from "react";
 import { type SessionCompletionStatus, SessionIndicator } from "@/components/primitives/session-indicator";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -34,7 +34,7 @@ const workspaceBadgeSurfaceProps = {
 } as const;
 
 export interface WorkspaceBadgeProps {
-  workspaceType: "worktree" | "folder" | "remote" | "current_branch";
+  workspaceType: "worktree" | "folder" | "remote";
   initializing?: boolean;
   label?: string;
   shorthand?: string;
@@ -50,7 +50,6 @@ export interface WorkspaceBadgeProps {
 }
 
 const WORKSPACE_TYPE_INDICATORS = {
-  current_branch: { icon: GitCommitIcon, label: "Current branch" },
   folder: { icon: FolderIcon, label: "Project folder" },
   remote: { icon: CloudIcon, label: "Remote workspace" },
   worktree: { icon: GitBranchIcon, label: "Git worktree" },

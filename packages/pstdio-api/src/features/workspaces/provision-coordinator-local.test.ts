@@ -13,7 +13,7 @@ const setup = (home: ReturnType<typeof makeWorkspace> | null = null) => {
     {
       provider_id: "example.local",
       execution_kind: "local",
-      worktree_path: "/provider/workspace",
+      root_path: "/provider/workspace",
       setup_error: "Previous failure",
     },
   );
@@ -93,7 +93,7 @@ describe("provider-owned local provisioning", () => {
 
   for (const stage of ["location", "config", "dispatch"] as const) {
     test(`a thrown ${stage} failure settles readiness and permits retry`, async () => {
-      const fixture = setup(makeWorkspace({ execution_kind: "local", worktree_path: "/home" }));
+      const fixture = setup(makeWorkspace({ execution_kind: "local", root_path: "/home" }));
       const failure = new Error(`${stage} unavailable`);
       const getDefault = fixture.deps.workspaceService.getDefault;
       const ensureConfig = fixture.hooks.ensureConfig;

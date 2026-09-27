@@ -4,7 +4,6 @@ import type {
   CommandOutcome,
   CommandSource,
   JsonObject,
-  RepoContext,
 } from "@pstdio/sdk/extensions";
 import type { RuntimeMiddlewareRecord } from "../../types/runtime";
 import type { RunnerState } from "./context";
@@ -21,14 +20,12 @@ const buildHostRequestPayload = (
   invocationId: string,
   projectId: string,
   source: CommandSource | undefined,
-  repo: RepoContext | undefined,
 ) => ({
   commandId,
   invocationId,
   source,
   params: invocation.params,
   resource: invocation.resource,
-  repo,
   projectId,
 });
 
@@ -51,7 +48,7 @@ const runHostCommand = async <TResult>(
 ): Promise<CommandOutcome<TResult>> => {
   if (input.signal?.aborted) throw input.signal.reason;
   const notices: CommandNotice[] = [];
-  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices, {
+  const envFor = createEnvironmentCache(state.deps, input.projectId, notices, {
     workspaceDir: input.workspaceDir,
     workspaceId: input.workspaceId,
   });
@@ -59,8 +56,6 @@ const runHostCommand = async <TResult>(
   const initialInvocation: CommandInvocation = {
     params: (input.params ?? {}) as JsonObject,
     resource: input.resource,
-    repoId: input.repo?.repoId,
-    repoPath: input.repo?.path,
     attachment: input.attachment,
     slot: input.slot,
     metadata: input.metadata,
@@ -72,7 +67,6 @@ const runHostCommand = async <TResult>(
     invocationId,
     input.projectId,
     input.source,
-    input.repo,
   );
   await state.dispatcher.dispatch(lifecycleEventId("requested", input.commandId), requestedPayload);
 
@@ -85,7 +79,6 @@ const runHostCommand = async <TResult>(
       invocationId,
       input.projectId,
       input.source,
-      input.repo,
       0,
       scope,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },

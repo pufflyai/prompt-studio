@@ -52,13 +52,13 @@ test("rejects directory dependencies and symlinks outside the supplied context",
   await expect(createSmokeContext({ source })).rejects.toThrow("outside");
 });
 
-test("creates a scratch git repo and ignores existing installs", async () => {
+test("creates a scratch folder and ignores existing installs", async () => {
   const source = fixture();
   manifest(source);
   mkdirSync(join(source, "node_modules"));
   const context = await createSmokeContext({ source });
   roots.push(context.root);
-  expect(existsSync(join(context.project, ".git"))).toBe(true);
+  expect(existsSync(context.project)).toBe(true);
   expect(existsSync(join(context.source, "node_modules"))).toBe(false);
 });
 

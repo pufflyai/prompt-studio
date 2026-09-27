@@ -1,4 +1,5 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -8,8 +9,8 @@ const deleteAllProjects = async (request: APIRequestContext) => {
   for (const project of projects) await request.delete(`${apiBase}/v1/projects/${project.id}`);
 };
 
-const createProjectViaApi = async (request: APIRequestContext, name: string) => {
-  const res = await request.post(`${apiBase}/v1/projects`, { data: { name } });
+const createProjectViaApi = async (request: APIRequestContext, name: string, folderPath?: string) => {
+  const res = await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name }, folderPath) });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string };
 };

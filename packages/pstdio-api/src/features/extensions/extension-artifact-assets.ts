@@ -30,7 +30,7 @@ export const artifactMediaType = (path: string) =>
 
 export const artifactImageMediaType = (path: string) => ARTIFACT_IMAGE_MEDIA_TYPES[extname(path).toLowerCase()];
 
-type ArtifactMountDeps = Pick<ExtensionsRouteDeps, "extensionRuntimeCatalog" | "repoService">;
+type ArtifactMountDeps = Pick<ExtensionsRouteDeps, "extensionRuntimeCatalog" | "workspaceService">;
 
 type ResolveArtifactMountInput = { projectId: string; mountId: string } & (
   | { extensionInstanceId: string }
@@ -58,12 +58,13 @@ export const resolveExtensionArtifactMount = async (deps: ArtifactMountDeps, inp
   );
   if (!runtimeMount) return null;
 
-  const [repo] = await deps.repoService.listByProject(input.projectId);
-  if (!repo) return null;
+  const workspace = await deps.workspaceService.getDefault(input.projectId);
+  const rootPath = workspace?.execution_kind === "local" ? workspace.root_path : null;
+  if (!rootPath) return null;
 
   return {
     installName: enabled.installedSource.install_name,
-    mount: createArtifactMount({ repoRoot: repo.path, name: runtimeMount.name, mountPath: runtimeMount.relativePath }),
+    mount: createArtifactMount({ repoRoot: rootPath, name: runtimeMount.name, mountPath: runtimeMount.relativePath }),
     runtimeMount,
   };
 };

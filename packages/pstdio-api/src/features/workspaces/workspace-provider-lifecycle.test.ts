@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { join } from "node:path";
 import type { WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
 import {
@@ -6,6 +7,7 @@ import {
   cancelProviderBackedWorkspace,
   deleteProviderBackedWorkspace,
 } from "./workspace-provider-lifecycle";
+import { resolveWorkspacesRoot } from "./worktree-setup";
 
 const readyRemoteResult = (state: WorkspaceProviderResult["state"]): WorkspaceProviderResult => ({
   providerRef: { version: 1, data: { remoteId: "remote-1" } },
@@ -34,7 +36,6 @@ const makeDeps = (provider: Record<string, unknown>, workspace = makeWorkspace()
       return stored;
     },
   );
-  const listByProject = mock(async () => [{ id: "repo-1", path: "/repo" }]);
   const softDelete = mock(async () => {});
   return {
     deps: {
@@ -49,7 +50,6 @@ const makeDeps = (provider: Record<string, unknown>, workspace = makeWorkspace()
           return stored;
         },
       },
-      repoService: { listByProject },
       workspaceSessionService: { listByWorkspace: async () => [] },
       sessionService: { archive: async () => {} },
       workspaceProviderRuntime: {
@@ -61,7 +61,6 @@ const makeDeps = (provider: Record<string, unknown>, workspace = makeWorkspace()
     } as never,
     updateProviderProjection,
     beginProviderOperation,
-    listByProject,
     softDelete,
   };
 };
@@ -72,12 +71,11 @@ describe("archiveProviderBackedWorkspace", () => {
       expect(input.operationId).toBeTruthy();
       return readyRemoteResult("archived");
     });
-    const { deps, beginProviderOperation, listByProject } = makeDeps({ archive });
+    const { deps, beginProviderOperation } = makeDeps({ archive });
 
     const updated = await archiveProviderBackedWorkspace(deps, makeWorkspace() as never);
 
     expect(archive).toHaveBeenCalledTimes(1);
-    expect(listByProject).not.toHaveBeenCalled();
     expect(updated?.provider_state).toBe("archived");
     expect(beginProviderOperation).toHaveBeenCalledWith("ws-1", {
       operationId: expect.any(String),
@@ -90,14 +88,20 @@ describe("archiveProviderBackedWorkspace", () => {
     const workspace = makeWorkspace({
       provider_id: "pstdio.worktree",
       execution_kind: "local",
-      worktree_path: "/tmp/ws",
-      provider_ref_json: null,
+      root_path: join(resolveWorkspacesRoot(), "already-removed"),
+      provider_ref_json: {
+        version: 1,
+        data: {
+          sourceRoot: "/source",
+          worktreeRoot: join(resolveWorkspacesRoot(), "already-removed"),
+          relativePath: "",
+        },
+      },
     });
-    const { deps, listByProject, updateProviderProjection } = makeDeps({}, workspace);
+    const { deps, updateProviderProjection } = makeDeps({}, workspace);
 
     const updated = await archiveProviderBackedWorkspace(deps, workspace as never);
 
-    expect(listByProject).toHaveBeenCalled();
     expect(updated?.provider_state).toBe("archived");
     expect(updateProviderProjection.mock.calls[0]?.[1]).toMatchObject({ provider_state: "archived" });
   });
@@ -118,7 +122,6 @@ describe("archiveProviderBackedWorkspace", () => {
           provider_operation_kind: input.kind,
         }),
       },
-      repoService: { listByProject: mock(async () => []) },
       workspaceProviderRuntime: { find: async () => undefined },
       extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
     } as never;
@@ -266,7 +269,6 @@ describe("deleteProviderBackedWorkspace without an installed provider", () => {
           provider_operation_kind: input.kind,
         }),
       },
-      repoService: { listByProject: mock(async () => []) },
       workspaceProviderRuntime: { find: async () => undefined },
       extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
     } as never;

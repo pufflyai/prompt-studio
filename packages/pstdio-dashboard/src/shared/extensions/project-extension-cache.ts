@@ -4,6 +4,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import type { QueryClient } from "@tanstack/react-query";
+import { invalidateWorkspaceProviders, workspaceProvidersQueryKey } from "@/shared/workspaces/workspace-providers";
 import type { DashboardExtensionMetadata } from "./types";
 
 export const projectExtensionsQueryKey = (projectId: string | undefined) => ["project-extensions", projectId] as const;
@@ -13,6 +14,7 @@ export const projectExtensionMetadataQueryKey = (projectId: string | undefined) 
 
 export const invalidateExtensionQueries = (queryClient: QueryClient, projectId: string | undefined) =>
   Promise.all([
+    invalidateWorkspaceProviders(queryClient, projectId),
     queryClient.invalidateQueries({ queryKey: projectExtensionsQueryKey(projectId) }),
     queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) }),
     queryClient.invalidateQueries({ queryKey: ["extension-contributions", projectId] }),
@@ -39,6 +41,7 @@ const replaceAutomation = (
 export const createProjectExtensionCache = (queryClient: QueryClient, projectId: string | undefined) => {
   const cancelProjectReads = () =>
     Promise.all([
+      queryClient.cancelQueries({ queryKey: workspaceProvidersQueryKey(projectId) }),
       queryClient.cancelQueries({ queryKey: projectExtensionsQueryKey(projectId) }),
       queryClient.cancelQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) }),
       queryClient.cancelQueries({ queryKey: ["extension-contributions", projectId] }),

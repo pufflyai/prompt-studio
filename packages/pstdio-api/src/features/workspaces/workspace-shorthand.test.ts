@@ -43,7 +43,12 @@ describe("workspace shorthand identifiers", () => {
 
   test.each(invalidShorthands)("rejects unsafe worktree identifier %s before accessing Git", async (shorthand) => {
     await expect(
-      setupWorkspaceWorktree({ repoPath: "/missing-repository", workspaceShorthand: shorthand, base: "HEAD" }),
+      setupWorkspaceWorktree({
+        repoPath: "/missing-repository",
+        workspaceId: "workspace-1",
+        workspaceShorthand: shorthand,
+        base: "HEAD",
+      }),
     ).rejects.toThrow("Workspace shorthand");
   });
 });

@@ -214,7 +214,7 @@ describe("syncRepoExtensionsForProject", () => {
     expect(disabled?.enabled).toBe(false);
   });
 
-  test("syncs every linked repo in deterministic path order", async () => {
+  test("syncs extensions from the default workspace folder", async () => {
     const project = await projectService.create({ name: "Repo Extensions" });
     const repoA = join(tempRoot, "a");
     const repoB = join(tempRoot, "b");
@@ -225,54 +225,18 @@ describe("syncRepoExtensionsForProject", () => {
       extensionService,
       installedExtensionSourcesService,
       projectId: project.id,
-      repoService: {
-        listByProject: async () => [
-          { id: "repo-b", path: repoB },
-          { id: "repo-a", path: repoA },
-        ],
+      workspaceService: {
+        getDefault: async () => ({
+          id: "home",
+          project_id: "project-1",
+          root_path: repoB,
+          execution_kind: "local",
+          provider_id: "pstdio.root",
+          provider_state: "ready",
+        }),
       },
     });
 
-    expect(result.flatMap((entry) => entry.enabled)).toEqual(["repo-a", "repo-b"]);
-  });
-
-  test("a second repo claiming a running extension id is registered disabled", async () => {
-    const project = await projectService.create({ name: "Repo Extensions" });
-    const repoA = join(tempRoot, "a");
-    const repoB = join(tempRoot, "b");
-    writeExtension(join(repoA, ".pstdio", "extensions", "shared-tool"), "shared-tool");
-    writeExtension(join(repoB, ".pstdio", "extensions", "shared-tool"), "shared-tool");
-    const repoService = {
-      listByProject: async () => [
-        { id: "repo-b", path: repoB },
-        { id: "repo-a", path: repoA },
-      ],
-    };
-
-    const first = await syncRepoExtensionsForLinkedRepos({
-      extensionService,
-      installedExtensionSourcesService,
-      projectId: project.id,
-      repoService,
-    });
-
-    expect(first.flatMap((entry) => entry.enabled)).toEqual(["shared-tool"]);
-    expect(first.flatMap((entry) => entry.conflicting)).toEqual(["shared-tool"]);
-
-    // Discovery repeats on every repo link change, so the winner must not move.
-    await syncRepoExtensionsForLinkedRepos({
-      extensionService,
-      installedExtensionSourcesService,
-      projectId: project.id,
-      repoService,
-    });
-
-    const enabledSources = await extensionService.listEnabledSourcesForProject(project.id);
-    expect(enabledSources.map(({ installedSource }) => installedSource.source_path)).toEqual([
-      join(repoA, ".pstdio", "extensions", "shared-tool"),
-    ]);
-
-    const all = await extensionService.listProjectExtensionInstances(project.id);
-    expect(all).toHaveLength(2);
+    expect(result.flatMap((entry) => entry.enabled)).toEqual(["repo-b"]);
   });
 });

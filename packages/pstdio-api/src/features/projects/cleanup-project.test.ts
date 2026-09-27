@@ -1,7 +1,39 @@
 import { describe, expect, mock, test } from "bun:test";
+import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createTestApp } from "../../test-utils/create-test-app";
+import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
 import { cleanupProjectArtifacts } from "./cleanup-project";
 
 describe("cleanupProjectArtifacts", () => {
+  test("preserves the folder binding when project storage cannot be removed", async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "project-cleanup-")));
+    const host = await createTestApp();
+    try {
+      const project = await host.deps.projectService.create({ name: "Cleanup" });
+      const workspace = await host.deps.workspaceService.ensureDefault({
+        project_id: project.id,
+        root_path: root,
+        name: "Project folder",
+      });
+      await ensureWorkspaceConfig(root, root, workspace.id, project.id, host.deps);
+      const config = join(root, ".pstdio/config.json");
+      const original = await readFile(config, "utf8");
+      await expect(
+        cleanupProjectArtifacts(host.deps, project.id, {
+          removeProjectStorage: () => {
+            throw new Error("storage busy");
+          },
+        }),
+      ).rejects.toThrow("storage busy");
+      expect(await readFile(config, "utf8")).toBe(original);
+    } finally {
+      await host.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test("persists each released provider resource before project storage is removed", async () => {
     const order: string[] = [];
     const workspaces = [
@@ -10,21 +42,21 @@ describe("cleanupProjectArtifacts", () => {
         provider_id: "example.remote",
         project_id: "project-1",
         is_default: false,
-        worktree_path: null,
+        root_path: null,
       },
       {
         id: "local-1",
         provider_id: "pstdio.worktree",
         project_id: "project-1",
         is_default: false,
-        worktree_path: "/repo/.worktrees/local-1",
+        root_path: "/repo/.worktrees/local-1",
       },
       {
         id: "root-1",
         provider_id: "pstdio.root",
         project_id: "project-1",
         is_default: true,
-        worktree_path: "/repo",
+        root_path: "/repo",
       },
     ];
     const deleteProviderWorkspace = mock(async (_deps: unknown, workspace: { id: string }) => {
@@ -63,7 +95,7 @@ describe("cleanupProjectArtifacts", () => {
                 provider_id: "pstdio.worktree",
                 project_id: "project-1",
                 is_default: false,
-                worktree_path: "/repo/.worktrees/local-1",
+                root_path: "/repo/.worktrees/local-1",
               },
             ],
             softDelete,
@@ -90,7 +122,7 @@ describe("cleanupProjectArtifacts", () => {
           provider_id: "example.remote",
           project_id: "project-1",
           is_default: false,
-          worktree_path: null,
+          root_path: null,
         },
       ])
       .mockResolvedValueOnce([]);

@@ -1,6 +1,7 @@
 import type { Arguments, Argv } from "yargs";
 import { resolveHarnessId } from "@/features/agents/api/resolve-harness-id";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { findProjectRoot, readConfig } from "@/features/config/config";
+import { getProjectFolder } from "@/features/projects/project-folder";
 import { installSkillsForAgent } from "@/features/skills/install-default-skills";
 
 export const command = "setup <agent-id>";
@@ -26,8 +27,9 @@ type SetupArgs = {
 
 type Deps = {
   cwd: () => string;
+  getProjectFolder: typeof getProjectFolder;
   resolveHarnessId: typeof resolveHarnessId;
-  findGitRoot: typeof findGitRoot;
+  findProjectRoot: typeof findProjectRoot;
   readConfig: typeof readConfig;
   installSkillsForAgent: typeof installSkillsForAgent;
   log: (message: string) => void;
@@ -40,12 +42,12 @@ export const createHandler = (deps: Deps) => {
     const harnessId = await deps.resolveHarnessId(agentId);
     deps.log(`Using harness "${harnessId}".`);
 
-    const root = deps.findGitRoot(deps.cwd());
+    const root = deps.findProjectRoot(deps.cwd());
     const installRoot = root ?? deps.cwd();
     const shouldInstallGlobalSkills = argv["global-skills"];
 
     if (!root && !shouldInstallGlobalSkills) {
-      deps.log("Not inside a git repository — skipping skill installation.");
+      deps.log("Not inside a project folder — skipping skill installation.");
       return;
     }
 
@@ -59,7 +61,10 @@ export const createHandler = (deps: Deps) => {
     const shouldInstallSkills = Boolean(projectConfig || shouldInstallGlobalSkills);
     if (shouldInstallSkills) {
       installedSkills = await deps.installSkillsForAgent({
-        root: installRoot,
+        root:
+          projectConfig && !shouldInstallGlobalSkills
+            ? await deps.getProjectFolder(projectConfig.project_id)
+            : installRoot,
         agentId,
         projectId: projectConfig?.project_id,
         global: shouldInstallGlobalSkills,
@@ -76,7 +81,8 @@ export const createHandler = (deps: Deps) => {
 export const handler = createHandler({
   cwd: () => process.cwd(),
   resolveHarnessId,
-  findGitRoot,
+  getProjectFolder,
+  findProjectRoot,
   readConfig,
   installSkillsForAgent,
   log: console.log,

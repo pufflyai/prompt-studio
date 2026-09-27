@@ -46,20 +46,17 @@ const createFixture = async (name: string) => {
   const projectResponse = await handle.app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, initial_workspace: { provider_id: "pstdio.root", params: { path: repoPath } } }),
   });
   expect(projectResponse.status).toBe(201);
   const project = (await projectResponse.json()) as { id: string };
-  const repoResponse = await handle.app.request(`/v1/projects/${project.id}/repos`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, path: repoPath }),
-  });
-  expect(repoResponse.status).toBe(201);
   const configPath = join(repoPath, ".pstdio", "config.json");
   const config = readFileSync(configPath, "utf8");
   writeFileSync(configPath, "{ invalid config");
-  return { projectId: project.id, repoPath, configPath, config };
+  git("add", "--force", ".pstdio/config.json");
+  git("commit", "-m", "Record invalid historical workspace config");
+  writeFileSync(configPath, config);
+  return { projectId: project.id, repoPath };
 };
 
 describe("local provider creation setup failures", () => {
@@ -103,7 +100,7 @@ describe("local provider creation setup failures", () => {
       });
       expect(typeof workspace.setup_error).toBe("string");
       expect(workspace.setup_error).not.toBeEmpty();
-      expect(existsSync(workspace.worktree_path!)).toBe(true);
+      expect(existsSync(workspace.root_path!)).toBe(true);
       expect(await resolveWorkspaceExecutionTarget(handle.deps, workspace.id)).toBeUndefined();
 
       if (response) {
@@ -118,7 +115,10 @@ describe("local provider creation setup failures", () => {
         expect((failure as Error).message).toContain(workspace.setup_error!);
       }
 
-      writeFileSync(fixture.configPath, fixture.config);
+      writeFileSync(
+        join(workspace.root_path!, ".pstdio", "config.json"),
+        JSON.stringify({ project_id: fixture.projectId, workspace_id: workspace.id }),
+      );
       const recovered = await runWorkspaceProvisioning(handle.deps, {
         projectId: fixture.projectId,
         workspace,
@@ -126,17 +126,17 @@ describe("local provider creation setup failures", () => {
       });
       expect(recovered).toMatchObject({
         id: workspace.id,
-        worktree_path: workspace.worktree_path,
+        root_path: workspace.root_path,
         provider_ref_json: workspace.provider_ref_json,
         provider_state: "ready",
         initializing: false,
         setup_error: null,
       });
       expect(await resolveWorkspaceExecutionTarget(handle.deps, workspace.id)).toMatchObject({
-        root: workspace.worktree_path,
+        root: workspace.root_path,
       });
       expect(await handle.deps.workspaceService.list(fixture.projectId)).toHaveLength(workspaces.length);
-      expect(JSON.parse(readFileSync(join(workspace.worktree_path!, ".pstdio", "config.json"), "utf8"))).toMatchObject({
+      expect(JSON.parse(readFileSync(join(workspace.root_path!, ".pstdio", "config.json"), "utf8"))).toMatchObject({
         workspace_id: workspace.id,
       });
     });

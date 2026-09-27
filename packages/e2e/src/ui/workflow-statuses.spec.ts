@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "Independent workflow statuses" },
+    data: folderProjectInput({ name: "Independent workflow statuses" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
@@ -66,8 +67,7 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
     .toEqual(["Workbench", "Project", "Lab", "Planner"]);
   const settingsEntries = await settings.getByRole("option").allTextContents();
   const entryIndex = (label: string) => settingsEntries.findIndex((entry) => entry.trim() === label);
-  expect(entryIndex("Extensions")).toBeLessThan(entryIndex("Repositories"));
-  expect(entryIndex("Repositories")).toBeLessThan(entryIndex("Statuses"));
+  expect(entryIndex("Extensions")).toBeLessThan(entryIndex("Statuses"));
   expect(entryIndex("Statuses")).toBeLessThan(entryIndex("Danger zone"));
   expect(entryIndex("Danger zone")).toBeLessThan(entryIndex("Lab (global)"));
   expect(entryIndex("Lab (project)")).toBeLessThan(entryIndex("Ticket tags"));

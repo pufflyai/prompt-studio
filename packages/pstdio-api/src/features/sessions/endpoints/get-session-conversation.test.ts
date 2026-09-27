@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessExit, HarnessSession, SessionMessage } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 import {
   createTestHarnessRecord,
@@ -137,7 +138,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Conversation Download Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Conversation Download Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = (await projectRes.json()) as { id: string };
@@ -187,7 +188,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Agent Messages Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Agent Messages Project" })),
     });
     const project = (await projectRes.json()) as { id: string };
 
@@ -223,7 +224,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Queued Conversation Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Queued Conversation Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = (await projectRes.json()) as { id: string };
@@ -252,7 +253,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Queued Follow-up Conversation Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Queued Follow-up Conversation Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = (await projectRes.json()) as { id: string };
@@ -292,7 +293,7 @@ describe("GET /v1/sessions/:id/conversation", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Missing Attachment Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Missing Attachment Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = (await projectRes.json()) as { id: string };

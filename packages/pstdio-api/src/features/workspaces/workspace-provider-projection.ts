@@ -20,7 +20,7 @@ const safeErrorMessage = (message: string, fallback: string) =>
 
 export const projectionBase = (workspace: WorkspaceRecord) => ({
   branch: workspace.branch,
-  worktree_path: workspace.worktree_path,
+  root_path: workspace.root_path,
   provider_ref_json: workspace.provider_ref_json,
   execution_kind: workspace.execution_kind,
   provider_capabilities_json: workspace.provider_capabilities_json,

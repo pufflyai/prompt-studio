@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
@@ -45,9 +46,9 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "Extension Webviews Project" },
+    data: folderProjectInput({ name: "Extension Webviews Project" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };

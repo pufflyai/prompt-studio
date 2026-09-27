@@ -4,7 +4,9 @@ Proposed: 2026-09-26
 
 ## Status
 
-accepted for PS-391; remove the bridge at the alpha.11 host cutover.
+Superseded by the PS-391 alpha.13 host cutover. Repository interfaces and compatibility projections are removed by the single folder-workspace migration. Compatible extensions support alpha.12 and alpha.13 and must be released before the cutover.
+
+The release sequence below records the original alpha.10/alpha.11 plan. Other host changes advanced the API before the final cutover. The published bridge SDK is 0.35.0; the final sequence uses alpha.12 for the bridge and alpha.13 for the folder host.
 
 ## Intended design
 

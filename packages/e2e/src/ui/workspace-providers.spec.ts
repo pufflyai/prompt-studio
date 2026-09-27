@@ -1,7 +1,9 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 
@@ -30,6 +32,7 @@ test("the global workspace action uses declared cloud parameters without a repos
   const fixturesRoot = join(import.meta.dirname, "../../../../__test-tmp__/workspace-provider-e2e");
   mkdirSync(fixturesRoot, { recursive: true });
   const sourcePath = mkdtempSync(join(fixturesRoot, "cloud-"));
+  const projectRoot = mkdtempSync(join(tmpdir(), "pstdio-cloud-project-"));
   writeFileSync(join(sourcePath, "extension.ts"), source);
   writeFileSync(
     join(sourcePath, "package.json"),
@@ -44,7 +47,9 @@ test("the global workspace action uses declared cloud parameters without a repos
   );
   let projectId: string | undefined;
   try {
-    const created = await request.post(`${uiOrigin}/v1/projects`, { data: { name: "Provider choices" } });
+    const created = await request.post(`${uiOrigin}/v1/projects`, {
+      data: folderProjectInput({ name: "Provider choices" }, projectRoot),
+    });
     expect(created.ok(), await created.text()).toBe(true);
     projectId = (await created.json()).id;
     await page.addInitScript((id) => localStorage.setItem("dashboard-wb2:selected-project:global", id), projectId!);
@@ -83,7 +88,7 @@ test("the global workspace action uses declared cloud parameters without a repos
       params: { image: "documents" },
     });
     expect(await response.json()).toMatchObject({
-      worktree_path: null,
+      root_path: null,
       execution_kind: "remote",
       provider_state: "ready",
       provider_ref_json: { version: 1, data: { image: "documents" } },
@@ -92,5 +97,6 @@ test("the global workspace action uses declared cloud parameters without a repos
   } finally {
     if (projectId) expect((await request.delete(`${uiOrigin}/v1/projects/${projectId}`)).ok()).toBe(true);
     rmSync(sourcePath, { recursive: true, force: true });
+    rmSync(projectRoot, { recursive: true, force: true });
   }
 });

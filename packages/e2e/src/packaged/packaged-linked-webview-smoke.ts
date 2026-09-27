@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionWithDependency } from "./extension-fixtures";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -41,7 +42,7 @@ export const registerLinkedWebviewSmokeTests = () => {
       const created = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ name: "Linked webview" }),
+        body: JSON.stringify(folderProjectInput({ name: "Linked webview" }, root)),
       });
       expect(created.status).toBe(201);
       const project = (await created.json()) as { id: string };

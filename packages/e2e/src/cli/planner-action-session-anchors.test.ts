@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { e2eExtensions } from "../default-extensions";
 import { cleanupDirs } from "./helpers";
-import { createInitializedRepo, createRun, getProjectId, type HookTestContext, registerRepo } from "./hooks-infra";
+import { createInitializedRepo, createRun, getProjectId, type HookTestContext } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -47,7 +47,6 @@ describe("planner action session anchors", () => {
       const run = createRun(ctx);
       const repo = createInitializedRepo(ctx, "planner-action-anchors");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "planner-action-anchors-repo");
 
       const ticket = JSON.parse(run(`tickets create --content "# Refine anchor proof"`, repo)) as {
         id: string;

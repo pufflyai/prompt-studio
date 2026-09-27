@@ -147,3 +147,55 @@ test("a cancelled real command invocation cannot continue into later host reader
   expect((await running).ok).toBe(false);
   expect(laterReads).toBe(0);
 });
+
+for (const target of ["default workspace", "original session"] as const) {
+  test(`session creation cancels a pending ${target} read before proceeding`, async () => {
+    const controller = new AbortController();
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const wait = async () => {
+      entered.resolve();
+      await release.promise;
+    };
+    let projectReads = 0;
+    const sessions = createSessionsApi(
+      {
+        workspaceService: {
+          getDefault: async () => {
+            if (target === "default workspace") await wait();
+            return { id: "w", project_id: "p" };
+          },
+        },
+        sessionService: {
+          get: async () => {
+            await wait();
+            return { id: "s", project_id: "p" };
+          },
+        },
+        projectService: {
+          get: async () => {
+            projectReads++;
+            return null;
+          },
+        },
+      } as never,
+      { projectId: "p", project: {} as never, signal: controller.signal },
+    );
+    const result = sessions
+      .create(target === "original session" ? { title: "New", originalSessionId: "s" } : { title: "New" })
+      .then(
+        () => "created",
+        (error: Error) => error.name,
+      );
+    await entered.promise;
+    controller.abort();
+    release.resolve();
+    try {
+      expect(await result).toBe("AbortError");
+      expect(projectReads).toBe(0);
+    } finally {
+      release.resolve();
+      await result;
+    }
+  });
+}

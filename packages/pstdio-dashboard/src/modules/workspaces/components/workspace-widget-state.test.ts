@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { resolveDefaultWorkspaceDiffPath, resolveWorkspaceDiffRequest } from "./workspace-widget-state";
 
 describe("resolveWorkspaceDiffRequest", () => {
-  test("loads current changes for current-branch workspaces", () => {
+  test("loads current changes for folder workspaces with Git support", () => {
     expect(
       resolveWorkspaceDiffRequest({
         resourceId: "workspace-current",
-        metadata: { workspaceProviderState: "ready", workspaceType: "current_branch" },
+        metadata: { workspaceProviderState: "ready", workspaceType: "folder", workspaceSupportsDiff: true },
       }),
     ).toEqual({ workspaceId: "workspace-current", mode: "current" });
   });
@@ -15,7 +15,7 @@ describe("resolveWorkspaceDiffRequest", () => {
     expect(
       resolveWorkspaceDiffRequest({
         resourceId: "workspace-worktree",
-        metadata: { workspaceProviderState: "ready", workspaceType: "worktree" },
+        metadata: { workspaceProviderState: "ready", workspaceType: "worktree", workspaceSupportsDiff: true },
       }),
     ).toEqual({ workspaceId: "workspace-worktree", mode: "fork_point" });
   });
@@ -24,9 +24,27 @@ describe("resolveWorkspaceDiffRequest", () => {
     expect(
       resolveWorkspaceDiffRequest({
         resourceId: "workspace-resource",
-        metadata: { workspaceProviderState: "ready", workspaceId: "workspace-metadata", workspaceType: "worktree" },
+        metadata: {
+          workspaceProviderState: "ready",
+          workspaceId: "workspace-metadata",
+          workspaceType: "worktree",
+          workspaceSupportsDiff: true,
+        },
       }),
     ).toEqual({ workspaceId: "workspace-metadata", mode: "fork_point" });
+  });
+
+  test.each([
+    false,
+    undefined,
+    "true",
+  ])("does not request diffs when declared support is %s", (workspaceSupportsDiff) => {
+    expect(
+      resolveWorkspaceDiffRequest({
+        resourceId: "workspace-folder",
+        metadata: { workspaceProviderState: "ready", workspaceType: "folder", workspaceSupportsDiff },
+      }),
+    ).toBeUndefined();
   });
 });
 

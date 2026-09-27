@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -37,13 +38,13 @@ describe("GET /v1/projects", () => {
     await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Project A" }),
+      body: JSON.stringify(folderProjectInput({ name: "Project A" })),
     });
 
     await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Project B" }),
+      body: JSON.stringify(folderProjectInput({ name: "Project B" })),
     });
 
     const res = await app.request("/v1/projects");

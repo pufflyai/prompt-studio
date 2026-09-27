@@ -19,6 +19,7 @@ beforeEach(() => {
     port: 0,
     fetch: (request) => {
       const url = new URL(request.url);
+      if (url.pathname.endsWith("/workspace-providers")) return Response.json([]);
       requests.push(url.pathname + url.search);
       if (url.pathname.endsWith("/file")) {
         return Response.json({
@@ -70,7 +71,7 @@ const createFixture = () => {
     execution_kind: "local",
     provider_state: "ready",
     provider_capabilities_json: { files: "write", diff: true },
-    worktree_path: "/project",
+    root_path: "/project",
     setup_error: null,
     provider_error_json: null,
   };

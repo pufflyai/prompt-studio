@@ -1,5 +1,4 @@
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/lib/sync/collections";
-import { toProjectRepository } from "./project-api";
 import { isProjectQueryLoading } from "./project-query-loading-state";
 import type { Project } from "./project-types";
 
@@ -22,19 +21,6 @@ export const useProject = (projectId: string | undefined) => {
   });
   const project = projectRows?.[0];
 
-  const { data: rawProjectRepos } = useLiveQuery(
-    (q) =>
-      projectId
-        ? q
-            .from({ pr: getCollection("project_repos") })
-            .where(({ pr }) => eq(pr.project_id, projectId))
-            .select(({ pr }) => ({ ...pr }))
-        : undefined,
-    [projectId],
-  );
-
-  const { data: rawRepos } = useLiveQuery((q) => q.from({ r: getCollection("repos") }).select(({ r }) => ({ ...r })));
-
   if (!projectId) {
     return { data: undefined, isLoading };
   }
@@ -42,12 +28,6 @@ export const useProject = (projectId: string | undefined) => {
   if (!project) {
     return { data: undefined, isLoading };
   }
-
-  const projectRepoRows = asSyncedRows(rawProjectRepos);
-  const repoRows = asSyncedRows(rawRepos);
-
-  const repoIds = new Set((projectRepoRows ?? []).map((pr) => pr.repo_id as string));
-  const repos = (repoRows ?? []).filter((r) => repoIds.has(r.id));
 
   const data: Project = {
     id: project.id,
@@ -59,7 +39,6 @@ export const useProject = (projectId: string | undefined) => {
     created_at: project.created_at as string,
     updated_at: project.updated_at as string,
     deleted_at: (project.deleted_at as string | null) ?? null,
-    repositories: repos.map((r) => toProjectRepository(r as Parameters<typeof toProjectRepository>[0])),
   };
 
   return { data, isLoading };

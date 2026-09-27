@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { tmpdir } from "node:os";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { dispatchQueuedEntry } from "./session-queue-dispatch";
@@ -54,6 +55,7 @@ test.each(["start", "follow_up", "resume"])("keeps a queued %s for retry when st
     await app.deps.workspaceService.updateProviderProjection(workspace.id, {
       provider_state: "ready",
       execution_kind: "local",
+      root_path: tmpdir(),
       provider_capabilities_json: workspace.provider_capabilities_json,
     });
     for (let attempt = 0; attempt < 50; attempt += 1) {

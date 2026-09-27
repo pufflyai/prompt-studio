@@ -33,10 +33,9 @@ const discoverGitProvider = async (path: string) => {
 };
 
 export const listWorkspaceProviders = async (deps: WorkspacesRouteDeps, projectId: string) => {
-  // The bridge creation service uses the first linked repository when no legacy repo_id is supplied.
-  // Keep its branch choices tied to that same source until the single-folder host cutover.
-  const [repository] = await deps.repoService.listByProject(projectId);
-  const gitProvider = repository ? await discoverGitProvider(repository.path) : null;
+  const home = await deps.workspaceService.getDefault(projectId);
+  const gitProvider =
+    home?.execution_kind === "local" && home.root_path ? await discoverGitProvider(home.root_path) : null;
   const providers: ExtensionWorkspaceProvider[] = gitProvider ? [gitProvider] : [];
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   for (const entry of snapshot.runtime.workspaceTypes) {

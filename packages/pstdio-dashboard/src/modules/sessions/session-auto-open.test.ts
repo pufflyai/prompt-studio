@@ -17,7 +17,7 @@ const workspaceRow = (overrides: Record<string, unknown> = {}) => ({
   project_id: "project-1",
   name: "Dashboard workbench datalayer",
   branch: "workspace/PS-307_A1",
-  worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
+  root_path: "/repo/.pstdio/workspaces/PS-307_A1",
   archived: false,
   workspace_shorthand: "PS-307_A1",
   setup_error: null,

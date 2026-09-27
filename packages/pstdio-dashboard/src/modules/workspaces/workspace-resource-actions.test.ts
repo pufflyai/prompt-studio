@@ -144,7 +144,7 @@ describe("registerWorkspaceResourceActions", () => {
       workspaceIsDefault: true,
       workspaceProviderState: "ready",
       workspaceShorthand: "default",
-      workspaceType: "current_branch",
+      workspaceType: "folder",
     });
     const worktreeWorkspace = createDashboardResource("workspace", "workspace-1", "WS-1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",

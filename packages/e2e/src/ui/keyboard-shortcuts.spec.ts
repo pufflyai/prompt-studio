@@ -1,4 +1,5 @@
 import { expect } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
@@ -6,7 +7,7 @@ test.use({ notificationsEnabled: true });
 
 test("lists every registered keyboard shortcut", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-299 Keyboard Shortcuts" },
+    data: folderProjectInput({ name: "PS-299 Keyboard Shortcuts" }),
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };

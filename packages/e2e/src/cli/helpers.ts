@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
+import { folderProjectInput } from "../helpers/folder-project";
 import { TEST_TIMEOUT } from "./timeouts";
 
 export const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
@@ -85,12 +86,13 @@ export const createInitializedRepo = (input: {
   return repo;
 };
 
-export const createProjectViaApi = async (apiUrl: string, name: string) => {
+export const createProjectViaApi = async (apiUrl: string, name: string, path?: string) => {
   const res = await fetch(`${apiUrl}/v1/projects`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(folderProjectInput({ name }, path)),
   });
+  if (!res.ok) throw new Error(await res.text());
   return (await res.json()) as { id: string; name: string };
 };
 

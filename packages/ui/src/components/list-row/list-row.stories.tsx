@@ -215,8 +215,8 @@ export const Decorations: Story = {
             icon: <Ticket size={14} />,
             description: (
               <WorkspaceBadge
-                workspaceType="current_branch"
-                shorthand="main"
+                workspaceType="folder"
+                label="Project workspace"
                 attemptStatus={{ name: "Failed", color: "red" }}
                 sessionStatus="failed"
               />
@@ -253,8 +253,8 @@ export const Decorations: Story = {
             icon: <Ticket size={14} />,
             endContent: (
               <WorkspaceBadge
-                workspaceType="current_branch"
-                shorthand="main"
+                workspaceType="folder"
+                label="Project workspace"
                 attemptStatus={{ name: "Failed", color: "red" }}
                 sessionStatus="failed"
               />

@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import type { AppBindings } from "../../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource, createTestSkillExtensionSource } from "../test-utils/create-test-extension-source";
 
@@ -54,7 +56,7 @@ const createProject = async (name: string) => {
   const response = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(folderProjectInput({ name })),
   });
   return response.json();
 };
@@ -141,17 +143,10 @@ const enableProvisionHarness = async (projectId: string) => {
   });
 };
 
-const registerClaudeRepo = async (projectId: string, name: string) => {
-  const repoPath = join(tempRoot, name);
-  mkdirSync(repoPath, { recursive: true });
-  const res = await app.request(`/v1/projects/${projectId}/repos`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, path: repoPath }),
-  });
-  expect(res.status).toBe(201);
-
-  return repoPath;
+const provisionProjectFolder = async (projectId: string) => {
+  const workspace = await handle.deps.workspaceService.getDefault(projectId);
+  await provisionProjectWorkspaces(handle.deps, projectId);
+  return workspace!.root_path!;
 };
 
 describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
@@ -208,7 +203,7 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
     const project = await createProject("Uninstall Skill Project");
     await enableProvisionHarness(project.id);
     const { instanceId } = await seedEnabledSkillInstance(project.id);
-    const repoPath = await registerClaudeRepo(project.id, "uninstall-skill-repo");
+    const repoPath = await provisionProjectFolder(project.id);
     const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");
     expect(existsSync(skillPath)).toBe(true);
 

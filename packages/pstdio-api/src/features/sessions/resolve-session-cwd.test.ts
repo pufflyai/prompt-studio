@@ -3,8 +3,17 @@ import { resolveSessionCwd } from "./resolve-session-cwd";
 
 const makeDeps = (workspace: Record<string, unknown>) =>
   ({
-    workspaceService: { get: async () => workspace },
-    repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+    workspaceService: {
+      getDefault: async () => ({
+        id: "home",
+        project_id: "project-1",
+        root_path: "/repo",
+        execution_kind: "local",
+        provider_id: "pstdio.root",
+        provider_state: "ready",
+      }),
+      get: async () => workspace,
+    },
   }) as never;
 
 describe("resolveSessionCwd", () => {
@@ -15,7 +24,7 @@ describe("resolveSessionCwd", () => {
         project_id: "project-1",
         provider_state: "ready",
         execution_kind: "remote",
-        worktree_path: null,
+        root_path: null,
       }),
       "project-1",
       "ws-remote",
@@ -31,7 +40,7 @@ describe("resolveSessionCwd", () => {
         project_id: "project-1",
         provider_state: "failed",
         execution_kind: "local",
-        worktree_path: null,
+        root_path: null,
       }),
       "project-1",
       "ws-failed",

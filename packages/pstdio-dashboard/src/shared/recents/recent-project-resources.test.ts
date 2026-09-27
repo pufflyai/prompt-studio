@@ -4,8 +4,6 @@ import { createRecentProjectResources } from "./recent-project-resources";
 
 const emptyRows: DashboardRows = {
   files: [],
-  projectRepos: [],
-  repos: [],
   sessions: [],
   workspaceSessions: [],
   workspaces: [],

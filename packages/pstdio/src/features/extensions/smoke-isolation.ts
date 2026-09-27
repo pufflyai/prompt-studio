@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import {
   cpSync,
   existsSync,
@@ -117,8 +116,6 @@ export const createSmokeContext = async (input: { source: string; projectPath?: 
       PSTDIO_DEFAULT_EXTENSIONS: "[]",
       BUN_INSTALL_CACHE_DIR: join(home, "bun-cache"),
     });
-    const git = spawnSync("git", ["init", "--quiet", project], { env, encoding: "utf8" });
-    if (git.status !== 0) throw new Error(`Cannot create scratch Git repository: ${git.stderr}`);
     return { root, home, project, source: join(staged, relative(context, source)), env };
   } catch (error) {
     rmSync(root, { recursive: true, force: true });

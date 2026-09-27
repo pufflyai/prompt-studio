@@ -128,7 +128,7 @@ describe("extension workspace badge renderer", () => {
           label: "Latest attempt",
           metadata: {
             workspaceShorthand: "T-1_A2",
-            workspaceType: "current_branch",
+            workspaceType: "folder",
           },
         },
         resourceParent: {
@@ -157,7 +157,7 @@ describe("extension workspace badge renderer", () => {
       metadata: {
         workspaceId: "workspace-2",
         workspaceShorthand: "T-1_A2",
-        workspaceType: "current_branch",
+        workspaceType: "folder",
         resourceParent: {
           type: "ticket",
           id: "ticket-child",

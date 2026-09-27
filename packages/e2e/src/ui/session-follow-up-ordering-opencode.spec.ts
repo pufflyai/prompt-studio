@@ -10,7 +10,6 @@ import {
   getRenderedConversationBlocks,
   openNewSessionPanel,
   openRecentSession,
-  registerRepoViaApi,
   setProjectAgentDefaults,
   submitInitialMessage,
   submitMessage,
@@ -71,7 +70,6 @@ const expectConversationOrder = (
 test.describe("OpenCode follow-up ordering", () => {
   let projectId: string;
   let repoDir: string;
-  let repoId: string;
 
   test.skip(!requiresOpencode, "Requires E2E_AGENTS=opencode");
 
@@ -87,8 +85,6 @@ test.describe("OpenCode follow-up ordering", () => {
     const project = await createProjectViaApi(request, "OpenCode Follow-up Ordering");
     projectId = project.id;
     await setProjectAgentDefaults(request, projectId, opencodeAgentId, selectedModel);
-    const repo = await registerRepoViaApi(request, projectId, "opencode-follow-up-ordering-repo", repoDir);
-    repoId = repo.id;
   });
 
   test.afterEach(() => {
@@ -101,7 +97,7 @@ test.describe("OpenCode follow-up ordering", () => {
 
     await bypassOnboarding(page, {
       projectId,
-      repoId,
+
       branch: "main",
       agentId: opencodeAgentId,
       models: [selectedModel],

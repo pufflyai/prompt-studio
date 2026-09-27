@@ -9,7 +9,7 @@ import { BetaFeaturesPanel } from "./components/beta-features-panel";
 import { ExtensionsPanel } from "./components/extensions-panel";
 import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
-import { ProjectRepositoriesPanel } from "./components/project-repositories-panel";
+import { ProjectFolderPanel } from "./components/project-folder-panel";
 import { RuntimeSettingsPanel } from "./components/runtime-settings-panel";
 import { TemplateSettingsEditor } from "./components/template-settings-editor";
 import { getProjectSkills, type ProjectSkill } from "./data/skills-api";
@@ -28,7 +28,7 @@ export const dashboardSettingsDefaultPanel = { id: "runtime", title: "Runtime", 
 const settingsViewIds = {
   runtime: "dashboard.settings.runtime",
   extensions: "dashboard.settings.extensions",
-  repositories: "dashboard.settings.repositories",
+  projectFolder: "dashboard.settings.project-folder",
   skill: "dashboard.settings.skill",
   template: "dashboard.settings.template",
   machineTokens: "dashboard.settings.machine-tokens",
@@ -76,11 +76,11 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     body: { kind: "react", render: () => <ExtensionsPanel projectId={getDashboardSelectedProjectId(ctx)} /> },
   });
   ctx.views.registerView({
-    id: settingsViewIds.repositories,
-    title: "Repositories",
+    id: settingsViewIds.projectFolder,
+    title: "Project folder",
     body: {
       kind: "react",
-      render: () => <ProjectRepositoriesPanel projectId={getDashboardSelectedProjectId(ctx)} />,
+      render: () => <ProjectFolderPanel projectId={getDashboardSelectedProjectId(ctx)} />,
     },
   });
   ctx.views.registerView({
@@ -164,13 +164,13 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
 
   ctx.settings.registerPanel({
     kind: "view",
-    id: "repositories",
-    title: "Repositories",
+    id: "project-folder",
+    title: "Project folder",
     section: "project",
     scope: "project",
     order: 20,
     icon: "GitBranch",
-    viewId: settingsViewIds.repositories,
+    viewId: settingsViewIds.projectFolder,
   });
 
   ctx.settings.registerPanel<ProjectSkill>({

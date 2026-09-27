@@ -101,6 +101,7 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
   const page = pageState.activePageId ? core.pages.getPage(pageState.activePageId) : undefined;
   if (!page) return;
   for (const slot of page.slots) {
+    if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
     if (slot.region !== input.region) continue;
     if (slot.item.kind === "view" && slot.item.presence === "fixed") continue;
     const multiple = slot.item.kind === "binding" && slot.item.binding.cardinality === "many";

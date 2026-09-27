@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../test-utils/create-test-app";
 
-test("domain mutations publish project, repository, file, and skill changes once", async () => {
+test("domain mutations publish project, file, and skill changes once", async () => {
   const root = mkdtempSync(join(tmpdir(), "mutation-events-"));
   const app = await createTestApp();
-  const { eventBus, projectService, repoService, fileService, skillService } = app.deps;
+  const { eventBus, projectService, fileService, skillService } = app.deps;
   const events = () => eventBus.getSince(0);
   try {
     const project = await projectService.create({ name: "Mutation events" });
@@ -20,21 +20,6 @@ test("domain mutations publish project, repository, file, and skill changes once
         .filter((event) => event.table === "projects")
         .at(-1)?.data,
     ).toEqual(updated);
-    const repo = await repoService.registerForProject(project.id, { name: "repo", path: root });
-    const link = await repoService.getProjectRepoLink(project.id, repo.id);
-    expect(events().filter((event) => event.table === "repos")).toHaveLength(1);
-    expect(events().filter((event) => event.table === "project_repos")).toEqual([
-      expect.objectContaining({ op: "set", data: link }),
-    ]);
-    await repoService.removeFromProject(project.id, repo.id);
-    expect(
-      events()
-        .filter((event) => event.table === "project_repos")
-        .at(-1),
-    ).toMatchObject({
-      op: "delete",
-      data: { id: link!.id },
-    });
     const file = await fileService.upload({
       project_id: project.id,
       file_name: "context.txt",

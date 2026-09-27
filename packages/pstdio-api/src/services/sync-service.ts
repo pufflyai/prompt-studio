@@ -6,9 +6,7 @@ import {
   files,
   installed_extension_sources,
   notifications,
-  project_repos,
   projects,
-  repos,
   sessions,
   settings,
   sql,
@@ -20,8 +18,6 @@ import type { EventBus } from "../features/sync/event-bus";
 const tableMap = {
   settings,
   projects,
-  repos,
-  project_repos,
   installed_extension_sources,
   notifications,
   extension_instances,
@@ -47,9 +43,6 @@ export type SyncServiceDeps = {
 const emitProjectDependents = async (db: DbClient, projectId: string, bus: EventBus) => {
   const ws = await db.select().from(workspaces).where(eq(workspaces.project_id, projectId));
   for (const row of ws) bus.emit("workspaces", "delete", { id: row.id });
-
-  const pr = await db.select().from(project_repos).where(eq(project_repos.project_id, projectId));
-  for (const row of pr) bus.emit("project_repos", "delete", { id: row.id });
 
   const projectFiles = await db.select().from(files).where(eq(files.project_id, projectId));
   for (const row of projectFiles) bus.emit("files", "delete", { id: row.id });

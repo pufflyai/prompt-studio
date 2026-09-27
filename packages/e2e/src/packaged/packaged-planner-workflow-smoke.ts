@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { folderProjectInput } from "../helpers/folder-project";
 
 export const expectPlannerWorkflow = async (
   baseUrl: string,
@@ -53,10 +54,12 @@ export const expectPlannerWorkflow = async (
     expect(await readPolicy()).toEqual({ ...expected, defaultTargetBranch: null });
   }
 
+  const otherFolder = join(tempRoot, "other-project");
+  mkdirSync(otherFolder);
   const otherResponse = await fetch(`${baseUrl}/v1/projects`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ name: "Other Planner project" }),
+    body: JSON.stringify(folderProjectInput({ name: "Other Planner project" }, otherFolder)),
   });
   expect(otherResponse.status).toBe(201);
   const other = (await otherResponse.json()) as { id: string };
@@ -68,19 +71,12 @@ export const expectPlannerWorkflow = async (
   expect(await execute("implementation-targets", {}, other.id)).toBeNull();
 
   const projectFolder = join(tempRoot, "project");
-  mkdirSync(projectFolder);
   const git = (...args: string[]) => execFileSync("git", args, { cwd: projectFolder, stdio: "pipe" });
   git("init", "-b", "main");
   git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "--allow-empty", "-m", "Initial");
   git("update-ref", "refs/remotes/origin/main", "HEAD");
   git("update-ref", "refs/remotes/origin/release", "HEAD");
   git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
-  const registerRepo = await fetch(`${baseUrl}/v1/projects/${projectId}/repos`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ name: "project", path: projectFolder }),
-  });
-  expect(registerRepo.status).toBe(201);
   expect(await execute("implementation-targets")).toEqual({
     branches: ["origin/main", "origin/release"],
     selected: "",

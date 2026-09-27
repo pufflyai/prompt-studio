@@ -18,7 +18,7 @@ export const createPreviewStorage = (): BenchStorageSeed => {
         workspace_shorthand: "WS-1",
         anchors_json: [{ type: "ticket", id: "PS-16", label: "PS-16", shorthand: "PS-16" }],
         branch: "feature/tree-renderer",
-        worktree_path: "/tmp/ws-preview-1",
+        root_path: "/tmp/ws-preview-1",
       },
       {
         id: "ws-preview-2",

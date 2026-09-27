@@ -1,10 +1,6 @@
 import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
-import type {
-  ExtensionProjectContext,
-  RepoContext,
-  TerminalSessionRequest,
-} from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionProjectContext } from "pstdio-api-contracts/extension-kernel";
 import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import {
   type CommandRunnerEnvironment,
@@ -21,7 +17,6 @@ import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
 import { findFreePort } from "../extension-process-api";
-import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
 import { createAutomationApi } from "./automation";
@@ -30,7 +25,6 @@ import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createExtensionPackageFilesApi } from "./package-files";
 import { createProjectFilesApi } from "./project-files";
-import { createReposApi, resolveRegisteredRepoPath } from "./repos";
 import { createResourcesApi } from "./resources";
 import { createScopedHostApis } from "./scoped-host-apis";
 import { createSettingsApi } from "./settings";
@@ -56,7 +50,6 @@ export const createCommandEnvironment = (
     name: string;
     project: ExtensionProjectContext;
     projectId: string;
-    repo?: RepoContext;
     settings?: RuntimeExtensionSettingRecord[];
     workspaceDir?: string;
     workspaceId?: string;
@@ -66,20 +59,13 @@ export const createCommandEnvironment = (
   const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
 
-  const hostTerminal = deps.terminal;
-  const terminal =
-    hostTerminal && input.workspaceDir && !input.workspaceId
-      ? {
-          openSession: (request: TerminalSessionRequest) =>
-            hostTerminal.openSession({ ...request, cwd: request.cwd ?? input.workspaceDir }),
-        }
-      : hostTerminal;
+  const terminal = deps.terminal;
   const connections = createExtensionConnectionsApi(deps.extensionConnectionService, {
     projectId: input.projectId,
     extensionId: input.extensionId,
   });
   const manifest = (enabledSource.installedSource.manifest_json ?? {}) as {
-    pstdio?: { repoFiles?: { tracked?: boolean } };
+    pstdio?: { projectFiles?: { tracked?: boolean } };
   };
 
   const scopedHostApis = (scope?: InvocationScope) => {
@@ -93,7 +79,6 @@ export const createCommandEnvironment = (
           workspaceId: input.workspaceId,
           provisioningWorkspaceId,
           eventId: input.eventId,
-          repo: input.repo,
         },
         access,
       );
@@ -104,8 +89,8 @@ export const createCommandEnvironment = (
         })
       : undefined;
 
-    const resolveRepoPath = (readSignal?: AbortSignal) =>
-      resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext, readSignal);
+    const resolveProjectPath = (access: FileAccess) =>
+      resolveWorkspaceFilesPath(deps, { projectId: input.projectId, provisioningWorkspaceId }, access);
     const storage = createStorageApi(deps, {
       extensionInstanceId: enabledSource.instance.id,
       projectId: input.projectId,
@@ -121,8 +106,7 @@ export const createCommandEnvironment = (
 
     return {
       storage,
-      artifacts: createArtifactsApi(deps, { ...input, signal }),
-      repoFiles: input.repo ? createRepoFilesApi(resolveRepoPath, signal) : undefined,
+      artifacts: createArtifactsApi(resolveProjectPath, { ...input, signal }),
       projectFiles: createProjectFilesApi(deps, input.projectId, provisioningWorkspaceId, signal),
       workspaceFiles:
         input.workspaceId && workingFiles
@@ -137,17 +121,14 @@ export const createCommandEnvironment = (
             }
           : workingFiles,
       packageFiles: createExtensionPackageFilesApi(enabledSource.installedSource.source_path, signal),
-      extensionFiles: input.repo
-        ? createExtensionFilesApi({
-            extensionId: input.extensionId,
-            signal,
-            resolveRepoPath,
-            tracked: manifest.pstdio?.repoFiles?.tracked === true,
-          })
-        : undefined,
+      extensionFiles: createExtensionFilesApi({
+        extensionId: input.extensionId,
+        signal,
+        resolveRepoPath: resolveProjectPath,
+        tracked: manifest.pstdio?.projectFiles?.tracked === true,
+      }),
       files: createFilesApi(deps, input.projectId, signal),
       skills: { list: () => createReadBoundary(signal)(() => deps.skillService.list(input.projectId)) },
-      repos: createReposApi(deps, input.projectId, signal),
       settings,
       ...createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope),
     } satisfies ScopedHostApis;

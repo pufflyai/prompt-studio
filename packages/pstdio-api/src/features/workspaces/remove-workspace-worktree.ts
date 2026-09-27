@@ -18,7 +18,7 @@ export const removeWorkspaceWorktree = async (
     fireEvent?: typeof fireExtensionEventAsync;
   } = {},
 ) => {
-  const worktreePath = workspace.worktree_path;
+  const worktreePath = workspace.root_path;
   const cleanup = overrides.cleanup ?? cleanupWorkspaceWorktree;
   const removed = await cleanup(deps, workspace);
   if (!removed || !worktreePath) return false;

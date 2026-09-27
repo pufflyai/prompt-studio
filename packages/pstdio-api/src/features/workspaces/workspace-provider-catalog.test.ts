@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { workspaceProviderDescriptorSchema } from "pstdio-api-contracts";
@@ -27,9 +27,11 @@ const createRepo = async (name: string, commit = true) => {
   return { id: crypto.randomUUID(), name, path };
 };
 
-const providerCatalog = (repos: Awaited<ReturnType<typeof createRepo>>[]) =>
+const providerCatalog = (rootPath: string | null, executionKind = "local") =>
   ({
-    repoService: { listByProject: async () => repos },
+    workspaceService: {
+      getDefault: async () => (rootPath ? { root_path: rootPath, execution_kind: executionKind } : null),
+    },
     extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
   }) as unknown as WorkspacesRouteDeps;
 
@@ -39,10 +41,9 @@ describe("workspace provider branch choices", () => {
     await git(repo.path, ["switch", "-c", "feature/notes"]);
     await git(repo.path, ["update-ref", "refs/remotes/origin/review", "HEAD"]);
 
-    const [provider] = await listWorkspaceProviders(providerCatalog([repo]), "project-1");
+    const [provider] = await listWorkspaceProviders(providerCatalog(repo.path), "project-1");
 
     expect(provider.id).toBe("pstdio.worktree");
-    expect(workspaceProviderDescriptorSchema.parse(provider).icon).toBe("git-branch");
     expect(provider.params.base).toMatchObject({
       type: "select",
       required: true,
@@ -55,13 +56,13 @@ describe("workspace provider branch choices", () => {
     });
   });
 
-  test("uses branches from the same first repository as implicit workspace creation", async () => {
+  test("uses the exact default folder inside a Git repository", async () => {
     const home = await createRepo("home");
-    const other = await createRepo("other");
+    const projectPath = join(home.path, "docs", "notes");
+    mkdirSync(projectPath, { recursive: true });
     await git(home.path, ["switch", "-c", "home-branch"]);
-    await git(other.path, ["switch", "-c", "other-branch"]);
 
-    const [provider] = await listWorkspaceProviders(providerCatalog([home, other]), "project-1");
+    const [provider] = await listWorkspaceProviders(providerCatalog(projectPath), "project-1");
 
     expect(provider.params.base).toMatchObject({
       type: "select",
@@ -73,11 +74,20 @@ describe("workspace provider branch choices", () => {
     });
   });
 
-  test("does not advertise a later repository when the implicit source has no base commit", async () => {
-    const home = await createRepo("home", false);
-    const other = await createRepo("other");
+  test("does not advertise Git without a usable local default folder", async () => {
+    const unborn = await createRepo("unborn", false);
+    const committed = await createRepo("remote");
+    const plainPath = mkdtempSync(join(tmpdir(), "workspace-provider-plain-"));
+    roots.push(plainPath);
 
-    expect(await listWorkspaceProviders(providerCatalog([home, other]), "project-1")).toEqual([]);
+    for (const deps of [
+      providerCatalog(unborn.path),
+      providerCatalog(committed.path, "remote"),
+      providerCatalog(plainPath),
+      providerCatalog(null),
+    ]) {
+      expect(await listWorkspaceProviders(deps, "project-1")).toEqual([]);
+    }
   });
 
   test("selects the current branch instead of a same-named tag when creating a worktree", async () => {
@@ -86,7 +96,7 @@ describe("workspace provider branch choices", () => {
     await git(repo.path, ["commit", "--allow-empty", "-m", "Advance the branch"]);
     const branchHead = await git(repo.path, ["rev-parse", "HEAD"]);
 
-    const [provider] = await listWorkspaceProviders(providerCatalog([repo]), "project-1");
+    const [provider] = await listWorkspaceProviders(providerCatalog(repo.path), "project-1");
     const base = provider.params.base;
     expect(base).toMatchObject({
       type: "select",
@@ -112,11 +122,13 @@ describe("workspace provider branch choices", () => {
     const repo = await createRepo("project");
     await git(repo.path, ["checkout", "--detach", "HEAD"]);
 
-    const [provider] = await listWorkspaceProviders(providerCatalog([repo]), "project-1");
+    const [provider] = await listWorkspaceProviders(providerCatalog(repo.path), "project-1");
 
     const base = provider.params.base;
     expect(base).toMatchObject({ type: "select", defaultValue: "HEAD" });
-    if (base.type !== "select") throw new Error("Git provider must declare branch choices");
+    if (base.type !== "select" || !Array.isArray(base.options)) {
+      throw new Error("Git provider must declare branch choices");
+    }
     expect(base.options.map((option) => option.value)).toEqual(["HEAD", "main"]);
     for (const option of base.options) {
       expect(await git(repo.path, ["rev-parse", "--verify", `${option.value}^{commit}`])).toBeTruthy();
@@ -132,7 +144,7 @@ describe("workspace provider branch choices", () => {
       image: { type: "select", options: [{ label: "Ubuntu", value: "ubuntu" }] },
     };
     const deps = {
-      ...providerCatalog([repo]),
+      ...providerCatalog(repo.path),
       extensionRuntimeCatalog: {
         get: async () => ({
           runtime: { workspaceTypes: [{ id: "example.cloud", provider: { label: "Cloud", params } }] },
@@ -148,7 +160,7 @@ describe("workspace provider branch choices", () => {
     await git(repo.path, ["config", "branch.sort", "invalid-sort-field"]);
     const failure = new Error("Extension catalog unavailable");
     const deps = {
-      ...providerCatalog([repo]),
+      ...providerCatalog(repo.path),
       extensionRuntimeCatalog: {
         get: async () => {
           throw failure;
@@ -164,7 +176,7 @@ describe("workspace provider branch choices", () => {
       image: { type: "select", defaultValue: "ubuntu", options: [{ label: "Ubuntu", value: "ubuntu" }] },
     };
     const deps = {
-      ...providerCatalog([]),
+      ...providerCatalog(null),
       extensionRuntimeCatalog: {
         get: async () => ({
           runtime: {

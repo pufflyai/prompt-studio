@@ -20,7 +20,7 @@ const fixture = async () => {
     provider_id: "pstdio.root",
     is_default: true,
     execution_kind: "local" as "local" | "remote",
-    worktree_path: null,
+    root_path: root,
     provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities },
   };
   const selected = {
@@ -28,7 +28,7 @@ const fixture = async () => {
     id: "selected",
     provider_id: "pstdio.worktree",
     execution_kind: "local" as "local" | "remote",
-    worktree_path: join(root, "selected"),
+    root_path: join(root, "selected"),
     provider_capabilities_json: { ...defaultLocalWorkspaceCapabilities },
   };
   const workspaces = [home, selected];
@@ -41,7 +41,6 @@ const fixture = async () => {
           workspaces.find((workspace) => workspace.id === shorthand) ?? null,
         list: async () => workspaces,
       },
-      repoService: { listByProject: async () => [{ id: "repo", path: root }] },
       extensionRuntimeCatalog: {
         get: async () => ({
           runtime: {
@@ -67,8 +66,7 @@ const fixture = async () => {
       projectId: "project-1",
       project: { id: "project-1", name: "Project", shorthand: "P" },
       workspaceId: selected.id,
-      workspaceDir: selected.worktree_path!,
-      repo: { projectId: "project-1", repoId: "repo", path: root },
+      workspaceDir: selected.root_path!,
     },
   );
   return { env, root, home, selected };
@@ -79,8 +77,7 @@ test("project files use the default workspace while working files use the select
   await env.projectFiles!.writeText("notes.md", "home");
   await env.workspaceFiles!.writeText("notes.md", "selected");
   expect(await readFile(join(root, "notes.md"), "utf8")).toBe("home");
-  expect(await readFile(join(selected.worktree_path!, "notes.md"), "utf8")).toBe("selected");
-  expect(await env.repoFiles!.readText("notes.md")).toBe("home");
+  expect(await readFile(join(selected.root_path!, "notes.md"), "utf8")).toBe("selected");
 });
 
 test("project file mounts recheck capabilities and never fall back from remote to a repository", async () => {
@@ -92,17 +89,6 @@ test("project file mounts recheck capabilities and never fall back from remote t
   home.execution_kind = "remote";
   await expect(env.projectFiles!.readText("notes.md")).rejects.toThrow("local");
   expect(await readFile(join(root, "notes.md"), "utf8")).toBe("home");
-});
-
-test("workspace context projects local roots and keeps the old worktree fields", async () => {
-  const { env, root, home, selected } = await fixture();
-  expect(await env.workspaces.getDefault()).toMatchObject({ id: home.id, root_path: root, worktree_path: null });
-  expect(await env.workspaces.get(selected.id)).toMatchObject({
-    root_path: selected.worktree_path,
-    worktree_path: selected.worktree_path,
-  });
-  selected.execution_kind = "remote";
-  expect(await env.workspaces.get(selected.id)).toMatchObject({ root_path: null });
 });
 
 test("provider discovery includes declared remote parameters without requiring a Git source", async () => {

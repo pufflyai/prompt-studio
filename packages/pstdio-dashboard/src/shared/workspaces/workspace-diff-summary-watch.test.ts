@@ -23,7 +23,6 @@ test("subscribed badge totals load when the same workspace becomes ready", async
   const row = {
     id: workspaceId,
     root_path: "/project",
-    worktree_path: "/project",
     execution_kind: "local",
     provider_state: "ready",
     initializing: true,

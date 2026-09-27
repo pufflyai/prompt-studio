@@ -46,14 +46,14 @@ export interface PlannerTag {
 export interface PlannerWorkspace {
   id: string;
   workspace_shorthand: string;
-  worktree_path: string;
+  root_path: string;
   branch: string | null;
 }
 
 interface PlannerCommandBody {
   params?: Record<string, unknown>;
   resource?: Record<string, unknown>;
-  repo?: Record<string, unknown>;
+  workspaceId?: string;
   source?: "api";
 }
 
@@ -202,8 +202,6 @@ export const createPlannerAttempt = (
   projectId: string,
   input: {
     ticketId: string;
-    repoId?: string;
-    mode?: "worktree" | "current_branch";
     agent?: { harnessId: string; model?: string };
   },
 ) =>
@@ -214,8 +212,6 @@ export const createPlannerAttempt = (
     "run-attempt",
     {
       ticket: input.ticketId,
-      mode: input.mode ?? "worktree",
       agent: input.agent ?? { harnessId: "pstdio.workbench-fixture.harness.fake" },
-      ...(input.repoId !== undefined ? { repo: { repoId: input.repoId } } : {}),
     },
   );

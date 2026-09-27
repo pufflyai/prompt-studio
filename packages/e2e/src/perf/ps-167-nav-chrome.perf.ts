@@ -2,6 +2,7 @@ import { appendFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { calculateStats, installLongTaskObserver, throttleChromiumCpu } from "./perf-helpers";
 
@@ -25,8 +26,10 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-167 Performance" } });
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-167 Performance" }, folderPath),
+  });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };

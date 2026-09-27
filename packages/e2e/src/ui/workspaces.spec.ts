@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -26,23 +27,14 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
-  const res = await request.post(`${apiBase}/v1/projects`, { data: { name } });
+const createProjectViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  name: string,
+  folderPath?: string,
+) => {
+  const res = await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name }, folderPath) });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string };
-};
-
-const registerRepoViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  name: string,
-  path: string,
-) => {
-  const res = await request.post(`${apiBase}/v1/projects/${projectId}/repos`, {
-    data: { name, path },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string };
 };
 
 const createTicketViaApi = async (
@@ -56,7 +48,7 @@ const createTicketViaApi = async (
 type Workspace = {
   id: string;
   workspace_shorthand: string;
-  worktree_path: string;
+  root_path: string;
   branch: string | null;
 };
 
@@ -68,22 +60,15 @@ const createAttemptViaApi = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
   ticketId: string,
-  repoId: string,
 ) => {
   return createPlannerAttempt(request, apiBase, projectId, {
     ticketId,
-    repoId,
-    mode: "worktree",
   }) as Promise<AttemptResponse>;
 };
 
-const createWorkspaceViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  repoId: string,
-) => {
+const createWorkspaceViaApi = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
   const res = await request.post(`${apiBase}/v1/workspaces`, {
-    data: { project_id: projectId, repo_id: repoId },
+    data: { project_id: projectId, provider_id: "pstdio.worktree", params: {} },
   });
   expect(res.ok()).toBe(true);
   return (await res.json()) as Workspace;
@@ -101,8 +86,6 @@ test.describe("Workspace diff", () => {
 
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
-    const project = await createProjectViaApi(request, "Workspace Diff Test");
-    projectId = project.id;
   });
 
   test.afterEach(() => {
@@ -115,9 +98,10 @@ test.describe("Workspace diff", () => {
   test("current mode (default) — returns empty diff when no uncommitted changes", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "clean-repo", repoRoot);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
+
     const ticket = await createTicketViaApi(request, projectId, "# Clean workspace test");
-    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
     const sessionsResponse = await request.get(`${apiBase}/v1/sessions?project_id=${projectId}`);
     expect(sessionsResponse.ok()).toBe(true);
     expect(await sessionsResponse.json()).toEqual(
@@ -125,7 +109,7 @@ test.describe("Workspace diff", () => {
     );
 
     // Commit a change — should NOT appear in current mode (only uncommitted)
-    const wtPath = attempt.workspace.worktree_path;
+    const wtPath = attempt.workspace.root_path;
     writeFileSync(join(wtPath, "committed.ts"), "export const x = 1;\n");
     execSync("git add committed.ts", { cwd: wtPath, stdio: "pipe" });
     execSync('git commit -m "add committed"', { cwd: wtPath, stdio: "pipe" });
@@ -142,11 +126,12 @@ test.describe("Workspace diff", () => {
   test("current mode — shows only uncommitted changes", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "current-dirty-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Current mode dirty test");
-    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
 
-    const wtPath = attempt.workspace.worktree_path;
+    const ticket = await createTicketViaApi(request, projectId, "# Current mode dirty test");
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
+
+    const wtPath = attempt.workspace.root_path;
 
     // Commit a change
     writeFileSync(join(wtPath, "committed.ts"), "export const x = 1;\n");
@@ -167,11 +152,12 @@ test.describe("Workspace diff", () => {
   test("fork_point mode — returns all changes since branch diverged", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "fork-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Fork point test");
-    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
 
-    const wtPath = attempt.workspace.worktree_path;
+    const ticket = await createTicketViaApi(request, projectId, "# Fork point test");
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
+
+    const wtPath = attempt.workspace.root_path;
     writeFileSync(join(wtPath, "feature.ts"), 'export const greet = () => "hello";\n');
     execSync("git add feature.ts", { cwd: wtPath, stdio: "pipe" });
     execSync('git commit -m "add feature"', { cwd: wtPath, stdio: "pipe" });
@@ -194,12 +180,13 @@ test.describe("Workspace diff", () => {
   test("fork_point mode keeps diff after squash merge when workspace remains", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "ui-diff-repo", repoRoot);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
+
     const ticket = await createTicketViaApi(request, projectId, "# Merge diff retention test");
-    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
 
     // Commit a file on the workspace branch
-    const wtPath = attempt.workspace.worktree_path;
+    const wtPath = attempt.workspace.root_path;
     writeFileSync(join(wtPath, "component.tsx"), "export const App = () => <div>Hello</div>;\n");
     execSync("git add component.tsx", { cwd: wtPath, stdio: "pipe" });
     execSync('git commit -m "add component"', { cwd: wtPath, stdio: "pipe" });
@@ -225,11 +212,12 @@ test.describe("Workspace diff", () => {
   test("fork_point mode keeps diff after fast-forward merge when workspace remains", async ({ request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "ui-diff-ff-repo", repoRoot);
-    const ticket = await createTicketViaApi(request, projectId, "# Fast-forward merge diff retention test");
-    const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
 
-    const wtPath = attempt.workspace.worktree_path;
+    const ticket = await createTicketViaApi(request, projectId, "# Fast-forward merge diff retention test");
+    const attempt = await createAttemptViaApi(request, projectId, ticket.id);
+
+    const wtPath = attempt.workspace.root_path;
     writeFileSync(join(wtPath, "widget.tsx"), "export const Widget = () => <div>Widget</div>;\n");
     execSync("git add widget.tsx", { cwd: wtPath, stdio: "pipe" });
     execSync('git commit -m "add widget"', { cwd: wtPath, stdio: "pipe" });
@@ -261,8 +249,6 @@ test.describe("Workspace table", () => {
 
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
-    const project = await createProjectViaApi(request, "Workspace Rename Test");
-    projectId = project.id;
   });
 
   test.afterEach(() => {
@@ -275,8 +261,9 @@ test.describe("Workspace table", () => {
   test("renames a workspace from the workspaces view", async ({ page, request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "rename-repo", repoRoot);
-    const workspace = await createWorkspaceViaApi(request, projectId, repo.id);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
+
+    const workspace = await createWorkspaceViaApi(request, projectId);
     const nextName = "Renamed workspace e2e";
 
     page.on("dialog", (dialog) => {
@@ -311,8 +298,9 @@ test.describe("Workspace table", () => {
   test("shows archived workspaces with their state", async ({ page, request }) => {
     const repoRoot = createGitRepo();
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, projectId, "archive-repo", repoRoot);
-    const workspace = await createWorkspaceViaApi(request, projectId, repo.id);
+    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
+
+    const workspace = await createWorkspaceViaApi(request, projectId);
     const archiveResponse = await request.post(`${apiBase}/v1/workspaces/${workspace.id}/archive`);
     expect(archiveResponse.ok()).toBe(true);
 
