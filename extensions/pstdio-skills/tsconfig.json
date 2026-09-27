@@ -10,7 +10,12 @@
     "noEmit": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "types": ["bun"]
+    "types": ["bun"],
+    "jsx": "react-jsx"
   },
-  "include": ["extension.ts", "skills/create-pstdio-extension/references/examples/**/*.ts"]
+  "include": [
+    "extension.ts",
+    "skills/create-pstdio-extension/references/examples/**/*.ts",
+    "skills/create-pstdio-extension/references/examples/**/*.tsx"
+  ]
 }

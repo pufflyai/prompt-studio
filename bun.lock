@@ -257,10 +257,17 @@
       "name": "pstdio-skills",
       "version": "0.35.0",
       "dependencies": {
-        "@pstdio/sdk": "^0.25.0",
+        "@pstdio/sdk": "^0.35.0",
       },
       "devDependencies": {
+        "@chakra-ui/react": "3.32.0",
+        "@emotion/react": "^11.0.0",
+        "@pstdio/ui": "^0.35.0",
         "@types/bun": "1.4.2",
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
         "typescript": "6.0.2",
       },
     },
@@ -5367,8 +5374,6 @@
     "pstdio-planner-loops/@pstdio/sdk": ["@pstdio/sdk@0.25.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-XNDaFO+jss4f18KXO6LRW9tgtuRkRj+ARlM7JRkCOm0nAB9xYQW1wxHTIOTJIxUOc/GEpglvc61NgvFdCoo5pw=="],
 
     "pstdio-reports/@pstdio/sdk": ["@pstdio/sdk@0.25.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-XNDaFO+jss4f18KXO6LRW9tgtuRkRj+ARlM7JRkCOm0nAB9xYQW1wxHTIOTJIxUOc/GEpglvc61NgvFdCoo5pw=="],
-
-    "pstdio-skills/@pstdio/sdk": ["@pstdio/sdk@0.25.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-XNDaFO+jss4f18KXO6LRW9tgtuRkRj+ARlM7JRkCOm0nAB9xYQW1wxHTIOTJIxUOc/GEpglvc61NgvFdCoo5pw=="],
 
     "react-i18next/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 

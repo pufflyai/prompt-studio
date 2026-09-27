@@ -16,8 +16,8 @@ metadata:
    - Use [references/scope.md](references/scope.md) to choose repo-local vs user scope before scaffolding new files.
    - Inspect the target `package.json`, `extension.ts`, tests, and nearby extension patterns before editing.
 2. Choose the contribution type.
-   - Read [references/pages.md](references/pages.md) for page ownership, close behavior, contextual navigation, and refreshing installed guidance.
-   - Start with the complete public SDK modules in [references/examples.md](references/examples.md). Scribble covers documents and a navigation tree; Zipline covers a board and inspector; Pigeon covers a list and reader.
+   - Use the decision table in [references/pages.md](references/pages.md) to choose a page, attached menu, or independent panel. It also covers resources, close behavior, and navigation.
+   - Choose a typechecked example from [references/examples.md](references/examples.md): the resource reviewer for a tree, custom preview, native inspector, and palette search; Scribble for documents; Zipline for a board; Pigeon for a reader.
    - Use commands for user-triggered operations from the CLI, dashboard menus, command palette, schedules, or other commands.
    - Use middlewares to validate, reject, or rewrite command invocations before a command runs.
    - Use hooks to react to project, ticket, workspace, worktree, git, session, attempt-status, or command lifecycle events.
@@ -36,6 +36,7 @@ metadata:
    - Use artifact mounts for files under `.pstdio/<extension-package-name>/`.
    - Use Harnesses and workspace types only when adding a new execution or workspace provider.
 3. Implement the smallest useful extension change.
+   - For custom UI, read [references/webviews.md](references/webviews.md) for shared UI, sizing, resource rebinding, and event subscriptions. Prefer native controls for standard forms.
    - Keep identity in `package.json`; do not add identity fields to `defineExtension()`.
    - Export a single default `defineExtension({ ... })` value from `extension.ts`.
    - Use `packageAsset()` for every shipped file or directory asset.
@@ -58,5 +59,7 @@ metadata:
 - [references/extension-api.md](references/extension-api.md) - package manifest, contribution types, ids, context APIs, and asset rules.
 - [references/host-storage-and-workspaces.md](references/host-storage-and-workspaces.md) - harness state, worktree cleanup, workspace identity, and repo file storage.
 - [references/examples.md](references/examples.md) - compact examples for common extension use cases.
+- [references/pages.md](references/pages.md) - choose native composition, resource navigation, and page lifecycle.
+- [references/webviews.md](references/webviews.md) - bounded custom content, typed commands, and shared state.
 - [references/scope.md](references/scope.md) - repo-local vs user extension source selection.
 - [references/validation.md](references/validation.md) - typecheck, install, runtime, package, and dashboard validation guidance.
