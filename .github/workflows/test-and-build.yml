@@ -67,7 +67,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
-      # Real-time scanning of the thousands of files that PGlite and bun installs write slows the tests.
+      # ADR 0034: Defender scans every file PGlite, installs and builds write. Temporary runner workaround.
       - name: Exclude build and test folders from Defender scanning
         shell: pwsh
         run: Add-MpPreference -ExclusionPath $env:TEMP, $env:RUNNER_TEMP, "${{ github.workspace }}", "$env:USERPROFILE\.bun"
