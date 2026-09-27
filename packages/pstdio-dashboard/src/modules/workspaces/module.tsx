@@ -237,7 +237,7 @@ export const createWorkspacesModule = () =>
       registerWorkspaceDetailWidgets(ctx);
       registerWorkspacesPage(ctx);
       const workspaceResourceSubscription = watchOpenWorkspaceResource(ctx);
-      registerWorkspaceSidenavContributions(ctx);
+      const workspaceNavigation = registerWorkspaceSidenavContributions(ctx);
       ctx.modes.registerMode({
         id: "project",
         label: "Project",
@@ -273,6 +273,7 @@ export const createWorkspacesModule = () =>
       );
       return {
         dispose: () => {
+          workspaceNavigation.dispose();
           workspaceResourceSubscription.dispose();
           unsubscribePage();
         },

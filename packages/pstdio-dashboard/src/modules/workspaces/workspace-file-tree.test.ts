@@ -19,6 +19,7 @@ beforeEach(() => {
     port: 0,
     fetch: (request) => {
       const url = new URL(request.url);
+      if (url.pathname.endsWith("/workspace-providers")) return Response.json([]);
       requests.push(url.pathname + url.search);
       if (url.pathname.endsWith("/files")) {
         return Response.json({

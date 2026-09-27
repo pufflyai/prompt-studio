@@ -49,6 +49,7 @@ afterEach(() => {
 describe("workspace file contributions", () => {
   test("loads files for a current-branch workspace through the API", async () => {
     const fetchMock = mock(async (input: string | URL | Request) => {
+      if (String(input).endsWith("/workspace-providers")) return jsonResponse([]);
       if (String(input).includes("/diff-files?")) {
         return jsonResponse({
           workspace_id: "workspace-1",
@@ -83,7 +84,9 @@ describe("workspace file contributions", () => {
       title: "Select a file",
       description: "Choose a file from the Files panel.",
     });
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/v1/workspaces/workspace-1/files?limit=500");
+    expect(
+      fetchMock.mock.calls.some(([input]) => String(input).includes("/v1/workspaces/workspace-1/files?limit=500")),
+    ).toBe(true);
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/diff-files?mode=current"))).toBe(true);
   });
   test("searches, opens, loads, and saves a workspace text file through one resource", async () => {
@@ -94,6 +97,7 @@ describe("workspace file contributions", () => {
     }> = [];
     const fetchMock = mock(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
+      if (url.endsWith("/workspace-providers")) return jsonResponse([]);
       calls.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : undefined });
       if (init?.method === "PUT") {
         return jsonResponse({

@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -31,6 +32,7 @@ test("the global workspace action uses declared cloud parameters without a repos
   const fixturesRoot = join(import.meta.dirname, "../../../../__test-tmp__/workspace-provider-e2e");
   mkdirSync(fixturesRoot, { recursive: true });
   const sourcePath = mkdtempSync(join(fixturesRoot, "cloud-"));
+  const projectRoot = mkdtempSync(join(tmpdir(), "pstdio-cloud-project-"));
   writeFileSync(join(sourcePath, "extension.ts"), source);
   writeFileSync(
     join(sourcePath, "package.json"),
@@ -46,7 +48,7 @@ test("the global workspace action uses declared cloud parameters without a repos
   let projectId: string | undefined;
   try {
     const created = await request.post(`${uiOrigin}/v1/projects`, {
-      data: folderProjectInput({ name: "Provider choices" }, sourcePath),
+      data: folderProjectInput({ name: "Provider choices" }, projectRoot),
     });
     expect(created.ok(), await created.text()).toBe(true);
     projectId = (await created.json()).id;
@@ -95,5 +97,6 @@ test("the global workspace action uses declared cloud parameters without a repos
   } finally {
     if (projectId) expect((await request.delete(`${uiOrigin}/v1/projects/${projectId}`)).ok()).toBe(true);
     rmSync(sourcePath, { recursive: true, force: true });
+    rmSync(projectRoot, { recursive: true, force: true });
   }
 });

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { FolderPickerDialog } from "./folder-picker-dialog";
 
 const meta = {
@@ -29,3 +30,22 @@ export const PermissionError: Story = { args: { error: "Permission denied while 
 
 export const WindowsDriveRoot: Story = { args: { currentPath: "C:\\", entries: [] } };
 export const NetworkShareRoot: Story = { args: { currentPath: "\\\\server\\share", entries: [] } };
+
+export const CreateFolderEmpty: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "New folder", exact: true }));
+    await expect(canvas.getByRole("button", { name: "Create folder", exact: true })).toBeDisabled();
+    await expect(canvas.queryByRole("button", { name: "Open folder", exact: true })).not.toBeInTheDocument();
+  },
+};
+
+export const CreateFolderNamed: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "New folder", exact: true }));
+    await userEvent.type(canvas.getByRole("textbox", { name: "New folder name" }), "assets");
+    await expect(canvas.getByRole("button", { name: "Create folder", exact: true })).toBeEnabled();
+    await expect(canvas.queryByRole("textbox", { name: "Filter folders" })).not.toBeInTheDocument();
+  },
+};

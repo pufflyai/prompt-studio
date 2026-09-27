@@ -89,23 +89,25 @@ export const FolderPicker = (props: FolderPickerProps) => {
               disabled={isLoading || isOpening}
             />
           </Stack>
-          <Stack direction="row" gap="sm">
-            <Input
-              aria-label="Filter folders"
-              placeholder="Filter folders"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!currentPath || isLoading || isOpening}
-              onClick={() => setCreating(true)}
-            >
-              <FolderPlus />
-              New folder
-            </Button>
-          </Stack>
+          {!creating && (
+            <Stack direction="row" gap="sm">
+              <Input
+                aria-label="Filter folders"
+                placeholder="Filter folders"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!currentPath || isLoading || isOpening}
+                onClick={() => setCreating(true)}
+              >
+                <FolderPlus />
+                New folder
+              </Button>
+            </Stack>
+          )}
           {creating && (
             <Stack direction="row" gap="sm">
               <Input
@@ -119,6 +121,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
                 }}
               />
               <Button size="sm" variant="primary" disabled={!folderName.trim()} loading={saving} onClick={createFolder}>
+                <FolderPlus />
                 Create folder
               </Button>
               <Button size="sm" variant="outline" disabled={saving} onClick={() => setCreating(false)}>
@@ -161,9 +164,16 @@ export const FolderPicker = (props: FolderPickerProps) => {
         <Button variant="outline" onClick={onClose} disabled={isLoading || isOpening}>
           Cancel
         </Button>
-        <Button variant="primary" onClick={onSelect} loading={isOpening} disabled={!currentPath || isLoading || saving}>
-          Open folder
-        </Button>
+        {!creating && (
+          <Button
+            variant="primary"
+            onClick={onSelect}
+            loading={isOpening}
+            disabled={!currentPath || isLoading || saving}
+          >
+            Open folder
+          </Button>
+        )}
       </Dialog.Footer>
     </>
   );
