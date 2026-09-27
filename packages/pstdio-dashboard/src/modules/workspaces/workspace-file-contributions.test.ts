@@ -67,7 +67,7 @@ describe("workspace file contributions", () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const workspace = workspaceResource({ workspaceType: "current_branch", workspaceView: "files" });
+    const workspace = workspaceResource({ workspaceType: "folder", workspaceView: "files" });
     const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, { resource: workspace });
     const file = await fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(
       workspace,

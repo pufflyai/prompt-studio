@@ -167,10 +167,3 @@ export const StateMatrix: Story = {
     </VStack>
   ),
 };
-
-export const LegacyCurrentBranch: Story = {
-  args: { workspaceType: "current_branch", label: "Current branch", sessionStatus: "in_progress" },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByLabelText("Current branch")).toBeVisible();
-  },
-};

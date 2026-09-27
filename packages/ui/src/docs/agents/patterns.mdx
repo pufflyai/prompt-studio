@@ -32,5 +32,12 @@ Use the diff patterns for changed-file navigation, file summaries, and drawer-ba
 
 Use `Dialog.Title`, the shared `CloseButton`, and `Dialog.Footer` with grouped actions for creation dialogs.
 The workbench overlay owns its close button; widgets supply the header, body, and footer.
-Put parameter explanations in `description`. `ParamEditorLabel` shows them through an info button and popover,
-including keyboard focus and Escape handling. Labels do not add an asterisk; required validation stays in the form.
+Put parameter explanations in `description`. `ParamEditorLabel` shows a tooltip on hover or keyboard focus of its
+info button. Escape uses the shared overlay behavior and can also dismiss a containing dialog. Labels do not add an asterisk; required validation
+stays in the form.
+
+Selection dropdowns disable themselves when no enabled option or group change can change the value. A sole unset
+option can still be selected. Clearable single selections and multi-selections can still remove their selected value.
+Action menus keep an enabled selected action available so it can run again.
+Declare icons on options and workspace providers; iconless choices stay iconless. Use `git-commit-horizontal` for
+branches, `git-branch` for Git worktrees, and `level-low`, `level-mid`, `level-high`, `level-xhigh` for effort levels.

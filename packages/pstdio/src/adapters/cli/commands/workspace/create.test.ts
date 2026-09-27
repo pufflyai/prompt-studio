@@ -47,7 +47,6 @@ describe("workspaces create", () => {
 
     expect(createStandaloneWorkspace).toHaveBeenCalledWith({
       projectId: "proj-1",
-      base: undefined,
       providerId: "example.remote",
       params: { repository: "acme/repo" },
     });
@@ -60,7 +59,7 @@ describe("workspaces create", () => {
     );
   });
 
-  test("throws when not in git repo", async () => {
+  test("throws outside a project", async () => {
     const handler = createHandler({ ...baseDeps, findProjectRoot: () => null });
     await expect(handler({ _: [], $0: "" } as never)).rejects.toThrow("Not inside a pstdio project.");
   });

@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { resolveDefaultWorkspaceDiffPath, resolveWorkspaceDiffRequest } from "./workspace-widget-state";
 
 describe("resolveWorkspaceDiffRequest", () => {
-  test("loads current changes for current-branch workspaces", () => {
+  test("loads current changes for folder workspaces with Git support", () => {
     expect(
       resolveWorkspaceDiffRequest({
         resourceId: "workspace-current",
-        metadata: { workspaceProviderState: "ready", workspaceType: "current_branch", workspaceSupportsDiff: true },
+        metadata: { workspaceProviderState: "ready", workspaceType: "folder", workspaceSupportsDiff: true },
       }),
     ).toEqual({ workspaceId: "workspace-current", mode: "current" });
   });

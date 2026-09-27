@@ -16,8 +16,10 @@ test("upgrades linked folders and recorded aliases without losing workspace or s
   const alias = join(root, "alias");
   await mkdir(projectFolder);
   await symlink(projectFolder, alias);
-  const old = new PGlite(folder);
+  // Build the old fixture in memory, then persist its image to avoid disk-heavy initdb on Windows.
+  const old = new PGlite();
   await old.waitReady;
+  let image: Blob;
   try {
     await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 31);
     // Seed the old schema atomically instead of flushing every fixture row to disk.
@@ -68,9 +70,13 @@ test("upgrades linked folders and recorded aliases without losing workspace or s
         "INSERT INTO workspace_sessions(id,workspace_id,session_id,created_at) VALUES ('link','other-workspace','session','2026-01-01')",
       );
     });
+    image = await old.dumpDataDir("none");
   } finally {
     await old.close();
   }
+  const persisted = new PGlite(folder, { loadDataDir: image });
+  await persisted.waitReady;
+  await persisted.close();
   const upgraded = await createDb({ path: folder });
   try {
     const records = await upgraded.db.select().from(schema.workspaces);

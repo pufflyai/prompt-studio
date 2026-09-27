@@ -3,11 +3,11 @@ status: "draft"
 created: "2026-03-10T20:12:05Z"
 ---
 
-# Product Requirements Document: Dashboard Settings and Project Agent Selection
+# Product Requirements Document: Dashboard Settings and Folder Projects
 
 ## Summary
 
-The dashboard ships a global settings surface plus project creation with agent selection. Global settings uses a sidenav + panel layout aligned with project settings, with Agents and Runtime panels for agent configuration and session runtime limits.
+The dashboard opens projects from folders. Global settings uses a sidenav + panel layout aligned with project settings, with Agents and Runtime panels for agent configuration and session runtime limits.
 
 ## Problem
 
@@ -34,7 +34,7 @@ Current settings routes:
 - `/settings`
 - `/projects/:projectId/settings`
 
-Project creation includes a second step for selecting agents, with all installed agents selected by default. If no agents are installed on the machine, project creation is disabled and the projects page shows a warning banner with recovery guidance (Settings -> Agents and manual add/setup paths). Existing projects remain visible and accessible. The global settings page uses a sidenav with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration. The `Runtime` panel controls global session concurrency; when the active-session limit is reached, accepted session requests are queued.
+Project creation opens one selected or newly created folder. It has no agent-selection step and works without installed agents. The global settings page uses a sidenav with an `Agents` panel that lists known agents, indicates which agents are configured/default, and supports enable/disable/default actions. Manual add allows creating a config for a supported agent id (`claude-code` or `opencode`) with an executable path at creation time. Existing configured executable paths are shown as read-only text in this iteration. The `Runtime` panel controls global session concurrency; when the active-session limit is reached, accepted session requests are queued.
 
 ## Requirements
 
@@ -42,9 +42,9 @@ Project creation includes a second step for selecting agents, with all installed
 
 1. `/projects` must always remain accessible regardless of onboarding state.
 2. Project creation opens one selected folder immediately. Missing agents do not block opening.
-3. All installed agents must be pre-selected in the agent-selection step by default.
-4. If no agents are installed, project creation controls must be disabled and a warning banner must be shown on `/projects`.
-5. The warning banner must clearly explain how to add agents using Settings -> Agents, including setup/manual add paths.
+3. Project creation must not require an agent-selection step.
+4. Folder opening must remain enabled when no agents are installed.
+5. Users configure agents through Settings -> Agents when they want to start a session.
 6. Existing projects and project navigation must remain available when no agents are installed.
 7. Global settings must use panel-based navigation with an `Agents` section.
 8. Global settings must show available agents and current agent configs.
@@ -58,7 +58,7 @@ Project creation includes a second step for selecting agents, with all installed
 
 ### UX Requirements
 
-- Project creation should clearly separate project details (step 1) from agent selection (step 2).
+- Project creation uses one folder picker. The chosen folder supplies the initial project name.
 - Global settings should distinguish installed, enabled, and default states.
 - Global settings should expose manual-add affordance from the Agents panel.
 - Existing configured executable paths should be visible as read-only values.
@@ -66,7 +66,7 @@ Project creation includes a second step for selecting agents, with all installed
 
 ### Operational Requirements
 
-- Agent availability on the projects list is sourced from `/v1/agents/info`.
+- Agent availability in settings is sourced from `/v1/agents/info`.
 - Global settings mutations call the agent-config APIs and surface errors with toasts.
 - Runtime settings mutations call the settings APIs and trigger queue draining when capacity increases.
 
@@ -74,9 +74,9 @@ Project creation includes a second step for selecting agents, with all installed
 
 1. Project routes no longer depend on onboarding completion state.
 2. Project creation opens one chosen or newly created folder. Agent defaults remain configurable in settings.
-3. Installed agents are pre-selected on step 2; users can deselect before creating.
-4. If no installed agents are found, project creation is disabled and the warning banner explains how to recover.
-5. Existing projects remain visible and can still be opened when project creation is blocked.
+3. The folder opens without prompting for an agent.
+4. If no installed agents are found, folder opening and tools remain available.
+5. Existing projects remain visible and accessible regardless of agent availability.
 6. The global settings page loads available agents and configured agents, then renders toggle and default actions for each one inside the `Agents` panel.
 7. Selecting `Add agent manually` opens a flow that captures supported `agent_id` and executable path, then creates/updates the config via setup endpoint.
 8. Existing configured rows show executable path text as read-only (`Not set` when absent).
@@ -102,7 +102,7 @@ Project creation includes a second step for selecting agents, with all installed
 
 | Action | Behavior |
 | ------ | -------- |
-| Create project (step 2) | Selects which installed agents to use, all selected by default. |
+| Open folder | Opens an existing project or creates one for the selected folder. |
 | Toggle agent | Enables or disables a configured agent. |
 | Set default agent | Marks the selected agent config as default. |
 | Add agent manually | Creates/updates a supported agent config with executable path at create time. |
@@ -113,7 +113,6 @@ Project creation includes a second step for selecting agents, with all installed
 - Manual add in global settings supports `claude-code` and `opencode` only.
 - Project creation works when no agent is installed.
 - Project settings include tags, project folder, hooks, skills, templates, and danger zone.
-- Repository management (add/remove) is handled in global settings, not project settings.
 - Existing configured executable path is read-only in global settings for this phase.
 - Skill installation badges reflect real-time filesystem checks against agent directories in the default workspace folder.
 - Active runtime capacity counts `in_progress` and `awaiting_input` sessions.
@@ -123,12 +122,12 @@ Project creation includes a second step for selecting agents, with all installed
 
 | Error | Cause |
 | ----- | ----- |
-| No agents available | Project creation is blocked until an agent is installed/configured. |
+| No agents available | Sessions need an installed agent; folder opening and tools remain available. |
 | Failed to enable / disable / set default agent | The corresponding settings mutation failed. |
 | Failed to save runtime settings | The settings mutation failed or the value is invalid. |
 
 ## Verification & Evidence
 
 - **Commands to run**: `bun test packages/pstdio-dashboard/src/features/project-list/pages/project-list.test.ts`, `bun test packages/e2e/src/ui/projects.spec.ts`
-- **Expected evidence**: Project creation has a second agent step, no-agent state shows blocking banner, and existing project navigation remains available.
+- **Expected evidence**: A folder opens without an agent-selection step or an installed agent, and existing project navigation remains available.
 - **Where to find artifacts**: `packages/pstdio-dashboard/src/features/project-list/`, `packages/pstdio-dashboard/src/features/settings/`, `packages/pstdio-dashboard/src/features/project-settings/`

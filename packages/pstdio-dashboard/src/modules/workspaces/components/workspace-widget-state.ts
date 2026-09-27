@@ -13,7 +13,7 @@ export const resolveWorkspaceDiffRequest = (input: WorkspaceDiffInput) => {
   const workspaceId = typeof metadataWorkspaceId === "string" ? metadataWorkspaceId : input.resourceId;
   if (!workspaceId) return undefined;
 
-  const mode: WorkspaceDiffMode = input.metadata?.workspaceType === "current_branch" ? "current" : "fork_point";
+  const mode: WorkspaceDiffMode = input.metadata?.workspaceType === "folder" ? "current" : "fork_point";
   return { workspaceId, mode };
 };
 

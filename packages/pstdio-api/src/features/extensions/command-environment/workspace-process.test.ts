@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { TerminalSessionRequest } from "pstdio-api-contracts/extension-kernel";
 import { createInvocationScope } from "pstdio-extensions";
 import { createWorkspaceContextFixture } from "../workspace-context.test-fixture";
@@ -54,14 +56,17 @@ const events = async (session: ReturnType<NonNullable<ReturnType<typeof environm
   return received;
 };
 
-test("processes and terminals default to the selected workspace directory", async () => {
+test("processes and terminals resolve the current workspace directory before starting", async () => {
   const env = environment();
-  expect((await env.process.run({ command })).stdout.trim()).toBe(fixture.root);
+  const moved = join(fixture.root, "moved");
+  await mkdir(moved);
+  Object.assign(fixture.workspace, { root_path: moved });
+  expect((await env.process.run({ command })).stdout.trim()).toBe(moved);
   const session = env.terminal!.openSession(terminalRequest);
   session.write("queued input");
   session.resize(100, 30);
   await events(session);
-  expect(requests).toEqual([{ ...terminalRequest, cwd: fixture.root }]);
+  expect(requests).toEqual([{ ...terminalRequest, cwd: moved }]);
   expect(writes).toEqual(["queued input"]);
   expect(sizes).toEqual([[100, 30]]);
 });
