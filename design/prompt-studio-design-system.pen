@@ -106195,7 +106195,7 @@
     {
       "type": "frame",
       "id": "LmcML",
-      "x": 20208,
+      "x": 18927,
       "y": 18634,
       "name": "Folder onboarding and workspace providers",
       "theme": {
@@ -106276,6 +106276,9 @@
                     "badge": "subtle",
                     "palette": "blue"
                   }
+                },
+                "vzzEL": {
+                  "enabled": false
                 },
                 "z28bu": {
                   "theme": {
@@ -106405,8 +106408,32 @@
                           }
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vFCpw",
+                      "name": "Folder state",
+                      "width": "fill_container",
+                      "height": 180,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b3pD8e",
+                          "name": "Empty directory",
+                          "fill": "$ds-fg-subtle",
+                          "content": "This folder is empty.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
+                },
+                "vzzEL": {
+                  "enabled": false
                 },
                 "z28bu": {
                   "theme": {
@@ -106471,18 +106498,11 @@
                       "fontFamily": "$font-body",
                       "fontSize": 14,
                       "fontWeight": "normal"
-                    },
-                    {
-                      "type": "text",
-                      "id": "G5cYq",
-                      "name": "Creation error",
-                      "fill": "$ds-fg",
-                      "content": "A folder with that name already exists.",
-                      "fontFamily": "$font-body",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
                     }
                   ]
+                },
+                "vzzEL": {
+                  "enabled": false
                 },
                 "z28bu": {
                   "theme": {
@@ -107119,8 +107139,8 @@
     {
       "type": "frame",
       "id": "b39KPj",
-      "x": -440,
-      "y": 28042,
+      "x": 480,
+      "y": 27371,
       "name": "Exploration",
       "theme": {
         "mode": "dark"
@@ -116397,39 +116417,11 @@
       ]
     },
     {
-      "id": "YHNoW",
-      "type": "ref",
-      "ref": "c24zV7",
-      "name": "Create folder",
-      "theme": {
-        "btn": "primary",
-        "size": "sm"
-      },
-      "layout": "horizontal",
-      "justifyContent": "space_between",
-      "x": 21251,
-      "y": 18567,
-      "descendants": {
-        "DsEVd": {
-          "enabled": false
-        },
-        "Hf4GT": {
-          "content": "Create folder"
-        },
-        "khvEs": {
-          "theme": {
-            "kbd": "raised",
-            "size": "md"
-          }
-        }
-      }
-    },
-    {
       "id": "C09B8",
       "type": "ref",
       "ref": "I2wLw",
       "name": "Create folder · existing files",
-      "x": 22172,
+      "x": 20891,
       "y": 18634,
       "theme": {
         "mode": "dark"
@@ -116612,6 +116604,9 @@
               ]
             }
           ]
+        },
+        "vzzEL": {
+          "enabled": false
         },
         "z28bu": {
           "theme": {
