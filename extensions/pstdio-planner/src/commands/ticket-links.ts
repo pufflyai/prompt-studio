@@ -49,7 +49,7 @@ const changeLink = async (ctx: CommandContext, input: LinkParams, unlink: boolea
         workspace: {
           id: workspace.id,
           workspace_shorthand: workspace.workspace_shorthand,
-          worktree_path: workspace.worktree_path,
+          root_path: workspace.root_path,
         },
       }
     : { ticket: ticket.shorthand, session: { id: target.id, title: session?.title } };

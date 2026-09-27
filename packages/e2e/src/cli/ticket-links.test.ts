@@ -16,23 +16,29 @@ test(
       const repo = createInitializedRepo({ name: "shared-workspace", dirs, run, withInitialCommit: true });
       const one = JSON.parse(run('tickets create --title "One"', repo));
       const two = JSON.parse(run('tickets create --title "Two"', repo));
-      run("workspaces create", repo);
+      const created = run("workspaces create --provider pstdio.worktree", repo);
+      const [, workspace, rootPath] = created.match(/Created workspace (WS-\d+) at (.+)/) ?? [];
+      expect(workspace).toBeTruthy();
+      expect(rootPath).toBeTruthy();
       for (const ticket of [one, two, one]) {
-        const result = JSON.parse(run(`tickets link --id ${ticket.shorthand} --workspace WS-1`, repo));
-        expect(result).toMatchObject({ ticket: ticket.shorthand, workspace: { workspace_shorthand: "WS-1" } });
+        const result = JSON.parse(run(`tickets link --id ${ticket.shorthand} --workspace ${workspace}`, repo));
+        expect(result).toMatchObject({
+          ticket: ticket.shorthand,
+          workspace: { workspace_shorthand: workspace, root_path: rootPath },
+        });
       }
       expect(() => run(`tickets worktrees remove-all --id ${one.shorthand}`, repo)).toThrow(
-        "WS-1 is linked to other tickets",
+        `${workspace} is linked to other tickets`,
       );
       for (const ticket of [one, two]) {
         expect(JSON.parse(run(`tickets workspaces --id ${ticket.shorthand}`, repo))).toEqual([
-          expect.objectContaining({ workspace: "WS-1" }),
+          expect.objectContaining({ workspace }),
         ]);
       }
-      run(`tickets unlink --id ${one.shorthand} --workspace WS-1`, repo);
+      run(`tickets unlink --id ${one.shorthand} --workspace ${workspace}`, repo);
       expect(JSON.parse(run(`tickets workspaces --id ${one.shorthand}`, repo))).toEqual([]);
       expect(JSON.parse(run(`tickets workspaces --id ${two.shorthand}`, repo))).toHaveLength(1);
-      run("workspaces delete --id WS-1", repo);
+      run(`workspaces delete --id ${workspace}`, repo);
     } finally {
       await api.stop();
     }

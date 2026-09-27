@@ -50,7 +50,7 @@ pst sessions resolve-session-id --agent <agent> --agent-session-id <id> [--cwd <
 ## Workspaces
 
 ```sh
-pst workspaces create [--base <ref>] [--provider <id>] [--params <json>]
+pst workspaces create --provider <id> [--params <json>]
 pst workspaces list [--json]
 pst workspaces merge --id <id> [--delete-workspace]
 pst workspaces delete --id <id>

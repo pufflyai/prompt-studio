@@ -72,6 +72,21 @@ for (const target of ["workspace", "session"] as const) {
   });
 }
 
+test.each([
+  { provider_id: "pstdio.root", execution_kind: "local", root_path: "/project" },
+  { provider_id: "pstdio.worktree", execution_kind: "local", root_path: "/workspaces/task" },
+  { provider_id: "example.cloud", execution_kind: "remote", root_path: null },
+] as const)("link and unlink report the canonical location for $provider_id", async (location) => {
+  const env = await setup();
+  Object.assign(env.workspace, location);
+  for (const command of [linkTicketCommand, unlinkTicketCommand]) {
+    const result = await command.run(...env.args({ id: env.tickets[0].id, workspace: "WS-1" }));
+    expect(result).toMatchObject({
+      workspace: { id: env.workspace.id, workspace_shorthand: "WS-1", root_path: location.root_path },
+    });
+  }
+});
+
 test("rejects invalid targets without changing anchors", async () => {
   const env = await setup();
   for (const command of [linkTicketCommand, unlinkTicketCommand]) {

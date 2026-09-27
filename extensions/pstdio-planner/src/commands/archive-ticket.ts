@@ -52,9 +52,14 @@ const persistArchivedTickets = async (ctx: ArchiveTicketsContext, tickets: Store
 };
 
 const archiveLinkedWorkspaces = async (ctx: ArchiveTicketsContext, tickets: StoredTicket[]) => {
-  // Cascade: archive each ticket's attempt workspaces. The host workspaces.archive
-  // primitive archives each workspace's sessions and removes its worktree.
-  const linked = (await ctx.workspaces.list()).filter((workspace) => isLinkedToAnyTicket(workspace, tickets));
+  // Providers own workspace cleanup. Retain the project folder and providers
+  // that explicitly disallow archiving, even after their last ticket is archived.
+  const linked = (await ctx.workspaces.list()).filter(
+    (workspace) =>
+      !workspace.is_default &&
+      workspace.provider_capabilities_json?.archive !== false &&
+      isLinkedToAnyTicket(workspace, tickets),
+  );
   const allTickets = new Map((await ticketsCollection(ctx.storage).list()).map((ticket) => [ticket.id, ticket]));
   const unused = linked.filter((workspace) =>
     (workspace.anchors_json ?? [])

@@ -68,19 +68,19 @@ See the [Planner CLI index](./index.md) for namespaced attempt and review comman
 
 ## Link workspaces and sessions
 
-Create a workspace, then link each ticket you want to work on:
+Create a Git worktree workspace, then link each ticket you want to work on:
 
 ```sh
-pst workspaces create
+pst workspaces create --provider pstdio.worktree
 pst tickets link --id PS-1 --workspace WS-19
 pst tickets link --id PS-2 --workspace WS-19
 pst tickets workspaces --id PS-2
 ```
 
-For separate workspaces, create one per ticket and link each separately. Link an existing session with `pst tickets link --id PS-1 --session <session-id>`.
+For separate workspaces, create one per ticket and link each separately. Other workspace types use their provider ID and declared parameters. An existing project folder or remote workspace can also be linked by its shorthand or ID. Link an existing session with `pst tickets link --id PS-1 --session <session-id>`.
 
 Both commands require exactly one target. Workspaces accept a shorthand or ID; sessions accept an ID. Repeating a link refreshes its anchor without adding a duplicate and preserves its existing role. New links use the context role. Every linked ticket shows the workspace or session. Links use resource anchors, not workspace or branch names. Linking does not copy ticket drafts.
 
 Remove a link with `pst tickets unlink --id PS-1 --workspace WS-19` or `--session <session-id>`. Other ticket links remain. A managed attempt's own ticket cannot be unlinked from its workspace, implementation session, or review sessions.
 
-Archiving a ticket only archives a shared workspace after all tickets linked to it are archived.
+Archiving a ticket only archives a shared workspace after all tickets linked to it are archived. The default project folder and providers that do not support archiving stay available.
