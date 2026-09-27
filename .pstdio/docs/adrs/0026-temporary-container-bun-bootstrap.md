@@ -1,6 +1,10 @@
 # Temporary Bun bootstrap for browser CI containers
 
-Status: Accepted temporary workaround.
+Proposed: 2026-09-13
+
+## Status
+
+Accepted temporary workaround.
 
 ## Intended design
 
@@ -25,10 +29,12 @@ with the image's existing `tar`, verify the executable version, and expose `bun`
 This adds a bootstrap script to maintain and still requires the registry download.
 It adds no OS package installation, install retries, or timeout increases.
 
-## Isolation and removal
+## Isolation
 
 Keep this code in `scripts/ci/setup-container-bun.ts` and call it only from the three
 browser job definitions. Do not turn it into a general package installer.
+
+## Removal
 
 Remove it when the Bun setup action can extract its archive using dependencies included
 in the Playwright image, or when that image includes Bun's installer requirements.

@@ -1,5 +1,11 @@
 # ADR: Test Environment Isolation via Bun Preload
 
+Proposed: 2026-04-12
+
+## Status
+
+Accepted.
+
 ## Decision
 
 Preload [scripts/test-setup.ts](../../../scripts/test-setup.ts) in every package that runs `bun test`. The setup file scrubs ambient `PSTDIO_*` variables from `process.env` at preload time and snapshot/restores `process.env` around every test.

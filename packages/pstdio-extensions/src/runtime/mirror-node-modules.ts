@@ -12,7 +12,7 @@ export const mirrorNodeModules = (sourceNodeModulesPath: string, targetNodeModul
     const targetChild = join(targetNodeModulesPath, dirent.name);
 
     // Relative package links must resolve at their source, including inside scopes.
-    // A junction above those links breaks Windows frontend builds (ADR 0031).
+    // A junction above those links breaks Windows frontend builds (ADR 0041).
     if (dirent.name.startsWith("@")) {
       mirrorNodeModules(sourceChild, targetChild);
       continue;

@@ -1,4 +1,6 @@
-# Temporarily apply native title bar updates after the first show
+# Temporary native title bar updates after the first show
+
+Proposed: 2026-09-09
 
 ## Status
 

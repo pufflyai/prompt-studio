@@ -1,5 +1,7 @@
 # ADR: Temporary Non-Blocking Bun Shutdown
 
+Proposed: 2026-08-17
+
 ## Status
 
 Temporary workaround for Bun 1.3.13. Remove it when a stable Bun release lets `Bun.Server.stop(true)` finish while supported browsers hold long-lived connections open.

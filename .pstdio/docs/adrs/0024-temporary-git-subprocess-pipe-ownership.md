@@ -1,10 +1,16 @@
 # Temporary Git subprocess pipe ownership
 
+Proposed: 2026-09-11
+
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended behavior
 
 The Git adapter must consume stdout and stderr completely and keep their readers alive until the command finishes. Text commands and binary file previews must use the same subprocess owner. A Git error must fail the caller without a retry.
 
-## External limit
+## External limitation
 
 Bun 1.3.14's direct spawn/readable-stream path failed in two independent Linux CI runs. `git symbolic-ref --short HEAD` and `git worktree list --porcelain` exited with SIGPIPE while their output was being consumed through `new Response(proc.stdout)`.
 

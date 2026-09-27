@@ -1,5 +1,11 @@
 # Temporary packaged debugger attachment order
 
+Proposed: 2026-09-08
+
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended design
 
 Packaged Electron tests should attach their debugger during startup, capture the

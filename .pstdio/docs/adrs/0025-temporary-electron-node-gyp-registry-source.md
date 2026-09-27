@@ -1,6 +1,10 @@
 # Temporary registry source for Electron node-gyp
 
-Status: Accepted temporary workaround.
+Proposed: 2026-09-13
+
+## Status
+
+Accepted temporary workaround.
 
 ## Intended design
 
@@ -26,10 +30,12 @@ This avoids the GitHub tarball endpoint while preserving the requested implement
 It still depends on registry availability and adds a dependency override to maintain.
 It does not add install retries or change any timeout.
 
-## Isolation and removal
+## Isolation
 
 Keep the override at the workspace root. Do not patch Electron Forge or node-gyp.
 Docker images separately install only their target workspace dependency graph.
+
+## Removal
 
 Remove the override when a compatible Forge/rebuild release uses a registry package.
 Regenerate the lockfile and validate cold installs and packaged desktop tests on Linux

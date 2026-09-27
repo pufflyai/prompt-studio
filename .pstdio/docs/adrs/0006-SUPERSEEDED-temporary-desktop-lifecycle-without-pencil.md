@@ -1,8 +1,10 @@
-# ADR: Temporarily Implement Desktop Lifecycle Without Pencil
+# ADR: Temporary Desktop Lifecycle Implementation Without Pencil
+
+Proposed: 2026-08-13
 
 ## Status
 
-Temporary. Remove this decision after the Pencil editor transport is reliable and the desktop lifecycle designs have been reviewed in the canonical design file.
+SUPERSEEDED. The Pencil CLI restored access to the canonical design file. The [desktop startup and recovery change](https://github.com/pufflyai/prompt-studio/pull/675) records the design corrections and lifecycle validation. The transport exception is no longer needed.
 
 ## Ideal design
 

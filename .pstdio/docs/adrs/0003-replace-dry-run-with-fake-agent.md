@@ -1,6 +1,12 @@
 # ADR: Replace `PSTDIO_DRY_RUN` With Fake Agent
 
-**Supersedes:** `/adrs/0002-dry-run-flag`
+Proposed: 2026-03-13
+
+## Status
+
+Accepted.
+
+**Supersedes:** `/adrs/0002-SUPERSEEDED-dry-run-flag`
 
 ## Decision
 

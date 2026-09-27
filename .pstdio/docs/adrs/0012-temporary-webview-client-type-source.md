@@ -1,7 +1,10 @@
-# 0012. The webview client derives types from the commands record, not the extension definition
+# ADR 0012: Temporary webview client type source
 
-Date: 2026-08-25
-Status: Accepted (temporary workaround)
+Proposed: 2026-08-25
+
+## Status
+
+Accepted (temporary workaround)
 
 ## How the system should ideally work
 
@@ -10,7 +13,7 @@ keys, command params, command results, and settings — from one source: the val
 returned by `defineExtension`. Extension authors would pass one type and get a fully
 typed client.
 
-## What external limitation prevents that
+## External limitation
 
 TypeScript cannot infer per-command result types at the `defineExtension` level without
 breaking the typing of inline `run` handlers.
@@ -64,7 +67,7 @@ Only the type derivation in `packages/sdk/src/extensions/webview-client.ts` and 
 authoring convention in `.pstdio/docs/extensions/cookbook.md` know about the two-source split.
 The runtime client, the bridge, and the host are unaffected: they only see command ids.
 
-## When and how to remove it
+## Removal
 
 If TypeScript learns to combine reverse mapped-type inference with result capture (or
 `defineExtension` moves to a builder API that types commands one at a time), change

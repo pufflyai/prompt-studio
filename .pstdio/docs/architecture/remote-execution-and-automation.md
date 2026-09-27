@@ -18,7 +18,7 @@ The host does not invent a local path for a remote workspace. Local file and ter
 
 A connection contribution declares its allowed HTTP methods, path prefixes, authentication shape, and streaming support. Project settings hold only the base URL and an opaque secret reference. The credential lives in the host secret store. The request proxy enforces same-origin relative paths, HTTPS outside loopback, bounded request and response sizes, timeouts, cancellation, and no redirects.
 
-The default desktop implementation uses the temporary file store documented in [ADR 0013](../adrs/0013-temporary-file-connection-secret-store.md). Hosted deployments should inject their deployment secret provider through the same interface.
+The default desktop implementation uses the temporary file store documented in [ADR 0034](../adrs/0034-temporary-file-connection-secret-store.md). Hosted deployments should inject their deployment secret provider through the same interface.
 
 ## Machine request flow
 

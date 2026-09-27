@@ -1,5 +1,11 @@
 # Temporary Node Windows directory removal
 
+Proposed: 2026-09-26
+
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended design
 
 Packaged tests stop their processes, wait for runtime termination, and remove their

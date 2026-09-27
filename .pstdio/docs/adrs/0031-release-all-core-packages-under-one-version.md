@@ -1,6 +1,10 @@
 # ADR 0031: Release all core packages under one version
 
-Status: accepted for PS-410.
+Proposed: 2026-09-26
+
+## Status
+
+accepted for PS-410.
 
 ## Context
 

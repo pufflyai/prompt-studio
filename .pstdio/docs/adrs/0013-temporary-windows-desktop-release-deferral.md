@@ -1,4 +1,6 @@
-# ADR: Temporarily Defer the Windows Desktop Release
+# ADR: Temporary Windows Desktop Release Deferral
+
+Proposed: 2026-08-27
 
 ## Status
 

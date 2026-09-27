@@ -13,7 +13,7 @@ import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-e
 
 // Command types derive from a record of `defineCommand` values (the extension's
 // exported commands map), not from `typeof extension`: `defineExtension` cannot keep
-// per-command result types (see ADR 0012-webview-client-type-source).
+// per-command result types (see ADR 0012-temporary-webview-client-type-source).
 type CommandFn<TDefinition> =
   TDefinition extends CommandDefinition<infer TSchema, infer TResult, infer _TSettings>
     ? TSchema extends ParamObjectSchema

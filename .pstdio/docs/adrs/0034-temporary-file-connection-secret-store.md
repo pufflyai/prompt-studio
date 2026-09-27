@@ -1,5 +1,7 @@
 # Temporary file-backed extension connection secrets
 
+Proposed: 2026-08-27
+
 ## Status
 
 Accepted as a temporary development workaround.

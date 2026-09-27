@@ -1,5 +1,11 @@
 # Temporary Windows extension dependency links
 
+Proposed: 2026-09-26
+
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended design
 
 An extension installed from a local workspace can reuse that workspace's dependencies without copying their contents. Backend loading and frontend builds must resolve the same installed packages.
