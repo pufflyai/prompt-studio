@@ -20,7 +20,7 @@ test("workspace provisioning ignores Planner ticket drafts before copying one", 
   const ticket = { shorthand: "PS-1" } as StoredTicket;
 
   await copyOrWriteTicketFile({
-    repoFiles: repo.mount,
+    projectFiles: repo.mount,
     workspaceFiles: workspace.mount as WorkspaceFilesMount,
     storage: createMemoryStorage(),
     ticket,

@@ -53,7 +53,6 @@ const extension = defineExtension({
       id: "font-editor",
       path: "data",
       label: l10n("artifactMounts.fontEditor.label", "Font editor files"),
-      repoRole: "default",
     }),
   ],
   skills: [

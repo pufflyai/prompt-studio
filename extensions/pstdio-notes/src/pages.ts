@@ -29,7 +29,7 @@ export const note = defineResourceKind({
   icon: "file-text",
 });
 
-/** Notes live in the repo, so every note document is read through the repo mount. */
+/** Notes belong to the default project workspace through the host artifact mount. */
 export const notesMount = (ctx: ExtensionContextBase) => ctx.artifacts.mount(documents.id);
 
 export const editor = defineView({
@@ -37,7 +37,7 @@ export const editor = defineView({
   title: l10n("views.noteEditor", "Note"),
   body: {
     kind: "file",
-    refreshEvents: [notesChanged, viewDataEvents.repositoriesChanged],
+    refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
     load: async (ctx, { renderer }) => {
       const id = renderer.resource?.id;
       const mount = notesMount(ctx);
@@ -84,7 +84,7 @@ export const notesPage = definePage({
       order: 0,
       mountStrategy: "keep-mounted",
       tab: {
-        refreshEvents: [notesChanged, viewDataEvents.repositoriesChanged],
+        refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
         query: async (ctx, { renderer }) => {
           const id = renderer.resource?.id;
           const mount = notesMount(ctx);

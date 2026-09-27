@@ -37,7 +37,7 @@ test("tree menus act on an inactive sub-ticket and preserve the open ticket", as
   const openedUrl = page.url();
 
   await parentRow.click({ button: "right" });
-  await expectResourceMenuItems(page, ["Create workspace", "Run attempt", "Refine ticket", "Archive"]);
+  await expectResourceMenuItems(page, ["Run attempt", "Refine ticket", "Archive"]);
   await expect(page.getByRole("menu")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);

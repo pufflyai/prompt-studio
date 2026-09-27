@@ -1,6 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { reportsCollection } from "../data/collections";
-import { reportDir, reportFilesDirFor, reportMarkdownPathFor, requireRepoFiles } from "../data/draft-storage";
+import { reportDir, reportFilesDirFor, reportMarkdownPathFor, requireReportDraftFiles } from "../data/draft-storage";
 import { findReport, resolveWorkspace } from "../data/resolve";
 import { assertSafeReportName } from "../data/validation";
 
@@ -16,7 +16,7 @@ export const deleteReportCommand = defineCommand({
     name: params.text({ required: true }),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const { projectFiles } = await requireReportDraftFiles(ctx);
     const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, commandParams.workspace);
     const name = commandParams.name;
     assertSafeReportName(name);
@@ -28,21 +28,21 @@ export const deleteReportCommand = defineCommand({
     await collection.delete(report.id);
     await Promise.allSettled(report.files.map((file) => blobs.delete(file.blobId)));
     const directoryName = report.directoryName ?? report.name;
-    const siblingExists = (await collection.list()).some(
-      (candidate) =>
-        candidate.workspaceShorthand === workspaceShorthand &&
-        (candidate.directoryName ?? candidate.name) === directoryName,
+    const siblings = (await collection.list()).filter(
+      (candidate) => (candidate.directoryName ?? candidate.name) === directoryName,
     );
     // A report without attached files has no files directory, and a report that was
     // never checked out has no paths at all, so each removal is guarded.
-    if (siblingExists) {
+    if (siblings.length > 0) {
       const markdownPath = reportMarkdownPathFor(report);
       const filesDir = reportFilesDirFor(report);
-      if (await repoFiles.exists(markdownPath)) await repoFiles.delete(markdownPath);
-      if (await repoFiles.exists(filesDir)) await repoFiles.delete(filesDir);
+      const markdownUsed = siblings.some((candidate) => reportMarkdownPathFor(candidate) === markdownPath);
+      const filesUsed = siblings.some((candidate) => reportFilesDirFor(candidate) === filesDir);
+      if (!markdownUsed && (await projectFiles.exists(markdownPath))) await projectFiles.delete(markdownPath);
+      if (!filesUsed && (await projectFiles.exists(filesDir))) await projectFiles.delete(filesDir);
     } else {
       const directory = reportDir(directoryName);
-      if (await repoFiles.exists(directory)) await repoFiles.delete(directory);
+      if (await projectFiles.exists(directory)) await projectFiles.delete(directory);
     }
     await ctx.events.emit("pstdio-reports.report.deleted", {
       projectId: ctx.projectId,

@@ -8,7 +8,7 @@ import {
 export { applyFrontmatter, stripFrontmatter } from "@pstdio/sdk/data";
 // Frontmatter helpers for the local-file draft workflow (`tickets write/save/pull`).
 // Ported from the legacy pstdio CLI so the draft round-trip lives entirely in the
-// extension; the host only provides the generic file primitive (ctx.repoFiles).
+// extension; the host only provides the generic file primitive (ctx.projectFiles).
 
 export interface TicketFrontmatterFields {
   shorthand: string;

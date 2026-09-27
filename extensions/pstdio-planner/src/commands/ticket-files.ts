@@ -173,7 +173,7 @@ export const deleteTicketFileCommand = defineCommand({
 });
 
 export const listTicketFilesTree = async (
-  ctx: Pick<ExtensionContextBase, "sessions" | "storage" | "workspaces">,
+  ctx: Pick<ExtensionContextBase, "extensionId" | "projectId" | "sessions" | "storage" | "workspaces">,
   input: { renderer?: RendererContext },
 ) => {
   const renderer = input.renderer ?? { rendererId: "pstdio.pstdio-planner.view.ticket-files" };
@@ -248,8 +248,10 @@ export const listTicketFilesTree = async (
   };
 
   // Linked workspaces open as native workspace tabs from the same sidenav.
-  const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) =>
-    isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
+  const [workspaces, providers] = await Promise.all([ctx.workspaces.list(), ctx.workspaces.listProviders()]);
+  const linkedWorkspaces = workspaces.filter((workspace) => isWorkspaceLinkedToTicket(workspace, ticket.shorthand));
+  const visibleWorkspaces = workspaces.filter(
+    (workspace) => workspace.is_default || linkedWorkspaces.includes(workspace),
   );
 
   const statusesById = new Map((await statusesCollection(ctx.storage).list()).map((status) => [status.id, status]));
@@ -258,7 +260,18 @@ export const listTicketFilesTree = async (
     parentTicketId: ticket.id,
     statusesById,
   });
-  const linkedWorkspacesSection = buildWorkspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
+  const linkedWorkspacesSection = buildWorkspacesSection(
+    visibleWorkspaces,
+    ticketMeta,
+    providers.length > 0
+      ? {
+          shorthand_base: ticket.shorthand,
+          anchors: [
+            { ...ticketMeta.resourceParent, projectId: ctx.projectId, extensionId: ctx.extensionId, role: "primary" },
+          ],
+        }
+      : undefined,
+  );
 
   // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
   // to its workspaces. The ticket shows the whole conversation history either way.

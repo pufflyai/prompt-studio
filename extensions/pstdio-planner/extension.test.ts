@@ -178,7 +178,7 @@ describe("pstdio planner workspace contributions", () => {
       await hook("worktree-created")?.run(
         {
           storage,
-          repoFiles: fileMount(worktreePath),
+          projectFiles: fileMount(worktreePath),
           workspaceFiles: fileMount(worktreePath),
         } as never,
         {
@@ -216,7 +216,7 @@ describe("pstdio planner workspace contributions", () => {
       await hook("worktree-created")?.run(
         {
           storage,
-          repoFiles: fileMount(repoPath),
+          projectFiles: fileMount(repoPath),
           workspaceFiles: fileMount(worktreePath),
         } as never,
         {
@@ -328,15 +328,6 @@ describe("pstdio planner workspace contributions", () => {
       action: { kind: "page", page: { kind: "page", id: "tickets" } },
     });
     expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toBeUndefined();
-  });
-  test("exposes ticket workspace creation as an extension-owned row action", () => {
-    const tickets = extension.views?.find((view) => view.id === "tickets");
-    expect(tickets?.body.kind === "kanban" ? tickets.body.rowActions : undefined).toContainEqual({
-      id: "create-workspace",
-      label: { $l10n: "kanbanRenderers.tickets.rowActions.createWorkspace", default: "Create workspace" },
-      icon: "git-branch",
-      command: { id: "create-workspace", kind: "command" },
-    });
   });
   test("provides Planner's shared status fields", () => {
     expect(extension.settingsSections).toEqual([

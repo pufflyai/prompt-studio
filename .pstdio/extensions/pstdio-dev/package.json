@@ -6,7 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.12"
+    "pstdio": "1.0.0-alpha.12 || 1.0.0-alpha.13"
   },
   "pstdio": {
     "scope": "repo"
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.25.0"
+    "@pstdio/sdk": "^0.35.0"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",

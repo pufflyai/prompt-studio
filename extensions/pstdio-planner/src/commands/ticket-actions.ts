@@ -1,6 +1,8 @@
 import {
   type CommandContext,
   defineCommand,
+  type ExtensionWorkspace,
+  type JsonObject,
   l10n,
   params,
   type ResourceAnchor,
@@ -43,16 +45,6 @@ const selectedTicketParams = {
   ticket: ticketActionParams.ticket,
   agent: ticketActionParams.agent,
 };
-
-export const workspaceModeParam = params.select({
-  label: "Mode",
-  required: false,
-  defaultValue: "worktree",
-  options: [
-    { label: "Worktree", value: "worktree", icon: "GitFork" },
-    { label: "Current branch", value: "current_branch", icon: "GitBranch" },
-  ],
-});
 
 const nonEmptyText = (value: string | undefined) => {
   const trimmed = value?.trim();
@@ -125,36 +117,45 @@ const ticketTemplateVars = (ticket: string, template: string | undefined) => ({
 export const harnessInput = (agent: { harnessId: string; model?: string } | undefined) =>
   agent ? { harness: agent } : {};
 
+const requireReadyWorkspace = async (ctx: Pick<CommandContext, "workspaces">, workspace: ExtensionWorkspace) => {
+  if (workspace.setup_error) throw new Error(workspace.setup_error);
+  if (workspace.provider_state && workspace.provider_state !== "ready") {
+    const result = await ctx.workspaces.resolve(workspace.id);
+    throw new Error(result.error?.message ?? "The workspace is not ready. Check its setup status.");
+  }
+  if (workspace.initializing) throw new Error("Workspace setup is still running. Try again when it finishes.");
+  if (workspace.execution_kind === "local" && !workspace.root_path) {
+    throw new Error("Attach a project folder in settings before opening ticket work.");
+  }
+};
+
 export const createAnchoredWorkspace = async (
   ctx: Pick<
     CommandContext<{
       ticket?: string;
       rowId?: string;
-      repo?: { repoId: string; branch?: string };
-      mode?: string;
+      base?: string;
     }>,
     "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
   >,
   commandParams: {
     ticket?: string;
     rowId?: string;
-    repo?: { repoId: string; branch?: string };
-    mode?: string;
+    base?: string;
   },
   base?: string,
 ) => {
-  const { mode, repo } = commandParams;
   const ticketRef = resolveTicket(ctx, commandParams);
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
-  const attemptMode = mode === "current_branch" ? mode : "worktree";
+  const attemptMode = "worktree";
   const workspace = await ctx.workspaces.create({
     project_id: ctx.projectId,
     shorthand_base: shorthand,
     anchors: [anchor],
-    provider_id: attemptMode === "current_branch" ? "pstdio.root" : "pstdio.worktree",
-    ...(repo ? { repo_id: repo.repoId } : {}),
-    ...((base ?? repo?.branch) ? { base: base ?? repo?.branch } : {}),
+    provider_id: "pstdio.worktree",
+    params: { base: base ?? commandParams.base ?? "HEAD" },
   });
+  await requireReadyWorkspace(ctx, workspace);
 
   return { anchor, mode: attemptMode, ticket, workspace };
 };
@@ -162,29 +163,22 @@ export const createAnchoredWorkspace = async (
 export const createWorkspaceCommand = defineCommand({
   id: "create-workspace",
   title: "Create workspace",
-  menus: [
-    {
-      slot: ticketMenuSlots.headerOverflow,
-      label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
-      icon: "git-branch",
-      placement: "first",
-    },
-  ],
   params: {
     ticket: ticketActionParams.ticket,
     rowId: ticketActionParams.rowId,
-    repo: params.repo({ label: "Workspace" }),
-    mode: workspaceModeParam,
+    provider_id: params.text({ label: "Workspace provider", required: true }),
+    params: params.json<JsonObject>(),
   },
   async run(ctx, commandParams) {
-    const { mode, ticket, workspace } = await createAnchoredWorkspace(ctx, commandParams);
-
-    return {
-      mode,
-      ticket,
-      workspace,
-      session: null,
-    };
+    const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, resolveTicket(ctx, commandParams));
+    const workspace = await ctx.workspaces.create({
+      project_id: ctx.projectId,
+      shorthand_base: shorthand,
+      anchors: [anchor],
+      provider_id: commandParams.provider_id,
+      params: commandParams.params,
+    });
+    return { ticket, workspace };
   },
 });
 

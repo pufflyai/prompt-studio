@@ -80,7 +80,13 @@ const setup = async () => {
           },
         },
         workspaces: {
-          get: async () => ({ id: "workspace-1", workspace_shorthand: "PS-1_A1", worktree_path: "/workspace" }),
+          get: async () => ({
+            id: "workspace-1",
+            workspace_shorthand: "PS-1_A1",
+            root_path: "/workspace",
+            execution_kind: "local",
+            provider_capabilities_json: { diff: true },
+          }),
         },
         process: {
           run: async () => ({ exitCode: 0, stdout: `${headSha}\n`, stderr: "" }),

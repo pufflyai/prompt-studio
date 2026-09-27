@@ -1,6 +1,8 @@
+import { resolve } from "node:path";
 import { type CommandContextInput, makeCommandContext as makeContext } from "@pstdio/sdk/testing";
 
 export { commandParamsFor } from "@pstdio/sdk/testing";
+export const defaultProjectRoot = resolve("/repo");
 export const makeCommandContext = <TParams extends Record<string, unknown>>(input: CommandContextInput<TParams>) => {
   const projectId = input.projectId ?? "proj-1";
   return makeContext({
@@ -8,11 +10,6 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     resourcePrefixes: { ticket: input.overrides?.project?.shorthand ?? "T", report: "RP" },
     overrides: {
       extensionId: "pstdio-planner",
-      repos: {
-        list: async () => [{ projectId, repoId: "repo-1", path: "/repo", role: "default" }],
-        get: async () => ({ projectId, repoId: "repo-1", path: "/repo", role: "default" }),
-        getDefault: async () => ({ projectId, repoId: "repo-1", path: "/repo", role: "default" }),
-      },
       process: {
         run: async () => ({ exitCode: 0, stdout: "main-sha\n", stderr: "" }),
         runOrThrow: async () => ({ exitCode: 0, stdout: "main-sha\n", stderr: "" }),
@@ -23,6 +20,19 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
       },
       settings: { all: async () => ({ "automation.maxInProgress": 2 }) },
       ...input.overrides,
+      workspaces: {
+        ...makeContext(input).workspaces,
+        getDefault: async () => ({
+          id: "default",
+          project_id: projectId,
+          root_path: defaultProjectRoot,
+          provider_id: "pstdio.root",
+          execution_kind: "local",
+          provider_state: "ready",
+        }),
+        listProviders: async () => [{ id: "pstdio.worktree", label: "Git worktree", params: {} }],
+        ...input.overrides?.workspaces,
+      },
     },
   });
 };

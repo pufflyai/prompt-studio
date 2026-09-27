@@ -5,7 +5,7 @@ import { breakIntoSubTicketsCommand, refineTicketCommand } from "./ticket-action
 
 describe("ticket action command params", () => {
   test("limits Run attempt to user-editable inputs", () => {
-    expect(Object.keys(runAttemptCommand.params ?? {})).toEqual(["ticket", "rowId", "agent", "repo", "mode"]);
+    expect(Object.keys(runAttemptCommand.params ?? {})).toEqual(["ticket", "rowId", "agent", "base"]);
   });
 
   test("labels harness selectors as model selectors", () => {

@@ -1,5 +1,6 @@
-import { createDraftLayout } from "@pstdio/sdk/data";
-import type { ArtifactMount } from "@pstdio/sdk/extensions";
+import { resolve } from "node:path";
+import { createDraftLayout, requireRepoFiles } from "@pstdio/sdk/data";
+import type { ArtifactMount, ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { applyFrontmatter, buildReportFrontmatter } from "./frontmatter";
 import type { StoredReport } from "./types";
 
@@ -45,10 +46,18 @@ export const reportToMarkdown = (report: StoredReport) =>
     report.body,
   );
 
-export const readReportMarkdown = async (repoFiles: ArtifactMount, report: StoredReport) => {
+export const readReportMarkdown = async (projectFiles: ArtifactMount, report: StoredReport) => {
   const path = reportMarkdownPathFor(report);
-  if (!(await repoFiles.exists(path))) return null;
-  return repoFiles.readText(path);
+  if (!(await projectFiles.exists(path))) return null;
+  return projectFiles.readText(path);
 };
 
-export { requireRepoFiles } from "@pstdio/sdk/data";
+export const requireReportDraftFiles = async (ctx: Pick<ExtensionContextBase, "projectFiles" | "workspaces">) => {
+  const projectFiles = requireRepoFiles(ctx.projectFiles);
+  const home = await ctx.workspaces.getDefault();
+  if (home?.execution_kind !== "local" || !home.root_path) {
+    throw new Error("Report drafts require a local project folder.");
+  }
+  const root = home.root_path;
+  return { projectFiles, resolvePath: (path: string) => resolve(root, path) };
+};

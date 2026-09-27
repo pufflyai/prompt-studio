@@ -29,7 +29,7 @@ export const ticketWorkspacesCommand = defineCommand({
         id: ws.id,
         workspace: ws.workspace_shorthand ?? ws.id,
         branch: ws.branch ?? "",
-        path: ws.worktree_path ?? "",
+        path: ws.root_path ?? "",
         active: sessions.some((session) => isLiveSessionStatus(session.status)),
       });
     }
@@ -37,8 +37,10 @@ export const ticketWorkspacesCommand = defineCommand({
   },
 });
 
-// `pst tickets worktrees list`: list the worktrees (workspaces with a worktree path)
-// linked to a ticket.
+const isGitWorktree = (workspace: ExtensionWorkspace) =>
+  workspace.execution_kind === "local" && workspace.provider_id === "pstdio.worktree" && Boolean(workspace.root_path);
+
+// `pst tickets worktrees list`: list Git worktrees linked to a ticket.
 export const ticketWorktreesListCommand = defineCommand({
   id: "ticket-worktrees-list",
   title: "List ticket worktrees",
@@ -46,13 +48,11 @@ export const ticketWorktreesListCommand = defineCommand({
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
-    return workspaces
-      .filter((ws) => ws.worktree_path)
-      .map((ws) => ({
-        workspace: ws.workspace_shorthand ?? ws.id,
-        branch: ws.branch ?? "",
-        path: ws.worktree_path ?? "",
-      }));
+    return workspaces.filter(isGitWorktree).map((ws) => ({
+      workspace: ws.workspace_shorthand ?? ws.id,
+      branch: ws.branch ?? "",
+      path: ws.root_path ?? "",
+    }));
   },
 });
 
@@ -69,7 +69,7 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
-    const worktrees = workspaces.filter((ws) => ws.worktree_path);
+    const worktrees = workspaces.filter(isGitWorktree);
 
     let removed = 0;
     for (const ws of worktrees) {

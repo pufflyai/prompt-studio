@@ -35,8 +35,9 @@ and must be loaded or mutated through planner extension commands.
 The planner extension declares a `tickets` page whose Main view has `kind: "kanban"`.
 The view queries tickets and updates attributes through native renderer callbacks.
 Row activation returns a target for the resource-bound `ticket` page.
-User actions call public commands such as `pstdio.pstdio-planner.command.create-ticket`,
-`pstdio.pstdio-planner.command.create-workspace`, and `pstdio.pstdio-planner.command.run-attempt`.
+User actions call public commands such as `pstdio.pstdio-planner.command.create-ticket`
+and `pstdio.pstdio-planner.command.run-attempt`. Workspace creation is available
+from the ticket's Workspaces tree through the host provider form.
 See [the UI declarations](../../src/ui-contributions.ts) for the current callbacks and refs.
 
 ## Requirements
@@ -48,7 +49,9 @@ See [the UI declarations](../../src/ui-contributions.ts) for the current callbac
    storage itself.
 3. Moving a row between status columns must call the planner update command.
 4. Creating a row must call the planner create command.
-5. Manual workspace creation must call `pstdio.pstdio-planner.command.create-workspace`.
+5. Manual workspace creation must use the host's `workbench.workspace.create`
+   command with the ticket anchor and shorthand prefix. Show the tree action
+   only when a provider can create an additional workspace.
 6. Running an implementation attempt must call `pstdio.pstdio-planner.command.run-attempt`.
 
 ### UX Requirements
@@ -86,7 +89,7 @@ See [the UI declarations](../../src/ui-contributions.ts) for the current callbac
 
 | Control              | Behavior                                                |
 | -------------------- | ------------------------------------------------------- |
-| Row action menu      | Executes planner commands such as create workspace/run. |
+| Row action menu      | Executes planner commands such as run attempt.          |
 | Column create action | Executes the planner create-ticket command.             |
 | Drag and drop        | Executes the planner status update command.             |
 

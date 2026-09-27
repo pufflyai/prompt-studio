@@ -1,5 +1,5 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { fileNameFromPath, requireRepoFiles, ticketFilesDir, ticketFilesPattern } from "../data/draft-storage";
+import { fileNameFromPath, requireTicketDraftFiles, ticketFilesDir, ticketFilesPattern } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
 
 // `pst tickets files`: compare a ticket's stored files against the local
@@ -11,13 +11,13 @@ export const listTicketFilesCommand = defineCommand({
   cli: { globalAliases: [["tickets", "files"]], examples: ["pstdio tickets files --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const { projectFiles, resolvePath } = await requireTicketDraftFiles(ctx);
     const ticket = await findTicket(ctx.storage, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     const stored = new Set((ticket.files ?? []).map((file) => file.name));
     const local = new Set(
-      (await repoFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) =>
+      (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) =>
         fileNameFromPath(ticket.shorthand, entry.path),
       ),
     );
@@ -26,7 +26,7 @@ export const listTicketFilesCommand = defineCommand({
       file: name,
       storage: stored.has(name) ? "yes" : "no",
       local: local.has(name) ? "yes" : "no",
-      path: `${ticketFilesDir(ticket.shorthand)}/${name}`,
+      path: resolvePath(`${ticketFilesDir(ticket.shorthand)}/${name}`),
     }));
   },
 });

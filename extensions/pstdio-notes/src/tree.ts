@@ -17,10 +17,11 @@ export const notesTree = defineView({
   title: l10n("views.noteList", "Notes"),
   body: {
     kind: "tree",
-    refreshEvents: [notesChanged, viewDataEvents.repositoriesChanged],
+    refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
     body: async (ctx) => {
-      const repo = await ctx.repos.getDefault();
-      const notes = repo ? await listNotes(notesMount(ctx)) : [];
+      const workspace = await ctx.workspaces.getDefault();
+      const local = workspace?.execution_kind === "local" && Boolean(workspace.root_path);
+      const notes = local ? await listNotes(notesMount(ctx)) : [];
 
       return [
         {
@@ -32,8 +33,8 @@ export const notesTree = defineView({
               label: l10n("navigation.notes", "Notes"),
               icon: "notebook-pen",
               collapsible: true,
-              description: repo ? undefined : "Add a repository to create notes.",
-              actions: [{ ...newNoteAction, disabled: !repo }],
+              description: local ? undefined : "Open a local project folder to create notes.",
+              actions: [{ ...newNoteAction, disabled: !local }],
               children: notes.map((note) => ({
                 id: note.id,
                 label: note.title,

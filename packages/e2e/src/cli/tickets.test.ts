@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import { PSTDIO_E2E_PLANNER_EXTENSION } from "../default-extensions";
 import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -129,7 +129,8 @@ describe("pstdio tickets write", () => {
       const result = JSON.parse(run('tickets write --title "Draft ticket"', repo));
 
       expect(result.shorthand).toBe("TW-1");
-      expect(result.path).toBe(".pstdio/tickets/TW-1/ticket.md");
+      expect(isAbsolute(result.path)).toBe(true);
+      expect(realpathSync(result.path)).toBe(join(realpathSync(repo), ".pstdio/tickets/TW-1/ticket.md"));
 
       const ticketDir = join(repo, ".pstdio", "tickets");
       expect(existsSync(ticketDir)).toBe(true);

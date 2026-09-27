@@ -23,7 +23,7 @@ Do not create a review report for your own implementation. Do not create a chang
 
 Always pass `--template`. There is no default report template. The available templates are `change-request` and `review`.
 
-Read the JSON returned by `reports write`. Edit its `path` and place supporting artifacts under its `filesPath`. Reusing a name never overwrites an existing report: later reports use numbered names and files such as `review_01` and `.pstdio/reports/review/report_01.md`. Review reports should include findings and requested changes when applicable.
+Read the JSON returned by `reports write`. Edit its `path` and place supporting artifacts under its `filesPath`. Both are absolute paths in the default project folder on the host, even when the report belongs to another workspace. They are not paths inside a remote environment. Reusing a name never overwrites an existing report: later reports use numbered names and files such as `review_01` and `.pstdio/reports/review/report_01.md`. Review reports should include findings and requested changes when applicable.
 
 When done, persist your edits with the returned `name`:
 

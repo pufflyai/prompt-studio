@@ -35,22 +35,22 @@ const failReportPutAndBlobDeletes = (storage: ExtensionStorageApi): ExtensionSto
 describe("save report", () => {
   test("preserves the storage write error when rollback blob cleanup fails", async () => {
     const storage = createMemoryStorage();
-    const repoFiles = createMemoryRepoFiles();
+    const projectFiles = createMemoryRepoFiles();
     await writeReportCommand.run(
       ...makeCommandArgs({
         storage,
         params: { workspace: "PS-116_A1", kind: "review", template: "review" },
-        overrides: { repoFiles },
+        overrides: { projectFiles },
       }),
     );
-    repoFiles.files.set(`${reportFilesDir("review")}/evidence.txt`, new TextEncoder().encode("details"));
+    projectFiles.files.set(`${reportFilesDir("review")}/evidence.txt`, new TextEncoder().encode("details"));
 
     await expect(
       saveReportCommand.run(
         ...makeCommandArgs({
           storage: failReportPutAndBlobDeletes(storage),
           params: { workspace: "PS-116_A1", name: "review" },
-          overrides: { repoFiles },
+          overrides: { projectFiles },
         }),
       ),
     ).rejects.toThrow("storage write failed");

@@ -2,7 +2,6 @@ import { isAbsolute, relative } from "node:path";
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { type ArtifactRevision, createArtifactService, HTML_LIMIT_BYTES } from "./artifacts";
 import { artifactIdFromUrl, artifactTarget, changedEvent } from "./contracts";
-import { withProjectFiles } from "./project-files";
 
 const serviceFor = (ctx: ExtensionContextBase) =>
   createArtifactService({
@@ -17,12 +16,13 @@ const publishFile = async (
   ctx: ExtensionContextBase,
   input: { file_path: string; url?: string; favicon?: string; label?: string },
 ) => {
-  const files = ctx.workspaceFiles ?? ctx.repoFiles;
+  const files = ctx.workspaceId ? ctx.workspaceFiles : ctx.projectFiles;
+  if (ctx.workspaceId && !files) throw new Error("The selected workspace has no file access for publishing HTML.");
   if (!files) throw new Error("Select a project workspace before publishing an HTML file.");
   let path = input.file_path;
   if (isAbsolute(path)) {
-    const workspace = ctx.workspaceId ? await ctx.workspaces.get(ctx.workspaceId) : undefined;
-    const root = workspace?.worktree_path ?? ctx.repo?.path;
+    const workspace = ctx.workspaceId ? await ctx.workspaces.get(ctx.workspaceId) : await ctx.workspaces.getDefault();
+    const root = workspace?.root_path;
     if (!root) throw new Error("Use a workspace-relative HTML file path.");
     path = relative(root, path);
   }
@@ -50,7 +50,7 @@ const publish = defineCommand({
     favicon: params.text({ label: l10n("params.favicon", "Emoji") }),
     label: params.text({ label: l10n("params.label", "Revision label") }),
   },
-  run: (ctx, input) => withProjectFiles(ctx, "publish", input, () => publishFile(ctx, input)),
+  run: publishFile,
 });
 
 const list = defineCommand({

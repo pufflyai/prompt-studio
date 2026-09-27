@@ -1,5 +1,8 @@
 import {
+  type CreateWorkspaceCommandParams,
+  commandRef,
   type ExtensionWorkspace,
+  l10n,
   type TreeAction,
   type TreeNode,
   type TreeViewSection,
@@ -7,7 +10,12 @@ import {
 } from "@pstdio/sdk/extensions";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import type { TicketResourceReference } from "../data/ticket-resource-hierarchy";
-import { createWorkspaceCommand } from "./ticket-actions";
+import { workspacePresentation } from "../data/workspace-presentation";
+
+const createWorkspace = commandRef<CreateWorkspaceCommandParams>({
+  extensionId: "pstdio",
+  id: "workbench.workspace.create",
+});
 
 // Prefer the (renamable) workspace name so the sidenav reflects renames; the immutable
 // shorthand is only a fallback. The tree re-runs on workspace collection changes, so the
@@ -22,18 +30,19 @@ type LinkedWorkspaceMetadata = {
 
 const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMetadata) => {
   const label = workspaceLabel(workspace);
+  const { workspaceType, icon } = workspacePresentation(workspace);
   const workspaceMetadata = {
     workspaceId: workspace.id,
     ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
-    workspaceType: workspace.worktree_path ? "worktree" : "current_branch",
+    workspaceType,
     ...ticket,
   };
   const resource = { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata };
 
   return {
     id: `workspace-${workspace.id}`,
-    label,
-    icon: "GitBranch",
+    label: workspace.is_default ? l10n("ticketWorkspaces.project", "Project workspace") : label,
+    icon,
     resource,
     target: {
       kind: "page",
@@ -46,19 +55,13 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
 
 const workspaceActivityAt = (workspace: ExtensionWorkspace) => workspace.updated_at ?? workspace.created_at ?? "";
 
-const createWorkspaceTreeActionParams = {
-  repo: createWorkspaceCommand.params!.repo,
-  mode: createWorkspaceCommand.params!.mode,
-};
-
-const workspaceSectionActions = (ticketId: string): TreeAction[] => [
+const workspaceSectionActions = (options: CreateWorkspaceCommandParams): TreeAction[] => [
   {
     id: "create-workspace",
-    label: "Create workspace",
+    label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
     icon: "Plus",
-    command: createWorkspaceCommand.ref,
-    params: { ticket: ticketId },
-    input: createWorkspaceTreeActionParams,
+    command: createWorkspace,
+    params: options,
   },
 ];
 
@@ -80,13 +83,13 @@ const emptyWorkspacesNode = (): TreeNode => ({
 
 export const buildWorkspacesSection = (
   workspaces: ExtensionWorkspace[],
-  ticketId: string,
   ticket: LinkedWorkspaceMetadata,
+  creationOptions: CreateWorkspaceCommandParams | undefined,
 ) =>
   ({
     id: "workspaces",
     label: "Workspaces",
     collapsible: true,
-    actions: workspaceSectionActions(ticketId),
+    actions: creationOptions ? workspaceSectionActions(creationOptions) : [],
     nodes: workspaces.length > 0 ? workspaceNodes(workspaces, ticket) : [emptyWorkspacesNode()],
   }) satisfies TreeViewSection;

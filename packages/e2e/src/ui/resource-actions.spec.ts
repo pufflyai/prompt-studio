@@ -51,7 +51,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     await expect(ticketCard).toBeVisible();
 
     await ticketCard.click({ button: "right" });
-    await expectMenuItems(page, ["Create workspace", "Run attempt", "Refine ticket", "Break into sub-tickets"]);
+    await expectMenuItems(page, ["Run attempt", "Refine ticket", "Break into sub-tickets"]);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
     await ticketCard.getByText(ticket.title, { exact: true }).click();
@@ -96,7 +96,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     const breadcrumbAction = page.locator("[data-workbench-breadcrumb-resource-actions]");
     await expect(breadcrumbAction).toBeVisible();
     await breadcrumbAction.click();
-    await expectMenuItems(page, ["Create workspace", "Run attempt", "Refine ticket", "Break into sub-tickets"]);
+    await expectMenuItems(page, ["Run attempt", "Refine ticket", "Break into sub-tickets"]);
     await breadcrumbAction.click();
     await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
 
