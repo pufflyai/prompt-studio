@@ -67,6 +67,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
+      # Real-time scanning of the thousands of files that PGlite and bun installs write slows the tests.
+      - name: Exclude build and test folders from Defender scanning
+        shell: pwsh
+        run: Add-MpPreference -ExclusionPath $env:TEMP, $env:RUNNER_TEMP, "${{ github.workspace }}", "$env:USERPROFILE\.bun"
+
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
