@@ -90,7 +90,15 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
         ) : null}
       </ScrollArea>
       {showFooter ? (
-        <Flex borderTopWidth="1px" borderColor="border.muted" px="sm" py="xs" gap="xs" justifyContent="flex-end">
+        <Flex
+          borderTopWidth="1px"
+          borderColor="border.muted"
+          pl="sm"
+          pr="4xl"
+          py="xs"
+          gap="xs"
+          justifyContent="flex-end"
+        >
           {contribution.reset ? (
             <Button
               size="xs"
