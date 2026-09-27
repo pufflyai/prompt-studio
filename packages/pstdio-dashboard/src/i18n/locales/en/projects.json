@@ -3,13 +3,6 @@
   "subtitle": "Manage your projects and track their progress",
   "createProject": "Create Project",
   "loading": "Loading projects...",
-  "repoSearch": {
-    "searching": "Searching for repositories...",
-    "stillSearching": "Still searching... ({{seconds}}s)",
-    "takingLonger": "This is taking longer than usual. You can browse manually below.",
-    "noReposFound": "No repositories found in common locations.",
-    "browseHint": "Use the option below to browse for a repository."
-  },
   "errors": {
     "fetchFailed": "Failed to fetch projects",
     "deleteFailed": "Failed to delete project"
@@ -33,14 +26,6 @@
       "unknown": "No harness available",
       "loading": "Loading harnesses..."
     },
-    "repo": {
-      "selectLabel": "Select repository",
-      "none": "No repositories",
-      "noneLinked": "No repositories linked",
-      "loading": "Loading repositories...",
-      "searchPlaceholder": "Search repositories...",
-      "noSearchResults": "No repositories match your search"
-    },
     "branch": {
       "selectLabel": "Select branch",
       "none": "No branches",
@@ -62,7 +47,6 @@
     },
     "sessionMeta": {
       "agent": "Harness",
-      "repo": "Repo",
       "branch": "Branch"
     },
     "session": {
@@ -93,18 +77,6 @@
       "placeholder": "Project name",
       "required": "Project name is required."
     },
-    "repositories": {
-      "label": "Repositories",
-      "empty": "No repositories selected yet.",
-      "remove": "Remove repository",
-      "browse": "Browse for repository",
-      "selectOne": "Select at least one repository.",
-      "errors": {
-        "pathRequired": "Repository path is required.",
-        "alreadyAdded": "Repository already added.",
-        "registerFailed": "Failed to register repository."
-      }
-    },
     "actions": {
       "next": "Next",
       "back": "Back",
@@ -115,10 +87,6 @@
       "description": "Choose which harnesses to enable for this project.",
       "selectAtLeastOne": "Select at least one harness.",
       "notDetectedWarning": "This harness was not detected. It may not work until it is installed."
-    },
-    "folderPicker": {
-      "title": "Select repository",
-      "description": "Choose a git repository folder"
     }
   },
   "ticketPanel": {
@@ -165,7 +133,6 @@
       "updatedLabel": "Updated {{date}}",
       "dialog": {
         "title": "Start new attempt",
-        "description": "Choose an agent and repository to start this ticket attempt.",
         "modelLabel": "Model",
         "modelPlaceholder": "Use default model",
         "promptLabel": "Prompt",
@@ -227,14 +194,6 @@
   "projectSettings": {
     "title": "Project Settings",
     "tags": "Tags",
-    "repositories": "Repositories",
-    "repositoriesEmpty": "No repositories linked to this project.",
-    "removeRepository": "Remove repository",
-    "removeRepositoryConfirm": {
-      "headline": "Remove repository?",
-      "notification": "This will unlink \"{{name}}\" from the project. The repository itself will not be deleted.",
-      "button": "Remove"
-    },
     "skills": "Skills",
     "templates": "Templates",
     "createTemplate": "Create template",

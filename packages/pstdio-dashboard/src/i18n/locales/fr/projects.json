@@ -3,13 +3,6 @@
   "subtitle": "Gérez vos projets et suivez leur progression",
   "createProject": "Créer un projet",
   "loading": "Chargement des projets...",
-  "repoSearch": {
-    "searching": "Recherche de dépôts...",
-    "stillSearching": "Recherche en cours... ({{seconds}}s)",
-    "takingLonger": "Cela prend plus de temps que prévu. Vous pouvez parcourir manuellement ci-dessous.",
-    "noReposFound": "Aucun dépôt trouvé dans les emplacements courants.",
-    "browseHint": "Utilisez l'option ci-dessous pour parcourir et trouver un dépôt."
-  },
   "errors": {
     "fetchFailed": "Échec de la récupération des projets",
     "deleteFailed": "Échec de la suppression du projet"
@@ -33,14 +26,6 @@
       "unknown": "Aucun harness disponible",
       "loading": "Chargement des harness..."
     },
-    "repo": {
-      "selectLabel": "Sélectionner un dépôt",
-      "none": "Aucun dépôt",
-      "noneLinked": "Aucun dépôt lié",
-      "loading": "Chargement des dépôts...",
-      "searchPlaceholder": "Rechercher des dépôts...",
-      "noSearchResults": "Aucun dépôt ne correspond a votre recherche"
-    },
     "branch": {
       "selectLabel": "Sélectionner une branche",
       "none": "Aucune branche",
@@ -55,7 +40,6 @@
     },
     "sessionMeta": {
       "agent": "Harness",
-      "repo": "Repo",
       "branch": "Branche"
     },
     "session": {
@@ -92,18 +76,6 @@
       "placeholder": "Nom du projet",
       "required": "Le nom du projet est requis."
     },
-    "repositories": {
-      "label": "Dépôts",
-      "empty": "Aucun dépôt sélectionné pour l'instant.",
-      "remove": "Retirer le dépôt",
-      "browse": "Parcourir les dépôts",
-      "selectOne": "Sélectionnez au moins un dépôt.",
-      "errors": {
-        "pathRequired": "Le chemin du dépôt est requis.",
-        "alreadyAdded": "Le dépôt est déjà ajouté.",
-        "registerFailed": "Échec de l'enregistrement du dépôt."
-      }
-    },
     "actions": {
       "next": "Suivant",
       "back": "Retour",
@@ -114,10 +86,6 @@
       "description": "Choisissez les harnesses à activer pour ce projet.",
       "selectAtLeastOne": "Sélectionnez au moins un harness.",
       "notDetectedWarning": "Ce harness n'a pas été détecté. Il peut ne pas fonctionner tant qu'il n'est pas installé."
-    },
-    "folderPicker": {
-      "title": "Sélectionner un dépôt",
-      "description": "Choisissez un dossier de dépôt git"
     }
   },
   "ticketPanel": {
@@ -164,7 +132,6 @@
       "updatedLabel": "Mis à jour {{date}}",
       "dialog": {
         "title": "Démarrer une nouvelle tentative",
-        "description": "Choisissez un agent et un dépôt pour démarrer cette tentative de tâche.",
         "modelLabel": "Modèle",
         "modelPlaceholder": "Utiliser le modèle par défaut",
         "promptLabel": "Instruction",

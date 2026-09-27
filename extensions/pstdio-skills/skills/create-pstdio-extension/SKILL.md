@@ -2,7 +2,7 @@
 name: create-pstdio-extension
 description: "Create or edit a Prompt Studio extension. Use for extension commands, hooks, schedules, templates, skills, pages, native editors, file trees, settings, themes, artifact storage, workspaces, agent harnesses, and validation."
 metadata:
-  version: 0.0.3
+  version: 0.0.4
 ---
 
 # Create a Prompt Studio extension

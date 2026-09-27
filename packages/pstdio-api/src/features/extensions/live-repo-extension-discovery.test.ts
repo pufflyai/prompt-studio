@@ -126,7 +126,7 @@ describe("live repo-local extension discovery", () => {
           return row?.status === "loaded" ? row : null;
         },
         // Nudge the non-recursive root watcher with a fresh root entry in case the folder-create
-        // event landed in the brief window before the watcher attached to the linked repo root.
+        // event landed in the brief window before the watcher attached to the project folder root.
         () => writeFileSync(join(repoExtensionsRoot, `.live-touch-${touch++}`), ""),
         250,
         40,

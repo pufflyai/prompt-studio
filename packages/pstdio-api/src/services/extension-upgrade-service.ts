@@ -11,6 +11,7 @@ import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
   prepareGitExtensionSource,
+  RepoScopedExtensionNeedsProjectFolderError,
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
@@ -74,6 +75,9 @@ const repoForSource = async (deps: ExtensionUpgradeServiceDeps, projectId: strin
   const root = workspace?.root_path;
   return root && resolve(root, ".pstdio/extensions") === resolve(sourcePath, "..") ? root : undefined;
 };
+
+const repoScopeUnavailableMessage =
+  "This extension installs into the project folder. Open the project from a local folder.";
 
 const extensionScope = (manifest: unknown) => {
   if (!manifest || typeof manifest !== "object" || !("pstdio" in manifest)) return "user";
@@ -248,7 +252,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const installMarketplaceExtension = async (projectId: string, installName: string) => {
     const requestedEntry = await requireCatalogEntry(installName);
     const workspace = await deps.workspaceService.getDefault(projectId);
-    const repos = workspace?.root_path ? [{ path: workspace.root_path }] : [];
+    const projectFolder = workspace?.root_path ?? undefined;
     const records = await deps.extensionService.listProjectExtensionInstances(projectId);
     const knownRepoScope = records.some(
       (record) =>
@@ -256,35 +260,23 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         extensionScope(record.installedSource.manifest_json) === "repo",
     );
 
-    const installRepoCopies = async (firstInstalled?: Awaited<ReturnType<typeof installForRelease>>) => {
-      if (repos.length === 0) {
-        throw new ExtensionUpgradeUnavailableError("Link a repository before installing this repo-scoped extension.");
-      }
-      const installedResults = [];
-      for (const [index, repo] of repos.entries()) {
-        const targetPath = resolve(repo.path, ".pstdio/extensions", installName);
-        const existing = records.find(
-          (record) => resolve(record.installedSource.source_path) === targetPath && existsSync(targetPath),
-        );
-        if (existing) {
-          installedResults.push(await enableExisting(deps, projectId, existing.installedSource));
-          continue;
-        }
+    const installRepoScoped = async (installed?: Awaited<ReturnType<typeof installForRelease>>) => {
+      if (!projectFolder) throw new ExtensionUpgradeUnavailableError(repoScopeUnavailableMessage);
+      const targetPath = resolve(projectFolder, ".pstdio/extensions", installName);
+      const existing = records.find(
+        (record) => resolve(record.installedSource.source_path) === targetPath && existsSync(targetPath),
+      );
+      if (existing) return enableExisting(deps, projectId, existing.installedSource);
 
-        const installed =
-          index === 0 && firstInstalled ? firstInstalled : await installForRelease(installName, repo.path);
-        installedResults.push(
-          await deps.extensionService.enableInstalledSourceForProject({
-            installName: installed.installName,
-            projectId,
-            ...toExtensionEnableInput(installed),
-          }),
-        );
-      }
-      return installedResults[0]!;
+      const resolved = installed ?? (await installForRelease(installName, projectFolder));
+      return deps.extensionService.enableInstalledSourceForProject({
+        installName: resolved.installName,
+        projectId,
+        ...toExtensionEnableInput(resolved),
+      });
     };
 
-    if (knownRepoScope) return installRepoCopies();
+    if (knownRepoScope) return installRepoScoped();
 
     const existing = await deps.extensionService.getInstalledSource(installName);
     const existingOrigin = parseExtensionSourceRef(existing?.source_ref ?? null);
@@ -306,14 +298,14 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
     let installed: Awaited<ReturnType<typeof installForRelease>>;
     try {
-      installed = await installForRelease(installName, repos[0]?.path);
+      installed = await installForRelease(installName, projectFolder);
     } catch (error) {
-      if (error instanceof Error && error.message.includes("must be installed from a linked repo")) {
-        throw new ExtensionUpgradeUnavailableError("Link a repository before installing this repo-scoped extension.");
+      if (error instanceof RepoScopedExtensionNeedsProjectFolderError) {
+        throw new ExtensionUpgradeUnavailableError(repoScopeUnavailableMessage);
       }
       throw error;
     }
-    if (extensionScope(installed.manifest) === "repo") return installRepoCopies(installed);
+    if (extensionScope(installed.manifest) === "repo") return installRepoScoped(installed);
 
     return deps.extensionService.enableInstalledSourceForProject({
       installName: installed.installName,

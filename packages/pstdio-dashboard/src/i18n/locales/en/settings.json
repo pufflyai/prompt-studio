@@ -15,9 +15,6 @@
         "general": "General",
         "generalDesc": "Theme, notifications, and preferences",
         "projects": "Projects",
-        "projectsDesc": "Project repositories and configuration",
-        "repos": "Repositories",
-        "reposDesc": "Repository scripts and configuration",
         "agents": "Agents",
         "agentsDesc": "Coding agent configurations",
         "mcp": "MCP Servers",
@@ -379,11 +376,6 @@
           "label": "Project Name",
           "placeholder": "Enter project name",
           "helper": "A display name for this project."
-        },
-        "repoPath": {
-          "label": "Git Repository Path",
-          "placeholder": "/path/to/your/existing/repo",
-          "helper": "The absolute path to your git repository on disk."
         }
       },
       "save": {
@@ -393,81 +385,6 @@
         "unsavedChanges": "• You have unsaved changes",
         "discard": "Discard",
         "confirmSwitch": "You have unsaved changes. Are you sure you want to switch projects? Your changes will be lost."
-      },
-      "repositories": {
-        "title": "Repositories",
-        "description": "Manage the git repositories in this project",
-        "noRepositories": "No repositories configured",
-        "addRepository": "Add Repository"
-      }
-    },
-    "repos": {
-      "title": "Repository Configuration",
-      "description": "Configure scripts that run when this repository is used in workspaces.",
-      "loading": "Loading repositories...",
-      "loadError": "Failed to load repositories.",
-      "selector": {
-        "label": "Select Repository",
-        "placeholder": "Choose a repository to configure",
-        "helper": "Select a repository to view and edit its configuration.",
-        "noRepos": "No repositories available"
-      },
-      "general": {
-        "title": "General Settings",
-        "description": "Configure basic repository information.",
-        "displayName": {
-          "label": "Display Name",
-          "placeholder": "Enter display name",
-          "helper": "A friendly name for this repository."
-        },
-        "path": {
-          "label": "Repository Path"
-        },
-        "defaultWorkingDir": {
-          "label": "Default Working Directory",
-          "placeholder": "e.g., packages/frontend",
-          "helper": "Subdirectory relative to the repository root where the coding agent runs for single-repo workspaces. Set when the workspace is created. Leave empty to use the repository root."
-        },
-        "defaultTargetBranch": {
-          "label": "Default Target Branch",
-          "placeholder": "Select a branch",
-          "helper": "The default base branch for new workspaces. Worktrees branch off from this branch and PRs will target it.",
-          "search": "Search branches",
-          "noBranches": "No branches found",
-          "loading": "Loading branches...",
-          "useCurrent": "Use current branch"
-        }
-      },
-      "scripts": {
-        "title": "Scripts & Configuration",
-        "description": "Configure dev server, setup, cleanup, and copy files for this repository. These scripts run whenever the repository is used in any workspace.",
-        "setup": {
-          "label": "Setup Script",
-          "helper": "This script runs from within the worktree after it's created and before the coding agent starts. Use it for setup tickets like installing dependencies or preparing the environment.",
-          "parallelLabel": "Run setup script in parallel with coding agent",
-          "parallelHelper": "When enabled, the setup script runs simultaneously with the coding agent instead of waiting for setup to complete first."
-        },
-        "cleanup": {
-          "label": "Cleanup Script",
-          "helper": "This script runs from within the worktree after coding agent execution, only if changes were made. Use it for quality assurance tickets like running linters, formatters, tests, or other validation steps."
-        },
-        "copyFiles": {
-          "label": "Copy Files",
-          "helper": "Comma-separated list of files to copy from the original repository directory to the worktree. Useful for environment files like .env. Make sure these are gitignored!",
-          "placeholder": "File paths or glob patterns (e.g., .env, config/*.json)"
-        },
-        "devServer": {
-          "label": "Dev Server Script",
-          "helper": "Starts a development server for this repository. Scripts execute from within the repository's worktree directory."
-        }
-      },
-      "save": {
-        "button": "Save Repository Settings",
-        "success": "Repository settings saved successfully!",
-        "error": "Failed to save repository settings",
-        "unsavedChanges": "You have unsaved changes",
-        "discard": "Discard",
-        "confirmSwitch": "You have unsaved changes. Are you sure you want to switch repositories? Your changes will be lost."
       }
     }
   },

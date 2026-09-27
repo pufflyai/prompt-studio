@@ -3,13 +3,6 @@
   "subtitle": "Gestiona tus proyectos y sigue su progreso",
   "createProject": "Crear Proyecto",
   "loading": "Cargando proyectos...",
-  "repoSearch": {
-    "searching": "Buscando repositorios...",
-    "stillSearching": "Aún buscando... ({{seconds}}s)",
-    "takingLonger": "Esto está tardando más de lo habitual. Puedes buscar manualmente abajo.",
-    "noReposFound": "No se encontraron repositorios en ubicaciones comunes.",
-    "browseHint": "Usa la opción de abajo para buscar un repositorio."
-  },
   "errors": {
     "fetchFailed": "Error al cargar proyectos",
     "deleteFailed": "Error al eliminar el proyecto"
@@ -33,14 +26,6 @@
       "unknown": "No hay harness disponible",
       "loading": "Cargando harnesses..."
     },
-    "repo": {
-      "selectLabel": "Seleccionar repositorio",
-      "none": "Sin repositorios",
-      "noneLinked": "No hay repositorios vinculados",
-      "loading": "Cargando repositorios...",
-      "searchPlaceholder": "Buscar repositorios...",
-      "noSearchResults": "Ningun repositorio coincide con la busqueda"
-    },
     "branch": {
       "selectLabel": "Seleccionar rama",
       "none": "Sin ramas",
@@ -61,7 +46,6 @@
     },
     "sessionMeta": {
       "agent": "Harness",
-      "repo": "Repo",
       "branch": "Rama"
     },
     "session": {
@@ -92,18 +76,6 @@
       "placeholder": "Nombre del proyecto",
       "required": "El nombre del proyecto es obligatorio."
     },
-    "repositories": {
-      "label": "Repositorios",
-      "empty": "Aún no se han seleccionado repositorios.",
-      "remove": "Quitar repositorio",
-      "browse": "Buscar repositorio",
-      "selectOne": "Selecciona al menos un repositorio.",
-      "errors": {
-        "pathRequired": "La ruta del repositorio es obligatoria.",
-        "alreadyAdded": "El repositorio ya está agregado.",
-        "registerFailed": "No se pudo registrar el repositorio."
-      }
-    },
     "actions": {
       "next": "Siguiente",
       "back": "Atrás",
@@ -114,10 +86,6 @@
       "description": "Elige qué harnesses habilitar para este proyecto.",
       "selectAtLeastOne": "Selecciona al menos un harness.",
       "notDetectedWarning": "Este harness no se detectó. Puede que no funcione hasta que se instale."
-    },
-    "folderPicker": {
-      "title": "Seleccionar repositorio",
-      "description": "Elige una carpeta de repositorio git"
     }
   },
   "ticketPanel": {
@@ -164,7 +132,6 @@
       "updatedLabel": "Actualizado {{date}}",
       "dialog": {
         "title": "Iniciar nuevo intento",
-        "description": "Elige un agente y un repositorio para iniciar este intento de tarea.",
         "modelLabel": "Modelo",
         "modelPlaceholder": "Usar modelo predeterminado",
         "promptLabel": "Instrucción",

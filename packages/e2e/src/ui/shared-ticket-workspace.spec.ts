@@ -36,14 +36,14 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     await workspaceNavigation.hover();
     await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
     await workspaceNavigation.click();
-    await expect(page.getByRole("row").filter({ hasText: workspace.workspace_shorthand })).toBeVisible();
+    await expect(page.getByRole("row").filter({ hasText: workspace.name })).toBeVisible();
     const providerRoute = `**/v1/projects/${projectId}/workspace-providers`;
     await page.route(providerRoute, (route) => route.fulfill({ status: 503, body: "Provider catalog unavailable" }));
     await page.reload();
     await expect(workspaceNavigation).toBeVisible();
     await workspaceNavigation.hover();
     await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("row").filter({ hasText: workspace.workspace_shorthand })).toBeVisible();
+    await expect(page.getByRole("row").filter({ hasText: workspace.name })).toBeVisible();
     await page.unroute(providerRoute);
     await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Plain folder ticket", { exact: true }).click();

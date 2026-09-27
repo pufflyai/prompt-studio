@@ -7,26 +7,37 @@ import { requestDashboardWorkspaceDiffSummaries } from "@/shared/workspaces/work
 import { subscribeWorkspaceDataChanges } from "./workspace-data-subscription";
 
 const workspaceColumns: DataTableRendererColumn[] = [
-  { id: "attempt", label: "Attempt", stat: { type: "unique" } },
   { id: "name", label: "Name", stat: { type: "unique" } },
-  { id: "type", label: "Type", stat: { type: "top-values", limit: 2 } },
-  { id: "provider", label: "Provider", stat: { type: "top-values", limit: 5 } },
-  { id: "state", label: "State", stat: { type: "top-values", limit: 2 } },
-  { id: "location", label: "Location", stat: { type: "unique" } },
-  { id: "error", label: "Provider error", stat: { type: "unique" } },
-  { id: "branch", label: "Branch", stat: { type: "unique" } },
-  { id: "created", label: "Created" },
-  { id: "updated", label: "Updated" },
-  { id: "diff", label: "Diff" },
+  {
+    id: "type",
+    label: "Type",
+    stat: { type: "top-values", limit: 3 },
+    renderer: {
+      type: "badge",
+      categories: [
+        { value: "Project folder", palette: "gray" },
+        { value: "Git worktree", palette: "purple" },
+        { value: "Remote workspace", palette: "blue" },
+      ],
+    },
+  },
+  { id: "location", label: "Location", stat: { type: "unique" }, renderer: { type: "path" } },
+  { id: "created", label: "Created at", renderer: { type: "date" } },
+  { id: "diff", label: "Diff", renderer: { type: "diff" } },
+  // Diagnostic fields stay available from the column menu without crowding the default list.
+  { id: "attempt", label: "Attempt", defaultHidden: true, stat: { type: "unique" } },
+  { id: "provider", label: "Provider", defaultHidden: true, stat: { type: "top-values", limit: 5 } },
+  { id: "state", label: "State", defaultHidden: true, stat: { type: "top-values", limit: 2 } },
+  { id: "error", label: "Provider error", defaultHidden: true, stat: { type: "unique" } },
+  { id: "branch", label: "Branch", defaultHidden: true, stat: { type: "unique" } },
+  { id: "updated", label: "Updated at", defaultHidden: true, renderer: { type: "date" } },
 ];
 
 const executeWorkspaceQuery = async (ctx: WorkbenchModuleContext, signal: AbortSignal) => {
   const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx), { includeArchived: true });
 
   await requestDashboardWorkspaceDiffSummaries(
-    workspaces
-      .filter((workspace) => !workspace.archived && workspace.type === "worktree")
-      .map((workspace) => workspace.id),
+    workspaces.filter((workspace) => !workspace.archived && workspace.supportsDiff).map((workspace) => workspace.id),
     signal,
   );
 
@@ -42,6 +53,7 @@ export const registerWorkspaceDataTableView = (ctx: WorkbenchModuleContext) => {
         kind: "dataTable",
         resourceKind: "workspace",
         columns: workspaceColumns,
+        defaultShowStats: false,
         emptyTitle: "No workspaces yet",
         emptyDescription: "Create a workspace to start an isolated attempt for this project.",
         contextKeys: [dashboardSelectedProjectIdContextKey],

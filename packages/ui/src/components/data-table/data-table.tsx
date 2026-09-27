@@ -29,6 +29,7 @@ import {
   resolveSelectionActions,
   shouldEnableSelection,
   shouldHighlightActiveRow,
+  toggleHiddenDataTableColumn,
 } from "./data-table-state";
 import { DataTableBodyRow, DataTableColumnHeader } from "./data-table-table-parts";
 import { EditModeDataTable } from "./edit-mode-data-table";
@@ -48,6 +49,15 @@ interface DatasetPaginationProps {
 
 const buildColumnMenuColumns = (columnKeys: string[], compactHeaders?: Partial<Record<string, string>>) =>
   columnKeys.map((columnId) => ({ id: columnId, label: compactHeaders?.[columnId] ?? columnId }));
+
+const resolveColumnSizeVars = (table: ReturnType<typeof useReactTable<RowData>>) => {
+  const colSizes: Record<string, number> = {};
+  for (const header of table.getFlatHeaders()) {
+    colSizes[`--header-${header.id}-size`] = header.getSize();
+    colSizes[`--col-${header.column.id}-size`] = header.column.getSize();
+  }
+  return colSizes;
+};
 
 const DatasetPagination = (props: DatasetPaginationProps) => {
   const { table, pagination, pageSizeOptions } = props;
@@ -71,6 +81,8 @@ const DatasetDataTable = (props: DataTableProps) => {
     noBorder,
     fullWidth,
     hiddenColumns,
+    defaultHiddenColumns,
+    defaultShowStats = true,
     onRowClick,
     isRowInteractive,
     activeRowId,
@@ -94,13 +106,13 @@ const DatasetDataTable = (props: DataTableProps) => {
     pageSize: resolveInitialPageSize({ initialPageSize }),
   }));
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [showStats, setShowStats] = useState(true);
+  const [showStats, setShowStats] = useState(defaultShowStats);
   const [wrapRows, setWrapRows] = useState(false);
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
     const propHiddenColumnsSet = new Set(hiddenColumns ?? []);
     return Object.keys(data[0] || {}).filter((key) => !propHiddenColumnsSet.has(key));
   });
-  const [hiddenColumnMenuIds, setHiddenColumnMenuIds] = useState<Set<string>>(() => new Set());
+  const [hiddenColumnMenuIds, setHiddenColumnMenuIds] = useState<Set<string>>(() => new Set(defaultHiddenColumns));
   const hiddenColumnsSet = new Set(hiddenColumns ?? []);
   const baseColumnKeys = Object.keys(data[0] || {}).filter((key) => !hiddenColumnsSet.has(key));
   const orderedBaseColumnKeys = resolveDataTableColumnOrder(baseColumnKeys, columnOrder);
@@ -108,8 +120,13 @@ const DatasetDataTable = (props: DataTableProps) => {
   const columnKeys = orderedBaseColumnKeys.filter((key) => visibleColumnIds.has(key));
   const enableSelection = shouldEnableSelection(props);
   const selectionActions = resolveSelectionActions(props);
-  const rendererAttributes = buildDataTableRendererAttributes(data, orderedBaseColumnKeys, compactHeaders);
-  const rendererRows = buildDataTableRendererRows(data, orderedBaseColumnKeys, getRowId);
+  const rendererAttributes = buildDataTableRendererAttributes(
+    data,
+    orderedBaseColumnKeys,
+    compactHeaders,
+    columnRenderers,
+  );
+  const rendererRows = buildDataTableRendererRows(data, orderedBaseColumnKeys, getRowId, columnRenderers);
   const resolvedToolbarStorageKey = resolveDataTableToolbarStorageKey({
     toolbarStorageKey,
     columnKeys: baseColumnKeys,
@@ -162,16 +179,7 @@ const DatasetDataTable = (props: DataTableProps) => {
     }));
   }, [pagination.pageIndex, table]);
 
-  const columnSizeVars = (() => {
-    const headers = table.getFlatHeaders();
-    const colSizes: Record<string, number> = {};
-    for (let i = 0; i < headers.length; i++) {
-      const header = headers[i]!;
-      colSizes[`--header-${header.id}-size`] = header.getSize();
-      colSizes[`--col-${header.column.id}-size`] = header.column.getSize();
-    }
-    return colSizes;
-  })();
+  const columnSizeVars = resolveColumnSizeVars(table);
 
   const selectedRows = table.getSelectedRowModel().rows;
   const allRows = table.getCoreRowModel().rows;
@@ -184,15 +192,7 @@ const DatasetDataTable = (props: DataTableProps) => {
       showStats={showStats}
       statsAvailable={Boolean(columnStats)}
       onColumnVisibilityChange={(columnId, visible) =>
-        setHiddenColumnMenuIds((current) => {
-          const next = new Set(current);
-          if (visible) {
-            next.delete(columnId);
-          } else {
-            next.add(columnId);
-          }
-          return next;
-        })
+        setHiddenColumnMenuIds((current) => toggleHiddenDataTableColumn(current, columnId, visible))
       }
       onColumnReorder={(activeColumnId, overColumnId) =>
         setColumnOrder((current) =>

@@ -11,13 +11,10 @@ import {
   SelectionCell,
   SelectionHeader,
 } from "./data-table-cell-renderers";
+import { resolveDataTableComparableValue } from "./data-table-cell-value";
 import type { DataTableColumnMeta } from "./data-table-column-meta";
-import { columnHelper, getIcon, isDisplayValue } from "./helpers";
+import { columnHelper, getIcon } from "./helpers";
 import type { DataTableColumnRenderer, DataTableRowAction, RowData } from "./types";
-
-const getSortValue = (value: unknown) => {
-  return isDisplayValue(value) ? value.sortValue : value;
-};
 
 const compareValues = (valueA: unknown, valueB: unknown) => {
   if (valueA === valueB) return 0;
@@ -106,8 +103,8 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
         getCellStyle: (value: unknown) => resolveDataCellStyle(value, renderer),
       } satisfies DataTableColumnMeta,
       sortingFn: (rowA, rowB) => {
-        const valueA = getSortValue(rowA.original[fallBackKey]);
-        const valueB = getSortValue(rowB.original[fallBackKey]);
+        const valueA = resolveDataTableComparableValue(rowA.original[fallBackKey], renderer);
+        const valueB = resolveDataTableComparableValue(rowB.original[fallBackKey], renderer);
         return compareValues(valueA, valueB);
       },
     });

@@ -15,9 +15,6 @@
         "general": "一般",
         "generalDesc": "主題、通知與偏好設定",
         "projects": "專案",
-        "projectsDesc": "專案儲存庫與設定",
-        "repos": "儲存庫",
-        "reposDesc": "儲存庫腳本與設定",
         "agents": "代理",
         "agentsDesc": "編碼代理設定",
         "mcp": "MCP 伺服器",
@@ -379,11 +376,6 @@
           "label": "專案名稱",
           "placeholder": "輸入專案名稱",
           "helper": "此專案的顯示名稱。"
-        },
-        "repoPath": {
-          "label": "Git 儲存庫路徑",
-          "placeholder": "/path/to/your/existing/repo",
-          "helper": "磁碟上的 Git 儲存庫絕對路徑。"
         }
       },
       "save": {
@@ -393,81 +385,6 @@
         "unsavedChanges": "• 您有未儲存的變更",
         "discard": "放棄",
         "confirmSwitch": "您有未儲存的變更。確定要切換專案嗎？您的變更將會遺失。"
-      },
-      "repositories": {
-        "title": "儲存庫",
-        "description": "管理此專案中的 Git 儲存庫",
-        "noRepositories": "未設定儲存庫",
-        "addRepository": "新增儲存庫"
-      }
-    },
-    "repos": {
-      "title": "儲存庫設定",
-      "description": "設定此儲存庫在工作區中使用時執行的腳本。",
-      "loading": "載入儲存庫中...",
-      "loadError": "載入儲存庫失敗。",
-      "selector": {
-        "label": "選擇儲存庫",
-        "placeholder": "選擇要設定的儲存庫",
-        "helper": "選擇儲存庫以查看與編輯其設定。",
-        "noRepos": "沒有可用的儲存庫"
-      },
-      "general": {
-        "title": "一般設定",
-        "description": "設定基本儲存庫資訊。",
-        "displayName": {
-          "label": "顯示名稱",
-          "placeholder": "輸入顯示名稱",
-          "helper": "此儲存庫的易讀名稱。"
-        },
-        "path": {
-          "label": "儲存庫路徑"
-        },
-        "defaultWorkingDir": {
-          "label": "預設工作目錄",
-          "placeholder": "例如：packages/frontend",
-          "helper": "單儲存庫工作區中程式碼代理執行的子目錄。在建立工作區時設定。留空則使用儲存庫根目錄。"
-        },
-        "defaultTargetBranch": {
-          "label": "預設目標分支",
-          "placeholder": "選擇分支",
-          "helper": "新工作區的預設基礎分支。工作樹從此分支建立，PR 將以此分支為目標。",
-          "search": "搜尋分支",
-          "noBranches": "找不到分支",
-          "loading": "正在載入分支...",
-          "useCurrent": "使用目前分支"
-        }
-      },
-      "scripts": {
-        "title": "腳本與設定",
-        "description": "設定此儲存庫的設定腳本、清理腳本與要複製的檔案。這些腳本在儲存庫用於任何工作區時執行。",
-        "setup": {
-          "label": "設定腳本",
-          "helper": "此腳本在工作樹內執行，於建立後、編碼代理啟動前執行。用於安裝相依套件或準備環境等設定工作。",
-          "parallelLabel": "與編碼代理平行執行設定腳本",
-          "parallelHelper": "啟用後，設定腳本將與編碼代理同時執行，而不是等待設定完成後再啟動。"
-        },
-        "cleanup": {
-          "label": "清理腳本",
-          "helper": "此腳本在工作樹內執行，於編碼代理執行後（僅在有變更時）執行。用於品質保證工作，如執行 linter、格式化工具、測試或其他驗證步驟。"
-        },
-        "copyFiles": {
-          "label": "複製檔案",
-          "helper": "要從原始儲存庫目錄複製到工作樹的檔案清單（以逗號分隔）。適合用於 .env 等環境檔案。請確保這些檔案已加入 gitignore！",
-          "placeholder": "檔案路徑或 glob 模式（例如：.env、config/*.json）"
-        },
-        "devServer": {
-          "label": "開發伺服器腳本",
-          "helper": "啟動此儲存庫的開發伺服器。腳本會從儲存庫的工作樹目錄執行。"
-        }
-      },
-      "save": {
-        "button": "儲存儲存庫設定",
-        "success": "儲存庫設定儲存成功！",
-        "error": "儲存儲存庫設定失敗",
-        "unsavedChanges": "您有未儲存的變更",
-        "discard": "放棄",
-        "confirmSwitch": "您有未儲存的變更。確定要切換儲存庫嗎？您的變更將會遺失。"
       }
     }
   },

@@ -1,7 +1,7 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { DataTableRendererRow, ResourceRef } from "@pstdio/workbench";
-import type { SyncedRow } from "@/lib/sync/collections";
-import { createDashboardResource } from "@/shared/app/resources";
+import { getCollection, type SyncedRow } from "@/lib/sync/collections";
+import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import {
   type DashboardRows,
   isDashboardProjectRow,
@@ -15,7 +15,7 @@ import {
   getDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
 import { createDashboardWorkspaceCapabilityMetadata } from "@/shared/workspaces/workspace-options";
-import { workspaceKind } from "./workspace-kind";
+import { workspaceIcon, workspaceKind } from "./workspace-kind";
 import { workspaceState } from "./workspace-state";
 export interface DashboardWorkspace {
   id: string;
@@ -34,6 +34,7 @@ export interface DashboardWorkspace {
   archived: boolean;
   setupError: string | null;
   displayPath: string | null;
+  supportsDiff: boolean;
   provider: string;
   providerState: string;
   resource: ResourceRef;
@@ -134,6 +135,7 @@ export const buildDashboardWorkspacesFromRows = (
           }
         | null
         | undefined;
+      const metadata = createWorkspaceResourceMetadata({ workspace, workspacePath, summary });
       return {
         id: workspace.id,
         title,
@@ -150,21 +152,28 @@ export const buildDashboardWorkspacesFromRows = (
         isDefault: Boolean(workspace.is_default),
         archived: Boolean(workspace.archived),
         setupError: (workspace.setup_error as string | null) ?? providerError?.message ?? null,
-        displayPath: (workspace.display_path as string | null) ?? null,
+        displayPath: (workspace.display_path as string | null) ?? workspacePath,
+        supportsDiff: metadata.workspaceSupportsDiff === true,
         provider: (workspace.provider_id as string | undefined) ?? "pstdio.root",
         providerState: workspaceState(workspace),
         resource: createDashboardResource(
           "workspace",
           workspace.id,
           title,
-          "GitBranch",
+          workspaceIcon(type),
           workspace.project_id as string,
-          createWorkspaceResourceMetadata({ workspace, workspacePath, summary }),
+          metadata,
         ),
       } satisfies DashboardWorkspace;
     })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 };
+// Tools can link a workspace by id alone. Its icon still comes from the synced row, so every route shows the same icon.
+export const resolveDashboardWorkspaceIcon = (workspaceId: string) => {
+  const workspace = getCollection("workspaces").state.get(workspaceId);
+  return workspace ? workspaceIcon(workspaceKind(workspace)) : dashboardViews.workspaces.icon;
+};
+
 export const createDashboardWorkspaces = (
   projectId?: string,
   options: {
@@ -185,20 +194,32 @@ const formatWorkspaceState = (workspace: DashboardWorkspace) => {
   const label = state.replaceAll("_", " ");
   return `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
 };
-export const toWorkspaceDataTableRow = (workspace: DashboardWorkspace): DashboardWorkspaceRow => ({
-  id: resourceKey(workspace.resource),
-  resource: workspace.resource,
-  values: {
-    attempt: workspace.shorthand,
-    name: workspace.title,
-    type: { worktree: "Git worktree", folder: "Project folder", remote: "Remote workspace" }[workspace.type],
-    provider: workspace.provider,
-    state: formatWorkspaceState(workspace),
-    branch: workspace.branch ?? "",
-    created: workspace.createdAt,
-    updated: workspace.updatedAt,
-    ...(workspace.setupError ? { error: workspace.setupError } : {}),
-    ...(workspace.displayPath ? { location: workspace.displayPath } : {}),
-    ...(workspace.diffOverview !== undefined ? { diff: workspace.diffOverview } : {}),
-  },
-});
+const workspaceTypeLabels = { worktree: "Git worktree", folder: "Project folder", remote: "Remote workspace" };
+
+// A workspace without the diff capability says so; a supported diff that is still loading has no value yet.
+const workspaceDiffValue = (workspace: DashboardWorkspace) => {
+  if (!workspace.supportsDiff) return "Not supported";
+  if (workspace.diffOverview === undefined) return undefined;
+  return { additions: workspace.additions, deletions: workspace.deletions };
+};
+
+export const toWorkspaceDataTableRow = (workspace: DashboardWorkspace): DashboardWorkspaceRow => {
+  const diff = workspaceDiffValue(workspace);
+  return {
+    id: resourceKey(workspace.resource),
+    resource: workspace.resource,
+    values: {
+      name: workspace.title,
+      type: workspaceTypeLabels[workspace.type],
+      ...(workspace.displayPath ? { location: workspace.displayPath } : {}),
+      created: workspace.createdAt,
+      ...(diff !== undefined ? { diff } : {}),
+      attempt: workspace.shorthand,
+      provider: workspace.provider,
+      state: formatWorkspaceState(workspace),
+      branch: workspace.branch ?? "",
+      updated: workspace.updatedAt,
+      ...(workspace.setupError ? { error: workspace.setupError } : {}),
+    },
+  };
+};

@@ -96,7 +96,7 @@ export const loadExtensionSourceRuntime = async (sourcePath: string) => {
     throw new Error(first?.message ?? `Failed to load extension at ${sourcePath}`);
   }
 
-  return normalizeExtensionSources([source], diagnostics, { repoRoots: [] });
+  return normalizeExtensionSources([source], diagnostics);
 };
 
 export const readExtensionSourceMetadata = (sourcePath: string) => {

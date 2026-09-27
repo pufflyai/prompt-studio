@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { listLinkedRepoExtensionRoots } from "./repo-extension-roots";
+import { listRepoExtensionRoots } from "./repo-extension-roots";
 
-describe("listLinkedRepoExtensionRoots", () => {
-  test("lists one extension root per linked repo", async () => {
-    const roots = await listLinkedRepoExtensionRoots({
+describe("listRepoExtensionRoots", () => {
+  test("lists one extension root per project folder", async () => {
+    const roots = await listRepoExtensionRoots({
       projectService: { list: async () => [{ id: "project-a" }, { id: "project-b" }] },
       workspaceService: {
         getDefault: async (projectId) => ({ root_path: projectId === "project-a" ? "/repos/alpha" : "/repos/beta" }),
@@ -14,17 +14,17 @@ describe("listLinkedRepoExtensionRoots", () => {
     expect(roots).toEqual([
       {
         rootPath: join("/repos/alpha", ".pstdio", "extensions"),
-        links: [{ projectId: "project-a", repoPath: "/repos/alpha" }],
+        projects: [{ projectId: "project-a", repoPath: "/repos/alpha" }],
       },
       {
         rootPath: join("/repos/beta", ".pstdio", "extensions"),
-        links: [{ projectId: "project-b", repoPath: "/repos/beta" }],
+        projects: [{ projectId: "project-b", repoPath: "/repos/beta" }],
       },
     ]);
   });
 
-  test("groups a repo shared by multiple projects into a single root with every link", async () => {
-    const roots = await listLinkedRepoExtensionRoots({
+  test("groups a folder opened by several projects into one root", async () => {
+    const roots = await listRepoExtensionRoots({
       projectService: { list: async () => [{ id: "project-b" }, { id: "project-a" }] },
       workspaceService: {
         getDefault: async () => ({
@@ -41,7 +41,7 @@ describe("listLinkedRepoExtensionRoots", () => {
     expect(roots).toEqual([
       {
         rootPath: join("/repos/shared", ".pstdio", "extensions"),
-        links: [
+        projects: [
           { projectId: "project-a", repoPath: "/repos/shared" },
           { projectId: "project-b", repoPath: "/repos/shared" },
         ],

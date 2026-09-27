@@ -86,7 +86,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     const runtime = normalizeExtensionSources(
       cachedSources.map((cached) => cached.source),
       cachedSources.flatMap((cached) => cached.diagnostics),
-      { repoRoots: workspace?.root_path ? [workspace.root_path] : [] },
+      { projectFolder: workspace?.root_path ?? undefined },
     );
 
     return { enabledSources, project, runtime };
@@ -228,8 +228,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   // dashboard can document what a disabled extension would contribute.
   const getInstalledSourceRuntime = async (installedSource: EnabledExtensionSource["installedSource"]) => {
     const cached = await sources.load(installedSource);
-    if (!cached) return normalizeExtensionSources([], [], { repoRoots: [] });
-    return normalizeExtensionSources([cached.source], cached.diagnostics, { repoRoots: [] });
+    if (!cached) return normalizeExtensionSources([], []);
+    return normalizeExtensionSources([cached.source], cached.diagnostics);
   };
 
   // Runs before an enable is persisted, so the candidate is described by its manifest

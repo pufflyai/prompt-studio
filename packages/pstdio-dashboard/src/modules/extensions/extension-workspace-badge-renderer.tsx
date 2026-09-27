@@ -1,4 +1,4 @@
-import { Box, Icon, Menu } from "@chakra-ui/react";
+import { Box, Menu } from "@chakra-ui/react";
 import type { KanbanRendererResourceRef, NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import { isNavigationTarget } from "@pstdio/sdk/extensions";
 import {
@@ -10,10 +10,11 @@ import {
 } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import { GitBranch } from "lucide-react";
+import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { createElement, useEffect, useState } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
 import { normalizeExtensionResourceReference } from "@/shared/workbench/resource-hierarchy";
+import { resolveDashboardWorkspaceIcon } from "@/shared/workspaces/dashboard-workspaces";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 import { watchDashboardWorkspaceDiffSummaries } from "@/shared/workspaces/workspace-diff-summary-watch";
 
@@ -92,12 +93,14 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
   });
 };
 
+const workspaceIdFromBadgeItem = (item: ExtensionWorkspaceBadgeItem) => item.resource?.id ?? item.id;
+
 export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, projectId: string): ResourceRef =>
   createDashboardResource(
     item.resource?.type ?? "workspace",
     item.resource?.id ?? item.id,
     item.resource?.label ?? item.label,
-    item.icon ?? "GitBranch",
+    item.icon ?? resolveDashboardWorkspaceIcon(workspaceIdFromBadgeItem(item)),
     projectId,
     {
       ...item.resource?.metadata,
@@ -123,8 +126,6 @@ const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
 };
 
 const stopWorkspaceBadgeRowActivation = (event: { stopPropagation: () => void }) => event.stopPropagation();
-
-const workspaceIdFromBadgeItem = (item: ExtensionWorkspaceBadgeItem) => item.resource?.id ?? item.id;
 
 export const createWorkspaceBadgeInteractionProps = (onActivate?: () => void) => ({
   onClick: (event: { stopPropagation: () => void }) => {
@@ -212,7 +213,12 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
                 asChild
                 variant="compact"
                 label={item.label}
-                icon={<Icon as={GitBranch} boxSize="16px" />}
+                icon={
+                  <WorkbenchIcon
+                    name={item.icon ?? resolveDashboardWorkspaceIcon(workspaceIdFromBadgeItem(item))}
+                    size={16}
+                  />
+                }
                 endContent={<WorkspaceDiffTotals workspaceId={workspaceIdFromBadgeItem(item)} />}
                 onActivate={() => openItem(item)}
               />

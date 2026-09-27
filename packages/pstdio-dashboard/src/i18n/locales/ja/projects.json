@@ -3,13 +3,6 @@
   "subtitle": "プロジェクトを管理し、進捗を追跡します",
   "createProject": "プロジェクトを作成",
   "loading": "プロジェクトを読み込み中...",
-  "repoSearch": {
-    "searching": "リポジトリを検索中...",
-    "stillSearching": "検索中... ({{seconds}}秒)",
-    "takingLonger": "通常より時間がかかっています。下から手動で選択できます。",
-    "noReposFound": "一般的な場所にリポジトリが見つかりませんでした。",
-    "browseHint": "下のオプションを使用してリポジトリを参照してください。"
-  },
   "errors": {
     "fetchFailed": "プロジェクトの取得に失敗しました",
     "deleteFailed": "プロジェクトの削除に失敗しました"
@@ -33,14 +26,6 @@
       "unknown": "利用可能なハーネスがありません",
       "loading": "ハーネスを読み込み中..."
     },
-    "repo": {
-      "selectLabel": "リポジトリを選択",
-      "none": "リポジトリがありません",
-      "noneLinked": "リンクされたリポジトリがありません",
-      "loading": "リポジトリを読み込み中...",
-      "searchPlaceholder": "リポジトリを検索...",
-      "noSearchResults": "検索に一致するリポジトリがありません"
-    },
     "model": {
       "selectLabel": "モデルを選択",
       "none": "モデルなし",
@@ -61,7 +46,6 @@
     },
     "sessionMeta": {
       "agent": "ハーネス",
-      "repo": "リポジトリ",
       "branch": "ブランチ"
     },
     "session": {
@@ -92,18 +76,6 @@
       "placeholder": "プロジェクト名",
       "required": "プロジェクト名は必須です。"
     },
-    "repositories": {
-      "label": "リポジトリ",
-      "empty": "まだリポジトリが選択されていません。",
-      "remove": "リポジトリを削除",
-      "browse": "リポジトリを参照",
-      "selectOne": "少なくとも1つのリポジトリを選択してください。",
-      "errors": {
-        "pathRequired": "リポジトリのパスが必要です。",
-        "alreadyAdded": "リポジトリはすでに追加されています。",
-        "registerFailed": "リポジトリの登録に失敗しました。"
-      }
-    },
     "actions": {
       "next": "次へ",
       "back": "戻る",
@@ -114,10 +86,6 @@
       "description": "このプロジェクトで有効にするハーネスを選択してください。",
       "selectAtLeastOne": "少なくとも1つのハーネスを選択してください。",
       "notDetectedWarning": "このハーネスは検出されませんでした。インストールされるまで動作しない可能性があります。"
-    },
-    "folderPicker": {
-      "title": "リポジトリを選択",
-      "description": "git リポジトリのフォルダーを選択してください"
     }
   },
   "ticketPanel": {
@@ -164,7 +132,6 @@
       "updatedLabel": "{{date}} 更新",
       "dialog": {
         "title": "新しい試行を開始",
-        "description": "このチケットの試行を開始するエージェントとリポジトリを選択してください。",
         "modelLabel": "モデル",
         "modelPlaceholder": "デフォルトモデルを使用",
         "promptLabel": "プロンプト",
