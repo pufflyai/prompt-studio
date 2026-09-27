@@ -1,6 +1,6 @@
 # Temporary space-free Linux desktop package paths
 
-Proposed: 2026-09-08 (first recorded in Git)
+Proposed: 2026-09-08
 
 ## Status
 

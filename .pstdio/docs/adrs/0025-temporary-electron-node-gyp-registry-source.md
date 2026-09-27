@@ -1,6 +1,6 @@
 # Temporary registry source for Electron node-gyp
 
-Proposed: 2026-09-13 (first recorded in Git)
+Proposed: 2026-09-13
 
 ## Status
 

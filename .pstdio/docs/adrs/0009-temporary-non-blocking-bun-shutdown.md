@@ -1,6 +1,6 @@
 # ADR: Temporary Non-Blocking Bun Shutdown
 
-Proposed: 2026-08-17 (first recorded in Git)
+Proposed: 2026-08-17
 
 ## Status
 

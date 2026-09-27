@@ -1,6 +1,6 @@
 # Temporary local dependency install context
 
-Proposed: 2026-09-07 (first recorded in Git)
+Proposed: 2026-09-07
 
 ## Status
 

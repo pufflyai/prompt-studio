@@ -1,6 +1,6 @@
 # Temporary terminal foreground probe
 
-Proposed: 2026-09-26 (first recorded in Git)
+Proposed: 2026-09-26
 
 ## Status
 

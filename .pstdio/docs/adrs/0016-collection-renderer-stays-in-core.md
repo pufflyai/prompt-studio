@@ -1,6 +1,6 @@
 # ADR 0016: keep the grouped collection renderer in core
 
-Proposed: 2026-08-28 (first recorded in Git)
+Proposed: 2026-08-28
 
 ## Status
 

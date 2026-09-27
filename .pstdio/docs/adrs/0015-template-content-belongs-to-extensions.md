@@ -1,6 +1,6 @@
 # ADR 0015: Template content belongs to extensions
 
-Proposed: 2026-08-28 (first recorded in Git)
+Proposed: 2026-08-28
 
 ## Status
 

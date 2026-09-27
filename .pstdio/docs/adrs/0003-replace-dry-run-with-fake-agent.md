@@ -1,6 +1,6 @@
 # ADR: Replace `PSTDIO_DRY_RUN` With Fake Agent
 
-Proposed: 2026-03-13 (first recorded in Git)
+Proposed: 2026-03-13
 
 ## Status
 

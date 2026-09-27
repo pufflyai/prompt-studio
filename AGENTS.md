@@ -55,7 +55,7 @@ Follow these principles:
 
 If an external limit makes a workaround unavoidable, create an architecture decision record (ADR) in `.pstdio/docs/adrs` before writing the workaround. Use the next four-digit number and a kebab-case filename.
 
-Every ADR must record its proposal date as `Proposed: YYYY-MM-DD` below the title. Preserve that date when the decision changes. If the original date is unknown, use the earliest Git addition date and label it as the first recorded date.
+Every ADR must record its proposal date as `Proposed: YYYY-MM-DD` below the title. Preserve that date when the decision changes. If the original date is unknown, use the earliest Git addition date.
 
 Temporary-workaround ADR filenames must contain `-temporary-`, including superseded records. Their document titles must include the word "Temporary".
 

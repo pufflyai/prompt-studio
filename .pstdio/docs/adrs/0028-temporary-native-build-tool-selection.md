@@ -1,6 +1,6 @@
 # Temporary native build tool selection
 
-Proposed: 2026-09-13 (first recorded in Git)
+Proposed: 2026-09-13
 
 ## Status
 

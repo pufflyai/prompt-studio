@@ -1,6 +1,6 @@
 # ADR: Test Environment Isolation via Bun Preload
 
-Proposed: 2026-04-12 (first recorded in Git)
+Proposed: 2026-04-12
 
 ## Status
 

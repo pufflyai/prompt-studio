@@ -1,6 +1,6 @@
 # ADR: Temporary Desktop Lifecycle Implementation Without Pencil
 
-Proposed: 2026-08-13 (first recorded in Git)
+Proposed: 2026-08-13
 
 ## Status
 

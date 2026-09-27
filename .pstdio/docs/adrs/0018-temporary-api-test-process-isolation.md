@@ -1,6 +1,6 @@
 # Temporary API test process isolation
 
-Proposed: 2026-09-07 (first recorded in Git)
+Proposed: 2026-09-07
 
 ## Status
 

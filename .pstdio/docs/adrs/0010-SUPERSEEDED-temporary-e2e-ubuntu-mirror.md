@@ -1,6 +1,6 @@
 # ADR: Temporary E2E Ubuntu Mirror Override
 
-Proposed: 2026-08-18 (first recorded in Git)
+Proposed: 2026-08-18
 
 ## Status
 

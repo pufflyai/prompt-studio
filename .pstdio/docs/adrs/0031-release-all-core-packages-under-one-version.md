@@ -1,6 +1,6 @@
 # ADR 0031: Release all core packages under one version
 
-Proposed: 2026-09-26 (first recorded in Git)
+Proposed: 2026-09-26
 
 ## Status
 

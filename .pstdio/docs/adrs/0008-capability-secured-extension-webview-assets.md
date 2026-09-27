@@ -1,6 +1,6 @@
 # ADR: Capability-Secured Extension Webview Assets
 
-Proposed: 2026-08-16 (first recorded in Git)
+Proposed: 2026-08-16
 
 ## Status
 
