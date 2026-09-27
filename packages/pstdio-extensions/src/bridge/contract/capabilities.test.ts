@@ -178,3 +178,10 @@ describe("createHostCapabilityGate", () => {
     ]);
   });
 });
+
+test("clipboard permission validates without a host bridge handler", () => {
+  expect(validateWebviewCapabilityNames(["clipboard.write", "clipboard.write@1"])).toEqual([]);
+  expect(createHostCapabilityGate({ capabilities: {}, declaredCapabilities: ["clipboard.write"] }).diagnostics).toEqual(
+    [],
+  );
+});

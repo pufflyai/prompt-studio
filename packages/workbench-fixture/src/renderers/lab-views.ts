@@ -104,6 +104,7 @@ export const createLabViews = (baseUrl: string) => {
       kind: "webview",
       entry: packageAsset("./src/views/main.tsx", baseUrl),
       capabilities: [
+        "clipboard.write",
         "commands.execute",
         "notification.action",
         "notification.show",

@@ -18,6 +18,7 @@ import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+// Includes the declared clipboard permission on the packaged webview fixture.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 const BUILD_TIMEOUT = 180_000;

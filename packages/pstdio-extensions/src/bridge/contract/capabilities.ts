@@ -1,5 +1,6 @@
 import {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
+  WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
@@ -40,10 +41,11 @@ interface CreateHostCapabilityGateInput {
   onDiagnostic?: (diagnostic: WebviewCapabilityDiagnostic) => void;
 }
 
-const publicCapabilityNames = new Set<string>(WEBVIEW_HOST_CAPABILITIES);
+const publicCapabilityNames = new Set<string>([...WEBVIEW_HOST_CAPABILITIES, ...WEBVIEW_DECLARABLE_CAPABILITIES]);
 const scopedCapabilityNames = new Set<string>(WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES);
 
-const isPublicCapability = (name: string): name is WebviewHostCapability => publicCapabilityNames.has(name);
+const isPublicCapability = (name: string): name is WebviewHostCapability | "clipboard.write" =>
+  publicCapabilityNames.has(name);
 
 const isScopedCapability = (name: string): name is WebviewScopedDeclarableCapability => scopedCapabilityNames.has(name);
 
@@ -108,12 +110,14 @@ export const validateWebviewCapabilityDeclarations = (
       diagnostics.push(unsupportedVersion(declaration, parsed.name, parsed.version));
       continue;
     }
-    if (!capabilities[parsed.name]) {
+    // Browser permissions are delegated by the iframe, not routed through the bridge.
+    if (parsed.name === "clipboard.write") continue;
+    if (!capabilities[parsed.name as WebviewHostCapability]) {
       diagnostics.push(unsupportedCapability(declaration));
       continue;
     }
     if (parsed.scope === undefined) {
-      allowed.add(parsed.name);
+      allowed.add(parsed.name as WebviewHostCapability);
       continue;
     }
     const scopes = allowedScopes.get(parsed.name) ?? new Set<string>();
@@ -167,7 +171,8 @@ export const createHostCapabilityGate = (input: CreateHostCapabilityGateInput) =
     diagnostics,
 
     async call(request: HostCapabilityRequest) {
-      if (!isPublicCapability(request.method)) throw deny(unsupportedCapability(request.method));
+      if (!isPublicCapability(request.method) || request.method === "clipboard.write")
+        throw deny(unsupportedCapability(request.method));
 
       if (isScopedCapability(request.method)) {
         const scope = requestScope(request);
