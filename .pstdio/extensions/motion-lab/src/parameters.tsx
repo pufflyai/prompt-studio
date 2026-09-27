@@ -28,7 +28,7 @@ export const Parameters = () => {
     }
     const [side, field] = id.split(".");
     if (side === "left" || side === "right") {
-      void update({ settings: { [side]: { ...settings[side], [field]: value } } });
+      void update({ settings: { [side]: { [field]: value } } });
       return;
     }
     void update({ settings: { [id]: value } });

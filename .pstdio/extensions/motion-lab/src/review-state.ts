@@ -1,4 +1,4 @@
-import { defaultProps, FPS, getStudy, type StudyId, type StudyProps } from "@pstdio/motion-studies";
+import { defaultProps, FPS, getStudy, type StudyId, type StudyProps, type Variant } from "@pstdio/motion-studies";
 
 export interface ReviewState {
   settings: StudyProps;
@@ -10,7 +10,7 @@ export interface ReviewState {
   startedAt: number;
 }
 export interface ReviewChange {
-  settings?: Partial<StudyProps>;
+  settings?: Partial<Omit<StudyProps, "left" | "right">> & { left?: Partial<Variant>; right?: Partial<Variant> };
   rate?: number;
   loop?: boolean;
   loopRange?: [number, number];
@@ -50,7 +50,13 @@ export const applyReviewChange = (current: ReviewState, change: ReviewChange, no
     ...position,
     ...change,
     frame: Math.max(0, Math.min(getStudy(study).duration * FPS - 1, change.frame ?? position.frame)),
-    settings: { ...current.settings, ...change.settings, study },
+    settings: {
+      ...current.settings,
+      ...change.settings,
+      left: { ...current.settings.left, ...change.settings?.left },
+      right: { ...current.settings.right, ...change.settings?.right },
+      study,
+    },
     startedAt: now,
   };
 };

@@ -43,3 +43,11 @@ describe("review playback", () => {
     expect(changed.settings.theme).toBe("dark");
   });
 });
+
+test("merges independent variant edits into the latest review", () => {
+  const initial = initialState("loaders");
+  const preset = applyReviewChange(initial, { settings: { right: { preset: "slower" } } }, 1000);
+  const loader = applyReviewChange(preset, { settings: { right: { loader: "contours" } } }, 1001);
+  expect(loader.settings.right).toEqual({ ...initial.settings.right, preset: "slower", loader: "contours" });
+  expect(loader.settings.left).toEqual(initial.settings.left);
+});

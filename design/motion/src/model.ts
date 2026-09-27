@@ -155,13 +155,13 @@ export const studies: StudyDefinition[] = [
     id: "tabs",
     title: "Tab closing and sizing",
     description:
-      "Close three neighboring tabs at the same pointer position. Each gap closes over 120 ms without resizing the remaining tabs. At 4s, a crowded strip shrinks to the 48 px minimum.",
+      "Close three neighboring tabs at the same pointer position. Each gap closes over 120 ms without resizing the remaining tabs. At 4s, a crowded strip shrinks to 96 px so the icon, filename suffix, and close button still fit. The 48 px design minimum is a floor, not a requirement to hide content.",
     duration: 7,
     markers: [
       { at: 1, label: "Close tab" },
       { at: 1.5, label: "Close next" },
       { at: 2, label: "Close next" },
-      { at: 4, label: "48 px minimum" },
+      { at: 4, label: "Crowded strip" },
     ],
   },
   {

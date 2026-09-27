@@ -10,7 +10,6 @@ const closeTimes = [Infinity, 1, 1.5, 2, Infinity];
 const StudyTab = (props: { name: string; width: number; selected: boolean }) => {
   const { name, width, selected } = props;
   const styles = useSlotRecipe({ key: "tabs" })({ size: "sm" });
-  const narrow = width < 80;
   return (
     <HStack
       css={[styles.root, styles.trigger]}
@@ -19,21 +18,19 @@ const StudyTab = (props: { name: string; width: number; selected: boolean }) => 
       minW="48px"
       gap="2xs"
       flexShrink="0"
+      title={name}
+      aria-label={name}
     >
-      {!narrow && (
-        <Box flexShrink="0">
-          <FileText size={14} />
-        </Box>
-      )}
+      <Box flexShrink="0">
+        <FileText size={14} />
+      </Box>
       <HStack gap="0" minW="0" flex="1" overflow="hidden">
         <Text textStyle="label/S/regular" truncate>
           {name.slice(0, -4)}
         </Text>
-        {!narrow && (
-          <Text textStyle="label/S/regular" flexShrink="0">
-            {name.slice(-4)}
-          </Text>
-        )}
+        <Text textStyle="label/S/regular" flexShrink="0">
+          {name.slice(-4)}
+        </Text>
       </HStack>
       <Box flexShrink="0">
         <X size={12} />
@@ -45,7 +42,7 @@ const StudyTab = (props: { name: string; width: number; selected: boolean }) => 
 export const Tabs = (props: SceneProps) => {
   const { time } = props;
   const crowded = time >= 4;
-  const width = track(time, [{ at: 4, value: 48, duration: duration(props, timings.tabClose, true) }], 160);
+  const width = track(time, [{ at: 4, value: 96, duration: duration(props, timings.tabClose, true) }], 160);
   const tabs = crowded ? Array.from({ length: 25 }, (_, i) => `file-${i + 1}.ts`) : names;
   return (
     <WorkbenchFrame>

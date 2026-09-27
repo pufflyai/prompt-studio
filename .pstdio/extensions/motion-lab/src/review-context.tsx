@@ -8,7 +8,8 @@ import {
 } from "@pstdio/sdk/extensions";
 import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { commands } from "./commands";
-import { applyReviewChange, initialState, playbackPosition, type ReviewChange, type ReviewState } from "./review-state";
+import { createReviewSession } from "./review-session";
+import { initialState, playbackPosition, type ReviewChange, type ReviewState } from "./review-state";
 
 export interface ReviewProps {
   resource?: ResourceRef;
@@ -37,54 +38,36 @@ export const useReviewConnection = (host: GuestHost, propsStore: PropsStore<Revi
   const [state, setState] = useState<ReviewState>(() => initialState(study));
   const [readyStudy, setReadyStudy] = useState<StudyId>();
   const [error, setError] = useState<string>();
-  const client = createWebviewClient<typeof commands>(host);
-  const writes = useRef({ queue: Promise.resolve(), pending: 0 });
+  const session = useRef<ReturnType<typeof createReviewSession> | null>(null);
   useEffect(() => {
-    writes.current = { queue: Promise.resolve(), pending: 0 };
-    let active = true;
-    let lastTick = propsStore.get().lastCommand?.tick ?? 0;
-    const accept = (value: unknown) => {
-      const snapshot = value as ReviewState;
-      if (active && snapshot?.settings?.study === study && writes.current.pending === 0) {
+    const client = createWebviewClient<typeof commands>(host);
+    setError(undefined);
+    const connection = createReviewSession(initialState(study), {
+      read: () => client.commands["review.read"]({ study }),
+      write: (change) => client.commands["review.update"]({ study, change }),
+      onState: (snapshot) => {
         setState(snapshot);
         setReadyStudy(study);
-      }
-    };
+      },
+      onError: (reason) => setError(String(reason)),
+    });
+    session.current = connection;
+    let lastTick = propsStore.get().lastCommand?.tick ?? 0;
     const unsubscribe = propsStore.subscribe((next) => {
       const event = next.lastCommand;
       if (!event || event.tick <= lastTick) return;
       lastTick = event.tick;
       if (event.extensionId === host.extensionId && event.commandId.endsWith(".review.update") && event.outcome.ok)
-        accept(event.outcome.value);
+        void connection.refresh();
     });
-    void createWebviewClient<typeof commands>(host)
-      .commands["review.read"]({ study })
-      .then(accept)
-      .catch((reason) => {
-        if (active) setError(String(reason));
-      });
+    void connection.refresh();
     return () => {
-      active = false;
+      connection.dispose();
       unsubscribe();
     };
   }, [host, propsStore, study]);
-  const preview = (change: ReviewChange) => setState((current) => applyReviewChange(current, change, Date.now()));
-  const update = (change: ReviewChange) => {
-    const pending = writes.current;
-    pending.pending += 1;
-    preview(change);
-    pending.queue = pending.queue.then(async () => {
-      try {
-        const result = await client.commands["review.update"]({ study, change });
-        if (pending.pending === 1) setState((current) => (current.settings.study === study ? result : current));
-      } catch (reason) {
-        setError(String(reason));
-      } finally {
-        pending.pending -= 1;
-      }
-    });
-    return pending.queue;
-  };
+  const preview = (change: ReviewChange) => session.current?.preview(change);
+  const update = (change: ReviewChange) => session.current?.update(change) ?? Promise.resolve();
   return { state, preview, update, ready: readyStudy === study, error };
 };
 export const usePlaybackPosition = (state: ReviewState) => {

@@ -88,7 +88,7 @@ All Remotion dependencies are pinned to **4.0.529**. Upgrade them together. The 
 | `panels` | Side Panel opens/closes/reverses; divider drags; Secondary Panel terminal opens/closes. Open: 180 ms; close: 140 ms. | Fixed content geometry during reveals; continuous reversal; immediate divider tracking. |
 | `surfaces` | Resource menu, delayed tooltip, dialog, field change inside open dialog, quick reversal. Menu/tooltip: 100 ms / 4 px in, 75 ms out; tooltip delay: 300 ms. Dialog: 140 ms / 6 px in with backdrop fade. | No content-change entrance replay; tooltip does not cover its trigger. |
 | `rows` | Create a folder among files, then cancel another creation. Space: 140 ms, then 80 ms fade; removal: 120 ms. | Disabled empty-name action; neighboring rows move together. |
-| `tabs` | Close three neighboring tabs, then crowd the strip. Tab gap: 120 ms. | Stable next close target; 48 px minimum tabs. |
+| `tabs` | Close three neighboring tabs, then crowd the strip. Tab gap: 120 ms. | Stable next close target; Icons, middle-truncated names with visible suffixes, and close buttons stay visible. This fixture uses 96 px tabs, above the 48 px minimum. |
 | `navigation-tree` | Expand Workspaces, expand a nested workspace, select a session, hover actions, collapse and reverse halfway. Expansion: 160 ms; collapse: 120 ms; hover exit delay: 150 ms. | Shared TreeList rows and section headers; readable indentation; continuous sibling movement; immediate selection. |
 
 Entrances ease out; exits ease in. There is no bounce or overshoot. These timings are hypotheses, not measurements of the reference products.
