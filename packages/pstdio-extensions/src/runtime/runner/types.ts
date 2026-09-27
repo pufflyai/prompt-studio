@@ -42,7 +42,22 @@ export const DEFAULT_MAX_COMMAND_DEPTH = 10;
  */
 export type ScopedHostApis = Pick<
   CommandRunnerEnvironment,
-  "sessions" | "workspaces" | "connections" | "process" | "terminal"
+  | "sessions"
+  | "workspaces"
+  | "connections"
+  | "process"
+  | "terminal"
+  | "storage"
+  | "artifacts"
+  | "projectFiles"
+  | "repoFiles"
+  | "workspaceFiles"
+  | "packageFiles"
+  | "extensionFiles"
+  | "files"
+  | "skills"
+  | "repos"
+  | "settings"
 >;
 
 export interface CommandRunnerEnvironment {

@@ -3,7 +3,7 @@ import type {
   ExtensionSessionsApi,
   ResourceAnchor,
 } from "pstdio-api-contracts/extension-kernel";
-import type { CommandRunnerEnvironment } from "pstdio-extensions";
+import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { emitActivityEvent } from "../../activity/activity-events";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
 import { resolveSessionCwd } from "../../sessions/resolve-session-cwd";
@@ -18,6 +18,7 @@ export const createSessionsApi = (
   deps: ExtensionsRouteDeps,
   input: { projectId: string; project: ExtensionProjectContext; signal?: AbortSignal },
 ): CommandRunnerEnvironment["sessions"] => {
+  const read = createReadBoundary(input.signal);
   const getProjectSession = async (id: string) => {
     const session = await deps.sessionService.get(id);
     return session?.project_id === input.projectId ? session : null;
@@ -28,9 +29,9 @@ export const createSessionsApi = (
     return session;
   };
   const getProjectWorkspace = async (id: string) => {
-    const byId = await deps.workspaceService.get(id);
+    const byId = await read(() => deps.workspaceService.get(id));
     if (byId?.project_id === input.projectId) return byId;
-    return deps.workspaceService.getByShorthand(input.projectId, id);
+    return read(() => deps.workspaceService.getByShorthand(input.projectId, id));
   };
   const requireProjectWorkspace = async (id: string) => {
     const workspace = await getProjectWorkspace(id);
@@ -43,9 +44,9 @@ export const createSessionsApi = (
   };
 
   return {
-    get: async (id) => toExtensionSession(await getProjectSession(id)),
+    get: async (id) => toExtensionSession(await read(() => getProjectSession(id))),
     list: async () => {
-      const sessions = await deps.sessionService.list(input.projectId);
+      const sessions = await read(() => deps.sessionService.list(input.projectId));
       return sessions.map((session) => ({
         id: session.id,
         title: session.title,
@@ -58,7 +59,7 @@ export const createSessionsApi = (
     },
     listByWorkspace: async (workspaceId) => {
       const workspace = await requireProjectWorkspace(workspaceId);
-      const sessions = await deps.workspaceSessionService.listByWorkspace(workspace.id);
+      const sessions = await read(() => deps.workspaceSessionService.listByWorkspace(workspace.id));
       return sessions.map((session) => ({
         id: session.id,
         title: session.title,
@@ -73,7 +74,7 @@ export const createSessionsApi = (
       const workspace = sessionInput.workspaceId ? await requireProjectWorkspace(sessionInput.workspaceId) : null;
       const repo = sessionInput.repoId ? await getProjectRepo(sessionInput.repoId) : null;
       if (sessionInput.repoId && !repo) throw new Error(`Repo not found: ${sessionInput.repoId}`);
-      if (sessionInput.originalSessionId) await requireProjectSession(sessionInput.originalSessionId);
+      if (sessionInput.originalSessionId) await read(() => requireProjectSession(sessionInput.originalSessionId!));
       const repoPath = repo?.path;
       const project = await deps.projectService.get(input.projectId);
       if (!project) throw new Error(`Project not found: ${input.projectId}`);
@@ -134,7 +135,7 @@ export const createSessionsApi = (
     },
     followup: async (followupInput) => {
       input.signal?.throwIfAborted();
-      const session = await requireProjectSession(followupInput.sessionId);
+      const session = await read(() => requireProjectSession(followupInput.sessionId));
       const prompt = resolveExtensionPrompt(followupInput);
       const attachments = await resolveSessionAttachments(deps, input.projectId, followupInput.attachments);
       await createSessionScheduler(deps).startOrQueueExisting({

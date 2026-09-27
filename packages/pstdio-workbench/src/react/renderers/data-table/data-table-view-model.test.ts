@@ -4,12 +4,19 @@ import type { DataTableRendererRow } from "../../../core";
 import {
   buildDataTableRendererData,
   resolveDataTableRendererColumns,
+  resolveDataTableRendererQueryKey,
   resolveDataTableRendererResourceActions,
   resolveDataTableRendererSelectionActions,
   resolveDataTableRendererStorageKey,
 } from "./data-table-view-model";
 
 describe("data table renderer view model", () => {
+  test("starts a new read when a declared context value changes, and only then", () => {
+    const table = { id: "workspaces", contextKeys: ["project.id"] };
+    const key = (values: Record<string, unknown>) => resolveDataTableRendererQueryKey(table, undefined, "home", values);
+    expect(key({ "project.id": "one" })).not.toBe(key({ "project.id": "two" }));
+    expect(key({ "project.id": "one", theme: "dark" })).toBe(key({ "project.id": "one", theme: "light" }));
+  });
   test("prefers query columns, then contribution columns, then inferred value keys", () => {
     const rows = [{ id: "one", values: { name: "API", score: 92 } }];
     expect(resolveDataTableRendererColumns({ rows, columns: [{ id: "score" }] }, [{ id: "name" }])).toEqual([

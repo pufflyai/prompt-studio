@@ -1,6 +1,6 @@
 import { join, resolve } from "node:path";
 import type { RepoContext } from "pstdio-api-contracts/extension-kernel";
-import type { CommandRunnerEnvironment } from "pstdio-extensions";
+import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 
 type WorkspaceRepoProjection = {
@@ -13,7 +13,11 @@ const nonEmptyString = (value: unknown) => (typeof value === "string" && value.t
 export const resolveWorkspaceRepoId = (workspace: WorkspaceRepoProjection) =>
   nonEmptyString(workspace.provider_params_json?.repo_id) ?? nonEmptyString(workspace.provider_ref_json?.data?.repo_id);
 
-export const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRunnerEnvironment["repos"] => {
+export const createReposApi = (
+  deps: ExtensionsRouteDeps,
+  projectId: string,
+  signal?: AbortSignal,
+): CommandRunnerEnvironment["repos"] => {
   const toContext = (repo: { id: string; path: string }, role?: "default") => ({
     projectId,
     repoId: repo.id,
@@ -23,20 +27,24 @@ export const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): Co
 
   return {
     async list() {
-      const repos = await deps.repoService.listByProject(projectId);
+      const repos = await createReadBoundary(signal)(() => deps.repoService.listByProject(projectId));
       return repos.map((repo, index) => toContext(repo, index === 0 ? "default" : undefined));
     },
     async get(repoId) {
-      const repo = (await deps.repoService.listByProject(projectId)).find((candidate) => candidate.id === repoId);
+      const repo = (await createReadBoundary(signal)(() => deps.repoService.listByProject(projectId))).find(
+        (candidate) => candidate.id === repoId,
+      );
       if (!repo) throw new Error(`Repo not found: ${repoId}`);
       return toContext(repo);
     },
     async getDefault() {
-      const [repo] = await deps.repoService.listByProject(projectId);
+      const [repo] = await createReadBoundary(signal)(() => deps.repoService.listByProject(projectId));
       return repo ? toContext(repo, "default") : undefined;
     },
     async resolvePath(repoId, relativePath) {
-      const repo = (await deps.repoService.listByProject(projectId)).find((candidate) => candidate.id === repoId);
+      const repo = (await createReadBoundary(signal)(() => deps.repoService.listByProject(projectId))).find(
+        (candidate) => candidate.id === repoId,
+      );
       if (!repo) throw new Error(`Repo not found: ${repoId}`);
       return join(repo.path, relativePath);
     },
@@ -48,13 +56,18 @@ export const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): Co
 // against forged execute requests pointing outside it. A worktree-backed workspace is a
 // legitimate working tree of the registered repo, so its own path is honored only when
 // it matches a known workspace for the project — otherwise we fall back to the repo root.
-export const resolveRegisteredRepoPath = async (deps: ExtensionsRouteDeps, projectId: string, repo: RepoContext) => {
-  const repos = await deps.repoService.listByProject(projectId);
+export const resolveRegisteredRepoPath = async (
+  deps: ExtensionsRouteDeps,
+  projectId: string,
+  repo: RepoContext,
+  signal?: AbortSignal,
+) => {
+  const repos = await createReadBoundary(signal)(() => deps.repoService.listByProject(projectId));
   const registered = repos.find((candidate) => candidate.id === repo.repoId);
   if (!registered) throw new Error(`Repo ${repo.repoId} is not registered for project ${projectId}`);
   if (resolve(repo.path) === resolve(registered.path)) return registered.path;
 
-  const workspaces = await deps.workspaceService.list(projectId);
+  const workspaces = await createReadBoundary(signal)(() => deps.workspaceService.list(projectId));
   const matched = workspaces.find(
     (workspace) =>
       resolveWorkspaceRepoId(workspace) === repo.repoId &&

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 
@@ -26,6 +26,7 @@ export const createExtensionBlobsApi = (
   input: {
     extensionInstanceId: string;
     projectId: string;
+    signal?: AbortSignal;
     scopeType: string;
     scopeId: string | null;
   },
@@ -44,23 +45,28 @@ export const createExtensionBlobsApi = (
     return toExtensionBlobRef(input.projectId, input.extensionInstanceId, file);
   },
   async get(id) {
+    input.signal?.throwIfAborted();
     const file = await deps.extensionFileService.getOwnedFile({
       project_id: input.projectId,
       extension_instance_id: input.extensionInstanceId,
       file_id: id,
     });
+    input.signal?.throwIfAborted();
     return file ? toExtensionBlobRef(input.projectId, input.extensionInstanceId, file) : undefined;
   },
   async getBytes(id) {
+    input.signal?.throwIfAborted();
     const file = await deps.extensionFileService.getOwnedFile({
       project_id: input.projectId,
       extension_instance_id: input.extensionInstanceId,
       file_id: id,
     });
     if (!file) throw new Error(`Extension file not found: ${id}`);
-    return new Uint8Array(readFileSync(file.storage_path));
+    input.signal?.throwIfAborted();
+    return new Uint8Array(await readFile(file.storage_path, { signal: input.signal }));
   },
   async list() {
+    input.signal?.throwIfAborted();
     const files = await deps.extensionFileService.list({
       project_id: input.projectId,
       extension_instance_id: input.extensionInstanceId,
@@ -68,6 +74,7 @@ export const createExtensionBlobsApi = (
       scope_id: input.scopeId,
     });
     if (!files) throw new Error(`Extension instance not found: ${input.extensionInstanceId}`);
+    input.signal?.throwIfAborted();
     return files.map((file) => toExtensionBlobRef(input.projectId, input.extensionInstanceId, file));
   },
   async delete(id) {

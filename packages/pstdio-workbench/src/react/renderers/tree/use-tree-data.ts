@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { resourceKey } from "@pstdio/sdk/extensions";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
-import {
-  expandDefaultTreeSections,
-  type LoadedTreeData,
-  loadExpandedTreeChildren,
-  loadTreeData,
-} from "./tree-view-load";
+import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { useRendererRead } from "../use-renderer-read";
+import { expandDefaultTreeSections, loadExpandedTreeChildren, loadTreeData } from "./tree-view-load";
 
 export const useTreeData = (
   workbench: WorkbenchCore,
@@ -13,69 +11,79 @@ export const useTreeData = (
   resource?: ResourceRef,
   viewId?: string,
   filter?: string,
+  ownerKey = JSON.stringify(["tree", treeViewId, resourceKey(resource)]),
 ) => {
-  const [data, setData] = useState<(LoadedTreeData & { treeViewId: string; filter?: string }) | null>(null);
-  const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
-  const [error, setError] = useState<string | null>(null);
-  const loadRevisionRef = useRef(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId);
-
-    const loadTree = () => {
-      const loadRevision = ++loadRevisionRef.current;
-      setError(null);
-      void loadTreeData(getWorkbenchRenderers(workbench), treeViewId, { resource, viewId, filter })
-        .then(async (data) => {
-          if (cancelled || loadRevision !== loadRevisionRef.current) return;
-          const treeStillRegistered = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
-          const children =
-            data && treeStillRegistered
-              ? await loadExpandedTreeChildren(
-                  getWorkbenchRenderers(workbench),
-                  treeViewId,
-                  data,
-                  getWorkbenchRenderers(workbench).getTreeState(treeViewId).expandedNodeIds,
-                  { resource, viewId, filter },
-                )
-              : {};
-          if (cancelled || loadRevision !== loadRevisionRef.current) return;
-          setData({
-            header: data?.header ?? [],
-            body: data?.body ?? [],
-            footer: data?.footer ?? [],
-            treeViewId,
-            filter,
-          });
-          setChildrenByNodeId(children);
-        })
-        .catch((loadError) => {
-          if (cancelled || loadRevision !== loadRevisionRef.current) return;
-          setError(loadError instanceof Error ? loadError.message : "The file tree could not be loaded.");
-        });
-    };
-
-    loadTree();
-    const disposable = getWorkbenchRenderers(workbench).onDidRefresh((event) => {
-      if (event.treeId === treeViewId) loadTree();
+  const trees = getWorkbenchRenderers(workbench);
+  const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
+  const project = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
+  const activePage = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
+  const getPageOwner = () => (activePage ? workbench.navigationTrees.resolveOwner("page", activePage) : undefined);
+  const pageOwner = useSyncExternalStore(
+    (listener) => {
+      const subscription = workbench.navigationTrees.onDidChange(listener);
+      return () => subscription.dispose();
+    },
+    getPageOwner,
+    getPageOwner,
+  );
+  // Shell trees also query the current mode and resource. Aggregate pages in
+  // the same scope share navigation, so their global links stay mounted.
+  const queryKey = JSON.stringify([
+    treeViewId,
+    resourceKey(resource),
+    viewId,
+    filter,
+    project,
+    mode,
+    pageOwner,
+    resourceKey(location?.resource),
+  ]);
+  // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
+  useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
+  const [expandedChildren, setExpandedChildren] = useState<{ queryKey: string; byNodeId: Record<string, TreeNode[]> }>({
+    queryKey,
+    byNodeId: {},
+  });
+  const read = useRendererRead({
+    workbench,
+    ownerKey,
+    queryKey,
+    load: async (signal) => {
+      const ctx = { resource, viewId, filter, signal };
+      const data = await loadTreeData(trees, treeViewId, ctx);
+      signal.throwIfAborted();
+      const children =
+        data && trees.getTreeRenderer(treeViewId)
+          ? await loadExpandedTreeChildren(trees, treeViewId, data, trees.getTreeState(treeViewId).expandedNodeIds, ctx)
+          : {};
+      return { header: data?.header ?? [], body: data?.body ?? [], footer: data?.footer ?? [], children };
+    },
+    subscribe: (refresh) =>
+      trees.onDidRefresh((event) => {
+        if (event.treeId === treeViewId) refresh();
+      }),
+  });
+  // Expanding one folder loads only its children. The next full read already includes them.
+  const loadChildren = (node: TreeNode) => {
+    void trees.getChildren(treeViewId, node, { resource, viewId, filter }).then((children) => {
+      setExpandedChildren((current) => ({
+        queryKey,
+        byNodeId: { ...(current.queryKey === queryKey ? current.byNodeId : {}), [node.id]: children },
+      }));
     });
-    return () => {
-      cancelled = true;
-      disposable.dispose();
-    };
-  }, [filter, resource, viewId, workbench, treeViewId]);
-
-  // Refreshes preserve the current tree, but a different query must not expose
-  // stale rows that can disappear in the middle of a click.
-  const loading = !error && (data?.treeViewId !== treeViewId || data?.filter !== filter);
+  };
   return {
-    body: data?.body ?? [],
-    childrenByNodeId,
-    error,
-    footer: data?.footer ?? [],
-    header: data?.header ?? [],
-    loading,
-    setChildrenByNodeId,
+    body: read.value?.body ?? [],
+    header: read.value?.header ?? [],
+    footer: read.value?.footer ?? [],
+    childrenByNodeId: {
+      ...(expandedChildren.queryKey === queryKey ? expandedChildren.byNodeId : {}),
+      ...read.value?.children,
+    },
+    loadChildren,
+    error: read.error ?? null,
+    loading: read.loading && !read.value,
+    retry: read.retry,
   };
 };

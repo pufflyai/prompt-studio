@@ -134,11 +134,15 @@ export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource
     },
   });
   await refreshWorkspaceFiles(ctx, workspaceId);
-  const selectedPath = workspaceMetadataString(resource, "workspaceFilePath");
+  // Tree actions can outlive the query that created them. Selection belongs to
+  // the current page, not the resource captured by that earlier query.
+  const selected = ctx.getPrimaryResource();
+  const selectedPath =
+    workspaceIdOf(selected) === workspaceId ? workspaceMetadataString(selected, "workspaceFilePath") : undefined;
   const deletedSelection = selectedPath === path || (type === "directory" && selectedPath?.startsWith(`${path}/`));
   if (deletedSelection) {
     ctx.treeViews.setSelectedNode(dashboardWidgetIds.workspaceFileTree, undefined);
-    openWorkspacesPage(ctx, workspaceRootResource(resource));
+    openWorkspacesPage(ctx, workspaceRootResource(selected!));
   }
   ctx.notifications.show({ level: "success", title: `Deleted ${path}` });
 };
@@ -188,7 +192,7 @@ const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
     body: {
       kind: "file",
       resourceKind: "workspace",
-      load: async (resource) => {
+      load: async (resource, signal) => {
         const workspaceId = workspaceIdOf(resource);
         const path = workspaceMetadataString(resource, "workspaceFilePath");
         const unavailable = workspaceId ? workspaceFilesUnavailableState(resource) : undefined;
@@ -199,7 +203,7 @@ const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
             emptyState: { title: "Select a file", description: "Choose a file from the Files panel." },
           };
         }
-        const file = await dashboardQueryClient.fetchQuery(workspaceFileQueryOptions(workspaceId, path));
+        const file = await getApiClient().workspaces.readFile(workspaceId, path, { signal });
         return {
           fileName: file.file_name,
           filePath: file.path,

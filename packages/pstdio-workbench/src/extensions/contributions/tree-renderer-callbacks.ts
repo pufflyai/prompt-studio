@@ -48,6 +48,7 @@ export const executeCallback = async (
   record: ExtensionTreeRendererRecord,
   commandId: string,
   params: Record<string, unknown>,
+  signal?: AbortSignal,
 ) => {
   const renderer = params.renderer as
     | {
@@ -58,6 +59,7 @@ export const executeCallback = async (
   const resource = renderer?.resource;
   return executeWorkbenchExtensionCommand(input, commandId, {
     params,
+    signal,
     resource,
     slot: slotContext({
       modeId: renderer?.modeId,

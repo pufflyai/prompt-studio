@@ -1,21 +1,17 @@
 import type {
   ResourceRef,
   TreeAction,
-  TreeContext,
   TreeNode,
+  TreeQueryContext,
   TreeViewSection,
   WorkbenchModuleContext,
 } from "@pstdio/workbench";
 import { createElement } from "react";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { apiRequest, getApiClient } from "@/lib/api";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { WorkspaceFileChangeBadge, WorkspaceFileTreeIcon } from "./components/workspace-file-tree-presentation";
 import { resolveWorkspaceDiffRequest } from "./components/workspace-widget-state";
-import {
-  workspaceDiffFilePath,
-  workspaceDiffFilesQueryOptions,
-  workspaceFilesQueryOptions,
-} from "./data/workspace-queries";
+import { type WorkspaceDiffFilesResponse, workspaceDiffFilePath } from "./data/workspace-queries";
 import {
   absoluteWorkspaceEntryPath,
   workspaceDeleteResource,
@@ -214,7 +210,7 @@ const unsupportedSection = (title: string, description: string): TreeViewSection
 
 export const loadWorkspaceFileEntries = async (
   ctx: WorkbenchModuleContext,
-  context: TreeContext,
+  context: TreeQueryContext,
   actions: WorkspaceFileTreeActions,
   pendingCreation: { workspaceId: string; parentPath: string; type: WorkspaceEntryCreationType } | undefined,
   path = "",
@@ -226,19 +222,25 @@ export const loadWorkspaceFileEntries = async (
   if (unavailable) return unsupportedSection(unavailable.title, unavailable.description);
   const diffRequest = resolveWorkspaceDiffRequest({ resourceId: resource.id, metadata: resource.metadata });
 
-  const [response, diffSummary, revealInFinder] = await Promise.all([
-    dashboardQueryClient.fetchQuery(
-      workspaceFilesQueryOptions(workspaceId, {
-        ...(path ? { path } : {}),
-        ...(context.filter ? { query: context.filter } : {}),
-        limit: 500,
-      }),
-    ),
-    diffRequest
-      ? dashboardQueryClient.fetchQuery(workspaceDiffFilesQueryOptions(diffRequest.workspaceId, diffRequest.mode))
-      : Promise.resolve(null),
-    finderAvailable(),
-  ]);
+  context.signal?.throwIfAborted();
+  const response = await getApiClient().workspaces.listFiles(
+    workspaceId,
+    {
+      ...(path ? { path } : {}),
+      ...(context.filter ? { query: context.filter } : {}),
+      limit: 500,
+    },
+    { signal: context.signal },
+  );
+  context.signal?.throwIfAborted();
+  const diffSummary = diffRequest
+    ? await apiRequest<WorkspaceDiffFilesResponse | null>(
+        `/v1/workspaces/${diffRequest.workspaceId}/diff-files?mode=${diffRequest.mode}`,
+        { allowNotFound: true, signal: context.signal },
+      )
+    : null;
+  context.signal?.throwIfAborted();
+  const revealInFinder = await finderAvailable();
   const changeByPath = new Map(diffSummary?.files.map((file) => [workspaceDiffFilePath(file), file.change]));
   const nodes = response.entries.map((entry) =>
     fileNode(ctx, resource, entry, actions, { change: changeByPath.get(entry.path), revealInFinder }),

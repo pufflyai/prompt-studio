@@ -4,7 +4,7 @@ import {
   type WorkspaceProviderRef,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
-import type { CommandRunnerEnvironment } from "pstdio-extensions";
+import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import { projectLegacyWorktreeProvider } from "../../workspaces/legacy-worktree-provider";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
@@ -86,6 +86,7 @@ export const createWorkspacesApi = (
   input: { projectId: string; signal?: AbortSignal },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
 ): CommandRunnerEnvironment["workspaces"] => {
+  const read = createReadBoundary(input.signal);
   const getScopedWorkspace = async (id: string) => {
     const workspace = await deps.workspaceService.get(id);
     return workspace?.project_id === input.projectId ? workspace : null;
@@ -95,23 +96,35 @@ export const createWorkspacesApi = (
     if (!workspace) throw new Error(`Workspace not found: ${id}`);
     return workspace;
   };
-  const projectWorkspace = async (workspace: WorkspaceRecord) => {
-    const target = workspace.execution_kind === "local" ? await resolveWorkspaceLocation(deps, workspace) : undefined;
+  const projectWorkspace = async (workspace: WorkspaceRecord, signal?: AbortSignal) => {
+    const project = createReadBoundary(signal);
+    const target =
+      workspace.execution_kind === "local" ? await project(() => resolveWorkspaceLocation(deps, workspace)) : undefined;
     return {
-      ...(await projectLegacyWorktreeProvider(deps, workspace)),
+      ...(await project(() => projectLegacyWorktreeProvider(deps, workspace))),
       root_path: target?.root ?? null,
     } as ExtensionWorkspace;
   };
   const projectOptionalWorkspace = async (workspace: WorkspaceRecord | null) =>
-    workspace ? projectWorkspace(workspace) : null;
+    workspace ? projectWorkspace(workspace, input.signal) : null;
 
   return {
-    listProviders: () => listWorkspaceProviders(deps, input.projectId),
-    getDefault: async () => projectOptionalWorkspace(await deps.workspaceService.getDefault(input.projectId)),
-    list: async () => Promise.all((await deps.workspaceService.list(input.projectId)).map(projectWorkspace)),
-    get: async (id) => projectOptionalWorkspace(await getScopedWorkspace(id)),
+    listProviders: () => read(() => listWorkspaceProviders(deps, input.projectId)),
+    getDefault: async () =>
+      read(async () => projectOptionalWorkspace(await read(() => deps.workspaceService.getDefault(input.projectId)))),
+    list: async () =>
+      read(async () =>
+        Promise.all(
+          (await read(() => deps.workspaceService.list(input.projectId))).map((workspace) =>
+            projectWorkspace(workspace, input.signal),
+          ),
+        ),
+      ),
+    get: async (id) => read(async () => projectOptionalWorkspace(await read(() => getScopedWorkspace(id)))),
     getByShorthand: async (shorthand) =>
-      projectOptionalWorkspace(await deps.workspaceService.getByShorthand(input.projectId, shorthand)),
+      read(async () =>
+        projectOptionalWorkspace(await read(() => deps.workspaceService.getByShorthand(input.projectId, shorthand))),
+      ),
     create: async (workspaceInput) => {
       input.signal?.throwIfAborted();
       const workspace = await createExtensionWorkspace(
@@ -131,8 +144,10 @@ export const createWorkspacesApi = (
       await deps.workspaceService.removeAnchors(id, refs);
     },
     resolve: async (id) => {
-      const workspace = await projectLegacyWorktreeProvider(deps, await requireScopedWorkspace(id));
-      const localTarget = await resolveWorkspaceExecutionTarget(deps, id);
+      const workspace = await read(async () =>
+        projectLegacyWorktreeProvider(deps, await read(() => requireScopedWorkspace(id))),
+      );
+      const localTarget = await read(() => resolveWorkspaceExecutionTarget(deps, id));
       const providerRef = workspace.provider_ref_json as WorkspaceProviderRef | null;
       if (workspace.execution_kind === "remote" && !providerRef) {
         throw new Error(`Workspace provider reference not found: ${id}`);

@@ -10,16 +10,19 @@ describe("createKanbanRendererStoryModule", () => {
 
     const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer(kanbanRendererStoryRendererId);
     const rows = await Promise.resolve(
-      renderer?.executeQuery({
-        settings: {
-          viewMode: "board",
-          columnGrouping: "status",
-          rowGrouping: "none",
-          ordering: { attributeId: "updated", direction: "desc" },
-          displayProperties: ["status"],
+      renderer?.executeQuery(
+        {
+          settings: {
+            viewMode: "board",
+            columnGrouping: "status",
+            rowGrouping: "none",
+            ordering: { attributeId: "updated", direction: "desc" },
+            displayProperties: ["status"],
+          },
+          filters: {},
         },
-        filters: {},
-      }) ?? [],
+        new AbortController().signal,
+      ) ?? [],
     );
 
     expect(renderer?.title).toBe("Rows");
@@ -36,16 +39,19 @@ describe("createKanbanRendererStoryModule", () => {
     renderer.onReorder?.("DR-8", "DR-2");
 
     const rows = await Promise.resolve(
-      renderer.executeQuery({
-        settings: {
-          viewMode: "board",
-          columnGrouping: "status",
-          rowGrouping: "none",
-          ordering: { attributeId: "manual", direction: "asc" },
-          displayProperties: ["status"],
+      renderer.executeQuery(
+        {
+          settings: {
+            viewMode: "board",
+            columnGrouping: "status",
+            rowGrouping: "none",
+            ordering: { attributeId: "manual", direction: "asc" },
+            displayProperties: ["status"],
+          },
+          filters: {},
         },
-        filters: {},
-      }),
+        new AbortController().signal,
+      ),
     );
 
     expect(rows.map((row) => row.id).slice(0, 3)).toEqual(["DR-1", "DR-8", "DR-2"]);

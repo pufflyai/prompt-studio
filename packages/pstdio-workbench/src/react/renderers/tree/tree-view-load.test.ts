@@ -6,6 +6,61 @@ const createTrees = () => {
   const rendererRegistry = createWorkbenchRendererRegistry();
   return createTreeRendererRegistry({ rendererRegistry });
 };
+test("expanded folder reads have at most four outstanding transports", async () => {
+  const trees = createTrees();
+  let active = 0;
+  let peak = 0;
+  const nodes = Array.from({ length: 20 }, (_, index) => ({ id: String(index), label: String(index) }));
+  trees.registerTreeRenderer({
+    id: "bounded",
+    title: "Folders",
+    getBody: () => [{ id: "root", nodes }],
+    getChildren: async () => {
+      active++;
+      peak = Math.max(peak, active);
+      await Bun.sleep(1);
+      active--;
+      return [];
+    },
+  });
+  const data = await loadTreeData(trees, "bounded");
+  await loadExpandedTreeChildren(
+    trees,
+    "bounded",
+    data!,
+    nodes.map((node) => node.id),
+  );
+  expect(peak).toBeLessThanOrEqual(4);
+  expect(active).toBe(0);
+});
+
+test("a failed section aborts its siblings and waits for them to settle", async () => {
+  const trees = createTrees();
+  const child = Promise.withResolvers<[]>();
+  let signal: AbortSignal | undefined;
+  let settled = false;
+  trees.registerTreeRenderer({
+    id: "failure",
+    title: "Folders",
+    getBody: () => {
+      throw new Error("failed");
+    },
+    getHeader: (ctx) => {
+      signal = ctx.signal;
+      return child.promise;
+    },
+    getChildren: () => [],
+  });
+  const loading = loadTreeData(trees, "failure").catch(() => {
+    settled = true;
+  });
+  await Bun.sleep(0);
+  expect(signal?.aborted).toBe(true);
+  expect(settled).toBe(false);
+  child.resolve([]);
+  await loading;
+  expect(settled).toBe(true);
+});
 describe("loadTreeData", () => {
   test("passes the widget resource to tree renderer loaders", async () => {
     const trees = createTrees();

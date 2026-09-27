@@ -1,6 +1,6 @@
 import type { CommandExecuteBody, JsonObject } from "pstdio-api-contracts";
 import type { RepoContext } from "pstdio-api-contracts/extension-kernel";
-import { createCommandRunner } from "pstdio-extensions";
+import { createCommandRunner, createReadBoundary } from "pstdio-extensions";
 import { resolveWorkspaceLocation } from "../workspaces/workspace-provider-execution-target";
 import { createCommandEnvironment } from "./command-environment";
 import { resolveWorkspaceRepoId } from "./command-environment/repos";
@@ -49,8 +49,10 @@ const resolveCommandInvocationContext = async (
   deps: ExtensionsRouteDeps,
   projectId: string,
   body: CommandExecuteBody,
+  signal?: AbortSignal,
 ) => {
-  const repos = body.repo ? await deps.repoService.listByProject(projectId) : [];
+  const read = createReadBoundary(signal);
+  const repos = body.repo ? await read(() => deps.repoService.listByProject(projectId)) : [];
   const registeredRepo = body.repo
     ? repos.find((candidate) => candidate.id === body.repo?.repoId && body.repo.projectId === projectId)
     : undefined;
@@ -64,8 +66,8 @@ const resolveCommandInvocationContext = async (
   }
 
   const workspace = body.workspaceId
-    ? await deps.workspaceService.get(body.workspaceId)
-    : await deps.workspaceService.getDefault(projectId);
+    ? await read(() => deps.workspaceService.get(body.workspaceId!))
+    : await read(() => deps.workspaceService.getDefault(projectId));
   if (!workspace && !body.workspaceId) return { repo: undefined, workspaceDir: undefined, workspaceId: undefined };
   if (!workspace || workspace.project_id !== projectId)
     throw new CommandWorkspaceNotFoundError(body.workspaceId ?? workspace!.id);
@@ -82,7 +84,7 @@ const resolveCommandInvocationContext = async (
         repoId: workspaceRepoId ?? body.repo?.repoId,
         executionKind: workspace.execution_kind,
       })
-    : (await resolveWorkspaceLocation(deps, workspace))?.root;
+    : (await read(() => resolveWorkspaceLocation(deps, workspace)))?.root;
   const repo: RepoContext | undefined = registeredRepo
     ? { projectId, repoId: registeredRepo.id, path: workspaceDir ?? registeredRepo.path, role: "workspace" }
     : undefined;
@@ -94,7 +96,7 @@ export const executeProjectExtensionCommand = async (
   input: { projectId: string; commandId: string; body: CommandExecuteBody; signal?: AbortSignal },
 ) => {
   const { body, commandId, projectId } = input;
-  const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+  const snapshot = await createReadBoundary(input.signal)(() => deps.extensionRuntimeCatalog.get(projectId));
   const command = snapshot.runtime.commands.find((candidate) => candidate.id === commandId);
   const handler = command ?? snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
   if (!handler) throw new ExtensionCommandNotFoundError(commandId);
@@ -112,7 +114,7 @@ export const executeProjectExtensionCommand = async (
     };
   }
 
-  const invocation = await resolveCommandInvocationContext(deps, projectId, body);
+  const invocation = await resolveCommandInvocationContext(deps, projectId, body, input.signal);
 
   const eventIds = new Set<string>();
   const runner = createCommandRunner(snapshot.runtime, {

@@ -117,7 +117,10 @@ describe("workspace file readiness", () => {
     if (state === "provisioning") writer.upsert({ ...row, initializing: true });
     else if (state !== "unknown") writer.upsert({ ...row, provider_state: state });
     const loadFile = () =>
-      fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(workbench.getPrimaryResource());
+      fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(
+        workbench.getPrimaryResource(),
+        new AbortController().signal,
+      );
 
     await loadFile();
     expect(requests).toEqual([]);
@@ -142,10 +145,13 @@ describe("workspace file readiness", () => {
 
     await expect(load()).rejects.toThrow(message);
     await expect(
-      fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load({
-        ...workbench.getPrimaryResource()!,
-        metadata: { ...workbench.getPrimaryResource()?.metadata, workspaceFilePath: "notes.md" },
-      }),
+      fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(
+        {
+          ...workbench.getPrimaryResource()!,
+          metadata: { ...workbench.getPrimaryResource()?.metadata, workspaceFilePath: "notes.md" },
+        },
+        new AbortController().signal,
+      ),
     ).rejects.toThrow(message);
     expect(requests).toEqual([]);
 

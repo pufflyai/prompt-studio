@@ -16,6 +16,7 @@ import {
 import {
   publishExtensionCommandEvent,
   subscribeToExtensionEventFeed,
+  subscribeToExtensionEventReset,
 } from "@/shared/extensions/extension-webview-broadcast";
 import { createDashboardSettingsWebviewFileCapabilities } from "@/shared/extensions/extension-webview-capabilities";
 import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
@@ -86,7 +87,11 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
       });
     }
     const kanban = createDashboardKanbanAdapter(input);
-    disposables.push(kanban.disposable);
+    disposables.push({
+      dispose: subscribeToExtensionEventReset(() => {
+        for (const view of input.metadata.views) input.ctx.views.refreshView(view.id);
+      }),
+    });
     disposables.push(
       registerWorkbenchExtensionContributions({
         createKeybindingWhenExpression: buildDashboardWorkbenchWhenExpression,
@@ -99,11 +104,12 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             projectId: input.projectId,
             webviewId,
           }),
-        executeCommand: async (commandId, body) => {
-          const rawResponse = await input.executeCommand(input.projectId, commandId, body);
+        executeCommand: async (commandId, body, signal) => {
+          const rawResponse = await input.executeCommand(input.projectId, commandId, body, signal);
+          signal?.throwIfAborted();
           const treeId = body.slot?.context?.treeId;
           const decoratedResponse =
-            typeof treeId === "string" ? await withWorkspaceDiffMetadata(rawResponse) : rawResponse;
+            typeof treeId === "string" ? await withWorkspaceDiffMetadata(rawResponse, undefined, signal) : rawResponse;
           const response = localizeDashboardExtensionCommandResponse(decoratedResponse);
           for (const notification of collectExtensionCommandNotifications(response)) {
             input.ctx.notifications.show({
@@ -122,7 +128,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
           }
           return response;
         },
-        kanbanAdapter: kanban.adapter,
+        kanbanAdapter: kanban,
         menuSlotsById: menuResult.menuSlotsById,
         menuTargetsById: dashboardMenuTargetsById,
         menuRegistrations: menuResult.registrations,
@@ -141,7 +147,9 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         settingsSectionId: "project",
         settingsSectionTitle: "Project",
         subscribeRefreshEvents: (listener) => {
-          const unsubscribe = subscribeToExtensionEventFeed(listener);
+          const unsubscribe = subscribeToExtensionEventFeed((event) => {
+            if (event.projectId === input.projectId) listener(event);
+          });
           return { dispose: unsubscribe };
         },
         workbench: input.ctx,

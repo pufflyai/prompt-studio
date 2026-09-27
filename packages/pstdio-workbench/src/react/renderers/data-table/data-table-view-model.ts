@@ -4,11 +4,25 @@ import type { DataTableSelectionAction, RowData } from "@pstdio/ui/data-table";
 import type { ReactNode } from "react";
 import type {
   DataTableRendererColumn,
+  DataTableRendererContribution,
   DataTableRendererQueryResult,
   DataTableRendererRow,
   DataTableRendererSelectionAction,
   WorkbenchPanelInstance,
 } from "../../../core";
+export const resolveDataTableRendererQueryKey = (
+  contribution: Pick<DataTableRendererContribution, "id" | "contextKeys">,
+  resource: WorkbenchPanelInstance["resource"],
+  modeId: string | undefined,
+  contextValues: Record<string, unknown>,
+) =>
+  JSON.stringify([
+    contribution.id,
+    resourceKey(resource),
+    modeId,
+    contribution.contextKeys?.map((key) => contextValues[key] ?? null),
+  ]);
+
 export const resolveDataTableRendererColumns = (
   result: DataTableRendererQueryResult,
   contributionColumns?: DataTableRendererColumn[],

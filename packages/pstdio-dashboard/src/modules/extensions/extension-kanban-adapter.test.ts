@@ -8,7 +8,7 @@ import { metadata, response } from "./module-test-fixtures";
 describe("dashboard Kanban adapter", () => {
   test("keeps non-workspace badge lists on the generic renderer", () => {
     const genericRender = () => "generic badge";
-    const { adapter, disposable } = createDashboardKanbanAdapter({
+    const adapter = createDashboardKanbanAdapter({
       ctx: createWorkbench(),
       executeCommand: async () => response,
       metadata: metadata as ResolvedWorkbenchExtensionMetadata,
@@ -32,12 +32,11 @@ describe("dashboard Kanban adapter", () => {
     });
 
     expect(rendered).toBe("generic badge");
-    disposable.dispose();
   });
 
   test("keeps mixed resource badge lists on the generic renderer", () => {
     const genericRender = () => "mixed badges";
-    const { adapter, disposable } = createDashboardKanbanAdapter({
+    const adapter = createDashboardKanbanAdapter({
       ctx: createWorkbench(),
       executeCommand: async () => response,
       metadata: metadata as ResolvedWorkbenchExtensionMetadata,
@@ -64,6 +63,5 @@ describe("dashboard Kanban adapter", () => {
     });
 
     expect(rendered).toBe("mixed badges");
-    disposable.dispose();
   });
 });

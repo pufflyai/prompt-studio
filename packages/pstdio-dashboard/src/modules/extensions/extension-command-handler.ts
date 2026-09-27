@@ -13,6 +13,7 @@ export type ExecuteDashboardExtensionCommand = (
   projectId: string,
   commandId: string,
   body: unknown,
+  signal?: AbortSignal,
 ) => Promise<CommandExecuteResponse>;
 
 export type UploadDashboardExtensionCommandFile = (

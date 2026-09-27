@@ -1,3 +1,4 @@
+import { settleReadBatch } from "@pstdio/workbench";
 import { apiRequest } from "@/lib/api";
 import { getCollection } from "@/lib/sync/collections";
 import { workspaceState } from "./workspace-state";
@@ -17,8 +18,7 @@ export interface DashboardWorkspaceDiffSummary {
 }
 
 const workspaceDiffSummariesById = new Map<string, DashboardWorkspaceDiffSummary>();
-const pendingWorkspaceDiffSummaryLoads = new Map<string, Promise<DashboardWorkspaceDiffSummary | null>>();
-const workspaceDiffSummaryListeners = new Set<() => void>();
+const workspaceDiffSummaryListeners = new Set<(workspaceId: string) => void>();
 
 export const formatDashboardWorkspaceDiffOverview = (summary: DashboardWorkspaceDiffSummary) =>
   `+${summary.additions} -${summary.deletions}`;
@@ -30,14 +30,14 @@ const toDashboardWorkspaceDiffSummary = (response: DashboardWorkspaceDiffSummary
   fileCount: response.file_count,
 });
 
-const notifyWorkspaceDiffSummaryListeners = () => {
-  for (const listener of workspaceDiffSummaryListeners) listener();
+const notifyWorkspaceDiffSummaryListeners = (workspaceId: string) => {
+  for (const listener of workspaceDiffSummaryListeners) listener(workspaceId);
 };
 
-const fetchDashboardWorkspaceDiffSummary = async (workspaceId: string) => {
+const fetchDashboardWorkspaceDiffSummary = async (workspaceId: string, signal?: AbortSignal) => {
   const response = await apiRequest<DashboardWorkspaceDiffSummaryResponse | null>(
     `/v1/workspaces/${workspaceId}/diff-summary?mode=fork_point`,
-    { allowNotFound: true },
+    { allowNotFound: true, signal },
   );
 
   return response ? toDashboardWorkspaceDiffSummary(response) : null;
@@ -46,7 +46,7 @@ const fetchDashboardWorkspaceDiffSummary = async (workspaceId: string) => {
 const writeDashboardWorkspaceDiffSummary = (summary: DashboardWorkspaceDiffSummary | null) => {
   if (!summary) return summary;
   workspaceDiffSummariesById.set(summary.workspaceId, summary);
-  notifyWorkspaceDiffSummaryListeners();
+  notifyWorkspaceDiffSummaryListeners(summary.workspaceId);
   return summary;
 };
 
@@ -63,7 +63,8 @@ export const getDashboardWorkspaceDiffSummaries = (workspaceIds: string[]) => {
   return summaries;
 };
 
-export const resolveDashboardWorkspaceDiffSummary = async (workspaceId: string) => {
+export const resolveDashboardWorkspaceDiffSummary = async (workspaceId: string, signal?: AbortSignal) => {
+  signal?.throwIfAborted();
   const workspace = getCollection("workspaces").state.get(workspaceId);
   if (!workspace || workspaceState(workspace) !== "ready") return null;
   const capabilities = workspace.provider_capabilities_json as { diff?: boolean } | undefined;
@@ -71,37 +72,33 @@ export const resolveDashboardWorkspaceDiffSummary = async (workspaceId: string) 
   const cached = workspaceDiffSummariesById.get(workspaceId);
   if (cached) return cached;
 
-  const pending = pendingWorkspaceDiffSummaryLoads.get(workspaceId);
-  if (pending) return pending;
-
-  const next = fetchDashboardWorkspaceDiffSummary(workspaceId)
-    .then(writeDashboardWorkspaceDiffSummary)
-    .finally(() => {
-      pendingWorkspaceDiffSummaryLoads.delete(workspaceId);
-    });
-
-  pendingWorkspaceDiffSummaryLoads.set(workspaceId, next);
-  return next;
+  return writeDashboardWorkspaceDiffSummary(await fetchDashboardWorkspaceDiffSummary(workspaceId, signal));
 };
 
-export const requestDashboardWorkspaceDiffSummaries = async (workspaceIds: string[]) => {
+export const requestDashboardWorkspaceDiffSummaries = async (workspaceIds: string[], signal?: AbortSignal) => {
   const summaries = new Map<string, DashboardWorkspaceDiffSummary>();
-
-  const loaded = await Promise.all(
-    [...new Set(workspaceIds)].map(async (workspaceId) => {
-      const summary = await resolveDashboardWorkspaceDiffSummary(workspaceId).catch(() => null);
-      return [workspaceId, summary] as const;
-    }),
-  );
-
-  for (const [workspaceId, summary] of loaded) {
-    if (summary) summaries.set(workspaceId, summary);
+  const ids = [...new Set(workspaceIds)];
+  for (let index = 0; index < ids.length; index += 4) {
+    const loaded = await settleReadBatch(
+      ids.slice(index, index + 4).map((id) => async (signal) => {
+        try {
+          const summary = await resolveDashboardWorkspaceDiffSummary(id, signal);
+          return [id, summary] as const;
+        } catch (error) {
+          signal.throwIfAborted();
+          if (error instanceof Error && error.name === "AbortError") throw error;
+          return [id, null] as const;
+        }
+      }),
+      signal,
+    );
+    for (const [id, summary] of loaded) if (summary) summaries.set(id, summary);
   }
 
   return summaries;
 };
 
-export const subscribeDashboardWorkspaceDiffSummaries = (listener: () => void) => {
+export const subscribeDashboardWorkspaceDiffSummaries = (listener: (workspaceId: string) => void) => {
   workspaceDiffSummaryListeners.add(listener);
   return () => {
     workspaceDiffSummaryListeners.delete(listener);

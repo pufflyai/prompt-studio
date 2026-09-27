@@ -86,7 +86,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
     );
 
     const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets");
-    await renderer?.executeQuery(queryState);
+    await renderer?.executeQuery(queryState, new AbortController().signal);
 
     const action = renderer?.getBoardColumnConfig?.("todo").actions?.[0];
 
@@ -179,7 +179,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
     const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("workflow")!;
     if (!("getSnapshot" in renderer.attributes)) throw new Error("Expected live status attributes");
     expect(renderer.attributes.getSnapshot()).toHaveLength(1);
-    await renderer.executeQuery(queryState);
+    await renderer.executeQuery(queryState, new AbortController().signal);
     expect(renderer.attributes.getSnapshot()).toHaveLength(1);
   });
 
@@ -213,7 +213,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
     );
 
     const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets");
-    await renderer?.executeQuery(queryState);
+    await renderer?.executeQuery(queryState, new AbortController().signal);
 
     expect(renderer?.getBoardColumnConfig?.("todo").color).toBe("red");
   });
@@ -245,7 +245,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
     );
 
     const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("recipes");
-    await renderer?.executeQuery(queryState);
+    await renderer?.executeQuery(queryState, new AbortController().signal);
 
     expect(renderer?.getBoardColumnConfig?.("draft").color).toBe("orange");
   });
@@ -290,10 +290,13 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
     );
 
     const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("recipes");
-    await renderer?.executeQuery({
-      ...queryState,
-      settings: { ...queryState.settings, columnGrouping: "review" },
-    });
+    await renderer?.executeQuery(
+      {
+        ...queryState,
+        settings: { ...queryState.settings, columnGrouping: "review" },
+      },
+      new AbortController().signal,
+    );
 
     expect(renderer?.getBoardColumnConfig?.("todo").color).toBe("purple");
   });
@@ -524,7 +527,9 @@ describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
       [record, inertRecord],
     );
 
-    const rows = await getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")?.executeQuery(queryState);
+    const rows = await getWorkbenchRenderers(workbench)
+      .getKanbanRenderer("tickets")
+      ?.executeQuery(queryState, new AbortController().signal);
     await getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")?.onRowActivate?.(rows![0]!);
 
     expect(calls.at(-1)).toEqual({
