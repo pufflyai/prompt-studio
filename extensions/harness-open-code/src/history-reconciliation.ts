@@ -31,12 +31,13 @@ export const composeOpencodeSnapshot = (known: readonly SessionMessage[], native
     const prompt = submittedPrompt(turn[0]);
     newCounts.set(prompt, (newCounts.get(prompt) ?? 0) + 1);
   }
+  // Ids made from a message's position say nothing about which turn it is.
+  const synthetic = (message: SessionMessage) => /^opencode-msg-\d+$/.test(message.id);
   return newTurns.flatMap((turn) => {
     const prompt = submittedPrompt(turn[0]);
-    let previous = byId.get(turn[0].id);
+    let previous = synthetic(turn[0]) ? undefined : byId.get(turn[0].id);
     if (previous && submittedPrompt(previous[0]) !== prompt) throw new HistoryConflict("conflicting_user_content");
     if (!previous) {
-      const synthetic = (message: SessionMessage) => /^opencode-msg-\d+$/.test(message.id);
       const matches = (byPrompt.get(prompt) ?? []).filter((candidate) => synthetic(candidate[0]) || synthetic(turn[0]));
       if (matches.length === 1 && newCounts.get(prompt) === 1) previous = matches[0];
       else if (
