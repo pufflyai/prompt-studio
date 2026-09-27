@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { getCollection, getWriter } from "@/lib/sync/collections";
 import {
   createWorkspaceBadgeInteractionProps,
   createWorkspaceBadgeResource,
@@ -196,5 +197,18 @@ describe("extension workspace badge renderer", () => {
       id: "workspace-42",
       metadata: { workspaceId: "workspace-42" },
     });
+  });
+
+  test("uses the synced workspace's icon when the badge item has none", () => {
+    getCollection("workspaces");
+    getWriter("workspaces")!.upsert({ id: "badge-folder", project_id: "project-1", provider_id: "pstdio.root" });
+
+    const resource = createWorkspaceBadgeResource(
+      { id: "badge-folder", label: "Project workspace", resource: { type: "workspace", id: "badge-folder" } },
+      "project-1",
+    );
+
+    expect(resource.icon).toBe("Folder");
+    getWriter("workspaces")!.remove("badge-folder");
   });
 });

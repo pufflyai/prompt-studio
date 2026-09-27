@@ -13,7 +13,7 @@ import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
 import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
-import { listLinkedRepoExtensionRoots } from "./repo-extension-roots";
+import { listRepoExtensionRoots } from "./repo-extension-roots";
 import { syncRepoExtensionsForProject } from "./repo-extensions";
 
 type RuntimeProcess = {
@@ -61,7 +61,7 @@ export const createInstalledExtensionRuntime = async (input: {
   };
 
   const listRepoExtensionRootRegistrations = async () => {
-    const roots = await listLinkedRepoExtensionRoots({
+    const roots = await listRepoExtensionRoots({
       projectService: input.projectService,
       workspaceService: input.workspaceService,
     });
@@ -70,12 +70,12 @@ export const createInstalledExtensionRuntime = async (input: {
       path: root.rootPath,
       sync: async () => {
         let markedMissing = false;
-        for (const link of root.links) {
+        for (const project of root.projects) {
           const result = await syncRepoExtensionsForProject({
             extensionService: input.extensionService,
             installedExtensionSourcesService: input.installedExtensionSourcesService,
-            projectId: link.projectId,
-            repoPath: link.repoPath,
+            projectId: project.projectId,
+            repoPath: project.repoPath,
           });
           if (result.missing.length > 0) markedMissing = true;
         }

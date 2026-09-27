@@ -49,7 +49,7 @@ In controlled testing, repeated public and private renderer commands grew API me
 2. Repeated reads for unchanged sources return the same snapshot identity.
 3. Concurrent initial reads share one promise.
 4. A snapshot is immutable after publication.
-5. Snapshot normalization uses the project's current linked repository roots.
+5. Snapshot normalization uses the project's current folder.
 6. Diagnostics and source attribution come from the same load as executable handlers.
 7. A consumer cannot call loadExtensionSources directly for an enabled project runtime.
 
@@ -57,7 +57,7 @@ In controlled testing, repeated public and private renderer commands grew API me
 
 1. Installed source reload invalidates every project using that source.
 2. Enable, disable, install, uninstall, and extension instance changes invalidate the affected project.
-3. Linked repository changes invalidate the affected project's normalized runtime.
+3. A change to the project folder invalidates the affected project's normalized runtime.
 4. Dependency changes detected by the source watcher invalidate affected sources.
 5. Several invalidations before the next read coalesce into one new load.
 6. An invalidation during an in-flight load prevents that stale load from becoming the current snapshot.

@@ -4,7 +4,7 @@ This folder contains the first-party Prompt Studio extensions. An extension can 
 
 ## Install an extension
 
-Use `pst extensions add` to install an extension into the scope declared by its `package.json` `pstdio.scope` field. The default scope is `user`, which installs to `~/.pstdio/extensions/<install-name>/` or `$PSTDIO_HOME/extensions/<install-name>/` if set. `repo` scope installs to `<repo>/.pstdio/extensions/<install-name>/` and must be run inside a linked repo.
+Use `pst extensions add` to install an extension into the scope declared by its `package.json` `pstdio.scope` field. The default scope is `user`, which installs to `~/.pstdio/extensions/<install-name>/` or `$PSTDIO_HOME/extensions/<install-name>/` if set. `repo` scope installs to `<project-folder>/.pstdio/extensions/<install-name>/` and must be run inside a project folder.
 
 ### From a local folder
 
@@ -91,7 +91,7 @@ bun run dev
 The API installs a configured list of default extensions. Packaged hosts fetch named defaults from the
 Prompt Studio Git tag paired with the running host release. Source checkouts use the local
 `extensions/<name>` folders so extension development stays local-first. Each package uses
-`pstdio.scope` in `package.json` to select the user extension root or the linked repository's extension
+`pstdio.scope` in `package.json` to select the user extension root or the project folder's extension
 root.
 
 The default list is:

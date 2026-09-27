@@ -27,7 +27,7 @@ type SyncRepoExtensionsForProjectInput = {
   repoPath: string;
 };
 
-type SyncRepoExtensionsForLinkedReposInput = Omit<SyncRepoExtensionsForProjectInput, "repoPath"> & {
+type SyncRepoExtensionsForProjectFolderInput = Omit<SyncRepoExtensionsForProjectInput, "repoPath"> & {
   workspaceService: { getDefault(projectId: string): Promise<{ root_path: string | null } | null> };
 };
 
@@ -124,8 +124,8 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
   return { conflicting, enabled, missing, skipped };
 };
 
-export const syncRepoExtensionsForLinkedRepos = async (input: SyncRepoExtensionsForLinkedReposInput) => {
+export const syncRepoExtensionsForProjectFolder = async (input: SyncRepoExtensionsForProjectFolderInput) => {
   const workspace = await input.workspaceService.getDefault(input.projectId);
-  if (!workspace?.root_path) return [];
-  return [await syncRepoExtensionsForProject({ ...input, repoPath: workspace.root_path })];
+  if (!workspace?.root_path) return null;
+  return syncRepoExtensionsForProject({ ...input, repoPath: workspace.root_path });
 };

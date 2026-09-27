@@ -77,6 +77,20 @@ describe("data table state helpers", () => {
     });
   });
 
+  test("uses total changes as the attribute value of diff cells", () => {
+    const rows: RowData[] = [
+      { id: "row-1", Diff: { additions: 12, deletions: 3 } },
+      { id: "row-2", Diff: "Not supported" },
+    ];
+    const renderers = { Diff: { type: "diff" as const } };
+
+    const attributes = buildDataTableRendererAttributes(rows, ["Diff"], undefined, renderers);
+    const rendererRows = buildDataTableRendererRows(rows, ["Diff"], undefined, renderers);
+
+    expect(rendererRows.map((row) => row.attributes.Diff)).toEqual([15, "Not supported"]);
+    expect(filterDataTableRows(rendererRows, { Diff: ["Not supported"] }, attributes)).toHaveLength(1);
+  });
+
   test("filters table rows through kanban-renderer filter state", () => {
     const rows: RowData[] = [
       { id: "row-1", Status: "Paid" },

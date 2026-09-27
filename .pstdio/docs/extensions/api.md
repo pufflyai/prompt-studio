@@ -181,13 +181,12 @@ them disagree.
 - Enabling a source takes the id from whatever held it before. That covers the extension panel,
   `pst extensions add`, and `pst extensions dev`, where you say which copy you want. The source that
   held the id becomes disabled and stays listed, so you can switch back.
-- Discovery never takes an id away. When a linked repository contributes a folder whose id another
+- Discovery never takes an id away. When the project folder contributes a folder whose id another
   enabled source already provides, that folder is registered **disabled**. Nothing that was running
   stops running, and you pick the copy you want in the extension panel.
 
-This matters when two linked repositories carry the same extension, and when a repository carries a
-copy of an extension you already installed for your user. In both cases the copy you were already
-running keeps the id until you say otherwise.
+This matters when a project folder carries a copy of an extension you already installed for your
+user. The copy you were already running keeps the id until you say otherwise.
 
 The extension detail view shows the source folder of each installed extension, which is what tells
 two copies of the same extension apart.

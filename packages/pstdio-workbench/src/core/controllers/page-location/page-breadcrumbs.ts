@@ -36,7 +36,7 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
     const page = pagesByRef.get(pageRefKey(location.page));
     const item: WorkbenchBreadcrumbItem = {
       title: location.resource?.label ?? (page ? pageTitle(page) : location.page.id),
-      icon: page?.icon,
+      icon: location.resource?.icon ?? page?.icon,
       ...(location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };
     if (index < locations.length - 1) {

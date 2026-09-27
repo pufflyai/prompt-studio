@@ -5,13 +5,10 @@
     "go": "Ir",
     "searchLabel": "Buscar en el directorio actual:",
     "selectCurrent": "Seleccionar actual",
-    "gitRepo": "repositorio git",
     "selectPath": "Seleccionar ruta",
     "errors": {
       "unableToLoadDirectory": "No se pudo cargar el directorio",
-      "pathRequired": "La ruta es obligatoria.",
-      "repositoryAlreadySelected": "Repositorio ya seleccionado.",
-      "notGitRepository": "La carpeta seleccionada no es un repositorio git."
+      "pathRequired": "La ruta es obligatoria."
     }
   },
   "branchSelector": {
@@ -182,8 +179,6 @@
   },
   "sections": {
     "changes": "Cambios",
-    "repositories": "Repositorios",
-    "addRepositories": "Agregar repositorios",
     "project": "Proyecto",
     "processes": "Procesos",
     "devServer": "Servidor de desarrollo",
@@ -199,20 +194,11 @@
     "placeholder": "Agregar notas sobre este espacio de trabajo...",
     "selectWorkspace": "Selecciona un espacio de trabajo para ver notas"
   },
-  "repos": {
-    "loading": "Cargando repositorios...",
-    "noRecentRepos": "No se encontraron repositorios recientes",
-    "noReposAdded": "No se agregaron repositorios",
-    "noReposAddedHint": "Agregue uno o más repositorios a este espacio de trabajo desde las opciones a continuación"
-  },
   "actions": {
-    "browseRepos": "Explorar repos en disco",
-    "createNewRepo": "Crear nuevo repo en disco",
     "viewInChangesPanel": "Ver en panel de cambios",
     "copyPath": "Copiar ruta",
     "copyWorktreePath": "Copiar ruta del worktree",
     "openInIde": "Abrir en IDE",
-    "repoSettings": "Configuración del repositorio",
     "cancel": "Cancelar",
     "saveChanges": "Guardar cambios",
     "copied": "Copiado",
@@ -227,10 +213,6 @@
   "confirm": {
     "defaultConfirm": "Confirmar",
     "defaultCancel": "Cancelar"
-  },
-  "dialogs": {
-    "selectGitRepository": "Seleccionar repositorio Git",
-    "chooseExistingRepo": "Elige un repositorio existente de tu sistema de archivos"
   },
   "empty": {
     "noChanges": "No hay cambios para mostrar"
@@ -255,7 +237,6 @@
     "intro": "Hemos reconstruido la interfaz de Vibe Kanban desde cero, y has sido invitado a probarla.",
     "newUiDescription": "La nueva interfaz está optimizada para el trabajo diario: gestionar agentes, previsualizar cambios y revisar código. También desbloquea funciones que no están disponibles en la interfaz anterior:",
     "newFeatures": {
-      "multiRepo": "Edita múltiples repositorios al mismo tiempo",
       "multiAgent": "Ejecuta múltiples conversaciones de agentes (incluso entre diferentes agentes) en un solo espacio de trabajo",
       "commandBar": "Navegación más rápida con la barra de comandos"
     },
@@ -286,10 +267,6 @@
     "sidenav": {
       "title": "Barra lateral de espacios de trabajo",
       "content": "Ve el estado de todos tus espacios de trabajo de un vistazo. Las notificaciones resaltan cuáles necesitan atención. Archiva los espacios de trabajo fusionados para mantener tu barra lateral limpia."
-    },
-    "multiRepo": {
-      "title": "Soporte multi-repositorio",
-      "content": "Agrega múltiples repositorios a un solo espacio de trabajo. Referencia código de un repositorio mientras trabajas en otro, o implementa cambios en varios repositorios a la vez."
     },
     "sessions": {
       "title": "Múltiples sesiones",

@@ -2,7 +2,7 @@
 name: pstdio
 description: Use Prompt Studio and its pst CLI. Covers project setup, .pstdio/config.json, agent setup, commands, extensions, and troubleshooting. Use for Prompt Studio questions or requests to configure a project or agent.
 metadata:
-  version: 0.0.7
+  version: 0.0.8
 ---
 
 # Prompt Studio
@@ -24,7 +24,7 @@ Run `pst <command> --help` for command options. See [references/cli-reference.md
 
 ### Projects
 
-A project groups repositories, tickets, documentation, templates, workspaces, and agent settings. Each linked repository has a project ID in `.pstdio/config.json`.
+A project opens one folder and groups its tickets, documentation, templates, workspaces, and agent settings. Git is optional. The folder's `.pstdio/config.json` holds the project ID, and commands use the nearest one.
 
 ### Tickets
 

@@ -6,7 +6,7 @@ import {
   syncInstalledExtensionsForProjects,
 } from "../features/extensions/default-extensions";
 import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
-import { syncRepoExtensionsForLinkedRepos } from "../features/extensions/repo-extensions";
+import { syncRepoExtensionsForProjectFolder } from "../features/extensions/repo-extensions";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
@@ -137,7 +137,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
     projectService: deps.projectService,
   });
   for (const project of await deps.projectService.list()) {
-    await syncRepoExtensionsForLinkedRepos({
+    await syncRepoExtensionsForProjectFolder({
       extensionService: deps.extensionService,
       installedExtensionSourcesService: deps.installedExtensionSourcesService,
       projectId: project.id,

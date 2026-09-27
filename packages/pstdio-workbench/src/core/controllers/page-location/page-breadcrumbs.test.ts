@@ -46,6 +46,21 @@ describe("page breadcrumbs", () => {
     expect(targets).toEqual([{ kind: "page", page: tickets.ref }]);
     expect(items[1]?.onClick).toBeUndefined();
   });
+  test("shows a resource's own icon and falls back to the page icon", () => {
+    const workspaces = { ...page("workspaces", "Workspaces"), icon: "computer" };
+    const workspace = { ...page("workspace", "Workspace"), icon: "computer", parentId: workspaces.id };
+    const items = createWorkbenchPageBreadcrumbItems({
+      location: {
+        page: workspace.ref,
+        resource: { type: "workspace", id: "ws-1", label: "Project workspace", icon: "Folder" },
+        parent: { page: workspaces.ref },
+      },
+      pages: [workspaces, workspace],
+      resources,
+      navigate: () => undefined,
+    });
+    expect(items.map((item) => item.icon)).toEqual(["computer", "Folder"]);
+  });
   test("uses only canonical page locations for contextual resource ancestry", () => {
     const tickets = page("tickets", "Tickets");
     const ticket = { ...page("ticket", "Ticket"), parentId: tickets.id };

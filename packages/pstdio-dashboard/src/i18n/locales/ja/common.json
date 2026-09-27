@@ -5,13 +5,10 @@
     "go": "移動",
     "searchLabel": "現在のディレクトリを検索:",
     "selectCurrent": "現在を選択",
-    "gitRepo": "git リポジトリ",
     "selectPath": "パスを選択",
     "errors": {
       "unableToLoadDirectory": "ディレクトリを読み込めません",
-      "pathRequired": "パスは必須です。",
-      "repositoryAlreadySelected": "リポジトリは既に選択されています。",
-      "notGitRepository": "選択されたフォルダはgitリポジトリではありません。"
+      "pathRequired": "パスは必須です。"
     }
   },
   "branchSelector": {
@@ -182,8 +179,6 @@
   },
   "sections": {
     "changes": "変更",
-    "repositories": "リポジトリ",
-    "addRepositories": "リポジトリを追加",
     "project": "プロジェクト",
     "processes": "プロセス",
     "devServer": "開発サーバー",
@@ -199,20 +194,11 @@
     "placeholder": "このワークスペースについてメモを追加...",
     "selectWorkspace": "メモを表示するにはワークスペースを選択してください"
   },
-  "repos": {
-    "loading": "リポジトリを読み込み中...",
-    "noRecentRepos": "最近のリポジトリが見つかりません",
-    "noReposAdded": "リポジトリが追加されていません",
-    "noReposAddedHint": "下のオプションからこのワークスペースにリポジトリを追加してください"
-  },
   "actions": {
-    "browseRepos": "ディスク上のリポジトリを参照",
-    "createNewRepo": "ディスク上に新しいリポジトリを作成",
     "viewInChangesPanel": "変更パネルで表示",
     "copyPath": "パスをコピー",
     "copyWorktreePath": "ワークツリーパスをコピー",
     "openInIde": "IDEで開く",
-    "repoSettings": "リポジトリ設定",
     "cancel": "キャンセル",
     "saveChanges": "変更を保存",
     "copied": "コピーしました",
@@ -227,10 +213,6 @@
   "confirm": {
     "defaultConfirm": "確認",
     "defaultCancel": "キャンセル"
-  },
-  "dialogs": {
-    "selectGitRepository": "Gitリポジトリを選択",
-    "chooseExistingRepo": "ファイルシステムから既存のリポジトリを選択してください"
   },
   "empty": {
     "noChanges": "表示する変更がありません"
@@ -255,7 +237,6 @@
     "intro": "Vibe KanbanのUIをゼロから再構築しました。あなたは試用に招待されています。",
     "newUiDescription": "新しいUIは日常業務に最適化されています：エージェントの管理、変更のプレビュー、コードのレビュー。また、旧UIでは利用できない機能も利用可能になります：",
     "newFeatures": {
-      "multiRepo": "複数のリポジトリを同時に編集",
       "multiAgent": "単一のワークスペースで複数のエージェント会話（異なるエージェント間でも）を実行",
       "commandBar": "コマンドバーでより高速なナビゲーション"
     },
@@ -286,10 +267,6 @@
     "sidenav": {
       "title": "ワークスペースサイドバー",
       "content": "すべてのワークスペースの状態を一目で確認できます。通知により注意が必要なワークスペースがハイライトされます。マージ済みのワークスペースをアーカイブしてサイドバーを整理しましょう。"
-    },
-    "multiRepo": {
-      "title": "マルチリポジトリ対応",
-      "content": "1つのワークスペースに複数のリポジトリを追加できます。別のリポジトリで作業しながら他のリポジトリのコードを参照したり、複数のリポジトリにまたがる変更を同時に実装できます。"
     },
     "sessions": {
       "title": "複数セッション",
