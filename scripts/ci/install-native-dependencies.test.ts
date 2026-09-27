@@ -30,21 +30,21 @@ test("native dependency scripts use the workspace node-gyp and the install does 
     // workspace native build start first, which is when replacing the root node-gyp link breaks the build.
     await Bun.write(
       join(cwd, "root-build-step/package.json"),
-      JSON.stringify({ name: "root-build-step", version: "1.0.0", scripts: { install: "node wait.cjs" } }),
+      JSON.stringify({ name: "root-build-step", version: "1.0.0", scripts: { install: "bun wait.ts" } }),
     );
-    await Bun.write(join(cwd, "root-build-step/wait.cjs"), "setTimeout(() => {}, 500);\n");
+    await Bun.write(join(cwd, "root-build-step/wait.ts"), "setTimeout(() => {}, 500);\n");
     await Bun.write(
       join(cwd, "native-fixture/package.json"),
       JSON.stringify({
         name: "native-fixture",
         version: "1.0.0",
-        scripts: { install: "node link-state.cjs > node-gyp-link.txt && node-gyp --version > node-gyp-version.txt" },
+        scripts: { install: "bun link-state.ts > node-gyp-link.txt && node-gyp --version > node-gyp-version.txt" },
       }),
     );
-    const linkState = join(cwd, "native-fixture/link-state.cjs");
+    const linkState = join(cwd, "native-fixture/link-state.ts");
     await Bun.write(
       linkState,
-      `const { lstatSync } = require("node:fs");
+      `import { lstatSync } from "node:fs";
 try {
   const link = lstatSync(${JSON.stringify(join(cwd, "node_modules/.bin/node-gyp"))});
   console.log(link.ino + ":" + link.ctimeMs);
@@ -76,7 +76,7 @@ try {
     expect(version).toBe(`v${manifest.devDependencies["node-gyp"]}`);
     // A build may start before the root link exists and use Bun's wrapper. It must never see a link the install replaces later.
     const seen = (await Bun.file(join(fixture, "node-gyp-link.txt")).text()).trim();
-    const final = Bun.spawnSync(["node", linkState]).stdout.toString().trim();
+    const final = Bun.spawnSync([process.execPath, linkState]).stdout.toString().trim();
     expect(["absent", final]).toContain(seen);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
