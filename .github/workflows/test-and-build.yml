@@ -236,7 +236,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # ADR 0042: Docker Hub resets anonymous pulls from shared runner IPs. The daemon tries
+      # ADR 0043: Docker Hub resets anonymous pulls from shared runner IPs. The daemon tries
       # Google's public Docker Hub cache first and falls back to Docker Hub. Temporary workaround.
       - name: Pull Docker Hub images through a mirror
         run: |
