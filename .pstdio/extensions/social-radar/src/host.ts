@@ -13,3 +13,11 @@ export const useRadarCommand = () => {
       }),
     ) as T;
 };
+export const useRadarNavigation = () => {
+  const host = useContext(HostContext);
+  if (!host) throw new Error("Social radar needs the extension host.");
+  return (page: "settings" | "threads") =>
+    host.call("navigation.open", {
+      target: { kind: "page", page: { kind: "page", id: page } },
+    });
+};

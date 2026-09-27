@@ -1,7 +1,20 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, params, resourceMenuSlotRef } from "@pstdio/sdk/extensions";
 import { completeRun, requireRun, requireRunning, startRun } from "./run-lifecycle";
-import { finishRun, type Idea, ideaStatus, type Run, saveIdea, saveThread, type Thread, threadStatus } from "./schemas";
-import { readSettings, settingsSchema } from "./settings";
+import {
+  finishRun,
+  type Idea,
+  ideaStatus,
+  type Run,
+  saveIdea,
+  saveThread,
+  siteSchema,
+  type Thread,
+  threadStatus,
+  updateIdea,
+  updateThread,
+} from "./schemas";
+import { readSettings, settingsSchema, writeSettings } from "./settings";
+import { threadResource } from "./thread-resource";
 import { canonicalThreadUrl, threadId } from "./urls";
 
 const newest = <T>(items: T[], date: (item: T) => string) => items.sort((a, b) => date(b).localeCompare(date(a)));
@@ -56,6 +69,46 @@ const saveIdeaCommand = defineCommand({
     await ctx.storage
       .collection<Idea>("ideas")
       .put(id, { ...data, id, status: "new", createdAt: new Date().toISOString() });
+    return { id };
+  },
+});
+const updateThreadCommand = defineCommand({
+  id: "update-thread",
+  title: "Revise a thread",
+  cli: true,
+  params: { id: params.text({ required: true }), input: params.json({ required: true }) },
+  async run(ctx, { id, input }) {
+    const patch = updateThread.parse(input);
+    const threads = ctx.storage.collection<Thread>("threads");
+    const thread = await threads.get(id);
+    if (!thread) throw new Error("Thread not found.");
+    if (patch.outcome && thread.status !== "posted") throw new Error("Only a posted thread can have an outcome.");
+    await threads.update(id, {
+      ...thread,
+      ...patch,
+      community: patch.community === null ? undefined : (patch.community ?? thread.community),
+      draftReply: patch.draftReply === null ? undefined : (patch.draftReply ?? thread.draftReply),
+      outcome: patch.outcome === null ? undefined : (patch.outcome ?? thread.outcome),
+      outcomeCheckedAt: patch.outcome
+        ? new Date().toISOString()
+        : patch.outcome === null
+          ? undefined
+          : thread.outcomeCheckedAt,
+    });
+    return { id };
+  },
+});
+const updateIdeaCommand = defineCommand({
+  id: "update-idea",
+  title: "Revise a post idea",
+  cli: true,
+  params: { id: params.text({ required: true }), input: params.json({ required: true }) },
+  async run(ctx, { id, input }) {
+    const patch = updateIdea.parse(input);
+    const ideas = ctx.storage.collection<Idea>("ideas");
+    const idea = await ideas.get(id);
+    if (!idea) throw new Error("Post idea not found.");
+    await ideas.update(id, { ...idea, ...patch });
     return { id };
   },
 });
@@ -115,7 +168,24 @@ const setThreadStatus = defineCommand({
   id: "set-thread-status",
   title: "Update thread status",
   cli: true,
-  params: { id: params.text({ required: true }), status: params.text({ required: true }) },
+  params: { id: params.text({ required: true, resolvedFrom: "resource" }), status: params.text({ required: true }) },
+  menus: [
+    {
+      slot: resourceMenuSlotRef(threadResource.ref, "header-actions"),
+      label: "Save thread",
+      params: { status: "saved" },
+    },
+    {
+      slot: resourceMenuSlotRef(threadResource.ref, "header-actions"),
+      label: "Mark posted",
+      params: { status: "posted" },
+    },
+    {
+      slot: resourceMenuSlotRef(threadResource.ref, "header-actions"),
+      label: "Skip thread",
+      params: { status: "skipped" },
+    },
+  ],
   async run(ctx, { id, status }) {
     const value = threadStatus.parse(status);
     const threads = ctx.storage.collection<Thread>("threads");
@@ -158,9 +228,33 @@ const saveSettings = defineCommand({
   cli: true,
   params: { input: params.json({ required: true }) },
   async run(ctx, { input }) {
-    const data = settingsSchema.parse(input);
-    for (const [key, value] of Object.entries(data)) await ctx.settings.set(key, value);
-    return data;
+    return writeSettings(ctx.settings, input);
+  },
+});
+const updateSite = defineCommand({
+  id: "update-site",
+  title: "Update site targets and budget",
+  cli: true,
+  params: { site: params.text({ required: true }), targets: params.list(), budget: params.number() },
+  async run(ctx, { site, targets, budget }) {
+    const key = siteSchema.parse(site);
+    const current = await readSettings(ctx.settings);
+    return writeSettings(ctx.settings, {
+      ...current,
+      targets: { ...current.targets, [key]: targets ?? current.targets[key] },
+      budgets: { ...current.budgets, [key]: budget ?? current.budgets[key] },
+    });
+  },
+});
+const updateSettings = defineCommand({
+  id: "update-settings",
+  title: "Update research settings",
+  cli: true,
+  params: { input: params.json({ required: true }) },
+  async run(ctx, { input }) {
+    const patch = settingsSchema.partial().parse(input);
+    const current = await readSettings(ctx.settings);
+    return writeSettings(ctx.settings, { ...current, ...patch });
   },
 });
 export const commands = {
@@ -168,6 +262,8 @@ export const commands = {
   getContext,
   saveThread: saveThreadCommand,
   saveIdea: saveIdeaCommand,
+  updateThread: updateThreadCommand,
+  updateIdea: updateIdeaCommand,
   recordOutcome,
   finishRun: finishRunCommand,
   listDigest,
@@ -176,4 +272,6 @@ export const commands = {
   setIdeaStatus,
   getSettings,
   saveSettings,
+  updateSite,
+  updateSettings,
 };

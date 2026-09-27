@@ -13,9 +13,9 @@ The session prompt supplies `runId`. Start with:
 pst social-radar get-context --runId <runId>
 ```
 
-This returns topics, competitors, communities, writing voice, per-site search budgets, `since`, unchecked posted threads, and recent idea titles. Use the returned settings. Do not repeat a recent idea unless new evidence changes it.
+This returns topics, competitors, per-site `targets`, writing voice, per-site search budgets, `since`, unchecked posted threads, and recent idea titles. Use the returned settings. Do not repeat a recent idea unless new evidence changes it.
 
-Count every endpoint query, browser search, and follow-up lookup against that site's budget. A failed endpoint attempt also counts; a browser fallback is another search. Scroll at most `budgets.scrollScreens` screens per search. A zero budget means skip that site. Spend follow-up lookups first, then search the highest priority topics and communities. Do not retry a login wall, captcha, rate limit, or unavailable endpoint repeatedly.
+Count every endpoint query, browser search, and follow-up lookup against that site's budget. A failed endpoint attempt also counts; a browser fallback is another search. Scroll at most `budgets.scrollScreens` screens per search. A zero budget means skip that site. Spend follow-up lookups first, then search the highest priority topics and that site's targets. Do not retry a login wall, captcha, rate limit, or unavailable endpoint repeatedly.
 
 Read the current endpoints below; free access can change. Use the endpoint first where listed. Use Codex's computer use tool for browser work in the user's existing browser profile. Do not launch another browser profile or install a browser tool. Skip browser-only sites when that tool is unavailable. Skip on login walls or captchas; never enter credentials or try to bypass a restriction. Record each skipped site and its reason. Partial access still makes a useful digest.
 
@@ -49,6 +49,13 @@ pst social-radar save-thread --input '{"runId":"<runId>","site":"hn","url":"http
 ```
 
 `intent` is `asking-for-tool`, `problem`, `comparison`, `launch`, `mention`, or `discussion`. Optional fields: `author`, `community`, `draftReply`.
+
+If new evidence improves a saved item, revise it instead of creating another copy. `update-thread` accepts a JSON object with any of `title`, `community`, `excerpt`, `topic`, `intent`, `relevance`, `reason`, `draftReply`, or a posted thread's `outcome`. `update-idea` accepts changed idea fields. The saved identity and posting status remain intact.
+
+```sh
+pst social-radar update-thread --id <id> --input '{"reason":"<revised reason>","draftReply":"<better reply>"}'
+pst social-radar update-idea --id <id> --input '{"body":"<better post>"}'
+```
 
 Read `pst social-radar list-posted` before drafting ideas. Use its observed outcome notes to learn which topics and replies helped. Treat unchecked threads as unknown results. Do not invent engagement or imply that a draft was posted.
 

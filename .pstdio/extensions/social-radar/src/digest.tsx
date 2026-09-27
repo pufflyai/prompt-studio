@@ -3,14 +3,13 @@ import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/reac
 import { ScrollArea, SegmentedControl } from "@pstdio/ui";
 import { useState } from "react";
 import { Ideas, Threads } from "./digest-sections";
-import { useRadarCommand } from "./host";
+import { useRadarCommand, useRadarNavigation } from "./host";
 import type { Idea, Run, Thread } from "./schemas";
-import { Settings } from "./settings-panel";
 
 export const Digest = () => {
   const command = useRadarCommand();
+  const navigate = useRadarNavigation();
   const [section, setSection] = useState("threads");
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const digest = useCommandQuery({
     queryKey: ["digest"],
     command: () => command<{ run: Run | null; threads: Thread[]; ideas: Idea[] }>("list-digest"),
@@ -43,15 +42,17 @@ export const Digest = () => {
             </Text>
           </Stack>
           <HStack gap="sm">
-            <Button size="sm" onClick={() => setSettingsOpen(!settingsOpen)}>
-              {settingsOpen ? "Close settings" : "Settings"}
+            <Button size="sm" onClick={() => navigate("threads")}>
+              Manage threads
+            </Button>
+            <Button size="sm" onClick={() => navigate("settings")}>
+              Settings
             </Button>
             <Button size="sm" loading={run.isPending} onClick={() => run.mutate(undefined)}>
               Run now
             </Button>
           </HStack>
         </HStack>
-        {settingsOpen && <Settings />}
         {error && (
           <Text role="alert" color="fg.error" textStyle="paragraph/S/regular">
             {error.message}
