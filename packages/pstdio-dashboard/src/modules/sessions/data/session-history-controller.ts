@@ -45,7 +45,6 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
   let revision = 0;
   let queueRevision = 0;
   let snapshotSeen = false;
-  let ended = false;
   let disposed = false;
   let runStartedAt = input.initialSession?.last_request_started;
   let connection: SessionStreamConnection | undefined;
@@ -74,7 +73,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
       reason,
     );
   };
-  const readHistory = (reason: "refresh" | "retry" = "refresh") => {
+  const readHistory = () => {
     if (disposed) return;
     const current = generation;
     const startedRevision = revision;
@@ -90,7 +89,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         },
         onError: (error) => publish({ loading: false, error: errorText(error) }),
       },
-      reason,
+      "refresh",
     );
   };
   const connect = () => {
@@ -101,7 +100,6 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
     historyBinding = undefined;
     queueBinding?.dispose();
     queueBinding = reads.bind(`${ownerKey}:queue`);
-    ended = false;
     snapshotSeen = false;
     publish({ loading: true, streaming: false, error: undefined });
     readHistory();
@@ -148,7 +146,6 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         },
         onEnd: () => {
           if (!active()) return;
-          ended = true;
           publish({ loading: false, streaming: false });
           connection?.close();
           readHistory();
@@ -156,7 +153,6 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         },
         onError: (error) => {
           if (!active()) return;
-          ended = true;
           publish({ loading: false, streaming: false, error: errorText(error) });
         },
       },
@@ -166,7 +162,6 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
   return {
     connect,
     refreshQueue: () => refreshQueue("retry"),
-    retryHistory: () => (ended ? connect() : readHistory("retry")),
     sessionChanged(row: SyncedRow | undefined) {
       if (row && row.id !== sessionId) return;
       const active = row?.status === "in_progress" || row?.status === "awaiting_input";

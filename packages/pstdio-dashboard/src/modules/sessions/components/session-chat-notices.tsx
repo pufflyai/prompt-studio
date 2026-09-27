@@ -1,30 +1,26 @@
 import { Button } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
-import { rendererReadKey } from "@pstdio/workbench";
-import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import type { SessionHistoryState } from "../data/session-history-controller";
-import { SessionHistoryNotice } from "./session-history-notice";
 
 interface SessionChatNoticesProps extends Pick<SessionHistoryState, "historyIssue" | "error" | "queueError"> {
-  input: WorkbenchPanelRenderInput;
-  sessionId: string | null;
-  retryHistory(): void;
   refreshQueue(): void;
 }
 export const SessionChatNotices = (props: SessionChatNoticesProps) => {
-  const { input, sessionId, historyIssue, error, queueError, retryHistory, refreshQueue } = props;
+  const { historyIssue, error, queueError, refreshQueue } = props;
+  const historyBlocked = historyIssue && historyIssue.code !== "native_unavailable";
   return (
     <>
-      {" "}
-      {sessionId && (historyIssue || error) ? (
-        <SessionHistoryNotice
-          sessionId={sessionId}
-          ownerKey={rendererReadKey(input.instance, "session")}
-          reads={input.workbench.views.reads}
-          issue={historyIssue}
-          error={error}
-          retry={retryHistory}
-        />
+      {error ? (
+        <AlertMessage status="error" title="Could not load conversation">
+          {error}
+        </AlertMessage>
+      ) : null}
+      {!error && historyBlocked ? (
+        <AlertMessage status="warning" title="Conversation cannot continue">
+          {historyIssue.code === "checkpoint_unreadable"
+            ? "The saved conversation could not be read."
+            : "The saved conversation and agent history could not be combined."}
+        </AlertMessage>
       ) : null}
       {queueError ? (
         <AlertMessage

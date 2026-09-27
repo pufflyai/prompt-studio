@@ -90,7 +90,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     return typeof value === "string" ? value : undefined;
   });
 
-  const { messages, loading, streaming, reconnect, refreshQueue, retryHistory, historyIssue, error, queueError } =
+  const { messages, loading, streaming, reconnect, refreshQueue, historyIssue, error, queueError } =
     useDashboardSessionMessages(input, view.sessionId);
   const historyReadOnly = Boolean(historyIssue && historyIssue.code !== "native_unavailable");
   const createSession = useCreateProjectSession();
@@ -161,12 +161,9 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     <Box position="relative" h="full" w="full">
       <Box position="absolute" inset="0" overflow="hidden" display="flex" flexDirection="column">
         <SessionChatNotices
-          input={input}
-          sessionId={sessionId}
           historyIssue={historyIssue}
           error={error}
           queueError={queueError}
-          retryHistory={retryHistory}
           refreshQueue={refreshQueue}
         />
         <Box flex="1" minH="0" overflow="hidden">
