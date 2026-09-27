@@ -45,7 +45,7 @@ Read `pst pstdio-planner implementation-policy` again before handoff so changes 
 
 The report must explain the change and include outputs that a reviewer can inspect.
 
-1. Run `pst reports write --kind change_request --name change_request --template change-request` and keep the returned `name`, `path`, and `filesPath`.
+1. Run `pst reports write --kind change_request --name change_request --template change-request` and keep the returned `name`, `path`, and `filesPath`. The paths are absolute locations in the default project folder on the host, not the active worktree or remote environment.
 2. Explain why the change is needed and why you chose the implementation.
 3. Link the ticket, relevant code, documentation, ADRs, designs, and other useful resources.
 4. Always state anything left undone, any shortcuts taken, and any blockers encountered. Write `None` when a section has nothing to report.

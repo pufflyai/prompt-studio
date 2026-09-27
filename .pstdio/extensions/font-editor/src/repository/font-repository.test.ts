@@ -34,6 +34,11 @@ class MemoryMount implements ArtifactMount {
     this.files.set(path, new TextEncoder().encode(value));
   }
 
+  async updateText(path: string, value: string) {
+    if (!this.files.has(path)) throw new Error(`Missing ${path}`);
+    await this.writeText(path, value);
+  }
+
   async readBytes(path: string) {
     const value = this.files.get(path);
     if (!value) throw new Error(`Missing ${path}`);

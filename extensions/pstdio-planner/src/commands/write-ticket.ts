@@ -1,6 +1,11 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { putTicket, ticketsCollection } from "../data/collections";
-import { requireRepoFiles, ticketMarkdownPath, ticketToMarkdown, writeTicketMarkdown } from "../data/draft-storage";
+import {
+  requireTicketDraftFiles,
+  ticketMarkdownPath,
+  ticketToMarkdown,
+  writeTicketMarkdown,
+} from "../data/draft-storage";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { allocateTicketIdentity } from "../data/ticket-identity";
@@ -24,7 +29,7 @@ export const writeTicketCommand = defineCommand({
     parent: params.text(),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const { projectFiles, resolvePath } = await requireTicketDraftFiles(ctx);
     const existing = await ticketsCollection(ctx.storage).list();
     const statuses = await seedDefaultStatuses(ctx.storage);
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
@@ -62,7 +67,7 @@ export const writeTicketCommand = defineCommand({
       updatedAt: now,
     });
 
-    await writeTicketMarkdown(repoFiles, ticket, await ticketToMarkdown(ctx.storage, ticket));
-    return { shorthand: ticket.shorthand, path: ticketMarkdownPath(ticket.shorthand) };
+    await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx.storage, ticket));
+    return { shorthand: ticket.shorthand, path: resolvePath(ticketMarkdownPath(ticket.shorthand)) };
   },
 });

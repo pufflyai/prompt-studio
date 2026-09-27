@@ -11,7 +11,7 @@ A proposal is a Planner ticket built from the `proposal` template. Use the `pst 
 
 1. Derive a short, verb-led title from the request, such as `add-`, `update-`, `remove-`, `refactor-`, or `fix-`.
 2. Confirm the `proposal` template exists with `pst tickets templates`.
-3. Run `pst tickets write --title "<title>"`. This creates `.pstdio/tickets/<shorthand>/ticket.md`.
+3. Run `pst tickets write --title "<title>"`. This returns the absolute `path` of the draft in the default project folder. Edit that file.
 4. Run `pst tickets apply-template --id <shorthand> --template proposal` to apply the template.
 5. Read the relevant code and documentation before editing the ticket. Record concrete findings that a reviewer can check.
 6. Complete every applicable template section. Use specific, testable statements. Mark unanswered questions with `[MISSING INFORMATION]`.

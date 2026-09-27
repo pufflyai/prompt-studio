@@ -54,7 +54,7 @@ describe("Prompt Studio Dev extension", () => {
       {
         resource: { type: "workspace", id: "workspace-1" },
         workspaces: {
-          get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
+          get: async () => ({ id: "workspace-1", root_path: "/repo/.worktrees/workspace-1" }),
         },
         process: {
           spawnDetached: async (input: unknown) => {
@@ -85,7 +85,7 @@ describe("Prompt Studio Dev extension", () => {
       {
         resource: { type: "workspace", id: "workspace-1" },
         workspaces: {
-          get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
+          get: async () => ({ id: "workspace-1", root_path: "/repo/.worktrees/workspace-1" }),
         },
         process: {
           runOrThrow: async (input: unknown) => {
@@ -142,7 +142,7 @@ describe("Prompt Studio Dev extension", () => {
       {
         resource: { type: "workspace", id: "workspace-1" },
         workspaces: {
-          get: async () => ({ id: "workspace-1", worktree_path: "/repo/.worktrees/workspace-1" }),
+          get: async () => ({ id: "workspace-1", root_path: "/repo/.worktrees/workspace-1" }),
         },
         process: {
           runOrThrow: async (input: unknown) => {

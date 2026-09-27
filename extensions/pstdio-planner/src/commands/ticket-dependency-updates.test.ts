@@ -10,7 +10,7 @@ import { updateTicketCommand } from "./update-ticket";
 
 const setup = (mode: "update" | "save") => {
   const storage = createMemoryStorage();
-  const repoFiles = createMemoryRepoFiles();
+  const projectFiles = createMemoryRepoFiles();
   const create = (title: string, dependsOn: string[] = []) =>
     createTicketCommand.run(...makeCommandArgs({ storage, params: { title, dependsOn } }));
   const setDependencies = async (ticket: StoredTicket, dependsOn: string[]) => {
@@ -20,12 +20,12 @@ const setup = (mode: "update" | "save") => {
       );
       return;
     }
-    await repoFiles.writeText(
+    await projectFiles.writeText(
       ticketMarkdownPath(ticket.shorthand),
       ["---", `depends_on: ${JSON.stringify(dependsOn)}`, "---", "# Edited"].join("\n"),
     );
     await saveTicketCommand.run(
-      ...makeCommandArgs({ storage, params: { id: ticket.shorthand }, overrides: { repoFiles } }),
+      ...makeCommandArgs({ storage, params: { id: ticket.shorthand }, overrides: { projectFiles } }),
     );
   };
   return { storage, create, setDependencies };

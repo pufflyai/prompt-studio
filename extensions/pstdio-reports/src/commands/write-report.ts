@@ -7,7 +7,7 @@ import {
   reportInstanceName,
   reportMarkdownPath,
   reportToMarkdown,
-  requireRepoFiles,
+  requireReportDraftFiles,
 } from "../data/draft-storage";
 import { resolveReportName, resolveWorkspace } from "../data/resolve";
 import { readReportTemplate } from "../data/template-store";
@@ -25,20 +25,17 @@ const resolveTemplateBody = async (ctx: CommandContext, name: string | undefined
 
 const resolveAvailableReport = async (
   ctx: CommandContext<Record<string, unknown>>,
-  repoFiles: NonNullable<CommandContext["repoFiles"]>,
-  workspaceShorthand: string,
+  projectFiles: NonNullable<CommandContext["projectFiles"]>,
   directoryName: string,
 ) => {
-  const reports = (await reportsCollection(ctx.storage).list()).filter(
-    (report) => report.workspaceShorthand === workspaceShorthand,
-  );
+  const reports = await reportsCollection(ctx.storage).list();
   let sequence = 0;
 
   while (true) {
     const name = reportInstanceName(directoryName, sequence);
     const path = reportMarkdownPath(directoryName, sequence);
     const nameExists = reports.some((report) => report.name === name);
-    if (!nameExists && !(await repoFiles.exists(path))) {
+    if (!nameExists && !(await projectFiles.exists(path))) {
       return { name, path, filesPath: reportFilesDir(directoryName, sequence) };
     }
     sequence += 1;
@@ -64,12 +61,12 @@ export const writeReportCommand = defineCommand({
     source: params.text(),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const { projectFiles, resolvePath } = await requireReportDraftFiles(ctx);
     const kind = commandParams.kind ?? "report";
     const directoryName = resolveReportName(commandParams.name, kind);
     const templateBody = await resolveTemplateBody(ctx, commandParams.template);
     const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, commandParams.workspace);
-    const { name, path, filesPath } = await resolveAvailableReport(ctx, repoFiles, workspaceShorthand, directoryName);
+    const { name, path, filesPath } = await resolveAvailableReport(ctx, projectFiles, directoryName);
 
     const now = new Date().toISOString();
     const report = await putReport(ctx.storage, {
@@ -87,7 +84,7 @@ export const writeReportCommand = defineCommand({
       updatedAt: now,
     });
 
-    await repoFiles.writeText(path, reportToMarkdown(report));
+    await projectFiles.writeText(path, reportToMarkdown(report));
     await ctx.events.emit("pstdio-reports.report.created", {
       projectId: ctx.projectId,
       reportId: report.id,
@@ -96,9 +93,16 @@ export const writeReportCommand = defineCommand({
       name,
       kind,
       source: report.source,
-      path,
+      path: resolvePath(path),
     });
 
-    return { reportId: report.id, shorthand: report.shorthand, workspace: workspaceShorthand, name, path, filesPath };
+    return {
+      reportId: report.id,
+      shorthand: report.shorthand,
+      workspace: workspaceShorthand,
+      name,
+      path: resolvePath(path),
+      filesPath: resolvePath(filesPath),
+    };
   },
 });

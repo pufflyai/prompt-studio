@@ -12,14 +12,14 @@ import type { StoredTicket } from "../data/types";
 import { ticketRefFromAnchors } from "../data/workspace-ticket-link";
 
 export const copyOrWriteTicketFile = async (input: {
-  repoFiles: ArtifactMount;
+  projectFiles: ArtifactMount;
   storage: ExtensionStorageApi;
   ticket: StoredTicket;
   workspaceFiles: WorkspaceFilesMount;
 }) => {
   const relativePath = ticketMarkdownPath(input.ticket.shorthand);
-  const content = (await input.repoFiles.exists(relativePath))
-    ? await input.repoFiles.readText(relativePath)
+  const content = (await input.projectFiles.exists(relativePath))
+    ? await input.projectFiles.readText(relativePath)
     : await ticketToMarkdown(input.storage, input.ticket);
   await ensureTicketDraftsIgnored(input.workspaceFiles);
   await input.workspaceFiles.writeText(relativePath, content);
@@ -29,15 +29,16 @@ export const worktreeCreatedHook = defineHook<WorkspaceProvisionPayload>({
   id: "worktree-created",
   event: workspaceEvents.provision,
   async run(ctx, payload) {
+    if (payload.workspace.execution_kind !== "local") return;
     const ticketRef = ticketRefFromAnchors(payload.workspace.anchors_json);
     if (!ticketRef) return;
 
     const ticket = await findTicket(ctx.storage, ticketRef);
     if (!ticket) return;
-    if (!ctx.repoFiles || !ctx.workspaceFiles) throw new Error("Workspace file mounts are unavailable.");
+    if (!ctx.projectFiles || !ctx.workspaceFiles) throw new Error("Workspace file mounts are unavailable.");
 
     await copyOrWriteTicketFile({
-      repoFiles: ctx.repoFiles,
+      projectFiles: ctx.projectFiles,
       storage: ctx.storage,
       ticket,
       workspaceFiles: ctx.workspaceFiles,

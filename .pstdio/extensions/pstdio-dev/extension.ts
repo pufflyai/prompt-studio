@@ -79,7 +79,7 @@ const openInVscodeCommand = defineCommand({
   async run(ctx, commandParams) {
     const workspaceId = workspaceIdFrom(ctx, commandParams);
     const workspace = await ctx.workspaces.get(workspaceId);
-    const worktreePath = workspace?.worktree_path?.trim();
+    const worktreePath = workspace?.root_path?.trim();
     if (!worktreePath) throw new Error("Workspace worktree path is required.");
 
     await ctx.process.spawnDetached({
@@ -108,7 +108,7 @@ const openInIsolationCommand = defineCommand({
   async run(ctx, commandParams) {
     const workspaceId = workspaceIdFrom(ctx, commandParams);
     const workspace = await ctx.workspaces.get(workspaceId);
-    const worktreePath = workspace?.worktree_path?.trim();
+    const worktreePath = workspace?.root_path?.trim();
     if (!worktreePath) throw new Error("Workspace worktree path is required.");
 
     const stackName = stackNameFrom(workspaceId);
@@ -144,7 +144,7 @@ const stopIsolationCommand = defineCommand({
   async run(ctx, commandParams) {
     const workspaceId = workspaceIdFrom(ctx, commandParams);
     const workspace = await ctx.workspaces.get(workspaceId);
-    const worktreePath = workspace?.worktree_path?.trim();
+    const worktreePath = workspace?.root_path?.trim();
     if (!worktreePath) throw new Error("Workspace worktree path is required.");
 
     const stackName = stackNameFrom(workspaceId);

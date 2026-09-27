@@ -11,7 +11,7 @@ Manage Planner tickets with the `pst tickets` commands.
 
 1. List the available statuses, tags, and ticket templates with `pst statuses list`, `pst tags list`, and `pst tickets templates`. Do not assume their names. Use `pst tickets list` to check for related work.
 2. Choose how to create the ticket.
-   - For a detailed body, run `pst tickets write --title "<verb-led title>" [--status <status>] [--tags <tag>]`. Apply a template with `pst tickets apply-template --id <shorthand> --template <template>`, edit `.pstdio/tickets/<shorthand>/ticket.md`, then save it with `pst tickets save --id <shorthand>`.
+   - For a detailed body, run `pst tickets write --title "<verb-led title>" [--status <status>] [--tags <tag>]`. Apply a template with `pst tickets apply-template --id <shorthand> --template <template>`, edit the returned absolute `path` in the default project folder, then save it with `pst tickets save --id <shorthand>`.
    - If the complete body already exists, run `pst tickets create --content "<markdown>" [--status <status>] [--tags <tag>]`. The first heading becomes the title.
 3. Read the relevant code and documentation before writing the body. Mark unanswered questions with `[MISSING INFORMATION]`.
 4. Complete every applicable template section. A free-form ticket must still include:
@@ -28,7 +28,7 @@ Manage Planner tickets with the `pst tickets` commands.
 
 ```bash
 pst tickets write --title "Add retry to upload client"
-# Apply a template if needed, then edit .pstdio/tickets/PS-42/ticket.md.
+# Apply a template if needed, then edit its returned absolute path.
 pst tickets save --id PS-42
 ```
 

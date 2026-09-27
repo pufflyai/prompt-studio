@@ -30,7 +30,7 @@ A project groups repositories, tickets, documentation, templates, workspaces, an
 
 A ticket is a bug, feature, proposal, or other work item owned by the `pstdio-planner` extension. Each ticket has a shorthand such as `PS-12`, a status, and a separate `draft` flag.
 
-The extension store holds the saved ticket. `pst tickets write` or `pst tickets pull` creates a local checkout at `.pstdio/tickets/<shorthand>/`. Edit that checkout, then run `pst tickets save` to persist it.
+The extension store holds the saved ticket. `pst tickets write` or `pst tickets pull` creates a local checkout under `.pstdio/tickets/<shorthand>/` in the default project folder. Use the returned absolute `path`, even when working in another workspace, then run `pst tickets save` to persist it.
 
 ### Skills
 
@@ -66,7 +66,7 @@ A session records a conversation with an agent. It can belong to a workspace and
 
 ## Set up a project
 
-Create a project for the current repository:
+Create a project from the current folder:
 
 ```bash
 pst projects create [name]
@@ -74,11 +74,7 @@ pst projects create [name]
 
 When `name` is absent, Prompt Studio uses the current folder name. The command also enables the installed default extensions and creates the documentation tree.
 
-To link the repository to an existing project:
-
-```bash
-pst projects link --project-id <id>
-```
+On hosts with extension API alpha.12, the folder must be a Git repository. On alpha.13, Git is optional: the exact current folder becomes the project, an already registered folder reuses its project, and a child folder is a distinct project.
 
 Configure an agent and install its project skills:
 

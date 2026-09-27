@@ -18,13 +18,34 @@ const ticket = (overrides: Partial<StoredTicket> = {}): StoredTicket => ({
 });
 
 describe("ticket file operations", () => {
-  test("createTicketFile appends a named file with empty content", async () => {
+  test.each([
+    "../outside.txt",
+    "../../outside.txt",
+    "/outside.txt",
+    "nested/../file.txt",
+    "..\\outside.txt",
+    ".",
+    "..",
+    "C:outside.txt",
+    "bad\u0000.txt",
+  ])("rejects unsafe file name %j without changing stored files", async (name) => {
+    const storage = createMemoryStorage();
+    await putTicket(storage, ticket());
+    const file = await createTicketFile({ storage, ticketId: "ticket-1", name: "notes.md" });
+    await expect(createTicketFile({ storage, ticketId: "ticket-1", name })).rejects.toThrow("Invalid ticket file name");
+    await expect(updateTicketFile({ storage, ticketId: "ticket-1", fileId: file.id, name })).rejects.toThrow(
+      "Invalid ticket file name",
+    );
+    expect((await ticketsCollection(storage).get("ticket-1"))?.files).toEqual([file]);
+  });
+
+  test.each(["notes.md", "screenshots/diagram.svg"])("createTicketFile appends %s with empty content", async (name) => {
     const storage = createMemoryStorage();
     await putTicket(storage, ticket());
 
-    const file = await createTicketFile({ storage, ticketId: "ticket-1", name: "notes.md" });
+    const file = await createTicketFile({ storage, ticketId: "ticket-1", name });
 
-    expect(file).toMatchObject({ name: "notes.md", content: "" });
+    expect(file).toMatchObject({ name, content: "" });
     const stored = await ticketsCollection(storage).get("ticket-1");
     expect(stored?.files?.map((entry) => entry.id)).toEqual([file.id]);
   });

@@ -6,7 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.12"
+    "pstdio": "1.0.0-alpha.12 || 1.0.0-alpha.13"
   },
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.25.0",
+    "@pstdio/sdk": "^0.35.0",
     "@pstdio/ui": "0.26.0",
     "fonteditor-core": "^2.6.3",
     "pako": "^2.1.0",

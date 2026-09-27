@@ -1,6 +1,11 @@
 import { defineCommand, params, type TemplateParam } from "@pstdio/sdk/extensions";
 import { renderPrompt } from "@pstdio/sdk/prompts";
-import { readTicketMarkdown, requireRepoFiles, ticketMarkdownPath, writeTicketText } from "../data/draft-storage";
+import {
+  readTicketMarkdown,
+  requireTicketDraftFiles,
+  ticketMarkdownPath,
+  writeTicketText,
+} from "../data/draft-storage";
 import { extractTicketTitle } from "../data/frontmatter";
 import { readOwnedTemplate } from "../data/template-store";
 
@@ -28,8 +33,8 @@ export const applyTicketTemplateCommand = defineCommand({
     var: params.list(),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const current = await readTicketMarkdown(repoFiles, commandParams.id);
+    const { projectFiles, resolvePath } = await requireTicketDraftFiles(ctx);
+    const current = await readTicketMarkdown(projectFiles, commandParams.id);
     if (current === null) throw new Error(`Ticket not found: ${commandParams.id}`);
 
     const template = await readOwnedTemplate(ctx, commandParams.template);
@@ -38,7 +43,7 @@ export const applyTicketTemplateCommand = defineCommand({
 
     const path = ticketMarkdownPath(commandParams.id);
     await writeTicketText(
-      repoFiles,
+      projectFiles,
       commandParams.id,
       renderPrompt(template.content, {
         CREATED_AT: new Date().toISOString(),
@@ -49,6 +54,6 @@ export const applyTicketTemplateCommand = defineCommand({
         ...parseVariables(commandParams.var),
       }),
     );
-    return { shorthand: commandParams.id, path };
+    return { shorthand: commandParams.id, path: resolvePath(path) };
   },
 });

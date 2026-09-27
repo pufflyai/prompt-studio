@@ -10,6 +10,7 @@ import {
   viewDataEvents,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { notesFileAccess } from "./file-access";
 import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
 
 export const notesChanged = eventRef<{ noteId?: string }>({
@@ -29,7 +30,7 @@ export const note = defineResourceKind({
   icon: "file-text",
 });
 
-/** Notes live in the repo, so every note document is read through the repo mount. */
+/** Notes belong to the default project workspace through the host artifact mount. */
 export const notesMount = (ctx: ExtensionContextBase) => ctx.artifacts.mount(documents.id);
 
 export const editor = defineView({
@@ -37,9 +38,14 @@ export const editor = defineView({
   title: l10n("views.noteEditor", "Note"),
   body: {
     kind: "file",
-    refreshEvents: [notesChanged, viewDataEvents.repositoriesChanged],
+    refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
     load: async (ctx, { renderer }) => {
       const id = renderer.resource?.id;
+      const { readable, writable } = await notesFileAccess(ctx);
+      if (!readable)
+        return {
+          emptyState: { title: "Notes unavailable", description: "Open a ready local project folder to read notes." },
+        };
       const mount = notesMount(ctx);
       // Reloads still handle missed removal events, including offline clients.
       if (!id || !(await noteExists(mount, id))) {
@@ -55,6 +61,7 @@ export const editor = defineView({
         fileName: `${id}.md`,
         mimeType: "text/markdown",
         content: await readNote(mount, id),
+        editable: writable,
         placeholder: "Write your notes here...",
       };
     },
@@ -84,9 +91,10 @@ export const notesPage = definePage({
       order: 0,
       mountStrategy: "keep-mounted",
       tab: {
-        refreshEvents: [notesChanged, viewDataEvents.repositoriesChanged],
+        refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
         query: async (ctx, { renderer }) => {
           const id = renderer.resource?.id;
+          if (!(await notesFileAccess(ctx)).readable) return {};
           const mount = notesMount(ctx);
           if (!id || !(await noteExists(mount, id))) return {};
           return { label: await readNoteTitle(mount, id) };

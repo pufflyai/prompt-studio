@@ -115,7 +115,7 @@ for (const action of ["Archive workspace", "Delete workspace"]) {
       apiBase,
       fixture.project.id,
       "create-workspace",
-      { ticket: fixture.ticket.id, repo: { repoId: fixture.repoRecord.id } },
+      { ticket: fixture.ticket.id, provider_id: "pstdio.worktree", params: { base: "HEAD" } },
     );
     await openTicket(page, fixture.project.id);
     const workspaceRow = page

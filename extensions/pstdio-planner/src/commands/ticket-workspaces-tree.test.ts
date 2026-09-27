@@ -3,13 +3,7 @@ import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { createWorkspaceCommand } from "./ticket-actions";
 import { listTicketFilesTreeCommand } from "./ticket-files";
-
-const createWorkspaceTreeActionParams = {
-  repo: createWorkspaceCommand.params!.repo,
-  mode: createWorkspaceCommand.params!.mode,
-};
 
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
@@ -35,7 +29,8 @@ describe("ticket files tree workspace commands", () => {
         { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
       ],
       branch: "feature/work",
-      worktree_path: "/tmp/ws-1",
+      root_path: "/tmp/ws-1",
+      provider_id: "pstdio.worktree",
     };
     const unrelated = {
       id: "ws-2",
@@ -67,14 +62,14 @@ describe("ticket files tree workspace commands", () => {
       label: "Workspaces",
       collapsible: true,
       actions: [
-        {
+        expect.objectContaining({
           id: "create-workspace",
-          label: "Create workspace",
-          icon: "Plus",
-          command: createWorkspaceCommand.ref,
-          params: { ticket: ticket.id },
-          input: createWorkspaceTreeActionParams,
-        },
+          command: { extensionId: "pstdio", kind: "command", id: "workbench.workspace.create" },
+          params: {
+            shorthand_base: ticket.shorthand,
+            anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],
+          },
+        }),
       ],
       nodes: [
         {
@@ -196,14 +191,14 @@ describe("ticket files tree workspace commands", () => {
       label: "Workspaces",
       collapsible: true,
       actions: [
-        {
+        expect.objectContaining({
           id: "create-workspace",
-          label: "Create workspace",
-          icon: "Plus",
-          command: createWorkspaceCommand.ref,
-          params: { ticket: ticket.id },
-          input: createWorkspaceTreeActionParams,
-        },
+          command: { extensionId: "pstdio", kind: "command", id: "workbench.workspace.create" },
+          params: {
+            shorthand_base: ticket.shorthand,
+            anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],
+          },
+        }),
       ],
       nodes: [
         {

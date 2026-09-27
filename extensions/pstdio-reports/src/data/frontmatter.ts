@@ -1,9 +1,4 @@
-import {
-  findClosingFrontmatterDelimiter,
-  quoteYamlScalar as q,
-  stripFrontmatter,
-  unquoteYamlScalar as unquote,
-} from "@pstdio/sdk/data";
+import { findClosingFrontmatterDelimiter, quoteYamlScalar as q, unquoteYamlScalar as unquote } from "@pstdio/sdk/data";
 
 export { applyFrontmatter, stripFrontmatter } from "@pstdio/sdk/data";
 export interface ReportFrontmatterFields {

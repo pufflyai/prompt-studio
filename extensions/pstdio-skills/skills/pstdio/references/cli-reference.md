@@ -16,14 +16,13 @@ pst logs [--lines <count>] [--path]
 ## Projects
 
 ```sh
-pst projects create [name] [--repo <path>...]
-pst projects link --project-id <id>
-pst projects unlink
+pst projects create [name]
 pst projects list
 pst projects view [--project-id <id>]
-pst projects repos [--project-id <id>]
 pst projects delete <project-id>
 ```
+
+The alpha.12 host requires a Git repository and accepts `--repo <folder>`. The alpha.13 host accepts ordinary folders and uses `--path <folder>`. Run `pst projects create --help` to check your installed host.
 
 ## Agents
 
@@ -133,13 +132,13 @@ pst reports save [--workspace <id>] [--name <name>]
 pst reports delete [--workspace <id>] [--name <name>]
 ```
 
-`reports write` returns paths for the report and its evidence files. Edit them, then use `reports save`.
+`reports write` returns absolute host paths in the default project folder for the report and its evidence files. Edit those paths, then use `reports save`. These paths do not refer to a remote workspace filesystem.
 
 ## Troubleshooting
 
 | Problem | Command or check |
 | --- | --- |
-| Project is not linked | Run `pst projects list`, then `pst projects link --project-id <id>`. |
+| Project is not linked | Run `pst projects create` from the selected folder (a Git repository on alpha.12). |
 | Skills are missing | Run `pst agents install-skills <agent-id>`. |
 | Extensions fail validation | Run `pst extensions check`, then inspect the diagnostics. |
 | Runtime is unreachable | Run `pst serve`, then `pst logs`. |
