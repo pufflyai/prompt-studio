@@ -1,7 +1,9 @@
-import { readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { type APIRequestContext, expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
-import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
 
 const executeNoteCommand = async (
   request: APIRequestContext,
@@ -23,12 +25,13 @@ test("nests notes under their sidebar group and follows the active note through 
   page,
   request,
 }) => {
-  const response = await request.post(`${uiOrigin}/v1/projects`, { data: { name: "Notes navigation" } });
+  const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-notes-navigation-"));
+  const response = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Notes navigation" }, repoRoot),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
-  const repoRoot = createGitRepo("pstdio-notes-navigation-", "Notes navigation");
   try {
-    await registerRepoViaApi(request, uiOrigin, project.id, "notes", repoRoot);
     await expect
       .poll(async () => {
         const response = await request.get(`${uiOrigin}/v1/projects/${project.id}/extensions/ui`);
@@ -85,12 +88,13 @@ test("keeps note titles independent of the body and renames them through the con
   page,
   request,
 }) => {
-  const response = await request.post(`${uiOrigin}/v1/projects`, { data: { name: "Note titles" } });
+  const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-note-titles-"));
+  const response = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Note titles" }, repoRoot),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
-  const repoRoot = createGitRepo("pstdio-note-titles-", "Note titles");
   try {
-    await registerRepoViaApi(request, uiOrigin, project.id, "notes", repoRoot);
     const note = await executeNoteCommand(request, project.id, "create", { title: "Original title" });
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("onboarding-complete", "true");

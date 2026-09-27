@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 let projectId = "";
@@ -59,16 +60,11 @@ test.beforeAll(async ({ request }) => {
   writeRepoExtension(repoPath, localExtensionName, "Local Example");
 
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: `Repo Extension Toggle ${unique}` },
+    data: folderProjectInput({ name: `Repo Extension Toggle ${unique}` }, repoPath),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
   projectId = project.id;
-
-  const repoResponse = await request.post(`${apiBase}/v1/projects/${projectId}/repos`, {
-    data: { name: `repo-extension-toggle-${unique}`, path: repoPath },
-  });
-  expect(repoResponse.status()).toBe(201);
 });
 
 const openLocalExtensionToggle = async (page: import("@playwright/test").Page) => {

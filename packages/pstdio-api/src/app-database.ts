@@ -14,7 +14,6 @@ import {
   createInstalledExtensionSourcesDBService,
   createNotificationsDBService,
   createProjectsDBService,
-  createReposDBService,
   createSessionQueueEntriesDBService,
   createSessionsDBService,
   createSettingsDBService,
@@ -47,7 +46,6 @@ export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}
 export const createAppDatabaseServices = (db: DbClient) => ({
   projectsDBService: createProjectsDBService(db),
   automationDBService: createAutomationDBService(db),
-  reposDBService: createReposDBService(db),
   sessionQueueEntriesService: createSessionQueueEntriesDBService(db),
   sessionsDBService: createSessionsDBService(db),
   settingsDBService: createSettingsDBService(db),

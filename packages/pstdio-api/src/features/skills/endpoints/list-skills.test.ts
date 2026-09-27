@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
 import {
@@ -11,6 +12,7 @@ import {
   createTestHarnessRegistry,
   testHarnessId,
 } from "../../harnesses/test-harness-registry";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 
 type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
@@ -95,7 +97,7 @@ beforeAll(async () => {
   const res = await handle.app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "Test Project" }),
+    body: JSON.stringify(folderProjectInput({ name: "Test Project" })),
   });
   const project = await res.json();
   projectId = project.id;
@@ -160,14 +162,7 @@ describe("GET /v1/projects/:id/skills/:name", () => {
   });
 
   test("returns agent IDs where the skill is installed locally", async () => {
-    const repoPath = join(tempRoot, "repo-installed-agents");
-    mkdirSync(repoPath, { recursive: true });
-    const repoRes = await handle.app.request(`/v1/projects/${projectId}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "installed-agents-repo", path: repoPath }),
-    });
-    expect(repoRes.status).toBe(201);
+    await provisionProjectWorkspaces(handle.deps, projectId);
 
     const res = await handle.app.request(`/v1/projects/${projectId}/skills/catalog-skill`);
     expect(res.status).toBe(200);
@@ -178,14 +173,7 @@ describe("GET /v1/projects/:id/skills/:name", () => {
 
   test("returns agent IDs where the installed skill is out of date", async () => {
     writeFileSync(catalogSkillPath(), versionedSkillContent("1.2.0"), "utf8");
-    const repoPath = join(tempRoot, "repo-outdated-agents");
-    mkdirSync(repoPath, { recursive: true });
-    const repoRes = await handle.app.request(`/v1/projects/${projectId}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "outdated-agents-repo", path: repoPath }),
-    });
-    expect(repoRes.status).toBe(201);
+    await provisionProjectWorkspaces(handle.deps, projectId);
 
     try {
       writeFileSync(catalogSkillPath(), versionedSkillContent("1.3.0"), "utf8");
@@ -221,14 +209,8 @@ describe("GET /v1/projects/:id/skills/:name", () => {
 describe("POST /v1/projects/:id/skills/:name/update", () => {
   test("updates installed extension-backed skills to the latest source files", async () => {
     writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
-    const repoPath = join(tempRoot, "repo-update-skill");
-    mkdirSync(repoPath, { recursive: true });
-    const repoRes = await handle.app.request(`/v1/projects/${projectId}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "update-skill-repo", path: repoPath }),
-    });
-    expect(repoRes.status).toBe(201);
+    const repoPath = (await handle.deps.workspaceService.getDefault(projectId))!.root_path!;
+    await provisionProjectWorkspaces(handle.deps, projectId);
 
     try {
       writeFileSync(catalogSkillPath(), "# Catalog Skill v2\n", "utf8");

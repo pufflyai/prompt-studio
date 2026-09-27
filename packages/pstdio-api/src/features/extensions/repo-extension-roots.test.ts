@@ -6,9 +6,8 @@ describe("listLinkedRepoExtensionRoots", () => {
   test("lists one extension root per linked repo", async () => {
     const roots = await listLinkedRepoExtensionRoots({
       projectService: { list: async () => [{ id: "project-a" }, { id: "project-b" }] },
-      repoService: {
-        listByProject: async (projectId) =>
-          projectId === "project-a" ? [{ path: "/repos/alpha" }] : [{ path: "/repos/beta" }],
+      workspaceService: {
+        getDefault: async (projectId) => ({ root_path: projectId === "project-a" ? "/repos/alpha" : "/repos/beta" }),
       },
     });
 
@@ -27,7 +26,16 @@ describe("listLinkedRepoExtensionRoots", () => {
   test("groups a repo shared by multiple projects into a single root with every link", async () => {
     const roots = await listLinkedRepoExtensionRoots({
       projectService: { list: async () => [{ id: "project-b" }, { id: "project-a" }] },
-      repoService: { listByProject: async () => [{ path: "/repos/shared" }] },
+      workspaceService: {
+        getDefault: async () => ({
+          id: "home",
+          project_id: "project-1",
+          root_path: "/repos/shared",
+          execution_kind: "local",
+          provider_id: "pstdio.root",
+          provider_state: "ready",
+        }),
+      },
     });
 
     expect(roots).toEqual([

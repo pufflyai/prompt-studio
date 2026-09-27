@@ -1,4 +1,4 @@
-import { type CollectionChange, getCollection, getIndexedRows, type SyncedRow } from "@/lib/sync/collections";
+import { type CollectionChange, getCollection, type SyncedRow } from "@/lib/sync/collections";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { subscribeDashboardWorkspaceDiffSummaries } from "@/shared/workspaces/workspace-diff-summary-data";
 
@@ -9,8 +9,6 @@ const ownsChange = (table: CollectionChange["table"], row: SyncedRow, projectId:
       getCollection("sessions").get(String(row.session_id))?.project_id === projectId
     );
   }
-  if (table === "repos")
-    return getIndexedRows("project_repos", "repo_id", row.id).some((link) => link.project_id === projectId);
   return row.project_id === projectId;
 };
 
@@ -20,7 +18,7 @@ export const subscribeWorkspaceDataChanges = (getProjectId: () => string | undef
       listener();
       return;
     }
-    if (!["workspaces", "sessions", "workspace_sessions", "repos", "project_repos"].includes(change.table)) return;
+    if (!["workspaces", "sessions", "workspace_sessions"].includes(change.table)) return;
     const projectId = getProjectId();
     if (
       !projectId ||

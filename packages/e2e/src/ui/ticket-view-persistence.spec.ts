@@ -1,9 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 
 // Browser persistence keeps the same profile; desktop profile persistence is covered
 // separately because its renderer session and runtime origin are temporary.
 test("keeps named ticket views after reload and reopening a page", async ({ page, context, request }) => {
-  const response = await request.post("/v1/projects", { data: { name: "Ticket view persistence" } });
+  const response = await request.post("/v1/projects", {
+    data: folderProjectInput({ name: "Ticket view persistence" }),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   const path = `/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`;

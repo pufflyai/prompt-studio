@@ -10,21 +10,18 @@ const hostEventRef = <TPayload extends Struct>(id: string) => eventRef<TPayload>
 const resourceMenuSlotRef = (resourceKind: { id: string }, id: string) =>
   defineSlot<Struct, "menu">(`${resourceKind.id}.${id}`, { kind: "menu" });
 
-/** How a workspace's working tree is backed. `root` = the repo checkout itself; `cloud` is reserved. */
-export type WorkspaceType = "worktree" | "root" | "cloud";
+/** Provider that owns the workspace location and lifecycle. */
+export type WorkspaceType = string;
 
 export interface WorkspaceProvisionPayload {
   projectId: string;
   workspaceId: string;
   workspace: ExtensionWorkspace;
-  /** Absolute working directory to materialize files into — a worktree path or the repo root. */
+  /** Absolute local workspace directory to materialize files into. */
   workspaceDir: string;
   /** Local home directory of the project, absent when its default workspace has no local target. */
   projectDir?: string;
   providerId: string;
-  repoPath: string;
-  branch?: string;
-  type: WorkspaceType;
 }
 
 export interface SessionLifecyclePayload {
@@ -34,9 +31,7 @@ export interface SessionLifecyclePayload {
   originalSessionId?: string;
   workspace?: ExtensionWorkspace;
   workspaceId?: string;
-  /** Local working directory; absent for remote workspace targets. */
   workspaceDir?: string;
-  worktreePath?: string;
   branch?: string;
   anchors?: ResourceAnchor[];
 }

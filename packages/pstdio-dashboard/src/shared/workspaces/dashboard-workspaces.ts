@@ -2,7 +2,6 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import type { DataTableRendererRow, ResourceRef } from "@pstdio/workbench";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
-import { indexFirstProjectRepoPaths } from "@/shared/projects/project-repo-path";
 import {
   type DashboardRows,
   isDashboardProjectRow,
@@ -16,12 +15,13 @@ import {
   getDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
 import { createDashboardWorkspaceCapabilityMetadata } from "@/shared/workspaces/workspace-options";
+import { workspaceKind } from "./workspace-kind";
 import { workspaceState } from "./workspace-state";
 export interface DashboardWorkspace {
   id: string;
   title: string;
   shorthand: string;
-  type: "worktree" | "current_branch";
+  type: "worktree" | "folder" | "remote";
   additions: number;
   deletions: number;
   diffOverview?: string;
@@ -84,14 +84,14 @@ const createWorkspaceResourceMetadata = (input: {
     workspaceId: input.workspace.id,
     ...(input.workspacePath ? { workspacePath: input.workspacePath } : {}),
     workspaceShorthand: input.workspace.workspace_shorthand as string,
-    workspaceType: input.workspace.worktree_path ? "worktree" : "current_branch",
+    workspaceType: workspaceKind(input.workspace),
     ...createDashboardWorkspaceCapabilityMetadata({
       executionKind,
       providerState,
       supportsArchive: providerCapabilities?.archive === true,
       supportsDelete: providerCapabilities?.delete === true,
       supportsFiles: providerCapabilities ? providerCapabilities.files !== "none" : executionKind === "local",
-      supportsDiff: providerCapabilities ? providerCapabilities.diff === true : executionKind === "local",
+      supportsDiff: providerCapabilities?.diff === true,
     }),
     ...(input.workspace.provider_id ? { workspaceProviderId: input.workspace.provider_id } : {}),
     ...(input.workspace.display_path ? { workspaceDisplayPath: input.workspace.display_path } : {}),
@@ -112,10 +112,9 @@ const createWorkspaceResourceMetadata = (input: {
   return metadata;
 };
 export const buildDashboardWorkspacesFromRows = (
-  rows: Pick<DashboardRows, "projectRepos" | "repos" | "workspaces">,
+  rows: Pick<DashboardRows, "workspaces">,
   options: DashboardWorkspaceOptions = {},
 ) => {
-  const repoPathByProjectId = indexFirstProjectRepoPaths(rows.projectRepos, rows.repos);
   return rows.workspaces
     .filter(
       (workspace) =>
@@ -124,15 +123,11 @@ export const buildDashboardWorkspacesFromRows = (
     )
     .map((workspace) => {
       const title = (workspace.name as string | null) ?? (workspace.workspace_shorthand as string);
-      const type: DashboardWorkspace["type"] = workspace.worktree_path ? "worktree" : "current_branch";
+      const type: DashboardWorkspace["type"] = workspaceKind(workspace);
       const summary = options.diffSummariesByWorkspaceId?.get(workspace.id);
       const diffOverview = summary ? formatDashboardWorkspaceDiffOverview(summary) : undefined;
       const workspacePath =
-        workspace.execution_kind === "remote"
-          ? null
-          : ((workspace.worktree_path as string | null) ??
-            repoPathByProjectId.get(workspace.project_id as string) ??
-            null);
+        workspace.execution_kind === "remote" ? null : ((workspace.root_path as string | null) ?? null);
       const providerError = workspace.provider_error_json as
         | {
             message?: string;
@@ -151,7 +146,7 @@ export const buildDashboardWorkspacesFromRows = (
         createdAt: (workspace.created_at as string) ?? "",
         updatedAt: (workspace.updated_at as string) ?? "",
         branch: (workspace.branch as string | null) ?? null,
-        worktreePath: (workspace.worktree_path as string | null) ?? null,
+        worktreePath: (workspace.root_path as string | null) ?? null,
         isDefault: Boolean(workspace.is_default),
         archived: Boolean(workspace.archived),
         setupError: (workspace.setup_error as string | null) ?? providerError?.message ?? null,
@@ -196,7 +191,7 @@ export const toWorkspaceDataTableRow = (workspace: DashboardWorkspace): Dashboar
   values: {
     attempt: workspace.shorthand,
     name: workspace.title,
-    type: workspace.type === "worktree" ? "Worktree" : "Current branch",
+    type: { worktree: "Git worktree", folder: "Project folder", remote: "Remote workspace" }[workspace.type],
     provider: workspace.provider,
     state: formatWorkspaceState(workspace),
     branch: workspace.branch ?? "",

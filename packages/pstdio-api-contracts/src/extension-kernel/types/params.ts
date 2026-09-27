@@ -11,7 +11,6 @@ export type ParamType =
   | "select"
   | "multi-select"
   | "files"
-  | "repo"
   | "harness"
   | "template"
   | "resource"
@@ -88,13 +87,6 @@ export type MultiSelectParam<TRequired extends boolean | undefined = boolean | u
   options: ParamOption[];
 };
 
-export type RepoParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
-  { repoId: string; branch?: string },
-  TRequired
-> & {
-  type: "repo";
-};
-
 export type HarnessParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
   { harnessId: string; model?: string; params?: Record<string, string | boolean> },
   TRequired
@@ -140,7 +132,6 @@ export type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefi
   | SelectParam<TRequired>
   | MultiSelectParam<TRequired>
   | FilesParam<TRequired>
-  | RepoParam<TRequired>
   | HarnessParam<TRequired>
   | TemplateParam<TRequired>
   | ResourceParam<TRequired>

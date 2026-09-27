@@ -3,6 +3,8 @@ import { dirname, join } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { createFileMount, createReadBoundary } from "pstdio-extensions";
 
+import type { FileAccess } from "./workspace-files";
+
 const ignoreEntry = (extensionId: string) => `/ext/${extensionId}/`;
 const ignoreMarker = (extensionId: string) => `# pstdio:ignore-owned ${ignoreEntry(extensionId)}`;
 const ignoreUpdates = new Map<string, Promise<void>>();
@@ -61,23 +63,17 @@ const updateIgnore = async (repoPath: string, extensionId: string, tracked: bool
 
 export const createExtensionFilesApi = (input: {
   extensionId: string;
-  resolveRepoPath: (signal?: AbortSignal) => Promise<string>;
+  resolveRepoPath: (access: FileAccess) => Promise<string>;
   tracked: boolean;
   signal?: AbortSignal;
 }): ArtifactMount => {
-  let mount: ArtifactMount | undefined;
-  const mountFor = async (signal?: AbortSignal) => {
-    if (!mount) {
-      const repoPath = await input.resolveRepoPath(signal);
-      mount = createFileMount(join(repoPath, ".pstdio", "ext", input.extensionId), input.signal);
-    }
-    return mount;
-  };
-  const readMount = () => createReadBoundary(input.signal)(() => mountFor(input.signal));
+  const mountFor = async (access: FileAccess) =>
+    createFileMount(join(await input.resolveRepoPath(access), ".pstdio", "ext", input.extensionId), input.signal);
+  const readMount = () => createReadBoundary(input.signal)(() => mountFor("read"));
   const beforeWrite = async () => {
-    const repoPath = await input.resolveRepoPath();
+    const repoPath = await input.resolveRepoPath("write");
     await updateIgnore(repoPath, input.extensionId, input.tracked);
-    return mountFor();
+    return mountFor("write");
   };
   return {
     exists: async (path) => (await readMount()).exists(path),
@@ -88,6 +84,6 @@ export const createExtensionFilesApi = (input: {
     writeBytes: async (path, value) => (await beforeWrite()).writeBytes(path, value),
     list: async (pattern) => (await readMount()).list(pattern),
     listDirs: async (path) => (await readMount()).listDirs(path),
-    delete: async (path) => (await mountFor()).delete(path),
+    delete: async (path) => (await mountFor("write")).delete(path),
   };
 };

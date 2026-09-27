@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveProjectId } from "./resolve-project-id";
 
-const tmpBase = join(import.meta.dirname, "__test-tmp-resolve-project-id__");
+let tmpBase: string;
 const previousProjectId = process.env.PSTDIO_PROJECT_ID;
 
 beforeEach(() => {
-  mkdirSync(tmpBase, { recursive: true });
+  tmpBase = realpathSync(mkdtempSync(join(tmpdir(), "resolve-project-id-")));
   delete process.env.PSTDIO_PROJECT_ID;
 });
 
@@ -27,7 +28,7 @@ describe("resolveProjectId", () => {
     expect(result.projectId).toBe("explicit-id");
   });
 
-  test("keeps the workspace id when an explicit project is provided", () => {
+  test("omits a foreign workspace when an explicit project is provided", () => {
     const root = join(tmpBase, "explicit-worktree");
     mkdirSync(join(root, ".git"), { recursive: true });
     mkdirSync(join(root, ".pstdio"), { recursive: true });
@@ -36,7 +37,7 @@ describe("resolveProjectId", () => {
     expect(resolveProjectId(root, "explicit-id")).toEqual({
       projectId: "explicit-id",
       root,
-      workspaceId: "ws_host_1",
+      workspaceId: undefined,
     });
   });
 
@@ -72,10 +73,10 @@ describe("resolveProjectId", () => {
 
     const result = resolveProjectId(root);
 
-    expect(result).toEqual({ projectId: "project-from-env", root });
+    expect(result).toEqual({ projectId: "project-from-env", root: null });
   });
 
-  test("throws when no explicit ID and no git root", () => {
+  test("throws when no explicit ID and no project config", () => {
     expect(() => resolveProjectId("/nonexistent-path-that-wont-match")).toThrow("No project specified");
   });
 

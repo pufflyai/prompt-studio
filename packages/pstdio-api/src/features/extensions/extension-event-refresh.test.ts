@@ -11,7 +11,7 @@ test("publishes host events to views before waiting for hooks", async () => {
   const dispatch = fireExtensionEvent(
     {
       eventBus,
-      repoService: { listByProject: async () => [] },
+      workspaceService: { getDefault: async () => null },
       extensionRuntimeCatalog: {
         get: async () => ({
           enabledSources: [

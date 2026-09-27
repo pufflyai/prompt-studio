@@ -1,8 +1,9 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import { showHiddenSidenavEntry } from "../ui/helpers/sidenav-navigation";
-import { createGitRepo, registerRepoViaApi } from "../ui/helpers/workspace-session-attempt";
+import { createGitRepo } from "../ui/helpers/workspace-session-attempt";
 import { calculateStats, installLongTaskObserver, throttleChromiumCpu } from "./perf-helpers";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3300");
@@ -15,17 +16,17 @@ declare global {
   }
 }
 
-const createProject = async (request: APIRequestContext) => {
+const createProject = async (request: APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-171 Performance" },
+    data: folderProjectInput({ name: "PS-171 Performance" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };
 
-const prepareDashboard = async (page: Page, projectId: string, repoId: string) => {
+const prepareDashboard = async (page: Page, projectId: string) => {
   await page.addInitScript(
-    ({ selectedProjectId, selectedRepoId }) => {
+    ({ selectedProjectId }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
       localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
@@ -35,7 +36,6 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
           state: {
             lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
             lastSelectedModels: [],
-            lastSelectedRepo: selectedRepoId,
             lastSelectedBranches: [],
             sessionModalState: "closed",
             selectedSessionId: null,
@@ -53,7 +53,7 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
         true,
       );
     },
-    { selectedProjectId: projectId, selectedRepoId: repoId },
+    { selectedProjectId: projectId },
   );
 };
 
@@ -67,9 +67,8 @@ const openWorkspace = async (page: Page, shorthand: string) => {
 
 test("PS-171 restores a resource layout within the interaction budget", async ({ page, request }) => {
   test.slow();
-  const project = await createProject(request);
   const repoRoot = createGitRepo("pstdio-ps-171-perf-", "resource layout restore perf");
-  const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-171-perf-repo", repoRoot);
+  const project = await createProject(request, repoRoot);
 
   try {
     const ticketA = await createPlannerTicket(request, apiBase, project.id, {
@@ -80,18 +79,14 @@ test("PS-171 restores a resource layout within the interaction budget", async ({
     });
     const attemptA = await createPlannerAttempt(request, apiBase, project.id, {
       ticketId: ticketA.id,
-      repoId: repo.id,
-      mode: "worktree",
     });
     const attemptB = await createPlannerAttempt(request, apiBase, project.id, {
       ticketId: ticketB.id,
-      repoId: repo.id,
-      mode: "worktree",
     });
     const shorthandA = attemptA.workspace.workspace_shorthand;
     const shorthandB = attemptB.workspace.workspace_shorthand;
 
-    await prepareDashboard(page, project.id, repo.id);
+    await prepareDashboard(page, project.id);
     await installLongTaskObserver(page);
     await throttleChromiumCpu(page);
     await page.goto(`/projects/${project.id}/`);

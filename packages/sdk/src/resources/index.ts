@@ -1,4 +1,3 @@
-export type { Repo } from "pstdio-api-contracts";
 export type { AgentAvailabilityType, AgentInfo, AgentModel, AgentSkillsLayout } from "./agent";
 export { harnessLocalId } from "./agent";
 export type { FileRecord } from "./file";

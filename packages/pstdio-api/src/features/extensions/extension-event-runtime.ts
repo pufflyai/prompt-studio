@@ -10,7 +10,6 @@ import type {
 import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
-import { resolveLegacyWorkspaceLocation } from "./command-environment/legacy-workspace-location";
 import type { ExtensionsRouteDeps } from "./deps";
 
 export type ExtensionEventDeps = ExtensionsRouteDeps;
@@ -36,42 +35,24 @@ const resolveEventContext = async <TPayload extends Struct>(
   projectId: string,
   payload: TPayload,
 ) => {
-  const repos = await deps.repoService.listByProject(projectId);
+  const home = await deps.workspaceService.getDefault(projectId);
   const requestedWorkspaceId = stringValue((payload as { workspaceId?: unknown }).workspaceId);
-  const workspace = requestedWorkspaceId ? await deps.workspaceService.get(requestedWorkspaceId) : null;
-  if (requestedWorkspaceId && (!workspace || workspace.project_id !== projectId)) {
-    throw new Error(`Workspace not found for project: ${requestedWorkspaceId}`);
-  }
-
-  const providerParams = workspace?.provider_params_json as Record<string, unknown> | undefined;
-  const providerRef = workspace?.provider_ref_json as { data?: Record<string, unknown> } | null | undefined;
-  const repoId = stringValue(providerParams?.repo_id) ?? stringValue(providerRef?.data?.repo_id);
-  const requestedRepoPath = stringValue((payload as { repoPath?: unknown }).repoPath);
-  const repo =
-    (repoId ? repos.find((candidate) => candidate.id === repoId) : undefined) ??
-    (requestedRepoPath ? repos.find((candidate) => candidate.path === requestedRepoPath) : undefined);
-  const location = workspace
-    ? await resolveLegacyWorkspaceLocation(deps, workspace, {
-        repo: repo ? { projectId, repoId: repo.id, path: repo.path } : undefined,
-      })
-    : undefined;
-  const workspaceDir = location?.root;
-
+  const workspace = requestedWorkspaceId ? await deps.workspaceService.get(requestedWorkspaceId) : home;
+  if (requestedWorkspaceId && (!workspace || workspace.project_id !== projectId))
+    throw new Error("Workspace not found for project.");
+  const workspaceDir = workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined;
   const trustedPayload = { ...payload, projectId } as JsonObject;
-  delete trustedPayload.workspaceId;
-  delete trustedPayload.workspace;
-  delete trustedPayload.workspaceDir;
-  delete trustedPayload.repoPath;
-  delete trustedPayload.branch;
+  for (const key of ["workspaceId", "workspace", "workspaceDir", "projectDir", "repoPath", "branch"])
+    delete trustedPayload[key];
   if (workspace) {
     trustedPayload.workspaceId = workspace.id;
-    trustedPayload.workspace = { ...workspace, root_path: workspaceDir ?? null } as unknown as JsonObject;
+    trustedPayload.workspace = workspace as unknown as JsonObject;
+    trustedPayload.providerId = workspace.provider_id;
     if (workspaceDir) trustedPayload.workspaceDir = workspaceDir;
     if (workspace.branch) trustedPayload.branch = workspace.branch;
   }
-  if (repo) trustedPayload.repoPath = repo.path;
-
-  return { repo, trustedPayload, workspaceDir, workspaceId: workspace?.id };
+  if (home?.root_path) trustedPayload.projectDir = home.root_path;
+  return { trustedPayload, workspaceDir, workspaceId: workspace?.id };
 };
 
 export const fireExtensionEvent = async <TPayload extends Struct>(
@@ -95,7 +76,6 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
         name: input.name,
         project: snapshot.project,
         projectId: input.projectId,
-        repo: context.repo ? { projectId, repoId: context.repo.id, path: context.repo.path } : undefined,
         workspaceDir: context.workspaceDir,
         workspaceId: context.workspaceId,
         settings: snapshot.runtime.settings,
@@ -143,18 +123,20 @@ export const runExtensionCommand = async <TParams extends Struct, TResult>(
         name: input.name,
         project: snapshot.project,
         projectId: input.projectId,
-        repo: input.repo,
         workspaceDir: input.workspaceDir,
         workspaceId: input.workspaceId,
         settings: snapshot.runtime.settings,
       }),
   });
 
+  const workspace = await deps.workspaceService.getDefault(projectId);
   return (await runner.execute({
     commandId,
     projectId,
     params: params as JsonObject,
     source: "api",
+    workspaceId: workspace?.id,
+    workspaceDir: workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
   })) as CommandOutcome<TResult>;
 };
 
@@ -176,18 +158,20 @@ export const runExtensionHostCommand = async <TParams extends Struct, TResult>(
         name: input.name,
         project: snapshot.project,
         projectId: input.projectId,
-        repo: input.repo,
         workspaceDir: input.workspaceDir,
         workspaceId: input.workspaceId,
         settings: snapshot.runtime.settings,
       }),
   });
 
+  const workspace = await deps.workspaceService.getDefault(projectId);
   return (await runner.executeHostCommand({
     commandId,
     projectId,
     params: params as JsonObject,
     source: "api",
+    workspaceId: workspace?.id,
+    workspaceDir: workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
     run: run as (invocation: CommandInvocation) => Promise<TResult> | TResult,
   })) as CommandOutcome<TResult>;
 };

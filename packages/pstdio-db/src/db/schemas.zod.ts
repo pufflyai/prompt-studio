@@ -28,9 +28,8 @@ export const workspaceApiSchema = workspaceSelectSchema;
 export const sessionApiSchema = sessionSelectSchema.extend({
   agent_session_status: z.enum(["connected", "disconnected", "not_connected"]).optional(),
   branch: z.string().nullable(),
-  repo_id: z.string().nullable(),
   workspace_id: z.string().nullable(),
-  worktree_path: z.string().nullable(),
+  root_path: z.string().nullable(),
 });
 
 export const ydocUpdatesSelectSchema = createSelectSchema(ydocUpdates);

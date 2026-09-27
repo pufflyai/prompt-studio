@@ -153,6 +153,12 @@ const selectOnlySyncedProject = (
 ) => {
   if (getDashboardSelectedProjectId(ctx)) return false;
   if (!isInitialCollectionsSyncComplete()) return false;
+  if (
+    ctx.layout
+      .getLayout()
+      .regions.overlay.widgets.some((placement) => placement.viewId === dashboardWidgetIds.createProject)
+  )
+    return false;
 
   const projects = createDashboardProjects();
   if (projects.length !== 1) return false;
@@ -173,5 +179,17 @@ export const registerSingleProjectSelectionSync = (
     selectOnlySyncedProject(ctx, selectedProjectContext, persistence);
   });
 
-  return { dispose: unsubscribeDashboardData };
+  const unsubscribeLayout = ctx.layout.store.subscribeSelector(
+    (state) =>
+      state.layout.regions.overlay.widgets.some((placement) => placement.viewId === dashboardWidgetIds.createProject),
+    (setupOpen) => {
+      if (!setupOpen) selectOnlySyncedProject(ctx, selectedProjectContext, persistence);
+    },
+  );
+  return {
+    dispose() {
+      unsubscribeDashboardData();
+      unsubscribeLayout();
+    },
+  };
 };

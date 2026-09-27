@@ -76,6 +76,7 @@ describe("createCommandEnvironment sessions listByWorkspace", () => {
       {
         extensionStorageService: makeStorageService(),
         workspaceService: {
+          getDefault: async () => null,
           get: async () => ({ id: "workspace-1", project_id: "project-1" }),
           getByShorthand: async () => null,
         },
@@ -117,6 +118,13 @@ describe("createCommandEnvironment sessions listByWorkspace", () => {
 describe("createCommandEnvironment sessions attachments", () => {
   test("forwards attachment refs from extension-created sessions", async () => {
     const dispatchEntries: unknown[] = [];
+    const workspace = {
+      id: "workspace",
+      project_id: "project-1",
+      execution_kind: "local",
+      root_path: process.cwd(),
+      provider_state: "ready",
+    };
     const start = mock((_input: unknown) => ({
       agentSessionId: "agent-session-1",
       done: new Promise(() => {}),
@@ -125,13 +133,12 @@ describe("createCommandEnvironment sessions attachments", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        repoService: {
-          listByProject: async () => [{ id: "repo-1", path: "/repo" }],
-        },
         workspaceService: {
-          get: async () => null,
+          getDefault: async () => workspace,
+          get: async () => workspace,
           getByShorthand: async () => null,
         },
+        workspaceSessionService: { link: async () => {}, getWorkspaceBySessionId: async () => workspace },
         projectService: {
           get: async () => ({ id: "project-1", default_agent_id: null, default_agent_model: null }),
         },

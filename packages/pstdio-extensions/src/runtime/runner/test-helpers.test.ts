@@ -78,12 +78,6 @@ export const stubEnvironment = (
       removeWorktree: async () => ({ removed: true }),
       delete: async () => {},
     },
-    repos: {
-      list: async () => [],
-      get: async () => ({}) as never,
-      getDefault: async () => undefined,
-      resolvePath: async (_repoId, relativePath) => relativePath,
-    },
     activity: { record: async () => ({ id: "" }) },
     notify: {
       toast: async () => {},

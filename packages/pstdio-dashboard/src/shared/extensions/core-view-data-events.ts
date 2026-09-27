@@ -1,5 +1,5 @@
 import { viewDataEvents } from "@pstdio/sdk/extensions";
-import { getCollection, getIndexedRows, type SyncedRow, subscribeCollections } from "@/lib/sync/collections";
+import { getCollection, type SyncedRow, subscribeCollections } from "@/lib/sync/collections";
 import { type ExtensionRefreshEvent, publishExtensionEvent } from "./extension-webview-broadcast";
 
 const projectOf = (row: SyncedRow | undefined) => (typeof row?.project_id === "string" ? row.project_id : undefined);
@@ -44,14 +44,6 @@ export const subscribeCoreViewDataEvents = (
             break;
           case "workspaces":
             enqueue(viewDataEvents.workspacesChanged.id, projectOf(row));
-            break;
-          case "project_repos":
-            enqueue(viewDataEvents.repositoriesChanged.id, projectOf(row));
-            break;
-          case "repos":
-            for (const link of getIndexedRows("project_repos", "repo_id", row.id)) {
-              enqueue(viewDataEvents.repositoriesChanged.id, projectOf(link));
-            }
             break;
         }
       }

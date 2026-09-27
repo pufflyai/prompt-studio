@@ -4,7 +4,6 @@ export interface DirectoryEntry {
   name: string;
   path: string;
   isDirectory: boolean;
-  isGitRepo: boolean;
 }
 export const createFilesystemClient = (request: RequestFn) => ({
   list: (path?: string) =>

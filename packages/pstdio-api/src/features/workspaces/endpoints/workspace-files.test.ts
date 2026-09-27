@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { folderWorkspaceCapabilities } from "pstdio-db";
 import type { AppBindings } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import {
@@ -28,15 +29,22 @@ let app: OpenAPIHono<AppBindings>;
 let root: string;
 let repoRoot: string;
 let outside: string;
-const workspaces = new Map<string, { id: string; project_id: string; worktree_path: string | null }>();
-const reposByProject = new Map<string, Array<{ path: string }>>();
+const workspaces = new Map<string, { id: string; project_id: string; root_path: string | null }>();
 
 const deps = {
   workspaceService: {
-    get: async (id: string) => workspaces.get(id) ?? null,
-  },
-  repoService: {
-    listByProject: async (projectId: string) => reposByProject.get(projectId) ?? [],
+    get: async (id: string) => {
+      const row = workspaces.get(id);
+      return row
+        ? {
+            ...row,
+            execution_kind: "local",
+            provider_state: "ready",
+            provider_id: "pstdio.root",
+            provider_capabilities_json: folderWorkspaceCapabilities,
+          }
+        : null;
+    },
   },
 } as unknown as WorkspacesRouteDeps;
 
@@ -52,11 +60,9 @@ beforeEach(() => {
   repoRoot = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-repo-"));
   outside = mkdtempSync(join(tmpdir(), "pstdio-workspace-files-outside-"));
   workspaces.clear();
-  reposByProject.clear();
-  workspaces.set("workspace-1", { id: "workspace-1", project_id: "project-1", worktree_path: root });
-  workspaces.set("default", { id: "default", project_id: "project-1", worktree_path: null });
-  workspaces.set("orphan", { id: "orphan", project_id: "project-without-repos", worktree_path: null });
-  reposByProject.set("project-1", [{ path: repoRoot }]);
+  workspaces.set("workspace-1", { id: "workspace-1", project_id: "project-1", root_path: root });
+  workspaces.set("default", { id: "default", project_id: "project-1", root_path: repoRoot });
+  workspaces.set("orphan", { id: "orphan", project_id: "project-without-repos", root_path: null });
   app = new OpenAPIHono<AppBindings>();
   app.openapi(listWorkspaceFilesRoute, listWorkspaceFilesHandler(deps));
   app.openapi(getWorkspaceFileRoute, getWorkspaceFileHandler(deps));
@@ -105,7 +111,7 @@ describe("GET /workspaces/:id/files", () => {
     expect(search.truncated).toBe(true);
   });
 
-  test("lists files from the linked repository for a default workspace", async () => {
+  test("lists files from the selected folder for a default workspace", async () => {
     writeFileSync(join(repoRoot, "README.md"), "default workspace");
 
     const response = await app.request("/workspaces/default/files");
@@ -148,7 +154,7 @@ describe("GET and PUT /workspaces/:id/file", () => {
     expect(readFileSync(join(root, "notes.md"), "utf8")).toBe("after");
   });
 
-  test("reads and replaces a default workspace file in the linked repository", async () => {
+  test("reads and replaces a default workspace file in the selected folder", async () => {
     writeFileSync(join(repoRoot, "notes.md"), "before");
 
     const readResponse = await app.request(requestPath("default", "notes.md"));

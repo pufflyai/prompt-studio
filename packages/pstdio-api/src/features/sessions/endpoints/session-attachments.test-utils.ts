@@ -10,6 +10,7 @@ import type {
   SessionMessage,
 } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -183,7 +184,7 @@ export const createProject = async (app: Awaited<ReturnType<typeof createIsolate
   const res = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(folderProjectInput({ name })),
   });
   expect(res.status).toBe(201);
   return (await res.json()) as { id: string };

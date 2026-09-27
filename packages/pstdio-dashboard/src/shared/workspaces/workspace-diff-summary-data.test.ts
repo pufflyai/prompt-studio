@@ -32,7 +32,7 @@ describe("workspace diff summary data", () => {
     getWriter("workspaces")!.upsert({
       id: "workspace-first-load",
       provider_state: "ready",
-      worktree_path: "/project",
+      root_path: "/project",
       provider_capabilities_json: { diff: true },
     });
     (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "http://localhost:19840" };
@@ -67,6 +67,57 @@ describe("workspace diff summary data", () => {
       fileCount: 2,
     });
   });
+
+  test("requests summaries only while a workspace declares diff support", async () => {
+    const workspaceId = "workspace-diff-capability";
+    const requests: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch: (request) => {
+        requests.push(new URL(request.url).pathname);
+        return Response.json({ workspace_id: workspaceId, additions: 1, deletions: 0, file_count: 1 });
+      },
+    });
+    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: server.url.toString() };
+    const writer = getWriter("workspaces")!;
+
+    try {
+      for (const diff of [false, undefined]) {
+        writer.upsert({
+          id: workspaceId,
+          provider_state: "ready",
+          root_path: "/project",
+          provider_capabilities_json: { files: "write", diff },
+        });
+        expect(await requestDashboardWorkspaceDiffSummaries([workspaceId])).toEqual(new Map());
+        expect(requests).toEqual([]);
+      }
+      writer.upsert({
+        id: workspaceId,
+        provider_state: "ready",
+        root_path: "/project",
+        provider_capabilities_json: { files: "write", diff: true },
+      });
+      expect((await requestDashboardWorkspaceDiffSummaries([workspaceId])).get(workspaceId)).toMatchObject({
+        additions: 1,
+        deletions: 0,
+        fileCount: 1,
+      });
+      expect(requests).toEqual([`/v1/workspaces/${workspaceId}/diff-summary`]);
+
+      writer.upsert({
+        id: workspaceId,
+        provider_state: "ready",
+        root_path: "/project",
+        provider_capabilities_json: { files: "write", diff: false },
+      });
+      expect(await requestDashboardWorkspaceDiffSummaries([workspaceId])).toEqual(new Map());
+      expect(requests).toHaveLength(1);
+    } finally {
+      writer.remove(workspaceId);
+      server.stop(true);
+    }
+  });
 });
 
 test("defers background diff requests until the synced workspace is ready", async () => {
@@ -88,7 +139,7 @@ test("defers background diff requests until the synced workspace is ready", asyn
     provider_error_json: null,
     provider_state: "ready",
     execution_kind: "local",
-    worktree_path: "/project",
+    root_path: "/project",
     provider_capabilities_json: { diff: true },
   };
   try {
@@ -155,7 +206,8 @@ test("one unavailable diff summary does not hide other workspaces", async () => 
   (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: server.url.toString() };
   const writer = getWriter("workspaces")!;
   try {
-    for (const id of ids) writer.upsert({ id, provider_state: "ready", worktree_path: "/project" });
+    for (const id of ids)
+      writer.upsert({ id, provider_state: "ready", root_path: "/project", provider_capabilities_json: { diff: true } });
     const summaries = await requestDashboardWorkspaceDiffSummaries(ids);
     expect(summaries.has(ids[0])).toBe(false);
     expect(summaries.get(ids[1])).toMatchObject({ additions: 2, deletions: 1, fileCount: 1 });

@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderWorkspaceCapabilities } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
@@ -10,7 +11,7 @@ import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtim
 
 const tempRoots: string[] = [];
 
-const withRuntimeCatalog = <T extends { extensionService: object; projectService: object; repoService: object }>(
+const withRuntimeCatalog = <T extends { extensionService: object; projectService: object; workspaceService: object }>(
   deps: T,
 ) => ({
   ...deps,
@@ -18,7 +19,7 @@ const withRuntimeCatalog = <T extends { extensionService: object; projectService
   extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
     extensionService: deps.extensionService as never,
     projectService: deps.projectService as never,
-    repoService: deps.repoService as never,
+    workspaceService: deps.workspaceService as never,
   }),
 });
 
@@ -35,6 +36,7 @@ const writeExtension = (
       ref: { kind: "hook", id: "remember-worktree" },
       event: { extensionId: "pstdio", kind: "event", id: "workspace.provision" },
       async run(ctx, event) {
+        await ctx.workspaceFiles.writeText("provisioned.txt", "ready");
         await ctx.storage.set("last-worktree", event.workspaceDir);
         await ctx.storage.set("last-workspace-id", ctx.workspaceId ?? null);
       },
@@ -72,6 +74,8 @@ const writeExtension = (
 describe("fireExtensionEvent", () => {
   test("dispatches a host event to enabled extension hooks", async () => {
     const sourcePath = writeExtension();
+    const workspacePath = join(sourcePath, "workspace");
+    mkdirSync(workspacePath);
     const writes: unknown[] = [];
 
     const result = await fireExtensionEvent(
@@ -103,19 +107,22 @@ describe("fireExtensionEvent", () => {
         },
         activityEventsService: {},
         fileService: {},
-        repoService: {
-          listByProject: async () => [],
-        },
+
         projectService: {
           get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }),
         },
         sessionService: {},
         workspaceService: {
+          getDefault: async () => null,
           get: async () => ({
             id: "workspace-1",
             project_id: "project-1",
             execution_kind: "local",
-            worktree_path: "/trusted/worktree",
+            root_path: workspacePath,
+            provider_state: "ready",
+            initializing: true,
+            setup_error: "previous setup failed",
+            provider_capabilities_json: folderWorkspaceCapabilities,
             branch: "workspace/one",
             provider_params_json: {},
             provider_ref_json: null,
@@ -128,6 +135,7 @@ describe("fireExtensionEvent", () => {
     );
 
     expect(result.delivered).toBe(1);
+    expect(readFileSync(join(workspacePath, "provisioned.txt"), "utf8")).toBe("ready");
     expect(writes).toEqual([
       {
         extension_instance_id: "instance-1",
@@ -135,7 +143,7 @@ describe("fireExtensionEvent", () => {
         project_id: "project-1",
         scope_id: "project-1",
         scope_type: "project",
-        value_json: "/trusted/worktree",
+        value_json: workspacePath,
       },
       {
         extension_instance_id: "instance-1",
@@ -147,7 +155,9 @@ describe("fireExtensionEvent", () => {
       },
     ]);
   });
+});
 
+describe("extension event scope and diagnostics", () => {
   test("rejects a workspace owned by another project before hooks run", async () => {
     const sourcePath = writeExtension();
     const writes: unknown[] = [];
@@ -177,10 +187,11 @@ describe("fireExtensionEvent", () => {
       },
       activityEventsService: {},
       fileService: {},
-      repoService: { listByProject: async () => [] },
+
       projectService: { get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }) },
       sessionService: {},
       workspaceService: {
+        getDefault: async () => null,
         get: async () => ({ id: "workspace-2", project_id: "project-2" }),
       },
     }) as never;
@@ -190,7 +201,7 @@ describe("fireExtensionEvent", () => {
         workspaceId: "workspace-2",
         workspaceDir: "/tmp/forged",
       }),
-    ).rejects.toThrow("Workspace not found for project: workspace-2");
+    ).rejects.toThrow("Workspace not found for project.");
     expect(writes).toEqual([]);
   });
 
@@ -202,7 +213,7 @@ describe("fireExtensionEvent", () => {
         event: { extensionId: "pstdio", kind: "event", id: "worktree.removed" },
         async run(ctx, event) {
           await ctx.storage.set("removed-context", {
-            repoFiles: Boolean(ctx.repoFiles),
+            projectFiles: Boolean(ctx.projectFiles),
             workspaceFiles: Boolean(ctx.workspaceFiles),
             workspaceDir: event.workspaceDir ?? null,
           });
@@ -238,18 +249,26 @@ describe("fireExtensionEvent", () => {
         },
         activityEventsService: {},
         fileService: {},
-        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+
         projectService: { get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }) },
         sessionService: {},
         workspaceService: {
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: "/repo",
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+          }),
           get: async () => ({
             id: "workspace-1",
             project_id: "project-1",
             execution_kind: "local",
             provider_id: "pstdio.worktree",
-            provider_params_json: { repo_id: "repo-1" },
+            provider_params_json: { base: "HEAD" },
             provider_ref_json: null,
-            worktree_path: null,
+            root_path: null,
           }),
         },
       }) as never,
@@ -259,7 +278,7 @@ describe("fireExtensionEvent", () => {
     );
 
     expect(writes.map((value) => value.value_json)).toEqual([
-      { repoFiles: true, workspaceDir: null, workspaceFiles: false },
+      { projectFiles: true, workspaceDir: null, workspaceFiles: false },
     ]);
   });
 
@@ -304,14 +323,12 @@ describe("fireExtensionEvent", () => {
           },
           activityEventsService: {},
           fileService: {},
-          repoService: {
-            listByProject: async () => [],
-          },
+
           projectService: {
             get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }),
           },
           sessionService: {},
-          workspaceService: {},
+          workspaceService: { getDefault: async () => null },
         }) as never,
         "project-1",
         "workspace.provision",

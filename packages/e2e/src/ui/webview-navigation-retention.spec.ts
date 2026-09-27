@@ -1,11 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
 test("returning to Boombox reuses its live webviews across other modes and browser history", async ({
   page,
   request,
 }) => {
-  const response = await request.post(`${uiOrigin}/v1/projects`, { data: { name: "Webview retention" } });
+  const response = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Webview retention" }),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   try {
@@ -67,7 +70,7 @@ test("switching projects releases the previous project's retained webviews", asy
   const projects: Array<{ id: string; name: string }> = [];
   try {
     for (const name of ["First retention project", "Second retention project"]) {
-      const response = await request.post(`${uiOrigin}/v1/projects`, { data: { name } });
+      const response = await request.post(`${uiOrigin}/v1/projects`, { data: folderProjectInput({ name }) });
       expect(response.ok()).toBe(true);
       projects.push(await response.json());
     }

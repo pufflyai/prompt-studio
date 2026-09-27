@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 export const registerExtensionAutomationSmokeTests = () => {
@@ -47,7 +48,7 @@ export const registerExtensionAutomationSmokeTests = () => {
           headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
-      const projectResponse = await request("/v1/projects", { name: "automation" });
+      const projectResponse = await request("/v1/projects", folderProjectInput({ name: "automation" }, root));
       expect(projectResponse.status).toBe(201);
       const project = (await projectResponse.json()) as { id: string };
       const enabled = await request(`/v1/projects/${project.id}/extensions/installed/automation-smoke/enable`, {

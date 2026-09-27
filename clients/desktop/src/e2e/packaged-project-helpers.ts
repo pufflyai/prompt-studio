@@ -1,4 +1,7 @@
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { join } from "node:path";
 import { expect, type Locator, type Page } from "@playwright/test";
+import type { PackagedApp } from "./packaged-app-helpers";
 
 export const startKeyboardTabDrag = async (tab: Locator) => {
   await tab.press("Space");
@@ -19,16 +22,23 @@ export const openPackagedProject = async (page: Page, project: { id: string; nam
   await expect(picker).not.toBeVisible();
 };
 
-export const createPackagedProject = async (page: Page, name: string) => {
-  const result = await page.evaluate(async (projectName) => {
+export const createPackagedProject = async (app: Pick<PackagedApp, "page" | "home">, name: string) => {
+  const path = join(mkdtempSync(join(app.home, "project-")), name);
+  mkdirSync(path);
+  const result = await app.page.evaluate(async (projectPath) => {
     const response = await fetch("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: projectName }),
+      body: JSON.stringify({ initial_workspace: { provider_id: "pstdio.root", params: { path: projectPath } } }),
     });
-    return { status: response.status, project: (await response.json()) as { id: string; name: string } };
-  }, name);
+    return {
+      status: response.status,
+      project: (await response.json()) as { id: string; name: string; extension_warnings?: unknown[] },
+    };
+  }, path);
   expect(result.status).toBe(201);
+  expect(result.project.name).toBe(name);
+  expect(result.project.extension_warnings ?? []).toEqual([]);
   return result.project;
 };
 

@@ -1,5 +1,5 @@
 import type { Argv } from "yargs";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { findProjectRoot, readConfig } from "@/features/config/config";
 import { listWorkspaces as defaultListWorkspaces } from "@/features/workspaces/api/list-workspaces";
 
 export const command = "list";
@@ -14,7 +14,7 @@ export const builder = (yargs: Argv) =>
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
+  findProjectRoot: typeof findProjectRoot;
   readConfig: typeof readConfig;
   listWorkspaces: typeof defaultListWorkspaces;
   log: (msg: string) => void;
@@ -22,7 +22,7 @@ type Deps = {
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
+  findProjectRoot,
   readConfig,
   listWorkspaces: defaultListWorkspaces,
   log: console.log,
@@ -34,7 +34,7 @@ const formatTable = (workspaces: Awaited<ReturnType<typeof defaultListWorkspaces
     workspace: workspace.workspace_shorthand,
     id: workspace.id,
     branch: workspace.branch ?? "null",
-    path: workspace.worktree_path ?? "null",
+    path: workspace.root_path ?? "null",
   }));
   const widths = {
     workspace: Math.max(header.workspace.length, ...rows.map((row) => row.workspace.length)),
@@ -50,7 +50,7 @@ const formatTable = (workspaces: Awaited<ReturnType<typeof defaultListWorkspaces
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: { json?: boolean } = {}) => {
-    const root = deps.findGitRoot(deps.cwd());
+    const root = deps.findProjectRoot(deps.cwd());
     if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
     const config = deps.readConfig(root);

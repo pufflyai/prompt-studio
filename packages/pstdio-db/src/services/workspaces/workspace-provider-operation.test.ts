@@ -80,3 +80,20 @@ describe("workspace provider operations", () => {
     });
   });
 });
+
+test("attaching an initial provider cannot replace an active remote creation", async () => {
+  const workspace = await workspacesService.createDefault({ project_id: projectId, name: "Default" });
+  const first = await workspacesService.attachInitialProvider(workspace.id, {
+    provider_id: "example.remote",
+    provider_params_json: {},
+    provider_operation_id: "first",
+  });
+  expect(first?.provider_operation_id).toBe("first");
+  const second = await workspacesService.attachInitialProvider(workspace.id, {
+    provider_id: "example.other",
+    provider_params_json: {},
+    provider_operation_id: "second",
+  });
+  expect(second).toBeNull();
+  expect((await workspacesService.get(workspace.id))?.provider_operation_id).toBe("first");
+});

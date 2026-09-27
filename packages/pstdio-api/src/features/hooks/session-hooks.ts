@@ -41,13 +41,12 @@ export type SessionHookDeps = Pick<
   | "harnessRegistry"
   | "notificationService"
   | "projectService"
-  | "repoService"
+  | "workspaceService"
   | "sessionQueueEntriesService"
   | "sessionQueueLifecycle"
   | "sessionService"
   | "skillService"
   | "settingsService"
-  | "workspaceService"
   | "workspaceSessionService"
 >;
 
@@ -72,8 +71,7 @@ export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, sess
     ...base,
     workspace: { ...workspace, root_path: location?.root ?? null },
     workspaceId: workspace.id,
-    workspaceDir: location?.root,
-    worktreePath: workspace.worktree_path ?? undefined,
+    workspaceDir: workspace.root_path ?? undefined,
     branch: workspace.branch ?? undefined,
     anchors: [...sessionAnchors, ...((workspace.anchors_json ?? []) as ResourceAnchor[])],
   };

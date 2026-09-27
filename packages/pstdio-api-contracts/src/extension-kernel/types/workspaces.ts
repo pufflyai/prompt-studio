@@ -1,3 +1,4 @@
+import type { Localizable } from "../l10n";
 import type { WorkspaceCapabilities, WorkspaceProviderResult, WorkspaceProviderState } from "./extension";
 import type { JsonObject } from "./json";
 import type { ParamObjectSchema } from "./params";
@@ -10,8 +11,6 @@ export interface ExtensionWorkspace {
   is_default?: boolean;
   workspace_shorthand?: string;
   branch?: string | null;
-  worktree_path?: string | null;
-  /** Local working directory. Remote workspaces have no local root. */
   root_path?: string | null;
   provider_id?: string;
   provider_state?: WorkspaceProviderState;
@@ -29,11 +28,16 @@ export interface CreateExtensionWorkspaceInput {
   project_id?: string;
   /** Identifier prefix: starts with a letter or number; letters, numbers, hyphens, and underscores only. */
   shorthand_base: string;
-  provider_id?: string;
+  provider_id: string;
   params?: JsonObject;
   anchors?: ResourceAnchor[];
-  repo_id?: string;
-  base?: string;
+}
+
+/** Opens the host's provider selection form for a new workspace. */
+export interface CreateWorkspaceCommandParams {
+  anchors?: ResourceAnchor[];
+  /** Identifier prefix: starts with a letter or number; letters, numbers, hyphens, and underscores only. */
+  shorthand_base?: string;
 }
 
 export interface ExtensionWorkspaceProvider {
@@ -66,5 +70,3 @@ export interface CreateWorkspaceCommandParams {
   /** Identifier prefix: starts with a letter or number; letters, numbers, hyphens, and underscores only. */
   shorthand_base?: string;
 }
-
-import type { Localizable } from "../l10n";

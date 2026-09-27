@@ -9,9 +9,11 @@ import {
 } from "../../db/schemas.pg";
 import { renameWorkspace } from "./rename-workspace";
 import { createWorkspaceAnchorMutations } from "./workspace-anchors";
+import { attachInitialProvider, findDefaultByPath } from "./workspace-location";
 import {
   buildWorkspaceRecord,
   type CreateInput,
+  type DefaultWorkspaceInput,
   insertDefaultWorkspace,
   nextStandaloneWorkspaceShorthand,
   nextWorkspaceShorthand,
@@ -22,7 +24,7 @@ import {
 
 interface ProviderProjectionInput {
   branch?: string | null;
-  worktree_path?: string | null;
+  root_path?: string | null;
   provider_ref_json?: WorkspaceProviderRef | null;
   provider_state: WorkspaceProviderState;
   execution_kind: "local" | "remote";
@@ -35,7 +37,7 @@ interface ProviderProjectionInput {
 
 const providerProjectionValues = (input: ProviderProjectionInput) => ({
   ...(Object.hasOwn(input, "branch") ? { branch: input.branch } : {}),
-  ...(Object.hasOwn(input, "worktree_path") ? { worktree_path: input.worktree_path } : {}),
+  ...(Object.hasOwn(input, "root_path") ? { root_path: input.root_path } : {}),
   ...(Object.hasOwn(input, "provider_ref_json") ? { provider_ref_json: input.provider_ref_json } : {}),
   provider_state: input.provider_state,
   execution_kind: input.execution_kind,
@@ -145,7 +147,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
       shorthand,
       name: input.name,
       branch: input.branch,
-      worktree_path: input.worktree_path,
+      root_path: input.root_path,
       anchors: input.anchors,
       provider_id: input.provider_id,
       provider_params_json: input.provider_params_json,
@@ -180,7 +182,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
       anchors: input.anchors,
       name: input.name,
       branch: input.branch,
-      worktree_path: input.worktree_path,
+      root_path: input.root_path,
       provider_id: input.provider_id,
       provider_params_json: input.provider_params_json,
       provider_state: input.provider_state,
@@ -283,7 +285,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
   const clearWorktree = async (id: string) => {
     const [updated] = await db
       .update(workspaces)
-      .set({ branch: null, display_path: null, worktree_path: null, updated_at: nowTimestamp() })
+      .set({ branch: null, display_path: null, root_path: null, updated_at: nowTimestamp() })
       .where(eq(workspaces.id, id))
       .returning();
     return updated ?? null;
@@ -294,10 +296,12 @@ export const createWorkspacesDBService = (db: DbClient) => {
   return {
     create,
     createStandalone,
-    createDefault: (input: { project_id: string; name: string; branch: string | null }) =>
-      insertDefaultWorkspace(db, input),
+    createDefault: (input: DefaultWorkspaceInput) => insertDefaultWorkspace(db, input),
+    attachInitialProvider: (id: string, input: Parameters<typeof attachInitialProvider>[2]) =>
+      attachInitialProvider(db, id, input),
     getDefault: (projectId: string) => selectDefaultWorkspace(db, projectId),
     ...createWorkspaceAnchorMutations(db),
+    findDefaultByPath: (rootPath: string) => findDefaultByPath(db, rootPath),
     get,
     list,
     listForProviderReconciliation,

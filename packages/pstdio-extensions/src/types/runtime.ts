@@ -146,7 +146,6 @@ export interface RuntimeArtifactMount {
   /** Full repo-relative path (.pstdio/extension-storage/<name>/<relativePath>). */
   fullPath: string;
   label: Localizable<string>;
-  repoRole?: "default" | "selected" | "workspace";
 }
 
 export interface RuntimeScheduleRecord {
@@ -160,7 +159,7 @@ export interface RuntimeScheduleRecord {
   commandId: string;
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous schedule params
   params?: any;
-  repoId?: string;
+  workspaceId?: string;
   disabled?: boolean;
 }
 

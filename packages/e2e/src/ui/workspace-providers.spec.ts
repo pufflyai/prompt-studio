@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 
@@ -44,7 +45,9 @@ test("the global workspace action uses declared cloud parameters without a repos
   );
   let projectId: string | undefined;
   try {
-    const created = await request.post(`${uiOrigin}/v1/projects`, { data: { name: "Provider choices" } });
+    const created = await request.post(`${uiOrigin}/v1/projects`, {
+      data: folderProjectInput({ name: "Provider choices" }, sourcePath),
+    });
     expect(created.ok(), await created.text()).toBe(true);
     projectId = (await created.json()).id;
     await page.addInitScript((id) => localStorage.setItem("dashboard-wb2:selected-project:global", id), projectId!);
@@ -83,7 +86,7 @@ test("the global workspace action uses declared cloud parameters without a repos
       params: { image: "documents" },
     });
     expect(await response.json()).toMatchObject({
-      worktree_path: null,
+      root_path: null,
       execution_kind: "remote",
       provider_state: "ready",
       provider_ref_json: { version: 1, data: { image: "documents" } },

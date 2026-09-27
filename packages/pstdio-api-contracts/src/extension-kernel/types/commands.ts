@@ -2,7 +2,7 @@ import type { WorkbenchAttachmentTarget } from "../workbench-targets";
 import type { ContributionRef } from "./contribution-identity";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
-import type { RepoContext, ResourceRef } from "./resources";
+import type { ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
 
 export type CommandSource = "cli" | "dashboard" | "api" | "schedule" | "event" | "automation" | "command-panel";
@@ -34,8 +34,6 @@ export interface WorkbenchAttachmentInvocationContext {
 export interface CommandInvocation<TParams extends Struct = Struct> {
   params: TParams;
   resource?: ResourceRef;
-  repoId?: string;
-  repoPath?: string;
   attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
   metadata?: JsonObject;
@@ -141,7 +139,6 @@ export interface CommandRequestedEvent<TParams extends Struct = Struct> {
   source?: CommandSource;
   params: TParams;
   resource?: ResourceRef;
-  repo?: RepoContext;
 }
 
 export interface CommandStartedEvent<TParams extends Struct = Struct> extends CommandRequestedEvent<TParams> {}

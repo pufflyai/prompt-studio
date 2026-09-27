@@ -63,8 +63,10 @@ export const runExtensionSmoke = async (input: {
       signal: input.signal,
     });
     const client = createClient({ baseUrl: host.origin, token: host.token });
-    const project = await client.projects.create({ name: "Extension smoke test" });
-    await client.projects.registerRepo(project.id, { name: "smoke-fixture", path: context.project });
+    const project = await client.projects.create({
+      name: "Extension smoke test",
+      initial_workspace: { provider_id: "pstdio.root", params: { path: context.project } },
+    });
     await client.extensions.enableInstalled(project.id, installed.installName, toExtensionEnableInput(installed));
     const request = createRequest({ baseUrl: host.origin, token: host.token });
     const inventory = await request<WorkbenchExtensionMetadata>(`/v1/projects/${project.id}/extensions/ui`, {

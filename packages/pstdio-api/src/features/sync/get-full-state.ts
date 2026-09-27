@@ -5,9 +5,7 @@ import {
   files,
   installed_extension_sources,
   notifications,
-  project_repos,
   projects,
-  repos,
   sessions,
   settings,
   workspace_sessions,
@@ -17,8 +15,6 @@ import {
 const tableMap = {
   settings,
   projects,
-  repos,
-  project_repos,
   installed_extension_sources,
   notifications,
   extension_instances,

@@ -110,7 +110,7 @@ describe("extensions dev", () => {
     async () => {
       const repo = createGitRepo();
       const extensionRoot = join(repo, ".pstdio", "extensions", "dev-smoke");
-      const project = await createProjectViaApi(api.url, "Repo extension dev e2e");
+      const project = await createProjectViaApi(api.url, "Repo extension dev e2e", repo);
       mkdirSync(extensionRoot, { recursive: true });
       writeFileSync(join(repo, ".pstdio", "config.json"), JSON.stringify({ project_id: project.id }));
       writeExtension(extensionRoot, { command: true, scope: "repo" });
@@ -147,7 +147,7 @@ describe("extensions dev", () => {
     async () => {
       const repo = createGitRepo();
       const extensionRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-dev-e2e-"));
-      const project = await createProjectViaApi(api.url, "Extension dev e2e");
+      const project = await createProjectViaApi(api.url, "Extension dev e2e", repo);
       mkdirSync(join(repo, ".pstdio"), { recursive: true });
       writeFileSync(join(repo, ".pstdio", "config.json"), JSON.stringify({ project_id: project.id }));
       writeExtension(extensionRoot);

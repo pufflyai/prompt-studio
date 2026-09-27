@@ -27,7 +27,7 @@ const waitFor = async (condition: () => Promise<boolean> | boolean, timeoutMs = 
   throw new Error(`Condition not met within ${timeoutMs}ms`);
 };
 
-const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) => {
+const writeScheduledExtension = (options: { scheduleDisabled?: boolean; workspaceId?: string } = {}) => {
   const root = createTempRoot();
   mkdirSync(root, { recursive: true });
   writeFileSync(
@@ -68,6 +68,7 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) =
             title: "Heartbeat",
             schedule: "* * * * *",
             command: { kind: "command", id: "heartbeat" },
+            workspaceId: ${JSON.stringify(options.workspaceId)},
             params: { from: "schedule" },${options.scheduleDisabled ? "\n            disabled: true," : ""}
           },
         ],
@@ -95,7 +96,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
       },
     ],
   };
-  const repoService = { listByProject: async () => [] };
+  const workspaceService = { get: async () => null, getDefault: async () => null };
   const projectService = {
     get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
   };
@@ -110,7 +111,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
       extensionService: extensionService as never,
       projectService: projectService as never,
-      repoService: repoService as never,
+      workspaceService: workspaceService as never,
     }),
     extensionService,
     projectService,
@@ -125,9 +126,8 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     },
     activityEventsService: {},
     fileService: {},
-    repoService,
+    workspaceService,
     sessionService: {},
-    workspaceService: {},
   } as never;
 };
 
@@ -217,4 +217,22 @@ describe("createExtensionScheduler", () => {
 
     await waitFor(() => state.calls.length === 1);
   });
+});
+
+test("a schedule never runs in the project folder when its explicit workspace is missing", async () => {
+  const sourcePath = writeScheduledExtension({ workspaceId: "removed-workspace" });
+  const state = { calls: [] as unknown[] };
+  (globalThis as Record<string, unknown>).__extensionScheduleState = state;
+  const cron = createTestCronDriver();
+  const scheduler = createExtensionScheduler({
+    deps: createDeps(sourcePath),
+    listProjectIds: async () => ["project-1"],
+    watermarkPath: join(createTempRoot(), "watermarks.json"),
+    now: () => new Date("2026-05-18T07:56:15.000Z"),
+    cron: cron.factory,
+  });
+  schedulers.push(scheduler);
+  await waitFor(() => cron.size() === 1);
+  await cron.fireAll();
+  expect(state.calls).toEqual([]);
 });

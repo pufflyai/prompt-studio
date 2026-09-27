@@ -1,10 +1,11 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const createProject = async (request: APIRequestContext) => {
+const createProject = async (request: APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-194 Ticket Ancestry" },
+    data: folderProjectInput({ name: "PS-194 Ticket Ancestry" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };

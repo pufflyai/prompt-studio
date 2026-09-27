@@ -36,10 +36,10 @@ import type {
   ViewMenuContribution,
 } from "./views";
 
-/** Current host API version. `engines.pstdio` must list it as an exact version, optionally among others joined by `||`. */
-// While the API is unstable, explicit versions prevent ranges from implying alpha compatibility.
-// Bump the alpha in the same change that breaks an extension contract.
-export const EXTENSION_API_VERSION = "1.0.0-alpha.12";
+/** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
+// While the API is unstable the version carries an `-alpha.N` suffix and extensions must
+// declare it exactly. Bump the alpha in the same change that breaks an extension contract.
+export const EXTENSION_API_VERSION = "1.0.0-alpha.13";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -157,10 +157,6 @@ export interface HookDefinition<TPayload extends Struct = Struct> extends Contri
   run(ctx: EventContext, payload: TPayload): MaybePromise<void>;
 }
 
-export interface RepoRef {
-  readonly id: string;
-}
-
 export type ScheduleExpression = string;
 
 export interface ScheduleContribution<TParams extends Struct = Struct> extends ContributionDefinition<"schedule"> {
@@ -168,7 +164,7 @@ export interface ScheduleContribution<TParams extends Struct = Struct> extends C
   schedule: ScheduleExpression;
   command: CommandRef<TParams, unknown>;
   params?: TParams;
-  repo?: RepoRef;
+  workspaceId?: string;
   disabled?: boolean;
 }
 

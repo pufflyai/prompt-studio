@@ -122,10 +122,10 @@ test("ending an invocation before target resolution never opens a terminal", asy
   expect(requests).toEqual([]);
 });
 
-test("legacy environments without a workspace preserve their unscoped terminal", async () => {
+test("terminals without a selected workspace use the default workspace", async () => {
   const env = environment("");
   await events(env.terminal!.openSession(terminalRequest));
-  expect(requests).toEqual([terminalRequest]);
+  expect(requests).toEqual([{ ...terminalRequest, cwd: fixture.root }]);
 });
 
 test("closing an invocation during process target resolution prevents a late spawn", async () => {

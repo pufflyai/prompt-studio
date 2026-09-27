@@ -90,7 +90,12 @@ test("resuming a stale checkpoint preserves native middle turns in GET, SSE, and
     }
   };
   try {
-    const project = (await (await request("/projects", { name: "history" })).json()) as { id: string };
+    const project = (await (
+      await request("/projects", {
+        name: "history",
+        initial_workspace: { provider_id: "pstdio.root", params: { path: root } },
+      })
+    ).json()) as { id: string };
     const session = (await (
       await request("/sessions", {
         project_id: project.id,

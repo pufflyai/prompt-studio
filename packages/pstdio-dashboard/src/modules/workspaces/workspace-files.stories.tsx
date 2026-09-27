@@ -51,17 +51,20 @@ const selectedPathForStory = (state: WorkspaceStoryState) => {
 const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
   const selectedPath = selectedPathForStory(state);
   const changesSelected = state === "diffs" || state.startsWith("changes-");
+  let workspaceType = "worktree";
+  if (state === "default") workspaceType = "folder";
+  if (state === "remote") workspaceType = "remote";
   return {
     type: "workspace",
     id: WORKSPACE_ID,
     label: WORKSPACE_ID,
-    icon: "GitBranch",
+    icon: state === "default" ? "Folder" : "GitBranch",
     metadata: {
       projectId: "prompt-studio",
       workspaceId: WORKSPACE_ID,
       workspaceProviderState: state === "preparing" ? "provisioning" : "ready",
       workspaceShorthand: WORKSPACE_ID,
-      workspaceType: state === "default" || state === "remote" ? "current_branch" : "worktree",
+      workspaceType,
       workspaceView: changesSelected ? "diffs" : "files",
       ...(state === "changes-setup-failed"
         ? { workspaceProviderState: "failed", workspaceError: "Workspace configuration could not be written." }
@@ -76,7 +79,7 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
       ...(state === "changes-preparing" || state === "changes-recovery"
         ? { workspaceProviderState: "provisioning" }
         : {}),
-      ...(state === "provider-failed" ? { workspaceProviderState: "failed", workspaceSupportsDiff: false } : {}),
+      workspaceSupportsDiff: state !== "default" && state !== "remote",
       ...(state === "failed"
         ? {
             workspaceProviderState: "failed",
@@ -84,6 +87,7 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
             workspaceSupportsDiff: false,
           }
         : {}),
+      ...(state === "provider-failed" ? { workspaceProviderState: "failed", workspaceSupportsDiff: false } : {}),
       ...(state === "remote"
         ? {
             workspaceExecutionKind: "remote",

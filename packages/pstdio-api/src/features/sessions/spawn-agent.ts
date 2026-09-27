@@ -132,8 +132,12 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
       attachments: input.attachments,
       model: input.model,
       params: input.params,
-      cwd: input.cwd,
-      workspace: workspace!,
+      cwd: workspace
+        ? workspace.executionTarget.kind === "local"
+          ? workspace.executionTarget.rootPath
+          : undefined
+        : input.cwd,
+      workspace,
       sessionId: input.sessionId,
       events: conversation,
       signal: input.signal,

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
@@ -15,7 +15,6 @@ const directoryEntrySchema = z.object({
   name: z.string(),
   path: z.string(),
   isDirectory: z.boolean(),
-  isGitRepo: z.boolean(),
 });
 
 const listDirectoryResponseSchema = z.object({
@@ -31,7 +30,7 @@ const resolveDirectoryPath = (path?: string) => {
   const trimmedPath = path?.trim();
 
   if (!trimmedPath) {
-    return process.cwd();
+    return homedir();
   }
 
   if (trimmedPath === "~") {
@@ -43,10 +42,6 @@ const resolveDirectoryPath = (path?: string) => {
   }
 
   return resolve(trimmedPath);
-};
-
-const isGitRepositoryDirectory = (path: string) => {
-  return existsSync(join(path, ".git"));
 };
 
 export const listDirectoryRoute = createRoute({
@@ -72,7 +67,7 @@ export const listDirectoryRoute = createRoute({
 export const listDirectoryHandler = (_deps: FilesystemRouteDeps): AppRouteHandler<typeof listDirectoryRoute> => {
   return async (c) => {
     const { path } = c.req.valid("query");
-    const targetDirectory = resolveDirectoryPath(path);
+    let targetDirectory = resolveDirectoryPath(path);
 
     if (!existsSync(targetDirectory)) {
       return c.json({ error: `Directory not found: ${targetDirectory}` }, 400);
@@ -81,6 +76,7 @@ export const listDirectoryHandler = (_deps: FilesystemRouteDeps): AppRouteHandle
     let directoryStats: ReturnType<typeof statSync>;
 
     try {
+      targetDirectory = realpathSync(targetDirectory);
       directoryStats = statSync(targetDirectory);
     } catch {
       return c.json({ error: `Unable to load directory: ${targetDirectory}` }, 400);
@@ -93,13 +89,17 @@ export const listDirectoryHandler = (_deps: FilesystemRouteDeps): AppRouteHandle
     try {
       const entries = readdirSync(targetDirectory, { withFileTypes: true }).map((entry) => {
         const entryPath = join(targetDirectory, entry.name);
-        const isDirectory = entry.isDirectory();
+        let isDirectory = entry.isDirectory();
+        if (entry.isSymbolicLink()) {
+          try {
+            isDirectory = statSync(entryPath).isDirectory();
+          } catch {}
+        }
 
         return {
           name: entry.name,
           path: entryPath,
           isDirectory,
-          isGitRepo: isDirectory && isGitRepositoryDirectory(entryPath),
         };
       });
 

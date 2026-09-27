@@ -6,7 +6,7 @@ describe("workspaces list", () => {
     id: "7d08f5cf-f788-4106-87e9-2f39d92576ea",
     workspace_shorthand: "default",
     branch: "main",
-    worktree_path: null,
+    root_path: null,
   };
 
   test("lists active workspaces with their complete IDs", async () => {
@@ -14,7 +14,7 @@ describe("workspaces list", () => {
 
     const handler = createHandler({
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
+      findProjectRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
       listWorkspaces: async () => [workspace] as never,
       log,
@@ -35,7 +35,7 @@ describe("workspaces list", () => {
     const log = mock();
     const handler = createHandler({
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
+      findProjectRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
       listWorkspaces: async () => [workspace] as never,
       log,
@@ -51,7 +51,7 @@ describe("workspaces list", () => {
 
     const handler = createHandler({
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
+      findProjectRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
       listWorkspaces: async () => [],
       log,
@@ -66,7 +66,7 @@ describe("workspaces list", () => {
     const log = mock();
     const handler = createHandler({
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
+      findProjectRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
       listWorkspaces: async () => [],
       log,

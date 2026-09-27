@@ -6,10 +6,8 @@ import {
 } from "pstdio-api-contracts/extension-kernel";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
-import { projectLegacyWorktreeProvider } from "../../workspaces/legacy-worktree-provider";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
 import { listWorkspaceProviders } from "../../workspaces/workspace-provider-catalog";
-import { resolveWorkspaceLocation } from "../../workspaces/workspace-provider-execution-target";
 import {
   assertWorkspaceDeleteAllowed,
   cancelProviderBackedWorkspace,
@@ -70,10 +68,8 @@ export const createExtensionWorkspace = async (
     projectId,
     shorthandBase,
     anchors,
-    providerId: input.workspaceInput.provider_id,
+    providerId: input.workspaceInput.provider_id ?? "pstdio.worktree",
     params: input.workspaceInput.params,
-    repoId: input.workspaceInput.repo_id,
-    base: input.workspaceInput.base,
     setupWorktree: runtimeDeps.setupWorkspaceWorktree,
     provision: (workspace, repoPath) => runtimeDeps.runWorkspaceProvisioning(deps, { projectId, workspace, repoPath }),
     signal: input.signal,
@@ -96,15 +92,7 @@ export const createWorkspacesApi = (
     if (!workspace) throw new Error(`Workspace not found: ${id}`);
     return workspace;
   };
-  const projectWorkspace = async (workspace: WorkspaceRecord, signal?: AbortSignal) => {
-    const project = createReadBoundary(signal);
-    const target =
-      workspace.execution_kind === "local" ? await project(() => resolveWorkspaceLocation(deps, workspace)) : undefined;
-    return {
-      ...(await project(() => projectLegacyWorktreeProvider(deps, workspace))),
-      root_path: target?.root ?? null,
-    } as ExtensionWorkspace;
-  };
+  const projectWorkspace = async (workspace: WorkspaceRecord, _signal?: AbortSignal) => workspace as ExtensionWorkspace;
   const projectOptionalWorkspace = async (workspace: WorkspaceRecord | null) =>
     workspace ? projectWorkspace(workspace, input.signal) : null;
 
@@ -144,9 +132,7 @@ export const createWorkspacesApi = (
       await deps.workspaceService.removeAnchors(id, refs);
     },
     resolve: async (id) => {
-      const workspace = await read(async () =>
-        projectLegacyWorktreeProvider(deps, await read(() => requireScopedWorkspace(id))),
-      );
+      const workspace = await read(() => requireScopedWorkspace(id));
       const localTarget = await read(() => resolveWorkspaceExecutionTarget(deps, id));
       const providerRef = workspace.provider_ref_json as WorkspaceProviderRef | null;
       if (workspace.execution_kind === "remote" && !providerRef) {
@@ -196,12 +182,12 @@ export const createWorkspacesApi = (
       const remove = runtimeDeps.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
       const removed = await remove(deps, workspace);
       await deps.workspaceService.softDelete(id);
-      if (removed && workspace.worktree_path) {
+      if (removed && workspace.root_path) {
         const { anchors_json: _anchors, ...eventWorkspace } = workspace;
         const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;
         fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
           projectId: workspace.project_id,
-          worktreePath: workspace.worktree_path,
+          worktreePath: workspace.root_path,
           workspace: eventWorkspace as ExtensionWorkspace,
           workspaceId: workspace.id,
         });

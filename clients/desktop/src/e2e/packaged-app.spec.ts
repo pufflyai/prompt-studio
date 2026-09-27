@@ -15,7 +15,7 @@ import {
   waitForDescriptor,
   waitForExit,
 } from "./packaged-app-helpers";
-import { openPackagedProject } from "./packaged-project-helpers";
+import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 import { waitForVisibleElement } from "./visible-element-timing";
 
 // Hosted Intel Mac runners start the packaged app two to three times slower than Apple Silicon,
@@ -24,16 +24,6 @@ const isIntelMac = process.platform === "darwin" && process.arch === "x64";
 const coldStartBudgetMs = isIntelMac ? 20_000 : 8_000;
 const macStartupWindowBudgetMs = isIntelMac ? 10_000 : 1_500;
 const startupWindowBudgetMs = process.platform === "darwin" ? macStartupWindowBudgetMs : 1_000;
-
-const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
-  app.page.evaluate(async (projectName) => {
-    const response = await fetch("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: projectName }),
-    });
-    return { body: (await response.json()) as { id?: string; name?: string }, status: response.status };
-  }, name);
 
 test(
   "proves cold packaged startup and both authenticated transport paths",
@@ -64,10 +54,7 @@ test(
         ).status,
       ).toBe(403);
 
-      expect(await createProjectThroughBrowser(app, "Packaged transport project")).toEqual({
-        body: expect.objectContaining({ name: "Packaged transport project" }),
-        status: 201,
-      });
+      await createPackagedProject(app, "Packaged transport project");
       expect(await app.page.evaluate(() => document.cookie)).toBe("");
       expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
       expect(app.page.url().includes(app.runtime.token)).toBe(false);
@@ -102,9 +89,8 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
   let second: PackagedApp | null = null;
   try {
     first = await launchPackagedApp(home);
-    const created = await createProjectThroughBrowser(first, "Relaunch persistence project");
-    expect(created).toMatchObject({ status: 201 });
-    const projectId = created.body.id;
+    const created = await createPackagedProject(first, "Relaunch persistence project");
+    const projectId = created.id;
     if (!projectId) throw new Error("Packaged project creation did not return an id");
     await openPackagedProject(first.page, { id: projectId, name: "Relaunch persistence project" });
     await first.page.getByRole("option", { name: "Sessions", exact: true }).click();

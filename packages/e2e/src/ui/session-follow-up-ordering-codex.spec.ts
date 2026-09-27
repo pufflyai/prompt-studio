@@ -9,7 +9,6 @@ import {
   expectOrderedConversationBlocks,
   getRenderedConversationBlocks,
   openNewSessionPanel,
-  registerRepoViaApi,
   setProjectAgentDefaults,
   startConversationLayoutRecorder,
   submitInitialMessage,
@@ -24,7 +23,6 @@ const codexAgentId = "pstdio.harness-codex.harness.codex";
 test.describe("Codex follow-up ordering", () => {
   let projectId: string;
   let repoDir: string;
-  let repoId: string;
 
   test.skip(!requiresCodex, "Requires E2E_AGENTS=codex");
 
@@ -39,8 +37,6 @@ test.describe("Codex follow-up ordering", () => {
     const project = await createProjectViaApi(request, "Codex Follow-up Ordering");
     projectId = project.id;
     await setProjectAgentDefaults(request, projectId, codexAgentId);
-    const repo = await registerRepoViaApi(request, projectId, "codex-follow-up-ordering-repo", repoDir);
-    repoId = repo.id;
   });
 
   test.afterEach(() => {
@@ -52,7 +48,7 @@ test.describe("Codex follow-up ordering", () => {
     const firstPrompt = "Reply with exactly FIRST DONE and nothing else.";
     const followUpPrompt = "Inspect README.md with a shell command, then reply with exactly SECOND DONE.";
 
-    await bypassOnboarding(page, { projectId, repoId, branch: "main", agentId: codexAgentId });
+    await bypassOnboarding(page, { projectId, branch: "main", agentId: codexAgentId });
     await openNewSessionPanel(page, projectId);
     const { sessionId } = await submitInitialMessage(page, initialPrompt);
 

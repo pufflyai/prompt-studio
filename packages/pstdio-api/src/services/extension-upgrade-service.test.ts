@@ -59,7 +59,7 @@ const idleExtensionService = {
   },
 };
 
-const emptyRepoService = { listByProject: async () => [] };
+const emptyWorkspaceService = { getDefault: async () => null };
 
 describe("extension upgrade service", () => {
   test("resolves an annotated release tag to its commit", async () => {
@@ -85,7 +85,7 @@ describe("extension upgrade service", () => {
     const service = createExtensionUpgradeService({
       extensionService: idleExtensionService,
       release: { source: "git", ref: releaseCommit },
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     const result = await service.canUpgrade({
@@ -103,7 +103,7 @@ describe("extension upgrade service", () => {
       extensionService: idleExtensionService,
       release: { source: "git", ref: "pstdio@0.27.0" },
       resolveReleaseCommit,
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
     const currentSource = {
       ...installedSource,
@@ -119,7 +119,7 @@ describe("extension upgrade service", () => {
     const service = createExtensionUpgradeService({
       extensionService: idleExtensionService,
       release: { source: "git", ref: "c".repeat(40) },
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     expect(
@@ -134,7 +134,7 @@ describe("extension upgrade service", () => {
     const service = createExtensionUpgradeService({
       extensionService: idleExtensionService,
       release: { source: "git", ref: "c".repeat(40) },
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     // Discovery creates rows for extensions it finds on disk. Those rows carry no install
@@ -152,7 +152,7 @@ describe("extension upgrade service", () => {
     const service = createExtensionUpgradeService({
       extensionService: idleExtensionService,
       release: { source: "git", ref: "c".repeat(40) },
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     expect(
@@ -168,7 +168,7 @@ describe("extension upgrade service", () => {
     const service = createExtensionUpgradeService({
       extensionService: idleExtensionService,
       release: { source: "git", ref: "c".repeat(40) },
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     expect(
@@ -202,7 +202,7 @@ describe("catalog extension installation and upgrades", () => {
       installExtensionSource,
       release: { source: "git", ref: "pstdio@0.27.0" },
       resolveReleaseCommit: async () => "e".repeat(40),
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     const result = await service.upgrade("project-1", "instance-1");
@@ -238,7 +238,7 @@ describe("catalog extension installation and upgrades", () => {
       extensionService: idleExtensionService,
       installExtensionSource: installExtensionSource as never,
       release: { source: "git", ref: "pstdio@0.27.0" },
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     const first = service.prepareMarketplaceExtensionSource("pstdio-planner");
@@ -284,7 +284,7 @@ describe("catalog extension installation and upgrades", () => {
       },
       installExtensionSource,
       release: { source: "git", ref: "pstdio@0.27.0" },
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     const result = await service.upgrade("project-1", "instance-1");
@@ -314,7 +314,7 @@ describe("catalog extension installation and upgrades", () => {
         throw new Error("should not install");
       },
       release: { source: "git", ref: "pstdio@0.27.0" },
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     expect(service.upgrade("project-1", "instance-1")).rejects.toBeInstanceOf(ExtensionUpgradeUnavailableError);
@@ -348,7 +348,7 @@ describe("catalog extension installation and upgrades", () => {
       installExtensionSource: installExtensionSource as never,
       release: { source: "git", ref: "v2.0.0" },
       resolveReleaseCommit: async () => "2".repeat(40),
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
     });
 
     const result = await service.upgrade("project-1", "instance-1");
@@ -381,7 +381,7 @@ describe("catalog extension installation and upgrades", () => {
       },
       extensionService: idleExtensionService,
       release: null,
-      repoService: emptyRepoService,
+      workspaceService: emptyWorkspaceService,
       resolveReleaseCommit,
     });
 

@@ -17,7 +17,7 @@ const buildDeps = () => {
       project_id: "project_1",
       branch: null,
       display_path: null,
-      worktree_path: null,
+      root_path: null,
     })),
     softDelete: mock(async (_id: string) => {}),
     rename: mock(async (id: string, name: string) => ({
@@ -106,12 +106,12 @@ describe("WorkspaceService", () => {
 
       const result = await service.clearWorktree("ws_1");
 
-      expect(result).toMatchObject({ id: "ws_1", branch: null, display_path: null, worktree_path: null });
+      expect(result).toMatchObject({ id: "ws_1", branch: null, display_path: null, root_path: null });
       expect(workspacesDb.clearWorktree).toHaveBeenCalledWith("ws_1");
       expect(emitted).toContainEqual([
         "workspaces",
         "set",
-        expect.objectContaining({ id: "ws_1", branch: null, worktree_path: null }),
+        expect.objectContaining({ id: "ws_1", branch: null, root_path: null }),
       ]);
     });
   });

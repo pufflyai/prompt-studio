@@ -30,9 +30,7 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
     nativeError: null,
   };
   const harness = await getSessionHarness(deps.harnessRegistry, session);
-  const workspace = deps.workspaceSessionService
-    ? await resolveSessionWorkspaceContext(deps.workspaceSessionService, sessionId, session.cwd ?? undefined)
-    : undefined;
+  let workspace: Awaited<ReturnType<typeof resolveSessionWorkspaceContext>>;
   await Promise.all([
     (async () => {
       if (!session.session_file_id) return;
@@ -48,6 +46,9 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
     (async () => {
       if (!session.agent_session_id || !harness?.supportsHistory) return;
       try {
+        workspace = deps.workspaceSessionService
+          ? await resolveSessionWorkspaceContext(deps.workspaceSessionService, sessionId)
+          : undefined;
         sources.native = await harness.getMessages(
           { agentSessionId: session.agent_session_id, cwd: session.cwd ?? undefined, workspace },
           { projectId: session.project_id ?? undefined },

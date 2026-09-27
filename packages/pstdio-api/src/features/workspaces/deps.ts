@@ -20,7 +20,7 @@ export type WorkspacesRouteDeps = Pick<
   | "harnessRegistry"
   | "notificationService"
   | "projectService"
-  | "repoService"
+  | "workspaceService"
   | "sessionQueueEntriesService"
   | "sessionQueueLifecycle"
   | "sessionService"

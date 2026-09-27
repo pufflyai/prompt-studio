@@ -70,7 +70,7 @@ describe("ensureApi auto-start", () => {
         PSTDIO_LOG_LEVEL: "info",
       });
 
-      expect(output).toContain("Created project");
+      expect(output).toContain("Opened project");
       expect(output).toContain("auto-test");
 
       // Request logging happens after the launcher has exited. A detached API must

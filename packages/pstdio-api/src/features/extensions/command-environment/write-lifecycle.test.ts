@@ -7,12 +7,12 @@ import { createCommandEnvironment } from "./index";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
 
-test("cancelling scoped reads leaves artifact, repo and extension saves independent", async () => {
+test("cancelling scoped reads leaves artifact, project and extension saves independent", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-scoped-save-"));
   const controller = new AbortController();
-  const repo = Promise.withResolvers<{ id: string; path: string }[]>();
+  const workspace = Promise.withResolvers<Record<string, unknown>>();
   const environment = createCommandEnvironment(
-    { repoService: { listByProject: () => repo.promise } } as never,
+    { workspaceService: { getDefault: () => workspace.promise } } as never,
     [
       {
         instance: { id: "instance" },
@@ -24,7 +24,6 @@ test("cancelling scoped reads leaves artifact, repo and extension saves independ
       name: "example",
       projectId: "p",
       project: { id: "p", name: "Project", shorthand: "P" },
-      repo: { projectId: "p", repoId: "repo", path: root },
       artifactMounts: [
         {
           extensionId: "test.example",
@@ -38,10 +37,17 @@ test("cancelling scoped reads leaves artifact, repo and extension saves independ
   );
   try {
     const scope = environment.withScope!(createInvocationScope({ parent: controller.signal, logger: console }));
-    const mounts = [scope.artifacts.mount("docs"), scope.repoFiles!, scope.extensionFiles!];
+    const mounts = [scope.artifacts.mount("docs"), scope.projectFiles!, scope.extensionFiles!];
     const saves = mounts.map((mount) => mount.writeText("draft.md", "Saved draft"));
     controller.abort();
-    repo.resolve([{ id: "repo", path: root }]);
+    workspace.resolve({
+      id: "home",
+      project_id: "p",
+      root_path: root,
+      execution_kind: "local",
+      provider_state: "ready",
+      provider_capabilities_json: { files: "write" },
+    });
     const results = await Promise.allSettled(saves);
     expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled", "fulfilled"]);
     for (const path of [

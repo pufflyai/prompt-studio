@@ -65,8 +65,6 @@ Heartbeats carry the latest sequence id to keep the connection warm.
 ### Synced Tables
 
 - `projects`
-- `repos`
-- `project_repos`
 - `agent_configs`
 - `installed_extension_sources`
 - `extension_instances`

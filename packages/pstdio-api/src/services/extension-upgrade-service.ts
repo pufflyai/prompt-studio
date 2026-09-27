@@ -16,7 +16,6 @@ import {
 } from "../features/extensions/install-extension-source";
 import { compatibilityError } from "../features/extensions/project-extension-instance";
 import type { createExtensionService } from "./extension-service";
-import type { createRepoService } from "./repo-service";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
@@ -27,7 +26,7 @@ type ExtensionService = Pick<
   | "registerInstalledSource"
 >;
 
-type RepoService = Pick<ReturnType<typeof createRepoService>, "listByProject">;
+type WorkspaceService = { getDefault(projectId: string): Promise<{ root_path: string | null } | null> };
 
 type ExtensionUpgradeServiceDeps = {
   extensionService: ExtensionService;
@@ -35,7 +34,7 @@ type ExtensionUpgradeServiceDeps = {
   catalog?: ExtensionCatalog;
   release: ExtensionRelease | null;
   resolveReleaseCommit?: (originUrl: string, releaseRef: string) => Promise<string>;
-  repoService: RepoService;
+  workspaceService: WorkspaceService;
 };
 
 type UpgradeSource = {
@@ -71,8 +70,9 @@ export class ExtensionUpgradeUnavailableError extends Error {
 }
 
 const repoForSource = async (deps: ExtensionUpgradeServiceDeps, projectId: string, sourcePath: string) => {
-  const repos = await deps.repoService.listByProject(projectId);
-  return repos.find((repo) => resolve(repo.path, ".pstdio/extensions") === resolve(sourcePath, ".."))?.path;
+  const workspace = await deps.workspaceService.getDefault(projectId);
+  const root = workspace?.root_path;
+  return root && resolve(root, ".pstdio/extensions") === resolve(sourcePath, "..") ? root : undefined;
 };
 
 const extensionScope = (manifest: unknown) => {
@@ -247,9 +247,8 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
   const installMarketplaceExtension = async (projectId: string, installName: string) => {
     const requestedEntry = await requireCatalogEntry(installName);
-    const repos = [...(await deps.repoService.listByProject(projectId))].sort((left, right) =>
-      left.path.localeCompare(right.path),
-    );
+    const workspace = await deps.workspaceService.getDefault(projectId);
+    const repos = workspace?.root_path ? [{ path: workspace.root_path }] : [];
     const records = await deps.extensionService.listProjectExtensionInstances(projectId);
     const knownRepoScope = records.some(
       (record) =>

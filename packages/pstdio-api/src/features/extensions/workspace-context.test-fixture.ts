@@ -59,7 +59,7 @@ export const createWorkspaceContextFixture = async () => {
     provider_id: "pstdio.root",
     execution_kind: "local",
     is_default: true,
-    worktree_path: null,
+    root_path: root,
     provider_params_json: {},
     provider_ref_json: null,
     provider_capabilities_json: {
@@ -85,7 +85,6 @@ export const createWorkspaceContextFixture = async () => {
   const repos = [{ id: "repo-1", path: root }];
   const deps = {
     workspaceService: { get: async () => workspace, getDefault: async () => workspace },
-    repoService: { listByProject: async () => repos },
     projectService: { get: async () => ({ id: "project-1", name: "Project", shorthand: "P" }) },
     extensionService: { listEnabledSourcesForProject: async () => [source] },
     extensionStorageService: {

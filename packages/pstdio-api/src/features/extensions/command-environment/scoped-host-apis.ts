@@ -2,7 +2,6 @@ import type {
   ExtensionConnectionsApi,
   ExtensionProjectContext,
   ExtensionTerminalApi,
-  RepoContext,
   TerminalSessionRequest,
 } from "pstdio-api-contracts/extension-kernel";
 import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
@@ -45,31 +44,27 @@ export const createScopedHostApis = (
     projectId: string;
     workspaceId?: string;
     eventId?: string;
-    repo?: RepoContext;
   },
   hosts: { connections: ExtensionConnectionsApi; terminal?: ExtensionTerminalApi },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
   scope?: InvocationScope,
 ): Pick<ScopedHostApis, "sessions" | "workspaces" | "connections" | "process" | "terminal"> => {
   const signal = scope?.signal;
-  const resolveCwd = input.workspaceId
-    ? async () => {
-        if (signal?.aborted) throw signal.reason;
-        const location = await resolveLocalWorkspaceTarget(
-          deps,
-          {
-            projectId: input.projectId,
-            workspaceId: input.workspaceId,
-            provisioningWorkspaceId: input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined,
-            eventId: input.eventId,
-            repo: input.repo,
-          },
-          "process",
-        );
-        if (signal?.aborted) throw signal.reason;
-        return location.root;
-      }
-    : undefined;
+  const resolveCwd = async () => {
+    if (signal?.aborted) throw signal.reason;
+    const location = await resolveLocalWorkspaceTarget(
+      deps,
+      {
+        projectId: input.projectId,
+        workspaceId: input.workspaceId,
+        provisioningWorkspaceId: input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined,
+        eventId: input.eventId,
+      },
+      "process",
+    );
+    if (signal?.aborted) throw signal.reason;
+    return location.root;
+  };
   const terminal = hosts.terminal && resolveCwd ? createWorkspaceTerminal(hosts.terminal, resolveCwd) : hosts.terminal;
 
   return {

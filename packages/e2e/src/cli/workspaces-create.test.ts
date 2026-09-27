@@ -45,7 +45,7 @@ describe("pstdio workspaces create", () => {
       const repo = createInitializedRepo("workspace-create-ticketless");
       const projectId = readProjectId(repo);
 
-      const createOutput = run("workspaces create", repo);
+      const createOutput = run("workspaces create --provider pstdio.worktree", repo);
       expect(createOutput).toContain("Created workspace WS-1");
 
       const worktreePath = createOutput.match(/Created workspace WS-1 at (\S+)/)?.[1];
@@ -55,9 +55,9 @@ describe("pstdio workspaces create", () => {
       const byShorthandUrl = `${api.url}/v1/workspaces/by-shorthand?project_id=${encodeURIComponent(projectId)}&shorthand=WS-1`;
       const createdRes = await fetch(byShorthandUrl);
       expect(createdRes.status).toBe(200);
-      const created = (await createdRes.json()) as { branch: string | null; worktree_path: string | null };
-      expect(created.branch).toBe("workspace/WS-1");
-      expect(created.worktree_path).toBe(worktreePath);
+      const created = (await createdRes.json()) as { branch: string | null; root_path: string | null };
+      expect(created.branch).toBe(`workspace/WS-1-${created.id}`);
+      expect(created.root_path).toBe(worktreePath);
 
       const deleteOutput = run("workspaces delete --id WS-1", repo);
       expect(deleteOutput).toContain("Deleted workspace WS-1");

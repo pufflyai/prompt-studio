@@ -19,7 +19,13 @@ const workspaceResource = (metadata: Record<string, unknown> = {}): ResourceRef 
   type: "workspace",
   id: "workspace-1",
   label: "PS-118_A5",
-  metadata: { workspaceProviderState: "ready", workspaceId: "workspace-1", workspaceType: "worktree", ...metadata },
+  metadata: {
+    workspaceProviderState: "ready",
+    workspaceId: "workspace-1",
+    workspaceType: "worktree",
+    workspaceSupportsDiff: true,
+    ...metadata,
+  },
 });
 const treeContext = (workbench: ReturnType<typeof createWorkbench>, resource: ResourceRef) => ({
   resource,

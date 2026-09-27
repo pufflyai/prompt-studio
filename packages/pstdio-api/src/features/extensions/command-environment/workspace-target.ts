@@ -1,17 +1,14 @@
-import type { RepoContext } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionsRouteDeps } from "../deps";
-import { resolveLegacyWorkspaceLocation } from "./legacy-workspace-location";
 
 export interface WorkspaceTargetInput {
   projectId: string;
   workspaceId?: string;
   provisioningWorkspaceId?: string;
   eventId?: string;
-  repo?: RepoContext;
 }
 
 export const resolveLocalWorkspaceTarget = async (
-  deps: Pick<ExtensionsRouteDeps, "workspaceService" | "repoService">,
+  deps: Pick<ExtensionsRouteDeps, "workspaceService">,
   input: WorkspaceTargetInput,
   kind: "file" | "process",
 ) => {
@@ -28,7 +25,7 @@ export const resolveLocalWorkspaceTarget = async (
     (!provisioning && (workspace.initializing || workspace.setup_error))
   )
     throw new Error(`This workspace has no ready local ${kind} target.`);
-  const location = await resolveLegacyWorkspaceLocation(deps, workspace, input);
+  const location = workspace.root_path ? { workspace, root: workspace.root_path } : undefined;
   if (!location) throw new Error(`This workspace has no local ${kind} target.`);
   return location;
 };

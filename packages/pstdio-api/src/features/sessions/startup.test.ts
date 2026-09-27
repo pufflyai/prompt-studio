@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessEventSink, HarnessSession, SessionMessage } from "pstdio-api-contracts";
 import { createSessionService } from "../../services/session-service";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { folderProjectInput } from "../../test-utils/folder-project-input";
 import type { AppBindings } from "../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
@@ -96,7 +97,7 @@ describe("resolveOrphanedSessions (via createApp startup)", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Startup Sweep Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Startup Sweep Project" })),
     });
     const project = await projectRes.json();
 
@@ -143,7 +144,7 @@ describe("resolveOrphanedSessions (via createApp startup)", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Completed Session Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Completed Session Project" })),
     });
     const project = await projectRes.json();
 
@@ -171,7 +172,7 @@ describe("resolveOrphanedSessions abort", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Abort Test Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Abort Test Project" })),
     });
     const project = await projectRes.json();
 

@@ -34,9 +34,9 @@ describe("default post-worktree-create hook", () => {
       const repo = createInitializedRepo(ctx, "hook-copies-config");
 
       const { workspace } = await createWorkspaceInRepo(ctx, repo);
-      expect(workspace.worktree_path).toBeTruthy();
+      expect(workspace.root_path).toBeTruthy();
 
-      expect(await waitForPath(join(workspace.worktree_path!, ".pstdio", "config.json"))).toBe(true);
+      expect(await waitForPath(join(workspace.root_path!, ".pstdio", "config.json"))).toBe(true);
     },
     TEST_TIMEOUT,
   );

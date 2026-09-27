@@ -1,6 +1,8 @@
 import { filterVisibleTabs, useTabVisibilityStore } from "@pstdio/ui";
 import {
   getActiveWorkbenchLocationPanel,
+  getAnchorResource,
+  headerTrailingMenuPath,
   isWorkbenchPanelPlacementVisible,
   type WorkbenchCore,
   type WorkbenchPanelRegion,
@@ -87,6 +89,11 @@ export const useWorkbenchRegionTabsState = (
       alwaysShowTabs: workbench.layout.getRegionSettings(region)?.alwaysShowTabs,
     });
   const hasActions = leadingItems.length > 0 || eligibleSubPanels.length > 0;
+  const hasTrailingActions =
+    region === "main" &&
+    listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, headerTrailingMenuPath(region), {
+      resource: getAnchorResource(layoutState.layout, "primary"),
+    }).length > 0;
 
   return {
     commands,
@@ -100,18 +107,23 @@ export const useWorkbenchRegionTabsState = (
     eligibleSubPanels,
     showTabs,
     hasActions,
+    hasTrailingActions,
   };
 };
 
 export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
-  const { showTabs, hasActions } = useWorkbenchRegionTabsState(workbench, region);
+  const { showTabs, hasActions, hasTrailingActions } = useWorkbenchRegionTabsState(workbench, region);
   const width = useWorkbenchPanelWidth(region);
   const responsiveCollapsed = shouldCollapseWorkbenchPanelMenus(width);
   const left = useWorkbenchPanelMenu(workbench, region, "left", responsiveCollapsed);
   const right = useWorkbenchPanelMenu(workbench, region, "right", responsiveCollapsed);
   const hasPanelMenus = [left, right].some((menu) => menu.has && menu.collapsed);
 
-  return shouldShowPanelHeader({ hasTabs: showTabs, hasHeaderActions: hasActions, hasPanelMenus });
+  return shouldShowPanelHeader({
+    hasTabs: showTabs,
+    hasHeaderActions: hasActions || hasTrailingActions,
+    hasPanelMenus,
+  });
 };
 
 export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: WorkbenchRegion) => {

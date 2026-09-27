@@ -205,7 +205,10 @@ export const createAutomationProject = async (request: AppRequest, root: string)
   const projectResponse = await request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "Automation Project" }),
+    body: JSON.stringify({
+      name: "Automation Project",
+      initial_workspace: { provider_id: "pstdio.root", params: { path: root } },
+    }),
   });
   if (projectResponse.status !== 201) throw new Error(`Project creation failed with HTTP ${projectResponse.status}.`);
   const projectId = ((await projectResponse.json()) as { id: string }).id;

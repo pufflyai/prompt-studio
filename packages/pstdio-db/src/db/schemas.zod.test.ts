@@ -43,7 +43,7 @@ describe("schemas.zod", () => {
       startup_log_file_id: null,
       updated_at: "2026-01-01T00:00:00.000Z",
       workspace_shorthand: "WS001",
-      worktree_path: null,
+      root_path: null,
     });
 
     const sessionResult = sessionApiSchema.safeParse({
@@ -64,12 +64,11 @@ describe("schemas.zod", () => {
       last_request_started: null,
       last_selected_model: null,
       project_id: "project-1",
-      repo_id: null,
       status: "in_progress",
       title: "Session",
       updated_at: "2026-01-01T00:00:00.000Z",
       workspace_id: null,
-      worktree_path: null,
+      root_path: null,
     });
 
     expect(workspaceResult.success).toBe(true);
@@ -95,12 +94,11 @@ describe("schemas.zod", () => {
       last_request_started: null,
       last_selected_model: null,
       project_id: "project-1",
-      repo_id: null,
       status: "awaiting_input",
       title: "Awaiting Input Session",
       updated_at: "2026-01-01T00:00:00.000Z",
       workspace_id: null,
-      worktree_path: null,
+      root_path: null,
     });
 
     expect(result.success).toBe(true);

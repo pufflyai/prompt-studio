@@ -201,7 +201,7 @@ const seedSessions = () => {
       project_id: PROJECT_ID,
       name: "Mode-driven sidenav",
       branch: "feature/PS-107",
-      worktree_path: "/repo/.pstdio/workspaces/PS-107",
+      root_path: "/repo/.pstdio/workspaces/PS-107",
       archived: false,
       workspace_shorthand: "PS-107_A1",
       setup_error: null,

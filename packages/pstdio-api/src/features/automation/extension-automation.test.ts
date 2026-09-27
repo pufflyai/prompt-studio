@@ -45,7 +45,7 @@ beforeEach(async () => {
           }),
         },
         eventBus,
-        repoService: { listByProject: async () => [] },
+        workspaceService: { getDefault: async () => null },
         activityEventsService: { create: async () => {} },
       }) as unknown as ExtensionsRouteDeps,
     executeCommand: async (_deps, input) => {

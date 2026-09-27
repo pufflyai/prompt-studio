@@ -14,7 +14,7 @@ import {
   runPackagedCli,
   waitForExit,
 } from "./packaged-app-helpers";
-import { openPackagedProject } from "./packaged-project-helpers";
+import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 
@@ -28,17 +28,8 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
           defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
         }),
       });
-      const created = await app.page.evaluate(async () => {
-        const response = await fetch("/v1/projects", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "Active terminal work" }),
-        });
-        return { status: response.status, body: await response.json() };
-      });
-      expect(created.status).toBe(201);
-      expect(created.body.extension_warnings ?? []).toEqual([]);
-      await openPackagedProject(app.page, { id: created.body.id, name: "Active terminal work" });
+      const created = await createPackagedProject(app, "Active terminal work");
+      await openPackagedProject(app.page, created);
       await app.page.getByTestId("start-page").waitFor();
       const socketOpened = app.page.waitForEvent(
         "websocket",

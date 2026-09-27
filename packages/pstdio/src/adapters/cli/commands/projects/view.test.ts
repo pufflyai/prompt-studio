@@ -8,7 +8,7 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
   return {
     cwd: () => "/fake/repo",
-    findGitRoot: () => "/fake/repo",
+    findProjectRoot: () => "/fake/repo",
     readConfig: () => ({ project_id: "proj-1" }),
     getProject: async () => ({
       id: "proj-1",
@@ -22,17 +22,13 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
       updated_at: "2026-01-20T12:00:00.000Z",
       deleted_at: null,
     }),
-    listRepos: async () => [
-      { id: "r1", name: "repo-1", path: "/p/repo-1", display_name: null, created_at: "", updated_at: "" },
-      { id: "r2", name: "repo-2", path: "/p/repo-2", display_name: null, created_at: "", updated_at: "" },
-    ],
     ...overrides,
     log,
   };
 };
 
 describe("projects view", () => {
-  test("prints project details with repos", async () => {
+  test("prints project details", async () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
@@ -44,17 +40,6 @@ describe("projects view", () => {
     expect(output).toContain("MA");
     expect(output).toContain("2026-01-15");
     expect(output).toContain("2026-01-20");
-    expect(output).toContain("2 linked");
-  });
-
-  test("shows 'none' when no repos linked", async () => {
-    const deps = makeDeps({ listRepos: async () => [] });
-    const handler = createHandler(deps);
-
-    await handler(argv({ "project-id": undefined }));
-
-    const output = deps.log.mock.calls[0][0] as string;
-    expect(output).toContain("none");
   });
 
   test("uses --project-id flag when provided", async () => {
@@ -79,7 +64,7 @@ describe("projects view", () => {
   });
 
   test("throws when no project specified and no config", async () => {
-    const deps = makeDeps({ findGitRoot: () => null, readConfig: () => null });
+    const deps = makeDeps({ findProjectRoot: () => null, readConfig: () => null });
     const handler = createHandler(deps);
 
     expect(handler(argv({ "project-id": undefined }))).rejects.toThrow(

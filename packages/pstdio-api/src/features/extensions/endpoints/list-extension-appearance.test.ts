@@ -22,7 +22,7 @@ const createApp = (sourcePath: string) => {
       },
     ],
   };
-  const repoService = { listByProject: async () => [] };
+  const workspaceService = { getDefault: async () => null };
   const projectService = {
     get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
   };
@@ -32,11 +32,11 @@ const createApp = (sourcePath: string) => {
       extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
         extensionService: extensionService as never,
         projectService: projectService as never,
-        repoService: repoService as never,
+        workspaceService: workspaceService as never,
       }),
       extensionService,
       projectService,
-      repoService,
+      workspaceService,
     } as never),
   );
   return app;

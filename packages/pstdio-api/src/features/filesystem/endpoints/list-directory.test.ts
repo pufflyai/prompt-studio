@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -24,8 +24,8 @@ afterAll(async () => {
 });
 
 describe("GET /v1/filesystem/list", () => {
-  test("lists entries and flags git repositories", async () => {
-    const caseDir = mkdtempSync(join(tempRoot, "case-"));
+  test("lists Git and ordinary directories consistently", async () => {
+    const caseDir = realpathSync(mkdtempSync(join(tempRoot, "case-")));
     const repoDir = join(caseDir, "repo");
     const docsDir = join(caseDir, "docs");
     const filePath = join(caseDir, "notes.md");
@@ -43,7 +43,6 @@ describe("GET /v1/filesystem/list", () => {
         name: string;
         path: string;
         isDirectory: boolean;
-        isGitRepo: boolean;
       }>;
     };
 
@@ -57,19 +56,16 @@ describe("GET /v1/filesystem/list", () => {
       name: "repo",
       path: repoDir,
       isDirectory: true,
-      isGitRepo: true,
     });
     expect(docs).toEqual({
       name: "docs",
       path: docsDir,
       isDirectory: true,
-      isGitRepo: false,
     });
     expect(notes).toEqual({
       name: "notes.md",
       path: filePath,
       isDirectory: false,
-      isGitRepo: false,
     });
   });
 

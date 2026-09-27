@@ -1,5 +1,5 @@
 import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
-import { defaultLocalWorkspaceCapabilities } from "pstdio-db";
+import { defaultLocalWorkspaceCapabilities, folderWorkspaceCapabilities } from "pstdio-db";
 import type { WorkspacesRouteDeps } from "./deps";
 import {
   isBuiltInProviderId,
@@ -13,6 +13,7 @@ import {
   failedOperationPatch,
   missingProviderPatch,
   pendingCreateCancellationPatch,
+  providerError,
   type WorkspaceRecord,
 } from "./workspace-provider-projection";
 import { normalizeResult } from "./workspace-provider-result";
@@ -30,35 +31,36 @@ const builtInCreate = async (input: {
   providerId: string;
   workspace: WorkspaceRecord;
   params: JsonObject;
-  repo: { id: string; path: string };
+  sourcePath: string;
   setupWorktree: typeof setupWorkspaceWorktree;
 }) => {
-  const { repo } = input;
-
   if (input.providerId === rootProviderId) {
     return {
-      providerRef: safeProviderRef(rootProviderId, { repo_id: repo.id }),
+      providerRef: safeProviderRef(rootProviderId, {}),
       state: "ready",
       executionKind: "local",
-      executionTarget: { kind: "local", rootPath: repo.path, displayPath: repo.path },
-      displayPath: repo.path,
-      capabilities: defaultLocalWorkspaceCapabilities,
+      executionTarget: { kind: "local", rootPath: input.sourcePath, displayPath: input.sourcePath },
+      displayPath: input.sourcePath,
+      capabilities: folderWorkspaceCapabilities,
     } satisfies WorkspaceProviderResult;
   }
-
-  const { branch, worktreePath } = await input.setupWorktree({
-    repoPath: repo.path,
+  const result = await input.setupWorktree({
+    repoPath: input.sourcePath,
     workspaceShorthand: input.workspace.workspace_shorthand,
+    workspaceId: input.workspace.id,
     base: asString(input.params.base) ?? "HEAD",
   });
-
   return {
-    providerRef: safeProviderRef(worktreeProviderId, { repo_id: repo.id, branch }),
-    branch,
+    providerRef: safeProviderRef(worktreeProviderId, {
+      sourceRoot: result.sourceRoot,
+      worktreeRoot: result.worktreePath,
+      relativePath: result.relativePath,
+    }),
+    branch: result.branch,
     state: "ready",
     executionKind: "local",
-    executionTarget: { kind: "local", rootPath: worktreePath, displayPath: worktreePath },
-    displayPath: worktreePath,
+    executionTarget: { kind: "local", rootPath: result.rootPath, displayPath: result.rootPath },
+    displayPath: result.rootPath,
     capabilities: defaultLocalWorkspaceCapabilities,
   } satisfies WorkspaceProviderResult;
 };
@@ -135,7 +137,7 @@ const cleanUpAcceptedCreate = async (
   }
 };
 
-const PROVIDER_READY_TIMEOUT_MS = 60_000;
+export const PROVIDER_READY_TIMEOUT_MS = 60_000;
 const PROVIDER_READY_POLL_MS = 250;
 
 const waitForProviderPoll = (signal?: AbortSignal) =>
@@ -238,7 +240,7 @@ export const provisionProviderWorkspace = async (
     projectId: string;
     providerId: string;
     params: JsonObject;
-    repo: { id: string; path: string } | null;
+    sourcePath: string | null;
     setupWorktree: typeof setupWorkspaceWorktree;
     signal?: AbortSignal;
     workspace: WorkspaceRecord;
@@ -278,7 +280,7 @@ export const provisionProviderWorkspace = async (
           providerId: input.providerId,
           workspace: input.workspace,
           params: input.params,
-          repo: input.repo!,
+          sourcePath: input.sourcePath!,
           setupWorktree: input.setupWorktree,
         });
 
@@ -319,6 +321,15 @@ export const provisionProviderWorkspace = async (
           state: "failed",
           error,
         }),
+        ...(isBuiltInProviderId(input.providerId)
+          ? {
+              provider_error_json: providerError({
+                code: "provider_create_failed",
+                message: error instanceof Error ? error.message : String(error),
+                retryable: true,
+              }),
+            }
+          : {}),
         execution_kind: isBuiltInProviderId(input.providerId) ? "local" : "remote",
         provider_capabilities_json: remoteReadOnlyCapabilities,
       })

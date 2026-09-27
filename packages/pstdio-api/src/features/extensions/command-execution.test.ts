@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { execSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -7,6 +6,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { folderProjectInput } from "../../test-utils/folder-project-input";
 import type { AppBindings } from "../../types";
 import { testHarnessId } from "../harnesses/test-harness-registry";
 
@@ -15,6 +15,7 @@ let closeApp: () => Promise<void>;
 let tempRoot: string;
 let sourcePath: string;
 let projectId: string;
+let defaultWorkspaceId: string;
 let previousPstdioHome: string | undefined;
 let previousDefaultExtensions: string | undefined;
 let appEventBus: Awaited<ReturnType<typeof createTestApp>>["eventBus"];
@@ -53,7 +54,7 @@ const writeCommandExtension = (root: string) => {
               counter: next,
               projectId: ctx.projectId,
               projectShorthand: ctx.project.shorthand,
-              repoPath: ctx.repo?.path,
+              workspaceId: ctx.workspaceId,
               resourceId: ctx.resource?.id,
             };
           },
@@ -118,18 +119,6 @@ const createJson = async (path: string, body: unknown) => {
   return response.json();
 };
 
-const createGitRepo = (name: string) => {
-  const repoRoot = join(tempRoot, name);
-  mkdirSync(repoRoot, { recursive: true });
-  execSync("git init", { cwd: repoRoot, stdio: "pipe" });
-  execSync('git config user.email "test@test.com"', { cwd: repoRoot, stdio: "pipe" });
-  execSync('git config user.name "Test"', { cwd: repoRoot, stdio: "pipe" });
-  writeFileSync(join(repoRoot, "README.md"), "# test\n");
-  execSync("git add README.md", { cwd: repoRoot, stdio: "pipe" });
-  execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
-  return repoRoot;
-};
-
 beforeEach(async () => {
   tempRoot = await realpath(mkdtempSync(join(tmpdir(), "pstdio-extension-command-test-")));
   previousPstdioHome = process.env.PSTDIO_HOME;
@@ -144,8 +133,12 @@ beforeEach(async () => {
   closeApp = created.close;
   appEventBus = created.eventBus;
 
-  const project = await createJson("/v1/projects", { name: "Command Project", agents: [testHarnessId("opencode")] });
+  const project = await createJson(
+    "/v1/projects",
+    folderProjectInput({ name: "Command Project", agents: [testHarnessId("opencode")] }),
+  );
   projectId = project.id;
+  defaultWorkspaceId = (await created.deps.workspaceService.getDefault(projectId))!.id;
   sourcePath = writeCommandExtension(tempRoot);
 
   const enableResponse = await app.request(`/v1/projects/${projectId}/extensions/installed/lab/enable`, {
@@ -198,10 +191,9 @@ describe("extension command execution routes", () => {
     );
   });
 
-  test("executes commands with params, repo context, resource context, and persisted storage", async () => {
+  test("executes commands with params, workspace context, resource context, and persisted storage", async () => {
     const syncEvents: Array<{ table: string; data: unknown }> = [];
     const unsubscribe = appEventBus.subscribe((event) => syncEvents.push({ table: event.table, data: event.data }));
-    const repo = await createJson(`/v1/projects/${projectId}/repos`, { name: "repo", path: tempRoot });
     const bumpResponse = await app.request(
       `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.bump/execute`,
       {
@@ -209,7 +201,7 @@ describe("extension command execution routes", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           params: { amount: 2 },
-          repo: { projectId, repoId: repo.id, path: tempRoot },
+          workspaceId: defaultWorkspaceId,
           resource: { type: "ticket", id: "PS-1", projectId },
           source: "cli",
         }),
@@ -230,7 +222,7 @@ describe("extension command execution routes", () => {
       outcome: {
         ok: true,
         status: "success",
-        value: { counter: 2, projectId, projectShorthand: "CP", repoPath: tempRoot, resourceId: "PS-1" },
+        value: { counter: 2, projectId, projectShorthand: "CP", workspaceId: defaultWorkspaceId, resourceId: "PS-1" },
       },
     });
     unsubscribe();
@@ -310,100 +302,6 @@ describe("extension command execution routes", () => {
 
     expect(response.status).toBe(404);
     expect((await response.json()).code).toBe("workspace_not_found");
-  });
-
-  test("replaces a forged repo path with the registered project repo path", async () => {
-    const repoPath = createGitRepo("trusted-repo");
-    const repo = await createJson(`/v1/projects/${projectId}/repos`, { name: "trusted", path: repoPath });
-
-    const response = await app.request(
-      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.bump/execute`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          repo: { projectId, repoId: repo.id, path: "/private/forged-host-path" },
-        }),
-      },
-    );
-
-    expect(response.status).toBe(200);
-    expect((await response.json()).outcome.value.repoPath).toBe(repoPath);
-  });
-
-  test("uses the registered repo for a legacy root workspace without a stored repo association", async () => {
-    const repoPath = createGitRepo("legacy-root-repo");
-    const repo = await createJson(`/v1/projects/${projectId}/repos`, { name: "legacy-root", path: repoPath });
-    const workspacesResponse = await app.request(`/v1/workspaces?project_id=${projectId}`);
-    const workspaces = (await workspacesResponse.json()) as Array<{ id: string; is_default: boolean }>;
-    const defaultWorkspace = workspaces.find((workspace) => workspace.is_default);
-
-    const response = await app.request(
-      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.bump/execute`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          workspaceId: defaultWorkspace?.id,
-          repo: { projectId, repoId: repo.id, path: "/private/forged-host-path" },
-        }),
-      },
-    );
-
-    expect(response.status).toBe(200);
-    expect((await response.json()).outcome.value.repoPath).toBe(repoPath);
-  });
-
-  test("rejects a repo that is not linked to the route project", async () => {
-    const foreignProject = await createJson("/v1/projects", { name: "Foreign Project" });
-    const foreignRepoPath = createGitRepo("foreign-repo");
-    const foreignRepo = await createJson(`/v1/projects/${foreignProject.id}/repos`, {
-      name: "foreign",
-      path: foreignRepoPath,
-    });
-
-    const response = await app.request(
-      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.bump/execute`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          repo: { projectId: foreignProject.id, repoId: foreignRepo.id, path: foreignRepoPath },
-        }),
-      },
-    );
-
-    expect(response.status).toBe(404);
-    expect((await response.json()).code).toBe("repo_not_found");
-  });
-
-  test("rejects a workspace that belongs to a different repo", async () => {
-    const firstRepoPath = createGitRepo("first-repo");
-    const secondRepoPath = createGitRepo("second-repo");
-    const firstRepo = await createJson(`/v1/projects/${projectId}/repos`, { name: "first", path: firstRepoPath });
-    const secondRepo = await createJson(`/v1/projects/${projectId}/repos`, { name: "second", path: secondRepoPath });
-    const workspaceResponse = await app.request("/v1/workspaces", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: projectId, repo_id: secondRepo.id }),
-    });
-    expect(workspaceResponse.status).toBe(201);
-    const workspace = await workspaceResponse.json();
-
-    const response = await app.request(
-      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.bump/execute`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          workspaceId: workspace.id,
-          repo: { projectId, repoId: firstRepo.id, path: firstRepoPath },
-        }),
-      },
-    );
-
-    expect(response.status).toBe(404);
-    expect((await response.json()).code).toBe("workspace_repo_mismatch");
   });
 
   test("protects nested command execution from recursion", async () => {

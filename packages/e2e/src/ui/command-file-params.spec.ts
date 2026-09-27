@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const commandId = "pstdio.ps-256-files.command.inspect";
@@ -15,9 +16,9 @@ const deleteAllProjects = async (request: APIRequestContext) => {
   }
 };
 
-const createProject = async (request: APIRequestContext) => {
+const createProject = async (request: APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-256 Command Files" },
+    data: folderProjectInput({ name: "PS-256 Command Files" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };

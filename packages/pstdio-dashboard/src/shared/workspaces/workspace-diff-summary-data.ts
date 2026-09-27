@@ -68,7 +68,7 @@ export const resolveDashboardWorkspaceDiffSummary = async (workspaceId: string, 
   const workspace = getCollection("workspaces").state.get(workspaceId);
   if (!workspace || workspaceState(workspace) !== "ready") return null;
   const capabilities = workspace.provider_capabilities_json as { diff?: boolean } | undefined;
-  if (capabilities?.diff === false) return null;
+  if (capabilities?.diff !== true) return null;
   const cached = workspaceDiffSummariesById.get(workspaceId);
   if (cached) return cached;
 

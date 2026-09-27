@@ -1,4 +1,4 @@
-import type { CommandNotice, CommandOutcome, RepoContext } from "@pstdio/sdk/extensions";
+import type { CommandNotice, CommandOutcome } from "@pstdio/sdk/extensions";
 import { serializeError } from "./internals";
 import type { CommandRunnerEnvironment, CommandRunnerHostDeps } from "./types";
 
@@ -19,7 +19,6 @@ export const withNotices = <TOutcome extends CommandOutcome>(outcome: TOutcome, 
 export const createEnvironmentCache = (
   deps: CommandRunnerHostDeps,
   projectId: string,
-  repo: RepoContext | undefined,
   notices: CommandNotice[],
   workspace?: { workspaceDir?: string; workspaceId?: string },
 ) => {
@@ -35,7 +34,6 @@ export const createEnvironmentCache = (
         projectId,
         extensionId: owner.extensionId,
         name: owner.name,
-        repo,
         workspaceDir: workspace?.workspaceDir,
         workspaceId: workspace?.workspaceId,
       }),

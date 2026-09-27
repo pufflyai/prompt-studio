@@ -32,6 +32,29 @@ Page targets change location. Panel targets preserve it. Compound targets contai
 
 Use `qualifyRef(owner, ref)` in provider contract modules. Keep definitions local and pass qualified refs between extensions. For webviews, declare capabilities and call the typed `GuestHost`; `placement.close` closes the calling placement through the normal tab controller.
 
+## Workspace creation
+
+Workspace creation belongs to the host. Use `ctx.workspaces.listProviders()` to
+check whether additional workspaces can be created. The existing project
+workspace is returned separately by `ctx.workspaces.getDefault()`.
+
+A tree action can call the public host command `workbench.workspace.create`:
+
+```ts
+const createWorkspace = commandRef<CreateWorkspaceCommandParams>({
+  extensionId: "pstdio",
+  id: "workbench.workspace.create",
+});
+```
+
+It accepts optional `anchors` and `shorthand_base` parameters. The host shows the available providers and their
+declared inputs, then creates the workspace with those resource links. Provider
+parameters stay nested and are passed unchanged. Cloud providers do not need Git
+or a local directory; creation may return while provisioning is still running.
+
+For programmatic creation, call `ctx.workspaces.create()` with an explicit
+`provider_id` and provider `params`.
+
 ## Dashboard URLs
 
 Use `serializePageUrl({ projectId, page, resource })` to return a dashboard link from a command. The page descriptor contains its `id`, qualified `ref`, and declared `path`; `resource` is optional. The workbench uses the same route and resource codec.
@@ -41,6 +64,11 @@ Use `parsePageUrl({ url, projectId, pages })` to resolve a saved link against th
 Page and panel navigation targets remain the API for opening views and tabs.
 
 ## Webview change subscriptions
+
+To run webview commands in a selected workspace, pass `{ workspaceId }` to
+`createWebviewClient(host, options)`. Without that option, commands use the project's
+default workspace. The host resolves the workspace target and checks project ownership.
+The low-level `commands.execute` bridge accepts the same `workspaceId` field.
 
 Use the typed client's `events.subscribe(event, listener)` to refetch after a command changes data:
 
@@ -64,9 +92,9 @@ Development and installed consumers both load built SDK entries. Repository deve
 
 Host authors should use the [workbench guide](https://github.com/pufflyai/prompt-studio/blob/main/packages/pstdio-workbench/README.md). Extension authors should use this SDK and public UI packages.
 
-## Workspace contract release bridge
+## Workspace contracts
 
-The alpha.10 host now provides workspace APIs alongside its existing repository APIs.
+The alpha.13 host opens one folder per project and uses workspace APIs for execution and files.
 Use `ctx.projectFiles` for the project's default workspace and `ctx.workspaceFiles`
 for the invocation's working files. Project file operations check the current workspace
 readiness and file capabilities. Remote workspaces never fall back to local files.
@@ -77,8 +105,7 @@ Render these declared parameters after the user selects a workspace type. The Gi
 provider supplies a **Base branch** selection; cloud providers supply their own fields.
 Local setup failures reject creation with the saved workspace ID and setup error.
 The workspace remains available for diagnosis and retry.
-Workspace context records expose `root_path` for a local directory and retain
-`worktree_path` during this release bridge.
+Workspace context records expose `root_path` for a local directory. Remote workspaces have no local root.
 
 The SDK client exposes `client.workspaces.listProviders(projectId)` and
 `client.filesystem.createDirectory({ parent_path, name })`.
@@ -88,7 +115,7 @@ Webviews can set `workspaceId` in `createWebviewClient(host, { workspaceId })`
 to run commands in that workspace. The host validates project ownership.
 
 Extensions that work with both host contracts can declare the exact versions
-`1.0.0-alpha.10 || 1.0.0-alpha.11` in `engines.pstdio`.
+`1.0.0-alpha.12 || 1.0.0-alpha.13` in `engines.pstdio`.
 General version ranges and wildcards remain unsupported.
-This declaration requires the bridge host; older alpha.10 hosts accept only one version.
+The compatible extension release must precede the host cutover.
 See [the staged release ADR](../../.pstdio/docs/adrs/0030-temporary-workspace-contract-release-bridge.md).

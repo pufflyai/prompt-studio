@@ -1,17 +1,18 @@
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
+import { folderProjectInput } from "../../helpers/folder-project";
 import { uiOrigin as apiBase } from "../../ui-server";
 
-export const createResourceActionsProject = async (request: APIRequestContext) => {
+export const createResourceActionsProject = async (request: APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "Resource Actions" },
+    data: folderProjectInput({ name: "Resource Actions" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };
 
-export const prepareResourceActionsDashboard = async (page: Page, projectId: string, repoId: string) => {
+export const prepareResourceActionsDashboard = async (page: Page, projectId: string) => {
   await page.addInitScript(
-    ({ selectedProjectId, selectedRepoId }) => {
+    ({ selectedProjectId }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
       localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
@@ -21,7 +22,6 @@ export const prepareResourceActionsDashboard = async (page: Page, projectId: str
           state: {
             lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
             lastSelectedModels: [],
-            lastSelectedRepo: selectedRepoId,
             lastSelectedBranches: [],
             sessionModalState: "closed",
             selectedSessionId: null,
@@ -30,7 +30,7 @@ export const prepareResourceActionsDashboard = async (page: Page, projectId: str
         }),
       );
     },
-    { selectedProjectId: projectId, selectedRepoId: repoId },
+    { selectedProjectId: projectId },
   );
 };
 

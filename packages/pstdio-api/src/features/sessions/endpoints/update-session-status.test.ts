@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -88,7 +89,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       const projectRes = await handle.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Cancel Session Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Cancel Session Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -149,7 +150,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       const projectRes = await handle.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "No-op Status Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "No-op Status Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -203,7 +204,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       const projectRes = await handle.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Queued Reject Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Queued Reject Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -239,7 +240,7 @@ describe("PATCH /v1/sessions/:id/status", () => {
       const projectRes = await handle.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Queued Terminal Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Queued Terminal Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();

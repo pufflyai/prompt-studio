@@ -4,7 +4,7 @@ import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
-import type { createRepoService } from "../../services/repo-service";
+import type { createWorkspaceService } from "../../services/workspace-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
@@ -38,7 +38,7 @@ export const createInstalledExtensionRuntime = async (input: {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   projectService: ReturnType<typeof createProjectService>;
-  repoService: ReturnType<typeof createRepoService>;
+  workspaceService: ReturnType<typeof createWorkspaceService>;
   webviewBuilds: boolean;
 }) => {
   const userExtensionsRoot = join(resolvePstdioHome({ env: process.env }), "extensions");
@@ -63,7 +63,7 @@ export const createInstalledExtensionRuntime = async (input: {
   const listRepoExtensionRootRegistrations = async () => {
     const roots = await listLinkedRepoExtensionRoots({
       projectService: input.projectService,
-      repoService: input.repoService,
+      workspaceService: input.workspaceService,
     });
 
     return roots.map((root) => ({

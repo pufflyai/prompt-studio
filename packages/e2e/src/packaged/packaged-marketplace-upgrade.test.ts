@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium, expect as expectPage } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -137,7 +138,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     child = started.child;
 
     const createResponse = await fetch(`${started.baseUrl}/v1/projects`, {
-      body: JSON.stringify({ name: "Marketplace Upgrade" }),
+      body: JSON.stringify(folderProjectInput({ name: "Marketplace Upgrade" }, projectRepository)),
       headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
       method: "POST",
     });
@@ -147,13 +148,6 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
       id: string;
     };
     expect(project.extension_warnings).toBeUndefined();
-
-    const registerRepoResponse = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
-      body: JSON.stringify({ name: "project-repo", path: projectRepository }),
-      headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-      method: "POST",
-    });
-    expect(registerRepoResponse.status, await registerRepoResponse.text()).toBe(201);
 
     const extensionsResponse = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
       headers: runtimeAuthorization(started.descriptor),

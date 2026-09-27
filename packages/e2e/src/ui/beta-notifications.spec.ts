@@ -1,10 +1,13 @@
 import { expect } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
 test("makes notifications opt-in and reflects settings from another client", async ({ page, request }) => {
   await request.patch(`${apiBase}/v1/settings`, { data: { notifications_enabled: false } });
-  const project = await (await request.post(`${apiBase}/v1/projects`, { data: { name: "Beta notifications" } })).json();
+  const project = await (
+    await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name: "Beta notifications" }) })
+  ).json();
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -55,7 +58,9 @@ test("makes notifications opt-in and reflects settings from another client", asy
 });
 
 test("opens the Help menu with pointer and keyboard", async ({ page, request }) => {
-  const project = await (await request.post(`${apiBase}/v1/projects`, { data: { name: "Help menu" } })).json();
+  const project = await (
+    await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name: "Help menu" }) })
+  ).json();
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);

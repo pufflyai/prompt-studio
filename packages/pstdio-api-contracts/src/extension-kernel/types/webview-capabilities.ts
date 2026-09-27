@@ -4,7 +4,7 @@ import type { CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
 import type { JsonObject } from "./json";
 import type { NavigationTarget } from "./navigation-target";
-import type { RepoContext, ResourceRef } from "./resources";
+import type { ResourceRef } from "./resources";
 
 export type { ExtensionBlobRef } from "./context";
 
@@ -56,9 +56,8 @@ export type WebviewCapabilityDeclaration =
 export interface WebviewCommandsExecuteParams {
   commandId: string;
   params?: JsonObject;
-  resource?: ResourceRef;
-  repo?: RepoContext;
   workspaceId?: string;
+  resource?: ResourceRef;
   metadata?: JsonObject;
 }
 
@@ -83,7 +82,7 @@ export type WebviewNotificationDismissParams = Pick<WebviewNotificationResolvePa
 export interface WebviewPreferencesGetParams {
   name: string;
   scope?: {
-    scope: "default" | "user" | "project" | "repo" | "workspace" | "extension" | "session";
+    scope: "default" | "user" | "project" | "workspace" | "extension" | "session";
     scopeId?: string;
   };
 }
@@ -100,11 +99,7 @@ export interface WebviewExtensionSettingSetParams extends WebviewExtensionSettin
   value: unknown;
 }
 
-export type WebviewFileScope =
-  | { type: "project" }
-  | { type: "repo"; id: string }
-  | { type: "resource"; id: string }
-  | { type: string; id?: string };
+export type WebviewFileScope = { type: "project" } | { type: "resource"; id: string } | { type: string; id?: string };
 
 export interface WebviewFilesUploadParams {
   name: string;

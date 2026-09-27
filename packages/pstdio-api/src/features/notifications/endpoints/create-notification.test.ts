@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
 
@@ -47,7 +48,7 @@ const createProject = async () => {
   const res = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "Notifications Project" }),
+    body: JSON.stringify(folderProjectInput({ name: "Notifications Project" })),
   });
   expect(res.status).toBe(201);
   return (await res.json()) as { id: string };

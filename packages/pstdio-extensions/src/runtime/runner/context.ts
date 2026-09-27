@@ -9,7 +9,6 @@ import type {
   ExtensionEventsApi,
   ExtensionLoggerApi,
   JsonObject,
-  RepoContext,
   Struct,
 } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget } from "@pstdio/sdk/extensions";
@@ -41,7 +40,6 @@ export interface ContextFactory {
     invocationId: string,
     projectId: string,
     source: CommandSource | undefined,
-    repo: RepoContext | undefined,
     depth: number,
     scope: InvocationScope,
     workspace?: { workspaceDir?: string; workspaceId?: string },
@@ -105,13 +103,6 @@ export const createExecuteBuilder = (runRef: {
       projectId: origin.projectId,
       params: (invocation?.params ?? {}) as JsonObject,
       resource: invocation?.resource,
-      repo: invocation?.repoId
-        ? ({
-            projectId: origin.projectId,
-            repoId: invocation.repoId,
-            path: invocation.repoPath ?? "",
-          } satisfies RepoContext)
-        : undefined,
       slot: invocation?.slot,
       attachment: invocation?.attachment,
       workspaceDir: origin.workspaceDir,
@@ -158,7 +149,6 @@ export const createContextFactory = (
       },
       artifacts: hostApis.artifacts,
       projectFiles: hostApis.projectFiles,
-      repoFiles: hostApis.repoFiles,
       workspaceFiles: hostApis.workspaceFiles,
       packageFiles: hostApis.packageFiles,
       extensionFiles: hostApis.extensionFiles,
@@ -166,7 +156,6 @@ export const createContextFactory = (
       skills: hostApis.skills,
       sessions: hostApis.sessions,
       workspaces: hostApis.workspaces,
-      repos: hostApis.repos,
       commands: buildCommandsApi(createExecute, origin),
       events: buildEventsApi(dispatcher, ids.extensionId),
       activity: env.activity,
@@ -189,7 +178,6 @@ export const createContextFactory = (
     invocationId,
     projectId,
     source,
-    repo,
     depth,
     scope,
     workspace,
@@ -222,7 +210,6 @@ export const createContextFactory = (
       resource: invocation.resource,
       attachment: invocation.attachment,
       slot: invocation.slot,
-      repo,
       source,
     };
   },

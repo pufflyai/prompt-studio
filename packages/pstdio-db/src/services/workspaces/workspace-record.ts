@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   defaultLocalWorkspaceCapabilities,
+  folderWorkspaceCapabilities,
   type ResourceRef,
   type WorkspaceCapabilities,
   type WorkspaceProviderError,
@@ -19,13 +20,25 @@ export type CreateInput = {
   anchors?: ResourceRef[];
   name?: string;
   branch?: string;
-  worktree_path?: string;
+  root_path?: string;
   provider_id?: string;
   provider_params_json?: JsonObject;
   provider_state?: WorkspaceProviderState;
   provider_operation_id?: string;
   provider_operation_kind?: "create" | "cancel" | "archive" | "delete";
 };
+
+export interface DefaultWorkspaceInput {
+  project_id: string;
+  name: string;
+  branch?: string | null;
+  root_path?: string;
+  provider_id?: string;
+  provider_params_json?: JsonObject;
+  provider_state?: WorkspaceProviderState;
+  provider_operation_id?: string;
+  provider_operation_kind?: "create";
+}
 
 export const nowTimestamp = () => new Date().toISOString();
 
@@ -63,7 +76,7 @@ export const buildWorkspaceRecord = (input: {
   shorthand: string;
   name?: string;
   branch?: string;
-  worktree_path?: string;
+  root_path?: string;
   is_default?: boolean;
   anchors?: ResourceRef[];
   provider_id?: string;
@@ -83,8 +96,8 @@ export const buildWorkspaceRecord = (input: {
     project_id: input.project_id,
     name: input.name ?? input.shorthand,
     branch: input.branch ?? null,
-    worktree_path: input.worktree_path ?? null,
-    provider_id: input.provider_id ?? (input.is_default ? "pstdio.root" : "pstdio.worktree"),
+    root_path: input.root_path ?? null,
+    provider_id: input.provider_id ?? "pstdio.root",
     provider_params_json: input.provider_params_json ?? {},
     provider_ref_json: input.provider_ref_json ?? null,
     provider_state: input.provider_state ?? "ready",
@@ -92,8 +105,12 @@ export const buildWorkspaceRecord = (input: {
     provider_operation_id: input.provider_operation_id ?? null,
     provider_operation_kind: input.provider_operation_kind ?? null,
     provider_error_json: input.provider_error_json ?? null,
-    provider_capabilities_json: input.provider_capabilities_json ?? defaultLocalWorkspaceCapabilities,
-    display_path: input.display_path ?? input.worktree_path ?? null,
+    provider_capabilities_json:
+      input.provider_capabilities_json ??
+      (!input.provider_id || input.provider_id === "pstdio.root"
+        ? folderWorkspaceCapabilities
+        : defaultLocalWorkspaceCapabilities),
+    display_path: input.display_path ?? input.root_path ?? null,
     is_default: input.is_default ?? false,
     archived: false,
     workspace_shorthand: input.shorthand,
@@ -107,27 +124,26 @@ export const buildWorkspaceRecord = (input: {
   };
 };
 
-export const insertDefaultWorkspace = async (
-  db: DbClient,
-  input: { project_id: string; name: string; branch: string | null },
-) => {
+export const insertDefaultWorkspace = async (db: DbClient, input: DefaultWorkspaceInput) => {
   const record = buildWorkspaceRecord({
+    ...input,
     project_id: input.project_id,
     shorthand: defaultShorthand,
     name: input.name,
     branch: input.branch ?? undefined,
     is_default: true,
+    root_path: input.root_path,
   });
   await db.insert(workspaces).values(record);
   return record;
 };
 
 export const selectDefaultWorkspace = async (db: DbClient, projectId: string) => {
-  const [row] = await db
+  const rows = await db
     .select()
     .from(workspaces)
     .where(
       and(eq(workspaces.project_id, projectId), eq(workspaces.is_default, true), sql`${workspaces.deleted_at} is null`),
     );
-  return row ?? null;
+  return rows.at(0) ?? null;
 };

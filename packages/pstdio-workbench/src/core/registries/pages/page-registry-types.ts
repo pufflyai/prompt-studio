@@ -16,6 +16,7 @@ import type { OwnedPlacementReconciliation, ResolvedOwnedPlacement } from "../la
 import type { WorkbenchPlacementPresentation } from "../views/view-placement";
 
 export interface WorkbenchPageSlot extends Omit<PageSlot, "tab"> {
+  readonly isAvailable?: (resource: ResourceRef | undefined) => boolean;
   readonly tab?: WorkbenchPlacementPresentation["tab"];
 }
 

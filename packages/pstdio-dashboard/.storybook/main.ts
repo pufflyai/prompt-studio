@@ -25,6 +25,8 @@ const config: StorybookConfig = {
   viteFinal: async (config) =>
     mergeConfig(config, {
       resolve: {
+        // Extension stories also import released UI versions. The dashboard owns this preview's UI contract.
+        dedupe: ["@pstdio/ui"],
         alias: {
           "@": resolve(rootDir, "../src"),
           $fonts: resolve(rootDir, "../public/font"),
