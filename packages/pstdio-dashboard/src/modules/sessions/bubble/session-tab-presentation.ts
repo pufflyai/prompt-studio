@@ -3,6 +3,7 @@ import type { WorkbenchModuleContext, WorkbenchPanelInstance, WorkbenchWidgetTab
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
+import { resolveDashboardWorkspaceIcon } from "@/shared/workspaces/dashboard-workspaces";
 import { createDashboardSessions, resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { subscribeSessionListData } from "../data/session-data-subscription";
 
@@ -33,7 +34,7 @@ const workspaceResource = (input: {
     "workspace",
     input.workspaceId,
     input.workspaceTitle || input.workspaceShorthand || "Workspace",
-    "GitBranch",
+    resolveDashboardWorkspaceIcon(input.workspaceId),
     input.projectId,
     {
       workspaceId: input.workspaceId,

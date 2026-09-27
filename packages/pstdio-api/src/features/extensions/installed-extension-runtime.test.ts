@@ -128,7 +128,7 @@ describe("createInstalledExtensionRuntime", () => {
     runtime.dispose();
   });
 
-  test("watches the user extension root and every linked repo extension root", async () => {
+  test("watches the user extension root and every project folder extension root", async () => {
     let listExtensionRoots: (() => Promise<Array<{ path: string }>>) | undefined;
 
     const runtime = await createInstalledExtensionRuntime({

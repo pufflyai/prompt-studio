@@ -13,7 +13,7 @@ import {
 import { createExtensionService } from "../../services/extension-service";
 import { createProjectService } from "../../services/project-service";
 import { EventBus } from "../sync/event-bus";
-import { syncRepoExtensionsForLinkedRepos, syncRepoExtensionsForProject } from "./repo-extensions";
+import { syncRepoExtensionsForProject, syncRepoExtensionsForProjectFolder } from "./repo-extensions";
 
 let close: (() => Promise<void>) | undefined;
 let projectService: ReturnType<typeof createProjectService>;
@@ -221,7 +221,7 @@ describe("syncRepoExtensionsForProject", () => {
     writeExtension(join(repoB, ".pstdio", "extensions", "repo-b"), "repo-b");
     writeExtension(join(repoA, ".pstdio", "extensions", "repo-a"), "repo-a");
 
-    const result = await syncRepoExtensionsForLinkedRepos({
+    const result = await syncRepoExtensionsForProjectFolder({
       extensionService,
       installedExtensionSourcesService,
       projectId: project.id,
@@ -237,6 +237,6 @@ describe("syncRepoExtensionsForProject", () => {
       },
     });
 
-    expect(result.flatMap((entry) => entry.enabled)).toEqual(["repo-b"]);
+    expect(result?.enabled).toEqual(["repo-b"]);
   });
 });

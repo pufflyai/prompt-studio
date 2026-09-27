@@ -334,7 +334,7 @@ describe("createWorkspacesModule breadcrumbs", () => {
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.icon)).toEqual([
       "square-kanban",
       "component",
-      dashboardViews.workspaces.icon,
+      "GitBranch",
     ]);
   });
   test("uses planner ticket ancestry when opening a ticket-linked workspace", async () => {

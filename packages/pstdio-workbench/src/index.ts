@@ -30,6 +30,7 @@ export type {
   ControlsResetInput,
   ControlsUpdateValueInput,
   createWorkbenchInput,
+  DataTableRendererBadgePalette,
   DataTableRendererColumn,
   DataTableRendererColumnRenderer,
   DataTableRendererColumnStat,

@@ -68,13 +68,10 @@
     "go": "前往",
     "searchLabel": "搜索当前目录:",
     "selectCurrent": "选择当前",
-    "gitRepo": "git 仓库",
     "selectPath": "选择路径",
     "errors": {
       "unableToLoadDirectory": "无法加载目录",
-      "pathRequired": "路径为必填项。",
-      "repositoryAlreadySelected": "仓库已选择。",
-      "notGitRepository": "所选文件夹不是 git 仓库。"
+      "pathRequired": "路径为必填项。"
     }
   },
   "branchSelector": {
@@ -182,8 +179,6 @@
   },
   "sections": {
     "changes": "更改",
-    "repositories": "仓库",
-    "addRepositories": "添加仓库",
     "project": "项目",
     "processes": "进程",
     "devServer": "开发服务器",
@@ -199,20 +194,11 @@
     "placeholder": "添加关于此工作区的笔记...",
     "selectWorkspace": "选择一个工作区以查看笔记"
   },
-  "repos": {
-    "loading": "正在加载仓库...",
-    "noRecentRepos": "未找到最近的仓库",
-    "noReposAdded": "未添加仓库",
-    "noReposAddedHint": "从下面的选项中添加一个或多个仓库到此工作区"
-  },
   "actions": {
-    "browseRepos": "浏览磁盘上的仓库",
-    "createNewRepo": "在磁盘上创建新仓库",
     "viewInChangesPanel": "在更改面板中查看",
     "copyPath": "复制路径",
     "copyWorktreePath": "复制工作树路径",
     "openInIde": "在IDE中打开",
-    "repoSettings": "仓库设置",
     "cancel": "取消",
     "saveChanges": "保存更改",
     "copied": "已复制",
@@ -227,10 +213,6 @@
   "confirm": {
     "defaultConfirm": "确认",
     "defaultCancel": "取消"
-  },
-  "dialogs": {
-    "selectGitRepository": "选择 Git 仓库",
-    "chooseExistingRepo": "从文件系统中选择现有仓库"
   },
   "empty": {
     "noChanges": "没有要显示的更改"
@@ -255,7 +237,6 @@
     "intro": "我们从头重建了 Vibe Kanban 的界面，您已被邀请试用。",
     "newUiDescription": "新界面针对日常工作进行了优化：管理代理、预览更改和审查代码。它还解锁了旧界面中不可用的功能：",
     "newFeatures": {
-      "multiRepo": "同时编辑多个仓库",
       "multiAgent": "在单个工作区中运行多个代理对话（甚至跨不同代理）",
       "commandBar": "使用命令栏更快地导航"
     },
@@ -286,10 +267,6 @@
     "sidenav": {
       "title": "工作区侧边栏",
       "content": "一目了然地查看所有工作区的状态。通知会突出显示需要关注的工作区。归档已合并的工作区以保持侧边栏整洁。"
-    },
-    "multiRepo": {
-      "title": "多仓库支持",
-      "content": "将多个仓库添加到单个工作区。在处理一个仓库时可以引用另一个仓库的代码，或者同时在多个仓库中实现更改。"
     },
     "sessions": {
       "title": "多会话",

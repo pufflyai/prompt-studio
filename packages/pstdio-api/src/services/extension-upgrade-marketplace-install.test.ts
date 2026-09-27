@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { join, resolve } from "node:path";
-import { createExtensionUpgradeService } from "./extension-upgrade-service";
+import { RepoScopedExtensionNeedsProjectFolderError } from "../features/extensions/install-extension-source";
+import { createExtensionUpgradeService, ExtensionUpgradeUnavailableError } from "./extension-upgrade-service";
 
 describe("marketplace extension installation", () => {
   test("loads marketplace sources from the configured workspace release", async () => {
@@ -120,6 +121,27 @@ describe("marketplace extension installation", () => {
         projectId: "project-1",
         sourcePath: targetPath,
       }),
+    );
+  });
+
+  test("reports that a repo-scoped extension needs a project with a local folder", async () => {
+    const service = createExtensionUpgradeService({
+      extensionService: {
+        enableInstalledSourceForProject: async () => null as never,
+        getInstalledSource: async () => null as never,
+        getProjectExtensionInstance: async () => null as never,
+        listProjectExtensionInstances: async () => [],
+        registerInstalledSource: async () => null as never,
+      },
+      installExtensionSource: async () => {
+        throw new RepoScopedExtensionNeedsProjectFolderError("pstdio.pstdio-planner-loops");
+      },
+      release: { source: "workspace", ref: "workspace-ref", root: resolve("/checkout/prompt-studio") },
+      workspaceService: { getDefault: async () => ({ root_path: null }) },
+    });
+
+    await expect(service.installMarketplaceExtension("project-1", "pstdio-planner-loops")).rejects.toBeInstanceOf(
+      ExtensionUpgradeUnavailableError,
     );
   });
 });

@@ -90992,6 +90992,985 @@
               ]
             }
           ]
+        },
+        {
+          "type": "rectangle",
+          "id": "F8Xaw",
+          "name": "Workspace List Divider",
+          "fill": "$ds-border",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "NZMBV",
+          "name": "Workspace list defaults",
+          "theme": {
+            "mode": "dark"
+          },
+          "width": "fill_container",
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": [
+            44,
+            72,
+            64,
+            72
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "lLVfF",
+              "name": "Section Header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "OcKz1",
+                  "name": "Kicker",
+                  "fill": "$ds-fg-subtle",
+                  "content": "DATA TABLE · WORKSPACE LIST",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 12,
+                  "fontWeight": "600",
+                  "letterSpacing": 1.5
+                },
+                {
+                  "type": "text",
+                  "id": "loGac",
+                  "name": "Heading",
+                  "fill": "$ds-fg",
+                  "content": "Workspace list defaults",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 28,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "r4cdEN",
+                  "name": "Description",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "A fresh list shows Name, Type, Location, Created at, and Diff with statistics hidden. Diagnostic columns stay in the Display menu. Type uses a subtle badge, dates read relative to now, long paths truncate in the middle, and Diff separates unsupported workspaces from a clean worktree.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Ey1fz",
+              "name": "Workspace list table",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "$ds-bg",
+              "cornerRadius": 8,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "D4wCBD",
+                  "name": "Header Row",
+                  "width": "fill_container",
+                  "height": 38,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "id": "j30hNR",
+                      "type": "ref",
+                      "ref": "CwlT9",
+                      "name": "Name Header",
+                      "width": 240,
+                      "theme": {
+                        "trow": "header"
+                      },
+                      "descendants": {
+                        "f4RTPs": {
+                          "icon": "type"
+                        },
+                        "EFru0": {
+                          "content": "Name"
+                        }
+                      }
+                    },
+                    {
+                      "id": "v0B5A",
+                      "type": "ref",
+                      "ref": "CwlT9",
+                      "name": "Type Header",
+                      "width": 170,
+                      "theme": {
+                        "trow": "header"
+                      },
+                      "descendants": {
+                        "f4RTPs": {
+                          "icon": "type"
+                        },
+                        "EFru0": {
+                          "content": "Type"
+                        }
+                      }
+                    },
+                    {
+                      "id": "Jq7cu",
+                      "type": "ref",
+                      "ref": "CwlT9",
+                      "name": "Location Header",
+                      "width": "fill_container",
+                      "theme": {
+                        "trow": "header"
+                      },
+                      "descendants": {
+                        "f4RTPs": {
+                          "icon": "type"
+                        },
+                        "EFru0": {
+                          "content": "Location"
+                        }
+                      }
+                    },
+                    {
+                      "id": "j77dG4",
+                      "type": "ref",
+                      "ref": "CwlT9",
+                      "name": "Created at Header",
+                      "width": 150,
+                      "theme": {
+                        "trow": "header"
+                      },
+                      "descendants": {
+                        "f4RTPs": {
+                          "icon": "calendar-clock"
+                        },
+                        "EFru0": {
+                          "content": "Created at"
+                        }
+                      }
+                    },
+                    {
+                      "id": "P18FT",
+                      "type": "ref",
+                      "ref": "CwlT9",
+                      "name": "Diff Header",
+                      "width": 150,
+                      "theme": {
+                        "trow": "header"
+                      },
+                      "descendants": {
+                        "f4RTPs": {
+                          "enabled": false
+                        },
+                        "EFru0": {
+                          "content": "Diff"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "JujQN",
+                  "name": "Project workspace Row",
+                  "width": "fill_container",
+                  "height": 46,
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "tJCTR",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Name Cell",
+                      "width": 240,
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "Project workspace"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "flDPZ",
+                      "name": "Type Cell",
+                      "width": 170,
+                      "height": "fill_container",
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "KSV4i",
+                          "type": "ref",
+                          "ref": "dbK8Z",
+                          "name": "Type Badge",
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "gray",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "ohhQY": {
+                              "enabled": false
+                            },
+                            "FaaBK": {
+                              "content": "Project folder"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "H6r03x",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Location Cell",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "/Users/alex/Projects/prompt-studio"
+                        }
+                      }
+                    },
+                    {
+                      "id": "omnNB",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Created Cell",
+                      "width": 150,
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "3 days ago",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V3aLV",
+                      "name": "Diff Cell",
+                      "width": 150,
+                      "height": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cK3q3",
+                          "name": "Unsupported",
+                          "fill": "$ds-fg",
+                          "content": "Not supported",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "AFu6G",
+                  "name": "Workspace list defaults Row",
+                  "width": "fill_container",
+                  "height": 46,
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "WXQy5",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Name Cell",
+                      "width": 240,
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "Workspace list defaults"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nnu0t",
+                      "name": "Type Cell",
+                      "width": 170,
+                      "height": "fill_container",
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "x5r3kg",
+                          "type": "ref",
+                          "ref": "dbK8Z",
+                          "name": "Type Badge",
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "purple",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "ohhQY": {
+                              "enabled": false
+                            },
+                            "FaaBK": {
+                              "content": "Git worktree"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "P5wNa3",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Location Cell",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "/Users/alex/.pstdio/workspaces/5c64…tudio"
+                        }
+                      }
+                    },
+                    {
+                      "id": "b6LPeN",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Created Cell",
+                      "width": 150,
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "5 hours ago",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D7puYO",
+                      "name": "Diff Cell",
+                      "width": 150,
+                      "height": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "a3NM9z",
+                          "name": "Additions",
+                          "fill": "$ds-success",
+                          "content": "+128",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "S9Ux2A",
+                          "name": "Deletions",
+                          "fill": "$ds-error",
+                          "content": "-14",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ztmP4",
+                  "name": "Clean worktree Row",
+                  "width": "fill_container",
+                  "height": 46,
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "jJGrY",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Name Cell",
+                      "width": 240,
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "Clean worktree"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fPaKR",
+                      "name": "Type Cell",
+                      "width": 170,
+                      "height": "fill_container",
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "QGKpp",
+                          "type": "ref",
+                          "ref": "dbK8Z",
+                          "name": "Type Badge",
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "purple",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "ohhQY": {
+                              "enabled": false
+                            },
+                            "FaaBK": {
+                              "content": "Git worktree"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "r16INu",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Location Cell",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "/Users/alex/.pstdio/workspaces/0b1f…tudio"
+                        }
+                      }
+                    },
+                    {
+                      "id": "JbtJN",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Created Cell",
+                      "width": 150,
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "1 hour ago",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xal6Q",
+                      "name": "Diff Cell",
+                      "width": 150,
+                      "height": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YdESF",
+                          "name": "Additions",
+                          "fill": "$ds-success",
+                          "content": "+0",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "g9M74G",
+                          "name": "Deletions",
+                          "fill": "$ds-error",
+                          "content": "-0",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "flUv6",
+                  "name": "Remote runner Row",
+                  "width": "fill_container",
+                  "height": 46,
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "N7O6p",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Name Cell",
+                      "width": 240,
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "Remote runner"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tVBou",
+                      "name": "Type Cell",
+                      "width": 170,
+                      "height": "fill_container",
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "wTKiW",
+                          "type": "ref",
+                          "ref": "dbK8Z",
+                          "name": "Type Badge",
+                          "theme": {
+                            "badge": "subtle",
+                            "palette": "blue",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "ohhQY": {
+                              "enabled": false
+                            },
+                            "FaaBK": {
+                              "content": "Remote workspace"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "fwYHR",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Location Cell",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "remote://runner-42/workspace"
+                        }
+                      }
+                    },
+                    {
+                      "id": "z6ei7",
+                      "type": "ref",
+                      "ref": "JrVLt",
+                      "name": "Created Cell",
+                      "width": 150,
+                      "height": "fill_container",
+                      "theme": {
+                        "trow": "data"
+                      },
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "right": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "descendants": {
+                        "E7NCh": {
+                          "content": "30 minutes ago",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mGAKI",
+                      "name": "Diff Cell",
+                      "width": 150,
+                      "height": "fill_container",
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "A5DSx6",
+                          "name": "Unsupported",
+                          "fill": "$ds-fg",
+                          "content": "Not supported",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "kyqvE",
+              "name": "Breadcrumb icons",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "d6Z9rn",
+                  "name": "Breadcrumb Title",
+                  "fill": "$ds-fg",
+                  "content": "Breadcrumbs show each workspace's own icon, from every route",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "HYcEu",
+                  "name": "Project workspace Trail",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "KQoPJ",
+                      "name": "Parent Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "computer",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "y9NyC",
+                      "name": "Parent",
+                      "fill": "$ds-fg-muted",
+                      "content": "Workspaces",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "nUuul",
+                      "name": "Separator",
+                      "fill": "$ds-fg-subtle",
+                      "content": "/",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "AlHSJ",
+                      "name": "Workspace Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "folder",
+                      "library": "lucide",
+                      "fill": "$ds-fg"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bJnLI",
+                      "name": "Workspace",
+                      "fill": "$ds-fg",
+                      "content": "Project workspace",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "PW9GL",
+                  "name": "PS-400_A1 Trail",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "g0OOQI",
+                      "name": "Parent Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "computer",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "HGDoP",
+                      "name": "Parent",
+                      "fill": "$ds-fg-muted",
+                      "content": "Workspaces",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "eYowz",
+                      "name": "Separator",
+                      "fill": "$ds-fg-subtle",
+                      "content": "/",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "Z5tf1",
+                      "name": "Workspace Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "git-branch",
+                      "library": "lucide",
+                      "fill": "$ds-fg"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Vn94j",
+                      "name": "Workspace",
+                      "fill": "$ds-fg",
+                      "content": "PS-400_A1",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "i2VLsd",
+                  "name": "Remote runner Trail",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "SbjO4",
+                      "name": "Parent Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "computer",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "hOmdC",
+                      "name": "Parent",
+                      "fill": "$ds-fg-muted",
+                      "content": "Workspaces",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "I9i41U",
+                      "name": "Separator",
+                      "fill": "$ds-fg-subtle",
+                      "content": "/",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "A5OAYv",
+                      "name": "Workspace Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "cloud",
+                      "library": "lucide",
+                      "fill": "$ds-fg"
+                    },
+                    {
+                      "type": "text",
+                      "id": "vNZli",
+                      "name": "Workspace",
+                      "fill": "$ds-fg",
+                      "content": "Remote runner",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -106195,7 +107174,7 @@
     {
       "type": "frame",
       "id": "LmcML",
-      "x": 20208,
+      "x": 18927,
       "y": 18634,
       "name": "Folder onboarding and workspace providers",
       "theme": {
@@ -106276,6 +107255,9 @@
                     "badge": "subtle",
                     "palette": "blue"
                   }
+                },
+                "vzzEL": {
+                  "enabled": false
                 },
                 "z28bu": {
                   "theme": {
@@ -106405,8 +107387,32 @@
                           }
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vFCpw",
+                      "name": "Folder state",
+                      "width": "fill_container",
+                      "height": 180,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b3pD8e",
+                          "name": "Empty directory",
+                          "fill": "$ds-fg-subtle",
+                          "content": "This folder is empty.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
+                },
+                "vzzEL": {
+                  "enabled": false
                 },
                 "z28bu": {
                   "theme": {
@@ -106471,18 +107477,11 @@
                       "fontFamily": "$font-body",
                       "fontSize": 14,
                       "fontWeight": "normal"
-                    },
-                    {
-                      "type": "text",
-                      "id": "G5cYq",
-                      "name": "Creation error",
-                      "fill": "$ds-fg",
-                      "content": "A folder with that name already exists.",
-                      "fontFamily": "$font-body",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
                     }
                   ]
+                },
+                "vzzEL": {
+                  "enabled": false
                 },
                 "z28bu": {
                   "theme": {
@@ -107119,8 +108118,8 @@
     {
       "type": "frame",
       "id": "b39KPj",
-      "x": -440,
-      "y": 28042,
+      "x": 480,
+      "y": 27371,
       "name": "Exploration",
       "theme": {
         "mode": "dark"
@@ -116397,39 +117396,11 @@
       ]
     },
     {
-      "id": "YHNoW",
-      "type": "ref",
-      "ref": "c24zV7",
-      "name": "Create folder",
-      "theme": {
-        "btn": "primary",
-        "size": "sm"
-      },
-      "layout": "horizontal",
-      "justifyContent": "space_between",
-      "x": 21251,
-      "y": 18567,
-      "descendants": {
-        "DsEVd": {
-          "enabled": false
-        },
-        "Hf4GT": {
-          "content": "Create folder"
-        },
-        "khvEs": {
-          "theme": {
-            "kbd": "raised",
-            "size": "md"
-          }
-        }
-      }
-    },
-    {
       "id": "C09B8",
       "type": "ref",
       "ref": "I2wLw",
       "name": "Create folder · existing files",
-      "x": 22172,
+      "x": 20891,
       "y": 18634,
       "theme": {
         "mode": "dark"
@@ -116612,6 +117583,9 @@
               ]
             }
           ]
+        },
+        "vzzEL": {
+          "enabled": false
         },
         "z28bu": {
           "theme": {

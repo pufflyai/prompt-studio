@@ -15,9 +15,6 @@
         "general": "Général",
         "generalDesc": "Thème, notifications et préférences",
         "projects": "Projets",
-        "projectsDesc": "Dépôts de projet et configuration",
-        "repos": "Dépôts",
-        "reposDesc": "Scripts et configuration des dépôts",
         "agents": "Agents",
         "agentsDesc": "Configurations des agents de codage",
         "mcp": "Serveurs MCP",
@@ -379,11 +376,6 @@
           "label": "Nom du projet",
           "placeholder": "Saisir le nom du projet",
           "helper": "Un nom d'affichage pour ce projet."
-        },
-        "repoPath": {
-          "label": "Chemin du dépôt Git",
-          "placeholder": "/chemin/vers/votre/depot/existant",
-          "helper": "Le chemin absolu vers votre dépôt git sur le disque."
         }
       },
       "save": {
@@ -393,81 +385,6 @@
         "unsavedChanges": "• Vous avez des modifications non enregistrées",
         "discard": "Abandonner",
         "confirmSwitch": "Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir changer de projet ? Vos modifications seront perdues."
-      },
-      "repositories": {
-        "title": "Dépôts",
-        "description": "Gérer les dépôts git dans ce projet",
-        "noRepositories": "Aucun dépôt configuré",
-        "addRepository": "Ajouter un dépôt"
-      }
-    },
-    "repos": {
-      "title": "Configuration du dépôt",
-      "description": "Configurez les scripts qui s'exécutent lorsque ce dépôt est utilisé dans les espaces de travail.",
-      "loading": "Chargement des dépôts...",
-      "loadError": "Échec du chargement des dépôts.",
-      "selector": {
-        "label": "Sélectionner un dépôt",
-        "placeholder": "Choisir un dépôt à configurer",
-        "helper": "Sélectionnez un dépôt pour voir et modifier sa configuration.",
-        "noRepos": "Aucun dépôt disponible"
-      },
-      "general": {
-        "title": "Paramètres généraux",
-        "description": "Configurez les informations de base du dépôt.",
-        "displayName": {
-          "label": "Nom d'affichage",
-          "placeholder": "Saisir le nom d'affichage",
-          "helper": "Un nom convivial pour ce dépôt."
-        },
-        "path": {
-          "label": "Chemin du dépôt"
-        },
-        "defaultWorkingDir": {
-          "label": "Répertoire de travail par défaut",
-          "placeholder": "ex. : packages/frontend",
-          "helper": "Sous-répertoire relatif à la racine du dépôt où l'agent de codage s'exécute pour les espaces de travail à dépôt unique. Défini lors de la création de l'espace de travail. Laissez vide pour utiliser la racine du dépôt."
-        },
-        "defaultTargetBranch": {
-          "label": "Branche cible par défaut",
-          "placeholder": "Sélectionner une branche",
-          "helper": "La branche de base par défaut pour les nouveaux espaces de travail. Les worktrees partent de cette branche et les PRs la cibleront.",
-          "search": "Rechercher des branches",
-          "noBranches": "Aucune branche trouvée",
-          "loading": "Chargement des branches...",
-          "useCurrent": "Utiliser la branche actuelle"
-        }
-      },
-      "scripts": {
-        "title": "Scripts et configuration",
-        "description": "Configurez le serveur de développement, la configuration, le nettoyage et les fichiers à copier pour ce dépôt. Ces scripts s'exécutent chaque fois que le dépôt est utilisé dans un espace de travail.",
-        "setup": {
-          "label": "Script de configuration",
-          "helper": "Ce script s'exécute depuis le worktree après sa création et avant le démarrage de l'agent de codage. Utilisez-le pour les tâches de configuration comme l'installation des dépendances ou la préparation de l'environnement.",
-          "parallelLabel": "Exécuter le script de configuration en parallèle avec l'agent de codage",
-          "parallelHelper": "Lorsque activé, le script de configuration s'exécute simultanément avec l'agent de codage au lieu d'attendre la fin de la configuration."
-        },
-        "cleanup": {
-          "label": "Script de nettoyage",
-          "helper": "Ce script s'exécute depuis le worktree après l'exécution de l'agent de codage, uniquement si des modifications ont été effectuées. Utilisez-le pour les tâches d'assurance qualité comme l'exécution de linters, formateurs, tests ou autres étapes de validation."
-        },
-        "copyFiles": {
-          "label": "Copier les fichiers",
-          "helper": "Liste de fichiers séparés par des virgules à copier depuis le répertoire du dépôt original vers le worktree. Utile pour les fichiers d'environnement comme .env. Assurez-vous qu'ils sont dans le gitignore !",
-          "placeholder": "Chemins de fichiers ou patterns glob (ex: .env, config/*.json)"
-        },
-        "devServer": {
-          "label": "Script du serveur de développement",
-          "helper": "Démarre un serveur de développement pour ce dépôt. Les scripts s'exécutent depuis le répertoire du worktree du dépôt."
-        }
-      },
-      "save": {
-        "button": "Enregistrer les paramètres du dépôt",
-        "success": "Paramètres du dépôt enregistrés avec succès !",
-        "error": "Échec de l'enregistrement des paramètres du dépôt",
-        "unsavedChanges": "Vous avez des modifications non enregistrées",
-        "discard": "Abandonner",
-        "confirmSwitch": "Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir changer de dépôt ? Vos modifications seront perdues."
       }
     }
   },

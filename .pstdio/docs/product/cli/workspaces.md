@@ -27,15 +27,3 @@ The Git provider requires a usable commit. For a project in a repository subfold
 Remote providers supply their own source and environment. They do not upload or synchronize the project folder. `delete` delegates resource cleanup to the provider and preserves user-selected folders.
 
 Run `pst workspaces <command> --help` for current options.
-
-## Dashboard creation
-
-Choose **Workspace type**, then fill in the fields declared by that provider.
-For **Git worktree**, select **Base branch** from the project's available branches.
-The current branch is selected initially. A checkout without a branch offers
-**Current checkout (no branch)** as well. Use **Create workspace** in the footer
-to submit, or **Cancel** to close the dialog.
-
-During the alpha.10 release bridge, Git choices use the first linked repository,
-matching workspace creation without an explicit legacy repository ID. Cloud
-providers supply their own fields and do not require Git.

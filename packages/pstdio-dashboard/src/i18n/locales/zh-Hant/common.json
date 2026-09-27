@@ -68,13 +68,10 @@
     "go": "前往",
     "searchLabel": "搜尋目前目錄:",
     "selectCurrent": "選取目前",
-    "gitRepo": "Git 儲存庫",
     "selectPath": "選取路徑",
     "errors": {
       "unableToLoadDirectory": "無法載入目錄",
-      "pathRequired": "路徑為必填。",
-      "repositoryAlreadySelected": "儲存庫已選擇。",
-      "notGitRepository": "所選資料夾不是 git 儲存庫。"
+      "pathRequired": "路徑為必填。"
     }
   },
   "branchSelector": {
@@ -182,8 +179,6 @@
   },
   "sections": {
     "changes": "變更",
-    "repositories": "儲存庫",
-    "addRepositories": "新增儲存庫",
     "project": "專案",
     "processes": "程序",
     "devServer": "開發伺服器",
@@ -199,20 +194,11 @@
     "placeholder": "新增關於此工作區的筆記...",
     "selectWorkspace": "選擇一個工作區以查看筆記"
   },
-  "repos": {
-    "loading": "正在載入儲存庫...",
-    "noRecentRepos": "找不到最近的儲存庫",
-    "noReposAdded": "尚未新增儲存庫",
-    "noReposAddedHint": "從下方選項中新增一個或多個儲存庫到此工作區"
-  },
   "actions": {
-    "browseRepos": "瀏覽磁碟上的儲存庫",
-    "createNewRepo": "在磁碟上建立新儲存庫",
     "viewInChangesPanel": "在變更面板中檢視",
     "copyPath": "複製路徑",
     "copyWorktreePath": "複製工作樹路徑",
     "openInIde": "在IDE中開啟",
-    "repoSettings": "儲存庫設定",
     "cancel": "取消",
     "saveChanges": "儲存變更",
     "copied": "已複製",
@@ -227,10 +213,6 @@
   "confirm": {
     "defaultConfirm": "確認",
     "defaultCancel": "取消"
-  },
-  "dialogs": {
-    "selectGitRepository": "選擇 Git 儲存庫",
-    "chooseExistingRepo": "從檔案系統中選擇現有儲存庫"
   },
   "empty": {
     "noChanges": "沒有要顯示的變更"
@@ -255,7 +237,6 @@
     "intro": "我們從頭重建了 Vibe Kanban 的介面，您已獲邀試用。",
     "newUiDescription": "新介面針對日常工作進行最佳化：管理代理、預覽變更和審查程式碼。它還解鎖了舊介面中無法使用的功能：",
     "newFeatures": {
-      "multiRepo": "同時編輯多個儲存庫",
       "multiAgent": "在單一工作區中執行多個代理對話（甚至跨不同代理）",
       "commandBar": "使用命令列更快地導覽"
     },
@@ -286,10 +267,6 @@
     "sidenav": {
       "title": "工作區側邊欄",
       "content": "一目了然地檢視所有工作區的狀態。通知會醒目提示需要關注的工作區。封存已合併的工作區以保持側邊欄整潔。"
-    },
-    "multiRepo": {
-      "title": "多儲存庫支援",
-      "content": "將多個儲存庫新增到單一工作區。在處理一個儲存庫時可以參考另一個儲存庫的程式碼，或者同時在多個儲存庫中實作變更。"
     },
     "sessions": {
       "title": "多工作階段",

@@ -82,7 +82,7 @@ It loads the discovered docs index for the selected project, derives the active 
 
 - The dashboard treats docs as read-only.
 - If no markdown docs are found, the panel shows an authoring-focused empty state with repo-local doc setup guidance and clickable prompt suggestions that start a new project session from the selected documentation question.
-- The docs panel depends on `.pstdio/docs` in the linked repo; it does not maintain a second copy.
+- The docs panel depends on `.pstdio/docs` in the project folder; it does not maintain a second copy.
 
 ## Errors
 

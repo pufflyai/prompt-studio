@@ -28,10 +28,41 @@ export interface DataTableCategoricalColor {
   color: DataTableThemeColor;
 }
 
+export type DataTableBadgePalette =
+  | "gray"
+  | "red"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "teal"
+  | "blue"
+  | "cyan"
+  | "purple"
+  | "pink";
+
+export interface DataTableBadgeCategory {
+  value: DataTableCategoricalValue;
+  palette: DataTableBadgePalette;
+}
+
+/** A cell value for the `diff` renderer. Sorting and filtering use the total number of changed lines. */
+export interface DataTableDiffValue {
+  additions: number;
+  deletions: number;
+}
+
 export type DataTableColumnRenderer =
   | { type: "json" }
   | { type: "color-scale"; stops: DataTableColorScaleStop[] }
-  | { type: "categorical-color"; categories: DataTableCategoricalColor[] };
+  | { type: "categorical-color"; categories: DataTableCategoricalColor[] }
+  /** Shows the value as a badge. Values without a category use the gray palette. */
+  | { type: "badge"; categories?: DataTableBadgeCategory[] }
+  /** Shows a `DataTableDiffValue` as added and deleted line counts. Other values render as text. */
+  | { type: "diff" }
+  /** Shows a date string relative to now, with the full date on hover. */
+  | { type: "date" }
+  /** Truncates a long path in the middle and shows the full path on hover and focus. */
+  | { type: "path" };
 
 export type DataTableColumnStat =
   | { type: "unique" }
@@ -112,6 +143,10 @@ export interface DataTableProps {
   onCSVUpload?: (csv: string) => Promise<void>;
   onCSVDownload?: (scenarios: string[]) => void;
   hiddenColumns?: string[];
+  /** Columns that start unchecked in the column menu. Viewers can still show them. */
+  defaultHiddenColumns?: string[];
+  /** Whether the statistics row starts visible when `columnStats` are set. Defaults to `true`. */
+  defaultShowStats?: boolean;
   onRowClick?: (row: RowData) => void;
   isRowInteractive?: (row: RowData) => boolean;
   activeRowId?: string | null;

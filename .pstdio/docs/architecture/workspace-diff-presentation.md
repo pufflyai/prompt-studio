@@ -34,6 +34,12 @@ reopen either view. The workspace page declares its routed resource separately a
 
 `Diffs` is active on the first visit. Resource-owned layout state restores the last valid sub-panel and Files menu state on later visits. File selection uses `workspaceView: "files"` and `workspaceFilePath` metadata on the same workspace resource URI.
 
+### 4) Workspaces list (summary only)
+
+The list shows Name, Type, Location, Created at, and Diff by default. Statistics and diagnostic columns stay available from the display menu. The Diff column asks for a summary only when the workspace provider declares the `diff` capability. A workspace without it shows "Not supported"; a supported workspace with no changes shows `+0 -0`.
+
+Workspace resources take their icon from their kind: a folder for the project folder, a Git branch for a Git worktree, and a cloud for a remote workspace. Breadcrumbs show that icon on every route, including after a reload.
+
 ## End-to-End Flow
 
 ```mermaid

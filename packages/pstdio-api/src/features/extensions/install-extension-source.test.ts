@@ -7,6 +7,7 @@ import {
   installExtensionSource,
   isLocalExtensionSource,
   namedSourceRef,
+  RepoScopedExtensionNeedsProjectFolderError,
   resolvePstdioHome,
 } from "./install-extension-source";
 import { makeExtension, writeManifest } from "./install-extension-source-test-fixtures";
@@ -46,7 +47,7 @@ describe("isLocalExtensionSource", () => {
 });
 
 describe("installExtensionSource scope", () => {
-  test("copies a repo-scoped extension into the linked repo extension root", async () => {
+  test("copies a repo-scoped extension into the project folder extension root", async () => {
     const source = join(root, "repo-extension");
     const repoPath = join(root, "repo");
     makeExtension(source, { pstdio: { scope: "repo" } });
@@ -65,7 +66,7 @@ describe("installExtensionSource scope", () => {
     expect(existsSync(join(pstdioHome, "extensions", "repo-extension", "extension.ts"))).toBe(false);
   });
 
-  test("rejects repo-scoped installs without a linked repo path", async () => {
+  test("rejects repo-scoped installs without a project folder", async () => {
     const source = join(root, "repo-extension");
     makeExtension(source, { pstdio: { scope: "repo" } });
 
@@ -76,7 +77,7 @@ describe("installExtensionSource scope", () => {
         env: { PSTDIO_HOME: pstdioHome },
         homedir: () => "/unused",
       }),
-    ).rejects.toThrow('declares pstdio.scope "repo" and must be installed from a linked repo');
+    ).rejects.toBeInstanceOf(RepoScopedExtensionNeedsProjectFolderError);
 
     expect(existsSync(join(pstdioHome, "extensions", "repo-extension", "extension.ts"))).toBe(false);
   });

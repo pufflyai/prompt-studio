@@ -83,7 +83,7 @@ describe("provider-owned local provisioning", () => {
     });
   }
 
-  test("catalog changes reprovision a recorded local target without linked repositories", async () => {
+  test("catalog changes reprovision a recorded local target", async () => {
     const fixture = setup();
     await provisionProjectWorkspaces(fixture.deps, "project-1", fixture.hooks);
     expect(fixture.payloads).toHaveLength(1);

@@ -16,13 +16,32 @@ export type DataTableRendererColumnStat =
   | { type: "histogram"; bins?: number }
   | { type: "top-values"; limit?: number };
 
+export type DataTableRendererBadgePalette =
+  | "gray"
+  | "red"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "teal"
+  | "blue"
+  | "cyan"
+  | "purple"
+  | "pink";
+
 export type DataTableRendererColumnRenderer =
   | { type: "json" }
   | { type: "color-scale"; stops: Array<{ value: number; color: DataTableRendererThemeColor }> }
   | {
       type: "categorical-color";
       categories: Array<{ value: string | number | boolean | null; color: DataTableRendererThemeColor }>;
-    };
+    }
+  | {
+      type: "badge";
+      categories?: Array<{ value: string | number | boolean | null; palette: DataTableRendererBadgePalette }>;
+    }
+  | { type: "diff" }
+  | { type: "date" }
+  | { type: "path" };
 
 export interface DataTableRendererColumn {
   id: string;
@@ -30,6 +49,8 @@ export interface DataTableRendererColumn {
   description?: string;
   icon?: unknown;
   hidden?: boolean;
+  /** Starts unchecked in the column menu; viewers can still show the column. */
+  defaultHidden?: boolean;
   stat?: DataTableRendererColumnStat;
   renderer?: DataTableRendererColumnRenderer;
 }
@@ -76,6 +97,8 @@ export interface DataTableRendererContribution {
   rowActions?: DataTableRendererRowAction[];
   initialPageSize?: number;
   pageSizeOptions?: number[];
+  /** Whether column statistics start visible. Defaults to `true`. */
+  defaultShowStats?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
   /** Context keys that choose which rows the query returns. A change drops the old rows and starts a new read. */

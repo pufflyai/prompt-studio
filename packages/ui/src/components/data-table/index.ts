@@ -5,6 +5,8 @@ export type { FriendlyJsonDisplayProps } from "./friendly-json-display";
 export { FriendlyJsonDisplay } from "./friendly-json-display";
 export { formatDisplayValue, getIcon } from "./helpers";
 export type {
+  DataTableBadgeCategory,
+  DataTableBadgePalette,
   DataTableCategoricalColor,
   DataTableCategoricalValue,
   DataTableCellContext,
@@ -12,6 +14,7 @@ export type {
   DataTableColorScaleStop,
   DataTableColumnRenderer,
   DataTableColumnStat,
+  DataTableDiffValue,
   DataTableEditModeAlignment,
   DataTableEditModeCellEditorProps,
   DataTableEditModeColumn,
