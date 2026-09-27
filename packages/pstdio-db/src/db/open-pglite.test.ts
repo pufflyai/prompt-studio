@@ -21,17 +21,23 @@ const createHome = () => {
 };
 
 beforeAll(async () => {
+  const startedAt = performance.now();
+  tracePhase("seed start", startedAt);
   existingHome = mkdtempSync(join(tmpdir(), "pstdio-bootstrap-seed-"));
   const source = await PGlite.create();
+  tracePhase("seed engine ready", startedAt);
   try {
     await source.exec("CREATE TABLE bootstrap_probe (value text); INSERT INTO bootstrap_probe VALUES ('image');");
     image = await source.dumpDataDir("gzip");
+    tracePhase("seed image ready", startedAt);
     await source.exec("UPDATE bootstrap_probe SET value = 'user data';");
     // Materialize a closed disk fixture without bootstrapping PostgreSQL on disk.
     const existing = await PGlite.create(existingHome, { loadDataDir: await source.dumpDataDir("none") });
+    tracePhase("seed disk ready", startedAt);
     await existing.close();
   } finally {
     await source.close();
+    tracePhase("seed complete", startedAt);
   }
 });
 
