@@ -1,12 +1,14 @@
 import { expect, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { text } from "node:stream/consumers";
 import { fileURLToPath } from "node:url";
+import { removeTestDirectory } from "./remove-test-directory";
 import { stopPackagedProcess } from "./stop-packaged-process";
+import { stopPackagedRuntime } from "./stop-packaged-runtime";
 
 test("terminates packaged processes when the test body times out", async () => {
   const node = Bun.which("node");
@@ -51,12 +53,9 @@ test("holds a packaged process past the test deadline", async () => {
     try {
       await stopPackagedProcess(runner);
     } finally {
-      if (existsSync(pidFile)) {
-        try {
-          process.kill(Number(readFileSync(pidFile, "utf8")), "SIGKILL");
-        } catch {}
-      }
-      rmSync(root, { recursive: true, force: true });
+      // Windows keeps the temp folder locked until the killed child has exited (ADR 0030).
+      if (existsSync(pidFile)) await stopPackagedRuntime(Number(readFileSync(pidFile, "utf8")));
+      await removeTestDirectory(root);
     }
   }
 });
