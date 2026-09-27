@@ -80,6 +80,39 @@ describe("navigation tree registry", () => {
     ]);
   });
 
+  test("places extension sections without a label in the root section", async () => {
+    const registry = createNavigationTreeRegistry();
+    registry.registerContribution({
+      id: "project.nav",
+      owner: project,
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: () => [{ id: "navigation.root", nodes: [{ id: "search", label: "Search" }] }],
+    });
+    registry.registerContribution({
+      id: "lab.examples",
+      idScope: "lab.examples",
+      owner: project,
+      sourceExtensionId: "pstdio.extension-lab",
+      declarationIndex: 0,
+      getSections: () => [{ id: "examples", label: "Examples", nodes: [{ id: "scribble", label: "Scribble" }] }],
+    });
+    registry.registerContribution({
+      id: "note-list",
+      idScope: "note-list",
+      owner: project,
+      sourceExtensionId: "pstdio.pstdio-notes",
+      declarationIndex: 0,
+      getSections: () => [
+        { id: "notes", nodes: [{ id: "notes", label: "Notes", children: [{ id: "n1", label: "N1" }] }] },
+      ],
+    });
+
+    const sections = await registry.getSections(project, "content");
+    expect(sections.map((section) => section.id)).toEqual(["navigation.root", "lab.examples:examples"]);
+    expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["search", "note-list:notes"]);
+    expect(sections[0]?.nodes[1]?.children?.map((node) => node.id)).toEqual(["note-list:n1"]);
+  });
   test("attaches one opaque owner key to every section and row", async () => {
     const registry = createNavigationTreeRegistry();
     registry.registerContribution({

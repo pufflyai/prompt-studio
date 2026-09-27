@@ -141,7 +141,6 @@ export default defineExtension({
       id: "motion-lab",
       owner: workbenchModes.project,
       slot: "content",
-      group: "Tools",
       label: l10n("motionLab.title", "Motion Lab"),
       icon: "play",
       action: target("chat-turn"),

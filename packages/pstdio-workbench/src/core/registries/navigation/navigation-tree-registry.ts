@@ -49,6 +49,9 @@ export interface NavigationTreeRegistry {
   onDidChange(listener: () => void): Disposable;
 }
 
+// The owner's top-level section. Extensions add ungrouped entries here and use a labeled section for a named group.
+export const navigationRootSectionId = "navigation.root";
+
 const ownerId = (owner: NavigationTreeOwner) => `${owner.kind}:${owner.extensionId}:${owner.id}`;
 
 const ownersEqual = (left: NavigationTreeOwner, right: NavigationTreeOwner) => ownerId(left) === ownerId(right);
@@ -106,14 +109,17 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
   const projectSection = (
     section: TreeViewSection,
     contribution: NavigationTreeContribution,
-    moveScope: string,
+    owner: NavigationTreeOwner,
   ): TreeViewSection => ({
     ...section,
-    id: scopedId(contribution.idScope, section.id),
-    moveScope,
+    id:
+      contribution.sourceExtensionId !== owner.extensionId && !section.label
+        ? navigationRootSectionId
+        : scopedId(contribution.idScope, section.id),
+    moveScope: ownerId(owner),
     canHide: section.canHide ?? true,
     canReorder: section.canReorder ?? true,
-    nodes: section.nodes.map((node) => projectNode(node, contribution, moveScope)),
+    nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner))),
   });
 
   return {
@@ -145,7 +151,6 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
     async getSections(owner, slot = "content", context = {}) {
       const sections: TreeViewSection[] = [];
-      const moveScope = ownerId(owner);
       for (const contribution of matching(owner, slot)) {
         context.signal?.throwIfAborted();
         const sourceSections = contribution.viewId
@@ -153,7 +158,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
           : await contribution.getSections?.(context);
         context.signal?.throwIfAborted();
         for (const section of sourceSections ?? []) {
-          mergeSection(sections, projectSection(section, contribution, moveScope));
+          mergeSection(sections, projectSection(section, contribution, owner));
         }
       }
       return sections;

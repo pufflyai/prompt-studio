@@ -157,7 +157,10 @@ export type {
   NavigationTreeRegistry,
   NavigationTreeSlot,
 } from "../registries/navigation/navigation-tree-registry";
-export { createNavigationTreeRegistry } from "../registries/navigation/navigation-tree-registry";
+export {
+  createNavigationTreeRegistry,
+  navigationRootSectionId,
+} from "../registries/navigation/navigation-tree-registry";
 export type {
   NotificationRegistry,
   RegisteredWorkbenchNotification,
