@@ -10,6 +10,9 @@ import { createDb, resolveMigrationsFolder, resolvePgliteOptions } from "./conne
 import * as schema from "./schemas.pg";
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
+// Creating an on-disk database writes about a thousand PostgreSQL files. Windows CI runners take
+// 2–4 s for that and have spiked to 11 s, past Bun's 5 s default. The user approved 15 s on 2026-09-27.
+const windowsDiskLimit = process.platform === "win32" ? 15_000 : undefined;
 
 const createTempDbPath = () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-lock-"));
@@ -36,7 +39,7 @@ describe("createDb", () => {
     seed = createTempDbPath();
     const client = await createDb({ path: seed.dbPath });
     await client.close();
-  });
+  }, windowsDiskLimit);
 
   afterAll(() => fs.rmSync(seed.tempRoot, { recursive: true, force: true }));
 
@@ -48,20 +51,24 @@ describe("createDb", () => {
     await client.close();
   });
 
-  it("uses PSTDIO_DB_PATH for the default database location", async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-"));
-    const dbPath = path.join(tempRoot, ".pstdio");
+  it(
+    "uses PSTDIO_DB_PATH for the default database location",
+    async () => {
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-"));
+      const dbPath = path.join(tempRoot, ".pstdio");
 
-    process.env.PSTDIO_DB_PATH = dbPath;
+      process.env.PSTDIO_DB_PATH = dbPath;
 
-    const client = await createDb();
+      const client = await createDb();
 
-    expect(client.path).toBe(fs.realpathSync(dbPath));
-    expect(fs.existsSync(dbPath)).toBe(true);
+      expect(client.path).toBe(fs.realpathSync(dbPath));
+      expect(fs.existsSync(dbPath)).toBe(true);
 
-    await client.close();
-    fs.rmSync(tempRoot, { force: true, recursive: true });
-  });
+      await client.close();
+      fs.rmSync(tempRoot, { force: true, recursive: true });
+    },
+    windowsDiskLimit,
+  );
 
   it("refuses to open a database directory held by a live process", async () => {
     const { dbPath } = seed;
@@ -136,28 +143,30 @@ describe("createDb", () => {
     expect(fs.readdirSync(lockPath)).toEqual([]);
   });
 
-  it("upgrades a pre-extension-storage template into readable extension storage", async () => {
-    const { dbPath, tempRoot } = createTempDbPath();
-    // Build the historical fixture without disk-heavy initdb, then persist it for the upgrade.
-    const pglite = new PGlite();
-    await pglite.waitReady;
-    const oldDb = drizzle(pglite, { schema });
-    const migrationsFolder = await resolveMigrationsFolder();
-    const oldMigrationsFolder = path.join(tempRoot, "old-migrations");
-    fs.mkdirSync(path.join(oldMigrationsFolder, "meta"), { recursive: true });
-    const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf8")) as {
-      entries: Array<{ tag: string }>;
-    };
-    journal.entries = journal.entries.slice(0, 11);
-    fs.writeFileSync(path.join(oldMigrationsFolder, "meta/_journal.json"), JSON.stringify(journal));
-    for (const entry of journal.entries) {
-      fs.copyFileSync(
-        path.join(migrationsFolder, `${entry.tag}.sql`),
-        path.join(oldMigrationsFolder, `${entry.tag}.sql`),
-      );
-    }
-    await migrate(oldDb, { migrationsFolder: oldMigrationsFolder });
-    await pglite.exec(`
+  it(
+    "upgrades a pre-extension-storage template into readable extension storage",
+    async () => {
+      const { dbPath, tempRoot } = createTempDbPath();
+      // Build the historical fixture without disk-heavy initdb, then persist it for the upgrade.
+      const pglite = new PGlite();
+      await pglite.waitReady;
+      const oldDb = drizzle(pglite, { schema });
+      const migrationsFolder = await resolveMigrationsFolder();
+      const oldMigrationsFolder = path.join(tempRoot, "old-migrations");
+      fs.mkdirSync(path.join(oldMigrationsFolder, "meta"), { recursive: true });
+      const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf8")) as {
+        entries: Array<{ tag: string }>;
+      };
+      journal.entries = journal.entries.slice(0, 11);
+      fs.writeFileSync(path.join(oldMigrationsFolder, "meta/_journal.json"), JSON.stringify(journal));
+      for (const entry of journal.entries) {
+        fs.copyFileSync(
+          path.join(migrationsFolder, `${entry.tag}.sql`),
+          path.join(oldMigrationsFolder, `${entry.tag}.sql`),
+        );
+      }
+      await migrate(oldDb, { migrationsFolder: oldMigrationsFolder });
+      await pglite.exec(`
       INSERT INTO projects
         (id, name, shorthand, created_at, updated_at, selected_agents)
       VALUES
@@ -173,44 +182,46 @@ describe("createDb", () => {
         ('template-1', 'project-1', 'implement_ticket', 'prompt', 'file-1', true,
          '2026-01-01', '2026-01-01', NULL);
     `);
-    const image = await pglite.dumpDataDir("none");
-    await pglite.close();
-    const persisted = new PGlite(dbPath, { loadDataDir: image });
-    await persisted.waitReady;
-    await persisted.close();
+      const image = await pglite.dumpDataDir("none");
+      await pglite.close();
+      const persisted = new PGlite(dbPath, { loadDataDir: image });
+      await persisted.waitReady;
+      await persisted.close();
 
-    const current = await createDb({ path: dbPath });
-    const templates = await current.pglite.query<{
-      extension_instance_id: string;
-      item_id: string;
-      value_json: { blobId: string; type: string };
-    }>(
-      `SELECT extension_instance_id, item_id, value_json
+      const current = await createDb({ path: dbPath });
+      const templates = await current.pglite.query<{
+        extension_instance_id: string;
+        item_id: string;
+        value_json: { blobId: string; type: string };
+      }>(
+        `SELECT extension_instance_id, item_id, value_json
          FROM extension_collection_items
         WHERE collection = 'templates'`,
-    );
-    expect(templates.rows).toEqual([
-      {
-        extension_instance_id: expect.any(String),
-        item_id: "implement-ticket",
-        value_json: expect.objectContaining({ blobId: "file-1", type: "prompt" }),
-      },
-    ]);
-    const linkedFile = await current.pglite.query<{ storage_path: string }>(
-      `SELECT files.storage_path
+      );
+      expect(templates.rows).toEqual([
+        {
+          extension_instance_id: expect.any(String),
+          item_id: "implement-ticket",
+          value_json: expect.objectContaining({ blobId: "file-1", type: "prompt" }),
+        },
+      ]);
+      const linkedFile = await current.pglite.query<{ storage_path: string }>(
+        `SELECT files.storage_path
          FROM extension_files
          JOIN files ON files.id = extension_files.file_id`,
-    );
-    expect(linkedFile.rows).toEqual([{ storage_path: "/legacy/implement_ticket.md" }]);
-    const legacyTable = await current.pglite.query<{ name: string | null }>(
-      "SELECT to_regclass('public.templates')::text AS name",
-    );
-    expect(legacyTable.rows).toEqual([{ name: null }]);
+      );
+      expect(linkedFile.rows).toEqual([{ storage_path: "/legacy/implement_ticket.md" }]);
+      const legacyTable = await current.pglite.query<{ name: string | null }>(
+        "SELECT to_regclass('public.templates')::text AS name",
+      );
+      expect(legacyTable.rows).toEqual([{ name: null }]);
 
-    await current.close();
+      await current.close();
 
-    fs.rmSync(tempRoot, { force: true, recursive: true });
-  });
+      fs.rmSync(tempRoot, { force: true, recursive: true });
+    },
+    windowsDiskLimit,
+  );
 });
 
 describe("resolvePgliteOptions", () => {
