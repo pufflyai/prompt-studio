@@ -44,13 +44,12 @@ export const SessionHistoryNotice = (props: SessionHistoryNoticeProps) => {
     });
     return () => binding.dispose();
   }, [sessionId, ownerKey, reads, open, attempt, loadSources]);
-  const unavailable = issue?.code === "native_unavailable";
-  const title = unavailable ? "Some history could not be checked" : "Conversation history needs review";
+  if (issue?.code === "native_unavailable" && !error) return null;
   return (
     <>
       <AlertMessage
         status="warning"
-        title={title}
+        title="Conversation history needs review"
         endElement={
           <Flex gap="xs">
             <Button size="xs" variant="outline" onClick={() => setOpen(true)}>
@@ -62,10 +61,7 @@ export const SessionHistoryNotice = (props: SessionHistoryNoticeProps) => {
           </Flex>
         }
       >
-        {error ??
-          (unavailable
-            ? "Showing the saved conversation. The agent history is unavailable."
-            : "The saved and agent histories could not be safely combined. Review both sources before resuming.")}
+        {error ?? "The saved and agent histories could not be safely combined. Review both sources before resuming."}
       </AlertMessage>
       <Dialog.Root open={open} onOpenChange={(event) => setOpen(event.open)} size="lg">
         <Portal>

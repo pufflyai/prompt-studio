@@ -22,8 +22,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof SessionHistoryNotice>;
 export const ConflictingHistory: Story = {};
-export const AgentHistoryUnavailable: Story = {
+export const SavedConversationFallback: Story = {
   args: { issue: { code: "native_unavailable", category: "native_unavailable" } },
+};
+export const HistoryLoadError: Story = {
+  args: { error: "Could not load the conversation." },
 };
 export const UnreadableSavedHistory: Story = {
   args: {
