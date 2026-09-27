@@ -9,6 +9,7 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
+import { navigationRootSectionId } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import { metadataRefId } from "../host/workbench-extension-metadata-ref";
 
@@ -55,7 +56,7 @@ const toSections = (
   for (const item of items) {
     if (!isVisible(workbench, item, createWhenExpression)) continue;
     const label = item.group || undefined;
-    const id = label ? `${item.extensionId}:${label}` : "navigation.root";
+    const id = label ? `${item.extensionId}:${label}` : navigationRootSectionId;
     const section = sections.get(id) ?? {
       id,
       label,

@@ -8,7 +8,7 @@ Executable proposals for chat and workbench motion. Review them in Prompt Studio
 | --- | --- |
 | Pencil `.pen` designs | Appearance, spacing, states, and layout |
 | `design/motion` | Compositions, fixtures, timing proposals, and review notes |
-| `.pstdio/extensions/motion-lab` | Project Tools page with the Remotion Player and review controls |
+| `.pstdio/extensions/motion-lab` | Project page with the Remotion Player and review controls |
 | `design/DESIGN.md` | Approved interaction rules |
 | `@pstdio/ui` and Storybook | Production components and interactive examples |
 
@@ -38,7 +38,7 @@ docker exec -it -w /workspace/project pstdio-playwright-prompt-studio-1 \
   "$PWD/.pstdio/extensions/motion-lab"
 ```
 
-Open **Tools → Motion Lab**. Stop the watcher with Ctrl+C. Stop the isolated app with `bun run dev:playwright:down` when finished. This does not install the lab into your regular Prompt Studio home.
+Open **Motion Lab** in the project sidenav. Stop the watcher with Ctrl+C. Stop the isolated app with `bun run dev:playwright:down` when finished. This does not install the lab into your regular Prompt Studio home.
 
 For an already linked development project, use `pst extensions dev .pstdio/extensions/motion-lab` from its root. The extension is repo-scoped. The watcher tracks extension files; after editing the shared studies, restart the watcher to rebuild its snapshot.
 
