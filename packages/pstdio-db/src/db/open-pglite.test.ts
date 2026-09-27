@@ -9,6 +9,11 @@ import { openPglite } from "./open-pglite";
 let image: Blob;
 let existingHome: string;
 const homes: string[] = [];
+const tracePhase = (phase: string, startedAt: number) => {
+  if (process.platform === "win32") {
+    process.stderr.write(`[open-pglite] ${phase}: ${(performance.now() - startedAt).toFixed(1)}ms\n`);
+  }
+};
 const createHome = () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-bootstrap-db-"));
   homes.push(home);
@@ -32,17 +37,28 @@ beforeAll(async () => {
 
 // Release each test's database before the next one creates another file tree.
 afterEach(async () => {
-  for (const home of homes.splice(0)) await rm(home, { recursive: true, force: true });
+  for (const home of homes.splice(0)) {
+    const startedAt = performance.now();
+    tracePhase("remove start", startedAt);
+    await rm(home, { recursive: true, force: true });
+    tracePhase("remove complete", startedAt);
+  }
 });
 
 afterAll(() => rm(existingHome, { recursive: true, force: true }));
 
 test("initializes an empty database directory from its packaged image", async () => {
+  const startedAt = performance.now();
+  tracePhase("open start", startedAt);
   const db = openPglite(createHome(), { loadDataDir: image });
   try {
     expect((await db.query("SELECT value FROM bootstrap_probe")).rows).toEqual([{ value: "image" }]);
+    tracePhase("query complete", startedAt);
   } finally {
+    const closeStartedAt = performance.now();
+    tracePhase("close start", closeStartedAt);
     await db.close();
+    tracePhase("close complete", closeStartedAt);
   }
 });
 
