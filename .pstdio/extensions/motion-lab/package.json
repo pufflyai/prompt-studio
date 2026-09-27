@@ -1,0 +1,38 @@
+{
+  "name": "motion-lab",
+  "version": "0.0.0",
+  "displayName": "Motion Lab",
+  "description": "Review chat and workbench motion studies with Remotion.",
+  "publisher": "pstdio",
+  "private": true,
+  "type": "module",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "1.0.0-alpha.12"
+  },
+  "pstdio": {
+    "scope": "repo"
+  },
+  "scripts": {
+    "test": "bun test src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@emotion/react": "^11.0.0",
+    "@pstdio/motion-studies": "workspace:*",
+    "@pstdio/sdk": "workspace:*",
+    "@pstdio/ui": "0.35.0",
+    "@remotion/player": "4.0.529",
+    "lucide-react": "^0.556.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2",
+    "@types/react": "^19.2.0",
+    "typescript": "6.0.2",
+    "@types/react-dom": "^19.2.0"
+  }
+}

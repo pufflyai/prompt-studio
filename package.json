@@ -59,7 +59,9 @@
     ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-dev",
     ".pstdio/extensions/pstdio-planner-loops",
-    "scripts"
+    "scripts",
+    "design/motion",
+    ".pstdio/extensions/motion-lab"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",
