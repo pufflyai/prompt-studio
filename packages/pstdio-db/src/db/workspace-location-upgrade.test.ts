@@ -74,9 +74,8 @@ test("upgrades linked folders and recorded aliases without losing workspace or s
   } finally {
     await old.close();
   }
-  const persisted = new PGlite(folder, { loadDataDir: image });
-  await persisted.waitReady;
-  await persisted.close();
+  // Extract the checkpoint directly instead of starting a second database only to copy it to disk.
+  await new Bun.Archive(image).extract(folder);
   const upgraded = await createDb({ path: folder });
   try {
     const records = await upgraded.db.select().from(schema.workspaces);
