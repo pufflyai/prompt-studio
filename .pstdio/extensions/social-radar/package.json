@@ -1,0 +1,38 @@
+{
+  "name": "social-radar",
+  "version": "0.0.0",
+  "displayName": "Social radar",
+  "description": "Daily research, reply drafts, and post ideas for Prompt Studio.",
+  "publisher": "pstdio",
+  "private": true,
+  "type": "module",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "1.0.0-alpha.13"
+  },
+  "pstdio": {
+    "scope": "repo"
+  },
+  "scripts": {
+    "test": "bun test src",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "3.32.0",
+    "@emotion/react": "11.14.0",
+    "@pstdio/sdk": "^0.35.0",
+    "@pstdio/ui": "0.35.0",
+    "@tanstack/react-query": "^5.90.21",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.2",
+    "@storybook/react": "^10.6.0"
+  }
+}
