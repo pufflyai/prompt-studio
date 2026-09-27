@@ -192,6 +192,22 @@ describe("social radar commands", () => {
     await expect(commands.updateThread.run(ctx, { id: saved.id, input: { relevance: 9 } })).rejects.toThrow();
   });
 
+  test("keeps posting history when a posted thread is saved or skipped again", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands.runDaily.run(ctx, {});
+    const saved = await commands.saveThread.run(ctx, { input: thread(run.runId) });
+    await commands.setThreadStatus.run(ctx, { id: saved.id, status: "posted" });
+    await commands.recordOutcome.run(ctx, { threadId: saved.id, outcome: "A reader replied." });
+    const posted = await storage.collection<Thread>("threads").get(saved.id);
+    await expect(commands.setThreadStatus.run(ctx, { id: saved.id, status: "saved" })).rejects.toThrow(
+      "Posted threads cannot be unposted.",
+    );
+    await expect(commands.setThreadStatus.run(ctx, { id: saved.id, status: "skipped" })).rejects.toThrow(
+      "Posted threads cannot be unposted.",
+    );
+    expect(await storage.collection<Thread>("threads").get(saved.id)).toEqual(posted);
+  });
+
   test("revises an idea draft while keeping its saved status", async () => {
     const { ctx, storage } = setup();
     const run = await commands.runDaily.run(ctx, {});
