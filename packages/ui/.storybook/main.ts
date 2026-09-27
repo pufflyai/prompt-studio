@@ -19,6 +19,8 @@ const config: StorybookConfig = {
     getAbsolutePath("@storybook/addon-mcp"),
   ],
   framework: getAbsolutePath("@storybook/react-vite"),
+  // Chakra's package.json declares a public Storybook URL. Composing it makes startup depend on the network.
+  refs: { "@chakra-ui/react": { disable: true } },
   typescript: {
     reactDocgen: "react-docgen-typescript",
     reactDocgenTypescriptOptions: {
