@@ -87,6 +87,28 @@ const createInbox = (cardinality: "one" | "many" = "one") => {
   return workbench;
 };
 describe("closing page resource panels", () => {
+  test("single-resource Main is fixed while its optional panels remain closable", () => {
+    const workbench = createInbox();
+    const main = workbench.layout.getLayout().regions.main.widgets[0]!;
+    expect(main.closable).toBe(false);
+    expect(workbench.layout.getLayout().regions.side.widgets.every((item) => item.closable)).toBe(true);
+    const location = workbench.pages.store.getState().location;
+    expect(workbench.pageLocations.closePlacement(main.placementIdentity!).ok).toBe(false);
+    expect(workbench.pages.store.getState().location).toEqual(location);
+    expect(workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id: "two" } }).ok).toBe(
+      true,
+    );
+    expect(workbench.layout.getLayout().regions.main.widgets).toMatchObject([
+      { closable: false, resource: { id: "two" } },
+    ]);
+  });
+  test("a page supporting many resources keeps its only tab closable", () => {
+    const workbench = createInbox("many");
+    const main = workbench.layout.getLayout().regions.main.widgets[0]!;
+    expect(main.closable).toBe(true);
+    expect(workbench.pageLocations.closePlacement(main.placementIdentity!).ok).toBe(true);
+    expect(workbench.pages.store.getState().location).toEqual({ page: home });
+  });
   test("closing an inactive pinned resource keeps a manually closed reader closed", () => {
     const workbench = createInbox("many");
     for (const id of ["one", "two"]) {

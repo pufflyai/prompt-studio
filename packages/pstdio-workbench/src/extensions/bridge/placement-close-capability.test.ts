@@ -64,7 +64,7 @@ test("native close and webview close enforce fixed placements and the last resou
     modeId: "review",
     parentId: home.id,
     resource: { kinds: [{ kind: "resource-kind", id: "note" }] },
-    main: { kind: "view", view: { kind: "view", id: "notes" }, cardinality: "one" },
+    main: { kind: "view", view: { kind: "view", id: "notes" }, cardinality: "many" },
     slots: [],
   });
   workbench.pageLocations.navigate({ kind: "page", page: resourcePage, resource: { type: "note", id: "one" } });

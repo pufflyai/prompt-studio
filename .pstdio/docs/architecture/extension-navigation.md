@@ -8,6 +8,6 @@ Compound navigation contains page and panel targets only. Preparation resolves d
 
 Serialization and the browser history write precede changes to live owners. Browser adapters must leave history unchanged when a write throws. Cache writes, mode hooks, and public subscribers run after this boundary. The workbench reports each failed host effect and continues notifying observers; an observer failure cannot reject an already committed route. Internal composition and breadcrumb updates finish before public subscribers run.
 
-The visible layout composes shell, mode, and page placements. Page changes preserve shared mode placements. Closing an auxiliary panel preserves location. Native and webview closing use one controller that protects fixed placements and follows the page's declared parent when its last routed resource view closes.
+The visible layout composes shell, mode, and page placements. Page changes preserve shared mode placements. Closing an auxiliary panel preserves location. Native and webview closing use one controller that protects fixed placements and follows the page's declared parent when its last tab closes on a page that supports multiple resources.
 
 See [composition architecture](extension-workbench-composition.md) and [navigation and layout state](../extensions/navigation-and-layout-state.md).

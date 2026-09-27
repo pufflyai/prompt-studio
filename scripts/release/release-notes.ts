@@ -1,19 +1,18 @@
 import { dirname, join } from "node:path";
-import { read as readChangesetsConfig } from "@changesets/config";
 
 type RootManifest = {
   workspaces?: string[];
 };
 
-export const findPackageDir = async (name: string) => {
-  const rootManifest = (await Bun.file("package.json").json()) as RootManifest;
+export const findPackageDir = async (name: string, cwd: string) => {
+  const rootManifest = (await Bun.file(join(cwd, "package.json")).json()) as RootManifest;
 
   for (const workspace of rootManifest.workspaces ?? []) {
     const manifests = new Bun.Glob(`${workspace.replace(/\/$/, "")}/package.json`);
-    for await (const manifestPath of manifests.scan({ dot: true, onlyFiles: true })) {
-      const manifestFile = Bun.file(manifestPath);
+    for await (const manifestPath of manifests.scan({ cwd, dot: true, onlyFiles: true })) {
+      const manifestFile = Bun.file(join(cwd, manifestPath));
       const manifest = await manifestFile.json();
-      if (manifest.name === name) return dirname(manifestPath);
+      if (manifest.name === name) return dirname(join(cwd, manifestPath));
     }
   }
   return null;
@@ -39,13 +38,12 @@ export const extractSection = (changelog: string, version: string) => {
     .trim();
 };
 
-const main = async () => {
-  const [version] = process.argv.slice(2);
-  if (!version) throw new Error("usage: release-notes.ts <version>");
-  const config = await readChangesetsConfig(process.cwd());
+export const createReleaseNotes = async (cwd: string, version: string) => {
+  const { read: readChangesetsConfig } = await import("@changesets/config");
+  const config = await readChangesetsConfig(cwd);
   const sections: string[] = [];
   for (const name of config.fixed[0] ?? []) {
-    const dir = await findPackageDir(name);
+    const dir = await findPackageDir(name, cwd);
     if (!dir) throw new Error(`package not found: ${name}`);
     const file = Bun.file(join(dir, "CHANGELOG.md"));
     if (!(await file.exists())) continue;
@@ -54,12 +52,14 @@ const main = async () => {
     const notes = section.replace(/^_\d{4}-\d{2}-\d{2}_\s*$/gm, "").trim();
     if (notes) sections.push(`## ${name}\n\n${notes}\n\n`);
   }
-  process.stdout.write(sections.length ? sections.join("") : "_No changelog entries._\n");
+  return sections.length ? sections.join("") : "_No changelog entries._\n";
 };
 
 if (import.meta.main) {
   try {
-    await main();
+    const [version] = process.argv.slice(2);
+    if (!version) throw new Error("usage: release-notes.ts <version>");
+    process.stdout.write(await createReleaseNotes(process.cwd(), version));
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);

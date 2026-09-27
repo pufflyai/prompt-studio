@@ -419,7 +419,7 @@ describe("page placement close lifecycle", () => {
           kind: "view",
           id: "detail",
         },
-        cardinality: "one",
+        cardinality: "many",
       },
       slots: [],
     });

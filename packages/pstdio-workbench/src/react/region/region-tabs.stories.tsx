@@ -17,6 +17,9 @@ const createPanelWorkbench = (
     actions?: boolean;
     closable?: boolean;
     resource?: boolean;
+    menu?: boolean;
+    menusOnly?: boolean;
+    cardinality?: "one" | "many";
     resourceLabel?: string;
     tabLabel?: string;
   } = {},
@@ -56,8 +59,16 @@ const createPanelWorkbench = (
       workbench.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath(region), { commandId: id });
     }
   }
+  if (options.menu) {
+    workbench.viewMenus.registerViewMenu({
+      id: "inspector",
+      ownerViewId: "main.first",
+      viewId: "main.second",
+      side: "right",
+    });
+  }
   const slots: WorkbenchPageSlot[] = workbenchPanelRegions.flatMap((region) => [
-    ...(region === "main"
+    ...(region === "main" || options.menusOnly
       ? []
       : [
           {
@@ -105,12 +116,25 @@ const createPanelWorkbench = (
     main: {
       kind: "view",
       view: { kind: "view", id: "main.first" },
-      cardinality: "one",
+      cardinality: options.cardinality ?? "one",
       ...(options.tabLabel ? { tab: { getSnapshot: () => ({ label: options.tabLabel }) } } : {}),
     },
     slots,
   });
   workbench.pageLocations.switchProject("storybook-panel-tabs");
+  if (options.menusOnly) {
+    for (const region of ["secondary", "side"] as const) {
+      const id = `${region}.menu`;
+      workbench.layout.registerPanelMenu({
+        id,
+        title: `${region} menu`,
+        region: `${region}-right-menu`,
+        rendererId: `${region}.second`,
+        regionCollapsible: false,
+      });
+      workbench.layout.openWidget(id);
+    }
+  }
   if (options.resource) {
     workbench.pageLocations.navigate({
       kind: "page",
@@ -118,6 +142,19 @@ const createPanelWorkbench = (
       resource: { type: "document", id: "one", label: options.resourceLabel },
     });
   }
+  return workbench;
+};
+const createUnavailableMenuWorkbench = () => {
+  const workbench = createPanelWorkbench();
+  workbench.modes.registerMode({ id: "main-only", label: "Main only", panels: ["main"], activate: () => undefined });
+  workbench.layout.registerPlaceholder({
+    id: "unavailable-menu",
+    title: "Unavailable menu",
+    region: "side-right-menu",
+    rendererId: "side.second",
+    regionCollapsible: false,
+  });
+  workbench.modes.setActiveMode("main-only");
   return workbench;
 };
 
@@ -130,7 +167,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "A lone closable panel keeps its tab and Close button. alwaysShowTabs overrides the single-tab default. Header actions remain available without tabs.",
+          "Single-resource Main pages have no tab. Pages supporting many resources and optional panels keep their last tab and Close button. alwaysShowTabs overrides the single-tab default. Header actions remain available without tabs.",
       },
     },
   },
@@ -149,6 +186,24 @@ export const SingleItems: Story = {
     await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
   },
 };
+export const MenuOnlyPanels: Story = {
+  args: { workbench: createPanelWorkbench({ menusOnly: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const region of ["secondary", "side"] as const) {
+      await expect(await canvas.findByText(`${region}.second content`)).toBeVisible();
+    }
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+  },
+};
+export const UnavailableMenuPanel: Story = {
+  args: { workbench: createUnavailableMenuWorkbench() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryByRole("button", { name: /(?:Show|Hide) Side Panel/ })).toBeNull();
+    await expect(canvas.queryByText("side.second content")).not.toBeVisible();
+  },
+};
 export const AlwaysShowTabs: Story = {
   args: { workbench: createPanelWorkbench({ alwaysShowTabs: true }) },
   play: async ({ canvasElement }) => {
@@ -163,11 +218,26 @@ export const SingleResourcePage: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("main.first content")).toBeVisible();
-    await expect(await canvas.findByRole("button", { name: "Close main first" })).toBeVisible();
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+  },
+};
+export const SingleResourceWithMenu: Story = {
+  args: { workbench: createPanelWorkbench({ resource: true, menu: true }) },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("main.first content")).toBeVisible();
+    await expect(await canvas.findByText("main.second content")).toBeVisible();
+    const header = canvasElement.querySelector('[data-workbench-panel-header="main"]');
+    await expect(header).not.toBeVisible();
+    const menu = args.workbench.layout.getLayout().regions["main-right-menu"].widgets[0]!;
+    args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, false);
+    await expect(await canvas.findByRole("button", { name: "Open Main right menu" })).toBeVisible();
+    args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, true);
+    await expect(header).not.toBeVisible();
   },
 };
 export const CloseResourcePage: Story = {
-  args: { workbench: createPanelWorkbench({ resource: true, alwaysShowTabs: true }) },
+  args: { workbench: createPanelWorkbench({ resource: true, cardinality: "many" }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Close main first" }));
@@ -194,7 +264,7 @@ export const HiddenSingleTabs: Story = {
   },
 };
 export const ResourceTabLabel: Story = {
-  args: { workbench: createPanelWorkbench({ resource: true, resourceLabel: "Design notes", alwaysShowTabs: true }) },
+  args: { workbench: createPanelWorkbench({ resource: true, resourceLabel: "Design notes", cardinality: "many" }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("tab", { name: "Design notes" })).toBeVisible();
@@ -206,6 +276,7 @@ export const ExplicitTabLabel: Story = {
   args: {
     workbench: createPanelWorkbench({
       resource: true,
+      cardinality: "many",
       resourceLabel: "Design notes",
       tabLabel: "Unsaved notes",
       alwaysShowTabs: true,

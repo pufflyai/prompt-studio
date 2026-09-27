@@ -19,7 +19,10 @@ test("terminates packaged processes when the test body times out", async () => {
   const pidFile = join(root, "child.pid");
   const fixture = fileURLToPath(new URL("./packaged-fixture.ts", import.meta.url));
   const playwright = fileURLToPath(import.meta.resolve("@playwright/test/cli"));
-  writeFileSync(join(root, "playwright.config.ts"), 'export default { timeout: 1000, workers: 1, reporter: "line" };');
+  writeFileSync(
+    join(root, "playwright.config.ts"),
+    'export default { timeout: 1000, workers: 1, reporter: "line", outputDir: "./test-results" };',
+  );
   writeFileSync(
     join(root, "timeout.spec.ts"),
     `
@@ -34,9 +37,9 @@ test("holds a packaged process past the test deadline", async () => {
 });
 `,
   );
-  // Use the runtime that owns the packaged Playwright processes, including worker IPC.
+  // Use Node for Playwright IPC. Keep its working directory outside the disposable
+  // fixture so Windows process teardown cannot retain a working-directory handle there.
   const runner = spawn(node, [playwright, "test", "--config", join(root, "playwright.config.ts")], {
-    cwd: root,
     detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });
