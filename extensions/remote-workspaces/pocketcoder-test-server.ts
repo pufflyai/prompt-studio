@@ -70,7 +70,7 @@ export const startPocketCoderTestServer = (handle: (request: Request) => Respons
         },
       },
     } as unknown as HarnessContext,
-    events: { push: (patch: JsonPatch) => patches.push(patch) },
+    events: { push: (patch: JsonPatch) => patches.push(patch), getMessages: () => [] },
     stop: () => server.stop(true),
   };
 };

@@ -1,4 +1,4 @@
-import { defineNavigationTree, defineView, l10n, params, workbenchModes } from "@pstdio/sdk/extensions";
+import { defineNavigationTree, defineView, l10n, params, viewDataEvents, workbenchModes } from "@pstdio/sdk/extensions";
 import { createNoteCommand, deleteNoteCommand, renameNoteCommand } from "./commands";
 import { listNotes } from "./notes";
 import { notesChanged, notesMount, noteTarget } from "./pages";
@@ -17,7 +17,7 @@ export const notesTree = defineView({
   title: l10n("views.noteList", "Notes"),
   body: {
     kind: "tree",
-    refreshEvents: [notesChanged],
+    refreshEvents: [notesChanged, viewDataEvents.repositoriesChanged],
     body: async (ctx) => {
       const repo = await ctx.repos.getDefault();
       const notes = repo ? await listNotes(notesMount(ctx)) : [];

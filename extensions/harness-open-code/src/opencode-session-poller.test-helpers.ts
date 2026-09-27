@@ -1,9 +1,16 @@
-import type { HarnessEventSink, JsonPatch } from "@pstdio/sdk/extensions";
+import type { JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
 import type { OpencodeSessionMessage, OpencodeSessionMessageInfo } from "./opencode-types";
 
 export const recordingSink = () => {
   const patches: JsonPatch[] = [];
-  const sink: HarnessEventSink = { push: (patch) => patches.push(patch) };
+  let messages: SessionMessage[] = [];
+  const sink = {
+    getMessages: () => [...messages],
+    push: (patch: JsonPatch) => {
+      patches.push(patch);
+      if (patch.path === "/messages" && Array.isArray(patch.value)) messages = patch.value as SessionMessage[];
+    },
+  };
   return { patches, sink };
 };
 
