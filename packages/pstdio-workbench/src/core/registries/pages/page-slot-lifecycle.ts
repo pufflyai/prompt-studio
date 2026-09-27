@@ -1,6 +1,6 @@
 import type { PageOpenIntent, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
-import { primarySlot, type ResolvedPageSlot } from "./page-main";
+import { isPageSlotClosable, primarySlot, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageOpenInput,
@@ -143,8 +143,7 @@ export const closePageSlot = (input: {
   instanceKey: string;
 }): ClosePageSlotResult => {
   const { page, slot, instanceKey } = input;
-  if (slot.item.kind === "view" && slot.item.presence === "fixed")
-    throw new Error(`Page slot "${slot.id}" is fixed and cannot close`);
+  if (!isPageSlotClosable(slot)) throw new Error(`Page slot "${slot.id}" is fixed and cannot close`);
   const state =
     instanceKey === "default"
       ? setStaticSlotOpen(input.state, slot.id, false)

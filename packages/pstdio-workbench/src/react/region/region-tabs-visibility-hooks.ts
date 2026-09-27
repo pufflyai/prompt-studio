@@ -1,18 +1,17 @@
 import { filterVisibleTabs, useTabVisibilityStore } from "@pstdio/ui";
 import {
   getActiveWorkbenchLocationPanel,
-  getActiveWorkbenchSubPanel,
   isWorkbenchPanelPlacementVisible,
-  matchesWorkbenchPanelMenuOwner,
   type WorkbenchCore,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
   type WorkbenchWidgetPlacement,
-  workbenchPanelMenuRegions,
   workbenchPanelRegions,
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
+import { shouldCollapseWorkbenchPanelMenus } from "../panel-menu/panel-menu-sizing";
+import { useWorkbenchPanelMenu, useWorkbenchPanelWidth } from "../panel-menu/use-panel-menu";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -105,26 +104,12 @@ export const useWorkbenchRegionTabsState = (
 };
 
 export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
-  const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
-  const resource = useWorkbenchLocationResource(workbench);
-  const modeId = useWorkbenchActiveModeId(workbench);
   const { showTabs, hasActions } = useWorkbenchRegionTabsState(workbench, region);
-  const activeSubPanel = getActiveWorkbenchSubPanel(layoutState.layout, region, resource, {
-    ignoreOwnerResourceKey: region === "side",
-  });
-  const activeLocationPanel = getActiveWorkbenchLocationPanel(layoutState.layout);
-  const menuRegions = workbenchPanelMenuRegions[region];
-  const hasPanelMenus = [menuRegions.left, menuRegions.right].some(
-    (menuRegion) =>
-      layoutState.layout.regions[menuRegion].widgets.some(
-        (placement) =>
-          isPlacementEligibleForRegion(workbench, region, placement, resource, modeId) &&
-          matchesWorkbenchPanelMenuOwner(layoutState.widgets[placement.contributionId], {
-            locationPanel: activeLocationPanel,
-            subPanel: activeSubPanel,
-          }),
-      ) || Boolean(workbench.layout.getPlaceholder(menuRegion)),
-  );
+  const width = useWorkbenchPanelWidth(region);
+  const responsiveCollapsed = shouldCollapseWorkbenchPanelMenus(width);
+  const left = useWorkbenchPanelMenu(workbench, region, "left", responsiveCollapsed);
+  const right = useWorkbenchPanelMenu(workbench, region, "right", responsiveCollapsed);
+  const hasPanelMenus = [left, right].some((menu) => menu.has && menu.collapsed);
 
   return shouldShowPanelHeader({ hasTabs: showTabs, hasHeaderActions: hasActions, hasPanelMenus });
 };

@@ -28,7 +28,7 @@ The page-location controller owns URL encoding, browser history, location persis
 
 ## Closing and lifecycle
 
-Native tabs and webview `placement.close` use the same placement close controller. The host supplies the calling webview identity. Fixed placements cannot close. Closing the last routed resource view follows the page's declared parent; closing an auxiliary panel leaves the route intact.
+Native tabs and webview `placement.close` use the same placement close controller. The host supplies the calling webview identity. Fixed placements and single-resource Main views cannot close. Closing the last tab on a page that supports multiple resources follows the page's declared parent; closing an auxiliary panel leaves the route intact.
 
 Native renderer callbacks cross a validated serializable boundary. Controls use a discriminated union and typed groups. UI-only React nodes and browser `File` objects remain outside that contract. `GuestHost.call` takes declared capability names and mapped parameters/results, with runtime validation at the host bridge.
 

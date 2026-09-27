@@ -1,7 +1,7 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "../../shared/contributions/reference-id";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
-import { PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
+import { isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPagePlacementInput,
@@ -82,7 +82,7 @@ const placementFor = <Value>(input: {
       ...(input.resource ? { resource: input.resource } : {}),
       ...(input.section ? { section: input.section } : {}),
       ...(input.open ? { open: input.open } : {}),
-      closable: item.kind === "binding" || item.presence !== "fixed",
+      closable: isPageSlotClosable(input.slot),
     }),
   } satisfies ResolvedOwnedPlacement<Value>;
 };

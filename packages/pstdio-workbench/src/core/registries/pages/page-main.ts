@@ -7,6 +7,12 @@ export interface ResolvedPageSlot extends WorkbenchPageSlot {
   readonly role: "primary" | "auxiliary";
 }
 
+export const isPageSlotClosable = (slot: ResolvedPageSlot) => {
+  if (slot.item.kind === "view") return slot.item.presence !== "fixed";
+  // A single-resource Main is the page itself, not a dismissible resource tab.
+  return slot.role !== "primary" || slot.item.binding.cardinality === "many";
+};
+
 export const primarySlot = (page: WorkbenchPageContribution): ResolvedPageSlot | undefined => {
   if (page.main.kind !== "view") return undefined;
   const { kind: _kind, view, cardinality, ...presentation } = page.main;

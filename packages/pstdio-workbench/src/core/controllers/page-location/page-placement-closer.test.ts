@@ -42,7 +42,7 @@ test("closing the last resource returns to its declared home page", () => {
         kind: "view",
         id: "session",
       },
-      cardinality: "one",
+      cardinality: "many",
     },
     slots: [],
   });
