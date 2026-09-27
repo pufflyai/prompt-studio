@@ -71,8 +71,9 @@ try {
     ]);
     expect({ exitCode, output: exitCode === 0 ? "" : stdout + stderr }).toEqual({ exitCode: 0, output: "" });
     const fixture = join(cwd, "clients/app/node_modules/native-fixture");
-    const version = await Bun.file(join(fixture, "node-gyp-version.txt")).text();
-    expect(version.trim()).toBe(`v${manifest.devDependencies["node-gyp"]}`);
+    // Bun's Windows node-gyp.cmd wrapper echoes its command before node-gyp prints the version.
+    const version = (await Bun.file(join(fixture, "node-gyp-version.txt")).text()).trim().split(/\r?\n/).at(-1);
+    expect(version).toBe(`v${manifest.devDependencies["node-gyp"]}`);
     // A build may start before the root link exists and use Bun's wrapper. It must never see a link the install replaces later.
     const seen = (await Bun.file(join(fixture, "node-gyp-link.txt")).text()).trim();
     const final = Bun.spawnSync(["node", linkState]).stdout.toString().trim();
