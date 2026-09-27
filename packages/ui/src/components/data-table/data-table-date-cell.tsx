@@ -1,4 +1,5 @@
 import { Text } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 
 const relativeUnits = [
@@ -27,11 +28,16 @@ export const formatDataTableRelativeDate = (value: unknown, now = new Date(), lo
 
 interface DataTableDateCellProps {
   value: string;
-  relativeLabel: string;
 }
 
 export const DataTableDateCell = (props: DataTableDateCellProps) => {
-  const { value, relativeLabel } = props;
+  const { value } = props;
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  const relativeLabel = formatDataTableRelativeDate(value, now);
   const fullDate = new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
   return (

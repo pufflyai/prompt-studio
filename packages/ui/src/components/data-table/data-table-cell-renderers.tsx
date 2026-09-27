@@ -167,8 +167,7 @@ const DataCell = (props: DataCellProps) => {
   if (renderer?.type === "path" && typeof value === "string" && !wrapRows) return <DataTablePathCell value={value} />;
 
   if (renderer?.type === "date") {
-    const relativeLabel = formatDataTableRelativeDate(value);
-    if (relativeLabel) return <DataTableDateCell value={value as string} relativeLabel={relativeLabel} />;
+    if (formatDataTableRelativeDate(value)) return <DataTableDateCell value={value as string} />;
   }
 
   if (renderer?.type === "color-scale") {

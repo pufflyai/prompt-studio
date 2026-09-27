@@ -67,6 +67,14 @@ const StoryFrame = (args: DataTableProps) => (
 );
 
 export const ValueRenderers = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Relative dates refresh every minute while the table stays open. Hover or focus a date to read its full timestamp.",
+      },
+    },
+  },
   args: {
     data: workspaceRows,
     fullWidth: true,
