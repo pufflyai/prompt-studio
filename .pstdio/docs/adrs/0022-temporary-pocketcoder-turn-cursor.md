@@ -1,5 +1,9 @@
 # Temporary PocketCoder turn cursor
 
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended design
 
 PocketCoder should accept an idempotent turn ID and expose its acceptance and completion state. Prompt Studio could then reconnect to that exact turn after a lost response or host restart.

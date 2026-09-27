@@ -1,6 +1,8 @@
 # Temporary Bun bootstrap for browser CI containers
 
-Status: Accepted temporary workaround.
+## Status
+
+Accepted temporary workaround.
 
 ## Intended design
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Retired. No CI job rewrites the Ubuntu package mirror or installs Playwright system dependencies.
+SUPERSEEDED by prebuilt Playwright browser environments and runner-provided desktop libraries. No CI job rewrites the Ubuntu package mirror or installs Playwright system dependencies.
 
 Linux UI, CLI, and packaged/Vite jobs now use the version-matched Playwright image with browsers and system libraries already installed. Run 34570969868 also stalled on the canonical archive: its packaged job spent nearly 15 minutes downloading system libraries and reached the unchanged 18-minute limit before tests started. A prebuilt browser environment replaces the mirror override for those jobs.
 

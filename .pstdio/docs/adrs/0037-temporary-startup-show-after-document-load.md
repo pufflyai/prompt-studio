@@ -3,7 +3,7 @@
 ## Status
 
 Temporary workaround for hidden-window painting in Electron 43.6.0 on Linux.
-Recheck the native readiness event after upgrading Electron.
+The current controller shows the prerendered document at `dom-ready`, before remaining resources load; see [desktop startup measurements](../architecture/desktop.md). The workaround for unreliable hidden-window painting remains active. Recheck the native readiness event after upgrading Electron.
 
 ## Ideal design
 

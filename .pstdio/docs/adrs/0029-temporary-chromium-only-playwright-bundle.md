@@ -1,5 +1,9 @@
 # Temporary Chromium-only Playwright bundle
 
+## Status
+
+Accepted as a temporary workaround.
+
 The packaged extension smoke command should bundle its browser client and run without a checkout or node_modules. Browser binaries are provisioned once with the matching Playwright installer.
 
 Playwright 1.60 bundles optional BiDi mapper imports in its core module but does not ship those dependencies. Bun resolves these imports while compiling, including when only Chromium's normal protocol is used. An unmodified compile therefore fails before a browser can launch.

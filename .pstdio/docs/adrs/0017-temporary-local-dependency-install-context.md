@@ -1,5 +1,9 @@
 # Temporary local dependency install context
 
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended behavior
 
 The extension installer validates a prepared snapshot before replacing an installed extension. Bun resolves declared dependencies. Registry and archive dependencies remain usable after the author removes the source checkout. Local directory dependencies retain their declared filesystem ownership.

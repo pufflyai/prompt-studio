@@ -1,5 +1,9 @@
 # Temporary keyboard drag activation barrier
 
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended behavior
 
 Once a sortable tab announces that a keyboard drag started, it must accept the next arrow key. Browser tests should be able to use that visible state as readiness.

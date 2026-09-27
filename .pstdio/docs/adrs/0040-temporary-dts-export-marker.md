@@ -1,5 +1,9 @@
 # Temporary export marker for bundled type files
 
+## Status
+
+Accepted as a temporary workaround.
+
 This is a temporary workaround, not the intended design.
 
 `@pstdio/sdk`, `@pstdio/ui`, and `@pstdio/workbench` publish one bundled `.d.ts` file per entry point. They are built with `rolldown-plugin-dts`. A published type file should export exactly what the source entry exports.

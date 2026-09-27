@@ -1,5 +1,9 @@
 # Temporary macOS desktop CI indexing isolation
 
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended design
 
 Native desktop checks should measure the packaged application's startup on an

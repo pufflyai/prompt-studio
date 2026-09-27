@@ -1,6 +1,8 @@
 # Temporary registry source for Electron node-gyp
 
-Status: Accepted temporary workaround.
+## Status
+
+Accepted temporary workaround.
 
 ## Intended design
 

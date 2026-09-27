@@ -1,5 +1,9 @@
 # Temporary terminal foreground probe
 
+## Status
+
+Accepted as a temporary workaround.
+
 The terminal supervisor should read the PTY foreground process group directly from Bun
 for process titles and foreground ownership. This cannot identify an idle prompt: shell
 builtins such as `read` run in the shell's own process group.

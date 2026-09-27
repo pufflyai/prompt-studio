@@ -1,5 +1,9 @@
 # Temporary Node Windows directory removal
 
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended design
 
 Packaged tests stop their processes, wait for runtime termination, and remove their

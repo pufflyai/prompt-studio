@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 
-// Temporary platform probe until Bun exposes the PTY foreground group. See ADR 0031.
+// Temporary platform probe until Bun exposes the PTY foreground group. See ADR 0033.
 export const readTerminalForeground = (pid: number) => {
   try {
     if (process.platform === "linux") {

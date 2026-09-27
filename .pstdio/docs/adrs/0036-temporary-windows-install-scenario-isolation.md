@@ -1,5 +1,9 @@
 # Temporary Windows install scenario isolation
 
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended behavior
 
 Integration tests must exercise installation, validation, and source replacement under the same filesystem rules as the shipped Bun runtime.

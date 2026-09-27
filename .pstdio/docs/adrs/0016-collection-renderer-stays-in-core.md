@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed.
+Accepted. The shared contracts use `badge-list` displays and query-owned `boardColumnConfigs`.
 
 ## Context
 

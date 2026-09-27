@@ -1,5 +1,9 @@
 # Temporary native build tool selection
 
+## Status
+
+Accepted as a temporary workaround.
+
 Native dependency installation should use the workspace's locked `node-gyp` version.
 
 Bun 1.4.2's isolated dependency layout does not expose the root build tool to every dependency script. Bun falls back to `bun x node-gyp`, which selects the latest version outside the lockfile. Concurrent native builds can race while that executable is being downloaded. PR #706's macOS desktop job failed this way while installing `fs-xattr` and `macos-alias`.

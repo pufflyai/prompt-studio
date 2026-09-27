@@ -1,5 +1,9 @@
 # Temporary API test process isolation
 
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended behavior
 
 Each API test file owns its fixtures and releases them when it finishes. The test runner must release the file's module state, including closed PGlite instances, before loading more files. Extension imports must finish top-level asynchronous initialization before their exports are read.

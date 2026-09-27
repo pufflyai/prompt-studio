@@ -2,7 +2,7 @@
 
 ## Status
 
-Superseded on 2026-03-13 by [ADR: Replace `PSTDIO_DRY_RUN` With Fake Agent](/adrs/0003-replace-dry-run-with-fake-agent).
+SUPERSEEDED on 2026-03-13 by [ADR: Replace `PSTDIO_DRY_RUN` With Fake Agent](/adrs/0003-replace-dry-run-with-fake-agent).
 
 ## Decision
 

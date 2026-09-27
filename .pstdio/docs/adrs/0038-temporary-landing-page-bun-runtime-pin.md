@@ -1,5 +1,9 @@
 # Temporary landing page Bun runtime pin
 
+## Status
+
+Accepted as a temporary workaround.
+
 This is a temporary workaround, not the intended design.
 
 The landing page should build in production the same way it builds in CI and in its Dockerfile: Astro running on Node, with the repository's Bun version (1.4.2) installing dependencies.

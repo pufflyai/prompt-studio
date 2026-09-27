@@ -1,7 +1,9 @@
 # 0012. The webview client derives types from the commands record, not the extension definition
 
 Date: 2026-08-25
-Status: Accepted (temporary workaround)
+## Status
+
+Accepted (temporary workaround)
 
 ## How the system should ideally work
 

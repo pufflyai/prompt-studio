@@ -10,7 +10,7 @@ Connection metadata and its credential should share one transactional secret pro
 
 ## External limitation
 
-The temporary file-backed secret store from ADR 0013 is outside PGlite transactions. The filesystem and PGlite cannot commit or roll back one atomic operation. A process can also stop between their separate writes.
+The temporary file-backed secret store from ADR 0034 is outside PGlite transactions. The filesystem and PGlite cannot commit or roll back one atomic operation. A process can also stop between their separate writes.
 
 ## Temporary workaround
 
@@ -26,4 +26,4 @@ Only the connection service and the file-backed secret store know about reconcil
 
 ## Removal
 
-Remove this reconciliation when ADR 0013 is removed and every supported secret provider can commit credential ownership with the application database or provide its own durable deletion queue. Delete this ADR, the secret listing method, and the startup reconciliation call together.
+Remove this reconciliation when ADR 0034 is removed and every supported secret provider can commit credential ownership with the application database or provide its own durable deletion queue. Delete this ADR, the secret listing method, and the startup reconciliation call together.

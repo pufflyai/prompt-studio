@@ -1,5 +1,9 @@
 # Temporary Git subprocess pipe ownership
 
+## Status
+
+Accepted as a temporary workaround.
+
 ## Intended behavior
 
 The Git adapter must consume stdout and stderr completely and keep their readers alive until the command finishes. Text commands and binary file previews must use the same subprocess owner. A Git error must fail the caller without a retry.

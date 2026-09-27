@@ -1,6 +1,8 @@
 # Temporary workspace contract release bridge
 
-Status: accepted for PS-391; remove the bridge at the alpha.11 host cutover.
+## Status
+
+accepted for PS-391; remove the bridge at the alpha.11 host cutover.
 
 ## Intended design
 

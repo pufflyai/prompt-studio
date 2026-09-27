@@ -1,5 +1,9 @@
 # ADR: Unified Test Runner — bun test
 
+## Status
+
+Accepted.
+
 ## Decision
 
 Remove vitest from the monorepo. Use `bun test` as the single test runner for all unit and integration tests. Use `test-storybook` for Storybook interaction tests.
