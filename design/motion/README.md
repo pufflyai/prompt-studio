@@ -75,7 +75,7 @@ bun run --cwd design/motion still streaming-compare --frame=543 --props=out/revi
 
 Generated MP4s, PNGs, and review JSON belong in ignored `out/`. Repeating an export replaces that composition's output. Match the selected composition ID to the configuration's study and single/comparison mode. Video rendering is CLI-only. The first render downloads Remotion's headless browser.
 
-All Remotion dependencies are pinned to **4.0.529**. Upgrade them together. The render config contains a temporary React subpath alias; see [ADR 0042](../../.pstdio/docs/adrs/0042-temporary-remotion-react-subpath-alias.md).
+All Remotion dependencies are pinned to **4.0.529**. Upgrade them together. The render config contains a temporary React subpath alias; see [ADR 0045](../../.pstdio/docs/adrs/0045-temporary-remotion-react-subpath-alias.md).
 
 ## Example catalog
 

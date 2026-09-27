@@ -22,6 +22,7 @@ export interface ReviewProps {
 }
 interface ReviewContextValue {
   state: ReviewState;
+  preview: (change: ReviewChange) => void;
   update: (change: ReviewChange) => Promise<void>;
 }
 export const ReviewContext = createContext<ReviewContextValue | null>(null);
@@ -67,10 +68,11 @@ export const useReviewConnection = (host: GuestHost, propsStore: PropsStore<Revi
       unsubscribe();
     };
   }, [host, propsStore, study]);
+  const preview = (change: ReviewChange) => setState((current) => applyReviewChange(current, change, Date.now()));
   const update = (change: ReviewChange) => {
     const pending = writes.current;
     pending.pending += 1;
-    setState((current) => applyReviewChange(current, change, Date.now()));
+    preview(change);
     pending.queue = pending.queue.then(async () => {
       try {
         const result = await client.commands["review.update"]({ study, change });
@@ -83,7 +85,7 @@ export const useReviewConnection = (host: GuestHost, propsStore: PropsStore<Revi
     });
     return pending.queue;
   };
-  return { state, update, ready: readyStudy === study, error };
+  return { state, preview, update, ready: readyStudy === study, error };
 };
 export const usePlaybackPosition = (state: ReviewState) => {
   const [now, setNow] = useState(Date.now);

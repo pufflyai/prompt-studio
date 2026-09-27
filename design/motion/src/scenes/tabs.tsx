@@ -52,7 +52,7 @@ export const Tabs = (props: SceneProps) => {
       <PanelSurface
         header={
           <Box position="relative" w="full" minW="0">
-            <HStack gap="0" w="full" overflow="hidden">
+            <HStack gap="0" w="full" overflowX="auto" overflowY="hidden">
               {tabs.map((name, index) => {
                 const closed = crowded ? 0 : progress(time, closeTimes[index], duration(props, timings.tabClose, true));
                 return (

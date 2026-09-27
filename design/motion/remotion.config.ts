@@ -4,7 +4,7 @@ import { Config } from "@remotion/cli/config";
 
 const require = createRequire(resolve(process.cwd(), "package.json"));
 
-// Temporary bundler workaround: see ADR 0042-temporary-remotion-react-subpath-alias.
+// Temporary bundler workaround: see ADR 0045-temporary-remotion-react-subpath-alias.
 Config.overrideWebpackConfig((config) => ({
   ...config,
   resolve: {

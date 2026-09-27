@@ -6,6 +6,8 @@ const studyParam = () =>
   params.select({ required: true, options: studies.map((study) => ({ value: study.id, label: study.title })) });
 const read = async (storage: ExtensionStorageApi, study: StudyId) =>
   (await storage.collection<ReviewState>("reviews").get(study)) ?? initialState(study);
+// Preview and Params share this command owner but send independent requests.
+let writes = Promise.resolve();
 const readState = defineCommand({
   id: "review.read",
   title: l10n("review.read", "Read animation review"),
@@ -20,10 +22,17 @@ const updateState = defineCommand({
   params: { study: studyParam(), change: params.json<ReviewChange, { required: true }>({ required: true }) },
   async run(ctx, input) {
     const study = input.study as StudyId;
-    const current = await read(ctx.storage, study);
-    const next = applyReviewChange(current, input.change, Date.now());
-    await ctx.storage.collection<ReviewState>("reviews").put(study, next);
-    return next;
+    const write = writes.then(async () => {
+      const current = await read(ctx.storage, study);
+      const next = applyReviewChange(current, input.change, Date.now());
+      await ctx.storage.collection<ReviewState>("reviews").put(study, next);
+      return next;
+    });
+    writes = write.then(
+      () => {},
+      () => {},
+    );
+    return write;
   },
 });
 export const commands = { "review.read": readState, "review.update": updateState };

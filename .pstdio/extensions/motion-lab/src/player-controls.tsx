@@ -7,7 +7,7 @@ import { usePlaybackPosition, useReview } from "./review-context";
 import { loopBounds } from "./review-state";
 
 export const PlayerControls = () => {
-  const { state, update } = useReview();
+  const { state, preview, update } = useReview();
   const { frame, playing } = usePlaybackPosition(state);
   const definition = getStudy(state.settings.study);
   const { start, end, max } = loopBounds(state);
@@ -109,7 +109,8 @@ export const PlayerControls = () => {
           max={max}
           step={1}
           value={[frame]}
-          onValueChange={(event) => seek(event.value[0])}
+          onValueChange={({ value }) => preview({ frame: value[0], playing: false })}
+          onValueChangeEnd={({ value }) => seek(value[0])}
         />
         <LoopRange />
       </Stack>

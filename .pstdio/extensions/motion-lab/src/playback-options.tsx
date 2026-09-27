@@ -36,7 +36,7 @@ export const PlaybackOptions = () => {
 };
 
 export const LoopRange = () => {
-  const { state, update } = useReview();
+  const { state, preview, update } = useReview();
   const { frame } = usePlaybackPosition(state);
   const { start, end, max } = loopBounds(state);
   if (!state.loop) return null;
@@ -76,7 +76,8 @@ export const LoopRange = () => {
         step={1}
         minStepsBetweenThumbs={1}
         value={[start, end]}
-        onValueChange={({ value }) => void update({ loopRange: [value[0], value[1]] })}
+        onValueChange={({ value }) => preview({ loopRange: [value[0], value[1]] })}
+        onValueChangeEnd={({ value }) => void update({ loopRange: [value[0], value[1]] })}
       />
     </>
   );
