@@ -16,7 +16,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.25.0"
+    "@pstdio/sdk": "^0.35.0"
   },
   "devDependencies": {
     "typescript": "6.0.2"
