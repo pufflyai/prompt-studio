@@ -31,6 +31,28 @@ export const saveIdea = z.object({
   tags: z.array(text),
   basedOn: z.array(text).optional(),
 });
+export const updateThread = saveThread
+  .pick({
+    title: true,
+    excerpt: true,
+    topic: true,
+    intent: true,
+    relevance: true,
+    reason: true,
+    community: true,
+    draftReply: true,
+  })
+  .partial()
+  .extend({
+    community: z.string().trim().min(1).nullable().optional(),
+    draftReply: z.string().trim().min(1).nullable().optional(),
+    outcome: z.string().trim().min(1).nullable().optional(),
+  })
+  .refine((input) => Object.keys(input).length > 0, "Provide at least one thread change.");
+export const updateIdea = saveIdea
+  .omit({ runId: true })
+  .partial()
+  .refine((input) => Object.keys(input).length > 0, "Provide at least one idea change.");
 export const finishRun = z.object({
   runId: text,
   summary: text,

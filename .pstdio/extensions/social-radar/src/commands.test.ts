@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
-import type { Run } from "./schemas";
+import type { Run, Thread } from "./schemas";
 
 const setup = () => {
   const storage = createMemoryStorage();
@@ -154,5 +154,57 @@ describe("social radar commands", () => {
     const runs = await storage.collection<Run>("runs").list();
     expect(runs).toHaveLength(1);
     expect(runs[0]).toMatchObject({ status: "failed", failureReason: "Codex harness is not enabled" });
+  });
+
+  test("updates one site's research targets without replacing other settings", async () => {
+    const { ctx } = setup();
+    await commands.updateSite.run(ctx, {
+      site: "reddit",
+      targets: ["r/LocalLLaMA", "r/ChatGPTCoding"],
+      budget: 2,
+    });
+    const settings = await commands.getSettings.run(ctx, {});
+    expect(settings.targets.reddit).toEqual(["r/LocalLLaMA", "r/ChatGPTCoding"]);
+    expect(settings.targets.bluesky).toEqual([]);
+    expect(settings.budgets).toMatchObject({ reddit: 2, hn: 4 });
+  });
+
+  test("revises a saved thread without losing its posting history", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands.runDaily.run(ctx, {});
+    const saved = await commands.saveThread.run(ctx, { input: thread(run.runId) });
+    await commands.setThreadStatus.run(ctx, { id: saved.id, status: "posted" });
+    const original = await storage.collection<Thread>("threads").get(saved.id);
+    await commands.updateThread.run(ctx, {
+      id: saved.id,
+      input: { title: "A clearer question", community: "r/ClaudeAI", relevance: 2, draftReply: "A better draft." },
+    });
+    expect((await commands.listPosted.run(ctx, {})).threads[0]).toMatchObject({
+      id: saved.id,
+      runId: run.runId,
+      status: "posted",
+      postedAt: original?.postedAt,
+      title: "A clearer question",
+      community: "r/ClaudeAI",
+      relevance: 2,
+      draftReply: "A better draft.",
+    });
+    await expect(commands.updateThread.run(ctx, { id: saved.id, input: { relevance: 9 } })).rejects.toThrow();
+  });
+
+  test("revises an idea draft while keeping its saved status", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands.runDaily.run(ctx, {});
+    const saved = await commands.saveIdea.run(ctx, {
+      input: { runId: run.runId, kind: "demo", title: "Demo", body: "First draft", sites: ["x"], tags: [] },
+    });
+    await commands.setIdeaStatus.run(ctx, { id: saved.id, status: "saved" });
+    await commands.updateIdea.run(ctx, { id: saved.id, input: { body: "Revised draft", sites: ["x", "linkedin"] } });
+    expect(await storage.collection("ideas").get(saved.id)).toMatchObject({
+      id: saved.id,
+      status: "saved",
+      body: "Revised draft",
+      sites: ["x", "linkedin"],
+    });
   });
 });

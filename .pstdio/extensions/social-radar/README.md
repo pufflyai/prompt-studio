@@ -4,9 +4,9 @@ A repo-local tool for daily marketing research. It reads sites, saves useful thr
 
 1. Enable Social radar and the Codex harness in project extensions. Your Codex account must have `gpt-6-astra`.
 2. Log in to X and LinkedIn in the browser that Codex computer use drives.
-3. Open **Social radar** under Tools, then **Settings**. Edit topics, competitors, communities, writing voice, and search budgets.
+3. Open **Social radar** under Tools, then **Settings**. Edit topics, competitors, writing voice, and each site's targets and search budget. Clear a field to remove an item; use the empty field to add one.
 4. Click **Run now**. Read the session and digest. Sites that cannot be read appear as skipped.
-5. Copy a draft, paste and post it yourself, then choose **Mark posted** or **Mark used**. Posted threads get an outcome note after a later run can read them.
+5. Copy a draft, paste and post it yourself, then choose **Mark posted** or **Mark used**. Open **Manage threads** to revise saved threads, including the draft reply and posted outcome.
 
 The schedule runs at 07:00 in the host machine’s local time. The app must be running; startup catches up once for the latest missed slot. Disable it in project automations. Run now uses the same command as the schedule. An active run blocks another run; the next run closes sessions that ended without a digest.
 
@@ -16,6 +16,8 @@ pst social-radar list-digest
 pst social-radar list-posted
 pst social-radar set-thread-status --id <id> --status posted
 pst social-radar get-settings
+pst social-radar update-site --site reddit --targets r/ClaudeAI,r/LocalLLaMA --budget 2
+pst social-radar update-thread --id <id> --input '{"draftReply":"A clearer reply"}'
 ```
 
 The agent calls the same commands as the page. Structured inputs use `--input '<JSON>'`; see the shipped [skill](skills/social-radar/SKILL.md). Threads, ideas, and runs live in project-scoped extension storage. Browser credentials stay in the browser.
