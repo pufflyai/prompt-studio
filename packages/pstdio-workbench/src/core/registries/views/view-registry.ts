@@ -11,6 +11,7 @@ import type { FileRendererContribution } from "../renderers/file-renderer-regist
 import type { KanbanRendererContribution } from "../renderers/kanban-renderer-registry";
 import type { WorkbenchRendererRegistration } from "../renderers/renderer-registry";
 import type { TreeRendererContribution } from "../renderers/tree-renderer-registry";
+import { createRendererReadRegistry, type RendererReadRegistry } from "./renderer-read-registry";
 
 export const workbenchViewIdContextKey = "workbench.view.id";
 
@@ -43,6 +44,7 @@ export interface WorkbenchViewRegistryStoreState {
 }
 
 export interface WorkbenchViewRegistry {
+  reads: RendererReadRegistry;
   store: WorkbenchStore<WorkbenchViewRegistryStoreState>;
   registerView(view: WorkbenchViewContribution, metadata?: ContributionMetadata): Disposable;
   getView(viewId: string): RegisteredWorkbenchView | undefined;
@@ -68,6 +70,7 @@ export const createViewRegistry = (input: CreateWorkbenchViewRegistryInput): Wor
   const bodies = new Map<string, Disposable & { refresh?(input?: unknown): void }>();
 
   return {
+    reads: createRendererReadRegistry(),
     store,
 
     registerView(view, metadata) {

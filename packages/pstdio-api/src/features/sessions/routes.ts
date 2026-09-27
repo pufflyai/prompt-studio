@@ -5,6 +5,8 @@ import { approveSessionHandler, approveSessionRoute } from "./endpoints/approve-
 import { archiveSessionHandler, archiveSessionRoute } from "./endpoints/archive-session";
 import { createSessionHandler, createSessionRoute } from "./endpoints/create-session";
 import { followUpSessionHandler, followUpSessionRoute } from "./endpoints/follow-up-session";
+import { getConversationSourcesHandler, getConversationSourcesRoute } from "./endpoints/get-conversation-sources";
+import { getQueuedMessagesHandler, getQueuedMessagesRoute } from "./endpoints/get-queued-messages";
 import { getSessionHandler, getSessionRoute } from "./endpoints/get-session";
 import { getSessionConversationHandler, getSessionConversationRoute } from "./endpoints/get-session-conversation";
 import { listSessionActivityHandler, listSessionActivityRoute } from "./endpoints/list-session-activity";
@@ -41,6 +43,8 @@ export const createSessionRoutes = (deps: SessionsRouteDeps) => {
   routes.openapi(getSessionRoute, getSessionHandler(deps));
   routes.openapi(listSessionActivityRoute, listSessionActivityHandler(deps));
   routes.openapi(getSessionConversationRoute, getSessionConversationHandler(deps));
+  routes.openapi(getConversationSourcesRoute, getConversationSourcesHandler(deps));
+  routes.openapi(getQueuedMessagesRoute, getQueuedMessagesHandler(deps));
   routes.openapi(updateSessionStatusRoute, updateSessionStatusHandler(deps));
   routes.openapi(archiveSessionRoute, archiveSessionHandler(deps));
   routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));

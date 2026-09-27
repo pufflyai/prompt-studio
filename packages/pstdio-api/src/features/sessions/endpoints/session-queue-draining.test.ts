@@ -79,6 +79,7 @@ describe("POST /v1/sessions queue draining", () => {
 
     expect(followUpRes.status).toBe(200);
     expect(await followUpRes.json()).toMatchObject({ id: session.id, status: "in_progress" });
+    for (let attempt = 0; resumeSession.mock.calls.length === 0 && attempt < 50; attempt++) await Bun.sleep(10);
     expect(resumeSession).toHaveBeenCalledTimes(1);
     expect(await handle.deps.sessionQueueEntriesService.listPending()).not.toContainEqual(
       expect.objectContaining({ session_id: session.id }),
@@ -271,13 +272,13 @@ describe("POST /v1/sessions isolated queue draining", () => {
       expect(second.status).toBe("queued");
       expect(startSession.mock.calls.length).toBe(startedBefore + 1);
 
+      const started = Promise.withResolvers<void>();
+      startSession.mockImplementationOnce(() => {
+        started.resolve();
+        return pendingSession();
+      });
       await isolated.deps.sessionService.transitionStatus(first.id, "completed");
-
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        const session = await isolated.deps.sessionService.get(second.id);
-        if (session?.status === "in_progress") break;
-        await Bun.sleep(25);
-      }
+      await started.promise;
 
       expect(await isolated.deps.sessionService.get(second.id)).toMatchObject({ id: second.id, status: "in_progress" });
       expect(startSession.mock.calls.length).toBe(startedBefore + 2);

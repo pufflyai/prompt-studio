@@ -1,5 +1,32 @@
 import { describe, expect, test } from "bun:test";
-import { getCollection, getWriter, SYNCED_TABLES, subscribeCollections } from "./collections";
+import {
+  type CollectionChange,
+  getCollection,
+  getIndexedRows,
+  getWriter,
+  SYNCED_TABLES,
+  subscribeCollections,
+} from "./collections";
+
+test("row changes retain previous ownership and indexes follow reassignment and removal", () => {
+  const writer = getWriter("workspace_sessions")!;
+  writer.truncateAndWrite([{ id: "link", session_id: "old" }]);
+  expect(getIndexedRows("workspace_sessions", "session_id", "old")).toHaveLength(1);
+  const changes: CollectionChange[] = [];
+  const unsubscribe = subscribeCollections((change) => {
+    if (change) changes.push(change);
+  });
+  writer.upsert({ id: "link", session_id: "new" });
+  expect(getIndexedRows("workspace_sessions", "session_id", "old")).toEqual([]);
+  expect(getIndexedRows("workspace_sessions", "session_id", "new")).toEqual([{ id: "link", session_id: "new" }]);
+  writer.remove("link");
+  unsubscribe();
+  expect(changes.map((change) => change.changes)).toEqual([
+    [{ key: "link", previousValue: { id: "link", session_id: "old" }, value: { id: "link", session_id: "new" } }],
+    [{ key: "link", previousValue: { id: "link", session_id: "new" } }],
+  ]);
+  expect(getIndexedRows("workspace_sessions", "session_id", "new")).toEqual([]);
+});
 
 describe("SYNCED_TABLES", () => {
   test("includes extension rows used by dashboard contribution selectors", () => {

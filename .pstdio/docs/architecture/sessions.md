@@ -262,61 +262,48 @@ Server flow:
 2. Route the follow-up through the scheduler. The session becomes `in_progress` when capacity is available or `queued` when capacity is full.
 3. Resolve cwd: workspace root if linked (`worktree_path` first, repo path fallback), otherwise project root.
 4. Resolve the follow-up model from request `model`, or from `last_selected_model` when the agent is unchanged.
-5. **Same agent:** require `agent_session_id`, call `agent.resumeSession(...)` with `messageOffset` from cached message count.
+5. **Same agent:** require `agent_session_id`, recover the complete conversation through the harness, then call resume with that exact baseline length as `messageOffset`.
 6. **Different agent:** update `session.agent`, clear previous `agent_session_id`, update `last_selected_model`, call `agent.startSession(...)`.
-7. On errors: append assistant error text to cached messages and set status `failed`.
+7. A history conflict leaves both sources unchanged and rejects resume with 409. Other startup failures checkpoint the captured owner and mark only that run failed.
 
 Queued follow-ups preserve the accepted prompt. Conversation hydration includes that prompt while the queued session waits, so clients can display the prompt and queued banner before the agent resumes.
 
 ## Message source of truth
 
-Endpoint: `GET /v1/sessions/:session_id`
+GET /v1/sessions/:id/conversation reads the active run's SessionConversation. This owner applies each patch before publishing it. Its materialized array is independent of the bounded delivery log. Root replacements, including an empty array, are authoritative. Indexed patches address raw array slots; display filtering never changes those coordinates.
 
-Resolution strategy:
+An entry publishes its readiness promise before asynchronous setup. GET and SSE wait for it. Resume stops the previous harness, waits for any checkpoint, closes and captures its final messages, and retries persistence before handing over. Completion and cancellation save complete captured arrays. A failed checkpoint retains the closed owner so history remains readable. Old-run cleanup uses owner identity and the existing run-start timestamp to avoid changing a later run.
 
-1. Try `agent.getMessages(agent_session_id, { cwd })`.
-2. If successful: return normalized messages, persist to `session.content`, mark `agent_session_status = connected`.
-3. If agent fetch fails: fallback to cached `session.content.messages`, mark `agent_session_status = disconnected`.
-4. If no `agent_session_id`: status is `not_connected`.
+The database advances the run-start timestamp on every resume and queue dispatch, even when the clock stalls or moves backward. Dispatch recovery retains the last run identity. Guarded status changes and terminal queue cleanup share one transaction, so a stale cancellation cannot remove a newer run's queued messages.
+
+Without an active owner, one loader reads the saved session file and native transcript. Harnesses that expose getMessages must also implement recoverMessages. The harness owns provider-format comparisons; shared SDK helpers handle ordered turns and metadata. Ambiguous alignment returns a historyIssue and the readable fallback. Missing or unreadable sources are distinct from a successful empty transcript. Reads never write a recovered checkpoint.
+
+OpenCode composes full poll snapshots against the current owner synchronously after the native read. Native turns determine membership. Attachments and locally generated errors follow surviving matched turns; deleting a turn or replacing history with [] removes that turn's metadata too.
+
+GET /v1/sessions/:id/conversation/sources exposes the unchanged saved and native arrays, with independent source errors, under the session's existing permissions. The dashboard shows conflicts, offers downloads, and disables resume until a retry can reconcile them.
 
 ## Streaming
 
 ### Event store (per-session, in-memory)
 
-Each active session has one event store, keyed by `session.id`:
-
-```typescript
-type EventStore = {
-  push(patch: JsonPatch): void;
-  getHistory(): JsonPatch[];
-  subscribe(): AsyncIterable<JsonPatch>;
-  historyPlusStream(): AsyncIterable<JsonPatch>;
-};
-```
-
-- Memory-bounded (default ~50 MB) with LRU eviction of oldest patches.
-- Uses Node.js EventEmitter for subscribers (up to 100 listeners).
-- `historyPlusStream()` replays buffered patches first, then streams live updates.
-- Creating a new event store for the same session ID closes/replaces the old one.
+The bounded event store delivers patches; it is not a history database. Evicting old delivery events does not change the conversation. Snapshot capture and subscription registration are synchronous. Closing an owner rejects later patches and completes current and future subscriptions while leaving its snapshot readable.
 
 ### Session message streaming via SSE
 
-Endpoint: `GET /v1/sessions/:session_id/stream`
+GET /v1/sessions/:id/stream sends:
 
-Uses the same SSE pattern as the rest of the application. The server replays buffered patches from the event store, then streams live updates.
+- ready when connected;
+- one exact root snapshot after initialization, including an empty array;
+- subsequent patch and approval_request events;
+- history_issue when recovery or a provider snapshot is ambiguous;
+- heartbeat while waiting;
+- end when the run finishes without an immediate queued follow-up.
 
-Events:
+Inactive streams use the same history loader as GET and send the readable snapshot, any issue, and end. A waiting reader follows a replacement owner instead of publishing an obsolete initializer's result.
 
-- `ready` — connection established (`{ sessionId }`)
-- `patch` — JSON patch for message updates (`{ op, path, value }`)
-- `approval_request` — agent requests tool permission (`{ id, toolName, toolInput, toolUseId }`)
-- `heartbeat` — keep-alive
+The client lets the initial GET hydrate only until the first SSE snapshot. Connection generations and message revisions reject late GETs and old stream callbacks. Queued prompts are a separate overlay loaded through GET /v1/sessions/:id/queued-messages. Queue edits, removals, reorders, and claims publish the owning session row. They trigger only the queue read lane, not full transcript hydration. A changed run-start timestamp reconnects the stream, even before the previous stream ends. An active stream waits if the run status arrives before its owner is published.
 
-Approval responses are sent via a separate POST endpoint:
-
-- `POST /v1/sessions/:session_id/approve` — `{ id, decision: "approve" | "deny" }`
-
-If no active event store exists for the session, the server sends `ready` followed by an `end` event and closes the connection.
+The session stream publishes `queued_messages` before its first snapshot and before a newly confirmed user message. The payload identifies pending queue entries by queue position, so two identical prompts remain distinct. A newer stream queue snapshot invalidates older queue GET responses. Queue read errors retain the last pending list and do not interrupt confirmed history.
 
 ### Table sync via SSE
 
@@ -361,7 +348,7 @@ Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 ## Rules
 
 1. **Sessions optionally link to a workspace via `workspace_sessions`.** When linked, the workspace provides cwd and diff context. Without a workspace, the session runs at the project root and has no diff tracking. A workspace can have multiple sessions.
-2. **Agent is the message authority.** Prompt Studio always tries to fetch messages from the agent first and only falls back to cached content.
+2. **The active owner holds complete history.** Inactive reads reconcile the complete saved checkpoint with native provider history. Incremental providers preserve saved turns; snapshot providers own membership. Unresolved conflicts preserve both sources and block resume.
 3. **Event stores are ephemeral.** They live in-memory for the duration of the API process and are not persisted.
 4. **All session mutations emit to EventBus.** Clients receive real-time updates via SSE sync.
 5. **Follow-ups can switch agents.** When the agent changes, the previous `agent_session_id` is cleared and a new session is started with the new agent.
@@ -369,4 +356,3 @@ Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 ## Current gaps
 
 - Event stores are lost on API restart — no persistence layer. Stale `in_progress` sessions are reattached when the agent supports it (OpenCode) or transitioned to `disconnected` otherwise, via the startup sweep (`runStartupTasks` → `resolveOrphanedSessions`; see [Session Status Lifecycle](/architecture/session-status-lifecycle)).
-- Queue routes exist as placeholders.

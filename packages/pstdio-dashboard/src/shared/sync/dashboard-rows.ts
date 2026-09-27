@@ -13,12 +13,9 @@ type DashboardDataTable = "files" | "project_repos" | "repos" | "sessions" | "wo
 
 const readRows = (table: DashboardDataTable) => Array.from(getCollection(table).state.values()) as SyncedRow[];
 
-export const readDashboardRows = (): DashboardRows => ({
-  files: readRows("files"),
+export const readWorkspaceRows = () => ({
   projectRepos: readRows("project_repos"),
   repos: readRows("repos"),
-  sessions: readRows("sessions"),
-  workspaceSessions: readRows("workspace_sessions"),
   workspaces: readRows("workspaces"),
 });
 

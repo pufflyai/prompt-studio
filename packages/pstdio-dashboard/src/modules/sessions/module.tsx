@@ -18,11 +18,11 @@ import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
+import { subscribeSessionListData } from "./data/session-data-subscription";
 import { openResourceSessionPreview } from "./session-auto-open";
 import { createSessionsSidenavSections } from "./sessions-sidenav-tree";
 
@@ -207,7 +207,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         commandId: dashboardCommandIds.openSessions,
         order: 30,
       });
-      const unsubscribeDashboardData = subscribeDashboardData(() => syncSessionsPageSelection(ctx));
+      const unsubscribeDashboardData = subscribeSessionListData(() => syncSessionsPageSelection(ctx));
       // Workspaces and extension-owned resources can carry a conversation; opening one brings it along.
       ctx.onDidChangePrimaryResource((resource) => {
         if (resource) openResourceSessionPreview(ctx, resource);

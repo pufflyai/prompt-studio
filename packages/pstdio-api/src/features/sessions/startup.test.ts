@@ -4,11 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessEventSink, HarnessSession, SessionMessage } from "pstdio-api-contracts";
-import { createEventStore } from "pstdio-api-runtime-host";
 import { createSessionService } from "../../services/session-service";
 import { createTestApp } from "../../test-utils/create-test-app";
 import type { AppBindings } from "../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
 import { resolveOrphanedSessions } from "./startup";
 
 const FAKE_ID = testHarnessId("fake");
@@ -92,7 +92,7 @@ afterAll(async () => {
 });
 
 describe("resolveOrphanedSessions (via createApp startup)", () => {
-  test("stream sends raw DB status without lazy fix", async () => {
+  test("stream waits for an active owner without rewriting the stored status", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -120,10 +120,23 @@ describe("resolveOrphanedSessions (via createApp startup)", () => {
       body: JSON.stringify({ status: "in_progress" }),
     });
 
-    // Without the lazy fix, the stream sends the raw DB status
     const streamRes = await app.request(`/v1/sessions/${session.id}/stream`);
-    const body = await streamRes.text();
-    expect(body).toContain('"status":"in_progress"');
+    const reader = streamRes.body!.getReader();
+    const decoder = new TextDecoder();
+    let body = "";
+    try {
+      while (!body.includes("event: heartbeat")) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        body += decoder.decode(chunk.value, { stream: true });
+      }
+      expect(body).toContain("event: heartbeat");
+      expect(body).not.toContain("event: end");
+      const stored = await app.request(`/v1/sessions/${session.id}`);
+      expect((await stored.json()).status).toBe("in_progress");
+    } finally {
+      await reader.cancel();
+    }
   });
 
   test("completed sessions are not affected", async () => {
@@ -194,6 +207,7 @@ describe("resolveOrphanedSessions abort", () => {
       repoService: {},
       harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("fake")]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionQueueEntriesService: {
         listDispatchStarted: async () => [],
@@ -246,6 +260,7 @@ describe("resolveOrphanedSessions resolution", () => {
       repoService: {},
       harnessRegistry: createTestHarnessRegistry([]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionQueueEntriesService: {
         listDispatchStarted: async () => [],
@@ -261,7 +276,7 @@ describe("resolveOrphanedSessions resolution", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected", expect.anything());
   });
 
   test("message lookup success does not imply completed", async () => {
@@ -285,6 +300,7 @@ describe("resolveOrphanedSessions resolution", () => {
         }),
       ]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
         store: { get: () => undefined },
@@ -296,7 +312,7 @@ describe("resolveOrphanedSessions resolution", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected", expect.anything());
   });
 
   test("reattaches orphan when agent advertises SessionReattach", async () => {
@@ -316,10 +332,7 @@ describe("resolveOrphanedSessions resolution", () => {
       }),
     );
     const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
-    const storeCreate = mock(() => ({
-      eventStore: createEventStore(),
-      approvalService: { handleResponse: () => {}, dispose: () => {} },
-    }));
+    const store = createTrackedSessionStore();
 
     const deps = {
       repoService: {},
@@ -332,18 +345,16 @@ describe("resolveOrphanedSessions resolution", () => {
         }),
       ]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionQueueEntriesService: {
         listDispatchStarted: async () => [],
         remove: async () => {},
       },
       sessionService: {
-        store: {
-          get: () => undefined,
-          create: storeCreate,
-          setSession: () => true,
-          remove: () => {},
-        },
+        store,
+        get: async () => staleSession,
+        update: async () => staleSession,
         listByStatus: async () => [staleSession],
         transitionStatus,
       },
@@ -371,10 +382,7 @@ describe("resolveOrphanedSessions reattach failures", () => {
       project_id: "p1",
     };
     const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
-    const storeCreate = mock(() => ({
-      eventStore: createEventStore(),
-      approvalService: { handleResponse: () => {}, dispose: () => {} },
-    }));
+    const store = createTrackedSessionStore();
     const controller = new AbortController();
     let reattachAttempts = 0;
     let providerSignal: AbortSignal | undefined;
@@ -401,18 +409,16 @@ describe("resolveOrphanedSessions reattach failures", () => {
         }),
       ]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionQueueEntriesService: {
         listDispatchStarted: async () => [],
         remove: async () => {},
       },
       sessionService: {
-        store: {
-          get: () => undefined,
-          create: storeCreate,
-          setSession: () => true,
-          remove: () => {},
-        },
+        store,
+        get: async () => staleSession,
+        update: async () => staleSession,
         listByStatus: async () => [staleSession],
         transitionStatus,
       },
@@ -460,20 +466,16 @@ describe("resolveOrphanedSessions reattach failures", () => {
         }),
       ]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionQueueEntriesService: {
         listDispatchStarted: async () => [{ session_id: staleSession.id, queue_position: 3 }],
         remove: removeQueueEntry,
       },
       sessionService: {
-        store: {
-          get: () => undefined,
-          create: () => ({
-            eventStore: createEventStore(),
-            approvalService: { handleResponse: () => {}, dispose: () => {} },
-          }),
-          remove: () => {},
-        },
+        store: createTrackedSessionStore(),
+        get: async () => staleSession,
+        update: async () => staleSession,
         listByStatus: async () => [staleSession],
         transitionStatus,
       },
@@ -483,7 +485,7 @@ describe("resolveOrphanedSessions reattach failures", () => {
 
     expect(reattach).toHaveBeenCalledTimes(1);
     expect(removeQueueEntry).toHaveBeenCalledWith(3);
-    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected", expect.anything());
   });
 });
 
@@ -509,6 +511,7 @@ describe("resolveOrphanedSessions message lookup", () => {
         }),
       ]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
         store: { get: () => undefined },
@@ -520,7 +523,7 @@ describe("resolveOrphanedSessions message lookup", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected", expect.anything());
   });
 });
 
@@ -562,6 +565,7 @@ describe("resolveOrphanedSessions hooks", () => {
       repoService: {},
       harnessRegistry: createTestHarnessRegistry([]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService,
       db: {},
@@ -569,7 +573,9 @@ describe("resolveOrphanedSessions hooks", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(updateStatus).toHaveBeenCalledWith("session-orphan-hook", "disconnected");
+    expect(updateStatus).toHaveBeenCalledWith("session-orphan-hook", "disconnected", {
+      expectedLastRequestStarted: null,
+    });
     expect(onSessionStatusChanged).toHaveBeenCalledWith({
       id: "session-orphan-hook",
       project_id: "project-orphan",
@@ -597,10 +603,7 @@ describe("resolveOrphanedSessions readiness gate", () => {
       }),
     );
     const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
-    const storeCreate = mock(() => ({
-      eventStore: createEventStore(),
-      approvalService: { handleResponse: () => {}, dispose: () => {} },
-    }));
+    const store = createTrackedSessionStore();
 
     const deps = {
       repoService: {},
@@ -610,6 +613,7 @@ describe("resolveOrphanedSessions readiness gate", () => {
         }),
       ]),
       eventBus: { emit: () => {} },
+      fileService: checkpointFileService,
       // A failed provision must block reattach on startup too, not boot the harness into the
       // half-synced skill tree — the same gate every other entrypoint enforces.
       workspaceSessionService: {
@@ -617,7 +621,9 @@ describe("resolveOrphanedSessions readiness gate", () => {
       },
       sessionQueueEntriesService: { listDispatchStarted: async () => [], remove: async () => {} },
       sessionService: {
-        store: { get: () => undefined, create: storeCreate, setSession: () => true, remove: () => {} },
+        store,
+        get: async () => staleSession,
+        update: async () => staleSession,
         listByStatus: async () => [staleSession],
         transitionStatus,
       },
@@ -627,6 +633,6 @@ describe("resolveOrphanedSessions readiness gate", () => {
     await resolveOrphanedSessions(deps);
 
     expect(reattach).not.toHaveBeenCalled();
-    expect(transitionStatus).toHaveBeenCalledWith("session-unready", "disconnected");
+    expect(transitionStatus).toHaveBeenCalledWith("session-unready", "disconnected", expect.anything());
   });
 });

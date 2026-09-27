@@ -68,8 +68,14 @@ export const mergeOrderedHistory = <T>(
       const refined: T[] = mergeOrderedHistory(known, native, refineKey(known, native), merge);
       return refined;
     }
-    if (known.length === native.length && known.every((item, index) => key(item) === key(native[index]))) {
-      return known.map((item, index) => merge(item, native[index]));
+    // A run cut short leaves one side a prefix of the other, so equal keys pair in order.
+    const paired = Math.min(known.length, native.length);
+    if (known.slice(0, paired).every((item, index) => key(item) === key(native[index]))) {
+      return [
+        ...known.slice(0, paired).map((item, index) => merge(item, native[index])),
+        ...known.slice(paired),
+        ...native.slice(paired),
+      ];
     }
     throw new HistoryConflict("ambiguous_interval");
   }

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts";
 
 export const verifyProviderPackageConsumer = (root: string, sdkArchive: string) => {
   const run = (cwd: string, args: string[]) => {
@@ -21,7 +22,7 @@ export const verifyProviderPackageConsumer = (root: string, sdkArchive: string) 
       main: "./extension.ts",
       exports: { ".": "./extension.ts", "./contracts": "./contracts.ts" },
       files: ["*.ts"],
-      engines: { pstdio: "1.0.0-alpha.10" },
+      engines: { pstdio: EXTENSION_API_VERSION },
       dependencies: { "@pstdio/sdk": `file:${sdkArchive}` },
     }),
   );

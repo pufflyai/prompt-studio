@@ -1,8 +1,16 @@
 import type { HarnessSession } from "pstdio-api-contracts";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
+import { checkpointConversation } from "./session-checkpoint";
+import type { ActiveSession } from "./session-store";
 
-type CancellationDeps = Pick<SessionsRouteDeps, "sessionService">;
+type CancellationDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService">;
+
+const finalizeCancellation = async (sessionId: string, entry: ActiveSession | null, deps: CancellationDeps) => {
+  if (!entry || deps.sessionService.store.get(sessionId) !== entry) return;
+  await checkpointConversation(sessionId, entry, deps);
+  deps.sessionService.store.remove(sessionId, entry);
+};
 
 export class SessionCancellationCleanupError extends Error {
   constructor(readonly cause: unknown) {
@@ -15,6 +23,7 @@ export const bindSessionCancellation = async (
   session: HarnessSession,
   deps: CancellationDeps,
   sessionId: string,
+  entry: ActiveSession | null = deps.sessionService.store.get(sessionId),
 ) => {
   if (!signal) return async () => {};
   let cancelling: Promise<void> | undefined;
@@ -27,11 +36,14 @@ export const bindSessionCancellation = async (
           { err: error, event: "session.abort_stop.failed", session_id: sessionId },
           "Failed to stop harness session after its request was cancelled",
         );
-        deps.sessionService.store.setSession(sessionId, session);
+        if (entry) deps.sessionService.store.setSession(sessionId, session, entry);
         throw new SessionCancellationCleanupError(error);
       }
-      deps.sessionService.store.remove(sessionId);
-      await deps.sessionService.transitionStatus(sessionId, "cancelled");
+      if (deps.sessionService.store.get(sessionId) === entry) {
+        if (entry) await checkpointConversation(sessionId, entry, deps);
+        await deps.sessionService.transitionStatus(sessionId, "cancelled", { expectedOwner: entry });
+        if (entry) deps.sessionService.store.remove(sessionId, entry);
+      }
     });
     return cancelling;
   };
@@ -54,6 +66,7 @@ export const rejectPersistedSessionCancellation = async (
   session: HarnessSession,
   deps: CancellationDeps,
   sessionId: string,
+  entry: ActiveSession | null = deps.sessionService.store.get(sessionId),
 ) => {
   const persisted = await deps.sessionService.get(sessionId);
   if (persisted?.status !== "cancelled") return;
@@ -65,11 +78,11 @@ export const rejectPersistedSessionCancellation = async (
       { err: error, event: "session.persisted_cancel_stop.failed", session_id: sessionId },
       "Failed to stop a harness session accepted after persisted cancellation",
     );
-    deps.sessionService.store.setSession(sessionId, session);
+    if (entry) deps.sessionService.store.setSession(sessionId, session, entry);
     throw new SessionCancellationCleanupError(error);
   }
 
-  deps.sessionService.store.remove(sessionId);
+  await finalizeCancellation(sessionId, entry, deps);
   throw new DOMException("Session was cancelled.", "AbortError");
 };
 
@@ -77,6 +90,7 @@ export const rejectStoreSessionCancellation = async (
   session: HarnessSession,
   deps: CancellationDeps,
   sessionId: string,
+  entry: ActiveSession | null = deps.sessionService.store.get(sessionId),
 ) => {
   try {
     await session.stop();
@@ -88,6 +102,6 @@ export const rejectStoreSessionCancellation = async (
     throw new SessionCancellationCleanupError(error);
   }
 
-  deps.sessionService.store.remove(sessionId);
+  await finalizeCancellation(sessionId, entry, deps);
   throw new DOMException("Session was cancelled.", "AbortError");
 };

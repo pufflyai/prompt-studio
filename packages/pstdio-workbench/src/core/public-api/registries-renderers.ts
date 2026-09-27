@@ -122,3 +122,10 @@ export {
   workbenchResourceTypeContextKey,
   workbenchSelectionResourceKeyMetadataKey,
 } from "../registries/resources/resource-registry";
+export { rendererReadKey } from "../registries/views/renderer-read-key";
+export type {
+  RendererReadBinding,
+  RendererReadRegistry,
+  RendererReadRequest,
+} from "../registries/views/renderer-read-registry";
+export { createRendererReadRegistry } from "../registries/views/renderer-read-registry";

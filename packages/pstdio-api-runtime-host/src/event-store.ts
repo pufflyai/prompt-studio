@@ -46,7 +46,7 @@ export const createEventStore = (options?: EventStoreOptions): EventStore & { cl
     [Symbol.asyncIterator]: () => {
       const queue: JsonPatch[] = [];
       let resolve: ((value: IteratorResult<JsonPatch>) => void) | null = null;
-      let done = false;
+      let done = closed;
 
       const onPatch = (patch: JsonPatch) => {
         if (resolve) {
@@ -70,8 +70,10 @@ export const createEventStore = (options?: EventStoreOptions): EventStore & { cl
         }
       };
 
-      emitter.on(PATCH_EVENT, onPatch);
-      emitter.on(CLOSE_EVENT, onClose);
+      if (!done) {
+        emitter.on(PATCH_EVENT, onPatch);
+        emitter.on(CLOSE_EVENT, onClose);
+      }
 
       return {
         next: () => {

@@ -274,6 +274,10 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       return activeWorkbenchResource(core);
     },
 
+    async dispose() {
+      await Promise.all([views.reads.dispose(), core.terminal.dispose()]);
+    },
+
     onDidChangeActiveResource(listener) {
       return createDisposable(
         core.layout.store.subscribeSelector(

@@ -4,7 +4,7 @@ import {
   type DashboardRows,
   isDashboardProjectRow,
   isVisibleDashboardRow,
-  readDashboardRows,
+  readWorkspaceRows,
 } from "@/shared/sync/dashboard-rows";
 import { workspaceState } from "./workspace-state";
 
@@ -82,7 +82,10 @@ export const createDashboardWorkspaceOptionResource = (workspace: DashboardWorks
   });
 
 // The default workspace (root repo) is pinned first; the rest follow newest-first.
-export const buildDashboardWorkspaceOptionsFromRows = (rows: DashboardRows, projectId?: string) => {
+export const buildDashboardWorkspaceOptionsFromRows = (
+  rows: Pick<DashboardRows, "projectRepos" | "repos" | "workspaces">,
+  projectId?: string,
+) => {
   const repoPathByProjectId = indexFirstProjectRepoPaths(rows.projectRepos, rows.repos);
 
   return rows.workspaces
@@ -95,4 +98,4 @@ export const buildDashboardWorkspaceOptionsFromRows = (rows: DashboardRows, proj
 };
 
 export const createDashboardWorkspaceOptions = (projectId?: string) =>
-  buildDashboardWorkspaceOptionsFromRows(readDashboardRows(), projectId);
+  buildDashboardWorkspaceOptionsFromRows(readWorkspaceRows(), projectId);
