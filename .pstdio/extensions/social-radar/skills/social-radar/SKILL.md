@@ -19,6 +19,8 @@ Count every endpoint query, browser search, and follow-up lookup against that si
 
 Read the current endpoints below; free access can change. Use the endpoint first where listed. Use Codex's computer use tool for browser work in the user's existing browser profile. Do not launch another browser profile or install a browser tool. Skip browser-only sites when that tool is unavailable. Skip on login walls or captchas; never enter credentials or try to bypass a restriction. Record each skipped site and its reason. Partial access still makes a useful digest.
 
+If research reveals a better community, channel, account, or repository to watch, revise that site's complete target list with `pst social-radar update-site --site <site> --targets <target>`. Repeat `--targets` for each target to keep. The command changes only that site's targets; include `--budget <count>` only when the user asks to change the budget. Use `pst social-radar update-settings --input '<JSON>'` when the user asks to revise topics, competitors, or voice. Never infer a new budget from a login wall or a failed search.
+
 | Site | First choice | Browser fallback |
 | --- | --- | --- |
 | `hn` | `https://hn.algolia.com/api/v1/search_by_date?query=<encoded-topic>&tags=story&numericFilters=created_at_i><since-unix>`; use `tags=comment` when useful | `https://hn.algolia.com`, newest first |

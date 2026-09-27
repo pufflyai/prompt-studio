@@ -97,6 +97,9 @@ test("copies a research draft, tracks posting, and saves research settings", asy
     await frame.getByRole("button", { name: "Manage threads" }).click();
     await expect(page.getByText("Managing coding agents", { exact: true })).toBeVisible();
     await page.getByText("Managing coding agents", { exact: true }).click();
+    await page.getByRole("button", { name: "Actions for Managing coding agents" }).click();
+    await expect(page.getByRole("menuitem", { name: "Mark posted" })).toBeVisible();
+    await page.keyboard.press("Escape");
     await page.getByRole("textbox", { name: "Title", exact: true }).fill("Managing several coding agents");
     await page.getByRole("textbox", { name: "Community or channel" }).fill("Hacker News");
     await page.getByRole("button", { name: "Apply" }).click();

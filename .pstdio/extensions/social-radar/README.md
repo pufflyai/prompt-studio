@@ -16,7 +16,7 @@ pst social-radar list-digest
 pst social-radar list-posted
 pst social-radar set-thread-status --id <id> --status posted
 pst social-radar get-settings
-pst social-radar update-site --site reddit --targets r/ClaudeAI,r/LocalLLaMA --budget 2
+pst social-radar update-site --site reddit --targets r/ClaudeAI --targets r/LocalLLaMA --budget 2
 pst social-radar update-thread --id <id> --input '{"draftReply":"A clearer reply"}'
 ```
 
