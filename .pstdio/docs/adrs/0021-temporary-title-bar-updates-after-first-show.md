@@ -1,5 +1,7 @@
 # Temporary native title bar updates after the first show
 
+Proposed: 2026-09-09 (first recorded in Git)
+
 ## Status
 
 Temporary workaround found while validating PS-60. Remove the ordering restriction

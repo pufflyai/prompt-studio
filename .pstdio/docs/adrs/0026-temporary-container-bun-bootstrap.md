@@ -1,5 +1,7 @@
 # Temporary Bun bootstrap for browser CI containers
 
+Proposed: 2026-09-13 (first recorded in Git)
+
 ## Status
 
 Accepted temporary workaround.

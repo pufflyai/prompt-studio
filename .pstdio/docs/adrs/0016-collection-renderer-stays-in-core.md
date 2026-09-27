@@ -1,5 +1,7 @@
 # ADR 0016: keep the grouped collection renderer in core
 
+Proposed: 2026-08-28 (first recorded in Git)
+
 ## Status
 
 Accepted. The shared contracts use `badge-list` displays and query-owned `boardColumnConfigs`.

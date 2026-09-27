@@ -1,5 +1,7 @@
 # Temporary startup window display after document load
 
+Proposed: 2026-09-09 (first recorded in Git)
+
 ## Status
 
 Temporary workaround for hidden-window painting in Electron 43.6.0 on Linux.

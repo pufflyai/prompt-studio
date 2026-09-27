@@ -1,5 +1,7 @@
 # Temporary reconciliation for file-backed connection secrets
 
+Proposed: 2026-08-27 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary development workaround.

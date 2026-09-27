@@ -1,5 +1,7 @@
 # ADR: Temporary Windows Desktop Release Deferral
 
+Proposed: 2026-08-27 (first recorded in Git)
+
 ## Status
 
 Temporary. Remove this decision when the Windows desktop release has a trusted

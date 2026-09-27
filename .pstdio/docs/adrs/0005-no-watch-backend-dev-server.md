@@ -1,5 +1,7 @@
 # ADR: Run the Backend Dev Server Without `bun --watch`
 
+Proposed: 2026-05-31 (first recorded in Git)
+
 ## Status
 
 Accepted.

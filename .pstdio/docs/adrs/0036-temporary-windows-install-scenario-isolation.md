@@ -1,5 +1,7 @@
 # Temporary Windows install scenario isolation
 
+Proposed: 2026-09-20 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary workaround.

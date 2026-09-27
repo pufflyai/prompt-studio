@@ -1,5 +1,7 @@
 # ADR: Unified Test Runner — bun test
 
+Proposed: 2026-03-07 (first recorded in Git)
+
 ## Status
 
 Accepted.

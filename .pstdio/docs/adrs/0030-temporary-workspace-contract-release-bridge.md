@@ -1,5 +1,7 @@
 # Temporary workspace contract release bridge
 
+Proposed: 2026-09-26 (first recorded in Git)
+
 ## Status
 
 accepted for PS-391; remove the bridge at the alpha.11 host cutover.

@@ -1,5 +1,7 @@
 # Temporary packaged debugger attachment order
 
+Proposed: 2026-09-08 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary workaround.

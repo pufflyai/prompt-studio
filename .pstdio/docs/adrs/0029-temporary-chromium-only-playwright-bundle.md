@@ -1,5 +1,7 @@
 # Temporary Chromium-only Playwright bundle
 
+Proposed: 2026-09-25 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary workaround.

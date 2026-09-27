@@ -1,5 +1,7 @@
 # Temporary keyboard drag activation barrier
 
+Proposed: 2026-09-11 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary workaround.

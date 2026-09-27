@@ -1,5 +1,7 @@
 # ADR: Temporary Direct Terminal WebSocket Endpoint
 
+Proposed: 2026-08-13 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary workaround for Bun 1.3.13 and 1.3.14. The required fixes have landed on Bun's `main` branch, but they are not in the latest stable release as of August 13, 2026. Remove this workaround only after Prompt Studio pins a stable Bun release containing the fixes and the Vite terminal end-to-end test passes through the same-origin proxy.

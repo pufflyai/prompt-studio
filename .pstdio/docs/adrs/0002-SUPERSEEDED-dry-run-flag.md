@@ -1,5 +1,7 @@
 # ADR: `PSTDIO_DRY_RUN` Environment Variable (Superseded)
 
+Proposed: 2026-03-13 (first recorded in Git)
+
 ## Status
 
 SUPERSEEDED on 2026-03-13 by [ADR: Replace `PSTDIO_DRY_RUN` With Fake Agent](/adrs/0003-replace-dry-run-with-fake-agent).

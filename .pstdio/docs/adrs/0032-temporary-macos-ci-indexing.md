@@ -1,5 +1,7 @@
 # Temporary macOS desktop CI indexing isolation
 
+Proposed: 2026-09-26 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary workaround.

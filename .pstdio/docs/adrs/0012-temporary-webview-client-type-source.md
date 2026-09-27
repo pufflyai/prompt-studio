@@ -1,6 +1,7 @@
 # ADR 0012: Temporary webview client type source
 
-Date: 2026-08-25
+Proposed: 2026-08-25
+
 ## Status
 
 Accepted (temporary workaround)

@@ -1,5 +1,7 @@
 # Temporary PocketCoder turn cursor
 
+Proposed: 2026-09-09 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary workaround.

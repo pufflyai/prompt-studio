@@ -1,5 +1,7 @@
 # Temporary local dependency install context
 
+Proposed: 2026-09-07 (first recorded in Git)
+
 ## Status
 
 Accepted as a temporary workaround.

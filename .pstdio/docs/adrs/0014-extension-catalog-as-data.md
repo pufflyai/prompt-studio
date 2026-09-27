@@ -1,5 +1,7 @@
 # ADR 0014: Extension catalog as data
 
+Proposed: 2026-08-28 (first recorded in Git)
+
 ## Status
 
 Accepted.

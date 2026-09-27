@@ -1,5 +1,7 @@
 # Temporary space-free Linux desktop package paths
 
+Proposed: 2026-09-08 (first recorded in Git)
+
 ## Status
 
 Temporary workaround for PS-219. Remove the path restriction when Electron's

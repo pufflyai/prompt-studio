@@ -1,5 +1,7 @@
 # ADR: Temporary E2E Ubuntu Mirror Override
 
+Proposed: 2026-08-18 (first recorded in Git)
+
 ## Status
 
 SUPERSEEDED by prebuilt Playwright browser environments and runner-provided desktop libraries. No CI job rewrites the Ubuntu package mirror or installs Playwright system dependencies.
