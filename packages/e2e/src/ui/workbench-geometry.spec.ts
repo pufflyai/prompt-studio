@@ -124,7 +124,7 @@ test("aligns an attached Side Panel with the active Location Panel", async ({ pa
   await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "hidden" });
 });
 
-test("keeps the Main Panel Header visible while the right menu is open", async ({ page, request }) => {
+test("reopens the Main right menu from a single-resource page", async ({ page, request }) => {
   test.setTimeout(30_000);
   await deleteAllProjects(request);
   const project = await createProject(request);
@@ -132,18 +132,27 @@ test("keeps the Main Panel Header visible while the right menu is open", async (
   const backlog = statuses.find((status) => status.name.toLowerCase() === "backlog");
   expect(backlog).toBeDefined();
   const ticket = await createPlannerTicket(request, apiBase, project.id, {
-    content: "Main Panel Header regression",
+    content: "Reopen ticket details",
     statusId: backlog!.id,
   });
   await prepareDashboard(page, project.id);
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
-  await page.getByText("Main Panel Header regression", { exact: true }).click();
-  await expect(page.getByRole("link", { name: `${ticket.shorthand} Main Panel Header regression` })).toBeVisible();
+  await page.getByText("Reopen ticket details", { exact: true }).click();
+  const ticketLink = page.getByRole("link", { name: `${ticket.shorthand} Reopen ticket details` });
+  await expect(ticketLink).toBeVisible();
 
   const mainPanelHeader = page.locator('[data-workbench-panel-header="main"]');
-  const openMainRightMenu = page.getByRole("button", { name: "Show Main right menu" });
-  if (await openMainRightMenu.isVisible()) await openMainRightMenu.click();
+  const rightMenu = page.locator('[data-workbench-panel-menu="main-right"]');
+  await expect(rightMenu).toBeVisible();
+  await expect(mainPanelHeader).toBeHidden();
 
-  await expect(page.locator('[data-workbench-region="main-right-menu"]')).toBeVisible();
+  await page.getByRole("separator", { name: "Resize Main right menu" }).press("Home");
+  await expect(rightMenu).toBeHidden();
   await expect(mainPanelHeader).toBeVisible();
+  await mainPanelHeader.getByRole("button", { name: "Open Main right menu" }).click();
+  await page.getByRole("button", { name: "Attach Main right menu" }).click();
+
+  await expect(rightMenu).toBeVisible();
+  await expect(mainPanelHeader).toBeHidden();
+  await expect(ticketLink).toBeVisible();
 });
