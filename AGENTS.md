@@ -120,7 +120,13 @@ Do not write:
 - Do not make the solution more general than needed
 - Support the normal, successful case first
 
-Run tests often.
+Run tests often, but run only the tests for the code you changed:
+
+- One test file: `bun test <path>` from its package directory
+- One package: `bun run --cwd packages/<name> test`
+- One e2e spec: `bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts`
+
+Do not run the full monorepo tests, full e2e suites, or `bun run validate` after each change. They take many minutes. Run `bun run validate` once, in step 4.
 
 ### 3. Refactor: clean up
 
@@ -138,7 +144,7 @@ Tests must stay green.
 
 (Skip this step for changes that only affect documentation.)
 
-Before finishing a task, run `bun run validate`. Fix every reported issue.
+When the change is complete, run `bun run validate` once. Fix every reported issue, then rerun only the checks that failed before a final `bun run validate`.
 
 Always validate UI changes using Playwright.
 

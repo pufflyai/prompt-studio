@@ -1,0 +1,67 @@
+import { describe, expect, test } from "bun:test";
+import { resolveCiScope } from "./pull-request-ci-scope";
+
+const packageDirs = [
+  "clients/landing-page",
+  "packages/ui",
+  "packages/pstdio",
+  "packages/pstdio-dashboard",
+  "packages/pstdio-db",
+  "packages/e2e",
+  "extensions/pstdio-planner",
+  "design/motion",
+  "scripts",
+];
+
+const pullRequest = (changedFiles: string[], affectedPackages: string[] = []) =>
+  resolveCiScope({ event: "pull_request", changedFiles, packageDirs, affectedPackages });
+
+const everything = { lernaFilter: "", windows: true, e2e: true, license: true };
+
+describe("pull request CI scope", () => {
+  test("the merge queue runs every job on every package", () => {
+    const scope = resolveCiScope({
+      event: "merge_group",
+      changedFiles: ["README.md"],
+      packageDirs,
+      affectedPackages: [],
+    });
+
+    expect(scope).toEqual(everything);
+  });
+
+  test("a package change tests changed packages and skips unrelated heavy jobs", () => {
+    const scope = pullRequest(["clients/landing-page/src/pages/index.astro"], ["@pstdio/landing-page"]);
+
+    expect(scope).toEqual({ lernaFilter: "--since HEAD~1", windows: false, e2e: false, license: false });
+  });
+
+  test("a change in a filesystem or process package runs Windows", () => {
+    expect(pullRequest(["packages/pstdio-db/src/db/connection.ts"]).windows).toBe(true);
+    expect(pullRequest(["packages/pstdio/src/cli.ts"]).windows).toBe(true);
+  });
+
+  test("a change that affects the e2e package runs the e2e jobs", () => {
+    expect(pullRequest(["extensions/pstdio-planner/src/index.ts"], ["pstdio-planner", "e2e"]).e2e).toBe(true);
+  });
+
+  test("a manifest change runs the license check", () => {
+    expect(pullRequest(["packages/ui/package.json"], ["@pstdio/ui"]).license).toBe(true);
+  });
+
+  test("documentation outside packages runs no heavy jobs", () => {
+    const scope = pullRequest(["README.md", ".pstdio/docs/contributing/tests.md", "design/website.pen", "LICENSE"]);
+
+    expect(scope).toEqual({ lernaFilter: "--since HEAD~1", windows: false, e2e: false, license: false });
+  });
+
+  test("any other change outside packages runs everything", () => {
+    expect(pullRequest(["bun.lock"])).toEqual(everything);
+    expect(pullRequest([".github/workflows/test-and-build.yml"])).toEqual(everything);
+    expect(pullRequest(["tsconfig.base.json"])).toEqual(everything);
+  });
+
+  test("a repository tooling change runs everything", () => {
+    expect(pullRequest(["scripts/test-setup.ts"], ["pstdio-scripts"])).toEqual(everything);
+  });
+});

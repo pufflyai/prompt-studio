@@ -1,20 +1,51 @@
 name: Test and Build
 
+# The merge queue tests every commit that reaches main, so main pushes need no second run.
+# Pull requests run only the jobs their changes need; the merge queue runs every job.
 on:
-  push:
-    branches:
-      - main
   pull_request:
   merge_group:
+  workflow_dispatch:
 
 concurrency:
-  # Only a newer push to the same pull request replaces a run. Every main and merge queue
-  # commit keeps its own run until it finishes, so a red commit can always be traced.
+  # Only a newer push to the same pull request replaces a run. Every merge queue commit
+  # keeps its own run until it finishes, so a red commit can always be traced.
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      lerna_filter: ${{ steps.scope.outputs.lernaFilter }}
+      windows: ${{ steps.scope.outputs.windows }}
+      e2e: ${{ steps.scope.outputs.e2e }}
+      license: ${{ steps.scope.outputs.license }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Choose the jobs and packages to test
+        id: scope
+        run: bun scripts/ci/pull-request-ci-scope.ts
+
   test_and_build:
+    needs: scope
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -58,12 +89,14 @@ jobs:
         run: bun run verify:translations
 
       - name: Lint monorepo
-        run: bun run lint
+        run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
 
       - name: Test monorepo (non-e2e)
-        run: bunx lerna run test --ignore e2e
+        run: bunx lerna run test --ignore e2e ${{ needs.scope.outputs.lerna_filter }}
 
   windows_test_and_build:
+    needs: scope
+    if: needs.scope.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -94,16 +127,18 @@ jobs:
         run: bun run build
 
       - name: Lint monorepo
-        run: bun run lint
+        run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
 
       - name: Test monorepo (non-e2e)
         # ADR 0044: hosted Windows runner variance exceeds Bun's 5 s default.
-        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --stream --concurrency=1 -- --timeout=15000
+        run: bunx lerna run test --ignore e2e --ignore pstdio-wt ${{ needs.scope.outputs.lerna_filter }} --stream --concurrency=1 -- --timeout=15000
 
       - name: Test Git worktrees with their existing 30-second limit
         run: bun run --cwd packages/pstdio-wt test
 
   e2e:
+    needs: scope
+    if: needs.scope.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -149,6 +184,8 @@ jobs:
           if-no-files-found: ignore
 
   e2e_cli:
+    needs: scope
+    if: needs.scope.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -180,6 +217,8 @@ jobs:
         run: bun run --cwd packages/e2e test:cli
 
   packaged_and_vite_e2e:
+    needs: scope
+    if: needs.scope.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -226,8 +265,44 @@ jobs:
             packages/e2e/playwright-report
           if-no-files-found: ignore
 
+  license_check:
+    needs: scope
+    if: needs.scope.outputs.license == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate license report
+        run: bunx license-checker --production --csv > npm-license-checker.csv
+
+      - name: Check license report
+        id: license_check_report
+        uses: pilosus/action-pip-license-checker@v2
+        with:
+          external: npm-license-checker.csv
+          external-format: csv
+          external-options: "{:skip-header true}"
+          fail: WeakCopyleft,StrongCopyleft,NetworkCopyleft
+          fails-only: true
+          totals: true
+          verbose: 1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Echo error
+        if: failure()
+        run: echo "::error::${{ steps.license_check_report.outputs.report }}"
+
   build_docker:
-    needs: [test_and_build, windows_test_and_build, e2e, e2e_cli, packaged_and_vite_e2e]
+    needs: test_and_build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -259,12 +334,15 @@ jobs:
   # The one status check the main ruleset and merge queue require. Job and matrix names
   # can change without touching the ruleset. It must always run: GitHub treats a skipped
   # required check as passing, and jobs are skipped when a job they need fails.
+  # Pull requests may skip jobs their changes do not need. In the merge queue every job must pass.
   ci_passed:
     if: always()
-    needs: [test_and_build, windows_test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, build_docker]
+    needs: [scope, test_and_build, windows_test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, license_check, build_docker]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Require every blocking job to succeed
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        if: >-
+          contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') ||
+          (github.event_name != 'pull_request' && contains(needs.*.result, 'skipped'))
         run: exit 1
