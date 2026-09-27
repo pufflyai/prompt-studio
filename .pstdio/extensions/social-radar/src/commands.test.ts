@@ -167,6 +167,15 @@ describe("social radar commands", () => {
     expect(settings.targets.reddit).toEqual(["r/LocalLLaMA", "r/ChatGPTCoding"]);
     expect(settings.targets.bluesky).toEqual([]);
     expect(settings.budgets).toMatchObject({ reddit: 2, hn: 4 });
+    await commands.updateSite.run(ctx, { site: "reddit", budget: 1 });
+    expect((await commands.getSettings.run(ctx, {})).targets.reddit).toEqual(["r/LocalLLaMA", "r/ChatGPTCoding"]);
+    await commands.updateSettings.run(ctx, { input: { topics: ["agent workflow"], competitors: ["Another tool"] } });
+    expect(await commands.getSettings.run(ctx, {})).toMatchObject({
+      topics: ["agent workflow"],
+      competitors: ["Another tool"],
+      targets: { reddit: ["r/LocalLLaMA", "r/ChatGPTCoding"] },
+      budgets: { reddit: 1, hn: 4 },
+    });
   });
 
   test("revises a saved thread without losing its posting history", async () => {
