@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { createReleaseNotes } from "./release-notes";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -24,9 +25,9 @@ const workspace = (changelogs: Record<string, string | null>) => {
   return root;
 };
 
-const run = async (cwd: string, version?: string) => {
+const runWithoutVersion = async (cwd: string) => {
   const proc = Bun.spawn({
-    cmd: ["bun", resolve(import.meta.dir, "release-notes.ts"), ...(version ? [version] : [])],
+    cmd: [process.execPath, resolve(import.meta.dir, "release-notes.ts")],
     cwd,
     stdout: "pipe",
     stderr: "pipe",
@@ -57,37 +58,34 @@ describe("shared release notes", () => {
       pstdio: "## 0.35.0\n\n_2026-09-26_\n\n### Minor Changes\n\n- Add tools.\n\n## 0.34.0\n\n- Old entry.\n",
       ui: "## 0.35.0\r\n\r\n### Patch Changes\r\n\r\n- Fix layout.\r\n",
     });
-    const result = await run(root, "0.35.0");
-    expect(result.exitCode).toBe(0);
-    expect(packageEntries(result.stdout)).toEqual([
+    const notes = await createReleaseNotes(root, "0.35.0");
+    expect(packageEntries(notes)).toEqual([
       { name: "pstdio", entries: ["Add tools."] },
       { name: "ui", entries: ["Fix layout."] },
     ]);
-    expect(result.stdout).not.toMatch(/^_\d{4}-\d{2}-\d{2}_$/m);
+    expect(notes).not.toMatch(/^_\d{4}-\d{2}-\d{2}_$/m);
   });
 
   test("leaves out packages without entries for the release version", async () => {
     const root = workspace({ pstdio: "## 0.35.0\n\n- Change.\n", empty: "## 0.35.0\n\n_2026-09-26_\n", missing: null });
-    const result = await run(root, "0.35.0");
-    expect(result.exitCode).toBe(0);
-    expect(packageEntries(result.stdout)).toEqual([{ name: "pstdio", entries: ["Change."] }]);
+    const notes = await createReleaseNotes(root, "0.35.0");
+    expect(packageEntries(notes)).toEqual([{ name: "pstdio", entries: ["Change."] }]);
   });
 
   test("prints default notes when every package has no entries", async () => {
-    const result = await run(workspace({ empty: "## 0.35.0\n\n_2026-09-26_\n" }), "0.35.0");
-    expect(result.exitCode).toBe(0);
-    expect(packageEntries(result.stdout)).toEqual([]);
-    expect(result.stdout.trim()).not.toBe("");
+    const notes = await createReleaseNotes(workspace({ empty: "## 0.35.0\n\n_2026-09-26_\n" }), "0.35.0");
+    expect(packageEntries(notes)).toEqual([]);
+    expect(notes.trim()).not.toBe("");
   });
 
   test("rejects a changelog missing the release version", async () => {
-    const result = await run(workspace({ pstdio: "## 0.34.0\n\n- Old.\n" }), "0.35.0");
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("pstdio@0.35.0");
+    await expect(createReleaseNotes(workspace({ pstdio: "## 0.34.0\n\n- Old.\n" }), "0.35.0")).rejects.toThrow(
+      "pstdio@0.35.0",
+    );
   });
 
   test("requires a release version", async () => {
-    const result = await run(workspace({ pstdio: null }));
+    const result = await runWithoutVersion(workspace({ pstdio: null }));
     expect(result.exitCode).toBe(1);
     expect(result.stderr.trim()).not.toBe("");
   });
