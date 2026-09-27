@@ -1,5 +1,5 @@
 {
-  "version": "2.17",
+  "version": "2.19",
   "children": [
     {
       "type": "frame",
@@ -41114,8 +41114,7 @@
                           "x": 0,
                           "y": 4
                         },
-                        "blur": 12,
-                        "spread": -4
+                        "blur": 12
                       },
                       "descendants": {
                         "TrZkC": {
@@ -45353,7 +45352,7 @@
       "type": "frame",
       "id": "pibMt",
       "x": 12000,
-      "y": 16750,
+      "y": 18634,
       "name": "Workbench Architecture and mockups",
       "layout": "vertical",
       "gap": 12,
@@ -54041,7 +54040,7 @@
       "type": "frame",
       "id": "qTOXK",
       "x": 14300,
-      "y": 16750,
+      "y": 18634,
       "name": "Extension Detail · Production",
       "theme": {
         "mode": "dark"
@@ -61803,7 +61802,7 @@
       "type": "frame",
       "id": "e85E4",
       "x": 0,
-      "y": 16750,
+      "y": 18634,
       "name": "Workbench Production Frames · Canonical and Placement",
       "theme": {
         "mode": "dark"
@@ -65388,7 +65387,7 @@
       "type": "frame",
       "id": "xXFUp",
       "x": 2400,
-      "y": 16750,
+      "y": 18634,
       "name": "Workbench Production Frames · Panel Interactions",
       "theme": {
         "mode": "dark"
@@ -69959,7 +69958,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -70681,7 +70680,7 @@
       "type": "frame",
       "id": "enh0U",
       "x": 4800,
-      "y": 16750,
+      "y": 18634,
       "name": "Workbench Production Frames · Sidenav and Resource Journeys",
       "theme": {
         "mode": "dark"
@@ -76108,7 +76107,7 @@
       "type": "frame",
       "id": "jV2OQ",
       "x": 7200,
-      "y": 16750,
+      "y": 18634,
       "name": "Workbench Production Frames · Modes and Global Surfaces",
       "theme": {
         "mode": "dark"
@@ -88027,7 +88026,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -88099,7 +88098,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 994,
+              "y": 989,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -97260,7 +97259,7 @@
       "type": "frame",
       "id": "wQigN",
       "x": 9600,
-      "y": 16750,
+      "y": 18634,
       "name": "Workbench Production Frames · Workspace View",
       "theme": {
         "mode": "dark"
@@ -104203,7 +104202,7 @@
       "type": "frame",
       "id": "xQ2tm",
       "x": 16600,
-      "y": 16750,
+      "y": 18634,
       "name": "Ticket Status Panel · Production",
       "theme": {
         "mode": "dark"
@@ -106197,7 +106196,7 @@
       "type": "frame",
       "id": "LmcML",
       "x": 20208,
-      "y": 16750,
+      "y": 18634,
       "name": "Folder onboarding and workspace providers",
       "theme": {
         "mode": "dark"
@@ -106322,6 +106321,25 @@
                     "size": "sm"
                   }
                 },
+                "nZbUt": {
+                  "name": "Create folder",
+                  "theme": {
+                    "btn": "primary",
+                    "size": "sm"
+                  },
+                  "enabled": false
+                },
+                "nZbUt/DsEVd": {
+                  "enabled": true,
+                  "icon": "folder-plus"
+                },
+                "nZbUt/Hf4GT": {
+                  "content": "Create folder"
+                },
+                "e3c889": {
+                  "enabled": false,
+                  "width": 552
+                },
                 "num3Q": {
                   "type": "frame",
                   "id": "vGgQA",
@@ -106332,43 +106350,61 @@
                   "gap": 12,
                   "children": [
                     {
-                      "id": "tJ9Hz",
-                      "type": "ref",
-                      "ref": "nbn0J",
-                      "name": "Folder name",
+                      "type": "frame",
+                      "id": "kRtJI",
+                      "name": "Folder name entry",
                       "width": "fill_container",
-                      "theme": {
-                        "size": "sm"
-                      },
-                      "descendants": {
-                        "hcIyD": {
-                          "content": "New folder name"
-                        }
-                      }
-                    },
-                    {
-                      "id": "YHNoW",
-                      "type": "ref",
-                      "ref": "c24zV7",
-                      "name": "Create folder",
-                      "theme": {
-                        "btn": "primary",
-                        "size": "sm"
-                      },
-                      "descendants": {
-                        "DsEVd": {
-                          "enabled": false
-                        },
-                        "Hf4GT": {
-                          "content": "Create folder"
-                        },
-                        "khvEs": {
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "tJ9Hz",
+                          "type": "ref",
+                          "ref": "nbn0J",
+                          "name": "Folder name",
+                          "width": "fill_container",
                           "theme": {
-                            "kbd": "raised",
-                            "size": "md"
+                            "size": "sm"
+                          },
+                          "layout": "horizontal",
+                          "justifyContent": "space_between",
+                          "descendants": {
+                            "hcIyD": {
+                              "content": "New folder name"
+                            }
+                          }
+                        },
+                        {
+                          "id": "tzeIx",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Create folder · disabled",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "sm",
+                            "btn-interaction": "disabled"
+                          },
+                          "context": "Disabled while the folder name is empty or contains only spaces.",
+                          "height": 32,
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": true,
+                              "icon": "folder-plus",
+                              "width": 16,
+                              "height": 16
+                            },
+                            "Hf4GT": {
+                              "content": "Create folder"
+                            },
+                            "khvEs": {
+                              "theme": {
+                                "kbd": "raised",
+                                "size": "md"
+                              }
+                            }
                           }
                         }
-                      }
+                      ]
                     }
                   ]
                 },
@@ -106388,7 +106424,8 @@
                   "theme": {
                     "btn": "primary",
                     "size": "sm"
-                  }
+                  },
+                  "enabled": false
                 },
                 "U5CKl9/khvEs": {
                   "theme": {
@@ -107082,8 +107119,8 @@
     {
       "type": "frame",
       "id": "b39KPj",
-      "x": 0,
-      "y": 23009,
+      "x": -440,
+      "y": 28042,
       "name": "Exploration",
       "theme": {
         "mode": "dark"
@@ -115045,7 +115082,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -116358,6 +116395,250 @@
           ]
         }
       ]
+    },
+    {
+      "id": "YHNoW",
+      "type": "ref",
+      "ref": "c24zV7",
+      "name": "Create folder",
+      "theme": {
+        "btn": "primary",
+        "size": "sm"
+      },
+      "layout": "horizontal",
+      "justifyContent": "space_between",
+      "x": 21251,
+      "y": 18567,
+      "descendants": {
+        "DsEVd": {
+          "enabled": false
+        },
+        "Hf4GT": {
+          "content": "Create folder"
+        },
+        "khvEs": {
+          "theme": {
+            "kbd": "raised",
+            "size": "md"
+          }
+        }
+      }
+    },
+    {
+      "id": "C09B8",
+      "type": "ref",
+      "ref": "I2wLw",
+      "name": "Create folder · existing files",
+      "x": 22172,
+      "y": 18634,
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "descendants": {
+        "D5TnMu": {
+          "theme": {
+            "btn": "outline",
+            "size": "sm"
+          }
+        },
+        "zsgoJ": {
+          "theme": {
+            "btn": "outline",
+            "size": "sm"
+          }
+        },
+        "KlD5y": {
+          "content": "/Users/alex/Documents/Project"
+        },
+        "nZbUt": {
+          "name": "Create folder",
+          "theme": {
+            "btn": "primary",
+            "size": "sm"
+          },
+          "enabled": false
+        },
+        "nZbUt/DsEVd": {
+          "enabled": true,
+          "icon": "folder-plus"
+        },
+        "nZbUt/Hf4GT": {
+          "content": "Create folder"
+        },
+        "e3c889": {
+          "enabled": false,
+          "width": 552
+        },
+        "num3Q": {
+          "type": "frame",
+          "id": "pbt95",
+          "name": "Folder state",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "frame",
+              "id": "JCp0E",
+              "name": "Folder name entry",
+              "width": "fill_container",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "F7I9C",
+                  "type": "ref",
+                  "ref": "nbn0J",
+                  "name": "Folder name",
+                  "width": "fill_container",
+                  "theme": {
+                    "size": "sm"
+                  },
+                  "layout": "horizontal",
+                  "justifyContent": "space_between",
+                  "descendants": {
+                    "hcIyD": {
+                      "content": "assets",
+                      "fill": "$ds-fg"
+                    }
+                  }
+                },
+                {
+                  "id": "cK3wr",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Create folder",
+                  "theme": {
+                    "btn": "primary",
+                    "size": "sm",
+                    "btn-interaction": "default"
+                  },
+                  "context": "Enabled when the folder name is valid and nonempty.",
+                  "height": 32,
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": true,
+                      "icon": "folder-plus",
+                      "width": 16,
+                      "height": 16
+                    },
+                    "Hf4GT": {
+                      "content": "Create folder"
+                    },
+                    "khvEs": {
+                      "theme": {
+                        "kbd": "raised",
+                        "size": "md"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "JH13x",
+              "name": "Existing files",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "id": "uwQ8L",
+                  "type": "ref",
+                  "ref": "hIyB7",
+                  "name": "src",
+                  "width": "fill_container",
+                  "height": 36,
+                  "descendants": {
+                    "vsjz1": {
+                      "icon": "folder"
+                    },
+                    "h0cJn": {
+                      "content": "src"
+                    }
+                  }
+                },
+                {
+                  "id": "Tr0yR",
+                  "type": "ref",
+                  "ref": "hIyB7",
+                  "name": "README.md",
+                  "width": "fill_container",
+                  "height": 36,
+                  "descendants": {
+                    "vsjz1": {
+                      "icon": "file-text"
+                    },
+                    "h0cJn": {
+                      "content": "README.md"
+                    }
+                  }
+                },
+                {
+                  "id": "OM8Pd",
+                  "type": "ref",
+                  "ref": "hIyB7",
+                  "name": "package.json",
+                  "width": "fill_container",
+                  "height": 36,
+                  "descendants": {
+                    "vsjz1": {
+                      "icon": "file-json"
+                    },
+                    "h0cJn": {
+                      "content": "package.json"
+                    }
+                  }
+                },
+                {
+                  "id": "AKlUr",
+                  "type": "ref",
+                  "ref": "hIyB7",
+                  "name": "notes.md",
+                  "width": "fill_container",
+                  "height": 36,
+                  "descendants": {
+                    "vsjz1": {
+                      "icon": "file-text"
+                    },
+                    "h0cJn": {
+                      "content": "notes.md"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "z28bu": {
+          "theme": {
+            "btn": "outline",
+            "size": "sm"
+          }
+        },
+        "z28bu/khvEs": {
+          "theme": {
+            "kbd": "raised",
+            "size": "md"
+          }
+        },
+        "U5CKl9": {
+          "theme": {
+            "btn": "primary",
+            "size": "sm"
+          },
+          "enabled": false
+        },
+        "U5CKl9/khvEs": {
+          "theme": {
+            "kbd": "raised",
+            "size": "md"
+          }
+        }
+      }
     }
   ],
   "themes": {
