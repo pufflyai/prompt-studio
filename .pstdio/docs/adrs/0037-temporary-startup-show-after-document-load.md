@@ -1,4 +1,4 @@
-# Temporary startup window display after document load
+# Temporary startup window display at DOM readiness
 
 Proposed: 2026-09-09
 
@@ -28,19 +28,23 @@ make that event reliable by waiting longer.
 
 ## Decision and trade-offs
 
-Show the native window in the local startup document's `did-finish-load` handler,
-then resolve the existing first-show promise. Workbench attachment and native title
-bar updates still wait for that promise. This lets Chromium paint in a visible
-window. This is a temporary workaround, not the intended first-paint ordering.
+Show the native window in the local startup document's `dom-ready` handler,
+then resolve the existing first-show promise. The prerendered document already
+contains the styled startup screen, so remaining resources can load after the
+window becomes visible. Workbench attachment and native title bar updates still
+wait for that promise. This lets Chromium paint in a visible window. This is a
+temporary workaround, not the intended first-paint ordering.
 
 Initialize lifecycle actions without waiting for animation frames. The lifecycle
 renderer remains mounted under the workbench, where occlusion can pause animation
 frames. Recovery and quit actions must continue to work in that state.
 
 The first native frame may appear before Chromium composites the startup content.
-Waiting for the local document and its assets to load limits that interval. The
-packaged readiness checks still measure both native visibility and first contentful
-paint; showing an empty window does not satisfy those checks.
+DOM readiness does not guarantee that all resources have loaded or that the first
+frame has painted. Showing the prerendered screen at that point avoids keeping the
+window hidden while remaining resources load. The packaged readiness checks still
+measure both native visibility and first contentful paint; showing an empty window
+does not satisfy those checks.
 
 ## Isolation
 
