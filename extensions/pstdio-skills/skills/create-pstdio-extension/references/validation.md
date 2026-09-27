@@ -26,6 +26,16 @@ In PowerShell, set `$env:BUN_BE_BUN = "1"`, run the same commands without the en
 
 Run the TypeScript command only when the extension has TypeScript installed and a `tsconfig.json`. Preserve any extra compiler options from its typecheck script. Execute the package's JavaScript entry file directly: package-command wrappers can require a separate runtime on Windows. For first-party extension behavior, prefer tests next to the relevant extension file or in the package that owns the runtime behavior.
 
+## Choose a check
+
+| Command | What it proves | What still needs review |
+| --- | --- | --- |
+| `pst extensions check` | Installed declarations, references, and host compatibility pass static checks | The rendered UI and user interactions |
+| `pst extensions dev <source>` | The linked project receives a validated development snapshot and rebuilt webviews | The open view actually loaded that snapshot and behaves correctly |
+| `pst extensions test <source>` | Installation and initial resource-free pages work in an isolated dashboard | Resource pages, optional views, and interactions listed as unexercised |
+
+Use the commands available in the target CLI's `extensions --help`; an older host may not include the isolated test command. Report the host version when a required capability is missing. A typecheck validates imports and declarations, not layout or bridge behavior.
+
 ## Local development loop
 
 Run Prompt Studio and start the extension watcher from a linked git project:
@@ -100,6 +110,18 @@ Inspect what the host actually loaded before clicking through the UI:
   contribution and its diagnostics, even while the extension is disabled.
 - For scripted checks, the same data is served by
   `GET /v1/projects/{projectId}/extensions/{instanceId}/contributions`.
+
+## Review a resource tool manually
+
+Resource pages need actual resource targets; a smoke run that opens no such page does not validate them. For the [resource reviewer](examples.md#resource-reviewer), open its navigation item, then exercise:
+
+- Select both catalog items in the tree, and open one through command-palette search. Confirm they use the same labels and destination.
+- Edit the heading and details option, then Apply. Confirm the preview changes. Reset from the preview and confirm the native inspector refreshes too.
+- Switch resources during a read and after saving. Each resource must show its own settings; obsolete responses must not replace the selected resource's content.
+- Leave the page and reopen it. Saved settings survive; subscriptions and transient state belong to the current mounted view. Inspect cleanup when a visual check cannot reveal a leaked subscription.
+- Resize Main and its attached menus. The preview stays within Main, its toolbar remains reachable, and scrolling stays in `ScrollArea` or the native inspector. Check light and dark themes.
+
+A successful build is not proof that a currently open webview loaded it. Reopen or reload the affected view and inspect the visible result and runtime errors. If the host still serves stale content, capture the contribution ID and host version as a platform bug; do not add a cache-busting workaround to the example.
 
 ## Packaged artifacts
 
