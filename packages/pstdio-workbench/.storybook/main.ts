@@ -1,13 +1,14 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { StorybookConfig } from "@storybook/react-vite";
-import { mergeConfig } from "vite";
+import { mergeConfig, withFilter } from "vite";
 
 function getAbsolutePath(value: string) {
   return dirname(fileURLToPath(import.meta.resolve(`${value}/package.json`)));
 }
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
+const sourceDir = resolve(rootDir, "../src");
 
 const config: StorybookConfig = {
   stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
@@ -15,8 +16,14 @@ const config: StorybookConfig = {
   framework: getAbsolutePath("@storybook/react-vite"),
   // Chakra's package.json declares a public Storybook URL. Composing it makes startup depend on the network.
   refs: { "@chakra-ui/react": { disable: true } },
-  viteFinal: async (config) =>
+  viteFinal: async ({ plugins = [], ...config }) =>
     mergeConfig(config, {
+      // Temporary workaround, see ADR 0042. Docgen skips only node_modules, so it would also parse the linked
+      // @pstdio/ui and @pstdio/sdk files. They made up most of the cold start time.
+      plugins: withFilter(plugins, {
+        pluginNamePattern: ["storybook:react-docgen-plugin"],
+        transform: { id: { include: `${sourceDir}/**` } },
+      }),
       resolve: {
         alias: [
           { find: /^@pstdio\/workbench\/react$/, replacement: resolve(rootDir, "../src/react/index.ts") },
