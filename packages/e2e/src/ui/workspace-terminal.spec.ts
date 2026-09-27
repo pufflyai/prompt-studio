@@ -108,6 +108,7 @@ test("restores the first terminal when the hidden launcher was persisted active"
   try {
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}`);
+    await expect(page.getByTestId("start-page")).toBeVisible();
 
     const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
     if (await showSecondary.isVisible()) await showSecondary.click();
