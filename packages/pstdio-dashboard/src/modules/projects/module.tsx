@@ -42,8 +42,6 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
     placement: "center",
     scrollBehavior: "inside",
     closeOnInteractOutside: false,
-    // Center the close trigger within the 3rem search header instead of the default top offset.
-    closeTriggerTop: "3.5",
   };
   ctx.overlays.registerOverlay({
     id: dashboardWidgetIds.projectPicker,

@@ -58,7 +58,6 @@ const registerNotificationWidget = (ctx: WorkbenchModuleContext) => {
       size: "lg",
       placement: "center",
       scrollBehavior: "inside",
-      closeTriggerTop: "3.5",
     },
   });
   return [view, overlay];
