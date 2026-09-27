@@ -9,11 +9,59 @@ import { applyTicketTemplateCommand } from "./apply-ticket-template";
 import { makeCommandArgs } from "./command-context.fixture";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { pullTicketCommand } from "./pull-ticket";
+import { saveTicketCommand } from "./save-ticket";
 import { writeTicketCommand } from "./write-ticket";
 
 const roots: string[] = [];
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+
+test("ticket file listing and pulling reject unsafe stored names before exposing paths or writing files", async () => {
+  const storage = createMemoryStorage();
+  const projectFiles = createMemoryRepoFiles();
+  const now = new Date().toISOString();
+  await ticketsCollection(storage).put("ticket-1", {
+    id: "ticket-1",
+    shorthand: "T-1",
+    title: "Draft",
+    content: "",
+    statusId: null,
+    archived: false,
+    sortOrder: 0,
+    createdAt: now,
+    updatedAt: now,
+    files: [{ id: "unsafe", name: "../../outside.txt", content: "", createdAt: now, updatedAt: now }],
+  });
+  await expect(
+    listTicketFilesCommand.run(...makeCommandArgs({ storage, params: { id: "T-1" }, overrides: { projectFiles } })),
+  ).rejects.toThrow("Invalid ticket file name");
+  await expect(
+    pullTicketCommand.run(
+      ...makeCommandArgs({ storage, params: { id: "T-1", force: true }, overrides: { projectFiles } }),
+    ),
+  ).rejects.toThrow("Invalid ticket file name");
+  expect(await projectFiles.list()).toEqual([]);
+});
+
+test("nested ticket files survive saving, listing and pulling", async () => {
+  const storage = createMemoryStorage();
+  const projectFiles = createMemoryRepoFiles();
+  const { shorthand } = await writeTicketCommand.run(
+    ...makeCommandArgs({ storage, params: { title: "Nested files" }, overrides: { projectFiles } }),
+  );
+  const path = `${ticketFilesDir(shorthand)}/screenshots/diagram.svg`;
+  await projectFiles.writeText(path, "<svg />");
+  await saveTicketCommand.run(...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { projectFiles } }));
+  const files = await listTicketFilesCommand.run(
+    ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { projectFiles } }),
+  );
+  expect(files).toMatchObject([{ file: "screenshots/diagram.svg", local: "yes", storage: "yes" }]);
+  await projectFiles.delete(path);
+  await pullTicketCommand.run(
+    ...makeCommandArgs({ storage, params: { id: shorthand, force: true }, overrides: { projectFiles } }),
+  );
+  expect(await projectFiles.readText(path)).toBe("<svg />");
 });
 
 test("ticket draft commands return usable project paths when the selected workspace is elsewhere", async () => {

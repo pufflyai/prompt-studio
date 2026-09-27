@@ -190,6 +190,7 @@ describe("pstdio planner workspace contributions", () => {
           branch: "workspace/T-1_A1",
           workspace: {
             id: "workspace-1",
+            execution_kind: "local",
             anchors_json: [
               { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
             ],
@@ -228,6 +229,7 @@ describe("pstdio planner workspace contributions", () => {
           branch: "workspace/T-1_A1",
           workspace: {
             id: "workspace-1",
+            execution_kind: "local",
             anchors_json: [
               { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
             ],

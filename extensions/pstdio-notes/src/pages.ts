@@ -10,6 +10,7 @@ import {
   viewDataEvents,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { notesFileAccess } from "./file-access";
 import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
 
 export const notesChanged = eventRef<{ noteId?: string }>({
@@ -40,6 +41,11 @@ export const editor = defineView({
     refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
     load: async (ctx, { renderer }) => {
       const id = renderer.resource?.id;
+      const { readable, writable } = await notesFileAccess(ctx);
+      if (!readable)
+        return {
+          emptyState: { title: "Notes unavailable", description: "Open a ready local project folder to read notes." },
+        };
       const mount = notesMount(ctx);
       // Reloads still handle missed removal events, including offline clients.
       if (!id || !(await noteExists(mount, id))) {
@@ -55,6 +61,7 @@ export const editor = defineView({
         fileName: `${id}.md`,
         mimeType: "text/markdown",
         content: await readNote(mount, id),
+        editable: writable,
         placeholder: "Write your notes here...",
       };
     },
@@ -87,6 +94,7 @@ export const notesPage = definePage({
         refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
         query: async (ctx, { renderer }) => {
           const id = renderer.resource?.id;
+          if (!(await notesFileAccess(ctx)).readable) return {};
           const mount = notesMount(ctx);
           if (!id || !(await noteExists(mount, id))) return {};
           return { label: await readNoteTitle(mount, id) };

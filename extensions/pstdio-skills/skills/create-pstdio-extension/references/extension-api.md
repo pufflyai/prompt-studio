@@ -80,7 +80,7 @@ extension id     pstdio.planner
 local command id tickets.create
 runtime id       pstdio.planner.command.tickets.create
 CLI path         pst planner tickets create
-artifact root    <repo>/.pstdio/extension-storage/planner/
+artifact root    <project-folder>/.pstdio/extension-storage/planner/
 template id      planner.ticket
 skill id         planner.create-guide
 theme id         planner.monokai
@@ -159,15 +159,15 @@ points with `menus` and a host-owned workbench target such as `workbench.nav.act
 `workbench.nav.overflow`. Add command palette entries explicitly with `palette`.
 
 Available param builders include `params.text`, `params.longText`, `params.number`, `params.boolean`,
-`params.select`, `params.multiSelect`, `params.repo`, `params.harness`, `params.resource`, and
+`params.select`, `params.multiSelect`, `params.harness`, `params.resource`, and
 `params.json`.
 
 Command params are the handler's second argument. `ctx` in a command includes:
 
-- `projectId`, `workspaceId`, `project`, `extensionId`, `name`, `repo`, `source`, and `resource`
+- `projectId`, `workspaceId`, `project`, `extensionId`, `name`, `source`, and `resource`
 - `commandId`, `invocationId`, `signal`, `invocation`, `attachment`, and `slot`
 - `attachment` for host-owned workbench invocations, including the target, mode, project, and active resource
-- `storage`, `artifacts`, `files`, read-only `packageFiles`, and repo-scoped `extensionFiles`
+- `storage`, `artifacts`, `files`, read-only `packageFiles`, and project-scoped `extensionFiles`
 - `projectFiles`, `workspaceFiles`, `skills`, `sessions`, and `workspaces`
 - `commands`, `events`, `activity`, `notify`
 - `process`, optional `terminal`, `net`, `connections`, `logger`, and `settings`
@@ -217,7 +217,7 @@ Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/exten
 
 A webview can read files from an artifact mount its extension defines. Declare one grant per mount with
 `artifactsRead(mount)`; there is no wildcard grant. A mount's `path` is relative to the extension's
-package-name root in the repo's extension storage directory (`<repo>/.pstdio/extension-storage/<package-name>/<path>/`); its `id` only names the
+package-name root in the default workspace's extension storage directory (`<project-folder>/.pstdio/extension-storage/<package-name>/<path>/`); its `id` only names the
 mount in refs and grants and never changes the disk path.
 
 ```ts
@@ -270,13 +270,12 @@ if (selected) {
 }
 ```
 
-Omitting `scope` uses project scope. Pass `{ type: "repo", id: repoId }`,
-`{ type: "resource", id: resource.id }`, or an extension-defined `{ type, id }` to
+Omitting `scope` uses project scope. Pass `{ type: "resource", id: resource.id }`,
+or an extension-defined `{ type, id }` to
 upload and list another group. Commands address those scopes with different runtime
 shapes:
 
 ```ts
-ctx.storage.scope({ type: "repo", repoId }).files;
 ctx.storage.scope({ type: "resource", resource }).files;
 ctx.storage.scope({ type: "import", id: importId }).files;
 ```

@@ -1,5 +1,6 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { ticketsCollection, updateTicket } from "./collections";
+import { validateTicketFileName } from "./ticket-file-name";
 import type { StoredTicketFile } from "./types";
 
 const loadTicket = async (storage: ExtensionStorageApi, ticketId: string) => {
@@ -23,7 +24,7 @@ export const createTicketFile = async (input: { storage: ExtensionStorageApi; ti
   const now = new Date().toISOString();
   const file: StoredTicketFile = {
     id: crypto.randomUUID(),
-    name: input.name?.trim() || nextUntitledName(ticket.files ?? []),
+    name: validateTicketFileName(input.name?.trim() || nextUntitledName(ticket.files ?? [])),
     content: "",
     createdAt: now,
     updatedAt: now,
@@ -39,6 +40,7 @@ export const updateTicketFile = async (input: {
   content?: string;
   name?: string;
 }) => {
+  if (input.name !== undefined) validateTicketFileName(input.name);
   const ticket = await loadTicket(input.storage, input.ticketId);
   const now = new Date().toISOString();
   const files = (ticket.files ?? []).map((file) =>

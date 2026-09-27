@@ -15,6 +15,7 @@ import {
   resolveTicketId,
 } from "../data/resolve";
 import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
+import { validateTicketFileName } from "../data/ticket-file-name";
 import type { StoredTicket, StoredTicketFile } from "../data/types";
 import { deriveTitle } from "../utils/derive-title";
 
@@ -27,7 +28,7 @@ const readTicketFiles = async (projectFiles: ArtifactMount, ticket: StoredTicket
 
   return Promise.all(
     entries.map(async (entry): Promise<StoredTicketFile> => {
-      const name = fileNameFromPath(ticket.shorthand, entry.path);
+      const name = validateTicketFileName(fileNameFromPath(ticket.shorthand, entry.path));
       const content = await projectFiles.readText(entry.path);
       const existing = previous.get(name);
       return existing

@@ -2,6 +2,7 @@ import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } f
 import { ticketsCollection } from "../data/collections";
 import { requireTicketDraftFiles, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
+import { validateTicketFileName } from "../data/ticket-file-name";
 import type { StoredTicket } from "../data/types";
 
 const pullTicket = async (input: {
@@ -16,6 +17,7 @@ const pullTicket = async (input: {
   // Without --force, never clobber local edits.
   if (!input.force && (await projectFiles.exists(markdownPath))) return { shorthand: ticket.shorthand, skipped: true };
 
+  for (const file of ticket.files ?? []) validateTicketFileName(file.name);
   await projectFiles.writeText(markdownPath, await ticketToMarkdown(input.storage, ticket));
   for (const file of ticket.files ?? []) {
     await projectFiles.writeText(`${ticketFilesDir(ticket.shorthand)}/${file.name}`, file.content);

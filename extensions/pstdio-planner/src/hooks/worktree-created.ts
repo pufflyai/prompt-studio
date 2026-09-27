@@ -29,6 +29,7 @@ export const worktreeCreatedHook = defineHook<WorkspaceProvisionPayload>({
   id: "worktree-created",
   event: workspaceEvents.provision,
   async run(ctx, payload) {
+    if (payload.workspace.execution_kind !== "local") return;
     const ticketRef = ticketRefFromAnchors(payload.workspace.anchors_json);
     if (!ticketRef) return;
 

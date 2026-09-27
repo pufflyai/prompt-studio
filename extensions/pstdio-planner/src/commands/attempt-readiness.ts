@@ -59,7 +59,12 @@ export const loadAttemptReadiness = async (
   const settings = await ctx.settings.all();
   const configuredCapacity = settings["automation.maxInProgress"];
   const maxInProgress = typeof configuredCapacity === "number" ? configuredCapacity : 2;
-  const mainHeadSha = await runGit(ctx, rootPath, ["rev-parse", commandParams.base ?? "HEAD"]);
+  const mainHeadSha = await runGit(ctx, rootPath, [
+    "rev-parse",
+    "--verify",
+    "--end-of-options",
+    `${commandParams.base ?? "HEAD"}^{commit}`,
+  ]);
   const doneStatusIds = new Set(
     statuses.filter((status) => status.name.trim().toLowerCase() === "done").map((status) => status.id),
   );

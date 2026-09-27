@@ -3,9 +3,23 @@ import { createNote, deleteNote, listNotes, renameNote } from "./notes";
 import { editor, notesPage } from "./pages";
 import { createNotesMount } from "./test-mount";
 
-const createContext = () => {
+const createContext = (files = "write") => {
   const mount = createNotesMount();
-  return { mount, ctx: { artifacts: { mount: () => mount }, events: { emit: async () => undefined } } };
+  return {
+    mount,
+    ctx: {
+      artifacts: { mount: () => mount },
+      events: { emit: async () => undefined },
+      workspaces: {
+        getDefault: async () => ({
+          execution_kind: "local",
+          provider_state: "ready",
+          root_path: "/notes",
+          provider_capabilities_json: { files },
+        }),
+      },
+    },
+  };
 };
 
 const load = (ctx: unknown, id?: string) =>
@@ -21,6 +35,19 @@ const save = (ctx: unknown, id: string, content: string) =>
   );
 
 describe("note editor", () => {
+  test("loads read-only note content without allowing edits", async () => {
+    const { ctx, mount } = createContext("read");
+    const note = await createNote(mount, "Read-only note");
+    expect(await load(ctx, note.id)).toMatchObject({ content: "", editable: false });
+  });
+
+  test("does not read unavailable note files", async () => {
+    const { ctx } = createContext("none");
+    ctx.artifacts.mount = () => {
+      throw new Error("Files unavailable");
+    };
+    expect(await load(ctx, "note-1")).toMatchObject({ emptyState: expect.any(Object) });
+  });
   test("opens a new note with an empty body", async () => {
     const { ctx, mount } = createContext();
     const note = await createNote(mount, "Release checklist");
