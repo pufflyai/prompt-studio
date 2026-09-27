@@ -99,15 +99,16 @@ test("copies a research draft, tracks posting, and saves research settings", asy
     await page.getByText("Managing coding agents", { exact: true }).click();
     await page.getByRole("textbox", { name: "Title", exact: true }).fill("Managing several coding agents");
     await page.getByRole("textbox", { name: "Community or channel" }).fill("Hacker News");
-    await page.getByRole("button", { name: "Apply" }).focus();
-    await page.keyboard.press("Enter");
-    await expect.poll(async () => {
-      const savedThread = await request.post(
-        `/v1/projects/${projectId}/extensions/commands/pstdio.social-radar.command.list-posted/execute`,
-        { data: { params: {}, source: "cli" } },
-      );
-      return (await savedThread.json()).outcome.value.threads[0];
-    }).toMatchObject({ title: "Managing several coding agents", community: "Hacker News", status: "posted" });
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect
+      .poll(async () => {
+        const savedThread = await request.post(
+          `/v1/projects/${projectId}/extensions/commands/pstdio.social-radar.command.list-posted/execute`,
+          { data: { params: {}, source: "cli" } },
+        );
+        return (await savedThread.json()).outcome.value.threads[0];
+      })
+      .toMatchObject({ title: "Managing several coding agents", community: "Hacker News", status: "posted" });
     await page.goto(`/projects/${projectId}/extensions/pstdio.social-radar/social-radar`);
     await frame.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("textbox", { name: "Topic 1" }).fill("bespoke tools");
@@ -118,19 +119,22 @@ test("copies a research draft, tracks posting, and saves research settings", asy
     await page.getByRole("textbox", { name: "Add competitor" }).fill("Another tool");
     await page.getByRole("textbox", { name: "Add target" }).fill("r/PromptStudio");
     await page.getByRole("spinbutton").first().fill("2");
-    await page.getByRole("button", { name: "Apply" }).focus();
-    await page.keyboard.press("Enter");
-    const settings = await request.post(
-      `/v1/projects/${projectId}/extensions/commands/pstdio.social-radar.command.get-settings/execute`,
-      { data: { params: {}, source: "cli" } },
-    );
-    expect((await settings.json()).outcome.value).toMatchObject({
-      topics: ["bespoke tools"],
-      voice: "Be brief and helpful.",
-      competitors: ["Another tool"],
-      targets: { reddit: ["r/ClaudeAI", "r/LocalLLaMA", "r/ChatGPTCoding", "r/PromptStudio"] },
-      budgets: { reddit: 2 },
-    });
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect
+      .poll(async () => {
+        const settings = await request.post(
+          `/v1/projects/${projectId}/extensions/commands/pstdio.social-radar.command.get-settings/execute`,
+          { data: { params: {}, source: "cli" } },
+        );
+        return (await settings.json()).outcome.value;
+      })
+      .toMatchObject({
+        topics: ["bespoke tools"],
+        voice: "Be brief and helpful.",
+        competitors: ["Another tool"],
+        targets: { reddit: ["r/ClaudeAI", "r/LocalLLaMA", "r/ChatGPTCoding", "r/PromptStudio"] },
+        budgets: { reddit: 2 },
+      });
   } finally {
     if (projectId) await request.delete(`/v1/projects/${projectId}`);
     rmSync(root, { recursive: true, force: true });
