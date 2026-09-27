@@ -33,12 +33,14 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
     files: Array<{ path: string }>;
     name: string;
   }>;
-  expect(skills).toContainEqual(
-    expect.objectContaining({
-      name: "implement-ticket",
-      files: expect.arrayContaining([expect.objectContaining({ path: "SKILL.md" })]),
-    }),
-  );
+  for (const name of ["implement-ticket", "pstdio"]) {
+    expect(skills).toContainEqual(
+      expect.objectContaining({
+        name,
+        files: expect.arrayContaining([expect.objectContaining({ path: "SKILL.md" })]),
+      }),
+    );
+  }
   expect(skills).toContainEqual(
     expect.objectContaining({
       name: "create-pstdio-extension",

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
+import { workspaces } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createWorkspacesDBService } from "./workspaces";
 
@@ -39,6 +41,9 @@ describe("createWorkspacesDBService rename", () => {
       root_path: "/repo/.pstdio/workspaces/PS-1_A1",
     });
 
+    // A create and rename may finish in the same millisecond; use a distinct saved timestamp.
+    const previousUpdate = "2000-01-01T00:00:00.000Z";
+    await db.update(workspaces).set({ updated_at: previousUpdate }).where(eq(workspaces.id, ws.id));
     const renamed = await workspacesService.rename(ws.id, "  Spike - API only  ");
 
     expect(renamed).not.toBeNull();
@@ -47,7 +52,7 @@ describe("createWorkspacesDBService rename", () => {
     expect(renamed!.workspace_shorthand).toBe(ws.workspace_shorthand);
     expect(renamed!.branch).toBe(ws.branch);
     expect(renamed!.root_path).toBe(ws.root_path);
-    expect(renamed!.updated_at).not.toBe(ws.updated_at);
+    expect(renamed!.updated_at).not.toBe(previousUpdate);
   });
 
   test("returns null for missing, archived, or deleted workspaces", async () => {

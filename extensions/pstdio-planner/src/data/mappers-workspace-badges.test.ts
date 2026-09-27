@@ -40,6 +40,7 @@ describe("ticket workspace badges", () => {
     const workspace: ExtensionWorkspace = {
       id: "workspace-1",
       workspace_shorthand: "T-1_A1",
+      anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
       ...target,
     };
 

@@ -19,7 +19,10 @@ const home: ExtensionWorkspace = {
 };
 
 describe("ticket work in shared folders", () => {
-  test("archiving a ticket preserves the shared workspace", async () => {
+  test.each([
+    { linked: false },
+    { linked: true },
+  ])("archiving a ticket preserves the project folder (linked: $linked)", async ({ linked }) => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
     const archive = mock(async () => home);
@@ -29,11 +32,58 @@ describe("ticket work in shared folders", () => {
         params: {},
         overrides: {
           resource: { type: "ticket", id: ticket.id },
-          workspaces: { list: async () => [home], archive },
+          workspaces: {
+            list: async () => [
+              {
+                ...home,
+                anchors_json: linked ? [{ type: "ticket", id: ticket.id, shorthand: ticket.shorthand }] : [],
+              },
+            ],
+            archive,
+          },
         },
       }),
     );
     expect(archive).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    { supportsArchive: false },
+    { supportsArchive: true },
+  ])("archiving a ticket respects a remote provider's archive capability ($supportsArchive)", async ({
+    supportsArchive,
+  }) => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Remote" } }));
+    const remote = {
+      ...home,
+      id: "remote",
+      is_default: false,
+      provider_id: "example.cloud",
+      execution_kind: "remote" as const,
+      root_path: null,
+      provider_capabilities_json: { archive: supportsArchive },
+      anchors_json: [{ type: "ticket", id: ticket.id, shorthand: ticket.shorthand }],
+    };
+    const archive = mock(async () => {
+      if (!supportsArchive) throw new Error("This provider does not support archiving");
+      return remote;
+    });
+    const action = mock(async () => undefined);
+    const result = await archiveTicketCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: {},
+        overrides: {
+          resource: { type: "ticket", id: ticket.id },
+          workspaces: { list: async () => [remote], archive },
+          notify: { action },
+        },
+      }),
+    );
+    expect(result?.archived).toBe(true);
+    expect(archive).toHaveBeenCalledTimes(supportsArchive ? 1 : 0);
+    expect(action).not.toHaveBeenCalled();
   });
 
   test("managed attempts still require a usable Git provider", async () => {

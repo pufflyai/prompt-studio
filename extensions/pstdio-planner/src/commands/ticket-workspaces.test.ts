@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -85,4 +86,45 @@ test.each([
   }
   expect(await ticketWorktreesRemoveAllCommand.run(...args)).toEqual({ removed: 1 });
   expect(removed).toEqual(["git"]);
+});
+
+test("bulk worktree cleanup refuses shared worktrees before removing any workspace", async () => {
+  const storage = createMemoryStorage();
+  const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "One" } }));
+  const anchor = { type: "ticket", id: ticket.id, shorthand: ticket.shorthand };
+  const exclusive: ExtensionWorkspace = {
+    id: "exclusive",
+    provider_id: "pstdio.worktree",
+    execution_kind: "local",
+    root_path: "/exclusive",
+    anchors_json: [anchor],
+  };
+  const shared: ExtensionWorkspace = {
+    id: "shared",
+    workspace_shorthand: "WS-2",
+    provider_id: "pstdio.worktree",
+    execution_kind: "local",
+    root_path: "/shared",
+    anchors_json: [anchor, { type: "ticket", id: "other-ticket", shorthand: "T-2" }],
+  };
+  const removed: string[] = [];
+  const args = makeCommandArgs({
+    storage,
+    params: { id: ticket.id },
+    overrides: {
+      workspaces: {
+        list: async () => [exclusive, shared],
+        removeWorktree: async (id) => {
+          removed.push(id);
+          return { removed: true };
+        },
+      },
+    },
+  });
+  await expect(ticketWorktreesRemoveAllCommand.run(...args)).rejects.toThrow("WS-2 is linked to other tickets");
+  expect(removed).toEqual([]);
+
+  shared.anchors_json = [anchor];
+  expect(await ticketWorktreesRemoveAllCommand.run(...args)).toEqual({ removed: 2 });
+  expect(removed).toEqual(["exclusive", "shared"]);
 });

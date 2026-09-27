@@ -18,6 +18,8 @@ pst tickets save --id <id> [--status <status>]
 pst tickets pull [--id <id>] [--force]
 pst tickets files --id <id>
 pst tickets implement --id <id> [--agent <agent>]
+pst tickets link --id <id> (--workspace <workspace> | --session <session-id>)
+pst tickets unlink --id <id> (--workspace <workspace> | --session <session-id>)
 pst tickets workspaces --id <id>
 pst tickets worktrees list --id <id>
 pst tickets worktrees remove-all --id <id>
@@ -58,8 +60,27 @@ pst tickets save --id PS-12
 
 ## Workspaces and reviews
 
-`implement` starts a managed implementation attempt. Use `workspaces` or `worktrees list` to inspect the work linked to a ticket. `worktrees remove-all` removes every linked worktree.
+`implement` starts a managed implementation attempt. Use `workspaces` or `worktrees list` to inspect the work linked to a ticket. `worktrees remove-all` removes every linked worktree. It refuses the entire operation if a worktree is shared with another ticket. Unlink the shared workspace from this ticket first, then retry cleanup.
 
 `link-review` attaches a review URL, such as a pull request, to the ticket. Repeating the command with the same URL keeps the existing link and its metadata. `proposal-refined` marks a proposal as ready for a person to review.
 
 See the [Planner CLI index](./index.md) for namespaced attempt and review commands.
+
+## Link workspaces and sessions
+
+Create a Git worktree workspace, then link each ticket you want to work on:
+
+```sh
+pst workspaces create --provider pstdio.worktree
+pst tickets link --id PS-1 --workspace WS-19
+pst tickets link --id PS-2 --workspace WS-19
+pst tickets workspaces --id PS-2
+```
+
+For separate workspaces, create one per ticket and link each separately. Other workspace types use their provider ID and declared parameters. An existing project folder or remote workspace can also be linked by its shorthand or ID. Link an existing session with `pst tickets link --id PS-1 --session <session-id>`.
+
+Both commands require exactly one target. Workspaces accept a shorthand or ID; sessions accept an ID. Repeating a link refreshes its anchor without adding a duplicate and preserves its existing role. New links use the context role. Every linked ticket shows the workspace or session. Links use resource anchors, not workspace or branch names. Linking does not copy ticket drafts.
+
+Remove a link with `pst tickets unlink --id PS-1 --workspace WS-19` or `--session <session-id>`. Other ticket links remain. A managed attempt's own ticket cannot be unlinked from its workspace, implementation session, or review sessions.
+
+Archiving a ticket only archives a shared workspace after all tickets linked to it are archived. The default project folder and providers that do not support archiving stay available.

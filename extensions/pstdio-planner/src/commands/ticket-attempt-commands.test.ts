@@ -86,12 +86,35 @@ describe("ticket workspace listing", () => {
       params: { id },
       overrides: {
         workspaces: {
-          list: async () =>
-            [
-              { id: "w1", workspace_shorthand: "T-1_A1", branch: "b1", root_path: "/wt/1" },
-              { id: "w2", workspace_shorthand: "T-1_A2", branch: "b2", root_path: null },
-              { id: "w3", workspace_shorthand: "T-2_A1", branch: "b3", root_path: "/wt/3" },
-            ].map((workspace) => ({ ...workspace, provider_id: "pstdio.worktree", execution_kind: "local" })),
+          list: async () => [
+            {
+              id: "w1",
+              anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
+              workspace_shorthand: "T-1_A1",
+              branch: "b1",
+              root_path: "/wt/1",
+              provider_id: "pstdio.worktree",
+              execution_kind: "local",
+            },
+            {
+              id: "w2",
+              anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
+              workspace_shorthand: "T-1_A2",
+              branch: "b2",
+              root_path: null,
+              provider_id: "pstdio.worktree",
+              execution_kind: "local",
+            },
+            {
+              id: "w3",
+              anchors_json: [{ type: "ticket", id: "ticket-2", shorthand: "T-2" }],
+              workspace_shorthand: "T-2_A1",
+              branch: "b3",
+              root_path: "/wt/3",
+              provider_id: "pstdio.worktree",
+              execution_kind: "local",
+            },
+          ],
         },
         sessions: {
           listByWorkspace: async (workspaceId: string) => sessionsByWorkspace[workspaceId] ?? [],
