@@ -1,4 +1,4 @@
-# 0012. The webview client derives types from the commands record, not the extension definition
+# ADR 0012: Temporary webview client type source
 
 Date: 2026-08-25
 ## Status

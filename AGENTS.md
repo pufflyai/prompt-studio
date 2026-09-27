@@ -55,6 +55,8 @@ Follow these principles:
 
 If an external limit makes a workaround unavoidable, create an architecture decision record (ADR) in `.pstdio/docs/adrs` before writing the workaround. Use the next four-digit number and a kebab-case filename.
 
+Temporary-workaround ADR filenames must contain `-temporary-`, including superseded records. Their document titles must include the word "Temporary".
+
 Every temporary-workaround ADR must include a `## Removal` section and either a `## Limitations` or `## External limitation` section.
 
 The ADR must explain:

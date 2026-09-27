@@ -1,4 +1,4 @@
-# ADR: Temporarily Implement Desktop Lifecycle Without Pencil
+# ADR: Temporary Desktop Lifecycle Implementation Without Pencil
 
 ## Status
 

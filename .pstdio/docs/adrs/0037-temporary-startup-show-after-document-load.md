@@ -1,4 +1,4 @@
-# Temporarily show the startup window after its document loads
+# Temporary startup window display after document load
 
 ## Status
 

@@ -1,4 +1,4 @@
-# Temporarily use space-free Linux desktop package paths
+# Temporary space-free Linux desktop package paths
 
 ## Status
 

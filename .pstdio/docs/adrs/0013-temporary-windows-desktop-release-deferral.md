@@ -1,4 +1,4 @@
-# ADR: Temporarily Defer the Windows Desktop Release
+# ADR: Temporary Windows Desktop Release Deferral
 
 ## Status
 
