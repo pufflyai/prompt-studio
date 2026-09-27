@@ -10,6 +10,8 @@ import { removeTestDirectory } from "./remove-test-directory";
 import { stopPackagedProcess } from "./stop-packaged-process";
 import { stopPackagedRuntime } from "./stop-packaged-runtime";
 
+// This starts two full Node and Playwright processes (runner and worker). On Linux CI, with three suites
+// running in parallel, it takes a median of 4.0 s and up to 5.0 s. The user approved 10 s on 2026-09-27.
 test("terminates packaged processes when the test body times out", async () => {
   const node = Bun.which("node");
   if (!node) throw new Error("The packaged Playwright tests require Node.js");
@@ -58,4 +60,4 @@ test("holds a packaged process past the test deadline", async () => {
       await removeTestDirectory(root);
     }
   }
-});
+}, 10_000);
