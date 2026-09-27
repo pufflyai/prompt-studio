@@ -1,7 +1,8 @@
 export interface PullRequest {
   state: string;
-  head: { sha: string };
-  base: { sha: string; ref: string };
+  user: { login: string };
+  head: { sha: string; ref: string; repo: { full_name: string } | null };
+  base: { sha: string; ref: string; repo: { full_name: string } };
   changed_files: number;
   labels: Array<{ name: string }>;
 }
@@ -14,6 +15,9 @@ export interface Status {
 interface PolicyApi {
   readPull: () => Promise<PullRequest>;
   publish: (sha: string, status: Status) => Promise<unknown>;
+  readChangedFiles: () => Promise<Array<{ filename: string; status: string }>>;
+  readManifest: (path: string, ref: string) => Promise<Record<string, unknown>>;
+  readMergeBase: (base: string, head: string) => Promise<string>;
 }
 
 interface Snapshot {
@@ -23,6 +27,73 @@ interface Snapshot {
 }
 
 const snapshotOf = (pull: PullRequest) => ({ head: pull.head.sha, base: pull.base.sha, baseRef: pull.base.ref });
+
+const dependencyFields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
+const releaseVersion = /^(?:\^|~)?\d+\.\d+\.\d+(?:-[\w.-]+)?$/;
+
+const sameValue = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
+
+const isVersionUpdate = (before: Record<string, unknown>, after: Record<string, unknown>) => {
+  const previous = { ...before };
+  const next = { ...after };
+  if (typeof next.version !== "string" || !releaseVersion.test(next.version)) return false;
+  delete previous.version;
+  delete next.version;
+  for (const field of dependencyFields) {
+    const oldDependencies = previous[field];
+    const newDependencies = next[field];
+    if (sameValue(oldDependencies, newDependencies)) continue;
+    if (
+      !oldDependencies ||
+      !newDependencies ||
+      typeof oldDependencies !== "object" ||
+      typeof newDependencies !== "object"
+    )
+      return false;
+    const oldRanges = oldDependencies as Record<string, unknown>;
+    const newRanges = newDependencies as Record<string, unknown>;
+    if (!sameValue(Object.keys(oldRanges).sort(), Object.keys(newRanges).sort())) return false;
+    for (const [name, range] of Object.entries(newRanges)) {
+      if (range !== oldRanges[name] && (typeof range !== "string" || !releaseVersion.test(range))) return false;
+    }
+    delete previous[field];
+    delete next[field];
+  }
+  return sameValue(previous, next);
+};
+
+// The fixed release group versions SDK and extensions together. Only release
+// metadata is exempt; implementation and package entry/script changes stay blocked.
+const isReleaseMetadata = async (api: PolicyApi, pull: PullRequest) => {
+  if (
+    pull.user.login !== "github-actions[bot]" ||
+    pull.base.ref !== "main" ||
+    pull.head.ref !== "changeset-release/main" ||
+    pull.head.repo?.full_name !== pull.base.repo.full_name
+  )
+    return false;
+  const files = await api.readChangedFiles();
+  if (files.length !== pull.changed_files || files.length === 0)
+    throw new Error("Incomplete release diff; rerun classification");
+  const mergeBase = await api.readMergeBase(pull.base.sha, pull.head.sha);
+  for (const file of files) {
+    if (file.filename === "bun.lock" && file.status === "modified") continue;
+    if (/^\.changeset\/[^/]+\.md$/.test(file.filename) && file.status === "removed") continue;
+    if (
+      /^(packages|extensions|clients)\/[^/]+\/CHANGELOG\.md$/.test(file.filename) &&
+      ["added", "modified"].includes(file.status)
+    )
+      continue;
+    if (!/^(packages|extensions|clients)\/[^/]+\/package\.json$/.test(file.filename) || file.status !== "modified")
+      return false;
+    const [before, after] = await Promise.all([
+      api.readManifest(file.filename, mergeBase),
+      api.readManifest(file.filename, pull.head.sha),
+    ]);
+    if (!isVersionUpdate(before, after)) return false;
+  }
+  return true;
+};
 
 export async function prepare(api: PolicyApi) {
   const pull = await api.readPull();
@@ -71,7 +142,15 @@ export async function finish(
     }
     status = { state: "success", description: "SDK and extension changes are separate" };
     if (labels.has("sdk") && labels.has("extensions")) {
-      status = { state: "failure", description: "Split SDK and extension changes into separate PRs" };
+      status = (await isReleaseMetadata(api, current))
+        ? {
+            state: "success",
+            description: "Generated release metadata contains no SDK or extension implementation changes",
+          }
+        : { state: "failure", description: "Split SDK and extension changes into separate PRs" };
+      const latest = await api.readPull();
+      if (latest.state !== "open" || !sameValue(snapshotOf(latest), snapshot))
+        throw new Error("PR head or base changed during classification; rerun the workflow");
     }
   } catch (error) {
     status = { state: "error", description: String(error).slice(0, 140) };
@@ -108,6 +187,26 @@ export function createApi(options: ApiOptions) {
   }
   return {
     readPull: async () => (await request(`pulls/${pullNumber}`)) as PullRequest,
+    readMergeBase: async (base: string, head: string) => {
+      const comparison = await request(`compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`);
+      return comparison.merge_base_commit.sha as string;
+    },
+    readChangedFiles: async () => {
+      const files: Array<{ filename: string; status: string }> = [];
+      for (let page = 1; page <= 30; page++) {
+        const batch = await request(`pulls/${pullNumber}/files?per_page=100&page=${page}`);
+        files.push(...batch);
+        if (batch.length < 100) break;
+      }
+      return files;
+    },
+    readManifest: async (path: string, ref: string) => {
+      const file = await request(
+        `contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(ref)}`,
+      );
+      if (file.encoding !== "base64") throw new Error(`Cannot read release manifest: ${path}`);
+      return JSON.parse(Buffer.from(file.content, "base64").toString("utf8")) as Record<string, unknown>;
+    },
     publish: (sha: string, status: Status) =>
       request(`statuses/${sha}`, { ...status, context: "sdk-extension-separation", target_url: runUrl }),
   };
