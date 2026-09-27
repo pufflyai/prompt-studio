@@ -158,17 +158,21 @@ describe("extensions add", () => {
     expect(output).toContain("--force");
   });
 
-  test("prints a clear error when a repo-scoped extension is added outside a linked project", async () => {
+  test("prints a clear error when a repo-scoped extension is added outside a project folder", async () => {
     const deps = makeDeps({
       findProjectRoot: () => null,
       readConfig: () => null,
       installExtensionSource: mock(async () => {
-        throw new Error('Extension "planner" declares pstdio.scope "repo" and must be installed from a linked repo.');
+        throw new Error(
+          'Extension "planner" declares pstdio.scope "repo". Install it from a project opened from a local folder.',
+        );
       }),
     });
     const handler = createHandler(deps);
 
-    await expect(handler(argv({ source: "planner" }))).rejects.toThrow("must be installed from a linked repo");
+    await expect(handler(argv({ source: "planner" }))).rejects.toThrow(
+      "Install it from a project opened from a local folder",
+    );
 
     expect(deps.ensureApi).not.toHaveBeenCalled();
     expect(deps.enableInstalledExtension).not.toHaveBeenCalled();

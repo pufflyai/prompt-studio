@@ -3,13 +3,6 @@
   "subtitle": "管理您的專案並追蹤進度",
   "createProject": "建立專案",
   "loading": "載入專案中...",
-  "repoSearch": {
-    "searching": "正在搜尋儲存庫...",
-    "stillSearching": "仍在搜尋... ({{seconds}}秒)",
-    "takingLonger": "搜尋時間比平時長。您可以在下方手動瀏覽。",
-    "noReposFound": "在常見位置未找到儲存庫。",
-    "browseHint": "使用下方選項瀏覽儲存庫。"
-  },
   "errors": {
     "fetchFailed": "取得專案失敗",
     "deleteFailed": "刪除專案失敗"
@@ -33,14 +26,6 @@
       "unknown": "沒有可用的 Harness",
       "loading": "正在載入 Harness..."
     },
-    "repo": {
-      "selectLabel": "選擇儲存庫",
-      "none": "沒有儲存庫",
-      "noneLinked": "未連結儲存庫",
-      "loading": "載入儲存庫中...",
-      "searchPlaceholder": "搜尋儲存庫...",
-      "noSearchResults": "沒有儲存庫符合你的搜尋"
-    },
     "branch": {
       "selectLabel": "選擇分支",
       "none": "沒有分支",
@@ -55,7 +40,6 @@
     },
     "sessionMeta": {
       "agent": "Harness",
-      "repo": "儲存庫",
       "branch": "分支"
     },
     "session": {
@@ -92,18 +76,6 @@
       "placeholder": "專案名稱",
       "required": "專案名稱為必填。"
     },
-    "repositories": {
-      "label": "儲存庫",
-      "empty": "尚未選擇儲存庫。",
-      "remove": "移除儲存庫",
-      "browse": "瀏覽儲存庫",
-      "selectOne": "請至少選擇一個儲存庫。",
-      "errors": {
-        "pathRequired": "需要儲存庫路徑。",
-        "alreadyAdded": "此儲存庫已加入。",
-        "registerFailed": "註冊儲存庫失敗。"
-      }
-    },
     "actions": {
       "next": "下一步",
       "back": "返回",
@@ -114,10 +86,6 @@
       "description": "選擇要為此專案啟用的 Harness。",
       "selectAtLeastOne": "請至少選擇一個 Harness。",
       "notDetectedWarning": "未偵測到此 Harness。安裝前可能無法正常運作。"
-    },
-    "folderPicker": {
-      "title": "選擇儲存庫",
-      "description": "選擇 git 儲存庫資料夾"
     }
   },
   "ticketPanel": {
@@ -164,7 +132,6 @@
       "updatedLabel": "{{date}} 已更新",
       "dialog": {
         "title": "開始新嘗試",
-        "description": "選擇代理和儲存庫以開始此任務嘗試。",
         "modelLabel": "模型",
         "modelPlaceholder": "使用預設模型",
         "promptLabel": "提示",

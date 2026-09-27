@@ -66,7 +66,15 @@ const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
   ctx.overlays.registerOverlay({
     id: dashboardWidgetIds.createProject,
     viewId: dashboardWidgetIds.createProject,
-    config: { size: "lg", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
+    config: {
+      placement: "center",
+      scrollBehavior: "inside",
+      closeOnInteractOutside: false,
+      contentWidth: "folder-picker-width",
+      contentHeight: "folder-picker-height",
+      contentMaxWidth: "calc(100vw - {spacing.xl})",
+      contentMaxHeight: "calc(100dvh - {spacing.xl})",
+    },
   });
 };
 

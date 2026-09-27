@@ -11,6 +11,7 @@ import { dialogSlotRecipe } from "./recipes/dialog";
 import { dividerRecipe } from "./recipes/divider";
 import { drawerSlotRecipe } from "./recipes/drawer";
 import { editableSlotRecipe } from "./recipes/editable";
+import { folderPickerSlotRecipe } from "./recipes/folder-picker";
 import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
 import { kbdRecipe } from "./recipes/kbd";
@@ -84,6 +85,7 @@ const config = defineConfig({
       editable: editableSlotRecipe,
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,
+      folderPicker: folderPickerSlotRecipe,
       progressCircle: progressCircleSlotRecipe,
       switch: switchSlotRecipe,
       tabs: tabsSlotRecipe,

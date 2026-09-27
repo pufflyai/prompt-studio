@@ -5,6 +5,14 @@ import { FolderPickerDialog } from "./folder-picker-dialog";
 const meta = {
   title: "Overlays/FolderPickerDialog",
   component: FolderPickerDialog,
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Open a project in an existing folder or create a folder first. The host owns navigation and creation. Matches the folder picker states in Pencil node LmcML.",
+      },
+    },
+  },
   args: {
     open: true,
     currentPath: "/Users/alex/Documents",
@@ -21,7 +29,23 @@ const meta = {
 } satisfies Meta<typeof FolderPickerDialog>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Folders: Story = {};
+export const Folders: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    const home = canvas.getByRole("button", { name: "Go to home directory" }).getBoundingClientRect();
+    const path = canvas.getByRole("textbox", { name: "Folder path" }).getBoundingClientRect();
+    const create = canvas.getByRole("button", { name: "New folder", exact: true }).getBoundingClientRect();
+    const filter = canvas.getByRole("textbox", { name: "Filter folders" });
+    const filterBounds = filter.getBoundingClientRect();
+    await expect(home.width).toBeCloseTo(home.height, 0);
+    await expect(path.y).toBeCloseTo(home.y, 0);
+    await expect(create.y).toBeCloseTo(home.y, 0);
+    await expect(filterBounds.width).toBeCloseTo(create.right - home.x, 0);
+    await userEvent.type(filter, "Draft");
+    await expect(within(canvas.getByLabelText("Folders")).getAllByRole("option")).toHaveLength(1);
+    await userEvent.clear(filter);
+  },
+};
 export const Empty: Story = { args: { entries: [] } };
 export const Loading: Story = { args: { isLoading: true } };
 export const Opening: Story = { args: { isOpening: true } };
@@ -37,6 +61,7 @@ export const CreateFolderEmpty: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "New folder", exact: true }));
     await expect(canvas.getByRole("button", { name: "Create folder", exact: true })).toBeDisabled();
     await expect(canvas.queryByRole("button", { name: "Open folder", exact: true })).not.toBeInTheDocument();
+    await expect(canvas.getAllByRole("button", { name: "Cancel", exact: true })).toHaveLength(1);
   },
 };
 

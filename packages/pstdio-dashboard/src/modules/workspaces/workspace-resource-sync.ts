@@ -8,7 +8,7 @@ export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
     const location = ctx.pages.store.getState().location;
     const primary = ctx.getPrimaryResource();
     if (location?.resource?.type !== "workspace" || primary?.type !== "workspace") return;
-    const current = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).find(
+    const current = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx), { includeArchived: true }).find(
       (workspace) => workspace.id === location.resource?.id,
     );
     if (!current) return;
@@ -17,12 +17,16 @@ export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
       ...current.resource,
       metadata: { ...primary.metadata, ...current.resource.metadata },
     };
-    if (primary.label === resource.label && JSON.stringify(primary.metadata) === JSON.stringify(resource.metadata))
+    if (
+      primary.label === resource.label &&
+      primary.icon === resource.icon &&
+      JSON.stringify(primary.metadata) === JSON.stringify(resource.metadata)
+    )
       return;
     setResourceBreadcrumb(ctx, resource);
   };
   const unsubscribeData = subscribeDashboardData((change) => {
-    if (!change || ["workspaces", "project_repos", "repos"].includes(change.table)) sync();
+    if (!change || change.table === "workspaces") sync();
   });
   // Resolve after the page commits so a ticket-to-workspace transition keeps its exact parent.
   const unsubscribePage = ctx.pages.store.subscribe(sync);

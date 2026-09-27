@@ -277,7 +277,7 @@ test.describe("Workspace table", () => {
     await page.goto(`/projects/${projectId}/workspaces`);
     const workspaceRow = page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible();
-    await expect(workspaceRow).toContainText("+0 -0");
+    await expect(workspaceRow).toContainText(/\+0\s*-0/);
 
     await workspaceRow.getByRole("button", { name: "Row actions" }).click();
     await page.getByRole("menuitem", { name: "Rename workspace" }).click();
@@ -312,6 +312,10 @@ test.describe("Workspace table", () => {
 
     const workspaceRow = page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible();
+    // State is a diagnostic column: hidden by default and available from the display menu.
+    await page.getByRole("button", { name: "Display settings" }).click();
+    await page.getByRole("dialog").getByText("State", { exact: true }).click();
+    await page.keyboard.press("Escape");
     await expect(workspaceRow.getByText("Archived", { exact: true })).toBeVisible();
   });
 });

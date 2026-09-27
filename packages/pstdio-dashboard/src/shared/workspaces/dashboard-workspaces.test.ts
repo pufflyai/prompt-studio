@@ -14,6 +14,7 @@ const rows = {
       name: "Dashboard workbench datalayer",
       branch: "workspace/PS-307_A1",
       root_path: "/repo/.pstdio/workspaces/PS-307_A1",
+      provider_capabilities_json: { diff: true, files: "write" },
       archived: false,
       workspace_shorthand: "PS-307_A1",
       setup_error: null,
@@ -223,7 +224,9 @@ describe("dashboard workspaces", () => {
       },
     });
   });
+});
 
+describe("dashboard workspace list rows", () => {
   test("maps a workspace into a data table row with diff values", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(rows, {
       projectId: "project-1",
@@ -240,15 +243,72 @@ describe("dashboard workspaces", () => {
         type: "Git worktree",
         provider: "pstdio.worktree",
         state: "Ready",
-        diff: "+0 -0",
+        created: "2026-05-22T08:10:00Z",
+        diff: { additions: 0, deletions: 0 },
       },
     });
   });
 
-  test("omits the diff value when no summary is available", () => {
+  test("omits the diff value while a supported diff is not loaded", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(rows, { projectId: "project-1" });
 
     expect(toWorkspaceDataTableRow(workspace).values).not.toHaveProperty("diff");
+  });
+
+  test("marks the diff as not supported when the provider has no diff capability", () => {
+    const [workspace] = buildDashboardWorkspacesFromRows(
+      {
+        ...rows,
+        workspaces: [
+          {
+            ...rows.workspaces[0],
+            provider_id: "pstdio.root",
+            provider_capabilities_json: { diff: false, files: "write" },
+          },
+        ],
+      },
+      { projectId: "project-1" },
+    );
+
+    expect(toWorkspaceDataTableRow(workspace).values.diff).toBe("Not supported");
+  });
+
+  test("shows a local workspace folder as its location when the provider supplies none", () => {
+    const [local, remote] = buildDashboardWorkspacesFromRows(
+      {
+        ...rows,
+        workspaces: [
+          { ...rows.workspaces[0], display_path: null },
+          {
+            ...rows.workspaces[0],
+            id: "workspace-remote",
+            created_at: "2026-05-23T08:10:00Z",
+            execution_kind: "remote",
+            display_path: null,
+          },
+        ],
+      },
+      { projectId: "project-1" },
+    );
+
+    expect(toWorkspaceDataTableRow(local!).values.location).toBe("/repo/.pstdio/workspaces/PS-307_A1");
+    expect(toWorkspaceDataTableRow(remote!).values).not.toHaveProperty("location");
+  });
+
+  test("gives each workspace kind its own resource icon", () => {
+    const workspaces = buildDashboardWorkspacesFromRows(
+      {
+        ...rows,
+        workspaces: [
+          { ...rows.workspaces[0], id: "worktree", created_at: "2026-05-21T08:10:00Z" },
+          { ...rows.workspaces[0], id: "folder", provider_id: "pstdio.root", created_at: "2026-05-22T08:10:00Z" },
+          { ...rows.workspaces[0], id: "remote", execution_kind: "remote", created_at: "2026-05-23T08:10:00Z" },
+        ],
+      },
+      { projectId: "project-1" },
+    );
+
+    expect(workspaces.map((workspace) => workspace.resource.icon)).toEqual(["GitBranch", "Folder", "Cloud"]);
   });
 
   test("includes archived workspaces only when the collection asks for them", () => {

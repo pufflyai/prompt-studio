@@ -8,7 +8,12 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import { ListRow } from "../list-row/list-row";
 import { CategoricalColorCell, resolveCategoricalColor } from "./categorical-color-cell";
 import { ColorScaleCell, resolveColorScaleValue } from "./color-scale-cell";
+import { DataTableBadgeCell } from "./data-table-badge-cell";
+import { isDataTableDiffValue } from "./data-table-cell-value";
 import type { DataTableColumnMeta } from "./data-table-column-meta";
+import { DataTableDateCell, formatDataTableRelativeDate } from "./data-table-date-cell";
+import { DataTableDiffCell } from "./data-table-diff-cell";
+import { DataTablePathCell } from "./data-table-path-cell";
 import { formatDisplayValue } from "./helpers";
 import { JsonCell } from "./json-cell";
 import type { DataTableColumnRenderer, DataTableRowAction, RowData } from "./types";
@@ -152,6 +157,18 @@ const DataCell = (props: DataCellProps) => {
   const { columnLabel, renderer, value, wrapRows } = props;
 
   if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} />;
+
+  if (renderer?.type === "badge" && ["string", "number", "boolean"].includes(typeof value)) {
+    return <DataTableBadgeCell value={value as string | number | boolean} categories={renderer.categories} />;
+  }
+
+  if (renderer?.type === "diff" && isDataTableDiffValue(value)) return <DataTableDiffCell value={value} />;
+
+  if (renderer?.type === "path" && typeof value === "string" && !wrapRows) return <DataTablePathCell value={value} />;
+
+  if (renderer?.type === "date") {
+    if (formatDataTableRelativeDate(value)) return <DataTableDateCell value={value as string} />;
+  }
 
   if (renderer?.type === "color-scale") {
     const color = resolveColorScaleValue(value, renderer.stops);

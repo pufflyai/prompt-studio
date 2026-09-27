@@ -106,7 +106,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     // The table chrome renders instantly: declared columns become real headers
     // and only the row values shimmer until the first query resolves.
     const skeletonColumns = (contribution.columns ?? [])
-      .filter((column) => !column.hidden)
+      .filter((column) => !column.hidden && !column.defaultHidden)
       .map((column) => ({ id: column.id, label: column.label ?? column.id }));
     return (
       <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
@@ -134,6 +134,8 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         columnDescriptions={descriptions}
         columnIcons={icons}
         hiddenColumns={columns.filter((column) => column.hidden).map((column) => column.id)}
+        defaultHiddenColumns={columns.filter((column) => column.defaultHidden).map((column) => column.id)}
+        defaultShowStats={contribution.defaultShowStats}
         columnStats={stats}
         columnRenderers={renderers}
         initialPageSize={contribution.initialPageSize}

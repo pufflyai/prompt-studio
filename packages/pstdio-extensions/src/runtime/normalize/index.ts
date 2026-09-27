@@ -26,13 +26,13 @@ import { registerUiModel } from "./ui-model";
 import { registerWebviewValidation } from "./webview-validation";
 
 type NormalizeExtensionSourcesOptions = {
-  repoRoots?: string[];
+  /** The project's local folder. Repo-scoped sources inside its `.pstdio/extensions` override other copies. */
+  projectFolder?: string;
 };
 
-const isRepoLocalSource = (source: LoadedExtensionSource, repoRoots: string[]) =>
-  repoRoots.some((repoRoot) =>
-    resolve(source.packagePath).startsWith(`${resolve(join(repoRoot, ".pstdio", "extensions"))}${sep}`),
-  );
+const isRepoLocalSource = (source: LoadedExtensionSource, projectFolder: string | undefined) =>
+  projectFolder !== undefined &&
+  resolve(source.packagePath).startsWith(`${resolve(join(projectFolder, ".pstdio", "extensions"))}${sep}`);
 
 const createOverrideDiagnostic = (source: LoadedExtensionSource, override: LoadedExtensionSource) => ({
   code: "extension_overridden_by_local",
@@ -48,14 +48,14 @@ const resolveSources = (
   runtime: ExtensionRuntime,
   options: NormalizeExtensionSourcesOptions,
 ) => {
-  const repoRoots = options.repoRoots ?? [];
+  const { projectFolder } = options;
   const selected: LoadedExtensionSource[] = [];
 
   for (const source of sources) {
-    const sourceIsLocal = source.sourceKind === "local_path" && isRepoLocalSource(source, repoRoots);
+    const sourceIsLocal = source.sourceKind === "local_path" && isRepoLocalSource(source, projectFolder);
     const duplicates = selected.filter((candidate) => candidate.manifest.id === source.manifest.id);
     const localDuplicate = duplicates.find(
-      (candidate) => candidate.sourceKind === "local_path" && isRepoLocalSource(candidate, repoRoots),
+      (candidate) => candidate.sourceKind === "local_path" && isRepoLocalSource(candidate, projectFolder),
     );
 
     if (!sourceIsLocal && localDuplicate) {
@@ -63,10 +63,10 @@ const resolveSources = (
       continue;
     }
 
-    if (sourceIsLocal && duplicates.some((candidate) => !isRepoLocalSource(candidate, repoRoots))) {
+    if (sourceIsLocal && duplicates.some((candidate) => !isRepoLocalSource(candidate, projectFolder))) {
       for (let index = selected.length - 1; index >= 0; index -= 1) {
         const candidate = selected[index];
-        if (candidate?.manifest.id !== source.manifest.id || isRepoLocalSource(candidate, repoRoots)) continue;
+        if (candidate?.manifest.id !== source.manifest.id || isRepoLocalSource(candidate, projectFolder)) continue;
         runtime.diagnostics.push(createOverrideDiagnostic(candidate, source));
         selected.splice(index, 1);
       }

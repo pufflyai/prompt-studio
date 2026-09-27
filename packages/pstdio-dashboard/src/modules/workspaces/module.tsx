@@ -204,7 +204,7 @@ export const createWorkspacesModule = () =>
       ctx.resources.registerKind({
         kind: "workspace",
         label: "Workspace",
-        icon: "GitBranch",
+        icon: dashboardViews.workspaces.icon,
       });
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",

@@ -68,13 +68,10 @@
     "go": "Aller",
     "searchLabel": "Rechercher dans le répertoire actuel :",
     "selectCurrent": "Sélectionner l'actuel",
-    "gitRepo": "dépôt git",
     "selectPath": "Sélectionner le chemin",
     "errors": {
       "unableToLoadDirectory": "Impossible de charger le répertoire",
-      "pathRequired": "Le chemin est requis.",
-      "repositoryAlreadySelected": "Dépôt déjà sélectionné.",
-      "notGitRepository": "Le dossier sélectionné n'est pas un dépôt git."
+      "pathRequired": "Le chemin est requis."
     }
   },
   "branchSelector": {
@@ -182,8 +179,6 @@
   },
   "sections": {
     "changes": "Modifications",
-    "repositories": "Dépôts",
-    "addRepositories": "Ajouter des dépôts",
     "project": "Projet",
     "processes": "Processus",
     "devServer": "Serveur de développement",
@@ -199,20 +194,11 @@
     "placeholder": "Ajouter des notes sur cet espace de travail...",
     "selectWorkspace": "Sélectionnez un espace de travail pour voir les notes"
   },
-  "repos": {
-    "loading": "Chargement des dépôts...",
-    "noRecentRepos": "Aucun dépôt récent trouvé",
-    "noReposAdded": "Aucun dépôt ajouté",
-    "noReposAddedHint": "Ajoutez un ou plusieurs dépôts à cet espace de travail depuis les options ci-dessous"
-  },
   "actions": {
-    "browseRepos": "Parcourir les dépôts sur le disque",
-    "createNewRepo": "Créer un nouveau dépôt sur le disque",
     "viewInChangesPanel": "Voir dans le panneau des modifications",
     "copyPath": "Copier le chemin",
     "copyWorktreePath": "Copier le chemin du worktree",
     "openInIde": "Ouvrir dans l'IDE",
-    "repoSettings": "Paramètres du dépôt",
     "cancel": "Annuler",
     "saveChanges": "Enregistrer les modifications",
     "copied": "Copié",
@@ -227,10 +213,6 @@
   "confirm": {
     "defaultConfirm": "Confirmer",
     "defaultCancel": "Annuler"
-  },
-  "dialogs": {
-    "selectGitRepository": "Sélectionner un dépôt Git",
-    "chooseExistingRepo": "Choisissez un dépôt existant depuis votre système de fichiers"
   },
   "empty": {
     "noChanges": "Aucune modification à afficher"
@@ -255,7 +237,6 @@
     "intro": "Nous avons reconstruit l'interface de Vibe Kanban de A à Z, et vous êtes invité à l'essayer.",
     "newUiDescription": "La nouvelle interface est optimisée pour le travail quotidien : jongler avec les agents, prévisualiser les modifications et réviser le code. Elle débloque également des fonctionnalités non disponibles dans l'ancienne interface :",
     "newFeatures": {
-      "multiRepo": "Modifier plusieurs dépôts en même temps",
       "multiAgent": "Exécuter plusieurs conversations d'agents (même avec différents agents) dans un seul espace de travail",
       "commandBar": "Navigation plus rapide avec la barre de commandes"
     },
@@ -286,10 +267,6 @@
     "sidenav": {
       "title": "Barre latérale des espaces de travail",
       "content": "Visualisez l'état de tous vos espaces de travail d'un coup d'œil. Les notifications mettent en évidence ceux qui nécessitent votre attention. Archivez les espaces de travail fusionnés pour garder votre barre latérale propre."
-    },
-    "multiRepo": {
-      "title": "Support multi-dépôts",
-      "content": "Ajoutez plusieurs dépôts à un seul espace de travail. Référencez le code d'un dépôt tout en travaillant dans un autre, ou implémentez des modifications sur plusieurs dépôts à la fois."
     },
     "sessions": {
       "title": "Sessions multiples",

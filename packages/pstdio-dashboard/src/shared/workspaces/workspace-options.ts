@@ -5,7 +5,7 @@ import {
   isVisibleDashboardRow,
   readWorkspaceRows,
 } from "@/shared/sync/dashboard-rows";
-import { workspaceKind } from "./workspace-kind";
+import { workspaceIcon, workspaceKind } from "./workspace-kind";
 import { workspaceState } from "./workspace-state";
 
 export interface DashboardWorkspaceOption {
@@ -65,7 +65,7 @@ const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): Dash
 };
 
 export const createDashboardWorkspaceOptionResource = (workspace: DashboardWorkspaceOption, projectId?: string) =>
-  createDashboardResource("workspace", workspace.id, workspace.title, "GitBranch", projectId, {
+  createDashboardResource("workspace", workspace.id, workspace.title, workspaceIcon(workspace.type), projectId, {
     workspaceId: workspace.id,
     workspaceShorthand: workspace.shorthand,
     workspaceType: workspace.type,

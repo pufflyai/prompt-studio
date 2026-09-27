@@ -45,9 +45,6 @@ const skillCopyOutdated = (input: {
     ? input.installedVersion !== input.expectedVersion
     : !installedMatchesCatalog(input.skillDir, input.files);
 
-// Root workspace provisioning can write a skill into every linked repo, so an agent is "out of
-// date" when ANY installed copy lags the catalog — a session in that repo would otherwise run
-// the old skill while another repo reads as current.
 export const getSkillInstallStatus = async (deps: Deps, input: SkillInstallStatusInput) => {
   const [workspace, agents] = await Promise.all([
     deps.workspaceService.getDefault(input.projectId),
@@ -59,19 +56,13 @@ export const getSkillInstallStatus = async (deps: Deps, input: SkillInstallStatu
   const outdatedAgents: string[] = [];
   const agentInstallations: SkillAgentInstallation[] = [];
 
+  const projectFolder = workspace?.root_path;
+  if (!projectFolder) return { installed_agents: [], outdated_agents: [], agent_installations: [] };
   for (const agent of agents) {
-    let installedVersion: string | null = null;
-    let installed = false;
-    let outdated = false;
-    for (const rootPath of workspace?.root_path ? [workspace.root_path] : []) {
-      const skillDir = join(rootPath, agent.skillsDir, input.name);
-      if (!existsSync(join(skillDir, "SKILL.md"))) continue;
-      installed = true;
-      const copyVersion = readInstalledVersion(join(skillDir, "SKILL.md"));
-      installedVersion = installedVersion ?? copyVersion;
-      outdated ||= skillCopyOutdated({ expectedVersion, installedVersion: copyVersion, skillDir, files: input.files });
-    }
-    if (!installed) continue;
+    const skillDir = join(projectFolder, agent.skillsDir, input.name);
+    if (!existsSync(join(skillDir, "SKILL.md"))) continue;
+    const installedVersion = readInstalledVersion(join(skillDir, "SKILL.md"));
+    const outdated = skillCopyOutdated({ expectedVersion, installedVersion, skillDir, files: input.files });
 
     installedAgents.push(agent.id);
     if (outdated) outdatedAgents.push(agent.id);

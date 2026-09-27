@@ -50,7 +50,7 @@ The catalog invalidates affected project snapshots when:
 
 - an installed source changes;
 - an extension is enabled, disabled, installed, removed, or explicitly reloaded;
-- linked repository extension roots change;
+- the project folder's extension root changes;
 - dependency state changes.
 
 Several invalidations before the next read coalesce into one replacement load. Invalidation is explicit; a time-to-live is not a correctness mechanism.

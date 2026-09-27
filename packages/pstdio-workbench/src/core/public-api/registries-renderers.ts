@@ -1,4 +1,5 @@
 export type {
+  DataTableRendererBadgePalette,
   DataTableRendererColumn,
   DataTableRendererColumnRenderer,
   DataTableRendererColumnStat,

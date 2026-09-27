@@ -4,7 +4,7 @@ import type {
   KanbanRendererRow,
 } from "@/components/kanban-renderer/types";
 import { filterRows } from "../kanban-renderer/kanban-renderer-grouping";
-import { isDisplayValue } from "./helpers";
+import { resolveDataTableComparableValue } from "./data-table-cell-value";
 import type { DataTableProps, DataTableSelectionAction, RowData } from "./types";
 
 export const defaultPageSize = 30;
@@ -52,21 +52,27 @@ export const shouldHighlightActiveRow = (props: {
   rowId: string;
 }) => props.enableRowActivation === true && props.activeRowId === props.rowId;
 
-const toAttributeValue = (value: unknown) => {
-  const raw = isDisplayValue(value) ? value.sortValue : value;
+type ColumnRenderers = DataTableProps["columnRenderers"];
+
+const toAttributeValue = (value: unknown, renderer?: NonNullable<ColumnRenderers>[string]) => {
+  const raw = resolveDataTableComparableValue(value, renderer);
   if (typeof raw === "boolean") return String(raw);
   return raw;
 };
 
-const isNumberColumn = (rows: RowData[], columnKey: string) => {
+const isNumberColumn = (rows: RowData[], columnKey: string, renderers?: ColumnRenderers) => {
   const values = rows
-    .map((row) => toAttributeValue(row[columnKey]))
+    .map((row) => toAttributeValue(row[columnKey], renderers?.[columnKey]))
     .filter((value) => value !== null && value !== undefined);
   return values.length > 0 && values.every((value) => typeof value === "number");
 };
 
-const resolveAttributeType = (rows: RowData[], columnKey: string): AttributeDescriptor["type"] => {
-  if (isNumberColumn(rows, columnKey)) return { kind: "number" };
+const resolveAttributeType = (
+  rows: RowData[],
+  columnKey: string,
+  renderers?: ColumnRenderers,
+): AttributeDescriptor["type"] => {
+  if (isNumberColumn(rows, columnKey, renderers)) return { kind: "number" };
   return { kind: "string" };
 };
 
@@ -74,11 +80,12 @@ export const buildDataTableRendererAttributes = (
   rows: RowData[],
   columnKeys: string[],
   compactHeaders?: Partial<Record<string, string>>,
+  renderers?: ColumnRenderers,
 ): AttributeDescriptor[] =>
   columnKeys.map((columnKey) => ({
     id: columnKey,
     label: compactHeaders?.[columnKey] ?? columnKey,
-    type: resolveAttributeType(rows, columnKey),
+    type: resolveAttributeType(rows, columnKey, renderers),
     filterable: true,
     sortable: true,
     displayable: true,
@@ -88,11 +95,14 @@ export const buildDataTableRendererRows = (
   rows: RowData[],
   columnKeys: string[],
   getRowId?: DataTableProps["getRowId"],
+  renderers?: ColumnRenderers,
 ): DataTableRendererRow[] =>
   rows.map((row, index) => {
-    const attributes = Object.fromEntries(columnKeys.map((columnKey) => [columnKey, toAttributeValue(row[columnKey])]));
+    const attributes = Object.fromEntries(
+      columnKeys.map((columnKey) => [columnKey, toAttributeValue(row[columnKey], renderers?.[columnKey])]),
+    );
     const rowId = resolveDataTableRowId(row, index, getRowId);
-    const firstValue = columnKeys.length > 0 ? toAttributeValue(row[columnKeys[0]!]) : rowId;
+    const firstValue = columnKeys.length > 0 ? attributes[columnKeys[0]!] : rowId;
 
     return {
       id: rowId,
@@ -115,6 +125,13 @@ export const resolveDataTableColumnOrder = (availableColumnIds: string[], reques
   const missingColumnIds = availableColumnIds.filter((columnId) => !orderedColumnIdSet.has(columnId));
 
   return [...orderedColumnIds, ...missingColumnIds];
+};
+
+export const toggleHiddenDataTableColumn = (hiddenColumnIds: Set<string>, columnId: string, visible: boolean) => {
+  const next = new Set(hiddenColumnIds);
+  if (visible) next.delete(columnId);
+  else next.add(columnId);
+  return next;
 };
 
 export const reorderDataTableColumns = (columnIds: string[], activeColumnId: string, overColumnId: string) => {
