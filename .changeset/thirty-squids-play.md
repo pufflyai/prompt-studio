@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Hide the unavailable agent history warning when the saved conversation is readable.
+Remove the unavailable history banner and history review controls that cannot resolve conversation problems.
