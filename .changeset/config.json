@@ -48,7 +48,8 @@
     "pstdio-storage",
     "pstdio-wt",
     "workbench-fixture",
-    "motion-lab"
+    "motion-lab",
+    "social-radar"
   ],
   "privatePackages": {
     "version": true,

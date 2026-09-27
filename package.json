@@ -60,7 +60,8 @@
     ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-dev",
     "scripts",
-    ".pstdio/extensions/motion-lab"
+    ".pstdio/extensions/motion-lab",
+    ".pstdio/extensions/social-radar"
   ],
   "devDependencies": {
     "@biomejs/biome": "2.4.10",
