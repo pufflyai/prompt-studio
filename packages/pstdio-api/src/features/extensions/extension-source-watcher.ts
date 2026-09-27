@@ -49,10 +49,12 @@ export type CreateExtensionSourceWatcherInput = {
   watchDependencies?: boolean;
 };
 
-// Windows can watch recursively with one root handle. Opening handles on child
-// directories prevents Windows from replacing the extension's parent directory.
+// macOS and Windows provide recursive notifications from one root handle. This
+// avoids the macOS gap while a new child watcher starts, and keeps child handles
+// from preventing source-directory replacement on Windows.
+const supportsNativeRecursiveWatch = process.platform === "win32" || process.platform === "darwin";
 const defaultWatch: WatchSource = (path, listener, onError) => {
-  const watcher = fsWatch(path, { recursive: process.platform === "win32" }, listener);
+  const watcher = fsWatch(path, { recursive: supportsNativeRecursiveWatch }, listener);
   watcher.on("error", onError);
   return watcher;
 };
@@ -110,7 +112,7 @@ export const createExtensionSourceWatcher = async (
   const debounceMs = input.debounceMs ?? defaultDebounceMs;
   const registrations = new Map<string, WatchedRegistration>();
   const watch = input.watch ?? defaultWatch;
-  const nativeRecursive = process.platform === "win32" && !input.watch;
+  const nativeRecursive = supportsNativeRecursiveWatch && !input.watch;
   const watchDependencies = input.watchDependencies ?? true;
   let disposed = false;
 
