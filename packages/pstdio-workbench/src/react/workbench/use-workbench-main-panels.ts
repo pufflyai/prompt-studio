@@ -1,4 +1,5 @@
 import type { WorkbenchCore } from "../../core";
+import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
@@ -23,13 +24,14 @@ const useSecondaryPanelView = (workbench: WorkbenchCore) => {
   const hasContent = useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true });
   const hasHeader = useWorkbenchRegionContent(workbench, "secondary-header");
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
+  const hasMenus = useWorkbenchPanelMenusPresent(workbench, "secondary");
   const collapsible = useWorkbenchStore(workbench.layout.store, () =>
     resolvePanelCollapsible(workbench, "secondary-header", "secondary"),
   );
   const open = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.visible);
 
   return {
-    has: hasContent || hasHeader || hasPanelHeader,
+    has: hasContent || hasHeader || hasPanelHeader || hasMenus,
     hasHeader,
     collapsible,
     collapsed: !open,

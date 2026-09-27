@@ -7,6 +7,7 @@ import type { CommandParamFieldRenderer } from "../command-palette/command-param
 import { WorkbenchNavChrome, type WorkbenchNavRegionControl } from "../header/workbench-nav-chrome";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
+import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
 import { installWorkbenchControlsRenderer } from "../renderers/controls/install-controls-renderer";
@@ -78,8 +79,10 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     hasSidenavWidgets: useWorkbenchRegionContent(workbench, "sidenav"),
     hasSecondaryHeaderWidgets: useWorkbenchRegionContent(workbench, "secondary-header"),
     hasSecondaryWidgets: useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true }),
+    hasSecondaryMenus: useWorkbenchPanelMenusPresent(workbench, "secondary"),
     hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
     hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
+    hasSideMenus: useWorkbenchPanelMenusPresent(workbench, "side"),
     hasStatusWidgets:
       statusChrome !== undefined
         ? statusChrome !== false
@@ -169,15 +172,18 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasNavWidgets,
     hasSideHeaderWidgets,
     hasSideWidgets,
+    hasSideMenus,
     hasSidenavWidgets,
     hasSecondaryHeaderWidgets,
     hasSecondaryWidgets,
+    hasSecondaryMenus,
     hasStatusWidgets,
   } = useWorkbenchLayoutFlags(workbench);
-  const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets || hasSidePanelHeader;
+  const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets || hasSidePanelHeader || hasSideMenus;
   const showSidenav = hasSidenavWidgets;
   const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav");
-  const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader;
+  const showSecondaryPanel =
+    hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader || hasSecondaryMenus;
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
   const showAttachedSidePanel = hasSidePanel && sidePanelMode === "attached";

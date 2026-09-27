@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
+  isWorkbenchModePanelAvailable,
   isWorkbenchPanelPlacementVisible,
   matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
@@ -57,6 +58,7 @@ export const useWorkbenchPanelMenu = (
   const region = workbenchPanelMenuRegions[panel][side];
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
+  const panelAvailable = isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, panel);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const currentRegionState = layout.regions[region];
@@ -95,7 +97,7 @@ export const useWorkbenchPanelMenu = (
     label: getWorkbenchPanelMenuLabel(panel, side),
     title: widget?.title ?? getWorkbenchPanelMenuLabel(panel, side),
     icon: widget?.icon ?? (side === "left" ? "PanelLeft" : "PanelRight"),
-    has: regionState.widgets.length > 0 || Boolean(workbench.layout.getPlaceholder(region)),
+    has: panelAvailable && (regionState.widgets.length > 0 || Boolean(workbench.layout.getPlaceholder(region))),
     collapsed: (!open || responsiveCollapsed) && collapsible,
     responsiveCollapsed,
     collapsible,
@@ -105,6 +107,12 @@ export const useWorkbenchPanelMenu = (
       if (!collapsed || collapsible) workbench.panelMenuState.setOpen(panelStateKey, !collapsed);
     },
   };
+};
+
+export const useWorkbenchPanelMenusPresent = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {
+  const left = useWorkbenchPanelMenu(workbench, panel, "left");
+  const right = useWorkbenchPanelMenu(workbench, panel, "right");
+  return left.has || right.has;
 };
 
 export const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {

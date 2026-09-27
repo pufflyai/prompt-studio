@@ -18,6 +18,7 @@ const createPanelWorkbench = (
     closable?: boolean;
     resource?: boolean;
     menu?: boolean;
+    menusOnly?: boolean;
     cardinality?: "one" | "many";
     resourceLabel?: string;
     tabLabel?: string;
@@ -67,7 +68,7 @@ const createPanelWorkbench = (
     });
   }
   const slots: WorkbenchPageSlot[] = workbenchPanelRegions.flatMap((region) => [
-    ...(region === "main"
+    ...(region === "main" || options.menusOnly
       ? []
       : [
           {
@@ -121,6 +122,19 @@ const createPanelWorkbench = (
     slots,
   });
   workbench.pageLocations.switchProject("storybook-panel-tabs");
+  if (options.menusOnly) {
+    for (const region of ["secondary", "side"] as const) {
+      const id = `${region}.menu`;
+      workbench.layout.registerPanelMenu({
+        id,
+        title: `${region} menu`,
+        region: `${region}-right-menu`,
+        rendererId: `${region}.second`,
+        regionCollapsible: false,
+      });
+      workbench.layout.openWidget(id);
+    }
+  }
   if (options.resource) {
     workbench.pageLocations.navigate({
       kind: "page",
@@ -128,6 +142,19 @@ const createPanelWorkbench = (
       resource: { type: "document", id: "one", label: options.resourceLabel },
     });
   }
+  return workbench;
+};
+const createUnavailableMenuWorkbench = () => {
+  const workbench = createPanelWorkbench();
+  workbench.modes.registerMode({ id: "main-only", label: "Main only", panels: ["main"], activate: () => undefined });
+  workbench.layout.registerPlaceholder({
+    id: "unavailable-menu",
+    title: "Unavailable menu",
+    region: "side-right-menu",
+    rendererId: "side.second",
+    regionCollapsible: false,
+  });
+  workbench.modes.setActiveMode("main-only");
   return workbench;
 };
 
@@ -157,6 +184,24 @@ export const SingleItems: Story = {
       await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
     }
     await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+  },
+};
+export const MenuOnlyPanels: Story = {
+  args: { workbench: createPanelWorkbench({ menusOnly: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const region of ["secondary", "side"] as const) {
+      await expect(await canvas.findByText(`${region}.second content`)).toBeVisible();
+    }
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+  },
+};
+export const UnavailableMenuPanel: Story = {
+  args: { workbench: createUnavailableMenuWorkbench() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryByRole("button", { name: /(?:Show|Hide) Side Panel/ })).toBeNull();
+    await expect(canvas.queryByText("side.second content")).not.toBeVisible();
   },
 };
 export const AlwaysShowTabs: Story = {
