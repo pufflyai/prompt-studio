@@ -141,6 +141,14 @@ describe("core extension catalog", () => {
       "references/examples/commands.ts",
       "references/examples/controls.ts",
       "references/examples/pigeon.ts",
+      "references/examples/resource-reviewer/catalog.ts",
+      "references/examples/resource-reviewer/commands.ts",
+      "references/examples/resource-reviewer/extension.ts",
+      "references/examples/resource-reviewer/inspector.ts",
+      "references/examples/resource-reviewer/preview-entry.tsx",
+      "references/examples/resource-reviewer/preview.tsx",
+      "references/examples/resource-reviewer/style-types.ts",
+      "references/examples/resource-reviewer/use-review-settings.ts",
       "references/examples/scribble.ts",
       "references/examples/table-navigation.ts",
       "references/examples/zipline.ts",
@@ -149,6 +157,7 @@ describe("core extension catalog", () => {
       "references/pages.md",
       "references/scope.md",
       "references/validation.md",
+      "references/webviews.md",
     ]);
   });
 });
