@@ -191,6 +191,7 @@ const setThreadStatus = defineCommand({
     const threads = ctx.storage.collection<Thread>("threads");
     const thread = await threads.get(id);
     if (!thread) throw new Error("Thread not found.");
+    if (thread.status === "posted" && value !== "posted") throw new Error("Posted threads cannot be unposted.");
     const postedAt = value === "posted" ? (thread.postedAt ?? new Date().toISOString()) : undefined;
     await threads.update(id, {
       ...thread,
