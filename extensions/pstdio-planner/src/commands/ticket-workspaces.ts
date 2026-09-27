@@ -68,8 +68,16 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
   },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
-    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
+    const { ticket, workspaces } = await workspacesForTicket(ctx, commandParams.id);
     const worktrees = workspaces.filter(isGitWorktree);
+    const shared = worktrees.find((ws) =>
+      ws.anchors_json?.some((anchor) => anchor.type === "ticket" && anchor.id !== ticket.id),
+    );
+    if (shared) {
+      throw new Error(
+        `Workspace ${shared.workspace_shorthand ?? shared.id} is linked to other tickets. Unlink it from this ticket before removing its remaining worktrees.`,
+      );
+    }
 
     let removed = 0;
     for (const ws of worktrees) {

@@ -39,7 +39,8 @@ const changeLink = async (ctx: CommandContext, input: LinkParams, unlink: boolea
     await api.removeAnchors(target.id, [{ type: "ticket", id: ticket.id }]);
   } else {
     const { anchor } = await resolveTicketAnchor(ctx, ticket.id);
-    await api.addAnchors(target.id, [{ ...anchor, role: "context" }]);
+    const existing = target.anchors_json?.find((ref) => ref.type === "ticket" && ref.id === ticket.id);
+    await api.addAnchors(target.id, [{ ...anchor, role: existing?.role ?? "context" }]);
   }
 
   return workspace

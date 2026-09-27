@@ -148,3 +148,17 @@ for (const target of ["workspace", "implementation", "review"] as const) {
     ]);
   });
 }
+
+for (const target of ["workspace", "session"] as const) {
+  test(`refreshes a primary ${target} anchor without changing its role`, async () => {
+    const env = await setup();
+    const ticket = env.tickets[0];
+    env[target].anchors_json = [
+      { type: "ticket", id: ticket.id, shorthand: ticket.shorthand, label: "Old title", role: "primary" },
+    ];
+    await linkTicketCommand.run(...env.args({ id: ticket.id, [target]: target }));
+    expect(env[target].anchors_json).toEqual([
+      expect.objectContaining({ id: ticket.id, label: ticket.shorthand, role: "primary" }),
+    ]);
+  });
+}

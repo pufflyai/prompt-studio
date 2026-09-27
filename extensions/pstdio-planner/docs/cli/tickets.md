@@ -60,7 +60,7 @@ pst tickets save --id PS-12
 
 ## Workspaces and reviews
 
-`implement` starts a managed implementation attempt. Use `workspaces` or `worktrees list` to inspect the work linked to a ticket. `worktrees remove-all` removes every linked worktree.
+`implement` starts a managed implementation attempt. Use `workspaces` or `worktrees list` to inspect the work linked to a ticket. `worktrees remove-all` removes every linked worktree. It refuses the entire operation if a worktree is shared with another ticket. Unlink the shared workspace from this ticket first, then retry cleanup.
 
 `link-review` attaches a review URL, such as a pull request, to the ticket. Repeating the command with the same URL keeps the existing link and its metadata. `proposal-refined` marks a proposal as ready for a person to review.
 
@@ -79,7 +79,7 @@ pst tickets workspaces --id PS-2
 
 For separate workspaces, create one per ticket and link each separately. Link an existing session with `pst tickets link --id PS-1 --session <session-id>`.
 
-Both commands require exactly one target. Workspaces accept a shorthand or ID; sessions accept an ID. Repeating a link refreshes its anchor without adding a duplicate. Every linked ticket shows the workspace or session. Links use resource anchors, not workspace or branch names. Linking does not copy ticket drafts.
+Both commands require exactly one target. Workspaces accept a shorthand or ID; sessions accept an ID. Repeating a link refreshes its anchor without adding a duplicate and preserves its existing role. New links use the context role. Every linked ticket shows the workspace or session. Links use resource anchors, not workspace or branch names. Linking does not copy ticket drafts.
 
 Remove a link with `pst tickets unlink --id PS-1 --workspace WS-19` or `--session <session-id>`. Other ticket links remain. A managed attempt's own ticket cannot be unlinked from its workspace, implementation session, or review sessions.
 

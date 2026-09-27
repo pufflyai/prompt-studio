@@ -39,3 +39,15 @@ describe("workspace ticket link", () => {
     expect(isWorkspaceLinkedToTicket(shared, "T-2")).toBe(true);
   });
 });
+
+test("session lifecycle events use the session ticket before workspace context", async () => {
+  const { ticketRefFromLifecyclePayload } = await import("./workspace-ticket-link");
+  const linkedWorkspace = workspace([{ type: "ticket", id: "workspace-ticket" }]);
+  expect(
+    ticketRefFromLifecyclePayload({
+      anchors: [{ type: "ticket", id: "session-ticket" }],
+      workspace: linkedWorkspace,
+    }),
+  ).toBe("session-ticket");
+  expect(ticketRefFromLifecyclePayload({ anchors: [], workspace: linkedWorkspace })).toBe("workspace-ticket");
+});

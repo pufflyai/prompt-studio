@@ -30,4 +30,4 @@ export const ticketRefFromLifecyclePayload = (payload: {
   anchors?: ResourceAnchor[];
   branch?: string;
   workspace?: { anchors_json?: ResourceAnchor[]; workspace_shorthand?: string } | null;
-}) => ticketRefFromAnchors(payload.workspace?.anchors_json) ?? ticketRefFromAnchors(payload.anchors);
+}) => ticketRefFromAnchors(payload.anchors) ?? ticketRefFromAnchors(payload.workspace?.anchors_json);

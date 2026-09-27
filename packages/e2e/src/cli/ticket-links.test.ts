@@ -21,6 +21,9 @@ test(
         const result = JSON.parse(run(`tickets link --id ${ticket.shorthand} --workspace WS-1`, repo));
         expect(result).toMatchObject({ ticket: ticket.shorthand, workspace: { workspace_shorthand: "WS-1" } });
       }
+      expect(() => run(`tickets worktrees remove-all --id ${one.shorthand}`, repo)).toThrow(
+        "WS-1 is linked to other tickets",
+      );
       for (const ticket of [one, two]) {
         expect(JSON.parse(run(`tickets workspaces --id ${ticket.shorthand}`, repo))).toEqual([
           expect.objectContaining({ workspace: "WS-1" }),
