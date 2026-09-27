@@ -66,6 +66,8 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
   "@pstdio/desktop": ["@pstdio/ui", "pstdio", "pstdio-logging", "pstdio-paths", "workbench-fixture"],
   "@pstdio/landing-page": ["@pstdio/ui"],
+  "@pstdio/motion-studies": ["@pstdio/ui"],
+  "motion-lab": ["@pstdio/sdk", "@pstdio/ui", "@pstdio/motion-studies"],
 };
 
 // Extensions may only consume the public authoring surface.
@@ -170,7 +172,7 @@ const findCycles = (packages: WorkspacePackage[]) => {
 };
 
 const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, errors: string[]) => {
-  const allowed = pkg.isExtension ? EXTENSION_ALLOWED_DEPS : ALLOWED_WORKSPACE_DEPS[pkg.name];
+  const allowed = ALLOWED_WORKSPACE_DEPS[pkg.name] ?? (pkg.isExtension ? EXTENSION_ALLOWED_DEPS : undefined);
   if (!allowed) {
     errors.push(`${pkg.dir}: package "${pkg.name}" is missing from the allowed layer map in verify-boundaries.ts`);
     return;
