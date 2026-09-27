@@ -25,9 +25,9 @@ const workspace = (changelogs: Record<string, string | null>) => {
   return root;
 };
 
-const runWithoutVersion = async (cwd: string) => {
+const runCli = async (cwd: string, ...args: string[]) => {
   const proc = Bun.spawn({
-    cmd: [process.execPath, resolve(import.meta.dir, "release-notes.ts")],
+    cmd: [process.execPath, resolve(import.meta.dir, "release-notes.ts"), ...args],
     cwd,
     stdout: "pipe",
     stderr: "pipe",
@@ -85,8 +85,15 @@ describe("shared release notes", () => {
   });
 
   test("requires a release version", async () => {
-    const result = await runWithoutVersion(workspace({ pstdio: null }));
+    const result = await runCli(workspace({ pstdio: null }));
     expect(result.exitCode).toBe(1);
     expect(result.stderr.trim()).not.toBe("");
+  });
+
+  test("writes release notes to stdout and exits successfully", async () => {
+    const result = await runCli(workspace({ pstdio: "## 0.35.0\n\n- Change.\n" }), "0.35.0");
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(packageEntries(result.stdout)).toEqual([{ name: "pstdio", entries: ["Change."] }]);
   });
 });
