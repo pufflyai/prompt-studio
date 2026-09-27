@@ -236,12 +236,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Docker Hub resets anonymous pulls from shared runner IPs. The daemon tries Google's
-      # public Docker Hub cache first and falls back to Docker Hub when an image is missing.
+      # ADR 0042: Docker Hub resets anonymous pulls from shared runner IPs. The daemon tries
+      # Google's public Docker Hub cache first and falls back to Docker Hub. Temporary workaround.
       - name: Pull Docker Hub images through a mirror
         run: |
           config=$(sudo cat /etc/docker/daemon.json 2>/dev/null || echo '{}')
-          echo "$config" | jq '. + {"registry-mirrors": ["https://mirror.gcr.io"]}' | sudo tee /etc/docker/daemon.json
+          echo "$config" | jq '.["registry-mirrors"] = ((.["registry-mirrors"] // []) + ["https://mirror.gcr.io"] | unique)' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker
           docker info --format 'Registry mirrors: {{.RegistryConfig.Mirrors}}'
 

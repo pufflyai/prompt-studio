@@ -10,8 +10,8 @@ import { createDb, resolveMigrationsFolder, resolvePgliteOptions } from "./conne
 import * as schema from "./schemas.pg";
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
-// Creating an on-disk database writes about a thousand PostgreSQL files. Windows CI runners take
-// 2–4 s for that and have spiked to 11 s, past Bun's 5 s default. The user approved 15 s on 2026-09-27.
+// ADR 0043: creating an on-disk database writes about a thousand PostgreSQL files. Windows CI
+// runners take 2–4 s for that and have spiked to 11 s, past Bun's 5 s default. Temporary limit.
 const windowsDiskLimit = process.platform === "win32" ? 15_000 : undefined;
 
 const createTempDbPath = () => {
