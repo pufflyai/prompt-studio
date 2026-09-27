@@ -44,6 +44,9 @@ export const spacing = {
 };
 
 export const sizes = {
+  "folder-picker-width": { value: "36.5rem" },
+  "folder-picker-height": { value: "31rem" },
+  "folder-picker-header": { value: "3.25rem" },
   "panel-gap": { value: sp[50] },
   "window-title-bar": { value: "2.75rem" },
   "window-tab": { value: "1.75rem" },
