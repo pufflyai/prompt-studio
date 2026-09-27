@@ -80,6 +80,36 @@ describe("navigation tree registry", () => {
     ]);
   });
 
+  test("places ungrouped entries before named groups", async () => {
+    const registry = createNavigationTreeRegistry();
+    registry.registerContribution({
+      id: "project.nav",
+      owner: project,
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: () => [{ id: "navigation.root", nodes: [{ id: "search", label: "Search" }] }],
+    });
+    registry.registerContribution({
+      id: "lab.examples",
+      owner: project,
+      sourceExtensionId: "pstdio.extension-lab",
+      declarationIndex: 0,
+      getSections: () => [{ id: "examples", label: "Examples", nodes: [{ id: "scribble", label: "Scribble" }] }],
+    });
+    registry.registerContribution({
+      id: "notes.list",
+      owner: project,
+      sourceExtensionId: "pstdio.pstdio-notes",
+      declarationIndex: 0,
+      getSections: () => [{ id: "notes", nodes: [{ id: "notes", label: "Notes" }] }],
+    });
+
+    expect((await registry.getSections(project, "content")).map((section) => section.id)).toEqual([
+      "navigation.root",
+      "notes",
+      "examples",
+    ]);
+  });
   test("attaches one opaque owner key to every section and row", async () => {
     const registry = createNavigationTreeRegistry();
     registry.registerContribution({

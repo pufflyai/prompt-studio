@@ -156,7 +156,8 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
           mergeSection(sections, projectSection(section, contribution, moveScope));
         }
       }
-      return sections;
+      // Extension order is alphabetical, so a named group could otherwise land between top-level entries.
+      return [...sections.filter((section) => !section.label), ...sections.filter((section) => section.label)];
     },
 
     async getChildren(node, context = {}) {

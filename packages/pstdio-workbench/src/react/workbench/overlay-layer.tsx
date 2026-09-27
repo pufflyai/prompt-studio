@@ -23,7 +23,6 @@ export interface WorkbenchOverlayWidgetConfig {
   contentMinHeight?: string;
   contentWidth?: string;
   contentMaxWidth?: string;
-  closeTriggerTop?: string;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -58,7 +57,6 @@ const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => 
   const contentMinHeight = stringValue(config, "contentMinHeight");
   const contentWidth = stringValue(config, "contentWidth");
   const contentMaxWidth = stringValue(config, "contentMaxWidth");
-  const closeTriggerTop = stringValue(config, "closeTriggerTop");
 
   if (size) overlayConfig.size = size as WorkbenchOverlayWidgetConfig["size"];
   if (placement) overlayConfig.placement = placement as WorkbenchOverlayWidgetConfig["placement"];
@@ -75,7 +73,6 @@ const resolveOverlayConfig = (config: unknown): WorkbenchOverlayWidgetConfig => 
   if (contentMinHeight) overlayConfig.contentMinHeight = contentMinHeight;
   if (contentWidth) overlayConfig.contentWidth = contentWidth;
   if (contentMaxWidth) overlayConfig.contentMaxWidth = contentMaxWidth;
-  if (closeTriggerTop) overlayConfig.closeTriggerTop = closeTriggerTop;
   return overlayConfig;
 };
 
@@ -136,15 +133,8 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { open, placement } = renderState;
   const widget = workbench.layout.getWidget(placement.contributionId);
   const overlayConfig = resolveOverlayDialogConfig(placement, widget?.config);
-  const {
-    contentHeight,
-    contentMaxHeight,
-    contentMinHeight,
-    contentWidth,
-    contentMaxWidth,
-    closeTriggerTop,
-    ...dialogRootConfig
-  } = overlayConfig;
+  const { contentHeight, contentMaxHeight, contentMinHeight, contentWidth, contentMaxWidth, ...dialogRootConfig } =
+    overlayConfig;
   const renderer = widget ? renderers[widget.rendererId] : undefined;
   const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
@@ -216,7 +206,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
           >
             {body}
             {canCloseOverlay ? (
-              <Dialog.CloseTrigger asChild top={closeTriggerTop}>
+              <Dialog.CloseTrigger asChild>
                 <CloseButton size="sm" aria-label={`Close ${closeLabel}`} />
               </Dialog.CloseTrigger>
             ) : null}
