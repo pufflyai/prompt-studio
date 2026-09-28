@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "@playwright/test";
@@ -12,6 +12,10 @@ test("installs the smoke browser without external JavaScript runtimes", async ()
   const root = mkdtempSync(join(tmpdir(), "extension-browser-consumer-"));
   const callerManifest = JSON.stringify({ name: "browser-setup-consumer", private: true });
   writeFileSync(join(root, "package.json"), callerManifest);
+  // A file, not a pipe: on Windows the timeout kills only pstdio, and its install children would
+  // keep a pipe open until the test times out without showing which step stalled.
+  const logPath = join(root, "install-browser.log");
+  const log = openSync(logPath, "w");
   try {
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== "PATH"));
     const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
@@ -21,10 +25,11 @@ test("installs the smoke browser without external JavaScript runtimes", async ()
         PATH: "",
         PSTDIO_HOME: join(root, "home"),
       },
-      encoding: "utf8",
+      stdio: ["ignore", log, log],
       timeout: 29_000,
     });
-    expect({ code: result.status, stderr: result.stderr }).toMatchObject({ code: 0 });
+    closeSync(log);
+    expect({ code: result.status, output: readFileSync(logPath, "utf8") }).toMatchObject({ code: 0 });
     expect(existsSync(join(root, "home", "runtime.json"))).toBe(false);
     const browser = await chromium.launch({ executablePath: chromium.executablePath() });
     try {

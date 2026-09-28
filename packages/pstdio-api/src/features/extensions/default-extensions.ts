@@ -3,6 +3,7 @@ import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
+import { resolvePstdioHome } from "pstdio-paths";
 import { enqueueDefaultExtensionInstall } from "./default-extension-install-queue";
 import {
   type DefaultExtensionEntry,
@@ -292,8 +293,16 @@ export { registerInstalledExtensionSources } from "./register-installed-extensio
 type InstallRepoDefaultExtensionsInput = {
   defaultExtensions: DefaultExtensionEntry[];
   repoPath: string;
+  env?: Record<string, string | undefined>;
   releaseRef?: string;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
+};
+
+// A user install refuses repo-scoped sources, so an installed user copy proves the default is
+// not repo-scoped. Skipping it keeps project folders from fetching sources they never install.
+const isInstalledUserExtension = (entry: DefaultExtensionEntry, extensionsRoot: string) => {
+  const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
+  return existsSync(join(extensionsRoot, installName, "package.json"));
 };
 
 export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExtensionsInput) => {
@@ -311,10 +320,15 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
     }
   };
 
+  const userExtensionsRoot = join(resolvePstdioHome({ env: input.env }), "extensions");
+  const defaultExtensions = input.defaultExtensions.filter(
+    (entry) => !isInstalledUserExtension(entry, userExtensionsRoot),
+  );
+
   try {
     await withResolvedDefaultEntries(
       {
-        config: { defaultExtensions: input.defaultExtensions },
+        config: { defaultExtensions },
         releaseRef: input.releaseRef,
         prepareSharedCheckout: input.prepareSharedCheckout,
         sourceMode: true,

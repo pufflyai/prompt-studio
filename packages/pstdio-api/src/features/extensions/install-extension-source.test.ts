@@ -197,7 +197,7 @@ describe("installExtensionSource", () => {
       runCommand,
     });
 
-    expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
+    expect(runCommand).toHaveBeenCalledWith("bun", ["install", "--production"], {
       cwd: expect.stringContaining(join(pstdioHome, ".extension-install-")),
       env: {
         PATH: "/bin",
@@ -223,7 +223,7 @@ describe("installExtensionSource", () => {
       runCommand,
     });
 
-    expect(runCommand).toHaveBeenCalledWith("/Applications/Prompt Studio.app/pstdio", ["install"], {
+    expect(runCommand).toHaveBeenCalledWith("/Applications/Prompt Studio.app/pstdio", ["install", "--production"], {
       cwd: expect.stringContaining(join(pstdioHome, ".extension-install-")),
       env: expect.objectContaining({
         BUN_BE_BUN: "1",

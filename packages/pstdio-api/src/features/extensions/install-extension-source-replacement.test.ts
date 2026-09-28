@@ -195,7 +195,7 @@ describe("installExtensionSource replacement", () => {
     ).rejects.toThrow("Dependency install failed");
 
     expect(existsSync(join(target, "extension.ts"))).toBe(false);
-    expect(runCommand).toHaveBeenCalledWith("bun", ["install"], {
+    expect(runCommand).toHaveBeenCalledWith("bun", ["install", "--production"], {
       cwd: expect.stringContaining(join(pstdioHome, ".extension-install-")),
       env: {},
     });
