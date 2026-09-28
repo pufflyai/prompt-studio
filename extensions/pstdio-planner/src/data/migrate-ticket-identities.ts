@@ -1,4 +1,4 @@
-import type { CommandContext } from "@pstdio/sdk/extensions";
+import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { migrateTicketShorthand, ticketsCollection } from "./collections";
 import { requireTicketDraftFiles, TICKETS_DIR } from "./draft-storage";
 import { migrateTicketDraft } from "./migrate-ticket-drafts";
@@ -9,13 +9,13 @@ export interface TicketIdentityMigration {
   complete: boolean;
   draftsBackedUp?: boolean;
 }
-export const identityMigrations = (ctx: Pick<CommandContext, "storage">) =>
+export const identityMigrations = (ctx: Pick<ExtensionContextBase, "storage">) =>
   ctx.storage.collection<TicketIdentityMigration>("identity-migrations");
 export const IDENTITY_MIGRATION = "ticket-identities-v1";
 
 const BACKUP_ROOT = ".pstdio/ticket-identity-migration";
 
-const runTicketIdentityMigration = async (ctx: CommandContext) => {
+const runTicketIdentityMigration = async (ctx: ExtensionContextBase) => {
   const migrations = identityMigrations(ctx);
   const tickets = ticketsCollection(ctx.storage);
   let migration = await migrations.get(IDENTITY_MIGRATION);
@@ -110,7 +110,7 @@ const runTicketIdentityMigration = async (ctx: CommandContext) => {
 // resumes work after a host restart or a failed run.
 const pendingMigrations = new Map<string, ReturnType<typeof runTicketIdentityMigration>>();
 
-export const migrateTicketIdentities = (ctx: CommandContext) => {
+export const migrateTicketIdentities = (ctx: ExtensionContextBase) => {
   const key = JSON.stringify([ctx.extensionId, ctx.projectId]);
   const pending = pendingMigrations.get(key);
   if (pending) return pending;

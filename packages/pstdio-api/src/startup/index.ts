@@ -6,7 +6,9 @@ import {
   syncInstalledExtensionsForProjects,
 } from "../features/extensions/default-extensions";
 import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
+import { openProjectExtensions } from "../features/extensions/project-extension-initialization";
 import { syncRepoExtensionsForProjectFolder } from "../features/extensions/repo-extensions";
+import { upgradeReleaseManagedExtensions } from "../features/extensions/upgrade-release-managed-extensions";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
@@ -145,8 +147,8 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
     });
   }
   const backgroundTasks = Promise.all([
-    defaultExtensionPreparation,
+    defaultExtensionPreparation.then(() => upgradeReleaseManagedExtensions(deps, signal)),
     provisionRecoveredWorkspaces(deps, projectIds, signal),
-  ]).then(() => undefined);
+  ]).then(() => openProjectExtensions(deps, { signal }));
   registerBackgroundTask(backgroundTasks, options);
 };

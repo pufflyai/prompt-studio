@@ -18,6 +18,7 @@ import { createAutomationService } from "./features/automation/automation-servic
 import type { RouteDeps } from "./features/deps";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
+import { openProjectExtensions } from "./features/extensions/project-extension-initialization";
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
@@ -95,6 +96,7 @@ const appHostSecurity = (host: CreateAppInput["host"]) =>
     : { runtimeHost: undefined, securityToken: host.token };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
+  let deps!: RouteDeps;
   const { db, close: closeDb } = await openAppDatabase(input.config.database.path, input.lifecycle);
   const { runtimeHost, securityToken } = appHostSecurity(input.host);
   const app = new OpenAPIHono<AppBindings>();
@@ -156,6 +158,9 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     unsubscribeExtensionEvents,
     refreshInstalledSources,
   } = await wireAppExtensionServices({
+    onInstalledSourcesChanged: async (sourcePath) => {
+      if (deps) await openProjectExtensions(deps, { sourcePath });
+    },
     config: input.config.extensions,
     db,
     dependencies,
@@ -175,7 +180,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     skillsDBService,
   });
 
-  let deps!: RouteDeps;
   const automationService = await createAppAutomationService({
     automationDBService,
     getCommandDeps: () => deps,

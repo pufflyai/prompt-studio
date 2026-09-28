@@ -111,8 +111,12 @@ test("deleting a ticket during migration does not block later ticket creation", 
   const allocate = context.resources.allocate;
   context.resources.allocate = async (input) => {
     await deleteTicketCommand.run(
-      { ...context, resources: { ...context.resources, removed: async () => {} } },
-      { id: ticket.id },
+      {
+        ...context,
+        resource: { type: "ticket", id: ticket.id },
+        resources: { ...context.resources, removed: async () => {} },
+      },
+      {},
     );
     return allocate(input);
   };
@@ -135,7 +139,7 @@ test("saving an edit read before migration keeps the migrated ticket identity", 
 
 test.each([
   { status: "Invalid" },
-  { dependsOn: ["Unknown"] },
+  { dependsOn: ["Unknown"] as string[] },
 ])("invalid creation inputs do not renumber the supplied parent ($status $dependsOn)", async (invalid) => {
   const { storage, context, ticket } = await existingProject();
   await expect(createTicketCommand.run(context, { title: "New", parent: "T-9", ...invalid })).rejects.toThrow(

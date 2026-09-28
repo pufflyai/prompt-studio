@@ -55,21 +55,28 @@ describe("ticket work in shared folders", () => {
   }) => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Remote" } }));
-    const remote = {
+    const remote: ExtensionWorkspace = {
       ...home,
       id: "remote",
       is_default: false,
       provider_id: "example.cloud",
       execution_kind: "remote" as const,
       root_path: null,
-      provider_capabilities_json: { archive: supportsArchive },
+      provider_capabilities_json: {
+        archive: supportsArchive,
+        files: "none",
+        diff: false,
+        merge: false,
+        rebase: false,
+        delete: false,
+      },
       anchors_json: [{ type: "ticket", id: ticket.id, shorthand: ticket.shorthand }],
     };
     const archive = mock(async () => {
       if (!supportsArchive) throw new Error("This provider does not support archiving");
       return remote;
     });
-    const action = mock(async () => undefined);
+    const action = mock(makeCommandArgs({ storage, params: {} })[0].notify.action);
     const result = await archiveTicketCommand.run(
       ...makeCommandArgs({
         storage,

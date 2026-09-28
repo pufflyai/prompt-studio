@@ -1,5 +1,6 @@
 ---
 "pstdio-planner": patch
+"pstdio": patch
 ---
 
-Migrate ticket identities automatically during ticket creation while preserving local edits and supporting safe retries.
+Automatically upgrade release-managed extensions and migrate existing Planner tickets across all enabled projects.

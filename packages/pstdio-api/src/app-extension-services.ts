@@ -27,6 +27,7 @@ import type { createProjectService } from "./services/project-service";
 import type { createWorkspaceService } from "./services/workspace-service";
 
 interface WireExtensionServicesInput {
+  onInstalledSourcesChanged: (sourcePath?: string) => Promise<void>;
   config: AppConfig["extensions"];
   db: DbClient;
   dependencies: AppDependencies;
@@ -50,6 +51,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
   const refreshInstalledSources = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
     harnessRegistry.invalidate();
     await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
+    await input.onInstalledSourcesChanged(sourcePath);
   };
   const extensionService = createExtensionService({
     extensionInstancesService: input.extensionInstancesService,

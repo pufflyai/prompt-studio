@@ -16,6 +16,7 @@ import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { registerProjectInitializationSmokeTests } from "./packaged-project-initialization-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
@@ -359,6 +360,7 @@ test(
 );
 
 registerCoreDefaultExtensionSmokeTests();
+registerProjectInitializationSmokeTests();
 registerExtensionDiagnosticsSmokeTests();
 registerLinkedWebviewSmokeTests();
 registerRemoteExecutionSmokeTests();

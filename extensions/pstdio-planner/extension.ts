@@ -14,6 +14,7 @@ import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
+import { projectOpenedHook } from "./src/hooks/project-opened";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
 import { ticketStatuses } from "./src/ticket-status-provider";
@@ -90,6 +91,7 @@ export default defineExtension({
   settingsSections: [plannerSettingsSection],
 
   hooks: [
+    projectOpenedHook,
     worktreeCreatedHook,
     defineHook({
       id: "session-awaiting-input",

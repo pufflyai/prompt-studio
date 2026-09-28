@@ -46,7 +46,7 @@ export const compatibilityError = (installedSource: { install_name: string; mani
 // User-global sources live directly in `<pstdio home>/extensions`. The home folder is usually
 // named `.pstdio` itself, so the repo pattern `<repo>/.pstdio/extensions/` alone would misread
 // global installs as repo-local.
-const sourceScope = (sourcePath: string) => {
+export const sourceScope = (sourcePath: string) => {
   const parent = dirname(resolve(sourcePath));
   if (parent === join(resolvePstdioHome({ env: process.env }), "extensions")) return "global" as const;
   return basename(parent) === "extensions" && basename(dirname(parent)) === ".pstdio"

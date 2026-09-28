@@ -1,13 +1,9 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { packagedExtensionCatalog } from "../features/extensions/extension-catalog";
 import { namedSourceRef } from "../features/extensions/install-extension-source";
-import {
-  createExtensionUpgradeService,
-  ExtensionUpgradeUnavailableError,
-  resolveExtensionReleaseCommit,
-} from "./extension-upgrade-service";
+import { createExtensionUpgradeService, ExtensionUpgradeUnavailableError } from "./extension-upgrade-service";
 
 const instance = {
   id: "instance-1",
@@ -61,25 +57,18 @@ const idleExtensionService = {
 
 const emptyWorkspaceService = { getDefault: async () => null };
 
+// Scope follows where a source lives, so the fixtures' home must be the active Prompt Studio home.
+let previousPstdioHome: string | undefined;
+beforeAll(() => {
+  previousPstdioHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = "/home/user/.pstdio";
+});
+afterAll(() => {
+  if (previousPstdioHome === undefined) delete process.env.PSTDIO_HOME;
+  else process.env.PSTDIO_HOME = previousPstdioHome;
+});
+
 describe("extension upgrade service", () => {
-  test("resolves an annotated release tag to its commit", async () => {
-    const releaseCommit = "b".repeat(40);
-    const run = mock(async () => ({
-      exitCode: 0,
-      stderr: "",
-      stdout: `${"a".repeat(40)}\trefs/tags/pstdio@0.27.0\n${releaseCommit}\trefs/tags/pstdio@0.27.0^{}\n`,
-    }));
-
-    expect(await resolveExtensionReleaseCommit("https://example.com/extensions.git", "pstdio@0.27.0", run)).toBe(
-      releaseCommit,
-    );
-    expect(run).toHaveBeenCalledWith(
-      "git",
-      expect.arrayContaining(["https://example.com/extensions.git"]),
-      expect.any(Object),
-    );
-  });
-
   test("does not offer an upgrade when the installed source matches the host release", async () => {
     const releaseCommit = "a".repeat(40);
     const service = createExtensionUpgradeService({
@@ -164,6 +153,24 @@ describe("extension upgrade service", () => {
     ).toBe(false);
   });
 
+  test("leaves an incompatible repository source without provenance under the repository's control", async () => {
+    const service = createExtensionUpgradeService({
+      extensionService: idleExtensionService,
+      release: { source: "git", ref: "c".repeat(40) },
+      workspaceService: emptyWorkspaceService,
+    });
+
+    // The repository folder is the source of truth, so a release must never overwrite it.
+    expect(
+      await service.canUpgrade({
+        ...installedSource,
+        manifest_json: { name: "pstdio-planner", enginesPstdio: "^1.0.0" },
+        source_path: "/work/my-repo/.pstdio/extensions/pstdio-planner",
+        source_ref: null,
+      }),
+    ).toBe(false);
+  });
+
   test("does not offer an upgrade for an extension outside the marketplace", async () => {
     const service = createExtensionUpgradeService({
       extensionService: idleExtensionService,
@@ -174,8 +181,8 @@ describe("extension upgrade service", () => {
     expect(
       await service.canUpgrade({
         ...installedSource,
-        install_name: "extension-lab",
-        manifest_json: { name: "extension-lab", enginesPstdio: "^1.0.0" },
+        install_name: "local-example",
+        manifest_json: { name: "local-example", enginesPstdio: "^1.0.0" },
         source_ref: null,
       }),
     ).toBe(false);
@@ -307,7 +314,7 @@ describe("catalog extension installation and upgrades", () => {
         getProjectExtensionInstance: async () =>
           ({
             instance,
-            installedSource: { ...installedSource, install_name: "extension-lab", source_ref: null },
+            installedSource: { ...installedSource, install_name: "local-example", source_ref: null },
           }) as never,
       },
       installExtensionSource: async () => {
@@ -388,6 +395,7 @@ describe("catalog extension installation and upgrades", () => {
     expect(
       await service.canUpgrade({
         install_name: "acme-recipes",
+        source_path: "/home/user/.pstdio/extensions/acme-recipes",
         source_ref: `${originUrl}@${oldCommit}#extensions/recipes`,
       }),
     ).toBe(true);

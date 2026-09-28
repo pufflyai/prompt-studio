@@ -6,7 +6,7 @@ import {
   type ExtensionCatalogEntry,
   getExtensionCatalog,
 } from "../features/extensions/extension-catalog";
-import { runCommand } from "../features/extensions/install-extension-dependencies";
+import { hashExtensionSource } from "../features/extensions/hash-extension-source";
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
@@ -15,7 +15,8 @@ import {
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
-import { compatibilityError } from "../features/extensions/project-extension-instance";
+import { compatibilityError, sourceScope } from "../features/extensions/project-extension-instance";
+import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-release-ref";
 import type { createExtensionService } from "./extension-service";
 
 type ExtensionService = Pick<
@@ -41,6 +42,8 @@ type ExtensionUpgradeServiceDeps = {
 type UpgradeSource = {
   install_name: string;
   manifest_json?: unknown;
+  source_hash?: string | null;
+  source_path: string;
   source_ref: string | null;
 };
 
@@ -107,44 +110,6 @@ const enableExisting = async (
   });
 };
 
-const gitCommitPattern = /^[0-9a-f]{40}$/i;
-
-export const parseExtensionSourceRef = (sourceRef: string | null) => {
-  if (!sourceRef) return null;
-  const pathSeparator = sourceRef.lastIndexOf("#");
-  const commitSeparator = sourceRef.lastIndexOf("@", pathSeparator);
-  if (pathSeparator < 1 || commitSeparator < 1) return null;
-  const commit = sourceRef.slice(commitSeparator + 1, pathSeparator);
-  const path = sourceRef.slice(pathSeparator + 1);
-  const url = sourceRef.slice(0, commitSeparator);
-  if (!url || !path || !gitCommitPattern.test(commit)) return null;
-  return { commit: commit.toLowerCase(), path, url };
-};
-
-export const resolveExtensionReleaseCommit = async (originUrl: string, releaseRef: string, run = runCommand) => {
-  if (gitCommitPattern.test(releaseRef)) return releaseRef.toLowerCase();
-
-  const tagRef = releaseRef.startsWith("refs/") ? releaseRef : `refs/tags/${releaseRef}`;
-  const branchRef = releaseRef.startsWith("refs/") ? null : `refs/heads/${releaseRef}`;
-  const refs = [`${tagRef}^{}`, tagRef, ...(branchRef ? [branchRef] : [])];
-  const result = await run("git", ["ls-remote", originUrl, ...refs], { cwd: process.cwd() });
-  if (result.exitCode !== 0) {
-    throw new Error(result.stderr.trim() || result.stdout.trim() || `Could not resolve ${releaseRef}`);
-  }
-
-  const commits = new Map(
-    result.stdout
-      .trim()
-      .split("\n")
-      .map((line) => line.split("\t", 2))
-      .filter((entry): entry is [string, string] => entry.length === 2)
-      .map(([commit, ref]) => [ref, commit]),
-  );
-  const commit = refs.map((ref) => commits.get(ref)).find(Boolean);
-  if (!commit || !gitCommitPattern.test(commit)) throw new Error(`Could not resolve ${releaseRef}`);
-  return commit.toLowerCase();
-};
-
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
   const catalog = deps.catalog ? Promise.resolve(deps.catalog) : getExtensionCatalog();
@@ -177,7 +142,9 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     } catch {
       return false;
     }
-    if (!parsed) return compatibilityError(source) !== null;
+    // A repository owns the sources in its folder, so only a user-global copy without provenance
+    // gets the recovery upgrade.
+    if (!parsed) return sourceScope(source.source_path) === "global" && compatibilityError(source) !== null;
     if (!releaseRef) return false;
     try {
       return parsed.commit !== (await currentReleaseCommit(parsed.url, releaseRef));
@@ -186,6 +153,17 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       return true;
     }
   };
+
+  // Only a user-global copy the host installed from a recorded release, and that nobody changed
+  // since, is replaced without asking. Anything else may hold someone's work and waits for a person.
+  const canUpgradeAutomatically = async (source: UpgradeSource) =>
+    (await catalogEntry(source.install_name))?.origin.ref === "{hostRelease}" &&
+    parseExtensionSourceRef(source.source_ref) !== null &&
+    sourceScope(source.source_path) === "global" &&
+    Boolean(source.source_hash) &&
+    existsSync(source.source_path) &&
+    hashExtensionSource(source.source_path) === source.source_hash &&
+    (await canUpgrade(source));
 
   const requireCatalogEntry = async (installName: string) => {
     const entry = await catalogEntry(installName);
@@ -361,6 +339,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
   return {
     canUpgrade,
+    canUpgradeAutomatically,
     enabled: true,
     installMarketplaceExtension,
     prepareMarketplaceExtensionSource,
