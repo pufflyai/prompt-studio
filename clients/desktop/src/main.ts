@@ -3,6 +3,7 @@ import { app, autoUpdater, clipboard, dialog, ipcMain, Menu, protocol, shell } f
 import electronSquirrelStartup from "electron-squirrel-startup";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
+import { createMacOSCliSetup } from "./cli/macos-cli-setup";
 import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
 import { registerDesktopIpc } from "./ipc/register-desktop-ipc";
 import {
@@ -229,6 +230,9 @@ const confirmQuit = async () => {
 };
 
 const bootstrap = async () => {
+  const cliSetup = createMacOSCliSetup((error) => {
+    logger.error({ event: "desktop.cli.install.failed", message: error.message }, "CLI setup failed");
+  });
   const workbenchState = new DesktopWorkbenchStateStore(join(app.getPath("userData"), "workbench-state.json"));
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
@@ -240,6 +244,7 @@ const bootstrap = async () => {
         (commandId) => {
           if (state.kind === "workbench") windowController?.executeCommand(commandId);
         },
+        cliSetup?.install,
       ),
     ),
   );
@@ -302,6 +307,7 @@ const bootstrap = async () => {
     setSelectedProjectId: (projectId) => workbenchState.setSelectedProjectId(projectId),
   });
   await startRuntime();
+  void cliSetup?.onFirstLaunch();
 };
 
 if (electronSquirrelStartup) {

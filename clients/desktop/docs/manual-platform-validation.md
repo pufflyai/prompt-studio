@@ -63,6 +63,7 @@ spctl --assess --type execute --verbose=2 '/Applications/Prompt Studio.app'
 Use a fresh test account or a disposable remote machine. Keep the account through the update check.
 
 1. Install through the DMG or Setup installer and launch from Finder or the Windows Start menu. Record the installer behavior and the version shown in About.
+   On macOS, move the app to Applications before opening it. Complete the command installation password prompt if shown, then run `command -v pst` and `pst --version` in Terminal. Confirm the command is `/usr/local/bin/pst` and matches About. On a second fresh account, cancel the prompt and confirm that the app still opens, relaunching does not prompt again, and **Prompt Studio → Install pst Command…** retries successfully. Keep a separate CLI at that path in another check and confirm the app preserves it.
 2. Confirm the startup screen and workbench appear. Create a test project and check that the default extensions load.
 3. Create a second project, switch between project tabs, close one tab, and reopen it. Check that every tab responds to clicks.
 4. Create a ticket and a workspace. Edit and save a small file. Open a terminal and run a command that prints the working directory.
@@ -86,6 +87,7 @@ This requires two different, compatible signed versions on the target platform. 
 3. Choose **Check for Updates…** and capture the result. Confirm a newer version is downloaded.
 4. Quit normally when the update is ready, then reopen the app.
 5. Confirm About and the bundled CLI both show the new version and all test data survives.
+   On macOS, also run `pst --version` through the installed terminal command.
 6. Verify the updated application signature. On Windows, also verify the bundled `resources\bin\pstdio.exe` signature. On macOS, rerun the three application checks above.
 7. Check for updates again. Confirm the app reports that it is current.
 

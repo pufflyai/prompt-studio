@@ -243,6 +243,10 @@ jobs:
           DEB=$(find clients/desktop/out/make -type f -name '*.deb' -print -quit)
           test -n "$DEB"
           dpkg-deb --info "$DEB"
+          sudo apt-get install -y "$PWD/$DEB"
+          test "$(pst --version)" = '${{ inputs.version }}'
+          sudo apt-get remove -y prompt-studio
+          test ! -L /usr/bin/pst
 
       - name: Extract desktop release notes
         shell: bash

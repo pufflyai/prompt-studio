@@ -14,6 +14,24 @@ Choose the artifact for the computer that will run Prompt Studio:
 | Intel macOS | `Prompt-Studio-<version>-darwin-x64.dmg` | matching ZIP |
 | Linux x64 | `Prompt-Studio-<version>-linux-x64.deb` | portable ZIP |
 
+On macOS, drag the app to Applications and open it. On the first launch from
+Applications, the app links `/usr/local/bin/pst` to its bundled runtime. macOS asks
+for an administrator password if the directory requires it. Cancelling leaves
+the app usable and does not repeat the prompt on later launches. Choose
+**Prompt Studio → Install pst Command…** to retry or restore a removed link.
+Apps running from the DMG or another unpacked folder do not install the command.
+
+The Linux DEB installs `/usr/bin/pst` and removes its own link when uninstalled.
+Neither platform requires Bun, Node.js, or a separate CLI download. Run
+`pst --version` in Terminal to check the command. Desktop updates replace the
+runtime at the same path, so `pst` follows the desktop version.
+
+Existing commands are preserved. Remove a separate CLI installation before
+retrying setup to use the desktop's bundled version. A command earlier on a custom
+`PATH` takes priority; run `command -v pst` to check which one runs. Deleting the
+macOS app leaves its link behind; remove that link with `rm /usr/local/bin/pst`
+(use `sudo` if needed).
+
 The Linux ZIP is portable rather than system-integrated. Extract it to a stable
 directory without spaces, preserve executable permissions, and launch
 `prompt-studio` from the extracted directory. Electron's SUID sandbox currently
