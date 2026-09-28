@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -39,6 +39,29 @@ describe("installRepoDefaultExtensions", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
+
+test("does not fetch defaults that are already installed as user extensions", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-repo-defaults-installed-"));
+  const home = join(root, "home");
+  const repo = join(root, "repo");
+  writeExtension(join(home, "extensions", "user-extension"), "user-extension", "user");
+  const prepareSharedCheckout = mock(async () => {
+    throw new Error("A user extension default must not be fetched for a project folder.");
+  });
+  try {
+    const result = await installRepoDefaultExtensions({
+      repoPath: repo,
+      defaultExtensions: [{ source: "user-extension", installName: "user-extension" }],
+      env: { PSTDIO_HOME: home },
+      prepareSharedCheckout,
+    });
+
+    expect(result).toMatchObject({ materialized: [], skipped: [] });
+    expect(prepareSharedCheckout).not.toHaveBeenCalled();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("a failed default installation batch removes only the defaults it created", async () => {

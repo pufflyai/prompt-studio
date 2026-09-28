@@ -54,7 +54,7 @@ export const prepareInstallDependencies = async (input: {
     if (installInput.reuseInstalledDependencies) linkUsableNodeModules(source.path, installPath);
     else copyUsableNodeModules(source.path, installPath);
   } else {
-    await installDependencies(installPath, installInput);
+    await installDependencies(installPath, { ...installInput, production: true });
   }
   return linkedInstalledDependencies;
 };

@@ -24,6 +24,9 @@ export type DependencyInstallInput = {
   homedir?: () => string;
   isPackagedRuntime?: () => boolean;
   processExecPath?: string;
+  // Installs only `dependencies`. The host passes it for the copies it owns; a source checkout
+  // belongs to its author and keeps its development dependencies.
+  production?: boolean;
   runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
   saveLockfile?: boolean;
   signal?: AbortSignal;
@@ -91,15 +94,20 @@ export const installDependencies = async (targetPath: string, input: DependencyI
   const run = input.runCommand ?? runCommand;
   const packaged = (input.isPackagedRuntime ?? isPackagedRuntime)();
   const env = createExtensionInstallEnvironment(input.env ?? process.env);
+  const args = [
+    "install",
+    ...(input.saveLockfile === false ? ["--no-save"] : []),
+    ...(input.production ? ["--production"] : []),
+  ];
   const command = packaged
     ? resolveManagedBunCommand({
-        args: ["install", ...(input.saveLockfile === false ? ["--no-save"] : [])],
+        args,
         bunCacheDir: input.bunCacheDir ?? join(resolvePstdioHome(input), "cache", "extension-bun-install"),
         env,
         isPackaged: true,
         processExecPath: input.processExecPath ?? process.execPath,
       })
-    : { file: "bun", args: ["install", ...(input.saveLockfile === false ? ["--no-save"] : [])], env };
+    : { file: "bun", args, env };
 
   const result = await run(command.file, command.args, {
     cwd: targetPath,
