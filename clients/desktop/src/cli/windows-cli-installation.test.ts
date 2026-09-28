@@ -75,8 +75,9 @@ test.skipIf(process.platform !== "win32")(
       process.env.ComSpec ?? "cmd.exe",
       ["/d", "/v:off", "/s", "/c", 'pst probe.ts "a b" "Å & !" --flag'],
       {
-        cwd: root,
-        env: { ...process.env, PATH: `${join(installRoot, "bin")};${process.env.PATH}` },
+      cwd: root,
+      windowsVerbatimArguments: true,
+      env: { ...process.env, PATH: `${join(installRoot, "bin")};${process.env.PATH}` },
         encoding: "utf8",
       },
     );

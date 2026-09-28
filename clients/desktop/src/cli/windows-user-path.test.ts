@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { execFileSync, spawnSync } from "node:child_process";
 import { quotePowerShell, runWindowsPowerShell, updateWindowsUserPath } from "./windows-user-path";
 
 const directory = "C:\\Users\\Person's Å & %test% !\\PromptStudio\\bin";
@@ -12,14 +13,17 @@ for (const action of ["install", "uninstall"] as const) {
       const key = quotePowerShell(registryKey);
       const installed = `${original};${directory}`;
       try {
-        await runWindowsPowerShell(
-          `
-$key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey(${key})
-$key.SetValue('Path', $env:PSTDIO_TEST_USER_PATH, [Microsoft.Win32.RegistryValueKind]::ExpandString)
-$key.Dispose()
-`,
-          { PSTDIO_TEST_USER_PATH: action === "install" ? original : installed },
-        );
+        execFileSync("reg.exe", [
+          "add",
+          `HKCU\\${registryKey}`,
+          "/v",
+          "Path",
+          "/t",
+          "REG_EXPAND_SZ",
+          "/d",
+          action === "install" ? original : installed,
+          "/f",
+        ]);
         const read = async () =>
           JSON.parse(
             await runWindowsPowerShell(`
@@ -31,7 +35,7 @@ $key.Dispose()
         await updateWindowsUserPath(directory, action, registryKey);
         expect(await read()).toEqual({ value: action === "install" ? installed : original, kind: "ExpandString" });
       } finally {
-        await runWindowsPowerShell(`[Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree(${key}, $false)`);
+        spawnSync("reg.exe", ["delete", `HKCU\\${registryKey}`, "/f"]);
       }
     },
   );
@@ -51,6 +55,6 @@ $key.Dispose()
     );
     expect(stored).toBe(directory);
   } finally {
-    await runWindowsPowerShell(`[Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree(${key}, $false)`);
+    spawnSync("reg.exe", ["delete", `HKCU\\${registryKey}`, "/f"]);
   }
 });
