@@ -81,16 +81,16 @@ const seedEnabledInstance = async (projectId: string) => {
     version: loaded.metadata.version ?? null,
   });
 
-  return { instanceId: result.instance.id, installName, sourcePath };
+  return { instanceId: result.instance.id, sourcePath };
 };
 
 describe("POST /v1/projects/:projectId/extensions/:instanceId/attempt-fix", () => {
   test("creates a repair session seeded with the load error", async () => {
     const project = await createProject("Attempt Fix Project");
-    const { instanceId, installName, sourcePath } = await seedEnabledInstance(project.id);
+    const { instanceId, sourcePath } = await seedEnabledInstance(project.id);
 
     unlinkSync(join(sourcePath, "extension.ts"));
-    await handle.deps.extensionService.reloadInstalledSource(installName);
+    await handle.deps.extensionService.reloadInstalledSourceBySourcePath(sourcePath);
 
     const res = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}/attempt-fix`, {
       method: "POST",

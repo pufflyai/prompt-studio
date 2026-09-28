@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -57,15 +57,15 @@ const createProject = async (name: string) => {
   return response.json();
 };
 
-const seedEnabledInstance = async (projectId: string) => {
+const seedEnabledInstance = async (projectId: string, source: { installName?: string; root?: string } = {}) => {
   counter += 1;
-  const installName = `reload-source-${counter}`;
+  const installName = source.installName ?? `reload-source-${counter}`;
   const name = `test-reload-${counter}`;
   const sourcePath = createTestExtensionSource({
     displayName: `Reload ${counter}`,
     installName,
     name,
-    root: tempRoot,
+    root: source.root ?? tempRoot,
     version: "1.0.0",
   });
   const loaded = await loadExtensionSource(sourcePath);
@@ -102,6 +102,23 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/reload", () => {
     const fixedBody = await fixed.json();
     expect(fixedBody.status).toBe("loaded");
     expect(fixedBody.lastError).toBeNull();
+  });
+
+  test("adopts the project's own source when another folder uses the same install name", async () => {
+    const other = await createProject("Reload Other Folder");
+    const project = await createProject("Reload Own Folder");
+    await seedEnabledInstance(other.id, { installName: "shared-name", root: join(tempRoot, "other-folder") });
+    const own = await seedEnabledInstance(project.id, {
+      installName: "shared-name",
+      root: join(tempRoot, "own-folder"),
+    });
+    const manifestPath = join(own.sourcePath, "package.json");
+    writeFileSync(manifestPath, readFileSync(manifestPath, "utf8").replace('"1.0.0"', '"2.0.0"'));
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions/${own.instanceId}/reload`, { method: "POST" });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ sourcePath: own.sourcePath, status: "loaded", version: "2.0.0" });
   });
 
   test("returns 404 for an unknown instance", async () => {

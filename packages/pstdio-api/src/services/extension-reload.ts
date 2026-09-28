@@ -118,13 +118,6 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
   }
 };
 
-export const reloadInstalledSource = async (deps: ReloadDeps, installName: string) => {
-  const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
-  if (!existing) throw new Error(`Installed extension not found: ${installName}`);
-
-  return reloadInstalledSourceRow(deps, existing);
-};
-
 export const reloadInstalledSourceBySourcePath = async (deps: ReloadDeps, sourcePath: string) => {
   const existing = await deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
   if (!existing) throw new Error(`Installed extension not found at source path: ${sourcePath}`);

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createDb, createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { reloadInstalledSource } from "./extension-reload";
+import { reloadInstalledSourceBySourcePath } from "./extension-reload";
 
 const cleanup: Array<() => Promise<void> | void> = [];
 
@@ -28,7 +28,7 @@ const writeExtension = (root: string) => {
   writeFileSync(join(root, "extension.ts"), "export default {};\n");
 };
 
-describe("reloadInstalledSource published state", () => {
+describe("reloadInstalledSourceBySourcePath published state", () => {
   test("does not expose loaded state or a new revision before runtime refresh completes", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-reload-pending-test-"));
     cleanup.push(() => rmSync(root, { recursive: true, force: true }));
@@ -59,7 +59,7 @@ describe("reloadInstalledSource published state", () => {
       finishRefresh = resolve;
     });
 
-    const reload = reloadInstalledSource(
+    const reload = reloadInstalledSourceBySourcePath(
       {
         emitInstalledSource: () => {},
         installedExtensionSourcesService: sources,
@@ -68,7 +68,7 @@ describe("reloadInstalledSource published state", () => {
           await refreshFinished;
         },
       },
-      "reload-state-pending",
+      root,
     );
 
     await refreshStarted;
@@ -107,7 +107,7 @@ describe("reloadInstalledSource published state", () => {
     });
     const emitted: unknown[] = [];
 
-    const result = await reloadInstalledSource(
+    const result = await reloadInstalledSourceBySourcePath(
       {
         emitInstalledSource: (source) => emitted.push(source),
         installedExtensionSourcesService: sources,
@@ -117,7 +117,7 @@ describe("reloadInstalledSource published state", () => {
           await sources.updateLoadState(source.id, { loaded_revision: "published-revision" });
         },
       },
-      "reload-state",
+      root,
     );
 
     expect(result.installedSource.loaded_revision).toBe("published-revision");
