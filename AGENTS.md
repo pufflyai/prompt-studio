@@ -180,7 +180,7 @@ A pull request may contain only one migration entry. If the tools create more th
 
 - **Branches**: Use `<category>/<kebab-description>`. The categories are `feature`, `bugfix`, `hotfix`, `test`, and `chore`. Example: `feature/add-new-event-button`.
 - **Commits**: Use `<category>(<PS-XXX>): <statement>; <statement>`. The categories are `feat`, `fix`, `refactor`, and `chore`. Each statement must finish the sentence "This commit will..." Example: `fix(PS-42): add new button component; add new button to templates`.
-- **Pull requests**: Open them as drafts against `main` unless the user says otherwise. Use `<category>(<PS-XXX>): <statement>` for the title. Example: `fix(PS-42): add new button component`.
+- **Pull requests**: Open them as drafts against `main` unless the user says otherwise. Use `<category>(<PS-XXX>): <statement>` for the title. Example: `fix(PS-42): add new button component`. Write the description with the sections in [.github/pull_request_template.md](.github/pull_request_template.md), in the same order. `gh pr create --body` replaces the template, so copy its headings into the body yourself.
 
 ## Coding style rules
 
