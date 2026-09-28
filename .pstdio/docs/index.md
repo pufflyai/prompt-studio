@@ -57,6 +57,8 @@ See the [CLI command index](/product/cli/index) for the current core commands.
 | `product/`         | User-facing guides and cookbooks for the core CLI, dashboard, SDK, and platform.            |
 | `references/`      | Lookup-oriented API, SDK, workbench, endpoint, and command references.                     |
 
+Lessons learned use `NNNN-kebab-case.md` filenames, like ADRs. Keep assigned numbers stable and use the next available number for a new lesson. Retain lessons that explain a current system constraint or prevent a repeat failure; remove obsolete instructions and merge duplicate investigations.
+
 Extension documentation is split by audience:
 
 - [Extension authoring guides](./extensions/index.md) live under `.pstdio/docs/extensions/`.

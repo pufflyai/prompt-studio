@@ -53,4 +53,4 @@ If `pst` reports that the API did not become healthy, inspect the captured start
 
 ## See also
 
-- [`bun --watch` Corrupts the Dev Database](./bun_watch_corrupts_dev_db.md) — the same `Aborted()` corruption reached via unclean teardown on reload, rather than concurrent writers.
+- [`bun --watch` Corrupts the Dev Database](./0011-bun-watch-corrupts-dev-db.md) — the same `Aborted()` corruption reached via unclean teardown on reload, rather than concurrent writers.

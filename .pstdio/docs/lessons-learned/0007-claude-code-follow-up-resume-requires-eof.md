@@ -30,14 +30,14 @@ Once Claude stopped making progress while still waiting on open `stdin`, the chi
 
 The Claude resume wrapper now treats a follow-up as a one-shot input payload and closes `stdin` immediately after writing the message. That gives Claude the EOF it needs to finalize the resumed turn.
 
-### Add a process-exit timeout at the session layer
+### Let the provider control completion
 
-Update (PS-389): Claude Code and Codex now use provider-owned completion. A lack of chat events cannot distinguish a hung process from quiet reasoning or a long tool call. The host activity watchdog remains available to other harnesses, but must not terminate these CLI sessions. Their stderr pipes must also be drained to prevent output backpressure from blocking the executable.
+The original host timeout was superseded by PS-389. Claude Code and Codex now use provider-owned completion. A lack of chat events cannot distinguish a hung process from quiet reasoning or a long tool call, so the host activity watchdog must not terminate these CLI sessions.
 
-The API session tracker now applies a timeout while waiting for agent process exit. If a provider process hangs anyway, `pst` kills it and marks the session as `failed` instead of leaving it stuck forever.
+The [Claude Code harness](../../../extensions/harness-claude-code/src/spawn.ts) closes stdin after sending the prompt, drains stderr to prevent output backpressure, and returns `timeoutStrategy: "provider"`. Its [regression test](../../../extensions/harness-claude-code/src/spawn.test.ts) checks that follow-up input ends.
 
 ## Key takeaway
 
 When wrapping a streaming CLI with a one-shot request model, writing the message is not enough. The input boundary is part of the protocol.
 
-If the provider expects EOF to conclude a request, leaving `stdin` open can look like an unfinished turn. Session lifecycle code should also assume child processes may hang and enforce a timeout so the UI can always leave `in_progress`.
+If the provider expects EOF to conclude a request, leaving `stdin` open can look like an unfinished turn. Close the input boundary, drain output pipes, and respect the provider's completion contract.

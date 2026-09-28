@@ -168,7 +168,7 @@ Inspect the configured PGlite database with Drizzle Studio:
 bun run --cwd packages/pstdio-db studio
 ```
 
-Do not run Drizzle Studio against the live database while `pst` is running. Stop `pst` first or inspect a copied database, as described in [PGlite WAL corruption](/lessons-learned/pglite_wal_corruption).
+Do not run Drizzle Studio against the live database while `pst` is running. Stop `pst` first or inspect a copied database, as described in [PGlite WAL corruption](/lessons-learned/0002-pglite-wal-corruption).
 
 ## Storybook
 

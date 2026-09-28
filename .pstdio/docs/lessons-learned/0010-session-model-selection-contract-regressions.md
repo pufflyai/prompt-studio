@@ -14,7 +14,7 @@ user_prompt: "a model might get changed across the session, we need to make it c
 
 Session model handling regressed because Prompt Studio used the same word, `model`, for three different contracts: the user's currently selected model, the session's last selected model, and the provider-specific model payload. That blurred boundary let basic OpenCode session creation fail with HTTP 400 when the provider rejected a string model payload, and it also let the dashboard omit or restore the wrong model in session creation and follow-up flows.
 
-This postmortem covers the confirmed model-selection and model-payload bugs found in the current fix and in recent git history.
+This postmortem covers the model-selection and model-payload bugs investigated in May 2026. The model ownership contract still applies.
 
 ## Impact
 
@@ -55,7 +55,7 @@ Commit `e8b04476` (`fix(PS-67): preserve agent default model state`, 2026-05-07)
 
 ### OpenCode provider payload used the wrong model type
 
-The current regression sent this body to OpenCode session creation:
+The reported regression sent this body to OpenCode session creation:
 
 ```json
 { "model": "openai/gpt-5.5" }
@@ -68,7 +68,7 @@ The observed OpenCode API rejected it. Prompt Studio now converts the stored/req
 
 ### Dashboard create/follow-up paths did not prove selected model propagation
 
-The dashboard now has explicit tests that:
+The original fix added coverage proving that:
 
 - A new session passes the selected model from the agent browser into `createSession`.
 - `useCreateProjectSession` includes the trimmed model in the request body.
@@ -101,16 +101,18 @@ The fix changed the system to follow the contract above:
 
 ## Corrective actions
 
-Every future model-related change must preserve this test matrix:
+Future model-related changes must preserve these boundaries:
 
-1. DB/schema test for the session model field name and nullability.
-2. API create-session test proving an explicit request model is persisted as `last_selected_model`.
-3. API follow-up test proving a changed request model updates `last_selected_model`.
-4. Dashboard action/hook tests proving selected model reaches create and follow-up request bodies.
-5. Dashboard selection test proving existing sessions initialize from `lastSelectedModel`.
-6. Provider test proving OpenCode create uses `{ providerID, id }`.
-7. Provider test proving OpenCode message uses `{ providerID, modelID }`.
-8. E2E smoke test creating an OpenCode session from a non-`prompt-studio` repo with a selected model, using a mocked OpenCode binary and mocked OpenCode HTTP server.
+1. API and database tests prove that creation and follow-up persist `last_selected_model` correctly.
+2. Provider tests prove that OpenCode receives `{ providerID, id }` for creation and `{ providerID, modelID }` for messages.
+3. Storybook stories cover new-session selection and restoring the last selected model. Validate UI changes with Playwright, following the repository workflow.
+4. Integration coverage proves model propagation from an external linked project, using controlled provider fixtures rather than real agent processes in CI.
+
+Current implementation references:
+
+- [Session schema](../../../packages/pstdio-db/src/db/schemas/sessions.ts)
+- [Follow-up model resolution](../../../packages/pstdio-api/src/features/sessions/endpoints/follow-up-session.ts)
+- [OpenCode model conversion](../../../extensions/harness-open-code/src/opencode-service.ts)
 
 ## Preventive actions
 
@@ -121,7 +123,7 @@ Every future model-related change must preserve this test matrix:
 
 ## Verification
 
-The fix was verified with targeted tests for DB, API, dashboard selection/actions, CLI session fixtures, OpenCode provider payloads, and the external-repo OpenCode smoke test. Full validation passed with:
+The original fix was verified with targeted tests for DB, API, dashboard selection/actions, CLI session fixtures, OpenCode provider payloads, and the external-repo OpenCode smoke test. At that time, full validation passed with:
 
 ```sh
 bun run validate

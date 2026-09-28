@@ -20,8 +20,9 @@ The earlier fix that stopped a dangling `node_modules` symlink from crashing the
 ## How it was solved
 
 - A temporary `debug/api-test-hang` workflow reran the failing step under a watchdog and, on hang, dumped `ps auxwwf`, per-pid cmdline/cwd/fd tables, and kernel thread stacks. The fd table named the mechanism precisely.
-- `extension-source-watcher.ts` now walks the source tree itself and registers one non-recursive watch per directory, skipping `node_modules`, `.git`, gitignored directories, and symlinked directories, and registers directories created later when their parent emits an event.
-- Regression tests assert the watcher never registers dependency, VCS, ignored, or symlinked directories.
+- On Linux, the [source watcher](../../../packages/pstdio-api/src/features/extensions/extension-source-watcher.ts) walks the source tree and registers non-recursive watches. It skips dependency contents, `.git`, ignored directories, and symlinked directories. Separate shallow watches on `node_modules` and scope directories detect package replacement without crawling installed packages.
+- macOS and Windows use native recursive notifications from the source root.
+- Regression tests cover excluded directory contents, dependency replacement, and source-directory replacement.
 - Verified by rerunning the previously hanging step on CI: the non-e2e test step completes in ~3.5 minutes.
 
 ## Key takeaways
@@ -31,4 +32,7 @@ The earlier fix that stopped a dangling `node_modules` symlink from crashing the
 - For CI-only hangs, stop guessing and capture ground truth in CI: a watchdog that dumps the process tree, fd tables, and thread stacks at hang time identifies the culprit in one run. Open fds on unexpected paths (here: an icon library's sourcemaps) are a high-signal clue.
 - When CI runs are `cancelled`, classify them by duration first: a constant duration just under the job timeout means a hang, not flaky cancellation.
 - A macOS Docker reproduction that fails with memory errors instead of hanging can still be the same bug — an unbounded crawl OOMs in a small cgroup before it has time to look stuck.
-- See also: [ci_timeout_after_bun_parallel_db_tests.md](ci_timeout_after_bun_parallel_db_tests.md) — an earlier investigation of the same CI symptom that removed a fragile test wrapper; useful cleanup, but the timeout itself was caused by the watcher crawl documented here.
+
+## Earlier false lead
+
+The last visible green summary came from `pstdio-db:test`, which initially led the investigation toward Bun's parallel worker path. Removing its custom runner and using direct `bun test --silent` simplified that package, but did not fix the API watcher crawl. Do not identify a hung target from the last printed summary: confirm which command is still running, especially when Nx buffers task output.

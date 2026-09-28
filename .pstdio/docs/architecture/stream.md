@@ -80,7 +80,7 @@ useLiveQuery((q) =>
 .select(({ t }) => t)
 ```
 
-TanStack DB's query builder uses JavaScript Proxies to track property access in `.select()`. Returning the proxy directly only includes properties that were explicitly read through it. The spread operator triggers TanStack DB's internal merge mechanism that includes all fields from the source table. See [TanStack DB select proxy](/lessons-learned/tanstack_db_select_proxy) for the full story.
+TanStack DB's query builder uses JavaScript Proxies to track property access in `.select()`. Returning the proxy directly only includes properties that were explicitly read through it. The spread operator triggers TanStack DB's internal merge mechanism that includes all fields from the source table. See [TanStack DB select proxy](/lessons-learned/0004-tanstack-db-select-proxy) for the full story.
 
 Because all collections use a generic `SyncedRow` type (`{ id: string; [key: string]: unknown }`), the proxy-returned type loses the index signature. The `asSyncedRows()` helper casts the result back.
 

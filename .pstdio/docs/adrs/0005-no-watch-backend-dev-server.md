@@ -20,7 +20,7 @@ Investigation (Bun 1.3.13) showed why:
 - It does **not** deliver `SIGINT`/`SIGTERM` to the running script, so the serve command's shutdown handler — which calls `pglite.close()` — never runs before a reload.
 - The data directory is therefore reopened without ever being cleanly flushed/closed → inconsistent WAL → unrecoverable startup.
 
-This is the same corruption class as [PGlite WAL Corruption](../lessons-learned/pglite_wal_corruption.md), reached by a different route: unclean teardown on reload rather than two concurrent writers.
+This is the same corruption class as [PGlite WAL Corruption](../lessons-learned/0002-pglite-wal-corruption.md), reached by a different route: unclean teardown on reload rather than two concurrent writers.
 
 ## What changes
 

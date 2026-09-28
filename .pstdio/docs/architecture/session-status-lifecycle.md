@@ -216,8 +216,7 @@ that is a hint the seam is missing a method.
 
 The seam also logs **`sync_emit_skipped`** at `warn` level whenever the DB
 write returns `null` (the row no longer exists, was already in the desired
-state, etc.). A silent no-op was the root cause of both
-[`session_status_hooks_missing_on_secondary_paths`](../lessons-learned/session_status_hooks_missing_on_secondary_paths.md)
-and
-[`missing_sse_events_for_tag_assignments`](../lessons-learned/missing_sse_events_for_tag_assignments.md);
-the warn log makes the next regression observable instead of invisible.
+state, etc.). The warn log makes skipped transitions observable. See
+[Keep session status side effects in one service](../lessons-learned/0006-session-status-hooks-missing-on-secondary-paths.md)
+for why every transition path must keep the write, sync event, and lifecycle
+callback together.
