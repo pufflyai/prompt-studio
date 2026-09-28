@@ -67,9 +67,6 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
       )}
       <Text textStyle="label/S/medium">Project workspace</Text>
       <Text>{home?.root_path ?? home?.display_path ?? "No workspace attached"}</Text>
-      {home?.provider_id === "pstdio.root" && (
-        <Text color="fg.muted">Sessions work directly in this folder and share its files.</Text>
-      )}
       {setupError && (
         <ProjectSetupStatus error={setupError} retrying={retry.isPending} onRetry={() => retry.mutate()} />
       )}

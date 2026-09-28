@@ -32,7 +32,6 @@
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
     "@pstdio/ui": "workspace:*",
-    "electron-squirrel-startup": "1.0.1",
     "pstdio": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-paths": "workspace:*",

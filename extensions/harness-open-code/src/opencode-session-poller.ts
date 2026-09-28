@@ -1,5 +1,4 @@
 import type { HarnessEventSink, HarnessExit, SessionMessage } from "@pstdio/sdk/extensions";
-import { HistoryConflict } from "@pstdio/sdk/extensions";
 import { composeOwnedOpencodeSnapshot } from "./history-reconciliation";
 import { normalizeErrorPart } from "./normalized-error";
 import { isTransportTimeout } from "./opencode-http";
@@ -137,6 +136,7 @@ export const readSessionSnapshot = async (input: {
   sessionId: string;
   cwd: string | undefined;
   events: HarnessEventSink;
+  onHistoryRecovery?: () => void;
   lastObserved: OpencodeSessionMessage[];
   lastSnapshot: string;
 }) => {
@@ -144,7 +144,7 @@ export const readSessionSnapshot = async (input: {
 
   try {
     const raw = await loadMessages(sessionId, cwd);
-    const normalized = composeOwnedOpencodeSnapshot(events, raw.map(normalizeOpencodeMessage));
+    const normalized = composeOwnedOpencodeSnapshot(events, raw.map(normalizeOpencodeMessage), input.onHistoryRecovery);
     const snapshot = JSON.stringify(normalized);
 
     if (snapshot === input.lastSnapshot) {
@@ -161,8 +161,7 @@ export const readSessionSnapshot = async (input: {
       lastObserved: raw,
       lastSnapshot: snapshot,
     } satisfies PollSnapshot;
-  } catch (error) {
-    if (error instanceof HistoryConflict) throw error;
+  } catch {
     return {
       snapshotChanged: false,
       lastObserved: input.lastObserved,
@@ -180,6 +179,7 @@ export const pollOpencodeMessages = async (input: {
   messageComplete: Promise<void>;
   abortSignal?: AbortSignal;
   pollIntervalMs?: number;
+  onHistoryRecovery?: () => void;
 }) => {
   const { loadMessages, sessionId, cwd, events, baselineCount, messageComplete, abortSignal, pollIntervalMs } = input;
   let lastSnapshot = "";
@@ -199,6 +199,7 @@ export const pollOpencodeMessages = async (input: {
       events,
       lastObserved,
       lastSnapshot,
+      onHistoryRecovery: input.onHistoryRecovery,
     });
     lastObserved = snapshot.lastObserved;
     lastSnapshot = snapshot.lastSnapshot;
@@ -251,6 +252,7 @@ export const pollOpencodeUntilIdle = async (input: {
   events: HarnessEventSink;
   abortSignal?: AbortSignal;
   pollIntervalMs?: number;
+  onHistoryRecovery?: () => void;
 }) => {
   const { loadMessages, sessionId, cwd, events, abortSignal, pollIntervalMs } = input;
   let lastSnapshot = "";
@@ -269,6 +271,7 @@ export const pollOpencodeUntilIdle = async (input: {
       events,
       lastObserved,
       lastSnapshot,
+      onHistoryRecovery: input.onHistoryRecovery,
     });
     lastObserved = snapshot.lastObserved;
     lastSnapshot = snapshot.lastSnapshot;

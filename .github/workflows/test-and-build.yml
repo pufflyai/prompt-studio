@@ -120,6 +120,14 @@ jobs:
       - name: Test dependency installs, workspace links, watchers, and attachments
         run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-api/src/features/extensions/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
 
+      # A fresh runner's first Windows PowerShell start prepares its modules and C# compiler. That one-time cost
+      # is usually about 4 s but has stalled past the 15 s test limit, so pay it before the tests that use PowerShell.
+      - name: Warm up Windows PowerShell
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
+
+      - name: Test Windows desktop command setup
+        run: bun test --timeout 15000 clients/desktop/src/cli
+
       - name: Check formatting
         run: bun run format:check
 

@@ -6,7 +6,7 @@ A project has one default workspace. That relationship owns the project's home l
 
 ## Open a folder
 
-Choose or create one folder to open a local project. The host resolves symlinks and opens an existing project for the same canonical folder. A child folder is a distinct project selection, even inside a Git repository. The folder name supplies the initial project name, including numeric and Unicode names. Project settings can rename it.
+Choose or create one folder to open a local project. A folder belongs to at most one active workspace on a host, and the database enforces this. The host resolves symlinks and opens the project that already owns the canonical folder, including when the folder is one of its worktrees. A child folder is a distinct project selection, even inside a Git repository. The folder name supplies the initial project name, including numeric and Unicode names. Project settings can rename it.
 
 `POST /v1/projects` takes an optional name and one `initial_workspace` with `provider_id` and `params`. Local onboarding uses `pstdio.root` and `{ "path": "/chosen/folder" }`. The server owns default extension setup, config files, and workspace provisioning. Missing agents do not block opening a project. Failed setup stays unavailable and reopening the same folder retries the same project and workspace.
 
@@ -20,7 +20,7 @@ The default folder workspace supports files. Sessions reuse it and share its fil
 
 Providers declare their parameters and capabilities. `pstdio.worktree` creates an isolated Git branch when the selected folder belongs to a repository with a usable base commit. For a Git subfolder, the provider creates a repository worktree and uses the matching subfolder as `root_path`. A missing subfolder at the chosen revision fails and cleans up that worktree. Files remain scoped to the folder; Git review and merge cover every affected repository path.
 
-Remote providers own their source and environment. They keep provider references rather than local paths. A remote target never falls back to the project folder. Creating one does not upload or synchronize local files.
+Remote providers own their source and environment. They keep provider references rather than local paths. A remote target never falls back to the project folder. Creating one does not upload or synchronize local files. A remote project never gets a local folder: a folder workspace request returns its remote default workspace.
 
 `GET /v1/projects/{id}/workspace-providers` lists providers that can create additional workspaces. The already-open project workspace is listed separately. Plain folders have no creation choices unless an extension supplies a provider. Git creation appears only with a usable commit; cloud providers do not require a local folder or Git source.
 

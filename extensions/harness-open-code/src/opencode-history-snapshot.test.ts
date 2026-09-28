@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { SessionMessage } from "@pstdio/sdk/extensions";
+import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
 import { appendFailureMessage, pollOpencodeMessages, readSessionSnapshot } from "./opencode-session-poller";
 import { completedAssistant, recordingSink, userMessage } from "./opencode-session-poller.test-helpers";
 
@@ -29,21 +30,22 @@ test("a poll reads the current owner after its native read finishes", async () =
   expect(sink.getMessages().at(-1)).toEqual(failure);
 });
 
-test("ambiguous poll metadata reports a history issue without publishing a replacement", async () => {
+test("ambiguous poll metadata preserves saved content and publishes fresh agent output", async () => {
   const { sink, patches } = recordingSink();
   sink.push({ op: "replace", path: "/messages", value: [user, failure] });
-  await expect(
-    readSessionSnapshot({
-      events: sink,
-      sessionId: "s",
-      cwd: undefined,
-      loadMessages: async () => [userMessage("again"), userMessage("again")],
-      lastObserved: [],
-      lastSnapshot: "",
-    }),
-  ).rejects.toThrow();
-  expect(sink.getMessages()).toEqual([user, failure]);
-  expect(patches.at(-1)).toMatchObject({ path: "/history_issue", value: { code: "reconciliation_conflict" } });
+  const raw = [userMessage("again"), userMessage("again"), completedAssistant("done")];
+  const result = await readSessionSnapshot({
+    events: sink,
+    sessionId: "s",
+    cwd: undefined,
+    loadMessages: async () => raw,
+    lastObserved: [],
+    lastSnapshot: "",
+  });
+  expect(sink.getMessages().slice(0, 2)).toEqual([user, failure]);
+  expect(sink.getMessages().at(-1)?.parts).toEqual([{ type: "text", text: "done" }]);
+  expect(result.lastObserved).toEqual(raw);
+  expect(patches.some((patch) => patch.path === "/history_issue")).toBe(false);
 });
 
 test("a generated failure appends to the current conversation", () => {
@@ -66,4 +68,31 @@ test("an earlier generated failure does not fail a later successful turn", async
   });
   expect(sink.getMessages()).toContainEqual(failure);
   expect(result).toEqual({ status: "completed" });
+});
+
+test("a question answer survives an ambiguous history and completes the turn", async () => {
+  const { sink } = recordingSink();
+  sink.push({ op: "replace", path: "/messages", value: [user, failure] });
+  const result = await pollOpencodeQuestionReply({
+    events: sink,
+    sessionId: "s",
+    cwd: undefined,
+    questionTool: { messageID: "question", callID: "call" },
+    questionResponse: { answers: [["yes"]] },
+    loadMessages: async () => [
+      userMessage("again"),
+      userMessage("again"),
+      {
+        info: { id: "question", role: "assistant", time: { completed: 1 } },
+        parts: [{ type: "tool", tool: "question", callID: "call", state: { status: "completed" } }],
+      },
+    ],
+    messageComplete: Promise.resolve(),
+    pollIntervalMs: 1,
+  });
+  expect(result).toEqual({ status: "completed" });
+  expect(sink.getMessages().filter((message) => message.id === failure.id)).toEqual([failure]);
+  expect(sink.getMessages().at(-1)?.parts).toMatchObject([
+    { type: "tool", state: { metadata: { answers: [["yes"]] } } },
+  ]);
 });

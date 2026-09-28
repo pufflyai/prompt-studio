@@ -1,9 +1,8 @@
 import { Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
-import { ListRow } from "@pstdio/ui";
-import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
 import { forwardRef, type ReactNode } from "react";
+import { HarnessParamOptionIcon } from "./harness-param-option-icon";
 import {
   type HarnessParamValues,
   removeHarnessParamOverride,
@@ -112,7 +111,7 @@ const SelectParamControl = (
           disabled={disabled}
           size={size}
           tone={isOverride ? "accent" : "neutral"}
-          startIcon={selectedOption?.icon ? <WorkbenchIcon name={selectedOption.icon} size={14} /> : undefined}
+          startIcon={selectedOption?.icon ? <HarnessParamOptionIcon name={selectedOption.icon} /> : undefined}
           showChevron
         />
       </Menu.Trigger>
@@ -125,21 +124,15 @@ const SelectParamControl = (
                 <Menu.Item
                   key={option.value}
                   value={option.value}
-                  asChild
+                  role="menuitemradio"
+                  aria-checked={option.value === selectedValue}
                   onSelect={() =>
                     onOverridesChange(updateHarnessParamOverride(overrides, defaults, paramKey, option.value))
                   }
                 >
-                  <ListRow
-                    asChild
-                    variant="full-width"
-                    role="menuitemradio"
-                    aria-checked={option.value === selectedValue}
-                    id={option.value}
-                    label={option.label}
-                    icon={<WorkbenchIcon name={option.icon} size={14} />}
-                    endContent={option.value === selectedValue ? <Check size={14} /> : undefined}
-                  />
+                  <HarnessParamOptionIcon name={option.icon} />
+                  <Menu.ItemText>{option.label}</Menu.ItemText>
+                  {option.value === selectedValue ? <Check size={14} /> : null}
                 </Menu.Item>
               ))}
             </Menu.ItemGroup>

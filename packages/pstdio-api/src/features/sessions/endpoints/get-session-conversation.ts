@@ -40,10 +40,10 @@ export const getSessionConversationHandler = (deps: SessionsRouteDeps) => {
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    const { messages, historyIssue } = await getSessionHistory(id, deps);
+    const messages = await getSessionHistory(id, deps);
     const hydratedMessages = session.project_id
       ? [...messages, ...(await getQueuedSessionMessages(deps, session.project_id, id))]
       : messages;
-    return c.json({ session, messages: hydratedMessages, historyIssue }, 200);
+    return c.json({ session, messages: hydratedMessages }, 200);
   };
 };

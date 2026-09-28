@@ -15,6 +15,32 @@ Choose the artifact for the computer that will run Prompt Studio:
 | Linux x64 | `Prompt-Studio-<version>-linux-x64.deb` | portable ZIP |
 | Windows x64 | `Prompt-Studio-<version>-win32-x64-Setup.exe` | — |
 
+On macOS, drag the app to Applications and open it. On the first launch from
+Applications, the app links `/usr/local/bin/pst` to its bundled runtime. macOS asks
+for an administrator password if the directory requires it. Cancelling leaves
+the app usable and does not repeat the prompt on later launches. Choose
+**Prompt Studio → Install pst Command…** to retry or restore a removed link.
+Apps running from the DMG or another unpacked folder do not install the command.
+
+The Linux DEB installs `/usr/bin/pst` and removes its own link when uninstalled.
+The Windows Setup installer creates a `pst.cmd` launcher in the installation's
+stable `bin` folder and adds that folder to the current user's `PATH`. Setup does
+not require an administrator password. Close and reopen your terminal after installation,
+then run `pst --version`. The launcher follows the new bundled runtime on every
+Squirrel update. Uninstall removes the desktop-owned launcher and its PATH entry.
+Other PATH entries, including environment-variable references, are preserved.
+Windows release availability still depends on the signing lane described below.
+
+None of these installers requires Bun, Node.js, or a separate CLI download.
+Desktop updates keep `pst` on the matching bundled runtime.
+
+Existing commands are preserved. Remove a separate CLI installation before
+retrying setup to use the desktop's bundled version. A command earlier on a custom
+`PATH` takes priority; run `command -v pst` on macOS/Linux or `where.exe pst` on
+Windows to check which one runs. Deleting the
+macOS app leaves its link behind; remove that link with `rm /usr/local/bin/pst`
+(use `sudo` if needed).
+
 The Linux ZIP is portable rather than system-integrated. Extract it to a stable
 directory without spaces, preserve executable permissions, and launch
 `prompt-studio` from the extracted directory. Electron's SUID sandbox currently

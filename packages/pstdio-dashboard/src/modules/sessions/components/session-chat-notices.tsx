@@ -2,24 +2,16 @@ import { Button } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import type { SessionHistoryState } from "../data/session-history-controller";
 
-interface SessionChatNoticesProps extends Pick<SessionHistoryState, "historyIssue" | "error" | "queueError"> {
+interface SessionChatNoticesProps extends Pick<SessionHistoryState, "error" | "queueError"> {
   refreshQueue(): void;
 }
 export const SessionChatNotices = (props: SessionChatNoticesProps) => {
-  const { historyIssue, error, queueError, refreshQueue } = props;
-  const historyBlocked = historyIssue && historyIssue.code !== "native_unavailable";
+  const { error, queueError, refreshQueue } = props;
   return (
     <>
       {error ? (
         <AlertMessage status="error" title="Could not load conversation">
           {error}
-        </AlertMessage>
-      ) : null}
-      {!error && historyBlocked ? (
-        <AlertMessage status="warning" title="Conversation cannot continue">
-          {historyIssue.code === "checkpoint_unreadable"
-            ? "The saved conversation could not be read."
-            : "The saved conversation and agent history could not be combined."}
         </AlertMessage>
       ) : null}
       {queueError ? (

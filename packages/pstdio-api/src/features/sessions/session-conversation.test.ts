@@ -17,16 +17,6 @@ test("conversation retains the complete history after delivery log eviction", ()
   expect(conversation.getMessages()).toEqual([message("baseline"), message("next")]);
 });
 
-test("a provider history conflict remains visible after delivery log eviction", () => {
-  const conversation = createSessionConversation(createEventStore({ maxSizeBytes: 1 }), [message("saved")]);
-  const historyIssue = { code: "reconciliation_conflict" as const, category: "ambiguous_metadata_owner" };
-  conversation.push({ op: "replace", path: "/history_issue", value: historyIssue });
-  expect(conversation.historyIssue).toEqual(historyIssue);
-  expect(conversation.snapshotAndSubscribe().historyIssue).toEqual(historyIssue);
-  expect(conversation.getMessages()).toEqual([message("saved")]);
-  conversation.close();
-});
-
 test("snapshot and subscription share an exact patch boundary", async () => {
   const conversation = createSessionConversation(createEventStore(), [message("initial")]);
   const snapshot = conversation.snapshotAndSubscribe();

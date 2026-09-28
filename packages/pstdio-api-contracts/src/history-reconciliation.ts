@@ -1,4 +1,5 @@
 import { historyTurnEvidence } from "./history-turn-evidence";
+import { mergeOrderedHistory } from "./ordered-history-merge";
 import type { SessionMessage } from "./session-messages";
 
 export type HistoryRecoveryResult =
@@ -18,6 +19,8 @@ export interface HistoryProjection {
 
 export class HistoryConflict extends Error {}
 
+export { mergeOrderedHistory };
+
 export const submittedPrompt = (message: SessionMessage) =>
   message.parts
     .filter((part) => part.type === "text")
@@ -33,65 +36,6 @@ export const historyValueKey = (value: unknown) =>
   });
 
 export const historyMessageKey = (message: SessionMessage) => historyValueKey([message.role, message.parts]);
-
-const positions = <T>(items: T[], key: (item: T) => string) => {
-  const result = new Map<string, number[]>();
-  items.forEach((item, index) => {
-    const value = key(item);
-    const indices = result.get(value) ?? [];
-    indices.push(index);
-    result.set(value, indices);
-  });
-  return result;
-};
-
-// Unique ordered anchors establish where one-sided gaps belong. Repeated runs
-// can pair only when the complete interval agrees, retaining every occurrence.
-export const mergeOrderedHistory = <T>(
-  known: T[],
-  native: T[],
-  key: (item: T) => string,
-  merge: (known: T, native: T) => T,
-  refineKey?: (known: T[], native: T[]) => (item: T) => string,
-) => {
-  if (!known.length) return native;
-  if (!native.length) return known;
-  const knownPositions = positions(known, key);
-  const nativePositions = positions(native, key);
-  const anchors: [number, number][] = [];
-  for (const [value, indices] of knownPositions) {
-    const other = nativePositions.get(value);
-    if (indices.length === 1 && other?.length === 1) anchors.push([indices[0], other[0]]);
-  }
-  if (!anchors.length) {
-    if (refineKey) {
-      const refined: T[] = mergeOrderedHistory(known, native, refineKey(known, native), merge);
-      return refined;
-    }
-    // A run cut short leaves one side a prefix of the other, so equal keys pair in order.
-    const paired = Math.min(known.length, native.length);
-    if (known.slice(0, paired).every((item, index) => key(item) === key(native[index]))) {
-      return [
-        ...known.slice(0, paired).map((item, index) => merge(item, native[index])),
-        ...known.slice(paired),
-        ...native.slice(paired),
-      ];
-    }
-    throw new HistoryConflict("ambiguous_interval");
-  }
-  let left = 0;
-  let right = 0;
-  const result: T[] = [];
-  for (const [a, b] of anchors) {
-    if (b < right) throw new HistoryConflict("conflicting_order");
-    result.push(...mergeOrderedHistory(known.slice(left, a), native.slice(right, b), key, merge, refineKey));
-    result.push(merge(known[a], native[b]));
-    left = a + 1;
-    right = b + 1;
-  }
-  result.push(...mergeOrderedHistory(known.slice(left), native.slice(right), key, merge, refineKey));
-  return result;
-};
 
 export const splitHistoryTurns = (messages: readonly SessionMessage[]) => {
   const turns: SessionMessage[][] = [];
@@ -144,7 +88,18 @@ export const reconcileMessageHistory = (input: HistoryRecoveryInput, projection:
     const startsWithUser = known[0]?.role === "user" && native[0]?.role === "user";
     const body = (turn: SessionMessage[]) =>
       combineTextRuns(turn.slice(startsWithUser ? 1 : 0).filter((message) => !generated(message)));
-    const messages = mergeOrderedHistory(body(known), body(native), key, merge);
+    const shown = known.flatMap((message) =>
+      message.parts.flatMap((part) => (part.type === "text" ? [part.text] : [])),
+    );
+    const saved = shown.join("");
+    const messages = mergeOrderedHistory(body(known), body(native), {
+      key,
+      merge,
+      time: (message) => message.createdAt,
+      // Sources can split one reply into different chunks; text the user already saw is not missing.
+      covered: (message) =>
+        message.parts.length > 0 && message.parts.every((part) => part.type === "text" && saved.includes(part.text)),
+    });
     const metadata = [...native.filter(generated)];
     const counts = new Map<string, number>();
     metadata.forEach((message) => {
@@ -161,16 +116,15 @@ export const reconcileMessageHistory = (input: HistoryRecoveryInput, projection:
   try {
     const prompt = (turn: SessionMessage[]) =>
       turn[0]?.role === "user" ? `user:${submittedPrompt(turn[0])}` : "prefix";
-    const turns = mergeOrderedHistory(
-      splitHistoryTurns(input.knownMessages),
-      splitHistoryTurns(input.nativeMessages),
-      prompt,
-      mergeTurn,
-      (known, native) =>
+    const turns = mergeOrderedHistory(splitHistoryTurns(input.knownMessages), splitHistoryTurns(input.nativeMessages), {
+      key: prompt,
+      merge: mergeTurn,
+      refineKey: (known, native) =>
         historyTurnEvidence(known, native, prompt, (turn) =>
           combineTextRuns(turn.slice(1).filter((message) => !generated(message))).map(key),
         ),
-    );
+      time: (turn) => turn[0]?.createdAt,
+    });
     const messages = turns
       .flat()
       .map((message, index) => (message.index === undefined ? message : { ...message, index }));

@@ -54,12 +54,10 @@ const streamLivePatches = async (
       if (item.done) break;
       const patch = item.value;
       await queue.beforePatch(patch);
-      const event = patch.path === "/history_issue" ? "history_issue" : "patch";
+      const approval = patch.path === "/approval_request";
       await stream.writeSSE({
-        data: JSON.stringify(
-          patch.path === "/approval_request" || patch.path === "/history_issue" ? patch.value : patch,
-        ),
-        event: patch.path === "/approval_request" ? "approval_request" : event,
+        data: JSON.stringify(approval ? patch.value : patch),
+        event: approval ? "approval_request" : "patch",
       });
     }
     return aborted;
@@ -102,8 +100,6 @@ const streamEntry = async (id: string, entry: ActiveSession, deps: SessionsRoute
     try {
       await queue.snapshot(current.messages);
       await snapshot(current.messages, stream);
-      if (current.historyIssue)
-        await stream.writeSSE({ data: JSON.stringify(current.historyIssue), event: "history_issue" });
       return await streamLivePatches({ [Symbol.asyncIterator]: () => iterator }, stream, queue);
     } finally {
       await iterator.return?.();
@@ -120,12 +116,10 @@ const sendInactiveSnapshot = async (id: string, deps: SessionsRouteDeps, stream:
   if (!history) return null;
   const entry = deps.sessionService.store.get(id);
   if (entry) return entry;
-  await createStreamQueuePublisher(id, deps, stream).snapshot(history.messages);
+  await createStreamQueuePublisher(id, deps, stream).snapshot(history);
   const next = deps.sessionService.store.get(id);
   if (next) return next;
-  await snapshot(history.messages, stream);
-  if (history.historyIssue)
-    await stream.writeSSE({ data: JSON.stringify(history.historyIssue), event: "history_issue" });
+  await snapshot(history, stream);
   return null;
 };
 

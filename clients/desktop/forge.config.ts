@@ -4,6 +4,7 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { version } from "./package.json";
+import { writeCliInstallScripts } from "./src/packaging/cli-install-scripts";
 import { finalizeWindowsSidecar } from "./src/packaging/finalize-windows-sidecar";
 import { desktopPackageName } from "./src/packaging/package-layout";
 import { resolveDesktopSigning } from "./src/release/release-config";
@@ -11,6 +12,7 @@ import { validateSidecarArtifact } from "./src/runtime/sidecar-artifact";
 
 const desktopRoot = import.meta.dirname;
 const assetsRoot = join(desktopRoot, "assets");
+const installScripts = writeCliInstallScripts(join(desktopRoot, "out", "install-scripts"));
 const signing = resolveDesktopSigning({
   platform: process.platform,
   release: process.env.PSTDIO_DESKTOP_RELEASE === "1",
@@ -89,6 +91,10 @@ const config: ForgeConfig = {
           maintainer: "Prompt Studio <support@prompt.studio>",
           name: "prompt-studio",
           productName: "Prompt Studio",
+          scripts: {
+            postinst: join(installScripts, "postinst"),
+            postrm: join(installScripts, "postrm"),
+          },
         },
       },
     },

@@ -83,7 +83,7 @@ test("upgrades linked folders and recorded aliases without losing workspace or s
     expect(records.find((row) => row.project_id === "one" && row.is_default)?.root_path).toBe("/second");
     expect(records.find((row) => row.project_id === "many" && row.is_default)?.root_path).toBe("/first");
     const workspaces = createWorkspacesDBService(upgraded.db);
-    const home = await workspaces.findDefaultByPath(await realpath(alias));
+    const home = await workspaces.findByPath(await realpath(alias));
     expect(home).toMatchObject({
       id: "recorded-home",
       project_id: "recorded",
