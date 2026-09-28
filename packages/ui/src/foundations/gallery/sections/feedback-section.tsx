@@ -54,6 +54,18 @@ export const FeedbackSection = () => {
         </AlertMessage>
         <AlertMessage status="warning" title="Merge conflicts detected" />
         <AlertMessage status="error" title="Hook failed" />
+        <AlertMessage
+          status="error"
+          title="Could not load conversation"
+          onClose={() => {}}
+          endElement={
+            <Button size="2xs" variant="outline">
+              Retry
+            </Button>
+          }
+        >
+          <Text>The connection to the session was lost.</Text>
+        </AlertMessage>
       </GalleryCard>
 
       <GalleryCard title="Empty state" names={["EmptyState"]}>

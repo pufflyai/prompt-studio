@@ -37,6 +37,16 @@ Read this file before working on UI or design. Use these patterns across the app
 - Once all tabs reach 48 px, scroll the tab strip horizontally. Do not shrink tabs further or wrap them onto another row.
 - Scroll the active tab fully into view when a tab is opened or selected, including when closing a tab selects its neighbor.
 
+## Banners
+
+- Show a banner only when the user can act on it. The product recovers from internal problems, such as saved and agent history that disagree, on its own and shows no banner.
+- Every banner offers a way to recover, such as a Retry action, and a close button. Closing hides that message; a new failure shows its own banner.
+- Use `AlertMessage` with `endElement` for the recovery action (a `2xs` outline button) and `onClose` for the close button.
+- Chat banners:
+  - "Could not load conversation" (error): Retry reconnects the conversation.
+  - "Could not update queued prompts" (warning): Retry reloads the queued prompts.
+- Error parts inside the conversation and failed tool calls are part of the conversation, not banners. They have no close or retry action.
+
 ## Motion experiments
 
 - Explore animation proposals in [Motion Lab](motion/README.md), with source studies in `design/motion` and a review extension in the project sidenav.

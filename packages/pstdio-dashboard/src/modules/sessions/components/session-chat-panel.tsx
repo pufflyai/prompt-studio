@@ -161,7 +161,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     // to the region bounds and scrolls its messages internally instead of growing.
     <Box position="relative" h="full" w="full">
       <Box position="absolute" inset="0" overflow="hidden" display="flex" flexDirection="column">
-        <SessionChatNotices error={error} queueError={queueError} refreshQueue={refreshQueue} />
+        <SessionChatNotices error={error} queueError={queueError} reconnect={reconnect} refreshQueue={refreshQueue} />
         <Box flex="1" minH="0" overflow="hidden">
           <ChatPanel
             // Keying on the session id gives each session its own draft and scroll

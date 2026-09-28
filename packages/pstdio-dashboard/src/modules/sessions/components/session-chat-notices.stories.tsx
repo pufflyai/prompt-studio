@@ -5,6 +5,7 @@ const meta = {
   title: "Sessions/Chat notices",
   component: SessionChatNotices,
   args: {
+    reconnect: () => {},
     refreshQueue: () => {},
   },
 } satisfies Meta<typeof SessionChatNotices>;

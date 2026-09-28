@@ -12270,6 +12270,60 @@
                               "enabled": false
                             }
                           }
+                        },
+                        {
+                          "id": "VaEGm",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Could not load conversation",
+                          "theme": {
+                            "status": "error"
+                          },
+                          "width": "fill_container",
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "circle-x"
+                            },
+                            "GL4gS": {
+                              "content": "Could not load conversation"
+                            },
+                            "B8etL": {
+                              "content": "The connection to the session was lost."
+                            },
+                            "x7Usi7": {
+                              "enabled": true
+                            },
+                            "dqGb1": {
+                              "enabled": true
+                            }
+                          }
+                        },
+                        {
+                          "id": "mr1qE",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Could not update queued prompts",
+                          "theme": {
+                            "status": "warning"
+                          },
+                          "width": "fill_container",
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "triangle-alert"
+                            },
+                            "GL4gS": {
+                              "content": "Could not update queued prompts"
+                            },
+                            "B8etL": {
+                              "enabled": false
+                            },
+                            "x7Usi7": {
+                              "enabled": true
+                            },
+                            "dqGb1": {
+                              "enabled": true
+                            }
+                          }
                         }
                       ]
                     }
@@ -17985,6 +18039,57 @@
                               "fontFamily": "$font-body",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dJT4D",
+                          "name": "Actions",
+                          "width": "fit_content(0)",
+                          "height": "fit_content(0)",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "x7Usi7",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Action",
+                              "enabled": false,
+                              "height": 24,
+                              "theme": {
+                                "btn": "outline",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Retry"
+                                }
+                              }
+                            },
+                            {
+                              "id": "dqGb1",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Close",
+                              "enabled": false,
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "x",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
                             }
                           ]
                         }
@@ -69958,7 +70063,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -88026,7 +88131,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -88098,7 +88203,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 989,
+              "y": 994,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -116081,7 +116186,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
