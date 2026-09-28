@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
@@ -219,7 +220,7 @@ test(
     let child: ChildProcess | null = null;
 
     try {
-      const extensionSource = writeExtensionWithDependency(tempRoot, "1.0.0-alpha.10 || 1.0.0-alpha.11");
+      const extensionSource = writeExtensionWithDependency(tempRoot, `1.0.0-alpha.13 || ${EXTENSION_API_VERSION}`);
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
       const navigationProbe = writeNavigationExtension(tempRoot);
       const started = await startPackagedServe(tempRoot, {

@@ -203,7 +203,7 @@ describe("extension tree resource navigation", () => {
                 outcome: {
                   ok: true,
                   status: "success",
-                  value: { id: "file-1" },
+                  value: { kind: "page", page: startPage },
                   navigationRequests: [{ kind: "page", page, resource: ticket }],
                 },
               };
@@ -261,75 +261,5 @@ describe("extension tree resource navigation", () => {
 
     expect(children).toEqual([hostChild]);
     expect(calls).toEqual([]);
-  });
-});
-
-describe("existing extension behavior during SDK preparation", () => {
-  test("opens the navigation target a tree action returns", async () => {
-    const startPage = { kind: "page", extensionId: "pstdio.lab", id: "start" } as const;
-    const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
-    const workbench = createWorkbench({ startPage });
-    workbench.modes.registerMode({ id: "project", activate: () => undefined });
-    for (const id of ["start", "ticket"]) {
-      workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });
-    }
-    workbench.pages.registerPage({
-      id: "start",
-      ref: startPage,
-      path: "start",
-      modeId: "project",
-      main: { kind: "view", view: { kind: "view", id: "start" }, cardinality: "one" },
-      slots: [],
-    });
-    workbench.pages.registerPage({
-      id: "ticket",
-      ref: page,
-      path: "ticket",
-      modeId: "project",
-      parentId: "start",
-      resource: { kinds: [{ kind: "resource-kind", id: "ticket" }] },
-      main: { kind: "view", view: { kind: "view", id: "ticket" }, cardinality: "one" },
-      slots: [],
-    });
-    workbench.pageLocations.setProject("project-1");
-    const ticket = { type: "ticket", id: "ticket-1" };
-    const openFile = { ...ticket, metadata: { documentId: "file-1" } };
-    workbench.registerModule({
-      id: "test.extension-tree",
-      activate: (context) =>
-        registerWorkbenchExtensionTreeRenderers({
-          executeCommand: (commandId) => {
-            if (commandId === "pstdio.lab.command.delete-file") return { kind: "page", page, resource: ticket };
-            return [
-              {
-                id: "files",
-                nodes: [{ id: "file-1", label: "notes.md" }],
-                actions: [{ id: "delete", label: "Delete", command: { kind: "command", id: "delete-file" } }],
-              },
-            ];
-          },
-          metadata,
-          projectId: "project-1",
-          workbench: context,
-        }),
-    });
-    workbench.navigationTrees.registerContribution({
-      id: "files",
-      idScope: "files",
-      owner: page,
-      sourceExtensionId: "pstdio.lab",
-      declarationIndex: 0,
-      viewId: treeId,
-    });
-    workbench.pageLocations.navigate({ kind: "page", page, resource: openFile });
-    const sections = await workbench.navigationTrees.getSections(page, "content", { resource: openFile });
-
-    await sections[0]?.actions?.[0]?.run?.({});
-
-    expect(workbench.pages.store.getState().location?.resource).toEqual({
-      ...ticket,
-      extensionId: "pstdio.lab",
-      projectId: "project-1",
-    });
   });
 });

@@ -45,7 +45,7 @@ For a callback that refers to a page defined later, give the callback its public
 
 [Zipline](../../../extensions/extension-lab/src/examples/zipline.ts) declares a Side inspector. Its slot uses the same resource binding as a mode placement. `cardinality: "one"` rebinds one instance; `"many"` retains independent resource instances.
 
-Set `openOn: "page-resource"` when the inspector should open on matching page navigation. To inspect a row while keeping the route, return a panel target naming the page's generated panel reference and the row's resource. A panel target is valid while its page or mode owns the active location. To enter that owner and open its inspector together, use a compound page-and-panel target.
+Set `openOn: "page-resource"` when the inspector should open on matching page navigation. To inspect a row while keeping the route, call `ctx.navigation.open()` with a panel target naming the page's generated panel reference and the row's resource. A panel target is valid while its page or mode owns the active location. To enter that owner and open its inspector together, use a compound page-and-panel target.
 
 Explicit tab presentation wins over the resource label. Accessible close actions use that same label. Closing one inspector leaves other instances intact.
 

@@ -54,14 +54,3 @@ export function toWorkbenchNavigationTarget(
     targets: target.targets.map((item) => toWorkbenchNavigationTarget(item, input)),
   };
 }
-
-export const isExtensionNavigationTarget = isNavigationTarget;
-
-export const toWorkbenchNavigationTargetResult = (
-  value: unknown,
-  input: ToWorkbenchNavigationTargetInput = {},
-): NavigationTarget | undefined => {
-  if (value === undefined || value === null) return undefined;
-  if (!isExtensionNavigationTarget(value)) throw new Error("Renderer callback returned an invalid navigation target.");
-  return toWorkbenchNavigationTarget(value, input);
-};

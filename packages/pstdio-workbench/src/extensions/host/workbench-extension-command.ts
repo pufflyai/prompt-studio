@@ -1,5 +1,4 @@
 import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
-import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "../../core";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
@@ -32,22 +31,6 @@ export const createExtensionSlot = (input: {
   kind: input.kind,
   context: { projectId: input.projectId, ...(input.context ?? {}) },
 });
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-const deletedResourceId = (value: unknown) => {
-  if (!isRecord(value) || value.deleted !== true) return undefined;
-  return typeof value.id === "string" ? value.id : undefined;
-};
-const handleDeletedResource = async (
-  context: WorkbenchExtensionCommandContext,
-  resource: ResourceRef | undefined,
-  value: unknown,
-) => {
-  if (!resource || deletedResourceId(value) !== (resource.id ?? resourceKey(resource))) return;
-  if (resourceKey(context.workbench.getPrimaryResource()) !== resourceKey(resource)) return;
-  const result = context.workbench.pageLocations.navigateToParent();
-  if (!result.ok) throw new Error(result.diagnostic.message);
-};
 export const executeWorkbenchExtensionCommandResponse = async (
   context: Pick<WorkbenchExtensionCommandContext, "executeCommand" | "projectId"> & {
     workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications">;
@@ -92,6 +75,5 @@ export const executeWorkbenchExtensionCommand = async (
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
   const value = unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, input));
-  await handleDeletedResource(context, input.resource, value);
   return value;
 };
