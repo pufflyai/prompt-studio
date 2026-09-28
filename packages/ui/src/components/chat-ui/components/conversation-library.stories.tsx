@@ -44,8 +44,8 @@ function FixtureRenderer({ fixtureId }: FixtureRendererProps) {
       <Box h="680px" bg="bg" borderWidth="1px" borderColor="border" borderRadius="lg" p="md">
         <ChatPanel
           messages={fixture.messages}
-          emptyStateTitle="No active conversations"
-          emptyStateDescription="Start a conversation to see messages here."
+          emptyStateTitle="No messages yet"
+          emptyStateDescription="Send a message to start this session."
           chatInputPlaceholder="Type a message..."
         />
       </Box>

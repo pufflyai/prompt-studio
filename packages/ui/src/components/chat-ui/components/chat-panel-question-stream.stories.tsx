@@ -240,7 +240,7 @@ function QuestionInterruptedStreamRenderer() {
     <ChatPanel
       messages={messages}
       streaming={streaming}
-      emptyStateTitle="No active conversations"
+      emptyStateTitle="No messages yet"
       emptyStateDescription="The stream will start automatically."
       chatInputPlaceholder="Answer the question..."
       chatInputQuestionPrompt={activeQuestionPrompt}

@@ -154,8 +154,8 @@ export const MultilineUserMessageShowMore: Story = {
     <Box h="520px" maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" overflow="hidden">
       <ChatPanel
         messages={multilineUserMessageConversation}
-        emptyStateTitle="No active conversations"
-        emptyStateDescription="Start a conversation to see messages here."
+        emptyStateTitle="No messages yet"
+        emptyStateDescription="Send a message to start this session."
         chatInputPlaceholder="Type a message..."
       />
     </Box>
@@ -179,8 +179,8 @@ export const TallUserMessageScrollHandoff: Story = {
     <Box h="520px" maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" overflow="hidden">
       <ChatPanel
         messages={tallStickyUserMessageConversation}
-        emptyStateTitle="No active conversations"
-        emptyStateDescription="Start a conversation to see messages here."
+        emptyStateTitle="No messages yet"
+        emptyStateDescription="Send a message to start this session."
         chatInputPlaceholder="Type a message..."
       />
     </Box>

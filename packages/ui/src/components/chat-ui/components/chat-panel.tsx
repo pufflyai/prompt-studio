@@ -47,7 +47,7 @@ export interface ChatPanelProps {
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
   approvalPrompt?: ReactNode;
-  /** Problems shown at the end of the conversation, such as a failed load or a message that was not sent. */
+  /** Problems shown at the end of the conversation, such as a failed load or a message that was not sent. Without messages, they appear above the empty state. */
   conversationNotices?: ReactNode;
   /** Optional workspace status/control surface rendered above the conversation viewport. */
   workspaceHub?: ReactNode;
@@ -165,7 +165,10 @@ export const ChatPanel = (props: ChatPanelProps) => {
               {conversationNotices}
             </>
           ) : (
-            (conversationNotices ?? emptyContent)
+            <>
+              {conversationNotices}
+              {emptyContent}
+            </>
           )}
         </ChatPrimitives.Viewport>
         {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}

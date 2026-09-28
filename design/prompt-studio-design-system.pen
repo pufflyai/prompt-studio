@@ -43016,7 +43016,7 @@
                                   "id": "yfsp0",
                                   "name": "T",
                                   "fill": "$ds-fg",
-                                  "content": "No active conversations",
+                                  "content": "No messages yet",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 15,
                                   "fontWeight": "normal"
@@ -43026,7 +43026,7 @@
                                   "id": "hQtTi",
                                   "name": "D",
                                   "fill": "$ds-fg-muted",
-                                  "content": "Start a conversation to see messages here.",
+                                  "content": "Send a message to start this session.",
                                   "fontFamily": "$font-body",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
