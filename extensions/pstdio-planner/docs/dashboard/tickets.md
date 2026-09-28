@@ -34,7 +34,7 @@ and must be loaded or mutated through planner extension commands.
 
 The planner extension declares a `tickets` page whose Main view has `kind: "kanban"`.
 The view queries tickets and updates attributes through native renderer callbacks.
-Row activation returns a target for the resource-bound `ticket` page.
+Row activation calls `ctx.navigation.open()` with the target for the resource-bound `ticket` page.
 User actions call public commands such as `pstdio.pstdio-planner.command.create-ticket`
 and `pstdio.pstdio-planner.command.run-attempt`. Workspace creation is available
 from the ticket's Workspaces tree through the host provider form.

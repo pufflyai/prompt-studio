@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, supportsExtensionApiVersion } from "pstdio-api-contracts/extension-kernel";
 import { dashboardExtensionHostCapabilities } from "pstdio-extensions";
 import {
   checkExtensionSource,
@@ -71,7 +71,7 @@ describe("first-party extension loading", () => {
     const loaded = await loadExtensionSource(sourcePath);
     const result = await checkExtensionSource(sourcePath, resolve(sourcePath, ".."));
 
-    expect(loaded.manifest.enginesPstdio).toBe(EXTENSION_API_VERSION);
+    expect(supportsExtensionApiVersion(String(loaded.manifest.enginesPstdio), EXTENSION_API_VERSION)).toBe(true);
     expect(result.check.errorCount).toBe(0);
     expect(result.check.middlewares).toContainEqual(
       expect.objectContaining({

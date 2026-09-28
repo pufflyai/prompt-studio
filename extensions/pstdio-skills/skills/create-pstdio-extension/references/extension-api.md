@@ -301,6 +301,8 @@ The target chooses the screen. The host never guesses a page or panel from the r
 
 ## Handler navigation and removal
 
+API alpha.14 removes the old command-result conventions. Before declaring alpha.14 support, replace returned navigation targets with `ctx.navigation.open(target)` and report committed deletions with `await ctx.resources.removed(resource)`. Table and kanban activation callbacks return void. A command's returned data does not trigger navigation or resource cleanup. These explicit APIs also work on alpha.12 and alpha.13 hosts, so extensions can declare those exact versions together during release preparation.
+
 Commands and interaction callbacks use `ctx.navigation.open(target)`. It accepts the same `NavigationTarget` as webview `navigation.open`. The method records a request and returns void; it does not wait for the browser. Return ordinary data from the handler.
 
 Successful UI invocations apply recorded requests once through the existing navigation dispatcher. Nested calls share request order and keep each caller's extension identity. Failed children discard their requests; a failed root applies none. CLI, schedule, and event-hook execution records no navigation. A target-shaped return value is only data.
