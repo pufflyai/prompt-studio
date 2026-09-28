@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { addLocalExtensionFolderRequestSchema, addLocalExtensionFolderResponseSchema } from "pstdio-api-contracts";
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
-import { ExtensionAlreadyInstalledError } from "../install-extension-source";
+import { ExtensionAlreadyInstalledError, ExtensionValidationFailedError } from "../install-extension-source";
 import { InvalidExtensionFolderError } from "../local-extension-folder";
 import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
@@ -31,7 +31,8 @@ export const addLocalExtensionFolderRoute = createRoute({
       content: { "application/json": { schema: addLocalExtensionFolderResponseSchema } },
     },
     400: {
-      description: "The folder has no package.json, a path leaves the folder, or the project has no local folder.",
+      description:
+        "The folder has no package.json, a path leaves the folder, the extension fails validation, or the project has no local folder.",
       content: { "application/json": { schema: errorSchema } },
     },
     404: {
@@ -55,6 +56,9 @@ export const addLocalExtensionFolderHandler = (
       return c.json(await deps.projectExtensionLifecycle.addLocalFolder(projectId, folder), 200);
     } catch (error) {
       if (error instanceof InvalidExtensionFolderError) return c.json({ error: error.message }, 400);
+      if (error instanceof ExtensionValidationFailedError) {
+        return c.json({ error: error.firstError ?? error.message }, 400);
+      }
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       if (error instanceof ExtensionAlreadyInstalledError || error instanceof ExtensionNameConflictError) {
         return c.json({ error: error.message }, 409);

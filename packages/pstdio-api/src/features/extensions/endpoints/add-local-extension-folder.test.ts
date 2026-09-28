@@ -111,6 +111,19 @@ describe("POST /v1/projects/:projectId/extensions/local", () => {
     expect(existsSync(join(project.repoPath, ".pstdio", "extensions", "no-manifest"))).toBe(false);
   });
 
+  test("rejects an invalid extension with the validation error it failed on", async () => {
+    const project = await createProject("Drop Invalid Project");
+
+    const response = await addFolder(project.id, "invalid-extension", {
+      ...extensionFiles("invalid-extension"),
+      "extension.ts": "export default { label: 'Dropped' };\n",
+    });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe('Extension "test.invalid-extension" declares unknown contribution "label"');
+    expect(existsSync(join(project.repoPath, ".pstdio", "extensions", "invalid-extension"))).toBe(false);
+  });
+
   test("refuses to replace a folder that already exists", async () => {
     const project = await createProject("Drop Conflict Project");
     expect((await addFolder(project.id, "twice", extensionFiles("twice"))).status).toBe(200);

@@ -63,6 +63,19 @@ export class RepoScopedExtensionNeedsProjectFolderError extends Error {
   }
 }
 
+type ExtensionsCheck = Awaited<ReturnType<typeof checkExtensionSource>>["check"];
+
+/** The message is the full check report for the CLI; callers that show one line use `firstError`. */
+export class ExtensionValidationFailedError extends Error {
+  firstError: string | undefined;
+
+  constructor(check: ExtensionsCheck) {
+    super(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
+    this.name = "ExtensionValidationFailedError";
+    this.firstError = check.diagnostics.find((diagnostic) => diagnostic.severity === "error")?.message;
+  }
+}
+
 export const toExtensionEnableInput = (installed: InstalledExtensionSource): ExtensionEnableInput => ({
   displayName: installed.metadata.displayName,
   extensionId: installed.metadata.id,
@@ -231,12 +244,10 @@ const validatePreparedInstall = async (
       .filter((diagnostic) => diagnostic.severity === "error")
       .every((diagnostic) => diagnostic.code === "extension_manifest_unsupported_api_version");
   const keepForRecovery = allowUnsupportedApiVersion && unsupportedApiOnly;
-  if (check.errorCount > 0 && !keepForRecovery) {
-    throw new Error(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
-  }
+  if (check.errorCount > 0 && !keepForRecovery) throw new ExtensionValidationFailedError(check);
 
   const loaded = compatibleSource ?? (keepForRecovery ? readExtensionSourceMetadata(installPath) : null);
-  if (!loaded) throw new Error(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
+  if (!loaded) throw new ExtensionValidationFailedError(check);
 
   if (keepForRecovery && check.extensions.length === 0) {
     check.extensions.push({

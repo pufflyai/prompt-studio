@@ -13,7 +13,6 @@ import {
   useProjectExtensions,
   useSetProjectExtensionEnabled,
   useUpgradeProjectExtension,
-  useUpgradeProjectExtensions,
 } from "@/shared/extensions/use-project-extensions";
 import { AvailableExtensionDetail } from "./available-extension-detail";
 import { ExtensionDetailContainer } from "./extension-detail-container";
@@ -32,7 +31,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const setEnabled = useSetProjectExtensionEnabled(projectId);
   const upgrade = useUpgradeProjectExtension(projectId);
   const installMarketplace = useInstallMarketplaceExtension(projectId);
-  const upgradeAll = useUpgradeProjectExtensions(projectId);
   const addLocalFolder = useAddLocalExtensionFolder(projectId);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   const [selectedMarketplaceName, setSelectedMarketplaceName] = useState<string | null>(null);
@@ -132,27 +130,35 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     );
   };
 
-  const handleUpgradeAll = (upgradable: ProjectExtensionInstance[]) => {
-    upgradeAll.mutate(
-      { extensions: upgradable },
-      {
-        onSuccess: ({ upgraded, failed }) => {
-          if (upgraded > 0) {
-            toaster.create({
-              type: "success",
-              title: t("projectSettings.extensionsPanel.upgradeAll.succeeded", { count: upgraded }),
-            });
-          }
-          if (failed.length > 0) {
-            toaster.create({
-              type: "error",
-              title: t("projectSettings.extensionsPanel.upgradeAll.failed", { count: failed.length }),
-              description: failed.join("\n"),
-            });
-          }
-        },
-      },
-    );
+  // Every target is marked up front so each row shows it is queued. The upgrades then run one at a
+  // time: each fetches and installs a release, and one failure must not stop the rest.
+  const handleUpgradeAll = async (upgradable: ProjectExtensionInstance[]) => {
+    setUpgradingInstanceIds((current) => [...new Set([...current, ...upgradable.map((extension) => extension.id)])]);
+    let upgraded = 0;
+    const failed: string[] = [];
+    for (const extension of upgradable) {
+      try {
+        await upgrade.mutateAsync({ instanceId: extension.id });
+        upgraded += 1;
+      } catch (error) {
+        failed.push(`${extension.displayName}: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        setUpgradingInstanceIds((current) => current.filter((id) => id !== extension.id));
+      }
+    }
+    if (upgraded > 0) {
+      toaster.create({
+        type: "success",
+        title: t("projectSettings.extensionsPanel.upgradeAll.succeeded", { count: upgraded }),
+      });
+    }
+    if (failed.length > 0) {
+      toaster.create({
+        type: "error",
+        title: t("projectSettings.extensionsPanel.upgradeAll.failed", { count: failed.length }),
+        description: failed.join("\n"),
+      });
+    }
   };
 
   // Each row upgrades on its own, so several upgrades can run at once and each reports its own result.
@@ -209,8 +215,8 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       onOpen={(extension) => setSelectedInstanceId(extension.id)}
       onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}
       onOpenMarketplace={(extension) => setSelectedMarketplaceName(extension.installName)}
-      upgradingAll={upgradeAll.isPending}
-      onUpgradeAll={handleUpgradeAll}
+      upgradingAll={extensions.some((extension) => extension.canUpgrade && upgradingInstanceIds.includes(extension.id))}
+      onUpgradeAll={(upgradable) => void handleUpgradeAll(upgradable)}
       addingFolderName={addLocalFolder.isPending ? addLocalFolder.variables?.name : undefined}
       onDropFolder={(folder) => void handleDropFolder(folder)}
     />

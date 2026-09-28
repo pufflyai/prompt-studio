@@ -249,6 +249,7 @@ export const UpgradingOneExtension: Story = {
   },
 };
 
+// Upgrade all marks every row it will upgrade, so rows still waiting their turn show a spinner too.
 export const UpgradingAll: Story = {
   args: {
     extensions: installedExtensions,
@@ -256,6 +257,9 @@ export const UpgradingAll: Story = {
     diagnostics: [],
     automations,
     upgradingAll: true,
+    upgradingInstanceIds: installedExtensions
+      .filter((extension) => extension.canUpgrade)
+      .map((extension) => extension.id),
   },
 };
 

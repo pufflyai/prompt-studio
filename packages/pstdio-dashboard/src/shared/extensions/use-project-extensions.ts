@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse, ProjectExtensionInstance } from "@pstdio/sdk/api";
+import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { toaster } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -146,29 +146,6 @@ export const useUpgradeProjectExtension = (projectId: string | undefined) => {
 
 // Upgrades run one at a time: each one fetches and installs a release, and one failure must not stop
 // the rest. Failures come back as messages so the caller can report them together.
-export const useUpgradeProjectExtensions = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ extensions }: { extensions: ProjectExtensionInstance[] }) => {
-      if (!projectId) throw new Error("Project id is required to upgrade extensions.");
-      let upgraded = 0;
-      const failed: string[] = [];
-      for (const extension of extensions) {
-        try {
-          await upgradeProjectExtension(projectId, extension.id);
-          upgraded += 1;
-        } catch (error) {
-          failed.push(`${extension.displayName}: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-      return { upgraded, failed };
-    },
-    onSettled: () => {
-      void invalidateExtensionQueries(queryClient, projectId);
-    },
-  });
-};
-
 export const useExtensionContributions = (projectId: string | undefined, instanceId: string | undefined) => {
   return useQuery({
     queryKey: ["extension-contributions", projectId, instanceId],
