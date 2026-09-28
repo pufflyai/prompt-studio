@@ -1,5 +1,11 @@
 # Manual desktop checks without local target hardware
 
+The **Verify Windows installation and update** Actions workflow can check signed
+Setup installation, the installed Squirrel updater, and project preservation on
+a fresh Windows Server runner. See [Windows signing](windows-signing.md) for its
+inputs and limits. The interactive desktop checks below cover the remaining
+consumer Windows behavior.
+
 Use a remote desktop on the target architecture. The computer you connect from can be an Apple Silicon Mac. Run the checks inside the remote machine.
 
 - Windows: use an x64 Windows desktop or cloud PC. Microsoft [Windows App](https://learn.microsoft.com/en-us/windows-app/get-started-connect-devices-desktops-apps) connects from macOS. Choose a desktop image with a graphical session and permission to install applications.

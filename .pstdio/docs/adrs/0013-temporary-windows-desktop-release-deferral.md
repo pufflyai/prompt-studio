@@ -6,10 +6,13 @@ Proposed: 2026-08-27
 
 Temporary. On 2026-09-28, Pufflig AB identity validation is Completed and the
 existing Azure account has an Active `promptstudio-release` Public Trust profile.
-The six GitHub Actions variables are configured. Profile-scoped signer access,
-a signed build, and installation/update acceptance remain pending. PS-3 prepares
-release activation in a draft change; do not merge it or supersede this decision
-until the remaining release checks pass.
+The six GitHub Actions variables and profile-scoped signer access are configured.
+Trusted signature verification and all 16 signed packaged tests pass. Hosted
+Setup installation and a signed Squirrel update from 0.36.0 to 0.36.1 pass,
+including installed signatures and project preservation. PS-3 prepares release
+activation. Keep this decision until the full native release matrix publishes
+and the application checks its public update feed. Candidate loopback testing
+does not prove that public path.
 
 ## Ideal design
 
