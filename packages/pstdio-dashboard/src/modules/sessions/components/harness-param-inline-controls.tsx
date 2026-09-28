@@ -1,5 +1,4 @@
 import { Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
-import { ListRow } from "@pstdio/ui";
 import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
@@ -125,21 +124,15 @@ const SelectParamControl = (
                 <Menu.Item
                   key={option.value}
                   value={option.value}
-                  asChild
+                  role="menuitemradio"
+                  aria-checked={option.value === selectedValue}
                   onSelect={() =>
                     onOverridesChange(updateHarnessParamOverride(overrides, defaults, paramKey, option.value))
                   }
                 >
-                  <ListRow
-                    asChild
-                    variant="full-width"
-                    role="menuitemradio"
-                    aria-checked={option.value === selectedValue}
-                    id={option.value}
-                    label={option.label}
-                    icon={<WorkbenchIcon name={option.icon} size={14} />}
-                    endContent={option.value === selectedValue ? <Check size={14} /> : undefined}
-                  />
+                  <WorkbenchIcon name={option.icon} size={14} />
+                  <Menu.ItemText>{option.label}</Menu.ItemText>
+                  {option.value === selectedValue ? <Check size={14} /> : null}
                 </Menu.Item>
               ))}
             </Menu.ItemGroup>
