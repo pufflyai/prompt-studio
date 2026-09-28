@@ -1,6 +1,9 @@
 name: Verify Windows signing
 
 on:
+  push:
+    branches: [feature/ps-3-native-desktop-support]
+    paths: [.github/workflows/verify-windows-signing.yml, clients/desktop/scripts/verify-windows-signatures.ts]
   workflow_dispatch:
 
 permissions:
