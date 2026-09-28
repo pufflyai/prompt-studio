@@ -1,5 +1,15 @@
 # pstdio-artifacts
 
+## 0.36.0
+
+_2026-09-28_
+
+### Patch Changes
+
+- 42a6b1b: Declare conversation recovery and view dependencies for the next host API.
+- 8a924d0: Use workspace APIs for project files, notes, reports, and ticket workflows.
+- 6efb4bf: Stop positional OpenCode message ids from moving a removed turn's attachments to another turn, and complete the host API alpha.12 migration.
+
 ## 0.35.0
 
 _2026-09-26_
