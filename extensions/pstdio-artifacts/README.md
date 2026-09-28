@@ -15,7 +15,7 @@ pst pstdio-artifacts rename --url '<returned url>' --name 'New name' --json
 pst pstdio-artifacts delete --url '<returned url>' --json
 ```
 
-The input names follow Anthropic's artifact publishing tool: `file_path`, optional `favicon`, `label`, and `url`. The returned `url` identifies a saved artifact. Omit `url` to create a new artifact; provide it to append a revision. The result also includes `artifactId`, `revisionId`, `title`, a resource reference, and a dashboard navigation target. `open` returns a navigation target for callers to open.
+The input names follow Anthropic's artifact publishing tool: `file_path`, optional `favicon`, `label`, and `url`. The returned `url` identifies a saved artifact. Omit `url` to create a new artifact; provide it to append a revision. The result also includes `artifactId`, `revisionId`, `title`, a resource reference, and a dashboard navigation target. `open` requests navigation through `ctx.navigation.open()` and returns the latest artifact revision.
 
 With `--json`, the CLI returns that result under `outcome.value`. The packaged `publish-artifact` skill explains the workflow to agents.
 
