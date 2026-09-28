@@ -39,7 +39,7 @@ const createProject = async (name: string) => {
     body: JSON.stringify(input),
   });
   const project = (await response.json()) as { id: string };
-  return { id: project.id, repoPath: realpathSync(input.initial_workspace.params.path) };
+  return { id: project.id, repoPath: realpathSync.native(input.initial_workspace.params.path) };
 };
 
 const packageJson = (name: string) =>
