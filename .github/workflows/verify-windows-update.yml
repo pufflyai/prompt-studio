@@ -1,0 +1,111 @@
+name: Verify Windows installation and update
+
+on:
+  # Remove this bootstrap trigger after the first native acceptance run.
+  push:
+    branches: [feature/ps-3-native-desktop-support]
+    paths: [.github/workflows/verify-windows-update.yml]
+  workflow_dispatch:
+    inputs:
+      candidate-run-id:
+        description: Successful Verify Windows signing run containing the newer candidate
+        required: true
+        type: string
+      previous-tag:
+        description: Existing older pstdio release tag to build as the signed baseline
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.previous-tag || 'pstdio@0.36.0' }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+      - uses: ./.github/actions/setup-windows-signing
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile: ${{ vars.AZURE_SIGNING_PROFILE }}
+      - name: Build signed baseline
+        env:
+          PSTDIO_DESKTOP_RELEASE: "1"
+        run: bun run --cwd clients/desktop make -- --arch=x64
+      - name: Verify baseline signatures
+        run: |
+          # Verify the unchanged historical build with the current signature checker.
+          git show "${env:GITHUB_SHA}:clients/desktop/scripts/verify-windows-signatures.ts" |
+            Set-Content -Encoding utf8 clients/desktop/scripts/verify-windows-signatures.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Could not load current signature verifier' }
+          bun clients/desktop/scripts/verify-windows-signatures.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-signed-baseline
+          path: clients/desktop/out/make
+          if-no-files-found: error
+          retention-days: 14
+
+  installation:
+    needs: baseline
+    runs-on: windows-2025
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-signed-baseline
+          path: windows-baseline
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-signed-candidate
+          path: windows-candidate
+          run-id: ${{ inputs.candidate-run-id || '36434946159' }}
+          github-token: ${{ github.token }}
+      - name: Verify installed application and signed Squirrel update
+        run: bun clients/desktop/scripts/verify-windows-installation.ts windows-baseline windows-candidate
+      - name: Upload installation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installation-readiness
+          path: clients/desktop/test-results/windows-installation
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload prepared Windows release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-prepared-candidate
+          path: clients/desktop/out/release/win32-x64
+          if-no-files-found: error
+          retention-days: 14
