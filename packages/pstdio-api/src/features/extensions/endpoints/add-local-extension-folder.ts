@@ -56,9 +56,7 @@ export const addLocalExtensionFolderHandler = (
       return c.json(await deps.projectExtensionLifecycle.addLocalFolder(projectId, folder), 200);
     } catch (error) {
       if (error instanceof InvalidExtensionFolderError) return c.json({ error: error.message }, 400);
-      if (error instanceof ExtensionValidationFailedError) {
-        return c.json({ error: error.firstError ?? error.message }, 400);
-      }
+      if (error instanceof ExtensionValidationFailedError) return c.json({ error: error.firstError }, 400);
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       if (error instanceof ExtensionAlreadyInstalledError || error instanceof ExtensionNameConflictError) {
         return c.json({ error: error.message }, 409);

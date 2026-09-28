@@ -120,8 +120,23 @@ describe("POST /v1/projects/:projectId/extensions/local", () => {
     });
 
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toBe('Extension "test.invalid-extension" declares unknown contribution "label"');
+    expect((await response.json()).error).toBe(
+      'Extension "test.invalid-extension" declares unknown contribution "label"',
+    );
     expect(existsSync(join(project.repoPath, ".pstdio", "extensions", "invalid-extension"))).toBe(false);
+  });
+
+  test("rejects an extension built for another API version with the advice to fix it", async () => {
+    const project = await createProject("Drop Incompatible Project");
+    const manifest = { ...JSON.parse(packageJson("old-api")), engines: { pstdio: "1.0.0-alpha.1" } };
+
+    const response = await addFolder(project.id, "old-api", {
+      ...extensionFiles("old-api"),
+      "package.json": JSON.stringify(manifest),
+    });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toContain(`add "${EXTENSION_API_VERSION}" to engines.pstdio`);
   });
 
   test("refuses to replace a folder that already exists", async () => {

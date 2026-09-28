@@ -65,16 +65,22 @@ export class RepoScopedExtensionNeedsProjectFolderError extends Error {
 
 type ExtensionsCheck = Awaited<ReturnType<typeof checkExtensionSource>>["check"];
 
-/** The message is the full check report for the CLI; callers that show one line use `firstError`. */
+/** The message can be a full check report for the CLI; callers that show one line use `firstError`. */
 export class ExtensionValidationFailedError extends Error {
-  firstError: string | undefined;
+  firstError: string;
 
-  constructor(check: ExtensionsCheck) {
-    super(`Extension validation failed:\n${formatExtensionsCheck(check)}`);
+  constructor(message: string, firstError = message) {
+    super(message);
     this.name = "ExtensionValidationFailedError";
-    this.firstError = check.diagnostics.find((diagnostic) => diagnostic.severity === "error")?.message;
+    this.firstError = firstError;
   }
 }
+
+const checkFailed = (check: ExtensionsCheck) => {
+  const report = `Extension validation failed:\n${formatExtensionsCheck(check)}`;
+  const first = check.diagnostics.find((diagnostic) => diagnostic.severity === "error");
+  return new ExtensionValidationFailedError(report, first?.message ?? report);
+};
 
 export const toExtensionEnableInput = (installed: InstalledExtensionSource): ExtensionEnableInput => ({
   displayName: installed.metadata.displayName,
@@ -217,7 +223,7 @@ const sourceScope = (sourcePath: string, allowUnsupportedApiVersion: boolean) =>
   const { manifest, diagnostics } = readManifest(sourcePath);
   if (!manifest) {
     const first = diagnostics[0];
-    throw new Error(first?.message ?? `Extension validation failed: ${sourcePath}`);
+    throw new ExtensionValidationFailedError(first?.message ?? `Extension validation failed: ${sourcePath}`);
   }
   return { manifest, scope: manifest.pstdio?.scope ?? "user" };
 };
@@ -244,10 +250,10 @@ const validatePreparedInstall = async (
       .filter((diagnostic) => diagnostic.severity === "error")
       .every((diagnostic) => diagnostic.code === "extension_manifest_unsupported_api_version");
   const keepForRecovery = allowUnsupportedApiVersion && unsupportedApiOnly;
-  if (check.errorCount > 0 && !keepForRecovery) throw new ExtensionValidationFailedError(check);
+  if (check.errorCount > 0 && !keepForRecovery) throw checkFailed(check);
 
   const loaded = compatibleSource ?? (keepForRecovery ? readExtensionSourceMetadata(installPath) : null);
-  if (!loaded) throw new ExtensionValidationFailedError(check);
+  if (!loaded) throw checkFailed(check);
 
   if (keepForRecovery && check.extensions.length === 0) {
     check.extensions.push({
