@@ -1,30 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
+import { ctx, harnessDefaults, serviceOverrides } from "./harness.test-helpers";
 import { recordingSink } from "./opencode-session-poller.test-helpers";
 
 // --- Helpers ---
-
-const ctx: HarnessContext = {
-  extensionId: "pstdio.harness-open-code",
-  name: "harness-open-code",
-  connections: {
-    request: async () => {
-      throw new Error("No connections are configured in this test");
-    },
-    stream: async function* () {
-      yield { type: "end" } as const;
-    },
-  },
-  process: {
-    run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
-    runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
-    spawnDetached: async () => ({}),
-  },
-  net: { findFreePort: async () => 0 },
-  logger: { info: () => {}, warn: () => {}, error: () => {} },
-  state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
-};
 
 const harness = (opts: { available?: boolean; modelsOutput?: string } = {}) =>
   createOpencodeHarness(
@@ -42,18 +22,6 @@ const harness = (opts: { available?: boolean; modelsOutput?: string } = {}) =>
   );
 
 type MockMessage = { role: string; content: { type: string; text: string }[] };
-
-const serviceOverrides = () => ({
-  startServer: async () => "http://localhost:4096",
-  serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
-  pingServer: async () => true,
-  isPortOpen: async () => true,
-});
-
-const harnessDefaults = () => ({
-  detect: async () => ({ available: true }),
-  getModelsOutput: async () => "",
-});
 
 // --- Factory ---
 

@@ -197,6 +197,25 @@ describe("pollOpencodeMessages", () => {
 });
 
 describe("pollOpencodeQuestionReply", () => {
+  it("an earlier failed turn does not fail the answered question", async () => {
+    const { sink } = recordingSink();
+    const answered = {
+      info: { id: "msg-question", role: "assistant", time: { created: Date.now(), completed: Date.now() } },
+      parts: [{ type: "tool", tool: "question", callID: "call-question", state: { status: "completed" } }],
+    };
+    const history = [userMessage("hi"), completedAssistant("old", errorInfo), userMessage("ask"), answered];
+    const result = await pollOpencodeQuestionReply({
+      loadMessages: async () => history,
+      sessionId: "s1",
+      cwd: undefined,
+      events: sink,
+      questionTool: { messageID: "msg-question", callID: "call-question" },
+      messageComplete: Promise.resolve(),
+      pollIntervalMs: 20,
+    });
+    expect(result).toEqual({ status: "completed" });
+  });
+
   it("waits for the assistant continuation after the question answer is accepted", async () => {
     const { loader, set } = createMessageTimeline();
     const { patches, sink } = recordingSink();
