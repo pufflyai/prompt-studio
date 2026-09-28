@@ -1,3 +1,4 @@
+import { Flex } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
@@ -14,10 +15,13 @@ const meta = {
         label: "Reasoning effort",
         defaultValue: "medium",
         options: [
+          { label: "None", value: "none", icon: "CircleSlash" },
+          { label: "Minimal", value: "minimal", icon: "level-low" },
           { label: "Low", value: "low", icon: "level-low" },
           { label: "Medium", value: "medium", icon: "level-mid" },
           { label: "High", value: "high", icon: "level-high" },
           { label: "Extra high", value: "xhigh", icon: "level-xhigh" },
+          { label: "Max", value: "max", icon: "flame" },
         ],
       },
     },
@@ -33,6 +37,15 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const EffortLevels: Story = {};
+export const LevelColors: Story = {
+  render: (props) => (
+    <Flex gap="4" wrap="wrap">
+      {meta.args.schema.effort.options.map((option) => (
+        <HarnessParamInlineControls key={option.value} {...props} overrides={{ effort: option.value }} />
+      ))}
+    </Flex>
+  ),
+};
 export const ChangeEffort: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -55,7 +68,7 @@ export const ChangeEffortWithKeyboard: Story = {
     await userEvent.keyboard("{ArrowDown}");
     await waitFor(() => expect(page.getByRole("menu")).toHaveFocus());
     await userEvent.keyboard("{End}{Enter}");
-    await expect(canvas.getByRole("button", { name: "Reasoning effort: Extra high" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Reasoning effort: Max" })).toBeVisible();
   },
 };
 export const Disabled: Story = { args: { disabled: true } };

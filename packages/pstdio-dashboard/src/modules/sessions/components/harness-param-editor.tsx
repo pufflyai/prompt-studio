@@ -1,5 +1,6 @@
 import { type Param, ParamEditorRow, type ParamValueMap } from "@pstdio/ui/param-editor";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
+import { harnessParamOptionColor } from "./harness-param-option-icon";
 import { type HarnessParamValues, resolveHarnessParamText, updateHarnessParamOverride } from "./harness-param-values";
 
 interface HarnessParamEditorProps {
@@ -39,6 +40,7 @@ const buildParam = (key: string, descriptor: HarnessParamsInfo[string]): Param =
       id: option.value,
       name: option.label,
       icon: option.icon,
+      color: harnessParamOptionColor(option.icon),
     })),
   };
 };

@@ -1,8 +1,8 @@
 import { Button, Flex, type HTMLChakraProps, Menu, Portal, Text } from "@chakra-ui/react";
-import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
 import { forwardRef, type ReactNode } from "react";
+import { HarnessParamOptionIcon } from "./harness-param-option-icon";
 import {
   type HarnessParamValues,
   removeHarnessParamOverride,
@@ -111,7 +111,7 @@ const SelectParamControl = (
           disabled={disabled}
           size={size}
           tone={isOverride ? "accent" : "neutral"}
-          startIcon={selectedOption?.icon ? <WorkbenchIcon name={selectedOption.icon} size={14} /> : undefined}
+          startIcon={selectedOption?.icon ? <HarnessParamOptionIcon name={selectedOption.icon} /> : undefined}
           showChevron
         />
       </Menu.Trigger>
@@ -130,7 +130,7 @@ const SelectParamControl = (
                     onOverridesChange(updateHarnessParamOverride(overrides, defaults, paramKey, option.value))
                   }
                 >
-                  <WorkbenchIcon name={option.icon} size={14} />
+                  <HarnessParamOptionIcon name={option.icon} />
                   <Menu.ItemText>{option.label}</Menu.ItemText>
                   {option.value === selectedValue ? <Check size={14} /> : null}
                 </Menu.Item>

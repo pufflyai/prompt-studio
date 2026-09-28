@@ -139,7 +139,7 @@ describe("claude-code harness detection", () => {
           { label: "Medium", value: "medium", icon: "level-mid" },
           { label: "High", value: "high", icon: "level-high" },
           { label: "XHigh", value: "xhigh", icon: "level-xhigh" },
-          { label: "Max", value: "max", icon: "level-xhigh" },
+          { label: "Max", value: "max", icon: "flame" },
         ],
       },
     });

@@ -6,7 +6,7 @@ const effortMetadata: Record<string, { label: string; icon: string }> = {
   medium: { label: "Medium", icon: "level-mid" },
   high: { label: "High", icon: "level-high" },
   xhigh: { label: "XHigh", icon: "level-xhigh" },
-  max: { label: "Max", icon: "level-xhigh" },
+  max: { label: "Max", icon: "flame" },
 };
 
 const modelIdentity = (value: string, displayName: unknown) => {
