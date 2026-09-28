@@ -7,7 +7,7 @@ Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass
 - This is a **Lerna monorepo** managed with **Bun**. It uses **Nx caching**.
 - Write **TypeScript only**.
 - Use **bun**. Do not use `npm`, `yarn`, or `pnpm`.
-- A task is not complete until all tests pass.
+- A task is not complete until the relevant tests and checks for the change pass.
 - If you get stuck, read the relevant [lessons learned](documentation/lessons-learned/) before trying another approach.
 
 # Language
@@ -127,7 +127,7 @@ Run tests often, but run only the tests for the code you changed:
 - One package: `bun run --cwd packages/<name> test`
 - One e2e spec: `bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts`
 
-Do not run the full monorepo tests, full e2e suites, or `bun run validate` after each change. They take many minutes. Run `bun run validate` once, in step 4.
+Choose the smallest test scope that covers the changed behavior. Include affected callers or integration tests when the change crosses a package boundary. Do not run the full monorepo tests, full e2e suites, or `bun run validate` unless the user explicitly asks for full validation.
 
 ### 3. Refactor: clean up
 
@@ -143,17 +143,17 @@ Tests must stay green.
 
 ### 4. Prove it works (required)
 
-(Skip this step for changes that only affect documentation.)
+For code changes, run targeted tests and the relevant package checks, such as type checking, linting, or a build. Match the checks to the affected behavior and dependencies. Fix reported issues, then rerun only the failed or affected checks. Do not repeat passing checks without a new change or unresolved concern.
 
-When the change is complete, run `bun run validate` once. Fix every reported issue, then rerun only the checks that failed before a final `bun run validate`.
+For documentation-only changes, check the content, links, paths, and formatting. Do not run application tests or full validation merely because a documentation path appears in a source comment, prompt, or test fixture.
 
 Always validate UI changes using Playwright.
 
 ### 5. Test packaged files
 
-- If bundled runtime files change, update the packaged smoke test. These files include built-in templates, prompts, skills, and other packaged defaults.
+- If bundled runtime behavior, assets, or file inclusion change, update the relevant packaged smoke test. This includes built-in templates, prompts, skills, and other packaged defaults. Documentation-reference-only edits do not require packaged tests.
 - Keep `packages/e2e/src/packaged/packaged-serve-smoke.test.ts` in sync with the packaged files.
-- Run `bun run --cwd scripts verify:packages` to check packaged output.
+- For those runtime or package changes, run `bun run --cwd scripts verify:packages` to check packaged output.
 
 ### 6. Changesets
 

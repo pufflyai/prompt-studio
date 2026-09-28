@@ -8,19 +8,20 @@ When upgrading Bun, align the root `packageManager` pin, Bun engine requirements
 
 Native CI installs use `scripts/ci/install-native-dependencies.ts`. On Linux and macOS it gives node-gyp the headers already installed with Node. This removes another download from native addon builds. The setting applies only to dependency installation; Electron packaging selects the headers for Electron separately.
 
-`bun run validate` checks changesets, the lockfile, formatting, package boundaries, and extension API versions. It builds the monorepo before checking translations, linting, and testing. Translation validation and type checks load compiled SDK exports, so the build must come first on a clean checkout. Formatting is checked without changing files.
+Choose checks that cover the changed behavior and its affected callers. Start with one test file or one end-to-end spec. Run a package's tests, lint, type checks, or build when that is the smallest useful scope. After a failure, rerun only failed or affected checks. Do not repeat passing checks without a new change or unresolved concern.
 
-`bun run test` runs package tests through Lerna, followed by the E2E script, CLI, UI, and Vite terminal suites. Packaged and desktop tests run separately in CI.
+Documentation-only changes need content, link, path, and formatting checks. A documentation path in a source comment, prompt, or test fixture does not by itself require application tests.
 
 ```bash
-bun run validate
-bun run --cwd packages/e2e test:scripts
-bun run --cwd packages/e2e test:cli
-bun run --cwd packages/e2e test:ui
-bun run --cwd packages/e2e test:vite-terminal
-bun run --cwd packages/e2e test:packaged
-bun run --cwd scripts verify:packages
+bun test <path-to-test> # from the owning package directory
+bun run --cwd packages/<name> test
+bun run --cwd packages/<name> lint
+bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
 ```
+
+Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
+
+Do not run full repository or full end-to-end suites unless the user explicitly requests full validation. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, and extension API versions, then builds before translation checks, lint, and tests. `bun run test` runs package tests through Lerna followed by the E2E script, CLI, UI, and Vite terminal suites. Packaged and desktop tests run separately in CI.
 
 Install browser dependencies before running browser tests:
 

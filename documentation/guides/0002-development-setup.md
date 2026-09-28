@@ -117,10 +117,10 @@ Open the dashboard URL printed by the command, complete the browser checks, and 
 bun run dev:playwright:down
 ```
 
-Run the automated end-to-end suite with:
+Run the end-to-end spec for the behavior you changed:
 
 ```bash
-bun run test:e2e
+bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
 ```
 
 Agent-specific end-to-end behavior, including `E2E_AGENTS` and when real Claude or OpenCode sessions start, is documented in [Tests](0003-testing.md).
@@ -185,11 +185,7 @@ See `packages/ui/README.md` for UI-package Storybook guidance.
 
 ## Project Validation
 
-Run the repository validation suite after code changes:
-
-```bash
-bun run validate
-```
+Run the smallest relevant test scope and package checks for the behavior you changed. Include affected callers when a change crosses package boundaries. For documentation-only edits, check content, links, paths, and formatting; application tests are not needed. See [targeted validation](0003-testing.md#validation) for commands.
 
 ## Pull request area labels
 

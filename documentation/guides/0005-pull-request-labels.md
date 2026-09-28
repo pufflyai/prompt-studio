@@ -63,7 +63,6 @@ A failing workflow alone does not enforce separation. Current whole-package mapp
 
 ```bash
 bun test scripts/ci/pr-risk-labels.test.ts
-bun run validate
 ```
 
 The tests cover classification outcomes, reversions, failed classification, changed head/base snapshots, manual label removal during a run, and API errors. GitHub rollout checks above prove the actual hosted permissions and merge gate.
