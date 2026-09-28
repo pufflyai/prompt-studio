@@ -25,7 +25,7 @@ These tests exercise behavior that needs this work: a real on-disk database, and
 
 ## Temporary workaround
 
-- Both Windows CI test steps pass `--timeout=15000`: the focused dependency tests and the package test scripts run through Lerna. Bun tests and lifecycle hooks inherit this default, including the managed Git worktree migration test. Explicit test limits and custom runners retain their own limits. Other CI platforms retain their existing defaults.
+- Windows CI passes `--timeout=15000` to the focused dependency tests, the desktop command setup tests, and the package test scripts run through Lerna. Bun tests and lifecycle hooks inherit this default, including the managed Git worktree migration test. Explicit test limits and custom runners retain their own limits. Other CI platforms retain their existing defaults.
 - The `pstdio-wt` suite runs separately with its existing 30 s command-line limit so the forwarded argument does not shorten it. The API test runner also retains its existing 30 s limit.
 - The database suites retain their per-test and hook limits for local Windows runs. Cleanup still waits for database closure and propagates removal errors.
 - The packaged-fixture timeout test gets a 10 s limit on all platforms: 2.5 times the Linux median, and 2 times the slowest CI run.
@@ -34,7 +34,7 @@ Trade-offs: a real slowdown in a Windows test has to grow further before CI catc
 
 ## Isolation
 
-The Windows CI default is set in the Windows job's two test commands, next to a comment that points here. Local database tests and the packaged-fixture timeout test retain their explicit limits. Runtime code does not use these limits.
+The Windows CI default is set in the Windows job's test commands, with the Lerna command's comment pointing here. New test commands in that job must also pass the same default. Local database tests and the packaged-fixture timeout test retain their explicit limits. Runtime code does not use these limits.
 
 Bun's `setDefaultTimeout` applies to the current file, so setting it in a shared preload does not cover later files and their hooks. A local two-file probe on Bun 1.4.2 allowed the first file's 5.2 s hook and test to finish, but the second file's test still failed at 5 s. The command-line limit covers the whole run without changing package scripts or test setup.
 

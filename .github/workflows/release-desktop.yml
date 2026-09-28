@@ -238,6 +238,10 @@ jobs:
         if: matrix.platform == 'win32'
         run: bun clients/desktop/scripts/verify-windows-signatures.ts
 
+      - name: Verify installed Windows command
+        if: matrix.platform == 'win32'
+        run: bun clients/desktop/scripts/verify-windows-cli-install.ts
+
       - name: Verify Linux package
         if: matrix.platform == 'linux'
         shell: bash
@@ -246,6 +250,18 @@ jobs:
           DEB=$(find clients/desktop/out/make -type f -name '*.deb' -print -quit)
           test -n "$DEB"
           dpkg-deb --info "$DEB"
+          sudo apt-get install -y "$PWD/$DEB"
+          test "$(pst --version)" = '${{ inputs.version }}'
+          sudo dpkg -i "$DEB"
+          test "$(pst --version)" = '${{ inputs.version }}'
+          sudo apt-get purge -y prompt-studio
+          test ! -L /usr/bin/pst
+          sudo ln -s /bin/true /usr/bin/pst
+          sudo apt-get install -y "$PWD/$DEB"
+          test "$(readlink /usr/bin/pst)" = /bin/true
+          sudo apt-get purge -y prompt-studio
+          test "$(readlink /usr/bin/pst)" = /bin/true
+          sudo rm /usr/bin/pst
 
       - name: Extract desktop release notes
         shell: bash
