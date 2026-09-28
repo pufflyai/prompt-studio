@@ -43266,6 +43266,174 @@
                 },
                 {
                   "type": "frame",
+                  "id": "N9is11",
+                  "name": "Chat banners",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "y4Dh5",
+                      "name": "Card Head",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bOlAH",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Chat banners",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pbL0z",
+                          "name": "Chips",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "PBQRB",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "SessionChatNotices",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "SessionChatNotices"
+                                }
+                              }
+                            },
+                            {
+                              "id": "tzMm1",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "AlertMessage layout banner",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "AlertMessage · layout=\"banner\""
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "N36kRs",
+                          "name": "Rule",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Banners span the top edge of the chat with square corners. Each offers Retry and can be closed. They appear only when the user can act; internal problems recover on their own.",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SC2qa",
+                      "name": "Panel edge",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "id": "sqiw0",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Could not load conversation",
+                          "theme": {
+                            "status": "error"
+                          },
+                          "width": "fill_container",
+                          "cornerRadius": 0,
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "circle-x"
+                            },
+                            "GL4gS": {
+                              "content": "Could not load conversation"
+                            },
+                            "B8etL": {
+                              "content": "The connection to the session was lost."
+                            },
+                            "x7Usi7": {
+                              "enabled": true
+                            },
+                            "dqGb1": {
+                              "enabled": true
+                            }
+                          }
+                        },
+                        {
+                          "id": "ekYoH",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Could not update queued prompts",
+                          "theme": {
+                            "status": "warning"
+                          },
+                          "width": "fill_container",
+                          "cornerRadius": 0,
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "triangle-alert"
+                            },
+                            "GL4gS": {
+                              "content": "Could not update queued prompts"
+                            },
+                            "B8etL": {
+                              "enabled": false
+                            },
+                            "x7Usi7": {
+                              "enabled": true
+                            },
+                            "dqGb1": {
+                              "enabled": true
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "DNSqq",
+                          "name": "Conversation",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": 12,
+                          "children": [
+                            {
+                              "id": "es250",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "ChatAssistantMessage",
+                              "width": "fill_container"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "ZAZcC",
                   "name": "Conversation browse",
                   "width": "fill_container",
@@ -70066,7 +70234,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -88134,7 +88302,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -88206,7 +88374,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 989,
+              "y": 994,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -116189,7 +116357,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
