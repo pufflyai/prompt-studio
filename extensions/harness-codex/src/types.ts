@@ -9,7 +9,7 @@ export type CodexThreadItem = {
   id: string;
   type: string;
   text?: string;
-  command?: string;
+  command?: string | string[];
   aggregated_output?: string;
   exit_code?: number | null;
   status?: string;
