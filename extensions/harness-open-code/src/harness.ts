@@ -98,6 +98,18 @@ const toHarnessSession = (input: {
   };
 };
 
+// One diagnostic per running turn, even when the provider streams many snapshots.
+const historyRecoveryLogger = (ctx: HarnessContext, sessionId: string) => {
+  let reported = false;
+  return () => {
+    if (reported) return;
+    reported = true;
+    ctx.logger.warn(
+      `OpenCode history recovered for session ${sessionId}: retained saved turns with ambiguous metadata ownership.`,
+    );
+  };
+};
+
 // --- Factory ---
 
 export const createOpencodeHarness = (
@@ -153,6 +165,7 @@ export const createOpencodeHarness = (
       sessionId: input.agentSessionId,
       cwd: input.cwd,
       events: input.events,
+      onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
       questionTool: pendingQuestion?.tool,
       questionResponse,
       messageComplete,
@@ -194,6 +207,7 @@ export const createOpencodeHarness = (
         sessionId,
         cwd: input.cwd,
         events: input.events,
+        onHistoryRecovery: historyRecoveryLogger(ctx, sessionId),
         baselineCount: 0,
         messageComplete,
         abortSignal: abortController.signal,
@@ -229,6 +243,7 @@ export const createOpencodeHarness = (
         sessionId: input.agentSessionId,
         cwd: input.cwd,
         events: input.events,
+        onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
         baselineCount,
         messageComplete,
         abortSignal: abortController.signal,
@@ -250,6 +265,7 @@ export const createOpencodeHarness = (
         sessionId: input.agentSessionId,
         cwd: input.cwd,
         events: input.events,
+        onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
         abortSignal: abortController.signal,
       });
 
