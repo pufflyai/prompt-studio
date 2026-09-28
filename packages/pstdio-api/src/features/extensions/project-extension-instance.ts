@@ -28,13 +28,16 @@ type InstalledSourceLike = {
 
 const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
 
-export const compatibilityError = (installedSource: { install_name: string; manifest_json?: unknown }) => {
+export const compatibilityError = (
+  installedSource: { install_name: string; manifest_json?: unknown },
+  options: { upgradable?: boolean } = {},
+) => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
   const name = optionalString(manifest.name) ?? installedSource.install_name;
   const declared = optionalString(manifest.enginesPstdio);
   if (!declared) return null;
 
-  const message = getExtensionApiVersionError(name, declared);
+  const message = getExtensionApiVersionError(name, declared, options);
   return message
     ? {
         code: "extension_manifest_unsupported_api_version",
@@ -72,7 +75,7 @@ export const toProjectExtensionInstance = (
   options: { canUpgrade?: boolean } = {},
 ): ProjectExtensionInstance => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
-  const incompatible = compatibilityError(installedSource);
+  const incompatible = compatibilityError(installedSource, { upgradable: options.canUpgrade });
   return {
     id: instance.id,
     projectId: instance.scope_id,

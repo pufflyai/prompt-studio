@@ -7,22 +7,13 @@ import type {
 } from "@pstdio/sdk/api";
 import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
 import { ParamEditor } from "@pstdio/ui/param-editor";
-import {
-  ArrowLeft,
-  ArrowUpCircle,
-  Blocks,
-  Puzzle,
-  RotateCw,
-  SlidersHorizontal,
-  Timer,
-  Trash2,
-  Wrench,
-} from "lucide-react";
+import { ArrowLeft, ArrowUpCircle, Blocks, Puzzle, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
+import { ExtensionDetailHealth } from "./extension-detail-health";
 import { settingsToParams, settingsToValues } from "./extension-settings-params";
 
 export interface ExtensionDetailProps {
@@ -33,27 +24,18 @@ export interface ExtensionDetailProps {
   diagnostics: ExtensionDiagnostic[];
   settings: ExtensionSettingValueRecord[];
   toggling?: boolean;
-  retrying?: boolean;
-  updating?: boolean;
+  reloading?: boolean;
   upgrading?: boolean;
-  fixing?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
   onBack: () => void;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => void;
   onChangeSetting: (key: string, value: unknown) => void;
-  onRetry: () => void;
-  onUpdate: () => void;
+  onReload: () => void;
   onUpgrade: () => void;
-  onAttemptFix: () => void;
   onUninstall: () => void;
 }
-
-const errorText = (error: Record<string, unknown> | null | undefined, key: "code" | "message") => {
-  const value = error?.[key];
-  return typeof value === "string" ? value : undefined;
-};
 
 export const ExtensionDetail = (props: ExtensionDetailProps) => {
   const {
@@ -64,25 +46,22 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     diagnostics,
     settings,
     toggling,
-    retrying,
-    updating,
+    reloading,
     upgrading,
-    fixing,
     uninstalling,
     togglingAutomationId,
     onBack,
     onToggle,
     onToggleAutomation,
     onChangeSetting,
-    onRetry,
-    onUpdate,
+    onReload,
     onUpgrade,
-    onAttemptFix,
     onUninstall,
   } = props;
   const { t } = useTranslation("projects");
   const failed = extension.status === "error";
-  const incompatible = errorText(extension.lastError, "code") === "extension_manifest_unsupported_api_version";
+  // Changed source on disk is adopted by reloading it. Upgrade is only for sources a release replaces.
+  const showReload = !extension.canUpgrade && extension.updateAvailable;
   const hasErrorDiagnostics = diagnostics.some((diagnostic) => diagnostic.severity === "error");
   const settingsParams = settingsToParams(settings);
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
@@ -122,7 +101,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Stack>
           {extension.canUpgrade && (
             <Button
-              variant="solid"
+              variant="primary"
               size="2xs"
               onClick={onUpgrade}
               loading={upgrading}
@@ -133,17 +112,17 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               {t("projectSettings.extensionsPanel.upgrade.action")}
             </Button>
           )}
-          {!extension.canUpgrade && extension.updateAvailable && (
+          {showReload && (
             <Button
-              variant="solid"
+              variant="primary"
               size="2xs"
-              onClick={onUpdate}
-              loading={updating}
-              data-testid="extension-update"
+              onClick={onReload}
+              loading={reloading}
+              data-testid="extension-reload"
               flexShrink="0"
             >
-              <ArrowUpCircle size={12} />
-              {t("projectSettings.extensionsPanel.update.action")}
+              <RotateCw size={12} />
+              {t("projectSettings.extensionsPanel.reload.action")}
             </Button>
           )}
           <Switch
@@ -158,6 +137,12 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         {extension.description && (
           <Text textStyle="paragraph/S/regular" color="fg.muted">
             {extension.description}
+          </Text>
+        )}
+
+        {showReload && (
+          <Text textStyle="label/XS" color="fg.muted" data-testid="extension-reload-hint">
+            {t("projectSettings.extensionsPanel.reload.hint")}
           </Text>
         )}
 
@@ -176,50 +161,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Text>
         </Stack>
 
-        {failed && (
-          <AlertMessage
-            status="error"
-            title={
-              incompatible
-                ? t("projectSettings.extensionsPanel.health.incompatibleVersions")
-                : (errorText(extension.lastError, "code") ?? t("projectSettings.extensionsPanel.status.error"))
-            }
-            data-testid="extension-detail-health"
-            endElement={
-              incompatible ? undefined : (
-                <HStack gap="xs" flexShrink="0">
-                  <Button
-                    variant="outline"
-                    size="2xs"
-                    onClick={onRetry}
-                    loading={retrying}
-                    data-testid="extension-retry"
-                  >
-                    <RotateCw size={12} />
-                    {t("projectSettings.extensionsPanel.health.retry")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="2xs"
-                    onClick={onAttemptFix}
-                    loading={fixing}
-                    data-testid="extension-attempt-fix"
-                  >
-                    <Wrench size={12} />
-                    {t("projectSettings.extensionsPanel.health.attemptFix")}
-                  </Button>
-                </HStack>
-              )
-            }
-          >
-            {errorText(extension.lastError, "message") ?? t("projectSettings.extensionsPanel.health.unknownError")}
-            {extension.lastLoadedAt
-              ? ` · ${t("projectSettings.extensionsPanel.health.lastLoaded", {
-                  time: new Date(extension.lastLoadedAt).toLocaleString(),
-                })}`
-              : ""}
-          </AlertMessage>
-        )}
+        {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
 
         {!failed && diagnostics.length > 0 && (
           <AlertMessage

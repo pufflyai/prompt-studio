@@ -92,10 +92,13 @@ export const createRequestHeaders = (
   return headers;
 };
 
-const isBinaryBody = (body: unknown) => body instanceof ArrayBuffer || ArrayBuffer.isView(body);
+// Raw bodies go to fetch as they are. FormData must not get a JSON content type: fetch sets the
+// multipart type with its boundary.
+const isRawBody = (body: unknown) =>
+  body instanceof ArrayBuffer || ArrayBuffer.isView(body) || body instanceof FormData;
 
 const serializeRequestBody = (body: unknown) => {
-  if (body instanceof ArrayBuffer) return body;
+  if (body instanceof ArrayBuffer || body instanceof FormData) return body;
   if (ArrayBuffer.isView(body)) {
     if (body.buffer instanceof ArrayBuffer) return body as BodyInit;
     const copy = new Uint8Array(body.byteLength);
@@ -113,7 +116,7 @@ export const createRequest = (options: ClientOptions): RequestFn => {
     const url = resolveClientUrl(baseUrl, path);
     const headers = createRequestHeaders(options, {
       headers: reqOpts.headers,
-      hasJsonBody: reqOpts.body !== undefined && !isBinaryBody(reqOpts.body),
+      hasJsonBody: reqOpts.body !== undefined && !isRawBody(reqOpts.body),
     });
     if (!isSameOriginTarget(baseUrl, path, url)) headers.delete("authorization");
     const response = await fetchFn(url, {

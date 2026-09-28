@@ -24,7 +24,7 @@ export type {
   WorkspaceProviderDescriptor,
 } from "pstdio-api-contracts";
 export type {
-  AttemptExtensionFixResponse,
+  AddLocalExtensionFolderResponse,
   CommandExecuteRequest,
   CommandExecuteResponse,
   ConfigureExtensionConnectionInput,

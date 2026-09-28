@@ -236,17 +236,35 @@
         "issues_other": "{{count}} problemas",
         "lastLoaded": "Última carga {{time}}",
         "unknownError": "La extensión no se pudo cargar.",
-        "retry": "Reintentar",
-        "retrySucceeded": "Extensión cargada",
-        "retryFailed": "La extensión sigue sin cargarse",
-        "attemptFix": "Intentar corregir",
-        "fixSessionStarted": "Sesión de corrección iniciada",
-        "fixSessionFailed": "Error al iniciar la sesión de corrección"
+        "copyError": "Copiar error",
+        "errorCopied": "Error copiado"
       },
-      "update": {
-        "action": "Actualizar",
+      "upgrade": {
+        "action": "Actualizar versión",
         "succeeded": "Extensión actualizada",
-        "failed": "Actualización rechazada"
+        "current": "La extensión ya está al día",
+        "failed": "No se pudo actualizar la extensión"
+      },
+      "upgradeAll": {
+        "action": "Actualizar todas",
+        "succeeded_one": "{{count}} extensión actualizada",
+        "succeeded_other": "{{count}} extensiones actualizadas",
+        "failed_one": "No se pudo actualizar {{count}} extensión",
+        "failed_other": "No se pudieron actualizar {{count}} extensiones"
+      },
+      "reload": {
+        "action": "Recargar",
+        "hint": "La carpeta de origen cambió. Recarga para usar la nueva versión.",
+        "succeeded": "Cambios locales cargados",
+        "failed": "Cambios locales rechazados"
+      },
+      "dropZone": {
+        "title": "Suelta aquí una carpeta de extensión",
+        "hint": "Se copia en .pstdio/extensions y se carga desde allí.",
+        "uploading": "Añadiendo {{name}}…",
+        "succeeded": "{{name}} añadida",
+        "failed": "No se pudo añadir la carpeta de la extensión",
+        "notFolder": "Suelta una carpeta, no un archivo."
       },
       "automations": {
         "title": "Automatizaciones",

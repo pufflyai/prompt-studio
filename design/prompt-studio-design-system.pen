@@ -57704,7 +57704,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "The same slot, doing the work it exists for. Nothing is registered, so both tabs are empty and the health block becomes the page. The switch is still on: enabled and loaded are different facts — exactly what the row conflated into one control.",
+                          "content": "The same slot, doing the work it exists for. Nothing is registered, so both tabs are empty and the health block becomes the page. The switch is still on: enabled and loaded are different facts. Copy error puts the code and message on the clipboard to paste into a ticket or an agent.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -57888,29 +57888,23 @@
                                   "height": 2
                                 },
                                 {
-                                  "id": "F0DLcw",
+                                  "id": "QrwG7",
                                   "type": "ref",
                                   "ref": "c24zV7",
-                                  "name": "Retry",
+                                  "name": "Copy error",
                                   "theme": {
-                                    "btn": "outline",
+                                    "btn": "ghost",
                                     "size": "2xs"
                                   },
                                   "height": 24,
                                   "descendants": {
                                     "DsEVd": {
-                                      "icon": "refresh-cw",
+                                      "icon": "copy",
                                       "width": 12,
                                       "height": 12
                                     },
                                     "Hf4GT": {
-                                      "content": "Retry load"
-                                    },
-                                    "khvEs": {
-                                      "theme": {
-                                        "kbd": "raised",
-                                        "size": "md"
-                                      }
+                                      "content": "Copy error"
                                     }
                                   }
                                 }
@@ -58062,6 +58056,1592 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xVNEo",
+                  "name": "state · release available",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "C8t0F",
+                      "name": "H",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x0BSe",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "state · release available",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "X2odFl",
+                          "name": "D",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A catalog extension with a newer release shows Upgrade in the header, next to the switch. Upgrade installs the release and reloads the extension. In the list, the same extension shows an upgrade icon on its row.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pnHlo",
+                      "name": "W",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Txxid",
+                          "name": "Head",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 10,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "cbdJZ",
+                              "name": "T",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "KJ9Q0",
+                                  "name": "N",
+                                  "fill": "$ds-fg",
+                                  "content": "GitHub",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "eyemO",
+                                  "name": "M",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "pstdio.github · v1.2.0",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "cQHAY",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Upgrade",
+                              "theme": {
+                                "btn": "primary",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "DsEVd": {
+                                  "icon": "circle-arrow-up",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "Upgrade"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FkzJa",
+                              "name": "Track",
+                              "width": 34,
+                              "height": 20,
+                              "fill": "$ds-bg-inverted",
+                              "cornerRadius": 999,
+                              "padding": [
+                                0,
+                                3
+                              ],
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "qy9Uz",
+                                  "name": "Knob",
+                                  "fill": "$ds-fg-inverted",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              ]
+                            },
+                            {
+                              "id": "L9TwD",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "More",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "width": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "ellipsis",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "x2qUOP",
+                          "name": "Health",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "y2L5bo",
+                              "type": "ref",
+                              "ref": "qhELS",
+                              "name": "S",
+                              "theme": {
+                                "tab-status": "completed"
+                              },
+                              "descendants": {
+                                "D3iNU": {
+                                  "icon": "$session-icon"
+                                },
+                                "mKjk0": {
+                                  "content": "Loaded",
+                                  "fill": "$ds-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "oKbFB",
+                              "name": "D",
+                              "fill": "$ds-fg-subtle",
+                              "content": "· 2 minutes ago · revision a3f19c2",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "rfAR3",
+                              "name": "Sp",
+                              "width": "fill_container",
+                              "height": 2
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LfCKt",
+                          "name": "Tab Strip",
+                          "width": "fill_container",
+                          "height": 38,
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "vVae8",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Settings",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "active",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "sliders-horizontal",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Settings"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "gy0sg",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Contributions",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "default",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "blocks",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Contributions"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zdzdO",
+                  "name": "state · local source changed",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rM3Lm",
+                      "name": "H",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "c2lDX",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "state · local source changed",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "M1yc4h",
+                          "name": "D",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A local extension has no release to upgrade to. When its folder changes on disk, the header offers Reload instead, with a hint under the name. Reload loads the new source and fetches nothing.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s99WLY",
+                      "name": "W",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "aKsHK",
+                          "name": "Head",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 10,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "qAmcF",
+                              "name": "T",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uQ2oJ",
+                                  "name": "N",
+                                  "fill": "$ds-fg",
+                                  "content": "Prompt Studio Planner",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "KlGRC",
+                                  "name": "M",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "pstdio.pstdio-planner · v0.7.0",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "FvpH3",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Reload",
+                              "theme": {
+                                "btn": "primary",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "DsEVd": {
+                                  "icon": "rotate-cw",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "Reload"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "R6l4K",
+                              "name": "Track",
+                              "width": 34,
+                              "height": 20,
+                              "fill": "$ds-bg-inverted",
+                              "cornerRadius": 999,
+                              "padding": [
+                                0,
+                                3
+                              ],
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "JOJjR",
+                                  "name": "Knob",
+                                  "fill": "$ds-fg-inverted",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              ]
+                            },
+                            {
+                              "id": "uBaIA",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "More",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "width": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "ellipsis",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "M2w63G",
+                          "name": "Reload Hint",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wvEdx",
+                              "name": "T",
+                              "fill": "$ds-fg-muted",
+                              "content": "The source folder changed. Reload to use the new version.",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "j9uPPd",
+                          "name": "Health",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "kGg6G",
+                              "type": "ref",
+                              "ref": "qhELS",
+                              "name": "S",
+                              "theme": {
+                                "tab-status": "completed"
+                              },
+                              "descendants": {
+                                "D3iNU": {
+                                  "icon": "$session-icon"
+                                },
+                                "mKjk0": {
+                                  "content": "Loaded",
+                                  "fill": "$ds-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "H7WG2",
+                              "name": "D",
+                              "fill": "$ds-fg-subtle",
+                              "content": "· 2 minutes ago · revision a3f19c2",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "yUco3",
+                              "name": "Sp",
+                              "width": "fill_container",
+                              "height": 2
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "M0tTlu",
+                          "name": "Tab Strip",
+                          "width": "fill_container",
+                          "height": 38,
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "D9IZ6C",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Settings",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "active",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "sliders-horizontal",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Settings"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "y59y4z",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Contributions",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "default",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "blocks",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Contributions"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xJ2Px",
+                  "name": "state · incompatible API",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "B1NybT",
+                      "name": "H",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zJqci",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "state · incompatible API",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "v05Pu",
+                          "name": "D",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The host no longer supports the API version the extension was built for. The advice depends on who owns the source. A local source is told how to fix it. A catalog extension is told to upgrade, and Upgrade sits next to Copy error in the block.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QXKTa",
+                      "name": "W · local",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "b1dSMc",
+                          "name": "Head",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 10,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "S7SJYy",
+                              "name": "T",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "L1rN12",
+                                  "name": "N",
+                                  "fill": "$ds-fg",
+                                  "content": "Prompt Studio Planner",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "DGyRT",
+                                  "name": "M",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "pstdio.pstdio-planner · v0.7.0",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "lv6W1",
+                              "name": "Track",
+                              "width": 34,
+                              "height": 20,
+                              "fill": "$ds-bg-inverted",
+                              "cornerRadius": 999,
+                              "padding": [
+                                0,
+                                3
+                              ],
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "vMAxI",
+                                  "name": "Knob",
+                                  "fill": "$ds-fg-inverted",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              ]
+                            },
+                            {
+                              "id": "H2yQHB",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "More",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "width": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "ellipsis",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LF2ns",
+                          "name": "Health",
+                          "width": "fill_container",
+                          "fill": "$ds-error-subtle",
+                          "stroke": "$ds-error-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "layout": "vertical",
+                          "gap": 7,
+                          "padding": [
+                            12,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "ELZg9",
+                              "name": "Row",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "YQFfH",
+                                  "type": "ref",
+                                  "ref": "qhELS",
+                                  "name": "S",
+                                  "theme": {
+                                    "tab-status": "failed"
+                                  },
+                                  "descendants": {
+                                    "D3iNU": {
+                                      "icon": "$session-icon",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "mKjk0": {
+                                      "content": "Failed to load",
+                                      "fontSize": 12,
+                                      "fontWeight": "600",
+                                      "fill": "$ds-error"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "X8HhW",
+                                  "name": "D",
+                                  "fill": "$ds-danger-text",
+                                  "content": "· 18 minutes ago · last loaded 09:14",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "DwPRu",
+                                  "name": "Sp",
+                                  "width": "fill_container",
+                                  "height": 2
+                                },
+                                {
+                                  "id": "NpOse",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Copy error",
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "copy",
+                                      "width": 12,
+                                      "height": 12
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Copy error"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Jyxpq",
+                              "name": "Code",
+                              "fill": "$ds-error",
+                              "content": "Incompatible versions",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "OUosr",
+                              "name": "Msg",
+                              "fill": "$ds-error",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Extension \"pstdio-planner\" targets extension API 1.0.0-alpha.13 but this host provides 1.0.0-alpha.14. Fix the extension source: make it work with extension API 1.0.0-alpha.14, then add \"1.0.0-alpha.14\" to engines.pstdio in its package.json.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$font-mono",
+                              "fontSize": 10.5,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pnSpp",
+                          "name": "Tab Strip",
+                          "width": "fill_container",
+                          "height": 38,
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "i9Yqc4",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Settings",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "active",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "sliders-horizontal",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Settings"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "Tw5Ot",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Contributions",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "default",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "blocks",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Contributions"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "a2zUM",
+                      "name": "W · catalog",
+                      "clip": true,
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "q1a1yB",
+                          "name": "Head",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 10,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "pn0kf",
+                              "name": "T",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "jOtaX",
+                                  "name": "N",
+                                  "fill": "$ds-fg",
+                                  "content": "GitHub",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 13,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "B616J",
+                                  "name": "M",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "pstdio.github · v1.2.0",
+                                  "fontFamily": "$font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "VMLGy",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Upgrade",
+                              "theme": {
+                                "btn": "primary",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "DsEVd": {
+                                  "icon": "circle-arrow-up",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "Upgrade"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "z2b8k",
+                              "name": "Track",
+                              "width": 34,
+                              "height": 20,
+                              "fill": "$ds-bg-inverted",
+                              "cornerRadius": 999,
+                              "padding": [
+                                0,
+                                3
+                              ],
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "DOEH9",
+                                  "name": "Knob",
+                                  "fill": "$ds-fg-inverted",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              ]
+                            },
+                            {
+                              "id": "xQR6R",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "More",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "width": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "ellipsis",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K9pqAz",
+                          "name": "Health",
+                          "width": "fill_container",
+                          "fill": "$ds-error-subtle",
+                          "stroke": "$ds-error-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "layout": "vertical",
+                          "gap": 7,
+                          "padding": [
+                            12,
+                            16
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "aNGzE",
+                              "name": "Row",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "uyO4C",
+                                  "type": "ref",
+                                  "ref": "qhELS",
+                                  "name": "S",
+                                  "theme": {
+                                    "tab-status": "failed"
+                                  },
+                                  "descendants": {
+                                    "D3iNU": {
+                                      "icon": "$session-icon",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "mKjk0": {
+                                      "content": "Failed to load",
+                                      "fontSize": 12,
+                                      "fontWeight": "600",
+                                      "fill": "$ds-error"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fkhaf",
+                                  "name": "D",
+                                  "fill": "$ds-danger-text",
+                                  "content": "· 18 minutes ago · last loaded 09:14",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "N43Lj",
+                                  "name": "Sp",
+                                  "width": "fill_container",
+                                  "height": 2
+                                },
+                                {
+                                  "id": "s0IXRE",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Upgrade",
+                                  "theme": {
+                                    "btn": "primary",
+                                    "size": "2xs"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "circle-arrow-up",
+                                      "width": 12,
+                                      "height": 12
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Upgrade"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "EN3no",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Copy error",
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "copy",
+                                      "width": 12,
+                                      "height": 12
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Copy error"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "ez18q",
+                              "name": "Code",
+                              "fill": "$ds-error",
+                              "content": "Incompatible versions",
+                              "fontFamily": "$font-mono",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "h2QgQl",
+                              "name": "Msg",
+                              "fill": "$ds-error",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Extension \"pstdio-github\" targets extension API 1.0.0-alpha.13 but this host provides 1.0.0-alpha.14. Upgrade the extension to its build for this host.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$font-mono",
+                              "fontSize": 10.5,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "uK6Fd",
+                          "name": "Tab Strip",
+                          "width": "fill_container",
+                          "height": 38,
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "AxqEw",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Settings",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "active",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "sliders-horizontal",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Settings"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "b8Jx8X",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Contributions",
+                              "theme": {
+                                "size": "sm",
+                                "tab": "default",
+                                "tab-status": "none"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "blocks",
+                                  "width": 14,
+                                  "height": 14
+                                },
+                                "k9XlqC": {
+                                  "content": "Contributions"
+                                },
+                                "g1LJJh": {
+                                  "enabled": false
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Y8GTFf",
+                  "name": "state · folder drop",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 14,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "JY3sn",
+                      "name": "H",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 5,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uhCeT",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "state · folder drop",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "j5iON",
+                          "name": "D",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The drop zone at the bottom of the list takes an extension folder from the file manager. It highlights while a folder is over it, copies the folder into .pstdio/extensions, and the extension appears under Installed as a repo extension. node_modules and .git are skipped.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XroPc",
+                      "name": "State · idle",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jvMOe",
+                          "name": "L",
+                          "fill": "$ds-fg-subtle",
+                          "content": "idle",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "aOmYz",
+                          "name": "Drop Zone",
+                          "width": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": [
+                            20,
+                            16
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "OlrrW",
+                              "name": "I",
+                              "width": 18,
+                              "height": 18,
+                              "icon": "folder-plus",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "tmPnJ",
+                              "name": "T",
+                              "fill": "$ds-fg",
+                              "content": "Drop an extension folder here to install it.",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "FYAYh",
+                              "name": "Sub",
+                              "fill": "$ds-fg-subtle",
+                              "content": "It is copied to .pstdio/extensions and loaded from there.",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "i6P0vK",
+                      "name": "State · dragging over",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wM4Yz",
+                          "name": "L",
+                          "fill": "$ds-fg-subtle",
+                          "content": "dragging over",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Bpqf8",
+                          "name": "Drop Zone",
+                          "width": "fill_container",
+                          "fill": "$ds-accent-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-accent-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": [
+                            20,
+                            16
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "MHpnK",
+                              "name": "I",
+                              "width": 18,
+                              "height": 18,
+                              "icon": "folder-down",
+                              "library": "lucide",
+                              "fill": "$ds-accent"
+                            },
+                            {
+                              "type": "text",
+                              "id": "pLnDo",
+                              "name": "T",
+                              "fill": "$ds-fg",
+                              "content": "Drop to install",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "REmbq",
+                              "name": "Sub",
+                              "fill": "$ds-fg-subtle",
+                              "content": "It is copied to .pstdio/extensions and loaded from there.",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sj05V",
+                      "name": "State · uploading",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "p6Rb69",
+                          "name": "L",
+                          "fill": "$ds-fg-subtle",
+                          "content": "uploading",
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "vPqSR",
+                          "name": "Drop Zone",
+                          "width": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "cornerRadius": 8,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": [
+                            20,
+                            16
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "DtKXx",
+                              "name": "I",
+                              "width": 18,
+                              "height": 18,
+                              "icon": "loader-circle",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "myBAj",
+                              "name": "T",
+                              "fill": "$ds-fg",
+                              "content": "Adding pstdio-notes…",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "io3cp",
+                              "name": "Sub",
+                              "fill": "$ds-fg-subtle",
+                              "content": "Copying 24 files to .pstdio/extensions/pstdio-notes",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
@@ -58106,7 +59686,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The view the breadcrumb goes back to. Installed extensions as flat rows — identity, the enable switch, and warning or error counts that open a popover with details. A catalogue section lands later for browsing and installing from the global registry.",
+                  "content": "The view the breadcrumb goes back to. Installed extensions as flat rows: identity, the enable switch, and warning or error counts that open a popover with details. A row with a newer catalog release shows an upgrade icon before its switch, and Upgrade all appears in the header only while at least one row has one. Catalog extensions that are not installed yet sit under Available with Install. The drop zone at the bottom installs a dropped extension folder.",
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -58119,7 +59699,7 @@
               "name": "Settings · Extensions",
               "clip": true,
               "width": 1440,
-              "height": 760,
+              "height": 940,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border",
@@ -58166,17 +59746,6 @@
                       "fontFamily": "$font-heading",
                       "fontSize": 15,
                       "fontWeight": "600"
-                    },
-                    {
-                      "id": "nAfkQ",
-                      "type": "ref",
-                      "ref": "Tboo4",
-                      "name": "Chip",
-                      "descendants": {
-                        "L109Bg": {
-                          "content": "no slot · every mode"
-                        }
-                      }
                     },
                     {
                       "type": "frame",
@@ -58471,18 +60040,29 @@
                                       "fontFamily": "$font-heading",
                                       "fontSize": 18,
                                       "fontWeight": "600"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "bc4Wc",
-                                      "name": "Meta",
-                                      "fill": "$ds-fg-subtle",
-                                      "content": "6 installed · 5 enabled · 1 failing",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 11,
-                                      "fontWeight": "normal"
                                     }
                                   ]
+                                },
+                                {
+                                  "id": "i0m6z",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Upgrade all",
+                                  "theme": {
+                                    "btn": "primary",
+                                    "size": "sm"
+                                  },
+                                  "height": 32,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "circle-arrow-up",
+                                      "width": 14,
+                                      "height": 14
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Upgrade all"
+                                    }
+                                  }
                                 },
                                 {
                                   "id": "UAQsz",
@@ -58859,6 +60439,25 @@
                                   "gap": 4,
                                   "justifyContent": "end",
                                   "alignItems": "center"
+                                },
+                                {
+                                  "id": "jivqy",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Upgrade",
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "width": 24,
+                                  "height": 24,
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "circle-arrow-up",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
                                 },
                                 {
                                   "type": "frame",
@@ -59402,6 +61001,25 @@
                                   ]
                                 },
                                 {
+                                  "id": "R4wqi",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Upgrade",
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "width": 24,
+                                  "height": 24,
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "circle-arrow-up",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                },
+                                {
                                   "type": "frame",
                                   "id": "duiJs",
                                   "name": "Track",
@@ -59624,7 +61242,7 @@
                                   "id": "p5PidZ",
                                   "name": "L",
                                   "fill": "$ds-fg-subtle",
-                                  "content": "Marketplace",
+                                  "content": "Available · 2",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
                                   "fontWeight": "600",
@@ -59634,9 +61252,13 @@
                             },
                             {
                               "type": "frame",
-                              "id": "dFqYU",
-                              "name": "Catalogue Teaser",
+                              "id": "u4DgF3",
+                              "name": "Prompt Studio Reports",
                               "width": "fill_container",
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
                               "gap": 14,
                               "padding": [
                                 12,
@@ -59646,22 +61268,23 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "aHiYU",
+                                  "id": "rYi40",
                                   "name": "Logo",
                                   "width": 36,
                                   "height": 36,
+                                  "fill": "$ds-bg-subtle",
                                   "cornerRadius": 9,
-                                  "stroke": "$ds-border",
+                                  "stroke": "$ds-border-subtle",
                                   "justifyContent": "center",
                                   "alignItems": "center",
                                   "children": [
                                     {
                                       "type": "icon",
-                                      "id": "dEvbH",
+                                      "id": "xo2uX",
                                       "name": "I",
                                       "width": 18,
                                       "height": 18,
-                                      "icon": "globe",
+                                      "icon": "puzzle",
                                       "library": "lucide",
                                       "fill": "$ds-fg-subtle"
                                     }
@@ -59669,49 +61292,225 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "aoX5e",
+                                  "id": "fRp4F",
                                   "name": "Text",
                                   "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 2,
                                   "children": [
                                     {
-                                      "type": "text",
-                                      "id": "gFcSU",
-                                      "name": "Name",
-                                      "fill": "$ds-fg-muted",
-                                      "content": "Browse the marketplace",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 13.5,
-                                      "fontWeight": "600"
+                                      "type": "frame",
+                                      "id": "ul3jQ",
+                                      "name": "N Row",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "T6weu9",
+                                          "name": "Name",
+                                          "fill": "$ds-fg",
+                                          "content": "Prompt Studio Reports",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 13.5,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "MTwbI",
+                                          "name": "Meta",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "pstdio-reports",
+                                          "fontFamily": "$font-mono",
+                                          "fontSize": 10.5,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
                                     },
                                     {
                                       "type": "text",
-                                      "id": "XY2EX",
+                                      "id": "qykaG",
                                       "name": "Desc",
-                                      "fill": "$ds-fg-subtle",
-                                      "content": "Install extensions published to the marketplace.",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "Workspace reports for agent handoffs.",
                                       "fontFamily": "$font-body",
                                       "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "gSqoD",
+                                      "name": "Source",
+                                      "fill": "$ds-fg-subtle",
+                                      "content": "pufflyai · https://github.com/pufflyai/prompt-studio@pstdio@0.28.0#extensions/pstdio-reports",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 10.5,
                                       "fontWeight": "normal"
                                     }
                                   ]
                                 },
                                 {
-                                  "id": "TE6Qe",
+                                  "id": "KK0i1",
                                   "type": "ref",
-                                  "ref": "dbK8Z",
-                                  "name": "Soon",
+                                  "ref": "c24zV7",
+                                  "name": "Install",
                                   "theme": {
-                                    "badge": "outline",
-                                    "palette": "gray"
+                                    "btn": "outline",
+                                    "size": "2xs"
                                   },
-                                  "height": 20,
+                                  "height": 24,
                                   "descendants": {
-                                    "FaaBK": {
-                                      "content": "12 available"
+                                    "DsEVd": {
+                                      "icon": "download",
+                                      "width": 12,
+                                      "height": 12
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Install"
                                     }
                                   }
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "ILT13",
+                                  "name": "Chevron",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "chevron-right",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wi2p4",
+                              "name": "Prompt Studio Notes",
+                              "width": "fill_container",
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": {
+                                "bottom": 1
+                              },
+                              "gap": 14,
+                              "padding": [
+                                12,
+                                24
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "fLKlM",
+                                  "name": "Logo",
+                                  "width": 36,
+                                  "height": 36,
+                                  "fill": "$ds-bg-subtle",
+                                  "cornerRadius": 9,
+                                  "stroke": "$ds-border-subtle",
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "Cy0GC",
+                                      "name": "I",
+                                      "width": 18,
+                                      "height": 18,
+                                      "icon": "puzzle",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-subtle"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "PKPsi",
+                                  "name": "Text",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 2,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "R9ZwZg",
+                                      "name": "N Row",
+                                      "gap": 8,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "gZqMV",
+                                          "name": "Name",
+                                          "fill": "$ds-fg",
+                                          "content": "Prompt Studio Notes",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 13.5,
+                                          "fontWeight": "600"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "nZvgp",
+                                          "name": "Meta",
+                                          "fill": "$ds-fg-subtle",
+                                          "content": "pstdio-notes",
+                                          "fontFamily": "$font-mono",
+                                          "fontSize": 10.5,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "I0yWk",
+                                      "name": "Desc",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "Markdown notes with a file tree next to your sessions.",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "dcgO0",
+                                      "name": "Source",
+                                      "fill": "$ds-fg-subtle",
+                                      "content": "pufflyai · https://github.com/pufflyai/prompt-studio@pstdio@0.28.0#extensions/pstdio-notes",
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 10.5,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "L3nZ5s",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Install",
+                                  "theme": {
+                                    "btn": "outline",
+                                    "size": "2xs"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "download",
+                                      "width": 12,
+                                      "height": 12
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Install"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "zWzTz",
+                                  "name": "Chevron",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "chevron-right",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
                                 }
                               ]
                             }
@@ -59730,35 +61529,64 @@
                           "name": "Foot",
                           "width": "fill_container",
                           "stroke": "$ds-border-subtle",
-                          "strokeWidth": {
-                            "top": 1
-                          },
                           "gap": 8,
                           "padding": [
-                            12,
+                            16,
                             24
                           ],
+                          "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "icon",
-                              "id": "ysj1f",
-                              "name": "FI",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "folder",
-                              "library": "lucide",
-                              "fill": "$ds-fg-subtle"
-                            },
-                            {
-                              "type": "text",
-                              "id": "E9exJ",
-                              "name": "FT",
-                              "fill": "$ds-fg-subtle",
-                              "content": "Local extensions load from .pstdio/extensions — drop a folder there and it appears in this list.",
-                              "fontFamily": "$font-body",
-                              "fontSize": 11,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "gJs8R",
+                              "name": "Drop Zone",
+                              "width": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "padding": [
+                                20,
+                                16
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "ysj1f",
+                                  "name": "FI",
+                                  "width": 18,
+                                  "height": 18,
+                                  "icon": "folder-plus",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "E9exJ",
+                                  "name": "FT",
+                                  "fill": "$ds-fg",
+                                  "content": "Drop an extension folder here to install it.",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "boALm",
+                                  "name": "Sub",
+                                  "fill": "$ds-fg-subtle",
+                                  "content": "It is copied to .pstdio/extensions and loaded from there.",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         }
@@ -59877,7 +61705,7 @@
                           "id": "NyjlO",
                           "name": "Meta",
                           "fill": "$ds-fg-subtle",
-                          "content": "Last loaded 09:14 · 3 retries",
+                          "content": "Last loaded 09:14",
                           "fontFamily": "$font-body",
                           "fontSize": 10.5,
                           "fontWeight": "normal"
@@ -59900,29 +61728,44 @@
                       ],
                       "children": [
                         {
-                          "id": "SqSGG",
+                          "id": "LIr0w",
                           "type": "ref",
                           "ref": "c24zV7",
-                          "name": "Retry",
+                          "name": "Upgrade",
                           "theme": {
-                            "btn": "outline",
+                            "btn": "primary",
                             "size": "2xs"
                           },
                           "height": 24,
                           "descendants": {
                             "DsEVd": {
-                              "icon": "rotate-cw",
+                              "icon": "circle-arrow-up",
                               "width": 12,
                               "height": 12
                             },
                             "Hf4GT": {
-                              "content": "Retry"
+                              "content": "Upgrade"
+                            }
+                          }
+                        },
+                        {
+                          "id": "G9gQS",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Copy error",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "2xs"
+                          },
+                          "height": 24,
+                          "descendants": {
+                            "DsEVd": {
+                              "icon": "copy",
+                              "width": 12,
+                              "height": 12
                             },
-                            "khvEs": {
-                              "theme": {
-                                "kbd": "raised",
-                                "size": "md"
-                              }
+                            "Hf4GT": {
+                              "content": "Copy error"
                             }
                           }
                         }

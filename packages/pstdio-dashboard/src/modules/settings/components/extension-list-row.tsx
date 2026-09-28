@@ -1,24 +1,30 @@
-import { Box, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
-import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
-import { Switch, type SwitchProps } from "@pstdio/ui";
-import { ChevronRight, Folder, Globe, Puzzle } from "lucide-react";
+import { Box, Flex, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
+import type {
+  ExtensionDiagnostic,
+  ProjectExtensionInstance,
+  WorkbenchExtensionAutomationRecord,
+} from "@pstdio/sdk/api";
+import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
+import { ArrowUpCircle, ChevronRight, Folder, Globe, Puzzle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
-import { ExtensionHealthPopover, type ExtensionHealthPopoverProps } from "./extension-health-popover";
+import { ExtensionHealthPopover } from "./extension-health-popover";
 
 export interface ExtensionListRowProps {
   extension: ProjectExtensionInstance;
-  health: Omit<ExtensionHealthPopoverProps, "extension">;
+  diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
   toggling: boolean;
+  upgrading: boolean;
   onToggle: (enabled: boolean) => void;
+  onUpgrade: () => void;
   onOpen: () => void;
 }
 
 const stopRowClick = (event: { stopPropagation: () => void }) => event.stopPropagation();
 
 export const ExtensionListRow = (props: ExtensionListRowProps) => {
-  const { extension, health, automations, toggling, onToggle, onOpen } = props;
+  const { extension, diagnostics, automations, toggling, upgrading, onToggle, onUpgrade, onOpen } = props;
   const { t } = useTranslation("projects");
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
     onToggle(details.checked);
@@ -89,7 +95,31 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       </Box>
 
       <Box w="52px" flexShrink="0" display="flex" justifyContent="flex-end" onClick={stopRowClick}>
-        <ExtensionHealthPopover extension={extension} {...health} />
+        <ExtensionHealthPopover
+          extension={extension}
+          diagnostics={diagnostics}
+          upgrading={upgrading}
+          onUpgrade={onUpgrade}
+        />
+      </Box>
+
+      {/* The slot stays when there is nothing to upgrade, so the switches line up across rows. The row
+          opens on Enter, so a key press on the button must not reach it either. */}
+      <Box boxSize="6" flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
+        {extension.canUpgrade && (
+          <Tooltip content={t("projectSettings.extensionsPanel.upgrade.action")}>
+            <IconButton
+              variant="ghost"
+              size="2xs"
+              loading={upgrading}
+              onClick={onUpgrade}
+              aria-label={t("projectSettings.extensionsPanel.upgrade.action")}
+              data-testid="extension-row-upgrade"
+            >
+              <ArrowUpCircle />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
 
       <Box flexShrink="0" onClick={stopRowClick}>

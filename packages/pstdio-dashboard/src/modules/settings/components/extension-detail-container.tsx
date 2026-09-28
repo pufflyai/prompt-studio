@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import {
-  useAttemptExtensionFix,
   useExtensionContributions,
   useProjectExtensionSettings,
   useReloadProjectExtension,
@@ -35,7 +34,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const updateSetting = useUpdateProjectExtensionSetting(projectId);
   const reload = useReloadProjectExtension(projectId);
   const upgrade = useUpgradeProjectExtension(projectId);
-  const attemptFix = useAttemptExtensionFix(projectId);
   const uninstall = useUninstallProjectExtension(projectId);
   const [confirmingUninstall, setConfirmingUninstall] = useState(false);
   const [deleteUserData, setDeleteUserData] = useState(false);
@@ -48,32 +46,16 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     (diagnostic) => diagnostic.extensionId === extension.extensionId,
   );
 
-  // Taking an update adopts the source waiting on disk, which is the same operation as reloading a
-  // failed source: validate what is there now, then adopt it. Only the wording differs.
-  const handleUpdate = () => {
+  // Reloading validates the source waiting on disk, then adopts it.
+  const handleReload = () => {
     reload.mutate(
       { instanceId: extension.id },
       {
         onSuccess: (updated) => {
           toaster.create(
             updated.status === "loaded"
-              ? { type: "success", title: t("projectSettings.extensionsPanel.update.succeeded") }
-              : { type: "error", title: t("projectSettings.extensionsPanel.update.failed") },
-          );
-        },
-      },
-    );
-  };
-
-  const handleRetry = () => {
-    reload.mutate(
-      { instanceId: extension.id },
-      {
-        onSuccess: (updated) => {
-          toaster.create(
-            updated.status === "loaded"
-              ? { type: "success", title: t("projectSettings.extensionsPanel.health.retrySucceeded") }
-              : { type: "error", title: t("projectSettings.extensionsPanel.health.retryFailed") },
+              ? { type: "success", title: t("projectSettings.extensionsPanel.reload.succeeded") }
+              : { type: "error", title: t("projectSettings.extensionsPanel.reload.failed") },
           );
         },
       },
@@ -105,28 +87,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     );
   };
 
-  const handleAttemptFix = () => {
-    attemptFix.mutate(
-      { instanceId: extension.id },
-      {
-        onSuccess: (response) => {
-          toaster.create({
-            type: "success",
-            title: t("projectSettings.extensionsPanel.health.fixSessionStarted"),
-            description: response.title,
-          });
-        },
-        onError: (error) => {
-          toaster.create({
-            type: "error",
-            title: t("projectSettings.extensionsPanel.health.fixSessionFailed"),
-            description: error instanceof Error ? error.message : undefined,
-          });
-        },
-      },
-    );
-  };
-
   const handleUninstall = async () => {
     try {
       await uninstall.mutateAsync({ instanceId: extension.id, deleteUserData });
@@ -151,10 +111,8 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         diagnostics={diagnostics}
         settings={settingsQuery.data?.settings ?? []}
         toggling={setEnabled.isPending}
-        retrying={reload.isPending}
-        updating={reload.isPending}
+        reloading={reload.isPending}
         upgrading={upgrade.isPending}
-        fixing={attemptFix.isPending}
         uninstalling={uninstall.isPending}
         togglingAutomationId={
           setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
@@ -165,10 +123,8 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           setAutomationEnabled.mutate({ instanceId: extension.id, automationId: automation.id, enabled })
         }
         onChangeSetting={(key, value) => updateSetting.mutate({ instanceId: extension.id, key, value })}
-        onRetry={handleRetry}
-        onUpdate={handleUpdate}
+        onReload={handleReload}
         onUpgrade={handleUpgrade}
-        onAttemptFix={handleAttemptFix}
         onUninstall={() => setConfirmingUninstall(true)}
       />
       <DeleteConfirmationModal

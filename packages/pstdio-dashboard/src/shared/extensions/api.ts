@@ -1,5 +1,5 @@
 import type {
-  AttemptExtensionFixResponse,
+  AddLocalExtensionFolderResponse,
   CommandExecuteResponse,
   ExtensionSettingValueRecord,
   InstallMarketplaceExtensionResponse,
@@ -85,6 +85,22 @@ export const installMarketplaceExtension = (projectId: string, installName: stri
     { method: "POST" },
   );
 
+export interface DroppedExtensionFolder {
+  name: string;
+  /** Each file's name is its path relative to the folder root. */
+  files: File[];
+}
+
+export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtensionFolder) => {
+  const body = new FormData();
+  body.append("name", folder.name);
+  for (const file of folder.files) body.append("files", file, file.name);
+  return apiRequest<AddLocalExtensionFolderResponse>(`/v1/projects/${projectId}/extensions/local`, {
+    method: "POST",
+    body,
+  });
+};
+
 export const setProjectExtensionEnabled = (projectId: string, instanceId: string, enabled: boolean) =>
   apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}`, {
     method: "PATCH",
@@ -109,11 +125,6 @@ export const reloadProjectExtension = (projectId: string, instanceId: string) =>
 
 export const upgradeProjectExtension = (projectId: string, instanceId: string) =>
   apiRequest<UpgradeProjectExtensionResponse>(`/v1/projects/${projectId}/extensions/${instanceId}/upgrade`, {
-    method: "POST",
-  });
-
-export const attemptExtensionFix = (projectId: string, instanceId: string) =>
-  apiRequest<AttemptExtensionFixResponse>(`/v1/projects/${projectId}/extensions/${instanceId}/attempt-fix`, {
     method: "POST",
   });
 

@@ -40,7 +40,7 @@ export const reloadProjectExtensionHandler = (
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-    const result = await deps.extensionService.reloadInstalledSource(existing.installedSource.install_name);
+    const result = await deps.extensionService.reloadInstalledSourceBySourcePath(existing.installedSource.source_path);
 
     return c.json(
       toProjectExtensionInstance(existing.instance, result.installedSource, undefined, {
