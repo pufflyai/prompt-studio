@@ -42,10 +42,8 @@ export {
   registerWorkbenchExtensionTreeRenderers,
 } from "./contributions/tree-renderer-contributions";
 export {
-  isExtensionNavigationTarget,
   type ToWorkbenchNavigationTargetInput,
   toWorkbenchNavigationTarget,
-  toWorkbenchNavigationTargetResult,
 } from "./host/extension-navigation-target";
 export {
   executeWorkbenchExtensionCommandResponse,

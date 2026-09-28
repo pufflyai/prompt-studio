@@ -6,7 +6,6 @@ import { createElement } from "react";
 import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQueryState, ResourceRef } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
-import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
   createStatusOptionsResolver,
@@ -124,15 +123,13 @@ const toRowClick = (
   if (record.rowActivationHandlerId) {
     return async (row: KanbanRendererRow) => {
       const resource = resolveRowResource(record, row);
-      const result = await executeKanbanRendererCommand(
+      await executeKanbanRendererCommand(
         context,
         record,
         record.rowActivationHandlerId!,
         { row: toActivatedRow(row) },
         resource,
       );
-      const target = toWorkbenchNavigationTargetResult(result, { extensionId: record.extensionId });
-      if (target) await context.workbench.navigation.openTarget(target);
     };
   }
   if (!adapter.onRowClick) return undefined;
