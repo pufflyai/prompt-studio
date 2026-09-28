@@ -1,7 +1,6 @@
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { checkpointConversation } from "./session-checkpoint";
-import { SessionHistoryError } from "./session-history";
 import type { ExistingSession } from "./session-scheduler-internals";
 import type { ActiveSession } from "./session-store";
 
@@ -17,14 +16,6 @@ export const logStartupFailure = async (
     entry?: ActiveSession | null;
   },
 ) => {
-  if (input.error instanceof SessionHistoryError && input.submittedQueuePosition !== undefined) {
-    await deps.sessionService.recoverQueuedDispatchClaim(
-      input.session.id,
-      input.submittedQueuePosition,
-      input.session.last_request_started,
-    );
-    return;
-  }
   sessionLogger.error(
     {
       err: input.error,

@@ -94,13 +94,6 @@ export const followUpResponseSchema = sessionSchema.extend({
   follow_up: followUpDecisionSchema,
 });
 
-export const sessionHistoryIssueSchema = z.object({
-  code: z.enum(["reconciliation_conflict", "checkpoint_unreadable", "native_unavailable"]),
-  category: z.string(),
-});
-
-export type SessionHistoryIssue = z.infer<typeof sessionHistoryIssueSchema>;
-
 export const sessionQueuedMessagesResponseSchema = z.object({ messages: z.array(sessionMessageSchema) });
 export type SessionQueuedMessagesResponse = z.infer<typeof sessionQueuedMessagesResponseSchema>;
 
@@ -114,7 +107,6 @@ export const sessionConversationSourcesSchema = z.object({
 export type SessionConversationSources = z.infer<typeof sessionConversationSourcesSchema>;
 
 export const sessionConversationResponseSchema = z.object({
-  historyIssue: sessionHistoryIssueSchema.optional(),
   session: sessionSchema,
   messages: z.array(sessionMessageSchema),
 });

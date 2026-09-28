@@ -90,9 +90,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     return typeof value === "string" ? value : undefined;
   });
 
-  const { messages, loading, streaming, reconnect, refreshQueue, historyIssue, error, queueError } =
-    useDashboardSessionMessages(input, view.sessionId);
-  const historyReadOnly = Boolean(historyIssue && historyIssue.code !== "native_unavailable");
+  const { messages, loading, streaming, reconnect, refreshQueue, error, queueError } = useDashboardSessionMessages(
+    input,
+    view.sessionId,
+  );
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();
@@ -160,12 +161,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     // to the region bounds and scrolls its messages internally instead of growing.
     <Box position="relative" h="full" w="full">
       <Box position="absolute" inset="0" overflow="hidden" display="flex" flexDirection="column">
-        <SessionChatNotices
-          historyIssue={historyIssue}
-          error={error}
-          queueError={queueError}
-          refreshQueue={refreshQueue}
-        />
+        <SessionChatNotices error={error} queueError={queueError} refreshQueue={refreshQueue} />
         <Box flex="1" minH="0" overflow="hidden">
           <ChatPanel
             // Keying on the session id gives each session its own draft and scroll
@@ -214,8 +210,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             }
             onAttachFiles={projectId ? (files) => void draftAttachments.uploadFiles(files) : undefined}
             onAttachText={projectId ? (text) => void draftAttachments.uploadText(text) : undefined}
-            inputDisabled={draftAttachments.uploading || historyReadOnly}
-            submitDisabled={!canSubmit || historyReadOnly}
+            inputDisabled={draftAttachments.uploading}
+            submitDisabled={!canSubmit}
             workspaceHub={
               <ChatWorkspaceHub
                 workspaceControl={
@@ -237,7 +233,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               />
             }
             onSubmitMessage={(text, _attachments, questionResponse) => {
-              if (historyReadOnly) return;
               const submittedAttachments = draftAttachments.attachments;
               return submitSessionMessage({
                 sessionId,

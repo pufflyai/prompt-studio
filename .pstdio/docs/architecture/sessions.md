@@ -263,7 +263,7 @@ Server flow:
 4. Resolve the follow-up model from request `model`, or from `last_selected_model` when the agent is unchanged.
 5. **Same agent:** require `agent_session_id`, recover the complete conversation through the harness, then call resume with that exact baseline length as `messageOffset`.
 6. **Different agent:** update `session.agent`, clear previous `agent_session_id`, update `last_selected_model`, call `agent.startSession(...)`.
-7. A history conflict leaves both sources unchanged and rejects resume with 409. Other startup failures checkpoint the captured owner and mark only that run failed.
+7. Resume always continues from the reconciled history. Startup failures checkpoint the captured owner and mark only that run failed.
 
 Queued follow-ups preserve the accepted prompt. Conversation hydration includes that prompt while the queued session waits, so clients can display the prompt and queued banner before the agent resumes.
 
@@ -275,11 +275,13 @@ An entry publishes its readiness promise before asynchronous setup. GET and SSE 
 
 The database advances the run-start timestamp on every resume and queue dispatch, even when the clock stalls or moves backward. Dispatch recovery retains the last run identity. Guarded status changes and terminal queue cleanup share one transaction, so a stale cancellation cannot remove a newer run's queued messages.
 
-Without an active owner, one loader reads the saved session file and native transcript. Harnesses that expose getMessages must also implement recoverMessages. The harness owns provider-format comparisons; shared SDK helpers handle ordered turns and metadata. Ambiguous alignment returns a historyIssue and the readable fallback. Missing or unreadable sources are distinct from a successful empty transcript. Reads never write a recovered checkpoint.
+Without an active owner, one loader reads the saved session file and native transcript. Harnesses that expose getMessages must also implement recoverMessages. The harness owns provider-format comparisons; shared SDK helpers handle ordered turns and metadata.
+
+Reconciliation always produces a history the session can continue from. The saved conversation is what the user saw, so it wins wherever both sources record the same span differently. Native history adds only what the saved side lacks: turns it is missing, messages inside a matched turn that fill a gap, and messages written after the saved conversation ends. Native text the saved turn already shows is not repeated. When the two sources order matched messages differently, the largest consistently ordered set is kept. If a harness still cannot pair the sources, the saved conversation is used; if the saved file is unreadable, native history is used. Reads never write a recovered checkpoint.
 
 OpenCode composes full poll snapshots against the current owner synchronously after the native read. Native turns determine membership. Attachments and locally generated errors follow surviving matched turns; deleting a turn or replacing history with [] removes that turn's metadata too.
 
-GET /v1/sessions/:id/conversation/sources exposes the unchanged saved and native arrays, with independent source errors, under the session's existing permissions. The dashboard shows conflicts, offers downloads, and disables resume until a retry can reconcile them.
+GET /v1/sessions/:id/conversation/sources exposes the unchanged saved and native arrays, with independent source errors, under the session's existing permissions. It is a diagnostic view; the dashboard never blocks a session on how the two sources compare.
 
 ## Streaming
 
@@ -294,7 +296,6 @@ GET /v1/sessions/:id/stream sends:
 - ready when connected;
 - one exact root snapshot after initialization, including an empty array;
 - subsequent patch and approval_request events;
-- history_issue when recovery or a provider snapshot is ambiguous;
 - heartbeat while waiting;
 - end when the run finishes without an immediate queued follow-up.
 
@@ -347,7 +348,7 @@ Clients (CLI, dashboard) use TanStack React-DB with SSE sync:
 ## Rules
 
 1. **Sessions optionally link to a workspace via `workspace_sessions`.** When linked, the workspace provides cwd and diff context. Without a workspace, the session runs at the project root and has no diff tracking. A workspace can have multiple sessions.
-2. **The active owner holds complete history.** Inactive reads reconcile the complete saved checkpoint with native provider history. Incremental providers preserve saved turns; snapshot providers own membership. Unresolved conflicts preserve both sources and block resume.
+2. **The active owner holds complete history.** Inactive reads reconcile the complete saved checkpoint with native provider history. Incremental providers preserve saved turns; snapshot providers own membership. Reconciliation never blocks a session.
 3. **Event stores are ephemeral.** They live in-memory for the duration of the API process and are not persisted.
 4. **All session mutations emit to EventBus.** Clients receive real-time updates via SSE sync.
 5. **Follow-ups can switch agents.** When the agent changes, the previous `agent_session_id` is cleared and a new session is started with the new agent.

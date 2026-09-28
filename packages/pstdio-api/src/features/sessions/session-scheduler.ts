@@ -1,7 +1,6 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
-import { getSessionHistory, SessionHistoryError } from "./session-history";
 import { createSessionQueueDrain } from "./session-queue-drain";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
@@ -222,7 +221,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     return session;
   };
 
-  const reserveExistingDispatch = async (input: StartExistingInput, checkedHistoryKey: string | undefined) => {
+  const reserveExistingDispatch = async (input: StartExistingInput) => {
     input.signal?.throwIfAborted();
     // Re-read session status inside the lock so we don't race a terminal transition that landed
     // between endpoint entry and lock acquisition.
@@ -230,12 +229,9 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     const context = resolveDispatchContext(input, fresh);
     const status = fresh.status;
     const fastPathQuestion = status === "awaiting_input" && input.questionResponse != null;
-    const historyKey = JSON.stringify([fresh.agent, fresh.agent_session_id]);
-    const needsHistory = !context.switchingAgent && fresh.agent_session_id && historyKey !== checkedHistoryKey;
 
     if (fastPathQuestion) {
       input.signal?.throwIfAborted();
-      if (needsHistory) return { historyKey };
       return prepareExistingDispatch(deps, context);
     }
 
@@ -243,7 +239,6 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       return insertAbortAwareFollowUp(deps, context, false);
     }
 
-    if (needsHistory) return { historyKey };
     if (status === "queued") return insertAbortAwareFollowUp(deps, context, false);
     if (input.respectCapacity && !(await hasCreateCapacity(deps))) {
       return insertAbortAwareFollowUp(deps, context, true);
@@ -254,20 +249,10 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   const startOrQueueExisting = async (input: StartExistingInput): Promise<StartOrQueueResult> => {
-    let checkedHistoryKey: string | undefined;
-    while (true) {
-      const result = await withSchedulingLock(() => reserveExistingDispatch(input, checkedHistoryKey));
-      if (typeof result !== "function" && "historyKey" in result) {
-        const history = await getSessionHistory(input.session.id, deps);
-        if (history.historyIssue && history.historyIssue.code !== "native_unavailable")
-          throw new SessionHistoryError(history.historyIssue);
-        checkedHistoryKey = result.historyKey;
-        continue;
-      }
-      if (typeof result !== "function") return result;
-      await result();
-      return { status: "dispatched" };
-    }
+    const result = await withSchedulingLock(() => reserveExistingDispatch(input));
+    if (typeof result !== "function") return result;
+    await result();
+    return { status: "dispatched" };
   };
 
   const resumeForApproval = async (sessionId: string) => {

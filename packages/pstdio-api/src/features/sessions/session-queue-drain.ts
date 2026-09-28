@@ -1,28 +1,10 @@
 import type { SessionsRouteDeps } from "./deps";
-import { getSessionHistory, SessionHistoryError } from "./session-history";
 import { dispatchQueuedEntry } from "./session-queue-dispatch";
 import { isWorkspaceDispatchPending } from "./session-queue-readiness";
-import {
-  type ExistingSession,
-  hasCreateCapacity,
-  type PendingQueueEntry,
-  withSchedulingLock,
-} from "./session-scheduler-internals";
+import { hasCreateCapacity, withSchedulingLock } from "./session-scheduler-internals";
 
 const isTerminal = (status: string) =>
   status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
-
-// A resume waits while its native history conflicts, so the queued prompt is not lost.
-const hasDispatchableHistory = async (deps: SessionsRouteDeps, session: ExistingSession, entry: PendingQueueEntry) => {
-  if (!session.agent_session_id || entry.request_kind === "start") return true;
-  try {
-    const history = await getSessionHistory(session.id, deps);
-    return !history.historyIssue || history.historyIssue.code === "native_unavailable";
-  } catch (error) {
-    if (error instanceof SessionHistoryError) return false;
-    throw error;
-  }
-};
 
 export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
   const maybeRequeueReleasedSession = async (sessionId: string) => {
@@ -49,8 +31,6 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
         // Skip without side-effect; markDispatchStarted would permanently orphan the entry.
         const queued = await deps.sessionService.get(entry.session_id);
         if (!queued || queued.status !== "queued") continue;
-        // Native history reads stay outside the scheduling lock.
-        if (!(await hasDispatchableHistory(deps, queued, entry))) continue;
         const hasCapacity = await withSchedulingLock(async () => {
           if (!(await hasCreateCapacity(deps))) return false;
           const session = await deps.sessionService.get(entry.session_id);
