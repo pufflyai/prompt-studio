@@ -27,6 +27,7 @@ export const Recoverable: Story = {
   render: () => (
     <Stack gap="sm">
       <AlertMessage
+        layout="banner"
         status="error"
         title="Could not load conversation"
         onClose={() => {}}
@@ -39,6 +40,7 @@ export const Recoverable: Story = {
         The connection to the session was lost.
       </AlertMessage>
       <AlertMessage
+        layout="banner"
         status="warning"
         title="Could not update queued prompts"
         onClose={() => {}}

@@ -55,6 +55,7 @@ export const FeedbackSection = () => {
         <AlertMessage status="warning" title="Merge conflicts detected" />
         <AlertMessage status="error" title="Hook failed" />
         <AlertMessage
+          layout="banner"
           status="error"
           title="Could not load conversation"
           onClose={() => {}}

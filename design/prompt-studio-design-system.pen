@@ -12280,6 +12280,7 @@
                             "status": "error"
                           },
                           "width": "fill_container",
+                          "cornerRadius": 0,
                           "descendants": {
                             "sAoE1": {
                               "icon": "circle-x"
@@ -12307,6 +12308,7 @@
                             "status": "warning"
                           },
                           "width": "fill_container",
+                          "cornerRadius": 0,
                           "descendants": {
                             "sAoE1": {
                               "icon": "triangle-alert"
@@ -17982,6 +17984,7 @@
                       "type": "frame",
                       "id": "So6vB",
                       "name": "cmp/AlertMessage",
+                      "context": "Inline alerts use the alert radius. Banners (layout banner) span their panel edge with square corners, a Retry action, and a Close button.",
                       "theme": {
                         "status": "info"
                       },
@@ -70063,7 +70066,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -88131,7 +88134,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -88203,7 +88206,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 994,
+              "y": 989,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -116186,7 +116189,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"

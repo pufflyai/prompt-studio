@@ -41,7 +41,7 @@ Read this file before working on UI or design. Use these patterns across the app
 
 - Show a banner only when the user can act on it. The product recovers from internal problems, such as saved and agent history that disagree, on its own and shows no banner.
 - Every banner offers a way to recover, such as a Retry action, and a close button. Closing hides that message; a new failure shows its own banner.
-- Use `AlertMessage` with `endElement` for the recovery action (a `2xs` outline button) and `onClose` for the close button.
+- Use `AlertMessage` with `layout="banner"`, `endElement` for the recovery action (a `2xs` outline button), and `onClose` for the close button. Banners span their panel edge with square corners; inline alerts keep the alert radius.
 - Chat banners:
   - "Could not load conversation" (error): Retry reconnects the conversation.
   - "Could not update queued prompts" (warning): Retry reloads the queued prompts.

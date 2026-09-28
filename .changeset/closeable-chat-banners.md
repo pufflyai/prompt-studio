@@ -3,4 +3,4 @@
 "@pstdio/ui": minor
 ---
 
-Chat banners can be closed and offer Retry, and `AlertMessage` gains an `onClose` close button.
+Chat banners have square corners, can be closed, and offer Retry. `AlertMessage` gains an `onClose` close button and a `layout="banner"` variant.

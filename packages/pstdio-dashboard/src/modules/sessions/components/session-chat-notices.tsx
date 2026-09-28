@@ -22,6 +22,7 @@ const RecoverableNotice = (props: RecoverableNoticeProps) => {
   if (dismissed === message) return null;
   return (
     <AlertMessage
+      layout="banner"
       status={status}
       title={title}
       onClose={() => setDismissed(message)}
