@@ -59,3 +59,15 @@ under a checked root.
 
 1. Add the entry under `buildTargets` (used by `build/build-all.ts`) and
    `platformBinaries` (used by `verify/verify-packages.ts`).
+
+## Extension lockfiles
+
+The host installs catalog extensions outside this workspace, from their Git
+sources. Each extension under `extensions/` in the catalog ships its own
+`bun.lock`, so the host installs only its runtime dependencies instead of
+downloading every development dependency.
+
+After changing an extension's dependencies, run
+`bun run --cwd scripts release:extension-lockfiles:sync`. `verify:lockfile`
+fails when a lockfile is missing or its dependency ranges differ from the
+extension's `package.json`.
