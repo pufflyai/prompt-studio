@@ -1,5 +1,22 @@
 # @pstdio/workbench
 
+## 0.36.0
+
+_2026-09-28_
+
+### Minor Changes
+
+- 86d807d: Bound view reads, propagate cancellation, and refresh only declared data dependencies while retaining loaded content.
+- 8012028: Open one folder per project and resolve files and sessions through Git-optional workspace providers.
+- eca8486: Show workspace lists with five default columns, hidden statistics, readable badges and dates, and breadcrumb icons that match each workspace.
+- dc5d073: Preserve complete conversation history across reads, checkpoints, and resumes with guarded run ownership.
+
+### Patch Changes
+
+- 840fb97: Center the Settings dialog close button and show ungrouped extension navigation, such as Notes, in the top sidenav section.
+- 86d807d: Drop a data table's old rows when a declared context value changes, keep tree sections the user collapsed, and load only the expanded folder's children.
+- 46276af: Keep single-resource Main views fixed without a redundant closeable tab.
+
 ## 0.35.0
 
 _2026-09-26_

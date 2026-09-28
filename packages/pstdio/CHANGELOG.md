@@ -1,5 +1,28 @@
 # pstdio
 
+## 0.36.0
+
+_2026-09-28_
+
+### Minor Changes
+
+- 8012028: Open one folder per project and resolve files and sessions through Git-optional workspace providers.
+
+### Patch Changes
+
+- dc5d073: Recover saved history that was cut short between repeated tool calls instead of reporting a conflict.
+- 840fb97: Center the Settings dialog close button and show ungrouped extension navigation, such as Notes, in the top sidenav section.
+- 86d807d: Bound view reads, propagate cancellation, and refresh only declared data dependencies while retaining loaded content.
+- a189ad9: Use native recursive watching on macOS to observe new dependency directories without registration gaps.
+- 03b1b50: Align the open project folder dialog with the latest design.
+- eca8486: Describe repo-scoped extensions and project guidance in terms of the project folder instead of linked repositories.
+- 86d807d: Drop a data table's old rows when a declared context value changes, keep tree sections the user collapsed, and load only the expanded folder's children.
+- 1026dfd: Center close buttons in the project and notification search dialogs.
+- 46276af: Keep single-resource Main views fixed without a redundant closeable tab.
+- d4e1687: Remove the unavailable history banner and history review controls that cannot resolve conversation problems.
+- eca8486: Show workspace lists with five default columns, hidden statistics, readable badges and dates, and breadcrumb icons that match each workspace.
+- dc5d073: Preserve complete conversation history across reads, checkpoints, and resumes with guarded run ownership.
+
 ## 0.35.0
 
 _2026-09-26_

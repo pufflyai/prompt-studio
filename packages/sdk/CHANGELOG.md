@@ -1,5 +1,18 @@
 # @pstdio/sdk
 
+## 0.36.0
+
+_2026-09-28_
+
+### Minor Changes
+
+- 8012028: Open one folder per project and resolve files and sessions through Git-optional workspace providers.
+- dc5d073: Preserve complete conversation history across reads, checkpoints, and resumes with guarded run ownership.
+
+### Patch Changes
+
+- dc5d073: Recover saved history that was cut short between repeated tool calls instead of reporting a conflict.
+
 ## 0.35.0
 
 _2026-09-26_

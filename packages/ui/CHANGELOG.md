@@ -1,5 +1,19 @@
 # @pstdio/ui
 
+## 0.36.0
+
+_2026-09-28_
+
+### Minor Changes
+
+- 8012028: Open one folder per project and resolve files and sessions through Git-optional workspace providers.
+- eca8486: Show workspace lists with five default columns, hidden statistics, readable badges and dates, and breadcrumb icons that match each workspace.
+
+### Patch Changes
+
+- 86d807d: Bound view reads, propagate cancellation, and refresh only declared data dependencies while retaining loaded content.
+- 03b1b50: Align the open project folder dialog with the latest design.
+
 ## 0.35.0
 
 _2026-09-26_
