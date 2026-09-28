@@ -94,7 +94,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/reload", () => {
     expect(broken.status).toBe(200);
     const brokenBody = await broken.json();
     expect(brokenBody.status).toBe("error");
-    expect(brokenBody.lastError).toMatchObject({ code: "extension_reload_failed" });
+    expect(brokenBody.lastError).toMatchObject({ code: "extension_entry_not_found" });
 
     writeFileSync(join(sourcePath, "extension.ts"), "export default {};\n", "utf8");
     const fixed = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}/reload`, { method: "POST" });

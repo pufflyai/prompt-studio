@@ -563,7 +563,7 @@ describe("extensionService reload", () => {
 
       expect(result.installedSource.status).toBe("error");
       expect(result.installedSource.manifest_json).toEqual({ id: "pstdio.reload", templates: ["ticket"] });
-      expect(result.installedSource.last_error_json).toMatchObject({ code: "extension_reload_failed" });
+      expect(result.installedSource.last_error_json).toMatchObject({ code: "extension_import_failed" });
       expect(reloadEvents.at(-1)?.status).toBe("error");
       // A refused update keeps the adopted hash, so the source still reads as having an update waiting.
       expect(result.installedSource.source_hash).toBe("old-hash");
