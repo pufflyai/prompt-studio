@@ -2,6 +2,20 @@
 
 Azure keeps the private key. There is no `.pfx` file to download or upload to GitHub. The build creates `metadata.json` from account settings; this file contains resource names, not a private key.
 
+## Prompt Studio account
+
+The existing `promptstudio` account uses `https://neu.codesigning.azure.net/`.
+Its `promptstudio-release` Public Trust profile is Active and uses the approved
+Pufflig AB identity. The certificate subject is
+`CN=Pufflig AB, O=Pufflig AB, L=Sundbyberg, C=SE`.
+
+All six repository Actions variables below are configured. The dedicated
+`pstdio-github-signing` app has the Certificate Profile Signer role scoped to
+this profile. Signed verification has passed for 0.36.1, including all 16
+packaged tests. Hosted installation and Squirrel update acceptance from 0.36.0
+to 0.36.1 also passed. Public release and public-feed acceptance are tracked
+separately in PS-3.
+
 ## Find the existing account
 
 1. Sign in at <https://portal.azure.com> using the directory that owns the paid signing account.
@@ -46,7 +60,24 @@ The job builds with Forge, signs the app and native runtime, then records the ru
 
 The verifier checks trusted signatures and timestamps for the packaged app, runtime, installer, and the app/runtime extracted from the full update package. It validates the runtime checksum and version in both locations. It then runs the packaged application tests and uploads the installer as a GitHub Actions artifact. It does not publish a release.
 
-Download `windows-signed-candidate` for manual installation. Follow [manual platform validation](manual-platform-validation.md), including a real update between two signed versions and verification of the installed updater. An archive signature check is not an install/update test. Windows remains excluded from the production release matrix until acceptance is complete.
+Download `windows-signed-candidate` for manual installation. Follow [manual platform validation](manual-platform-validation.md), including a real update between two signed versions and verification of the installed updater. An archive signature check is not an install/update test. Do not merge the Windows release activation until this acceptance is complete.
+
+Without local Windows hardware, run **Verify Windows installation and update**.
+Supply a successful signing run ID and an older `pstdio@<version>` tag. The job
+builds and signs the older version, installs its Setup on a fresh Windows runner,
+and applies the newer candidate with the installed Squirrel updater. It checks
+installed signatures, versions, project preservation, shutdown, and release
+artifact preparation. Screenshots and results are uploaded as
+`windows-installation-readiness`; prepared files remain unpublished.
+Use the optional baseline run ID to repeat acceptance with an existing signed
+baseline artifact instead of building and signing that version again.
+
+This candidate check uses a loopback feed containing the generated `RELEASES`
+and unchanged nupkg. It does not prove the app's public GitHub release lookup,
+consumer Windows SmartScreen behavior, or sign-out/reboot behavior. The runner
+uses Windows Server. After publication, test the real **Check for Updates…**
+command against the public release; published-to-published updating requires two
+public Windows versions.
 
 The production desktop workflow uses the same Azure setup action and Forge configuration. Once Windows is enabled, the release must run from the authorized `main` branch even though it checks out the package release tag.
 

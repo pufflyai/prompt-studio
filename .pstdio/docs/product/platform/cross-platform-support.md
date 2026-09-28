@@ -111,9 +111,10 @@ and verifies it before the packaged suite. The production app does not use it.
 ### Operational Requirements
 
 - The release workflow builds and launches desktop distributions on native
-  Linux x64, Apple Silicon macOS arm64, and Intel macOS x64 runners. The macOS
-  jobs verify signing and notarization before publication. Windows desktop
-  distribution is deferred until its trusted signing lane is available.
+  Linux x64, Apple Silicon macOS arm64, Intel macOS x64, and Windows x64 runners.
+  The macOS jobs verify signing and notarization before publication. Windows
+  verifies trusted signatures and timestamps on the app, runtime, installer,
+  and update payload. Publication requires all four targets.
 - Native CLI packages for Linux x64, Intel macOS x64, and Windows x64 are verified
   on their own runners before each `pstdio` release. Pull requests run no native
   desktop or CLI builds.

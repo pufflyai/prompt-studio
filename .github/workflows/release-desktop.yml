@@ -51,7 +51,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows desktop distribution remains deferred until its signing lane is ready.
         include:
           - target: darwin-arm64
             platform: darwin
@@ -68,6 +67,10 @@ jobs:
             platform: linux
             arch: x64
             os: ubuntu-latest
+          - target: win32-x64
+            platform: win32
+            arch: x64
+            os: windows-2025
     steps:
       - uses: actions/checkout@v5
         with:

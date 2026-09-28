@@ -1,5 +1,11 @@
 # Manual desktop checks without local target hardware
 
+The **Verify Windows installation and update** Actions workflow can check signed
+Setup installation, the installed Squirrel updater, and project preservation on
+a fresh Windows Server runner. See [Windows signing](windows-signing.md) for its
+inputs and limits. The interactive desktop checks below cover the remaining
+consumer Windows behavior.
+
 Use a remote desktop on the target architecture. The computer you connect from can be an Apple Silicon Mac. Run the checks inside the remote machine.
 
 - Windows: use an x64 Windows desktop or cloud PC. Microsoft [Windows App](https://learn.microsoft.com/en-us/windows-app/get-started-connect-devices-desktops-apps) connects from macOS. Choose a desktop image with a graphical session and permission to install applications.
@@ -38,7 +44,7 @@ For a Windows development artifact, extract the entire ZIP to one directory, kee
 
 For the Intel diagnostic artifact named in the report, extract the downloaded ZIP, then extract `pstdio-intel-diagnostic.tar.gz` with `tar -xzf pstdio-intel-diagnostic.tar.gz`. Open `Prompt Studio-darwin-x64/Prompt Studio.app` in Finder. This is the signed app used by the native checks. Run the signature checks below against that app's actual path. It can prove application behavior, but it does not prove DMG installation or an update.
 
-Intel and Windows publication remain disabled while their release checks are incomplete. Once enabled, download the Intel `darwin-x64` DMG or the Windows `win32-x64-Setup.exe` from the same published version. Compare its SHA-256 with that release's checksum file.
+Download the Intel `darwin-x64` DMG or the Windows `win32-x64-Setup.exe` from the same published version. Compare its SHA-256 with that release's checksum file. A candidate from Actions is not a published release; record candidate acceptance separately from publication evidence.
 
 ```powershell
 Get-FileHash .\Prompt-Studio-VERSION-win32-x64-Setup.exe -Algorithm SHA256
