@@ -8,6 +8,7 @@ Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass
 - Write **TypeScript only**.
 - Use **bun**. Do not use `npm`, `yarn`, or `pnpm`.
 - A task is not complete until all tests pass.
+- If you get stuck, read the relevant [lessons learned](.pstdio/docs/lessons-learned/) before trying another approach.
 
 # Language
 
