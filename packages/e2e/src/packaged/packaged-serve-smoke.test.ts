@@ -149,6 +149,18 @@ test(
       };
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
+          installName: "extension-lab",
+          origin: {
+            kind: "git",
+            path: "extensions/extension-lab",
+            ref: "{hostRelease}",
+            url: "https://github.com/pufflyai/prompt-studio",
+          },
+          publisher: "pstdio",
+        }),
+      );
+      expect(extensionCatalog.marketplace).toContainEqual(
+        expect.objectContaining({
           installName: "pstdio-notes",
           origin: {
             kind: "git",

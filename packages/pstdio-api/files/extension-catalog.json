@@ -2,6 +2,19 @@
   "version": 1,
   "extensions": [
     {
+      "installName": "extension-lab",
+      "displayName": "Extension Lab",
+      "description": "Five complete example tools built with public extension pages, resources, modes, and themes.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/extension-lab",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pstdio",
+      "default": false
+    },
+    {
       "installName": "harness-claude-code",
       "displayName": "Claude Code",
       "description": "Contributes the Claude Code agent harness.",
