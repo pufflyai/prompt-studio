@@ -4,6 +4,10 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 export const expectPackagedWebviewRuntime = async (baseUrl: string, metadata: WorkbenchExtensionMetadata) => {
   const view = metadata.views.find((candidate) => candidate.body.kind === "webview");
   if (!view || view.body.kind !== "webview") throw new Error("Expected a packaged webview");
+  const clipboardView = metadata.views.find((candidate) => candidate.localId === "lab-page");
+  if (clipboardView?.body.kind === "webview") {
+    expect(clipboardView.body.webview.capabilities).toContain("clipboard.write");
+  }
   const response = await fetch(new URL(view.body.webview.runtimeUrl, baseUrl));
   expect(response.status).toBe(200);
   const script = (await response.text()).match(/<script>([\s\S]*?)<\/script>/)?.[1];

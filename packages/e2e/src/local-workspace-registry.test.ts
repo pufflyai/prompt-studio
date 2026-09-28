@@ -78,6 +78,53 @@ describe("local workspace package registry", () => {
     expect(tarballRequests).toBe(1);
   });
 
+  test("installs a lockfile-pinned published dependency through the local registry", async () => {
+    const { root, name, writePackage } = await fixture();
+    const oldTarball = packWorkspacePackageTarball(await writePackage("0.25.0"), join(root, "published"));
+    const upstream = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: (request) => {
+        const pathname = decodeURIComponent(new URL(request.url).pathname);
+        if (pathname === `/${name}/-/registry-fixture-0.25.0.tgz`) return new Response(Bun.file(oldTarball));
+        return new Response("Not found", { status: 404 });
+      },
+    });
+    cleanups.push(async () => upstream.stop(true));
+    const consumer = join(root, "consumer");
+    await Bun.write(join(consumer, "package.json"), JSON.stringify({ dependencies: { [name]: "^0.25.0" } }));
+    // Lockfiles resolved against npm record an empty registry, so Bun requests the tarball from
+    // the registry configured for the scope, which is the local registry here.
+    await Bun.write(
+      join(consumer, "bun.lock"),
+      JSON.stringify({
+        lockfileVersion: 2,
+        configVersion: 1,
+        workspaces: { "": { dependencies: { [name]: "^0.25.0" } } },
+        packages: { [name]: [`${name}@0.25.0`, "", {}, ""] },
+      }),
+    );
+    const registry = await startLocalWorkspaceRegistry({
+      configPath: join(consumer, ".npmrc"),
+      outputRoot: join(root, "packed"),
+      packagePaths: [await writePackage("0.26.0")],
+      upstreamOrigin: upstream.url.origin,
+    });
+    cleanups.push(registry.close);
+
+    const install = Bun.spawn(["bun", "install", "--ignore-scripts", "--cache-dir", join(root, "cache")], {
+      cwd: consumer,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [exitCode, stderr] = await Promise.all([install.exited, new Response(install.stderr).text()]);
+    expect(stderr).not.toContain("error:");
+    expect(exitCode).toBe(0);
+    expect(await Bun.file(join(consumer, "node_modules", name, "package.json")).json()).toMatchObject({
+      version: "0.25.0",
+    });
+  });
+
   test("starts without contacting npm and serves local packages when npm is unavailable", async () => {
     const { root, name, writePackage } = await fixture();
     let requests = 0;

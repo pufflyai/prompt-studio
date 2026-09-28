@@ -83,12 +83,13 @@ export const startLocalWorkspaceRegistry = async (input: {
   const registryRoot = join(input.outputRoot, "workspace-registry");
   mkdirSync(registryRoot, { recursive: true });
   const packages = input.packagePaths.map((packagePath) => packWorkspacePackage(packagePath, registryRoot));
+  const upstreamOrigin = input.upstreamOrigin ?? "https://registry.npmjs.org";
   const publishedByName = new Map<string, Promise<RegistryMetadata>>();
   const publishedMetadata = (name: string) => {
     let metadata = publishedByName.get(name);
     if (!metadata) {
       // Published versions supplement local tarballs; npm availability must not block the local registry.
-      metadata = readPublishedMetadata(name, input.upstreamOrigin ?? "https://registry.npmjs.org").catch(() => ({}));
+      metadata = readPublishedMetadata(name, upstreamOrigin).catch(() => ({}));
       publishedByName.set(name, metadata);
     }
     return metadata;
@@ -111,6 +112,16 @@ export const startLocalWorkspaceRegistry = async (input: {
       response.setHeader("content-type", "application/octet-stream");
       response.end(tarball);
       return;
+    }
+
+    // Lockfiles resolved against npm request published tarballs from this scope registry.
+    if (requestPath.includes("/-/")) {
+      const published = await fetch(new URL(requestPath, `${upstreamOrigin}/`)).catch(() => null);
+      if (published?.ok) {
+        response.setHeader("content-type", "application/octet-stream");
+        response.end(Buffer.from(await published.arrayBuffer()));
+        return;
+      }
     }
 
     response.statusCode = 404;

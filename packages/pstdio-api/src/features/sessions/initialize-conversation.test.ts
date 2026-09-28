@@ -47,7 +47,7 @@ test("resume drains an older checkpoint before saving the replacement conversati
     next.push({ op: "add", path: "/messages/1", value: turn("second") });
     await checkpointConversation(session.id, nextEntry, deps);
     handle.deps.sessionService.store.remove(session.id, nextEntry);
-    expect((await getSessionHistory(session.id, deps)).messages).toEqual([turn("first"), turn("second")]);
+    expect(await getSessionHistory(session.id, deps)).toEqual([turn("first"), turn("second")]);
     expect(uploads).toBe(1);
   } finally {
     await handle.close();
@@ -80,7 +80,7 @@ test("a failed handoff restores readable closed history and retries its checkpoi
     await expect(failed.conversationReady).rejects.toThrow("Checkpoint unavailable");
     expect(prepared).toBe(0);
     expect(handle.deps.sessionService.store.get(session.id)).toBe(oldEntry);
-    expect((await getSessionHistory(session.id, deps)).messages).toEqual([turn("retained")]);
+    expect(await getSessionHistory(session.id, deps)).toEqual([turn("retained")]);
     const subscription = old.snapshotAndSubscribe().stream[Symbol.asyncIterator]();
     expect((await subscription.next()).done).toBe(true);
     fail = false;

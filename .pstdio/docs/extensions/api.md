@@ -599,9 +599,9 @@ Tree rows use `resource` as their action subject and `target` as their normal-cl
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
 any parameter dialog keep the clicked resource as their context, even when another resource is open.
 
-The host refreshes the tree after a section or row action runs. An action command may also return a navigation
-target. The host opens it after the refresh, for example to move the page back to the ticket body when the
-action deleted the open document.
+The host refreshes the tree after a section or row action runs. An action command calls
+`ctx.navigation.open(target)` to move the page, for example back to the ticket body after deleting an open
+document. The host applies explicit requests once after a successful command. Returned values remain data.
 
 Set `resource` explicitly on ticket, workspace, and other resource rows. Reuse the same reference in `target`
 when the destination represents that resource. A ticket file can instead open its parent ticket page and use
@@ -962,8 +962,18 @@ Warnings are actionable even when the extension still loads. For example, `exten
 
 ## Migrating to extension API alpha.12
 
-Native-history harnesses must implement `recoverMessages(ctx, { knownMessages, nativeMessages, cwd, workspace })`. Return `{ kind: "recovered", messages }` or `{ kind: "conflict", category }`. A failed native read must throw; returning `[]` declares a successful empty history. Use the SDK's pure ordered-history helpers and keep provider-specific comparisons in the harness.
+Native-history harnesses must implement `recoverMessages(ctx, { knownMessages, nativeMessages, cwd, workspace })`. Return `{ kind: "recovered", messages }`. Returning `{ kind: "conflict", category }` makes the host continue from the saved conversation, so prefer the saved side inside a harness instead of returning a conflict. A failed native read must throw; returning `[]` declares a successful empty history. Use the SDK's pure ordered-history helpers and keep provider-specific comparisons in the harness.
 
-Every harness event sink now provides `getMessages()`. Full-snapshot providers must read it after asynchronous polling and compose any harness-generated metadata before synchronously publishing the replacement. Root replacements remain authoritative. A provider can publish `/history_issue` with the public history issue shape when a snapshot cannot be composed safely; it must leave the readable messages unchanged.
+Every harness event sink now provides `getMessages()`. Full-snapshot providers must read it after asynchronous polling and compose any harness-generated metadata before synchronously publishing the replacement. Root replacements remain authoritative. When a snapshot cannot be composed safely, a provider must leave the readable messages unchanged.
 
 Renderer read callbacks receive an AbortSignal. Forward it through command execution and all child I/O, and do not resolve a load before its children settle. Native renderers declare their refresh dependencies explicitly with extension events and the public `viewDataEvents` references. The host no longer reloads every extension view on unrelated sync changes.
+
+## Migrating to extension API alpha.14
+
+Navigation and resource removal use explicit context APIs. The host no longer interprets a command's returned value as a navigation target or a deletion report. Return ordinary data to the caller.
+
+- Call `ctx.navigation.open(target)` from commands and interaction callbacks. Table and kanban row activation callbacks return void. Navigation still uses the existing target types and dispatcher, applies only after successful UI execution, and does not affect dashboards during headless execution.
+- After deleting data, call `await ctx.resources.removed(resource)`. This reports the committed removal to every connected client, independently of command success. Keep missing-resource handling and update-only writes so a stale save cannot recreate deleted data.
+- Remove imports of the workbench's `toWorkbenchNavigationTargetResult` and `isExtensionNavigationTarget` aliases. Use the SDK's `isNavigationTarget` for explicit target validation and `toWorkbenchNavigationTarget` when adapting a target to the workbench.
+
+Core extensions already use these APIs. Publish their alpha.14 compatibility declarations before releasing the alpha.14 host, in a separate extension PR. Their existing published SDK dependency provides both APIs; this cleanup does not require an unpublished SDK in extension manifests. Existing exact alpha.12 and alpha.13 declarations remain valid for those hosts.

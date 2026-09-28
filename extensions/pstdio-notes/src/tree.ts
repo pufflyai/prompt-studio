@@ -13,12 +13,6 @@ const newNoteAction = {
   submitLabel: "Create",
 };
 
-const notesDescription = (readable: boolean, writable: boolean) => {
-  if (!readable) return "Open a ready local project folder to read notes.";
-  if (!writable) return "Notes are read-only in this project folder.";
-  return undefined;
-};
-
 export const notesTree = defineView({
   id: "note-list",
   title: l10n("views.noteList", "Notes"),
@@ -39,7 +33,6 @@ export const notesTree = defineView({
               label: l10n("navigation.notes", "Notes"),
               icon: "notebook-pen",
               collapsible: true,
-              description: notesDescription(readable, writable),
               actions: [{ ...newNoteAction, disabled: !writable }],
               children: notes.map((note) => ({
                 id: note.id,

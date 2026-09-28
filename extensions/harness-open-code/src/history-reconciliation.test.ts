@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import type { SessionMessage } from "@pstdio/sdk/extensions";
-import { HistoryConflict } from "@pstdio/sdk/extensions";
 import { composeOpencodeSnapshot } from "./history-reconciliation";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 
@@ -44,5 +43,29 @@ test("a positional OpenCode id cannot hand a removed turn's attachment to the tu
   attached.parts.push({ type: "file", fileId: "first-file", url: "/first-file" });
   const second = positional(1);
   // OpenCode dropped the first turn, so the second turn now sits at position 0.
-  expect(() => composeOpencodeSnapshot([attached, second], [positional(0)])).toThrow(HistoryConflict);
+  const native = [positional(0), reply];
+  const recovered = composeOpencodeSnapshot([attached, second], native);
+  expect(recovered[0].parts).toEqual(attached.parts);
+  expect(recovered.slice(-2)).toEqual(native);
+  expect(new Set(recovered.map((message) => message.id)).size).toBe(recovered.length);
+  expect(composeOpencodeSnapshot(recovered, native)).toEqual(recovered);
+  expect(
+    composeOpencodeSnapshot(recovered, [positional(0), { ...reply, parts: [{ type: "text", text: "updated" }] }]).at(-1)
+      ?.parts,
+  ).toEqual([{ type: "text", text: "updated" }]);
+});
+
+test("a prompt OpenCode is still writing takes its finished text on the next poll", () => {
+  const writing: SessionMessage = { id: "msg_1", role: "user", parts: [] };
+  const written: SessionMessage = { ...writing, parts: [{ type: "text", text: "hello" }] };
+  expect(composeOpencodeSnapshot([writing, failure], [written])).toEqual([written, failure]);
+});
+
+test("repeated snapshots retain an ambiguous saved turn once without moving its metadata", () => {
+  const native = [0, 1].map((index) =>
+    normalizeOpencodeMessage({ role: "user", content: [{ type: "text", text: "hello" }] }, index),
+  );
+  const recovered = composeOpencodeSnapshot([user, failure], [...native, reply]);
+  expect(recovered).toEqual([user, failure, ...native, reply]);
+  expect(composeOpencodeSnapshot(recovered, [...native, reply])).toEqual(recovered);
 });

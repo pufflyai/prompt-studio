@@ -1,5 +1,11 @@
 # Manual desktop checks without local target hardware
 
+The **Verify Windows installation and update** Actions workflow can check signed
+Setup installation, the installed Squirrel updater, and project preservation on
+a fresh Windows Server runner. See [Windows signing](windows-signing.md) for its
+inputs and limits. The interactive desktop checks below cover the remaining
+consumer Windows behavior.
+
 Use a remote desktop on the target architecture. The computer you connect from can be an Apple Silicon Mac. Run the checks inside the remote machine.
 
 - Windows: use an x64 Windows desktop or cloud PC. Microsoft [Windows App](https://learn.microsoft.com/en-us/windows-app/get-started-connect-devices-desktops-apps) connects from macOS. Choose a desktop image with a graphical session and permission to install applications.
@@ -38,7 +44,7 @@ For a Windows development artifact, extract the entire ZIP to one directory, kee
 
 For the Intel diagnostic artifact named in the report, extract the downloaded ZIP, then extract `pstdio-intel-diagnostic.tar.gz` with `tar -xzf pstdio-intel-diagnostic.tar.gz`. Open `Prompt Studio-darwin-x64/Prompt Studio.app` in Finder. This is the signed app used by the native checks. Run the signature checks below against that app's actual path. It can prove application behavior, but it does not prove DMG installation or an update.
 
-Intel and Windows publication remain disabled while their release checks are incomplete. Once enabled, download the Intel `darwin-x64` DMG or the Windows `win32-x64-Setup.exe` from the same published version. Compare its SHA-256 with that release's checksum file.
+Download the Intel `darwin-x64` DMG or the Windows `win32-x64-Setup.exe` from the same published version. Compare its SHA-256 with that release's checksum file. A candidate from Actions is not a published release; record candidate acceptance separately from publication evidence.
 
 ```powershell
 Get-FileHash .\Prompt-Studio-VERSION-win32-x64-Setup.exe -Algorithm SHA256
@@ -62,7 +68,10 @@ spctl --assess --type execute --verbose=2 '/Applications/Prompt Studio.app'
 
 Use a fresh test account or a disposable remote machine. Keep the account through the update check.
 
-1. Install through the DMG or Setup installer and launch from Finder or the Windows Start menu. Record the installer behavior and the version shown in About.
+1. Install through the DMG, Windows Setup installer, or Linux DEB and launch from Finder or the Windows Start menu. Record the installer behavior and the version shown in About.
+   On macOS, move the app to Applications before opening it. Complete the command installation password prompt if shown, then run `command -v pst` and `pst --version` in Terminal. Confirm the command is `/usr/local/bin/pst` and matches About. On a second fresh account, cancel the prompt and confirm that the app still opens, relaunching does not prompt again, and **Prompt Studio → Install pst Command…** retries successfully. Keep a separate CLI at that path in another check and confirm the app preserves it.
+   On Windows, install with Setup, then open a new PowerShell and Command Prompt. Run `where.exe pst` and `pst --version`; expect the desktop installation’s stable `bin\pst.cmd` and the version shown in About. Keep an existing user PATH entry containing `%USERPROFILE%` and confirm setup preserves it. Uninstall after the update check and confirm only the desktop command and its PATH entry are removed.
+   On Linux, install the DEB, then run `command -v pst` and `pst --version`; expect `/usr/bin/pst` and the desktop version. Reinstall the DEB and confirm the command still works. Uninstall and confirm its link is removed. Repeat with an independent command at `/usr/bin/pst` and confirm installation and removal preserve it.
 2. Confirm the startup screen and workbench appear. Create a test project and check that the default extensions load.
 3. Create a second project, switch between project tabs, close one tab, and reopen it. Check that every tab responds to clicks.
 4. Create a ticket and a workspace. Edit and save a small file. Open a terminal and run a command that prints the working directory.
@@ -86,6 +95,7 @@ This requires two different, compatible signed versions on the target platform. 
 3. Choose **Check for Updates…** and capture the result. Confirm a newer version is downloaded.
 4. Quit normally when the update is ready, then reopen the app.
 5. Confirm About and the bundled CLI both show the new version and all test data survives.
+   On macOS and Windows, also run `pst --version` through the installed terminal command. On Windows, confirm it still works after Squirrel removes the previous version folder.
 6. Verify the updated application signature. On Windows, also verify the bundled `resources\bin\pstdio.exe` signature. On macOS, rerun the three application checks above.
 7. Check for updates again. Confirm the app reports that it is current.
 

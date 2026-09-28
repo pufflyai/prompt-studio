@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { catalogExtensionDirs } from "../release/sync-extension-lockfiles";
 
 const ROOT = path.resolve(import.meta.dir, "../..");
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
@@ -20,8 +21,8 @@ interface Lockfile {
 
 const readJson = (file: string) => JSON.parse(readFileSync(file, "utf8")) as PackageManifest;
 
-const readLockfile = () => {
-  const source = readFileSync(path.join(ROOT, "bun.lock"), "utf8");
+const readLockfile = (dir = "") => {
+  const source = readFileSync(path.join(ROOT, dir, "bun.lock"), "utf8");
   return JSON.parse(source.replace(/,\s*([}\]])/g, "$1")) as Lockfile;
 };
 
@@ -69,13 +70,30 @@ const main = () => {
     }
   }
 
+  const extensionDirs = catalogExtensionDirs();
+  for (const dir of extensionDirs) {
+    if (!existsSync(path.join(ROOT, dir, "bun.lock"))) {
+      errors.push(`${dir}: missing bun.lock; run \`bun run --cwd scripts release:extension-lockfiles:sync\``);
+      continue;
+    }
+    const workspace = readLockfile(dir).workspaces?.[""] ?? {};
+    const manifest = readJson(path.join(ROOT, dir, "package.json"));
+    for (const field of DEPENDENCY_FIELDS) {
+      compareDependencyField({ dir: `${dir}/bun.lock`, field, manifest, workspace }, errors);
+    }
+  }
+
   if (errors.length > 0) {
     console.error(`Lockfile workspace metadata drift (${errors.length}):`);
     for (const error of errors) console.error(`  - ${error}`);
     process.exit(1);
   }
 
-  console.log(`Lockfile workspace metadata OK across ${Object.keys(lockfile.workspaces ?? {}).length} workspaces.`);
+  console.log(
+    `Lockfile workspace metadata OK across ${Object.keys(lockfile.workspaces ?? {}).length} workspaces and ${
+      extensionDirs.length
+    } extension lockfiles.`,
+  );
 };
 
 main();

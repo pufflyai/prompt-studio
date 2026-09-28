@@ -13,6 +13,33 @@ Choose the artifact for the computer that will run Prompt Studio:
 | Apple Silicon macOS | `Prompt-Studio-<version>-darwin-arm64.dmg` | matching ZIP |
 | Intel macOS | `Prompt-Studio-<version>-darwin-x64.dmg` | matching ZIP |
 | Linux x64 | `Prompt-Studio-<version>-linux-x64.deb` | portable ZIP |
+| Windows x64 | `Prompt-Studio-<version>-win32-x64-Setup.exe` | — |
+
+On macOS, drag the app to Applications and open it. On the first launch from
+Applications, the app links `/usr/local/bin/pst` to its bundled runtime. macOS asks
+for an administrator password if the directory requires it. Cancelling leaves
+the app usable and does not repeat the prompt on later launches. Choose
+**Prompt Studio → Install pst Command…** to retry or restore a removed link.
+Apps running from the DMG or another unpacked folder do not install the command.
+
+The Linux DEB installs `/usr/bin/pst` and removes its own link when uninstalled.
+The Windows Setup installer creates a `pst.cmd` launcher in the installation's
+stable `bin` folder and adds that folder to the current user's `PATH`. Setup does
+not require an administrator password. Close and reopen your terminal after installation,
+then run `pst --version`. The launcher follows the new bundled runtime on every
+Squirrel update. Uninstall removes the desktop-owned launcher and its PATH entry.
+Other PATH entries, including environment-variable references, are preserved.
+Windows release availability still depends on the signing lane described below.
+
+None of these installers requires Bun, Node.js, or a separate CLI download.
+Desktop updates keep `pst` on the matching bundled runtime.
+
+Existing commands are preserved. Remove a separate CLI installation before
+retrying setup to use the desktop's bundled version. A command earlier on a custom
+`PATH` takes priority; run `command -v pst` on macOS/Linux or `where.exe pst` on
+Windows to check which one runs. Deleting the
+macOS app leaves its link behind; remove that link with `rm /usr/local/bin/pst`
+(use `sudo` if needed).
 
 The Linux ZIP is portable rather than system-integrated. Extract it to a stable
 directory without spaces, preserve executable permissions, and launch
@@ -36,15 +63,25 @@ spctl --assess --type execute --verbose=2 "/Applications/Prompt Studio.app"
 xcrun stapler validate "/Applications/Prompt Studio.app"
 ```
 
-Windows desktop distribution is deferred until its trusted signing lane is
-available. Do not distribute a development Windows package as a supported
-desktop release.
+On Windows, run the Setup installer. Its verified publisher is **Pufflig AB**.
+The application, bundled runtime, installer, and update payload carry trusted
+Authenticode signatures and timestamps. To inspect the downloaded installer:
+
+```powershell
+Get-FileHash .\Prompt-Studio-VERSION-win32-x64-Setup.exe -Algorithm SHA256
+Get-AuthenticodeSignature .\Prompt-Studio-VERSION-win32-x64-Setup.exe |
+  Format-List Status, SignerCertificate, TimeStamperCertificate
+```
+
+Require `Valid` and compare the hash with the release's checksum file. Do not
+distribute an unsigned development package as a supported desktop release.
 
 ## Updates
 
-Packaged macOS applications query the public GitHub Releases API for the newest
+Packaged macOS and Windows applications query the public GitHub Releases API for the newest
 complete `pstdio@<version>` release. They then point Electron's native updater at
-that release's architecture-aware JSON metadata. Source builds do not use the
+that release's architecture-aware JSON metadata on macOS, or its `RELEASES` and
+full nupkg files on Windows. Source builds do not use the
 native updater. A check compares the published version with the installed desktop
 version before downloading. Equal or older releases are not downloaded.
 
@@ -94,7 +131,8 @@ Windows uses Azure Artifact Signing with GitHub OIDC. The private key stays in
 Azure; no `.pfx` file or client secret is needed. The account, Public Trust profile,
 endpoint, and Azure identity IDs are repository Actions variables. See
 [Windows signing setup](../../../../clients/desktop/docs/windows-signing.md).
-These settings are not required for the active macOS and Linux release set.
+All six Azure variables are required for Windows releases. The release workflow
+must run from the authorized `main` branch, even when it checks out a release tag.
 
 Credentials are decoded only into the native runner's temporary directory. The
 macOS certificate is imported into an ephemeral keychain that is deleted even

@@ -75,6 +75,11 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       response.on("close", () => eventResponses.delete(response));
       return;
     }
+    if (request.url === "/v1/extensions/webviews/token/radar/digest/runtime") {
+      response.setHeader("content-type", "text/html");
+      response.end("<!doctype html><button>Copy extension draft</button>");
+      return;
+    }
     response.setHeader("content-type", "text/html");
     response.write("<!doctype html><html><body>");
     dashboardRequested.resolve();

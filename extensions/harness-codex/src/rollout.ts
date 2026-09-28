@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
 import { classifyCodexTool } from "./items";
+import { type RolloutItem, rolloutItemMessage } from "./rollout-items";
 import { parseTimestamp } from "./utils";
 
 type RolloutMessageContent = { type: string; text?: string };
@@ -16,6 +17,7 @@ type RolloutPayload = {
   arguments?: string;
   call_id?: string;
   output?: string;
+  item?: RolloutItem;
 };
 
 interface RolloutState {
@@ -73,9 +75,9 @@ const parseArguments = (raw: string | undefined) => {
 const parseRolloutLine = (line: string) => {
   try {
     const parsed = JSON.parse(line) as { type?: string; timestamp?: string; payload?: RolloutPayload };
-    if (parsed.type !== "response_item" || !parsed.payload) return undefined;
+    if (!parsed.payload) return undefined;
 
-    return { createdAt: parseTimestamp(parsed.timestamp), payload: parsed.payload };
+    return { type: parsed.type, createdAt: parseTimestamp(parsed.timestamp), payload: parsed.payload };
   } catch {
     return undefined;
   }
@@ -150,21 +152,36 @@ const appendPayload = (payload: RolloutPayload, createdAt: number | undefined, s
   }
 };
 
+interface RolloutTurn {
+  state: RolloutState;
+  items: SessionMessage[] | null;
+}
+
+// Newer Codex versions also record each turn's completed items, which match the live
+// stream exactly. Code mode wraps tool calls in scripts, so its response items cannot.
+// A resumed thread can mix both versions, so each turn uses its own best record.
 export const normalizeRollout = (content: string): SessionMessage[] => {
   let counter = 0;
-  const state: RolloutState = {
-    messages: [],
-    toolIndex: new Map(),
-    nextId: (kind) => `rollout-${kind}-${counter++}`,
-  };
+  const nextId = (kind: string) => `rollout-${kind}-${counter++}`;
+  const newTurn = (): RolloutTurn => ({ state: { messages: [], toolIndex: new Map(), nextId }, items: null });
+  const turns = [newTurn()];
 
   for (const line of content.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
     const item = parseRolloutLine(trimmed);
-    if (item) appendPayload(item.payload, item.createdAt, state);
+    if (!item) continue;
+    const turn = turns[turns.length - 1];
+    if (item.type === "response_item") appendPayload(item.payload, item.createdAt, turn.state);
+    if (item.type !== "event_msg") continue;
+    if (item.payload.type === "task_started") turns.push(newTurn());
+    if (item.payload.type === "item_completed" && item.payload.item) {
+      turn.items ??= [];
+      const message = rolloutItemMessage(item.payload.item, item.createdAt);
+      if (message) turn.items.push(message);
+    }
   }
 
-  return state.messages;
+  return turns.flatMap((turn) => turn.items ?? turn.state.messages);
 };

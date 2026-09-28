@@ -30,6 +30,34 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
     ).toBe("denied");
     await window.evaluate(() => {
       const frame = document.createElement("iframe");
+      frame.title = "Extension draft";
+      frame.sandbox.add("allow-scripts");
+      frame.allow = "fullscreen; clipboard-write";
+      frame.src = "/v1/extensions/webviews/token/radar/digest/runtime";
+      document.body.append(frame);
+    });
+    const extensionCopy = window.frameLocator('iframe[title="Extension draft"]').getByRole("button");
+    await extensionCopy.evaluate((button) => {
+      button.onclick = async () => {
+        button.textContent = await navigator.clipboard.writeText("Extension draft").then(
+          () => "Copied extension draft",
+          () => "denied",
+        );
+      };
+    });
+    await extensionCopy.click();
+    await expect(extensionCopy).toHaveText("Copied extension draft");
+    expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe("Extension draft");
+    expect(
+      await extensionCopy.evaluate(() =>
+        navigator.clipboard.readText().then(
+          () => "allowed",
+          () => "denied",
+        ),
+      ),
+    ).toBe("denied");
+    await window.evaluate(() => {
+      const frame = document.createElement("iframe");
       frame.title = "Embedded copy request";
       frame.srcdoc = "<!doctype html><button>Copy embedded text</button>";
       document.body.append(frame);
@@ -45,6 +73,6 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
     });
     await embeddedCopy.click();
     await expect(embeddedCopy).toHaveText("denied");
-    expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe(nativeMessage);
+    expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe("Extension draft");
   });
 };

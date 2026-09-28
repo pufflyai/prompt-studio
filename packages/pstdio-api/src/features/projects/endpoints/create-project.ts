@@ -40,21 +40,24 @@ const openExistingProject = async (
   initial: Awaited<ReturnType<typeof resolveInitialWorkspace>>,
 ) => {
   if (!initial.path) return null;
-  const home = await deps.workspaceService.findDefaultByPath(initial.path);
-  if (!home) return null;
-  const project = await deps.projectService.get(home.project_id);
+  const owner = await deps.workspaceService.findByPath(initial.path);
+  if (!owner) return null;
+  const project = await deps.projectService.get(owner.project_id);
   if (!project) return null;
   let extensionWarnings: ExtensionSetupWarning[] = [];
-  if (home.setup_error || home.initializing || home.provider_state !== "ready")
-    await initializeProjectWorkspace(deps, project.id, initial.initial, async () => {
-      extensionWarnings = await retryProjectExtensions(deps, project.id);
-      return extensionWarnings;
-    });
-  else if (home.root_path) {
-    try {
-      await ensureWorkspaceConfig(home.root_path, home.root_path, home.id, project.id, deps);
-    } catch (error) {
-      await deps.workspaceService.setSetupError(home.id, error instanceof Error ? error.message : String(error));
+  // Opening a worktree folder opens its project; only the project folder has setup to repair.
+  if (owner.is_default) {
+    if (owner.setup_error || owner.initializing || owner.provider_state !== "ready")
+      await initializeProjectWorkspace(deps, project.id, initial.initial, async () => {
+        extensionWarnings = await retryProjectExtensions(deps, project.id);
+        return extensionWarnings;
+      });
+    else if (owner.root_path) {
+      try {
+        await ensureWorkspaceConfig(owner.root_path, owner.root_path, owner.id, project.id, deps);
+      } catch (error) {
+        await deps.workspaceService.setSetupError(owner.id, error instanceof Error ? error.message : String(error));
+      }
     }
   }
   const response = toProjectResponse(project);

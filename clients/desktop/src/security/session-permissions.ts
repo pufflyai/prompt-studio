@@ -7,9 +7,11 @@ interface SessionPermissionRequest {
 
 export const canGrantSessionPermission = (request: SessionPermissionRequest) => {
   const { permission, requestingUrl, isMainFrame, runtimeOrigin } = request;
-  if (permission !== "clipboard-sanitized-write" || !isMainFrame || !runtimeOrigin || !requestingUrl) {
+  if (permission !== "clipboard-sanitized-write" || !runtimeOrigin || !requestingUrl) {
     return false;
   }
 
-  return URL.parse(requestingUrl)?.origin === runtimeOrigin;
+  const url = URL.parse(requestingUrl);
+  if (url?.origin !== runtimeOrigin) return false;
+  return isMainFrame || /^\/v1\/extensions\/webviews\/[^/]+\/[^/]+\/[^/]+\/(runtime|assets\/.+)$/.test(url.pathname);
 };

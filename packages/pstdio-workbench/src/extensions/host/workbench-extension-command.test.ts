@@ -189,16 +189,28 @@ describe("executeWorkbenchExtensionCommand", () => {
   });
 });
 
-describe("existing extension behavior during SDK preparation", () => {
-  test("closes a scoped page resource through a breadcrumb delete action", async () => {
+describe("command result data", () => {
+  test("preserves explicit navigation when command data includes deletion fields", async () => {
     const workbench = setupPage();
     const activeTicket = workbench.getPrimaryResource()!;
-    await executeWorkbenchExtensionCommand(
+    const value = { id: activeTicket.id, deleted: true };
+    const result = await executeWorkbenchExtensionCommand(
       {
         executeCommand: () => ({
           commandId: "pstdio.planner.command.delete-ticket",
           extensionId: "pstdio.planner",
-          outcome: { ok: true, status: "success", value: { id: activeTicket.id, deleted: true } },
+          outcome: {
+            ok: true,
+            status: "success",
+            value,
+            navigationRequests: [
+              {
+                kind: "page",
+                page: { kind: "page", id: "ticket", extensionId: "acme.planner" },
+                resource: activeTicket,
+              },
+            ],
+          },
         }),
         projectId: "project-1",
         workbench,
@@ -206,9 +218,8 @@ describe("existing extension behavior during SDK preparation", () => {
       "pstdio.planner.command.delete-ticket",
       { resource: workbench.breadcrumbs.getItems()?.at(-1)?.resource },
     );
-    expect(workbench.pages.store.getState().activePageId).toBe("tickets");
-    expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
-      expect.objectContaining({ contributionId: "workbench.page-placement.tickets.%24main" }),
-    ]);
+    expect(result).toEqual(value);
+    expect(workbench.pages.store.getState().activePageId).toBe("ticket");
+    expect(workbench.getPrimaryResource()).toEqual(activeTicket);
   });
 });

@@ -43,10 +43,22 @@ export const NumberInput = (props: NumberInputProps) => {
   const showSlider = isRange && !hideSlider;
   const useFullWidthLayout = fullWidth && !showSlider;
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<number | null>(null);
 
   const scheduleChange = (nextValue: number) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => onChange(id, nextValue), 540);
+    pendingRef.current = nextValue;
+    timeoutRef.current = setTimeout(() => {
+      pendingRef.current = null;
+      onChange(id, nextValue);
+    }, 540);
+  };
+  const flushChange = () => {
+    if (pendingRef.current === null) return;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    const nextValue = pendingRef.current;
+    pendingRef.current = null;
+    onChange(id, nextValue);
   };
 
   useEffect(() => {
@@ -106,6 +118,7 @@ export const NumberInput = (props: NumberInputProps) => {
               className="nodrag"
               readOnly={readOnly}
               placeholder={hideLabel ? name : undefined}
+              onBlur={flushChange}
               onKeyUp={(e) => {
                 if (e.key === "Enter") {
                   e.currentTarget.blur();
@@ -135,6 +148,7 @@ export const NumberInput = (props: NumberInputProps) => {
               className="nodrag"
               readOnly={readOnly}
               placeholder={hideLabel ? name : undefined}
+              onBlur={flushChange}
               onKeyUp={(e) => {
                 if (e.key === "Enter") {
                   e.currentTarget.blur();

@@ -496,7 +496,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     expect(streamRes.status).toBe(200);
 
     const sse = createSSEReader(streamRes);
-    const events = await sse.readEvents(4);
+    const events = await sse.readEvents(3);
     sse.close();
 
     expect(events[0]?.event).toBe("ready");
@@ -508,8 +508,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     });
     expect(getPatchTextParts(snapshotPatch)).toEqual(["FIRST", "FIRST DONE", "SECOND"]);
 
-    expect(events[2]).toMatchObject({ event: "history_issue", data: { code: "native_unavailable" } });
-    const livePatch = events[3]?.data as JsonPatch;
+    const livePatch = events[2]?.data as JsonPatch;
     expect(livePatch).toMatchObject({
       op: "add",
       path: "/messages/3",

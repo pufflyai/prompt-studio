@@ -34,7 +34,7 @@ try {
     ...payloadFiles.filter((path) => path.endsWith(".exe")).map((path) => join(extracted, path)),
   ];
   const verification = spawnSync(
-    "powershell.exe",
+    "pwsh",
     [
       "-NoProfile",
       "-NonInteractive",

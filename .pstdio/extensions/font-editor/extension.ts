@@ -41,7 +41,6 @@ const extension = defineExtension({
       id: "font-editor",
       owner: workbenchModes.project,
       slot: "content",
-      group: "Tools",
       label: l10n("treeItems.fontEditor.label", "Font editor"),
       icon: "case-upper",
       when: { mode: workbenchModes.project },

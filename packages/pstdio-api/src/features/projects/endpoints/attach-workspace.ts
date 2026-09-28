@@ -45,7 +45,7 @@ export const attachWorkspaceHandler =
         home?.root_path ||
         home?.provider_ref_json ||
         home?.provider_operation_id ||
-        (initial.path && (await deps.workspaceService.findDefaultByPath(initial.path)))
+        (initial.path && (await deps.workspaceService.findByPath(initial.path)))
       )
         return c.json({ error: "An initial workspace is already attached to this project or folder." }, 409);
       return c.json(await initializeProjectWorkspace(deps, id, initial.initial), 201);

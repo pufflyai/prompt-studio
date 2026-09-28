@@ -1,5 +1,13 @@
 # pstdio
 
+## 0.36.1
+
+_2026-09-28_
+
+### Patch Changes
+
+- e71834a: Create projects without fetching extension sources they never install, and install only runtime dependencies for installed extensions.
+
 ## 0.36.0
 
 _2026-09-28_

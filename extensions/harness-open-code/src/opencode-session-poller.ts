@@ -1,4 +1,5 @@
 import type { HarnessEventSink, HarnessExit, SessionMessage } from "@pstdio/sdk/extensions";
+import { composeOwnedOpencodeSnapshot } from "./history-reconciliation";
 import { normalizeErrorPart } from "./normalized-error";
 import { isTransportTimeout } from "./opencode-http";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
@@ -16,7 +17,6 @@ export interface PollSnapshot {
   snapshotChanged: boolean;
   lastObserved: OpencodeSessionMessage[];
   lastSnapshot: string;
-  latestMessages: SessionMessage[];
 }
 
 export type SessionMessagesLoader = (sessionId: string, cwd?: string) => Promise<OpencodeSessionMessage[]>;
@@ -26,6 +26,10 @@ export const OPENCODE_STALE_TURN_TIMEOUT_MS = 30 * 60 * 1_000;
 
 export const hasErrorParts = (messages: SessionMessage[]) =>
   messages.some((m) => m.parts.some((p) => p.type === "error"));
+
+// The provider's own messages decide a turn's outcome. The published snapshot also
+// holds host-owned messages, such as earlier generated failures, that are not part of it.
+export const nativeMessages = (observed: OpencodeSessionMessage[]) => observed.map(normalizeOpencodeMessage);
 
 export const waitForNextPoll = (abortSignal?: AbortSignal, intervalMs = OPENCODE_POLL_INTERVAL_MS) =>
   new Promise<void>((resolve) => {
@@ -109,11 +113,11 @@ const shouldStopPolling = (input: {
 
 export const appendFailureMessage = (input: {
   sessionId: string;
-  latestMessages: SessionMessage[];
   events: HarnessEventSink;
   failureMessage: string;
 }): HarnessExit => {
-  const { sessionId, latestMessages, events, failureMessage } = input;
+  const { sessionId, events, failureMessage } = input;
+  const latestMessages = events.getMessages();
   const failurePart = normalizeErrorPart({ message: failureMessage });
   const normalizedFailureMessage: SessionMessage = {
     id: `opencode-error-${sessionId}-${latestMessages.length}`,
@@ -132,15 +136,15 @@ export const readSessionSnapshot = async (input: {
   sessionId: string;
   cwd: string | undefined;
   events: HarnessEventSink;
+  onHistoryRecovery?: () => void;
   lastObserved: OpencodeSessionMessage[];
   lastSnapshot: string;
-  latestMessages: SessionMessage[];
 }) => {
   const { loadMessages, sessionId, cwd, events } = input;
 
   try {
     const raw = await loadMessages(sessionId, cwd);
-    const normalized = raw.map(normalizeOpencodeMessage);
+    const normalized = composeOwnedOpencodeSnapshot(events, raw.map(normalizeOpencodeMessage), input.onHistoryRecovery);
     const snapshot = JSON.stringify(normalized);
 
     if (snapshot === input.lastSnapshot) {
@@ -148,7 +152,6 @@ export const readSessionSnapshot = async (input: {
         snapshotChanged: false,
         lastObserved: raw,
         lastSnapshot: input.lastSnapshot,
-        latestMessages: input.latestMessages,
       } satisfies PollSnapshot;
     }
 
@@ -157,14 +160,12 @@ export const readSessionSnapshot = async (input: {
       snapshotChanged: true,
       lastObserved: raw,
       lastSnapshot: snapshot,
-      latestMessages: normalized,
     } satisfies PollSnapshot;
   } catch {
     return {
       snapshotChanged: false,
       lastObserved: input.lastObserved,
       lastSnapshot: input.lastSnapshot,
-      latestMessages: input.latestMessages,
     } satisfies PollSnapshot;
   }
 };
@@ -178,10 +179,10 @@ export const pollOpencodeMessages = async (input: {
   messageComplete: Promise<void>;
   abortSignal?: AbortSignal;
   pollIntervalMs?: number;
+  onHistoryRecovery?: () => void;
 }) => {
   const { loadMessages, sessionId, cwd, events, baselineCount, messageComplete, abortSignal, pollIntervalMs } = input;
   let lastSnapshot = "";
-  let latestMessages: SessionMessage[] = [];
   let lastObserved: OpencodeSessionMessage[] = [];
   let lastInFlightProgressAt: number | null = null;
   const postState = trackPostState(messageComplete);
@@ -198,11 +199,10 @@ export const pollOpencodeMessages = async (input: {
       events,
       lastObserved,
       lastSnapshot,
-      latestMessages,
+      onHistoryRecovery: input.onHistoryRecovery,
     });
     lastObserved = snapshot.lastObserved;
     lastSnapshot = snapshot.lastSnapshot;
-    latestMessages = snapshot.latestMessages;
 
     if (abortSignal?.aborted) {
       return cancelTurn(events);
@@ -233,13 +233,12 @@ export const pollOpencodeMessages = async (input: {
   if (postState.failed) {
     return appendFailureMessage({
       sessionId,
-      latestMessages,
       events,
       failureMessage: postState.failureMessage,
     });
   }
 
-  if (hasErrorParts(latestMessages.slice(baselineCount))) {
+  if (hasErrorParts(nativeMessages(lastObserved).slice(baselineCount))) {
     return failTurn(events);
   }
 
@@ -253,10 +252,10 @@ export const pollOpencodeUntilIdle = async (input: {
   events: HarnessEventSink;
   abortSignal?: AbortSignal;
   pollIntervalMs?: number;
+  onHistoryRecovery?: () => void;
 }) => {
   const { loadMessages, sessionId, cwd, events, abortSignal, pollIntervalMs } = input;
   let lastSnapshot = "";
-  let latestMessages: SessionMessage[] = [];
   let lastObserved: OpencodeSessionMessage[] = [];
   let lastInFlightProgressAt: number | null = null;
 
@@ -272,11 +271,10 @@ export const pollOpencodeUntilIdle = async (input: {
       events,
       lastObserved,
       lastSnapshot,
-      latestMessages,
+      onHistoryRecovery: input.onHistoryRecovery,
     });
     lastObserved = snapshot.lastObserved;
     lastSnapshot = snapshot.lastSnapshot;
-    latestMessages = snapshot.latestMessages;
 
     if (abortSignal?.aborted) {
       return cancelTurn(events);
@@ -301,8 +299,7 @@ export const pollOpencodeUntilIdle = async (input: {
     await waitForNextPoll(abortSignal, pollIntervalMs);
   }
 
-  const trailing = latestMessages.at(-1);
-  if (trailing && hasErrorParts([trailing])) {
+  if (hasErrorParts(nativeMessages(lastObserved).slice(-1))) {
     return failTurn(events);
   }
 

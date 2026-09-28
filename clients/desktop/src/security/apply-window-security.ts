@@ -12,7 +12,7 @@ export const secureSession = (session: Session, runtimeOrigin: () => string | nu
   session.setPermissionCheckHandler((_webContents, permission, requestingOrigin, details) =>
     canGrantSessionPermission({
       permission,
-      requestingUrl: requestingOrigin,
+      requestingUrl: details.requestingUrl ?? requestingOrigin,
       isMainFrame: details.isMainFrame,
       runtimeOrigin: runtimeOrigin(),
     }),

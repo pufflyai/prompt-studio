@@ -212,7 +212,9 @@ OpenCode polls its HTTP server every second and always pushes the complete messa
 { op: "replace", path: "/messages", value: [all messages] }
 ```
 
-The server owns the canonical message list. Each poll cycle replaces the entire array atomically, so message ordering is always correct regardless of frontend state.
+OpenCode owns provider messages and deletions. Each poll reads the current saved conversation and preserves host attachments and generated errors when their turn is identifiable. If repeated prompts lack stable IDs, the adapter retains uncertain saved turns separately and still publishes fresh provider output. It never assigns an attachment to a guessed owner. Retained IDs are disambiguated when they collide with positional provider IDs. Repeating the same snapshot does not add more copies.
+
+This recovery logs one warning per running turn. It does not raise a reconciliation banner or abort OpenCode. Native provider messages still decide whether a turn completed or failed, so a retained error from an earlier turn cannot fail the current one. The same rule applies to start, resume, reattach, and question replies.
 
 **Why this matters for resume**
 
