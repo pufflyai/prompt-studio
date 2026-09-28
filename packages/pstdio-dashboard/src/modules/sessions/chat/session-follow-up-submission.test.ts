@@ -74,8 +74,22 @@ test("a follow-up that cannot be sent stays in the conversation as unsent", asyn
   reject(new TypeError("Failed to fetch"));
   await result;
   expect(submitted).toBe(true);
-  expect(current()?.failure).toEqual({ message: "Failed to fetch", temporary: true });
+  expect(current()?.failure).toEqual({ message: "The network is unavailable.", temporary: true });
   expect(mergeMessagesWithPendingFollowUp([], current())).toEqual([
     expect.objectContaining({ role: "user", delivery: "unsent", parts: [{ type: "text", text: "Next turn" }] }),
   ]);
+});
+
+test("a queued follow-up leaves the conversation to the queued list", async () => {
+  pending = null;
+  const result = submission(
+    {
+      mutate: (_input, options) => {
+        options.onSuccess({ status: "in_progress", followUp: { status: "queued", queue_position: 2 } });
+      },
+    },
+    () => undefined,
+  );
+  await result;
+  expect(current()).toBeNull();
 });

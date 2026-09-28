@@ -201,7 +201,7 @@ test("only temporary failures are marked as worth retrying", async () => {
   expect(state.error).toEqual({ message: "Session not found", temporary: false });
   expect(state.queueError).toEqual({ message: "Queue unavailable", temporary: true });
   handlers.onError!(new TypeError("Failed to fetch"));
-  expect(state.error).toEqual({ message: "Failed to fetch", temporary: true });
+  expect(state.error).toEqual({ message: "The network is unavailable.", temporary: true });
   controller.dispose();
   await registry.dispose();
 });

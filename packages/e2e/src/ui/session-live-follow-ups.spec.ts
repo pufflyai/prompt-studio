@@ -52,7 +52,7 @@ test("updates active and inactive session tab indicators from live state", async
   }
 });
 
-test("queues two follow-ups without stopping the active session and preserves a failed draft", async ({
+test("queues two follow-ups without stopping the active session and keeps a failed message recoverable", async ({
   page,
   request,
 }) => {
@@ -86,6 +86,11 @@ test("queues two follow-ups without stopping the active session and preserves a 
   );
   await editor.fill("Keep this draft");
   await send.click();
+  // The failed message stays in the conversation; closing it puts the text back in the composer.
+  await expect(page.getByText("Message not sent")).toBeVisible();
+  await expect(editor).toBeEmpty();
+  await page.getByRole("button", { name: "Dismiss" }).click();
+  await expect(page.getByText("Message not sent")).toHaveCount(0);
   await expect(editor).toHaveText("Keep this draft");
   await page.unroute(`${url}/follow-up`);
   await request.patch(`${url}/status`, { data: { status: "completed" } });

@@ -221,8 +221,11 @@ const submitFollowUpMessage = (input: {
         attachments: input.attachments,
       },
       {
-        onSuccess: () => {
+        onSuccess: ({ followUp }) => {
           input.onSubmitted?.();
+          // A queued follow-up is shown in the queued list, not in the conversation.
+          if (followUp?.status === "queued")
+            input.setPendingFollowUp((current) => (current?.userMessageId === pending.userMessageId ? null : current));
           input.reconnect();
           resolve();
         },
