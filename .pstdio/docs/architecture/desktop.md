@@ -119,12 +119,12 @@ resources/
 
 macOS release staging signs the Bun runtime with the release identity, hardened runtime, a secure timestamp, and the JIT entitlement before computing its checksum. Forge preserves that nested signature when signing the enclosing application. Signing the runtime again would change its bytes and invalidate the manifest. The packaged launch suite checks the final signed application, so this ordering is part of release validation.
 
-Active release targets are Apple Silicon macOS arm64, Intel macOS x64, and Linux
-x64. Windows desktop distribution remains deferred until trusted signing and
-installation/update verification are available. Windows CLI packages remain
-supported.
-Forge produces ZIP and DMG artifacts on macOS and
-ZIP and DEB artifacts on Linux. The package enables ASAR integrity and an
+Release targets are Apple Silicon macOS arm64, Intel macOS x64, Linux x64, and
+Windows x64. Forge produces ZIP and DMG artifacts on macOS, ZIP and DEB artifacts
+on Linux, and a signed Squirrel Setup installer and update package on Windows.
+Windows signs through Azure Artifact Signing with GitHub OIDC and the Public
+Trust profile. The final signed sidecar checksum is recorded before Squirrel
+creates its update package. The package enables ASAR integrity and an
 explicit full Electron fuse policy that disables Node execution, Node options,
 CLI inspection, and privileged `file://` behavior.
 
@@ -143,19 +143,20 @@ update metadata.
 | macOS arm64 | DMG and ZIP | Developer ID signature, notarization staple, Gatekeeper, clean-home launch | Electron updater through release-owned JSON metadata |
 | macOS x64 | DMG and ZIP | Developer ID signature, notarization staple, Gatekeeper, essential packaged tests | Electron updater through release-owned JSON metadata |
 | Linux x64 | DEB and portable ZIP | DEB inspection and clean-home launch | Distribution package manager or GitHub release page |
+| Windows x64 | Setup EXE, full nupkg, and RELEASES | Trusted Authenticode signatures and timestamps on app, sidecar, installer, and update payload; clean-home launch | Electron Squirrel updater through release-owned RELEASES metadata |
 
 Every target audits the packaged Electron fuse wire and emits a target manifest
-plus SHA-256 checksums. The publish job requires the complete three-target set,
+plus SHA-256 checksums. The publish job requires the complete four-target set,
 revalidates every checksum and component version, uploads the artifacts to the
 existing draft release, and only then publishes it. Native jobs receive read-only
 repository access; only the final publisher receives `contents: write`.
 
-The active native updater is configured only in a packaged macOS app. It resolves
+The native updater is configured in packaged macOS and Windows apps. It resolves
 the newest complete `pstdio@<version>` release and points Electron at that
 release's update metadata. This avoids depending on services that require plain
 SemVer Git tags, which do not match the monorepo tag format. Source builds and
-Linux open the release page instead. The deferred Windows updater code remains
-inactive until the signed Windows lane returns. Release assets keep explicit
+Linux open the release page instead. Windows uses the release download directory
+as its Squirrel feed, including the `pstdio@<version>` tag. Release assets keep explicit
 platform and architecture names.
 
 ## Development and tests

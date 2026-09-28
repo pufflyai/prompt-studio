@@ -4,10 +4,12 @@ Proposed: 2026-08-27
 
 ## Status
 
-Temporary. Remove this decision when the Windows desktop release has a trusted
-signing connection, an owner, and native release evidence. The owner has an
-existing Azure Artifact Signing account. PS-3 now prepares its GitHub OIDC
-integration; account/profile access and a real signed build remain unverified.
+Temporary. On 2026-09-28, Pufflig AB identity validation is Completed and the
+existing Azure account has an Active `promptstudio-release` Public Trust profile.
+The six GitHub Actions variables are configured. Profile-scoped signer access,
+a signed build, and installation/update acceptance remain pending. PS-3 prepares
+release activation in a draft change; do not merge it or supersede this decision
+until the remaining release checks pass.
 
 ## Ideal design
 
