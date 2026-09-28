@@ -95456,14 +95456,61 @@
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "icon",
-                                  "id": "hjN7O",
+                                  "type": "frame",
+                                  "id": "kSMu8",
                                   "name": "Reasoning effort selected icon",
+                                  "theme": {
+                                    "palette": "blue"
+                                  },
                                   "width": 14,
                                   "height": 14,
-                                  "icon": "brain",
-                                  "library": "lucide",
-                                  "fill": "#AEB8C8"
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "RrTLm",
+                                      "x": 0,
+                                      "y": 9,
+                                      "name": "Bar 1",
+                                      "fill": "$pal-500",
+                                      "width": 2.5,
+                                      "height": 5
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "WGxbz",
+                                      "x": 3.83,
+                                      "y": 6,
+                                      "name": "Bar 2",
+                                      "fill": "$pal-500",
+                                      "width": 2.5,
+                                      "height": 8
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "ELros",
+                                      "x": 7.66,
+                                      "y": 3,
+                                      "name": "Bar 3",
+                                      "fill": "$ds-border",
+                                      "width": 2.5,
+                                      "height": 11
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "zg7kA",
+                                      "x": 11.49,
+                                      "y": 0,
+                                      "name": "Bar 4",
+                                      "fill": "$ds-border",
+                                      "width": 2.5,
+                                      "height": 14
+                                    }
+                                  ]
                                 },
                                 {
                                   "type": "text",
@@ -95576,6 +95623,945 @@
                               ]
                             }
                           ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "paw2j",
+              "name": "Thinking level colors",
+              "context": "Thinking-level icons use the ticket planner priority palette: None, Minimal and Low gray; Medium blue; High orange; XHigh and Max red. Max uses flame. Apply to both selected values and menu options.",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "rV4ox",
+                  "name": "Thinking levels heading",
+                  "fill": "$ds-fg",
+                  "content": "Thinking levels · planner priority colors",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "w7Dikc",
+                  "name": "Thinking levels light",
+                  "theme": {
+                    "mode": "light"
+                  },
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "gap": 28,
+                  "padding": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "O9E8J8",
+                      "name": "None thinking level",
+                      "theme": {
+                        "palette": "gray"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "r5Boll",
+                          "name": "None icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "circle-slash",
+                          "library": "lucide",
+                          "fill": "$pal-500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "f81k8",
+                          "name": "None label",
+                          "fill": "$ds-fg",
+                          "content": "None",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Y55LK",
+                      "name": "Minimal thinking level",
+                      "theme": {
+                        "palette": "gray"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Q5H5ZW",
+                          "name": "Minimal icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "B3XF9",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "Fu2xW",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "E7GU4H",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "Tl4VZ",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "kkjZc",
+                          "name": "Minimal label",
+                          "fill": "$ds-fg",
+                          "content": "Minimal",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Guty0",
+                      "name": "Low thinking level",
+                      "theme": {
+                        "palette": "gray"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "MFsSa",
+                          "name": "Low icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "xoupY",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "XszvD",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "f64vz",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "EbFEa",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "wBS1l",
+                          "name": "Low label",
+                          "fill": "$ds-fg",
+                          "content": "Low",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HC6hj",
+                      "name": "Medium thinking level",
+                      "theme": {
+                        "palette": "blue"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "j5MX8R",
+                          "name": "Medium icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "nVOJn",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "giHun",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "jtYQn",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "htWmt",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "uSBvl",
+                          "name": "Medium label",
+                          "fill": "$ds-fg",
+                          "content": "Medium",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "slGCD",
+                      "name": "High thinking level",
+                      "theme": {
+                        "palette": "orange"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Zrc1d",
+                          "name": "High icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "dRLaj",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "h4Vdxy",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "P6ily1",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "CtdzJ",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "v4LVW",
+                          "name": "High label",
+                          "fill": "$ds-fg",
+                          "content": "High",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GKvQP",
+                      "name": "XHigh thinking level",
+                      "theme": {
+                        "palette": "red"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WnurZ",
+                          "name": "XHigh icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "h5trX1",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "rZfyr",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "Q59ZFW",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "shJPi",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "boY6P",
+                          "name": "XHigh label",
+                          "fill": "$ds-fg",
+                          "content": "XHigh",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mohTf",
+                      "name": "Max thinking level",
+                      "theme": {
+                        "palette": "red"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "FHaIz",
+                          "name": "Max icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "flame",
+                          "library": "lucide",
+                          "fill": "$pal-500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "vBs1s",
+                          "name": "Max label",
+                          "fill": "$ds-fg",
+                          "content": "Max",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GOxHz",
+                  "name": "Thinking levels dark",
+                  "theme": {
+                    "mode": "dark"
+                  },
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "gap": 28,
+                  "padding": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "p0cAC1",
+                      "name": "None thinking level",
+                      "theme": {
+                        "palette": "gray"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "xvlUV",
+                          "name": "None icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "circle-slash",
+                          "library": "lucide",
+                          "fill": "$pal-500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "WTB4D",
+                          "name": "None label",
+                          "fill": "$ds-fg",
+                          "content": "None",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QEsms",
+                      "name": "Minimal thinking level",
+                      "theme": {
+                        "palette": "gray"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "r4Gbt",
+                          "name": "Minimal icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "KxUu0",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "MCsco",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "a4KJd",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "mgGW2",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "CgFc7",
+                          "name": "Minimal label",
+                          "fill": "$ds-fg",
+                          "content": "Minimal",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bvtgD",
+                      "name": "Low thinking level",
+                      "theme": {
+                        "palette": "gray"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "r49Y4x",
+                          "name": "Low icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "qUSPq",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "hNfZf",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "EYFbN",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "VdLq3",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "X9Ps0",
+                          "name": "Low label",
+                          "fill": "$ds-fg",
+                          "content": "Low",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "PWYIL",
+                      "name": "Medium thinking level",
+                      "theme": {
+                        "palette": "blue"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "lDE1b",
+                          "name": "Medium icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "OtsDW",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "hRn2X",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "F1GSn",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "p16o4",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "KGlri",
+                          "name": "Medium label",
+                          "fill": "$ds-fg",
+                          "content": "Medium",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lguZh",
+                      "name": "High thinking level",
+                      "theme": {
+                        "palette": "orange"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hGa30",
+                          "name": "High icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "VJ7V4",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "u0QWbH",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "taSMm",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "XDWyU",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$ds-border",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "swRNR",
+                          "name": "High label",
+                          "fill": "$ds-fg",
+                          "content": "High",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s0iRk",
+                      "name": "XHigh thinking level",
+                      "theme": {
+                        "palette": "red"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "upqIq",
+                          "name": "XHigh icon",
+                          "width": 14,
+                          "height": 14,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "V6FNL",
+                              "x": 0,
+                              "y": 9,
+                              "name": "Bar 1",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 5
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "CoWCM",
+                              "x": 3.83,
+                              "y": 6,
+                              "name": "Bar 2",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 8
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "x2OGfT",
+                              "x": 7.66,
+                              "y": 3,
+                              "name": "Bar 3",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 11
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "v8Ee3o",
+                              "x": 11.49,
+                              "y": 0,
+                              "name": "Bar 4",
+                              "fill": "$pal-500",
+                              "width": 2.5,
+                              "height": 14
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "kcjbp",
+                          "name": "XHigh label",
+                          "fill": "$ds-fg",
+                          "content": "XHigh",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x2Tklv",
+                      "name": "Max thinking level",
+                      "theme": {
+                        "palette": "red"
+                      },
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "plBmi",
+                          "name": "Max icon",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "flame",
+                          "library": "lucide",
+                          "fill": "$pal-500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "x2SSd",
+                          "name": "Max label",
+                          "fill": "$ds-fg",
+                          "content": "Max",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
