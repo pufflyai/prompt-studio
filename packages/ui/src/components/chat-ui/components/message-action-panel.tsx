@@ -23,6 +23,7 @@ export const getMessageCopyText = (message: SessionMessage) => {
 };
 
 export const getMessageTimestampLabel = (message: SessionMessage, locale?: string, timeZone?: string) => {
+  if (message.delivery === "unsent") return "Not sent";
   if (!message.createdAt) return "";
 
   return new Intl.DateTimeFormat(locale, {

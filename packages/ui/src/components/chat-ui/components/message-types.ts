@@ -89,6 +89,8 @@ export type SessionMessage = {
   parts: ChatMessagePart[];
   index?: number;
   createdAt?: number;
+  // A message the user sent that never reached the server. It stays in the conversation until resent or removed.
+  delivery?: "unsent";
   modelId?: string;
   providerId?: string;
   tokens?: {

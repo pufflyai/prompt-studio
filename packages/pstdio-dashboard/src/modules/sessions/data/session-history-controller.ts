@@ -7,13 +7,14 @@ import {
   type DashboardSessionMessagePatch,
   visibleSessionMessages,
 } from "./session-messages";
+import { type SessionNotice, toSessionNotice } from "./session-notice";
 
 export interface SessionHistoryState {
   messages: SessionMessage[];
   loading: boolean;
   streaming: boolean;
-  error?: string;
-  queueError?: string;
+  error?: SessionNotice;
+  queueError?: SessionNotice;
 }
 interface HistoryTransport {
   getConversation(id: string, signal?: AbortSignal): Promise<{ messages: SessionMessage[] }>;
@@ -29,7 +30,7 @@ interface HistoryControllerInput {
   initialState?: SessionHistoryState;
   initialSession?: SyncedRow;
 }
-const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
 export const createSessionHistoryController = (input: HistoryControllerInput) => {
   const { sessionId, ownerKey, reads, transport, onChange } = input;
   const isQueued = (message: SessionMessage) => message.id.startsWith(`queued-prompt-${sessionId}-`);
@@ -63,7 +64,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
           queued = value.messages;
           publish({ queueError: undefined });
         },
-        onError: (error) => publish({ queueError: errorText(error) }),
+        onError: (error) => publish({ queueError: toSessionNotice(error) }),
       },
       reason,
     );
@@ -82,7 +83,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
           confirmed = value.messages.filter((message) => !isQueued(message));
           publish({ loading: false, error: undefined });
         },
-        onError: (error) => publish({ loading: false, error: errorText(error) }),
+        onError: (error) => publish({ loading: false, error: toSessionNotice(error) }),
       },
       "refresh",
     );
@@ -125,7 +126,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
           queueRevision++;
           queueBinding?.dispose();
           queueBinding = undefined;
-          if ("error" in value) publish({ queueError: value.error });
+          if ("error" in value) publish({ queueError: { message: value.error, temporary: true } });
           else {
             queued = value.messages;
             publish({ queueError: undefined });
@@ -140,7 +141,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         },
         onError: (error) => {
           if (!active()) return;
-          publish({ loading: false, streaming: false, error: errorText(error) });
+          publish({ loading: false, streaming: false, error: toSessionNotice(error) });
         },
       },
       { attempt: current },

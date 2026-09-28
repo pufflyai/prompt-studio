@@ -9,7 +9,12 @@ import {
   openCreatedSessionFromDraft,
   submitSessionMessage,
 } from "./session-chat-actions";
-import type { PendingFollowUpState } from "./session-chat-state";
+import {
+  forgetHandedOffPendingFollowUp,
+  handOffPendingFollowUp,
+  type PendingFollowUpState,
+  peekHandedOffPendingFollowUp,
+} from "./session-chat-state";
 
 const draftResource: ResourceRef = {
   type: "session-draft",
@@ -251,5 +256,35 @@ describe("moveQueuedFollowUpBySteps", () => {
       reconnect,
     });
     expect(reconnect).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("first message handoff", () => {
+  test("a created session hands its first message to the page that opens it", async () => {
+    let pendingFollowUp: PendingFollowUpState | null = null;
+    let created: PendingFollowUpState | undefined;
+    await submitSessionMessage({
+      sessionId: null,
+      projectId: "project-1",
+      agent: "codex",
+      model: undefined,
+      text: "Start here",
+      messages: [],
+      pendingIdRef: { current: 0 },
+      setPendingFollowUp: (next) => {
+        pendingFollowUp = typeof next === "function" ? next(pendingFollowUp) : next;
+      },
+      createSession: { mutate: (_input, options) => options.onSuccess({ sessionId: "session-9", status: "running" }) },
+      followUp: { mutate: mock(() => undefined) },
+      reconnect: () => undefined,
+      onSessionCreated: (_sessionId, pending) => {
+        created = pending;
+      },
+    });
+    expect(created).toMatchObject({ prompt: "Start here", sessionId: "session-9" });
+    handOffPendingFollowUp(created!);
+    expect(peekHandedOffPendingFollowUp("session-9")).toMatchObject({ prompt: "Start here" });
+    forgetHandedOffPendingFollowUp("session-9");
+    expect(peekHandedOffPendingFollowUp("session-9")).toBeNull();
   });
 });

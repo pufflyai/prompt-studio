@@ -175,7 +175,11 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
   return (
     <Box>
       <Box position="sticky" top="0" zIndex={1}>
-        <ChatMessage.Root from="user" {...(animate ? messageFadeInProps : undefined)}>
+        <ChatMessage.Root
+          from="user"
+          delivery={group.userMessage.delivery ?? "sent"}
+          {...(animate ? messageFadeInProps : undefined)}
+        >
           <ChatMessage.Content
             from="user"
             maxH={stickyMessageMaxHeight}

@@ -76,6 +76,11 @@ const recipe = defineSlotRecipe({
         content: { textStyle: "md" },
       },
     },
+    // A message that could not be sent is dimmed until it is resent or removed.
+    delivery: {
+      sent: {},
+      unsent: { content: { opacity: 0.6 } },
+    },
     shape: {
       rounded: {
         content: { rounded: "0" },
@@ -92,6 +97,7 @@ const recipe = defineSlotRecipe({
     from: "user",
     size: "md",
     shape: "rounded",
+    delivery: "sent",
   },
 });
 

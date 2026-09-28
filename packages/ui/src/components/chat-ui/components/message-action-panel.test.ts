@@ -27,6 +27,18 @@ describe("message action panel", () => {
     expect(getMessageCopyText(message)).toBe("");
   });
 
+  it("labels a message that could not be sent instead of showing its time", () => {
+    const message: SessionMessage = {
+      id: "unsent",
+      role: "user",
+      parts: [{ type: "text", text: "Summarize the open tickets." }],
+      createdAt: Date.UTC(2026, 0, 1, 9, 31),
+      delivery: "unsent",
+    };
+
+    expect(getMessageTimestampLabel(message, "en-US", "UTC")).toBe("Not sent");
+  });
+
   it("formats message timestamps when present", () => {
     const message: SessionMessage = {
       id: "assistant-timestamp",

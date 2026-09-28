@@ -54,6 +54,21 @@ export const FeedbackSection = () => {
         </AlertMessage>
         <AlertMessage status="warning" title="Merge conflicts detected" />
         <AlertMessage status="error" title="Hook failed" />
+        <AlertMessage
+          status="error"
+          title="Could not load conversation"
+          onClose={() => {}}
+          endElement={
+            <Button size="2xs" variant="outline">
+              Retry
+            </Button>
+          }
+        >
+          <Text>The server had a temporary problem.</Text>
+        </AlertMessage>
+        <AlertMessage status="error" title="Could not load conversation" onClose={() => {}}>
+          <Text>This session no longer exists.</Text>
+        </AlertMessage>
       </GalleryCard>
 
       <GalleryCard title="Empty state" names={["EmptyState"]}>

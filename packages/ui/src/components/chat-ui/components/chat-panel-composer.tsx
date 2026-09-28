@@ -116,7 +116,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const hasQueuedFollowUps = queuedFollowUps.length > 0;
 
   return (
-    <Stack px={hasWorkspaceHub ? "2xs" : "xs"} gap="0">
+    <Stack p="xs" gap="0">
       {/* Concentric hierarchy: the hub shell owns the visible border so the session reads
           as living inside the workspace; the nested input recedes to border.subtle. */}
       <Stack
@@ -124,7 +124,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
         p={hasWorkspaceHub ? "2xs" : undefined}
         borderWidth={hasWorkspaceHub ? "1px" : undefined}
         borderColor={hasWorkspaceHub ? "border" : undefined}
-        borderRadius={hasWorkspaceHub ? "sm" : undefined}
+        borderRadius={hasWorkspaceHub ? "xs" : undefined}
         bg={hasWorkspaceHub ? "bg.subtle" : undefined}
       >
         {workspaceHub}

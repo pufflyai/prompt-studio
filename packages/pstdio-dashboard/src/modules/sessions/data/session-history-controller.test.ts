@@ -167,7 +167,41 @@ test("authoritative queue snapshots preserve repeated prompts and reject older q
   expect(state.messages).toEqual([confirmed, queued(2)]);
   handlers.onQueuedMessages!({ error: "Queue unavailable" });
   expect(state.messages).toEqual([confirmed, queued(2)]);
-  expect(state.queueError).toBe("Queue unavailable");
+  expect(state.queueError).toEqual({ message: "Queue unavailable", temporary: true });
   controller.dispose();
   await reads.dispose();
+});
+
+test("only temporary failures are marked as worth retrying", async () => {
+  const registry = createRendererReadRegistry();
+  let handlers!: SessionStreamHandlers;
+  let state!: SessionHistoryState;
+  const controller = createSessionHistoryController({
+    sessionId: "s",
+    ownerKey: "placement",
+    reads: registry,
+    transport: {
+      getConversation: async () => {
+        throw Object.assign(new Error("Session not found"), { status: 404 });
+      },
+      getQueuedMessages: async () => {
+        throw Object.assign(new Error("Queue unavailable"), { status: 503 });
+      },
+      connectStream: (_id, next) => {
+        handlers = next;
+        return { close() {} };
+      },
+    },
+    onChange: (next) => {
+      state = next;
+    },
+  });
+  controller.connect();
+  await tick();
+  expect(state.error).toEqual({ message: "Session not found", temporary: false });
+  expect(state.queueError).toEqual({ message: "Queue unavailable", temporary: true });
+  handlers.onError!(new TypeError("Failed to fetch"));
+  expect(state.error).toEqual({ message: "The network is unavailable.", temporary: true });
+  controller.dispose();
+  await registry.dispose();
 });

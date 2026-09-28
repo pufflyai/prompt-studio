@@ -12270,6 +12270,59 @@
                               "enabled": false
                             }
                           }
+                        },
+                        {
+                          "id": "VaEGm",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Could not load conversation",
+                          "theme": {
+                            "status": "error"
+                          },
+                          "width": "fill_container",
+                          "cornerRadius": "$alert-radius",
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "circle-x"
+                            },
+                            "GL4gS": {
+                              "content": "Could not load conversation"
+                            },
+                            "B8etL": {
+                              "content": "The server had a temporary problem."
+                            },
+                            "x7Usi7": {
+                              "enabled": true
+                            },
+                            "dqGb1": {
+                              "enabled": true
+                            }
+                          }
+                        },
+                        {
+                          "id": "MLFik",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Could not load conversation (permanent)",
+                          "theme": {
+                            "status": "error"
+                          },
+                          "width": "fill_container",
+                          "cornerRadius": "$alert-radius",
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "circle-x"
+                            },
+                            "GL4gS": {
+                              "content": "Could not load conversation"
+                            },
+                            "B8etL": {
+                              "content": "This session no longer exists."
+                            },
+                            "dqGb1": {
+                              "enabled": true
+                            }
+                          }
                         }
                       ]
                     }
@@ -17928,6 +17981,7 @@
                       "type": "frame",
                       "id": "So6vB",
                       "name": "cmp/AlertMessage",
+                      "context": "Problems in the chat appear in the conversation as inline alerts. The Actions slot holds Retry, shown only for a temporary failure, and Close, shown on every problem.",
                       "theme": {
                         "status": "info"
                       },
@@ -17985,6 +18039,57 @@
                               "fontFamily": "$font-body",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dJT4D",
+                          "name": "Actions",
+                          "width": "fit_content(0)",
+                          "height": "fit_content(0)",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "x7Usi7",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Action",
+                              "enabled": false,
+                              "height": 24,
+                              "theme": {
+                                "btn": "outline",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Retry"
+                                }
+                              }
+                            },
+                            {
+                              "id": "dqGb1",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Close",
+                              "enabled": false,
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "x",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
                             }
                           ]
                         }
@@ -25968,7 +26073,7 @@
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-bg-subtle",
-                      "cornerRadius": 8,
+                      "cornerRadius": 4,
                       "stroke": "$ds-border",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
@@ -29509,90 +29614,92 @@
                           }
                         }
                       ]
-                    },
+                    }
+                  ]
+                },
+                {
+                  "id": "EWfBE",
+                  "type": "ref",
+                  "ref": "S9mjlP",
+                  "name": "ItemSection · closed",
+                  "theme": {
+                    "section": "closed"
+                  },
+                  "x": 0,
+                  "y": 665
+                },
+                {
+                  "type": "frame",
+                  "id": "S9mjlP",
+                  "name": "cmp/ItemSection",
+                  "context": "layout/item-section.tsx: collapsible trigger h 32, p 12, title label/S/medium weight 600, 16px chevron (rotates when open), hover bg.hover. section axis: open | closed.",
+                  "theme": {
+                    "section": "open"
+                  },
+                  "reusable": true,
+                  "width": 360,
+                  "layout": "vertical",
+                  "children": [
                     {
                       "type": "frame",
-                      "id": "S9mjlP",
-                      "name": "cmp/ItemSection",
-                      "context": "layout/item-section.tsx: collapsible trigger h 32, p 12, title label/S/medium weight 600, 16px chevron (rotates when open), hover bg.hover. section axis: open | closed.",
-                      "theme": {
-                        "section": "open"
-                      },
-                      "reusable": true,
-                      "width": 360,
-                      "layout": "vertical",
+                      "id": "YsSSm",
+                      "name": "Trigger",
+                      "width": "fill_container",
+                      "height": 32,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "frame",
-                          "id": "YsSSm",
-                          "name": "Trigger",
-                          "width": "fill_container",
-                          "height": 32,
-                          "gap": 8,
-                          "padding": [
-                            0,
-                            12
-                          ],
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "hbAyz",
-                              "name": "Title",
-                              "fill": "$ds-fg",
-                              "content": "Settings",
-                              "fontFamily": "$font-label",
-                              "fontSize": 12,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "BYfzz",
-                              "name": "Indicator",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "$section-chevron",
-                              "library": "lucide",
-                              "fill": "$ds-fg"
-                            }
-                          ]
+                          "type": "text",
+                          "id": "hbAyz",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "600"
                         },
                         {
-                          "type": "frame",
-                          "id": "IyV7Y",
-                          "name": "Content",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "padding": [
-                            4,
-                            12,
-                            12,
-                            12
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "e9oAT4",
-                              "name": "Text",
-                              "fill": "$ds-fg-muted",
-                              "content": "Collapsible section content",
-                              "fontFamily": "$font-body",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
+                          "type": "icon",
+                          "id": "BYfzz",
+                          "name": "Indicator",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "$section-chevron",
+                          "library": "lucide",
+                          "fill": "$ds-fg"
                         }
                       ]
                     },
                     {
-                      "id": "EWfBE",
-                      "type": "ref",
-                      "ref": "S9mjlP",
-                      "name": "ItemSection · closed",
-                      "theme": {
-                        "section": "closed"
-                      }
+                      "type": "frame",
+                      "id": "IyV7Y",
+                      "name": "Content",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        4,
+                        12,
+                        12,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "e9oAT4",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "content": "Collapsible section content",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -42909,7 +43016,7 @@
                                   "id": "yfsp0",
                                   "name": "T",
                                   "fill": "$ds-fg",
-                                  "content": "No active conversations",
+                                  "content": "No messages yet",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 15,
                                   "fontWeight": "normal"
@@ -42919,7 +43026,7 @@
                                   "id": "hQtTi",
                                   "name": "D",
                                   "fill": "$ds-fg-muted",
-                                  "content": "Start a conversation to see messages here.",
+                                  "content": "Send a message to start this session.",
                                   "fontFamily": "$font-body",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
@@ -43149,6 +43256,294 @@
                                   "fill": "#FF6B6B"
                                 }
                               ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "g4QyZ",
+                  "name": "Problems in the conversation",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "A1Y1BO",
+                      "name": "Card Head",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qhoVp",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Problems in the conversation",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "EViZG",
+                          "name": "Chips",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "PEGjU",
+                              "type": "ref",
+                              "ref": "Tboo4",
+                              "name": "AlertMessage",
+                              "descendants": {
+                                "L109Bg": {
+                                  "content": "AlertMessage"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "ql557",
+                          "name": "Rule",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The chat has no banners. A problem appears in the conversation, where the user is looking, styled like an agent error. A message that could not be sent stays in the conversation. Every problem can be closed; Retry appears only for a temporary failure (no response, 5xx, 408, 429).",
+                          "lineHeight": 1.4,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HzGSn",
+                      "name": "Message not sent (temporary)",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "HVL9Z",
+                          "name": "Caption",
+                          "fill": "$ds-fg-subtle",
+                          "content": "Message not sent (temporary)",
+                          "fontFamily": "$font-label",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "S762B3",
+                          "name": "Conversation",
+                          "width": "fill_container",
+                          "fill": "$ds-bg",
+                          "cornerRadius": 4,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "id": "eLjFz",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "ChatAssistantMessage",
+                              "width": "fill_container"
+                            },
+                            {
+                              "id": "qJZcv",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "Unsent message",
+                              "width": "fill_container",
+                              "opacity": 0.6,
+                              "descendants": {
+                                "ZdoE8": {
+                                  "content": "Summarize the open tickets."
+                                },
+                                "b60X5h": {
+                                  "content": "Not sent"
+                                }
+                              }
+                            },
+                            {
+                              "id": "i2vbhO",
+                              "type": "ref",
+                              "ref": "So6vB",
+                              "name": "Message not sent",
+                              "theme": {
+                                "status": "error"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "sAoE1": {
+                                  "icon": "circle-x"
+                                },
+                                "GL4gS": {
+                                  "content": "Message not sent"
+                                },
+                                "B8etL": {
+                                  "content": "The network is unavailable."
+                                },
+                                "x7Usi7": {
+                                  "enabled": true
+                                },
+                                "dqGb1": {
+                                  "enabled": true
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "t678B",
+                      "name": "Conversation could not load (temporary)",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "DJTsS",
+                          "name": "Caption",
+                          "fill": "$ds-fg-subtle",
+                          "content": "Conversation could not load (temporary)",
+                          "fontFamily": "$font-label",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "x53Bb9",
+                          "name": "Conversation",
+                          "width": "fill_container",
+                          "fill": "$ds-bg",
+                          "cornerRadius": 4,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "id": "t7FDIx",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "ChatAssistantMessage",
+                              "width": "fill_container"
+                            },
+                            {
+                              "id": "gCDQJ",
+                              "type": "ref",
+                              "ref": "So6vB",
+                              "name": "Could not load conversation",
+                              "theme": {
+                                "status": "error"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "sAoE1": {
+                                  "icon": "circle-x"
+                                },
+                                "GL4gS": {
+                                  "content": "Could not load conversation"
+                                },
+                                "B8etL": {
+                                  "content": "The server had a temporary problem."
+                                },
+                                "x7Usi7": {
+                                  "enabled": true
+                                },
+                                "dqGb1": {
+                                  "enabled": true
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "d7Q5H",
+                      "name": "Conversation could not load (permanent)",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vRCsI",
+                          "name": "Caption",
+                          "fill": "$ds-fg-subtle",
+                          "content": "Conversation could not load (permanent)",
+                          "fontFamily": "$font-label",
+                          "fontSize": 11,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qkxCg",
+                          "name": "Conversation",
+                          "width": "fill_container",
+                          "fill": "$ds-bg",
+                          "cornerRadius": 4,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "id": "st9kT",
+                              "type": "ref",
+                              "ref": "So6vB",
+                              "name": "Could not load conversation (permanent)",
+                              "theme": {
+                                "status": "error"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "sAoE1": {
+                                  "icon": "circle-x"
+                                },
+                                "GL4gS": {
+                                  "content": "Could not load conversation"
+                                },
+                                "B8etL": {
+                                  "content": "This session no longer exists."
+                                },
+                                "x7Usi7": {
+                                  "enabled": false
+                                },
+                                "dqGb1": {
+                                  "enabled": true
+                                }
+                              }
                             }
                           ]
                         }
@@ -71801,7 +72196,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -89869,7 +90264,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -89941,7 +90336,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 989,
+              "y": 994,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -118910,7 +119305,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"

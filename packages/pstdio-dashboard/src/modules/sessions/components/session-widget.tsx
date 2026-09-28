@@ -40,8 +40,8 @@ export const SessionWidget = (props: SessionWidgetProps) => {
       input={input}
       view={view}
       drafts={drafts}
-      emptyStateTitle="No active conversations"
-      emptyStateDescription="Start a conversation to see messages here."
+      emptyStateTitle="No messages yet"
+      emptyStateDescription="Send a message to start this session."
       // The hub frames every session; the open action only appears when there is a workspace to open
       // and it is not already the active resource.
       workspaceAction={

@@ -94,7 +94,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     if (!projectId) throw new Error("Packaged project creation did not return an id");
     await openPackagedProject(first.page, { id: projectId, name: "Relaunch persistence project" });
     await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await expect(first.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
+    await expect(first.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
     await expect
       .poll(() => first?.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
       .toMatchObject({ selectedProjectId: projectId });
@@ -144,7 +144,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(
       await second.page.evaluate(async () => (await (await fetch("/v1/projects")).json()) as Array<{ name: string }>),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
-    await expect(second.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
+    await expect(second.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
 
     await second.finishTrace();
     const close = runPackagedCli(home, ["close"]);
