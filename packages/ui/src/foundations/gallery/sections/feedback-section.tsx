@@ -65,7 +65,10 @@ export const FeedbackSection = () => {
             </Button>
           }
         >
-          <Text>The connection to the session was lost.</Text>
+          <Text>The server had a temporary problem.</Text>
+        </AlertMessage>
+        <AlertMessage layout="banner" status="error" title="Could not load conversation" onClose={() => {}}>
+          <Text>This session no longer exists.</Text>
         </AlertMessage>
       </GalleryCard>
 

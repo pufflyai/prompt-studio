@@ -11,9 +11,12 @@ const meta = {
 } satisfies Meta<typeof SessionChatNotices>;
 export default meta;
 type Story = StoryObj<typeof SessionChatNotices>;
-export const HistoryLoadError: Story = {
-  args: { error: "Could not load the conversation." },
+export const TemporaryHistoryError: Story = {
+  args: { error: { message: "The server had a temporary problem.", temporary: true } },
 };
-export const QueueLoadError: Story = {
-  args: { queueError: "Could not load queued prompts." },
+export const PermanentHistoryError: Story = {
+  args: { error: { message: "This session no longer exists.", temporary: false } },
+};
+export const TemporaryQueueError: Story = {
+  args: { queueError: { message: "The server had a temporary problem.", temporary: true } },
 };

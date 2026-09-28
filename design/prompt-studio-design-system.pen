@@ -12289,7 +12289,7 @@
                               "content": "Could not load conversation"
                             },
                             "B8etL": {
-                              "content": "The connection to the session was lost."
+                              "content": "The server had a temporary problem."
                             },
                             "x7Usi7": {
                               "enabled": true
@@ -12300,27 +12300,24 @@
                           }
                         },
                         {
-                          "id": "mr1qE",
+                          "id": "MLFik",
                           "type": "ref",
                           "ref": "So6vB",
-                          "name": "Could not update queued prompts",
+                          "name": "Could not load conversation (permanent)",
                           "theme": {
-                            "status": "warning"
+                            "status": "error"
                           },
                           "width": "fill_container",
                           "cornerRadius": 0,
                           "descendants": {
                             "sAoE1": {
-                              "icon": "triangle-alert"
+                              "icon": "circle-x"
                             },
                             "GL4gS": {
-                              "content": "Could not update queued prompts"
+                              "content": "Could not load conversation"
                             },
                             "B8etL": {
-                              "enabled": false
-                            },
-                            "x7Usi7": {
-                              "enabled": true
+                              "content": "This session no longer exists."
                             },
                             "dqGb1": {
                               "enabled": true
@@ -29617,90 +29614,92 @@
                           }
                         }
                       ]
-                    },
+                    }
+                  ]
+                },
+                {
+                  "id": "EWfBE",
+                  "type": "ref",
+                  "ref": "S9mjlP",
+                  "name": "ItemSection · closed",
+                  "theme": {
+                    "section": "closed"
+                  },
+                  "x": 0,
+                  "y": 665
+                },
+                {
+                  "type": "frame",
+                  "id": "S9mjlP",
+                  "name": "cmp/ItemSection",
+                  "context": "layout/item-section.tsx: collapsible trigger h 32, p 12, title label/S/medium weight 600, 16px chevron (rotates when open), hover bg.hover. section axis: open | closed.",
+                  "theme": {
+                    "section": "open"
+                  },
+                  "reusable": true,
+                  "width": 360,
+                  "layout": "vertical",
+                  "children": [
                     {
                       "type": "frame",
-                      "id": "S9mjlP",
-                      "name": "cmp/ItemSection",
-                      "context": "layout/item-section.tsx: collapsible trigger h 32, p 12, title label/S/medium weight 600, 16px chevron (rotates when open), hover bg.hover. section axis: open | closed.",
-                      "theme": {
-                        "section": "open"
-                      },
-                      "reusable": true,
-                      "width": 360,
-                      "layout": "vertical",
+                      "id": "YsSSm",
+                      "name": "Trigger",
+                      "width": "fill_container",
+                      "height": 32,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "frame",
-                          "id": "YsSSm",
-                          "name": "Trigger",
-                          "width": "fill_container",
-                          "height": 32,
-                          "gap": 8,
-                          "padding": [
-                            0,
-                            12
-                          ],
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "hbAyz",
-                              "name": "Title",
-                              "fill": "$ds-fg",
-                              "content": "Settings",
-                              "fontFamily": "$font-label",
-                              "fontSize": 12,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "BYfzz",
-                              "name": "Indicator",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "$section-chevron",
-                              "library": "lucide",
-                              "fill": "$ds-fg"
-                            }
-                          ]
+                          "type": "text",
+                          "id": "hbAyz",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "600"
                         },
                         {
-                          "type": "frame",
-                          "id": "IyV7Y",
-                          "name": "Content",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "padding": [
-                            4,
-                            12,
-                            12,
-                            12
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "e9oAT4",
-                              "name": "Text",
-                              "fill": "$ds-fg-muted",
-                              "content": "Collapsible section content",
-                              "fontFamily": "$font-body",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
+                          "type": "icon",
+                          "id": "BYfzz",
+                          "name": "Indicator",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "$section-chevron",
+                          "library": "lucide",
+                          "fill": "$ds-fg"
                         }
                       ]
                     },
                     {
-                      "id": "EWfBE",
-                      "type": "ref",
-                      "ref": "S9mjlP",
-                      "name": "ItemSection · closed",
-                      "theme": {
-                        "section": "closed"
-                      }
+                      "type": "frame",
+                      "id": "IyV7Y",
+                      "name": "Content",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        4,
+                        12,
+                        12,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "e9oAT4",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "content": "Collapsible section content",
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -43334,7 +43333,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Banners span the top edge of the chat with square corners. Each offers Retry and can be closed. They appear only when the user can act; internal problems recover on their own.",
+                          "content": "Banners span the top edge of the chat with square corners. Every banner can be closed. Retry appears only for a temporary failure (no response, 5xx, 408, 429). They appear only when the user can act; internal problems recover on their own.",
                           "lineHeight": 1.4,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -43365,6 +43364,8 @@
                           },
                           "width": "fill_container",
                           "cornerRadius": 0,
+                          "justifyContent": "start",
+                          "alignItems": "center",
                           "descendants": {
                             "sAoE1": {
                               "icon": "circle-x"
@@ -43373,10 +43374,39 @@
                               "content": "Could not load conversation"
                             },
                             "B8etL": {
-                              "content": "The connection to the session was lost."
+                              "content": "The server had a temporary problem."
+                            },
+                            "dJT4D": {
+                              "justifyContent": "end",
+                              "alignItems": "center"
                             },
                             "x7Usi7": {
                               "enabled": true
+                            },
+                            "dqGb1": {
+                              "enabled": true
+                            }
+                          }
+                        },
+                        {
+                          "id": "lRhAy",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Could not load conversation (permanent)",
+                          "theme": {
+                            "status": "error"
+                          },
+                          "width": "fill_container",
+                          "cornerRadius": 0,
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "circle-x"
+                            },
+                            "GL4gS": {
+                              "content": "Could not load conversation"
+                            },
+                            "B8etL": {
+                              "content": "This session no longer exists."
                             },
                             "dqGb1": {
                               "enabled": true

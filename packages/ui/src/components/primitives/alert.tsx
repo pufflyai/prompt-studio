@@ -4,7 +4,7 @@ import * as React from "react";
 
 export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
   startElement?: React.ReactNode;
-  // An action that recovers from the alert, such as a Retry button.
+  // An action that recovers from the alert, such as Retry for a temporary failure.
   endElement?: React.ReactNode;
   title?: React.ReactNode;
   icon?: React.ReactElement;

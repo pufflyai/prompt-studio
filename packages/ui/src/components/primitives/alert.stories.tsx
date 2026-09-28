@@ -22,8 +22,8 @@ export const Statuses: Story = {
   ),
 };
 
-// Banners the user cannot act on are not shown. Every shown banner offers a way to recover and can be closed.
-export const Recoverable: Story = {
+// Banners the user cannot act on are not shown. Every banner can be closed; only a temporary failure offers Retry.
+export const Banners: Story = {
   render: () => (
     <Stack gap="sm">
       <AlertMessage
@@ -37,19 +37,11 @@ export const Recoverable: Story = {
           </Button>
         }
       >
-        The connection to the session was lost.
+        The server had a temporary problem.
       </AlertMessage>
-      <AlertMessage
-        layout="banner"
-        status="warning"
-        title="Could not update queued prompts"
-        onClose={() => {}}
-        endElement={
-          <Button size="2xs" variant="outline">
-            Retry
-          </Button>
-        }
-      />
+      <AlertMessage layout="banner" status="error" title="Could not load conversation" onClose={() => {}}>
+        This session no longer exists.
+      </AlertMessage>
     </Stack>
   ),
 };
