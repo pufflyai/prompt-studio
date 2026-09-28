@@ -9,18 +9,19 @@ const PULL_REQUEST_BASE = "HEAD~1";
 const REPOSITORY_TOOLING_DIR = "scripts";
 
 // Packages that do filesystem or process work, where Windows behaves differently.
-const WINDOWS_SENSITIVE_DIRS = [
-  ".pstdio/extensions/pstdio-dev",
-  "clients/desktop",
-  "extensions/harness-codex",
-  "packages/pstdio",
-  "packages/pstdio-api",
-  "packages/pstdio-api-runtime-host",
-  "packages/pstdio-db",
-  "packages/pstdio-extensions",
-  "packages/pstdio-paths",
-  "packages/pstdio-storage",
-  "packages/pstdio-wt",
+// A change to one of their dependencies can break them on Windows too.
+const WINDOWS_SENSITIVE_PACKAGES = [
+  "@pstdio/desktop",
+  "harness-codex",
+  "pstdio",
+  "pstdio-api",
+  "pstdio-api-runtime-host",
+  "pstdio-db",
+  "pstdio-dev",
+  "pstdio-extensions",
+  "pstdio-paths",
+  "pstdio-storage",
+  "pstdio-wt",
 ];
 
 interface CiScopeInput {
@@ -45,7 +46,7 @@ export function resolveCiScope({ event, changedFiles, packageDirs, affectedPacka
 
   return {
     lernaFilter: `--since ${PULL_REQUEST_BASE}`,
-    windows: changedFiles.some((file) => WINDOWS_SENSITIVE_DIRS.some((dir) => isInside(file, dir))),
+    windows: affectedPackages.some((name) => WINDOWS_SENSITIVE_PACKAGES.includes(name)),
     e2e: affectedPackages.includes("e2e"),
     license: changedFiles.some((file) => ["bun.lock", "package.json"].includes(basename(file))),
   };

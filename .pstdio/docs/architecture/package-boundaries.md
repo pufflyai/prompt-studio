@@ -55,15 +55,15 @@ layer-map change.
    dependency and resolve its package root for installation through the public
    extension API. The fixture is not part of the desktop runtime bundle.
 
-   `e2e` declares the extensions and `workbench-fixture` it installs at runtime as
-   development dependencies. It does not import them. The declarations let the
+   `e2e` declares the extensions and `workbench-fixture` it installs at runtime,
+   and the `pstdio-dashboard` it builds and serves, as development dependencies. It
+   does not import them. The declarations let the
    package graph treat a change to one of them as an e2e change, so pull request CI
    runs the e2e jobs for it.
 
 8. **Packaging glue**
    `pstdio` may include generated packaging glue for compiled runtime artifacts.
-   Its compiled build embeds the dashboard, so it declares `pstdio-dashboard` as a
-   development dependency. The host embeds the default extension catalog as data. Extension source is fetched
+   The host embeds the default extension catalog as data. Extension source is fetched
    from each entry's pinned Git origin and is not embedded in the host binary.
    Cross-package relative imports are only allowed for the
    generated embed manifest allowlist enforced by the boundary checker.

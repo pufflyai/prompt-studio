@@ -7,6 +7,7 @@ const packageDirs = [
   "packages/pstdio",
   "packages/pstdio-dashboard",
   "packages/pstdio-db",
+  "packages/pstdio-logging",
   "packages/e2e",
   "extensions/pstdio-planner",
   "design/motion",
@@ -37,8 +38,12 @@ describe("pull request CI scope", () => {
   });
 
   test("a change in a filesystem or process package runs Windows", () => {
-    expect(pullRequest(["packages/pstdio-db/src/db/connection.ts"]).windows).toBe(true);
-    expect(pullRequest(["packages/pstdio/src/cli.ts"]).windows).toBe(true);
+    expect(pullRequest(["packages/pstdio-db/src/db/connection.ts"], ["pstdio-db"]).windows).toBe(true);
+    expect(pullRequest(["packages/pstdio/src/cli.ts"], ["pstdio"]).windows).toBe(true);
+  });
+
+  test("a change to a dependency of a filesystem or process package runs Windows", () => {
+    expect(pullRequest(["packages/pstdio-logging/src/index.ts"], ["pstdio-logging", "pstdio-api"]).windows).toBe(true);
   });
 
   test("a change that affects the e2e package runs the e2e jobs", () => {

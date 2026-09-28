@@ -62,7 +62,8 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-extensions",
     "@pstdio/workbench",
   ],
-  // e2e also declares the extensions it installs at runtime, so changing one marks e2e as affected.
+  // e2e also declares the extensions it installs at runtime and the dashboard it serves,
+  // so changing one marks e2e as affected.
   e2e: [
     "pstdio",
     "pstdio-api-contracts",
@@ -73,12 +74,16 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "harness-claude-code",
     "harness-codex",
     "harness-open-code",
+    "local-example",
     "pstdio-artifacts",
     "pstdio-base-themes",
+    "pstdio-dashboard",
     "pstdio-notes",
     "pstdio-planner",
+    "pstdio-planner-loops",
     "pstdio-reports",
     "pstdio-skills",
+    "remote-workspaces",
     "workbench-fixture",
   ],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],

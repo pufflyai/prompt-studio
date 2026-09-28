@@ -37,8 +37,8 @@ The merge queue protects `main`. It runs every Test and Build job on the exact c
 Pull requests run only what their changes need. The `scope` job runs `scripts/ci/pull-request-ci-scope.ts`, which compares the merge commit with the target branch:
 
 - The Linux job always builds everything. It lints and tests only changed packages and the packages that depend on them.
-- The Windows job runs when a file changes in a package that does filesystem or process work, such as `pstdio-db`, `pstdio-api`, or `pstdio-wt`. The script lists these packages.
-- The e2e jobs run when the `e2e` package is affected. The extensions that e2e loads at runtime are e2e devDependencies, and `pstdio` declares the dashboard its build embeds, so changes to them count. A test in `packages/e2e` keeps the extension list and the devDependencies in step.
+- The Windows job runs when a package that does filesystem or process work is affected, such as `pstdio-db`, `pstdio-api`, or `pstdio-wt`. A change to one of their dependencies counts. The script lists these packages.
+- The e2e jobs run when the `e2e` package is affected. The extensions that e2e loads at runtime and the dashboard it serves are e2e devDependencies, so changes to them count. A test in `packages/e2e` keeps the extension list and the devDependencies in step.
 - The license check runs when a `package.json` or `bun.lock` changes.
 - A change under `scripts/` runs every job. It holds repository tooling, such as the test preload and build scripts.
 - A change outside every workspace package runs every job, unless the file is Markdown, under `design/`, or `LICENSE`.

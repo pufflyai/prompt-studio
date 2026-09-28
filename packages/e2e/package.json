@@ -21,16 +21,20 @@
     "harness-claude-code": "workspace:*",
     "harness-codex": "workspace:*",
     "harness-open-code": "workspace:*",
+    "local-example": "workspace:*",
     "pstdio": "workspace:*",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-artifacts": "workspace:*",
     "pstdio-base-themes": "workspace:*",
+    "pstdio-dashboard": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "pstdio-notes": "workspace:*",
     "pstdio-planner": "workspace:*",
+    "pstdio-planner-loops": "workspace:*",
     "pstdio-reports": "workspace:*",
     "pstdio-skills": "workspace:*",
     "pstdio-wt": "workspace:*",
+    "remote-workspaces": "workspace:*",
     "workbench-fixture": "workspace:*"
   }
 }

@@ -40,18 +40,23 @@
       "entry": ["playwright.config.ts", "src/cli/run-pstdio.ts", "src/**/*.spec.ts", "src/**/*.test.ts"],
       "project": ["playwright.config.ts", "src/**/*.ts"],
       "ignore": ["playwright-report/**", "screenshots/**", "test-results/**"],
-      // Extensions e2e installs at runtime by path. Declared so CI treats their changes as e2e changes.
+      // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
+      // Declared so CI treats their changes as e2e changes.
       "ignoreDependencies": [
         "extension-lab",
         "harness-claude-code",
         "harness-codex",
         "harness-open-code",
+        "local-example",
         "pstdio-artifacts",
         "pstdio-base-themes",
+        "pstdio-dashboard",
         "pstdio-notes",
         "pstdio-planner",
+        "pstdio-planner-loops",
         "pstdio-reports",
         "pstdio-skills",
+        "remote-workspaces",
         "workbench-fixture"
       ]
     },
