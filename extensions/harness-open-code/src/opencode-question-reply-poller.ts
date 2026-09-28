@@ -1,5 +1,4 @@
 import type { HarnessEventSink, QuestionResponse, SessionMessage } from "@pstdio/sdk/extensions";
-import { composeOwnedOpencodeSnapshot } from "./history-reconciliation";
 import {
   appendFailureMessage,
   cancelTurn,
@@ -260,6 +259,7 @@ export const pollOpencodeQuestionReply = async (input: {
     if (postState.failed) {
       return appendFailureMessage({
         sessionId,
+        latestMessages: state.latestMessages,
         events,
         failureMessage: postState.failureMessage,
       });
@@ -276,6 +276,7 @@ export const pollOpencodeQuestionReply = async (input: {
   if (postState.failed) {
     return appendFailureMessage({
       sessionId,
+      latestMessages: state.latestMessages,
       events,
       failureMessage: postState.failureMessage,
     });
@@ -287,7 +288,7 @@ export const pollOpencodeQuestionReply = async (input: {
 
   const answeredMessages = markQuestionToolAnswered({ messages: state.latestMessages, questionTool, questionResponse });
   if (answeredMessages !== state.latestMessages) {
-    events.push({ op: "replace", path: "/messages", value: composeOwnedOpencodeSnapshot(events, answeredMessages) });
+    events.push({ op: "replace", path: "/messages", value: answeredMessages });
   }
 
   return completeTurn(events);

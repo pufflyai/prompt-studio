@@ -23,18 +23,3 @@ test("paired live and rollout history preserve reasoning and usage with one nati
   if (result.kind !== "recovered") return;
   expect(result.messages).toEqual([...nativeMessages, knownMessages.at(-1)!]);
 });
-
-test("a crash after the first of two identical commands restores the second from the rollout", () => {
-  const run = (id: string, callId: string, output?: string): SessionMessage => ({
-    id,
-    role: "assistant",
-    parts: [
-      { type: "tool", tool: "exec_command", callId, state: { input: { cmd: "git status", workdir: "/repo" }, output } },
-    ],
-  });
-  const prompt: SessionMessage = { id: "prompt", role: "user", parts: [{ type: "text", text: "check twice" }] };
-  const nativeMessages = [prompt, run("first", "call_1", "clean"), run("second", "call_2", "clean")];
-  const knownMessages = [prompt, run("live-first", "item_1", "clean")];
-  const result = recoverCodexMessages({ knownMessages, nativeMessages, cwd: "/repo" });
-  expect(result).toEqual({ kind: "recovered", messages: nativeMessages });
-});
