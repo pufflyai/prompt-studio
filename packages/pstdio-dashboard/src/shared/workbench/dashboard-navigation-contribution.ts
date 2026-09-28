@@ -19,6 +19,7 @@ interface DashboardNavigationContribution {
   modes: readonly (typeof dashboardModes)[number][];
   slot?: NavigationTreeSlot;
   defaultExpandedSectionIds?: string[];
+  resolveResource?(input: { modeId: string; resource?: ResourceRef }): ResourceRef | undefined;
   getSections(
     ctx: WorkbenchModuleContext,
     input: { modeId: string; resource?: ResourceRef },
@@ -31,6 +32,7 @@ export const registerDashboardNavigationContribution = (
 ) => {
   const slot = contribution.slot ?? "content";
   const declarationIndex = declarations[slot].indexOf(contribution.id);
+  const resolveResource = contribution.resolveResource;
 
   return contribution.modes.map((modeId) =>
     ctx.navigationTrees.registerContribution({
@@ -40,6 +42,11 @@ export const registerDashboardNavigationContribution = (
       declarationIndex: declarationIndex < 0 ? declarations[slot].length : declarationIndex,
       slot,
       defaultExpandedSectionIds: contribution.defaultExpandedSectionIds,
+      ...(resolveResource
+        ? {
+            resolveResource: (resource: ResourceRef | undefined) => resolveResource({ modeId, resource }),
+          }
+        : {}),
       getSections: ({ resource }) => contribution.getSections(ctx, { modeId, resource }),
     }),
   );

@@ -124,6 +124,8 @@ export interface TreeRendererContribution {
   when?: string;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
+  /** Identify the navigation data scope when it differs from the current page resource. */
+  getReadKey?(ctx: TreeQueryContext): string;
   getBody(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getHeader?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getFooter?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];

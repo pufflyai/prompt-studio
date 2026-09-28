@@ -14,6 +14,7 @@ export const useTreeData = (
   ownerKey = JSON.stringify(["tree", treeViewId, resourceKey(resource)]),
 ) => {
   const trees = getWorkbenchRenderers(workbench);
+  useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
   const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
   const project = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
@@ -27,8 +28,8 @@ export const useTreeData = (
     getPageOwner,
     getPageOwner,
   );
-  // Shell trees also query the current mode and resource. Aggregate pages in
-  // the same scope share navigation, so their global links stay mounted.
+  // Composed navigation owns its data scope. Other trees conservatively follow
+  // the page resource so pending reads cannot publish into a different resource.
   const queryKey = JSON.stringify([
     treeViewId,
     resourceKey(resource),
@@ -37,7 +38,7 @@ export const useTreeData = (
     project,
     mode,
     pageOwner,
-    resourceKey(location?.resource),
+    trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter }) ?? resourceKey(location?.resource),
   ]);
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);

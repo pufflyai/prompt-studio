@@ -176,6 +176,42 @@ describe("registerDashboardSidenav", () => {
   });
 });
 describe("dashboard sidenav mode composition", () => {
+  test("borrowed project navigation has project context while the active mode receives its resource", async () => {
+    const workbench = createWorkbench();
+    const reads: Array<{ mode: string; resource: string | undefined }> = [];
+    const pages = ["project", "sessions"].map((mode, index) => {
+      workbench.modes.registerMode({ id: mode, activate: () => undefined });
+      workbench.navigationTrees.registerContribution({
+        id: mode,
+        owner: { kind: "mode", id: mode, extensionId: "pstdio" },
+        sourceExtensionId: "test",
+        declarationIndex: 0,
+        getSections: ({ resource }) => {
+          reads.push({ mode, resource: resource?.id });
+          return [];
+        },
+      });
+      return registerModePage(workbench, mode, mode, index === 0 ? "workspace" : "session");
+    });
+    registerDashboardSidenav(workbench);
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page: pages[1], resource: { type: "session", id: "session-1" } });
+    await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
+    expect(reads).toEqual([
+      { mode: "project", resource: undefined },
+      { mode: "sessions", resource: "session-1" },
+    ]);
+
+    reads.length = 0;
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: pages[0],
+      resource: { type: "workspace", id: "workspace-1" },
+    });
+    await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
+    expect(reads).toEqual([{ mode: "project", resource: "workspace-1" }]);
+  });
+
   test("uses project navigation in Sessions mode without the project Sessions link", async () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });

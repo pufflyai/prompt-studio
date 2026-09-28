@@ -147,6 +147,8 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.list",
     modes: ["sessions", "project"],
+    resolveResource: ({ modeId, resource }) =>
+      modeId === "project" && resource?.type === "workspace" ? resource : undefined,
     getSections: (_workbench, input) => {
       const workspace = input.modeId === "project" && input.resource?.type === "workspace" ? input.resource : undefined;
       if (input.modeId === "project" && !workspace) return [];

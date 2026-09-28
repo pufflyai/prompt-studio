@@ -1,7 +1,7 @@
 import { Box, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "../workbench/workbench";
@@ -28,6 +28,20 @@ const SettingsOverlayStory = () => {
           section: "workbench",
           scope: "global",
           viewId: "storybook.settings.general.view",
+        });
+        ctx.views.registerView({
+          id: "storybook.settings.appearance.view",
+          title: "Appearance",
+          body: { kind: "react", render: () => <Text p="md">Appearance settings</Text> },
+        });
+        ctx.settings.registerPanel({
+          id: "storybook.appearance",
+          title: "Appearance",
+          kind: "view",
+          order: 20,
+          section: "workbench",
+          scope: "global",
+          viewId: "storybook.settings.appearance.view",
         });
       },
     });
@@ -73,5 +87,16 @@ export const CenteredClose: Story = {
       const difference = Math.abs(closeRect.y + closeRect.height / 2 - titleRect.y - titleRect.height / 2);
       expect(difference).toBeLessThanOrEqual(1);
     });
+  },
+};
+
+export const NavigationRetention: Story = {
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const general = await body.findByRole("option", { name: "General" });
+    await userEvent.click(body.getByRole("option", { name: "Appearance" }));
+    await expect(await body.findByText("Appearance settings")).toBeVisible();
+    await expect(general).toBeVisible();
+    await expect(general).toBe(body.getByRole("option", { name: "General" }));
   },
 };
