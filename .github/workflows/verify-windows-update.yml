@@ -1,10 +1,6 @@
 name: Verify Windows installation and update
 
 on:
-  # Remove this bootstrap trigger after the first native acceptance run.
-  push:
-    branches: [feature/ps-3-native-desktop-support]
-    paths: [.github/workflows/verify-windows-update.yml]
   workflow_dispatch:
     inputs:
       candidate-run-id:
@@ -15,12 +11,17 @@ on:
         description: Existing older pstdio release tag to build as the signed baseline
         required: true
         type: string
+      baseline-run-id:
+        description: Reuse a windows-signed-baseline artifact from an earlier run instead of rebuilding
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   baseline:
+    if: inputs.baseline-run-id == ''
     runs-on: windows-2025
     timeout-minutes: 30
     permissions:
@@ -29,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.previous-tag || 'pstdio@0.36.0' }}
+          ref: ${{ inputs.previous-tag }}
           fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
@@ -67,6 +68,7 @@ jobs:
 
   installation:
     needs: baseline
+    if: ${{ !cancelled() && (needs.baseline.result == 'success' || needs.baseline.result == 'skipped') }}
     runs-on: windows-2025
     timeout-minutes: 30
     permissions:
@@ -86,11 +88,13 @@ jobs:
         with:
           name: windows-signed-baseline
           path: windows-baseline
+          run-id: ${{ inputs.baseline-run-id || github.run_id }}
+          github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
           name: windows-signed-candidate
           path: windows-candidate
-          run-id: ${{ inputs.candidate-run-id || '36434946159' }}
+          run-id: ${{ inputs.candidate-run-id }}
           github-token: ${{ github.token }}
       - name: Verify installed application and signed Squirrel update
         run: bun clients/desktop/scripts/verify-windows-installation.ts windows-baseline windows-candidate

@@ -6,6 +6,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { chromium, expect } from "@playwright/test";
 import { gt, valid } from "semver";
+import { openPackagedProject } from "../src/e2e/packaged-project-helpers";
 import { prepareDesktopReleaseArtifacts } from "../src/release/release-artifacts";
 import { validateSidecarArtifact } from "../src/runtime/sidecar-artifact";
 
@@ -199,6 +200,9 @@ try {
     return (await response.json()) as { id: string; name: string; extension_warnings?: unknown[] };
   }, projectPath);
   assert.deepEqual(project.extension_warnings ?? [], []);
+  await openPackagedProject(active.page, project);
+  await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
+  await expect(active.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
   writeFileSync(join(projectPath, "persisted.txt"), "Signed Windows update preservation\n");
   assert((await run(files.sidecar, ["projects", "list"])).includes(project.id));
   await active.page.screenshot({ path: join(evidence, "baseline-workbench.png") });
@@ -216,6 +220,8 @@ try {
     name: string;
   }>;
   assert(projects.some((item) => item.id === project.id && item.name === project.name));
+  await openPackagedProject(active.page, project);
+  await expect(active.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
   assert.equal(readFileSync(join(projectPath, "persisted.txt"), "utf8"), "Signed Windows update preservation\n");
   assert((await run(updated.sidecar, ["projects", "list"])).includes(project.id));
   await active.page.screenshot({ path: join(evidence, "updated-workbench.png") });
