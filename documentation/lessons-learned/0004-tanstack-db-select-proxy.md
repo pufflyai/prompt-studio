@@ -36,4 +36,4 @@ This fix was applied across all ~20 `useLiveQuery` calls in 7 hook files.
 
 ## Key takeaway
 
-Never return a TanStack DB query proxy directly from `.select()`. Always spread it into a new object. This is documented in the [Streaming architecture](../references/0021-architecture-stream.md) client section.
+Never return a TanStack DB query proxy directly from `.select()`. Always spread it into a new object. This is documented in the [Streaming architecture](../references/architecture/0021-stream.md) client section.

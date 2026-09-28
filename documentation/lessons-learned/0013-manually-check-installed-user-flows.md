@@ -41,6 +41,6 @@ If a flow fails, reproduce it and fix the cause before calling it validated. Add
 
 ## Repository workflow
 
-Use the isolated manual browser setup in the [contributor guide](../guides/0002-development-setup.md#playwright-validation): start with `bun run dev:playwright`, use its printed dashboard URL, and finish with `bun run dev:playwright:down`. Do not use the user's production projects or runtime data for destructive checks.
+Use the isolated manual browser setup in the [contributor guide](../guides/development/0001-setup.md#playwright-validation): start with `bun run dev:playwright`, use its printed dashboard URL, and finish with `bun run dev:playwright:down`. Do not use the user's production projects or runtime data for destructive checks.
 
-For installed desktop behavior, follow the isolation and packaged validation guidance in [Desktop application foundation](../references/0006-architecture-desktop.md). Keep automated packaged smoke checks as well as the manual walkthrough.
+For installed desktop behavior, follow the isolation and packaged validation guidance in [Desktop application foundation](../references/architecture/0006-desktop.md). Keep automated packaged smoke checks as well as the manual walkthrough.

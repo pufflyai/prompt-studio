@@ -4,18 +4,18 @@ Prompt Studio is a workbench where people and agents build and use tools through
 
 ## Start here
 
-- [Install and use Prompt Studio](0013-getting-started.md)
-- [Set up repository development](0002-development-setup.md)
-- [Run tests and validate changes](0003-testing.md)
-- [Build an extension](0006-extension-authoring.md)
-- [Look up SDK methods](../references/0043-sdk-reference.md)
-- [Check lessons when stuck](../lessons-learned/)
+- [Install and use Prompt Studio](0002-getting-started.md)
+- [Set up repository development](development/0001-setup.md)
+- [Run tests and validate changes](development/0002-testing.md)
+- [Build an extension](extensions/0001-authoring.md)
+- [Look up SDK methods](../references/sdk/0003-api.md)
+- [Check lessons when stuck](../lessons-learned)
 
 ## Storage and product boundaries
 
 Runtime state normally lives under `PSTDIO_HOME` (default `~/.pstdio`), including the PGlite database, workspaces, installed user extensions, and logs. A linked folder keeps identity/configuration under `.pstdio`; extensions own their project content and draft layouts. This repository's documentation lives in `documentation/`. It is not a database snapshot or an automatic dashboard content source.
 
-The API and dashboard share an authenticated runtime. Core sync uses SSE. There is no optional Electric SQL/Postgres synchronization mode described by these docs. See [API architecture](../references/0003-architecture-api.md) and [projects](../references/0015-architecture-projects.md).
+The API and dashboard share an authenticated runtime. Core sync uses SSE. There is no optional Electric SQL/Postgres synchronization mode described by these docs. See [API architecture](../references/architecture/0003-api.md) and [projects](../references/architecture/0015-projects.md).
 
 ## Organization and numbering
 
@@ -27,95 +27,134 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 | `adrs` | Architecture decisions, including temporary limitations and removal criteria |
 | `lessons-learned` | Diagnosed failures and rules that prevent recurrence |
 
-Every file has a four-digit number within its category: `NNNN-kebab-case.md`. Keep published numbers stable. Add the next number; do not recycle removed numbers. ADR gaps preserve historical identifiers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
+Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
+
+Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
 
 Use relative Markdown links so these pages work in repository browsers and editors. Treat source-linked type declarations as the signature authority. Requirements marked proposed describe future behavior; superseded records explain retired decisions.
 
-## guides
+## Guides
 
-- [0002 — Development setup](0002-development-setup.md)
-- [0003 — Tests](0003-testing.md)
-- [0004 — Storybook coverage](0004-storybook-coverage.md)
-- [0005 — Pull request area labels](0005-pull-request-labels.md)
-- [0006 — Extensions](0006-extension-authoring.md)
-- [0007 — Workbench cookbook](0007-workbench-cookbook.md)
-- [0008 — Extension automation cookbook](0008-extension-automation.md)
-- [0009 — Migrate an extension to remote execution](0009-remote-execution-migration.md)
-- [0010 — Extension conformance and regression coverage](0010-extension-conformance.md)
-- [0011 — Extension runtime smoke checks](0011-extension-smoke-checks.md)
-- [0012 — Client](0012-sdk-client.md)
-- [0013 — Start using Prompt Studio](0013-getting-started.md)
+- [0002 — Start using Prompt Studio](0002-getting-started.md)
 
-## references
+### Development
 
-- [0001 — Adapters and Features](../references/0001-architecture-adapters-and-features.md)
-- [0002 — Agents and extension harnesses](../references/0002-architecture-agents.md)
-- [0003 — API](../references/0003-architecture-api.md)
-- [0004 — Compiled CLI distribution](../references/0004-architecture-bun-compiled-distribution.md)
-- [0005 — Control and execution planes](../references/0005-architecture-control-and-execution-planes.md)
-- [0006 — Desktop application foundation](../references/0006-architecture-desktop.md)
-- [0007 — Extension navigation](../references/0007-architecture-extension-navigation.md)
-- [0008 — Extension resource identities](../references/0008-architecture-extension-resource-identities.md)
-- [0009 — Extension workbench composition](../references/0009-architecture-extension-workbench-composition.md)
-- [0010 — Extension runtime](../references/0010-architecture-extensions-runtime.md)
-- [0011 — Extension Runtime Boundaries](../references/0011-architecture-hooks-runtime-boundaries.md)
-- [0012 — Local and remote workspaces](../references/0012-architecture-local-and-remote.md)
-- [0013 — Package Boundaries](../references/0013-architecture-package-boundaries.md)
-- [0014 — Project extension runtime snapshots](../references/0014-architecture-project-extension-runtime-snapshots.md)
-- [0015 — Projects and workspaces](../references/0015-architecture-projects.md)
-- [0016 — Remote execution and automation](../references/0016-architecture-remote-execution-and-automation.md)
-- [0017 — Service Layer](../references/0017-architecture-service-layer.md)
-- [0018 — Session Queue](../references/0018-architecture-session-queue.md)
-- [0019 — Session Status Lifecycle](../references/0019-architecture-session-status-lifecycle.md)
-- [0020 — Sessions](../references/0020-architecture-sessions.md)
-- [0021 — Streaming](../references/0021-architecture-stream.md)
-- [0022 — Workspace Diff Presentation](../references/0022-architecture-workspace-diff-presentation.md)
-- [0023 — Worktrees and Git operations](../references/0023-architecture-worktrees.md)
-- [0024 — Extension API reference](../references/0024-extensions-api.md)
-- [0025 — Extension lifecycle automation](../references/0025-extension-lifecycle-automation.md)
-- [0026 — Workbench composition](../references/0026-extensions-contextual-workbench-composition.md)
-- [0027 — Durable extension work](../references/0027-extensions-durable-automation.md)
-- [0028 — Extension modes and layout](../references/0028-extensions-modes-and-layout.md)
-- [0029 — Navigation and layout state](../references/0029-extensions-navigation-and-layout-state.md)
-- [0030 — Extension Notifications](../references/0030-extensions-notifications.md)
-- [0031 — Renderer Edit and Refresh Lifecycle](../references/0031-extensions-renderer-edit-refresh-lifecycle.md)
-- [0032 — Dashboard UI contributions](../references/0032-extensions-workbench-attachments.md)
-- [0033 — CLI agents](../references/0033-cli-agents.md)
-- [0034 — Remote automation](../references/0034-cli-automation.md)
-- [0035 — Prompt Studio CLI](../references/0035-cli.md)
-- [0036 — CLI notifications](../references/0036-cli-notifications.md)
-- [0037 — CLI projects](../references/0037-cli-projects.md)
-- [0038 — CLI sessions](../references/0038-cli-sessions.md)
-- [0039 — Product Requirements Document: CLI Runtime and API Setup](../references/0039-cli-setup.md)
-- [0040 — CLI workspaces](../references/0040-cli-workspaces.md)
-- [0041 — SDK](../references/0041-sdk.md)
-- [0042 — Resource types](../references/0042-sdk-resources.md)
-- [0043 — SDK method reference](../references/0043-sdk-reference.md)
-- [0044 — Workbench API](../references/0044-workbench-api.md)
-- [0045 — Contribution ownership](../references/0045-workbench-contribution-ownership.md)
-- [0046 — Workbench](../references/0046-workbench.md)
-- [0047 — Workbench navigation](../references/0047-workbench-navigation.md)
-- [0048 — Extension manifest and installation](../references/0048-extension-manifest-and-installation.md)
-- [0049 — Extension commands and processes](../references/0049-extension-command-and-process-api.md)
-- [0050 — Extension contributions](../references/0050-extension-contribution-api.md)
-- [0051 — Extension webviews and storage](../references/0051-extension-webview-and-storage-api.md)
+- [0001 — Development setup](development/0001-setup.md)
+- [0002 — Tests](development/0002-testing.md)
+- [0003 — Storybook coverage](development/0003-storybook-coverage.md)
+- [0004 — Pull request area labels](development/0004-pull-request-labels.md)
 
-## requirements
+### Extensions
 
-- [0001 — Project extension runtime snapshot requirements](../requirements/0001-extensions-runtime-snapshots.md)
-- [0002 — Product Requirements Document: API and Runtime Logs](../requirements/0002-api-error-logs.md)
-- [0003 — CLI feedback and help](../requirements/0003-cli-feedback.md)
-- [0004 — Superseded: generalized cross-session follow-up](../requirements/0004-cli-proposals-cross-session-follow-up.md)
-- [0005 — Beta features](../requirements/0005-dashboard-beta-features.md)
-- [0006 — Repository documentation and the retired core docs panel](../requirements/0006-dashboard-documentation.md)
-- [0007 — Dashboard browser page titles](../requirements/0007-dashboard-page-titles.md)
-- [0008 — Product Requirements Document: Dashboard Sessions](../requirements/0008-dashboard-sessions.md)
-- [0009 — Dashboard settings and folder projects](../requirements/0009-dashboard-settings.md)
-- [0010 — Cross-Platform Support](../requirements/0010-platform-cross-platform-support.md)
-- [0011 — Desktop distribution and updates](../requirements/0011-platform-desktop-distribution.md)
-- [0012 — Product Requirements Document: Real-time Updates](../requirements/0012-platform-realtime-updates.md)
-- [0013 — Templates and skills](../requirements/0013-platform-templates-and-skills.md)
-- [0014 — Versioning and releases](../requirements/0014-platform-versioning-and-releases.md)
+- [0001 — Extensions](extensions/0001-authoring.md)
+- [0002 — Workbench cookbook](extensions/0002-workbench-cookbook.md)
+- [0003 — Extension automation cookbook](extensions/0003-automation.md)
+- [0004 — Migrate an extension to remote execution](extensions/0004-remote-execution-migration.md)
+- [0005 — Extension conformance and regression coverage](extensions/0005-conformance.md)
+- [0006 — Extension runtime smoke checks](extensions/0006-smoke-checks.md)
+
+### SDK
+
+- [0001 — Client](sdk/0001-client.md)
+
+## References
+
+### Architecture
+
+- [0001 — Adapters and Features](../references/architecture/0001-adapters-and-features.md)
+- [0002 — Agents and extension harnesses](../references/architecture/0002-agents.md)
+- [0003 — API](../references/architecture/0003-api.md)
+- [0004 — Compiled CLI distribution](../references/architecture/0004-bun-compiled-distribution.md)
+- [0005 — Control and execution planes](../references/architecture/0005-control-and-execution-planes.md)
+- [0006 — Desktop application foundation](../references/architecture/0006-desktop.md)
+- [0007 — Extension navigation](../references/architecture/0007-extension-navigation.md)
+- [0008 — Extension resource identities](../references/architecture/0008-extension-resource-identities.md)
+- [0009 — Extension workbench composition](../references/architecture/0009-extension-workbench-composition.md)
+- [0010 — Extension runtime](../references/architecture/0010-extensions-runtime.md)
+- [0011 — Extension Runtime Boundaries](../references/architecture/0011-hooks-runtime-boundaries.md)
+- [0012 — Local and remote workspaces](../references/architecture/0012-local-and-remote.md)
+- [0013 — Package Boundaries](../references/architecture/0013-package-boundaries.md)
+- [0014 — Project extension runtime snapshots](../references/architecture/0014-project-extension-runtime-snapshots.md)
+- [0015 — Projects and workspaces](../references/architecture/0015-projects.md)
+- [0016 — Remote execution and automation](../references/architecture/0016-remote-execution-and-automation.md)
+- [0017 — Service Layer](../references/architecture/0017-service-layer.md)
+- [0018 — Session Queue](../references/architecture/0018-session-queue.md)
+- [0019 — Session Status Lifecycle](../references/architecture/0019-session-status-lifecycle.md)
+- [0020 — Sessions](../references/architecture/0020-sessions.md)
+- [0021 — Streaming](../references/architecture/0021-stream.md)
+- [0022 — Workspace Diff Presentation](../references/architecture/0022-workspace-diff-presentation.md)
+- [0023 — Worktrees and Git operations](../references/architecture/0023-worktrees.md)
+
+### CLI
+
+- [0001 — Prompt Studio CLI](../references/cli/0001-overview.md)
+- [0002 — CLI agents](../references/cli/0002-agents.md)
+- [0003 — Product Requirements Document: CLI Runtime and API Setup](../references/cli/0003-setup.md)
+- [0004 — CLI projects](../references/cli/0004-projects.md)
+- [0005 — CLI workspaces](../references/cli/0005-workspaces.md)
+- [0006 — CLI sessions](../references/cli/0006-sessions.md)
+- [0007 — Remote automation](../references/cli/0007-automation.md)
+- [0008 — CLI notifications](../references/cli/0008-notifications.md)
+
+### Extensions
+
+- [0001 — Extension API reference](../references/extensions/0001-api.md)
+- [0002 — Extension manifest and installation](../references/extensions/0002-manifest-and-installation.md)
+- [0003 — Extension commands and processes](../references/extensions/0003-command-and-process-api.md)
+- [0004 — Extension contributions](../references/extensions/0004-contribution-api.md)
+- [0005 — Extension webviews and storage](../references/extensions/0005-webview-and-storage-api.md)
+- [0006 — Extension lifecycle automation](../references/extensions/0006-lifecycle-automation.md)
+- [0007 — Durable extension work](../references/extensions/0007-durable-automation.md)
+- [0008 — Workbench composition](../references/extensions/0008-contextual-workbench-composition.md)
+- [0009 — Extension modes and layout](../references/extensions/0009-modes-and-layout.md)
+- [0010 — Navigation and layout state](../references/extensions/0010-navigation-and-layout-state.md)
+- [0011 — Extension Notifications](../references/extensions/0011-notifications.md)
+- [0012 — Renderer Edit and Refresh Lifecycle](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
+- [0013 — Dashboard UI contributions](../references/extensions/0013-workbench-attachments.md)
+
+### SDK
+
+- [0001 — SDK](../references/sdk/0001-overview.md)
+- [0002 — Resource types](../references/sdk/0002-resources.md)
+- [0003 — SDK method reference](../references/sdk/0003-api.md)
+
+### Workbench
+
+- [0001 — Workbench](../references/workbench/0001-overview.md)
+- [0002 — Workbench API](../references/workbench/0002-api.md)
+- [0003 — Contribution ownership](../references/workbench/0003-contribution-ownership.md)
+- [0004 — Workbench navigation](../references/workbench/0004-navigation.md)
+
+## Requirements
+
+### API
+
+- [0001 — Product Requirements Document: API and Runtime Logs](../requirements/api/0001-error-logs.md)
+
+### CLI
+
+- [0001 — CLI feedback and help](../requirements/cli/0001-feedback.md)
+- [0002 — Superseded: generalized cross-session follow-up](../requirements/cli/0002-proposals-cross-session-follow-up.md)
+
+### Dashboard
+
+- [0001 — Beta features](../requirements/dashboard/0001-beta-features.md)
+- [0002 — Repository documentation and the retired core docs panel](../requirements/dashboard/0002-documentation.md)
+- [0003 — Dashboard browser page titles](../requirements/dashboard/0003-page-titles.md)
+- [0004 — Product Requirements Document: Dashboard Sessions](../requirements/dashboard/0004-sessions.md)
+- [0005 — Dashboard settings and folder projects](../requirements/dashboard/0005-settings.md)
+
+### Extensions
+
+- [0001 — Project extension runtime snapshot requirements](../requirements/extensions/0001-runtime-snapshots.md)
+
+### Platform
+
+- [0001 — Cross-Platform Support](../requirements/platform/0001-cross-platform-support.md)
+- [0002 — Desktop distribution and updates](../requirements/platform/0002-desktop-distribution.md)
+- [0003 — Product Requirements Document: Real-time Updates](../requirements/platform/0003-realtime-updates.md)
+- [0004 — Templates and skills](../requirements/platform/0004-templates-and-skills.md)
+- [0005 — Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
 
 ## ADRs
 
@@ -164,7 +203,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0045 — Temporary Remotion React subpath alias](../adrs/0045-temporary-remotion-react-subpath-alias.md)
 - [0046 — Let extension webviews write to the clipboard when they declare it](../adrs/0046-declared-webview-clipboard-writes.md)
 
-## lessons learned
+## Lessons learned
 
 - [0001 — Check runtime support before using browser APIs](../lessons-learned/0001-no-bun-eventsource.md)
 - [0002 — PGlite WAL Corruption](../lessons-learned/0002-pglite-wal-corruption.md)

@@ -38,7 +38,7 @@ Maintaining two test frameworks adds unnecessary tooling complexity.
 
 The Storybook test runner checks stories without `play` for rendering errors. A `play` function adds assertions for interactions and state changes. Rendering alone does not prove those behaviors. See the [Storybook runner contract](https://storybook.js.org/docs/writing-tests/integrations/test-runner).
 
-Add `play` functions to stories that cover important interactions. See [Storybook Play Coverage](../guides/0004-storybook-coverage.md).
+Add `play` functions to stories that cover important interactions. See [Storybook Play Coverage](../guides/development/0003-storybook-coverage.md).
 
 ### Lost: vitest watch mode integration
 

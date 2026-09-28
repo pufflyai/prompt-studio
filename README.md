@@ -35,4 +35,4 @@ Learn more about the CLI using `pst --help`.
 
 ## Documentation
 
-Start with the [documentation guide](documentation/guides/0001-documentation.md), [user setup](documentation/guides/0013-getting-started.md), or [development setup](documentation/guides/0002-development-setup.md). Central docs live under `documentation/`, grouped into guides, references, requirements, ADRs, and lessons learned.
+Start with the [documentation guide](documentation/guides/0001-documentation.md), [user setup](documentation/guides/0002-getting-started.md), or [development setup](documentation/guides/development/0001-setup.md). Central docs live under `documentation/`, grouped into guides, references, requirements, ADRs, and lessons learned.

@@ -64,7 +64,7 @@ Trade-offs:
 ## How the workaround is kept isolated
 
 Only the type derivation in `packages/sdk/src/extensions/webview-client.ts` and the
-authoring convention in `documentation/guides/0007-workbench-cookbook.md` know about the two-source split.
+authoring convention in `documentation/guides/extensions/0002-workbench-cookbook.md` know about the two-source split.
 The runtime client, the bridge, and the host are unaffected: they only see command ids.
 
 ## Removal

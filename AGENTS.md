@@ -260,7 +260,8 @@ If a job times out, report what became slower and by how much. Then fix the slow
 
 - Central documentation lives in `documentation/`. Start with the [documentation guide](documentation/guides/0001-documentation.md).
 - Use `guides/` for setup and workflows, `references/` for APIs and architecture, `requirements/` for PRDs, `adrs/` for decisions, and `lessons-learned/` for recurring failures.
-- Every document in these categories uses `NNNN-kebab-case.md`. Number within each category, keep assigned numbers stable, and use the next available number. Do not reuse removed ADR or lesson numbers.
+- Group related documents in topic folders, such as `references/architecture/`, `references/sdk/`, `guides/development/`, and `requirements/dashboard/`. Do not repeat the folder's topic in every filename.
+- Every document uses `NNNN-kebab-case.md`. Number independently within each folder, keep assigned numbers stable, and use the next available number in that folder. Keep ADRs and lessons in their existing folders and do not reuse their removed numbers.
 - Update links and check claims against current source when changing documentation. Clearly mark proposed or superseded requirements.
 
 - Use the pstdio command-line tool to manage tickets.

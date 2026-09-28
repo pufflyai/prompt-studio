@@ -14,7 +14,7 @@ The [session service](../../packages/pstdio-api/src/services/session-service.ts)
 
 The service logs `sync_emit_skipped` when a guarded write returns no updated row. That makes a skipped transition visible; it does not replace the requirement to keep side effects together.
 
-See the [session status lifecycle](../references/0019-architecture-session-status-lifecycle.md) for the full contract.
+See the [session status lifecycle](../references/architecture/0019-session-status-lifecycle.md) for the full contract.
 
 ## Key takeaway
 

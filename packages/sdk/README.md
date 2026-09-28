@@ -22,7 +22,7 @@ Native extension entries work without React. The React entry requires its declar
 
 ## Build an extension
 
-Start with the [workbench cookbook](https://github.com/pufflyai/prompt-studio/blob/main/documentation/guides/0007-workbench-cookbook.md) and [Extension Lab](https://github.com/pufflyai/prompt-studio/blob/main/extensions/extension-lab/README.md). Existing examples cover saved edits, inspectors, shared panels, custom modes, provider refs, and webview cleanup.
+Start with the [workbench cookbook](https://github.com/pufflyai/prompt-studio/blob/main/documentation/guides/extensions/0002-workbench-cookbook.md) and [Extension Lab](https://github.com/pufflyai/prompt-studio/blob/main/extensions/extension-lab/README.md). Existing examples cover saved edits, inspectors, shared panels, custom modes, provider refs, and webview cleanup.
 
 Keep package identity in `package.json`. Export `defineExtension(...)` from the manifest's `main`. Install through `pst extensions dev <path>` from a linked project. The same workflow watches native TypeScript, contribution declarations, and webview assets.
 
