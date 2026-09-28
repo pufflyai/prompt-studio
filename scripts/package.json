@@ -8,6 +8,7 @@
     "lint": "bun run typecheck && biome check .",
     "release:notes": "bun --cwd .. ./scripts/release/release-notes.ts",
     "release:checksums": "bun --cwd .. ./scripts/release/generate-checksums.ts",
+    "release:extension-lockfiles:sync": "bun --cwd .. ./scripts/release/sync-extension-lockfiles.ts",
     "release:lockfile:sync": "bun --cwd .. ./scripts/release/sync-lockfile-workspace-dependencies.ts",
     "release:platforms:publish": "bun --cwd .. ./scripts/release/publish-platform-packages.ts",
     "release:platforms:scaffold": "bun --cwd .. ./scripts/release/scaffold-platform-packages.ts",
