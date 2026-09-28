@@ -235,7 +235,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await localRow.click();
     await expectPage(page.getByTestId("extension-detail")).toContainText(`v${localExampleVersion.version}`);
     await expectPage(page.getByTestId("extension-detail-health")).toHaveCount(0);
-    await expectPage(page.getByTestId("extension-update")).toHaveCount(0);
+    await expectPage(page.getByTestId("extension-reload")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-upgrade")).toHaveCount(0);
     await expectPage(page.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
 

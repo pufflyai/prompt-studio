@@ -238,10 +238,22 @@
         "fixSessionStarted": "修复会话已启动",
         "fixSessionFailed": "启动修复会话失败"
       },
-      "update": {
-        "action": "更新",
-        "succeeded": "扩展已更新",
-        "failed": "更新被拒绝"
+      "upgrade": {
+        "action": "升级",
+        "succeeded": "扩展已升级",
+        "current": "扩展已是最新",
+        "failed": "扩展升级失败"
+      },
+      "upgradeAll": {
+        "action": "全部升级",
+        "succeeded_other": "已升级 {{count}} 个扩展",
+        "failed_other": "{{count}} 个扩展升级失败"
+      },
+      "reload": {
+        "action": "重新加载",
+        "hint": "源文件夹已更改。重新加载以使用新版本。",
+        "succeeded": "已加载本地更改",
+        "failed": "本地更改被拒绝"
       },
       "automations": {
         "title": "自动化",

@@ -243,10 +243,24 @@
         "fixSessionStarted": "Session de correction démarrée",
         "fixSessionFailed": "Échec du démarrage de la session de correction"
       },
-      "update": {
-        "action": "Mettre à jour",
-        "succeeded": "Extension mise à jour",
-        "failed": "Mise à jour refusée"
+      "upgrade": {
+        "action": "Mettre à niveau",
+        "succeeded": "Extension mise à niveau",
+        "current": "L'extension est déjà à jour",
+        "failed": "Échec de la mise à niveau de l'extension"
+      },
+      "upgradeAll": {
+        "action": "Tout mettre à niveau",
+        "succeeded_one": "{{count}} extension mise à niveau",
+        "succeeded_other": "{{count}} extensions mises à niveau",
+        "failed_one": "{{count}} extension n'a pas pu être mise à niveau",
+        "failed_other": "{{count}} extensions n'ont pas pu être mises à niveau"
+      },
+      "reload": {
+        "action": "Recharger",
+        "hint": "Le dossier source a changé. Rechargez pour utiliser la nouvelle version.",
+        "succeeded": "Modifications locales chargées",
+        "failed": "Modifications locales refusées"
       },
       "automations": {
         "title": "Automatisations",

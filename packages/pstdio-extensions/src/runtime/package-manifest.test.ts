@@ -155,7 +155,7 @@ describe("readPackageManifest validation", () => {
     expect(result.diagnostics[0]?.message).toContain("Update Prompt Studio");
   });
 
-  test("directs an older extension to the extension repair command", () => {
+  test("directs the owner of an older extension to fix its source", () => {
     const dir = createPackage({
       name: "old-extension",
       version: "1.0.0",
@@ -165,7 +165,7 @@ describe("readPackageManifest validation", () => {
     });
     const result = readPackageManifest(dir);
     expect(result.manifest).toBeNull();
-    expect(result.diagnostics[0]?.message).toContain("pst extensions update");
+    expect(result.diagnostics[0]?.message).toContain("engines.pstdio in its package.json");
     expect(result.diagnostics[0]?.message).not.toContain("Update Prompt Studio");
   });
 

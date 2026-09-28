@@ -83,9 +83,11 @@ errors are reported for each checked root.
 | SDK | `SDK_VERSION` from `@pstdio/sdk/extensions` | Versions independently; its package number is not an API compatibility check. |
 | Dashboard | The CLI's bundled dashboard release | Each declared contribution must have a supported host capability. |
 
-An older extension should be updated or reinstalled for the current host. Run
-`pst extensions update` in a linked project to repair host-managed extensions. An extension
-that requires a newer API needs a newer Prompt Studio release or an extension build for this host.
+An extension that targets an older API is repaired where it comes from. A catalog extension is
+upgraded to its build for this host. Any other extension is fixed in its source folder: update the
+code for this API, add the host's API version to `engines.pstdio` in its `package.json`, then reload
+it. An extension that requires a newer API needs a newer Prompt Studio release or an extension build
+for this host.
 
 ## Installing And Updating
 
@@ -97,22 +99,26 @@ Installs and updates are explicit. Source that appears in the extensions root is
 - `pst extensions add <name> --branch <branch>` installs from a branch instead. A branch moves, so
   this is for extension development only.
 - Editing a folder under the extensions root does not change what a project runs. The extension is
-  marked as having an update available, and the project keeps running the version it adopted.
-- Choosing **Update** in the extension panel validates the source on disk and adopts it. If the source
-  is refused, for example because it targets a different `engines.pstdio`, the previously adopted
-  version keeps running and the update stays on offer.
+  marked as having local changes (`updateAvailable`), and the project keeps running the version it
+  adopted.
+- Choosing **Reload** in the extension panel validates the source on disk and adopts it. Nothing is
+  fetched: the source folder is the truth. If the source is refused, for example because it targets
+  a different `engines.pstdio`, the previously adopted version keeps running and Reload stays on offer.
 - A catalog extension shows **Upgrade** when its recorded commit differs from the catalog release.
   Upgrade fetches that origin, validates it in staging, replaces the installed source, and adopts it.
   Healthy local-path extensions stay under local control.
-- `pst extensions update [name]` runs that same host-owned upgrade path for the linked project. When
-  `name` is omitted, it upgrades every instance the host marks as eligible. The command does not
-  replace healthy local sources or change whether an extension is enabled.
+- **Upgrade all** in the extension panel runs Upgrade for every extension that offers it.
+- `pst extensions update [name]` runs that same host-owned upgrade path for the project in the
+  current folder, or the one named with `--project-id`. When `name` is omitted, it upgrades every
+  instance the host marks as eligible. The command does not replace healthy local sources or change
+  whether an extension is enabled.
 - Catalog entries marked `default` are installed for new projects. Catalog membership alone does not
   make an extension a default. The packaged catalog defaults to the harnesses, base themes, and
   Prompt Studio skills.
 - An adopted extension whose `engines.pstdio` does not match the host is shown as an error in the
-  extension list and detail view. The error names both API versions and offers Upgrade when the
-  extension has a catalog origin.
+  extension list and detail view. The error names both API versions. It offers Upgrade when the host
+  can replace the source with a release, and otherwise tells the owner to fix the source and offers
+  Retry and Attempt fix.
 
 The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to a local JSON file or
 an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is

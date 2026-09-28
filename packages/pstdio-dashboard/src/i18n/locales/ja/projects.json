@@ -238,10 +238,22 @@
         "fixSessionStarted": "修正セッションを開始しました",
         "fixSessionFailed": "修正セッションの開始に失敗しました"
       },
-      "update": {
-        "action": "更新",
-        "succeeded": "拡張機能を更新しました",
-        "failed": "更新は拒否されました"
+      "upgrade": {
+        "action": "アップグレード",
+        "succeeded": "拡張機能をアップグレードしました",
+        "current": "拡張機能はすでに最新です",
+        "failed": "拡張機能をアップグレードできませんでした"
+      },
+      "upgradeAll": {
+        "action": "すべてアップグレード",
+        "succeeded_other": "{{count}} 件の拡張機能をアップグレードしました",
+        "failed_other": "{{count}} 件の拡張機能をアップグレードできませんでした"
+      },
+      "reload": {
+        "action": "再読み込み",
+        "hint": "ソースフォルダーが変更されました。新しいバージョンを使うには再読み込みしてください。",
+        "succeeded": "ローカルの変更を読み込みました",
+        "failed": "ローカルの変更は拒否されました"
       },
       "automations": {
         "title": "自動化",

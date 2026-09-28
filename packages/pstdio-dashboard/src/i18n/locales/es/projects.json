@@ -243,10 +243,24 @@
         "fixSessionStarted": "Sesión de corrección iniciada",
         "fixSessionFailed": "Error al iniciar la sesión de corrección"
       },
-      "update": {
-        "action": "Actualizar",
+      "upgrade": {
+        "action": "Actualizar versión",
         "succeeded": "Extensión actualizada",
-        "failed": "Actualización rechazada"
+        "current": "La extensión ya está al día",
+        "failed": "No se pudo actualizar la extensión"
+      },
+      "upgradeAll": {
+        "action": "Actualizar todas",
+        "succeeded_one": "{{count}} extensión actualizada",
+        "succeeded_other": "{{count}} extensiones actualizadas",
+        "failed_one": "No se pudo actualizar {{count}} extensión",
+        "failed_other": "No se pudieron actualizar {{count}} extensiones"
+      },
+      "reload": {
+        "action": "Recargar",
+        "hint": "La carpeta de origen cambió. Recarga para usar la nueva versión.",
+        "succeeded": "Cambios locales cargados",
+        "failed": "Cambios locales rechazados"
       },
       "automations": {
         "title": "Automatizaciones",

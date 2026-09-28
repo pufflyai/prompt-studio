@@ -130,7 +130,7 @@ const meta: Meta<typeof ExtensionDetail> = {
     onToggleAutomation: noop,
     onChangeSetting: noop,
     onRetry: noop,
-    onUpdate: noop,
+    onReload: noop,
     onUpgrade: noop,
     onAttemptFix: noop,
     onUninstall: noop,
@@ -175,7 +175,8 @@ export const ConflictingSourceFolder: Story = {
   },
 };
 
-export const UpdateAvailable: Story = {
+// A local source folder changed. Reloading adopts it; nothing is fetched from a release.
+export const LocalChangesWaiting: Story = {
   args: {
     extension: { ...extension, updateAvailable: true },
   },
@@ -183,7 +184,12 @@ export const UpdateAvailable: Story = {
 
 export const UpgradeAvailable: Story = {
   args: {
-    extension: { ...extension, canUpgrade: true },
+    extension: {
+      ...extension,
+      canUpgrade: true,
+      scope: "global",
+      sourcePath: "/home/user/.pstdio/extensions/pstdio-planner",
+    },
   },
 };
 
@@ -192,11 +198,33 @@ export const IncompatibleApi: Story = {
     extension: {
       ...extension,
       canUpgrade: true,
+      scope: "global",
+      sourcePath: "/home/user/.pstdio/extensions/pstdio-planner",
       status: "error",
       lastError: {
         code: "extension_manifest_unsupported_api_version",
         message:
-          'Extension "pstdio-planner" was built for extension API 1.0.0-alpha.3, but this host provides 1.0.0-alpha.8. Update the extension with `pst extensions update pstdio-planner`, or reinstall it with `pst extensions add`.',
+          'Extension "pstdio-planner" targets extension API 1.0.0-alpha.3 but this host provides 1.0.0-alpha.13. Upgrade the extension to its build for this host.',
+      },
+    },
+  },
+};
+
+// A local source is fixed where it lives, so the alert offers Retry and Attempt fix instead of Upgrade.
+export const IncompatibleLocalSource: Story = {
+  args: {
+    extension: {
+      ...extension,
+      displayName: "Font Editor",
+      extensionId: "pstdio.font-editor",
+      installName: "font-editor",
+      name: "font-editor",
+      sourcePath: "/repo/.pstdio/extensions/font-editor",
+      status: "error",
+      lastError: {
+        code: "extension_manifest_unsupported_api_version",
+        message:
+          'Extension "font-editor" targets extension API 1.0.0-alpha.5 but this host provides 1.0.0-alpha.13. Fix the extension source: make it work with extension API 1.0.0-alpha.13, then add "1.0.0-alpha.13" to engines.pstdio in its package.json.',
       },
     },
   },

@@ -240,16 +240,24 @@
         "fixSessionStarted": "Fix session started",
         "fixSessionFailed": "Failed to start fix session"
       },
-      "update": {
-        "action": "Update",
-        "succeeded": "Extension updated",
-        "failed": "Update refused"
-      },
       "upgrade": {
-        "action": "Update",
-        "succeeded": "Extension updated",
+        "action": "Upgrade",
+        "succeeded": "Extension upgraded",
         "current": "Extension is already current",
-        "failed": "Extension update failed"
+        "failed": "Extension upgrade failed"
+      },
+      "upgradeAll": {
+        "action": "Upgrade all",
+        "succeeded_one": "{{count}} extension upgraded",
+        "succeeded_other": "{{count}} extensions upgraded",
+        "failed_one": "{{count}} extension could not be upgraded",
+        "failed_other": "{{count}} extensions could not be upgraded"
+      },
+      "reload": {
+        "action": "Reload",
+        "hint": "The source folder changed. Reload to use the new version.",
+        "succeeded": "Local changes loaded",
+        "failed": "Local changes refused"
       },
       "automations": {
         "title": "Automations",

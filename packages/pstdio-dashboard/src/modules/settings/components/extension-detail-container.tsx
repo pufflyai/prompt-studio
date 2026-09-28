@@ -48,17 +48,17 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     (diagnostic) => diagnostic.extensionId === extension.extensionId,
   );
 
-  // Taking an update adopts the source waiting on disk, which is the same operation as reloading a
-  // failed source: validate what is there now, then adopt it. Only the wording differs.
-  const handleUpdate = () => {
+  // Adopting the source waiting on disk is the same operation as retrying a failed source: validate
+  // what is there now, then adopt it. Only the wording differs.
+  const handleReload = () => {
     reload.mutate(
       { instanceId: extension.id },
       {
         onSuccess: (updated) => {
           toaster.create(
             updated.status === "loaded"
-              ? { type: "success", title: t("projectSettings.extensionsPanel.update.succeeded") }
-              : { type: "error", title: t("projectSettings.extensionsPanel.update.failed") },
+              ? { type: "success", title: t("projectSettings.extensionsPanel.reload.succeeded") }
+              : { type: "error", title: t("projectSettings.extensionsPanel.reload.failed") },
           );
         },
       },
@@ -152,7 +152,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         settings={settingsQuery.data?.settings ?? []}
         toggling={setEnabled.isPending}
         retrying={reload.isPending}
-        updating={reload.isPending}
+        reloading={reload.isPending}
         upgrading={upgrade.isPending}
         fixing={attemptFix.isPending}
         uninstalling={uninstall.isPending}
@@ -166,7 +166,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         }
         onChangeSetting={(key, value) => updateSetting.mutate({ instanceId: extension.id, key, value })}
         onRetry={handleRetry}
-        onUpdate={handleUpdate}
+        onReload={handleReload}
         onUpgrade={handleUpgrade}
         onAttemptFix={handleAttemptFix}
         onUninstall={() => setConfirmingUninstall(true)}

@@ -188,7 +188,17 @@ const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, p
   return resolved;
 };
 
-export const getExtensionApiVersionError = (name: string, declared: string) => {
+const apiVersionRepair = (targetsOlderApi: boolean, upgradable: boolean) => {
+  if (!targetsOlderApi) return "Update Prompt Studio, or use a build of the extension for this host.";
+  if (upgradable) return "Upgrade the extension to its build for this host.";
+  return `Fix the extension source: make it work with extension API ${EXTENSION_API_VERSION}, then add "${EXTENSION_API_VERSION}" to engines.pstdio in its package.json.`;
+};
+
+/**
+ * `upgradable` means the host can replace this source with a release built for it. Any other
+ * source is owned by whoever wrote it, so the advice is to fix the source itself.
+ */
+export const getExtensionApiVersionError = (name: string, declared: string, options: { upgradable?: boolean } = {}) => {
   const versions = parseExtensionApiVersions(declared);
   if (versions?.includes(EXTENSION_API_VERSION)) return null;
 
@@ -196,10 +206,8 @@ export const getExtensionApiVersionError = (name: string, declared: string) => {
     return `Extension "${name}" declares engines.pstdio "${declared}". List exact supported API versions separated by "||", including "${EXTENSION_API_VERSION}". Ranges and wildcards are not supported.`;
   }
 
-  const repair = versions.every((version) => Bun.semver.order(version, EXTENSION_API_VERSION) < 0)
-    ? "Run `pst extensions update` from a linked project to repair host-managed extensions, or update this extension to a build for this host."
-    : "Update Prompt Studio, or install a build of the extension for this host.";
-  return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. ${repair}`;
+  const targetsOlderApi = versions.every((version) => Bun.semver.order(version, EXTENSION_API_VERSION) < 0);
+  return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. ${apiVersionRepair(targetsOlderApi, options.upgradable === true)}`;
 };
 
 export const readPackageManifestMetadata = (packageDir: string): ReadPackageManifestResult => {

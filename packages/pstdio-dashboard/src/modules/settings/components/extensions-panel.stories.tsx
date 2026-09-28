@@ -4,7 +4,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ExtensionsPanelView } from "./extensions-panel";
+import { ExtensionsPanelView } from "./extensions-panel-view";
 
 const installedExtensions: ProjectExtensionInstance[] = [
   {
@@ -188,5 +188,35 @@ export const HealthPopoverOpen: Story = {
   },
   play: async ({ canvasElement }) => {
     canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
+  },
+};
+
+// At least one extension can take a newer release, so the header offers one action for all of them.
+export const UpgradesAvailable: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    onUpgradeAll: () => {},
+  },
+};
+
+export const UpgradingAll: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    upgradingAll: true,
+  },
+};
+
+export const NothingToUpgrade: Story = {
+  args: {
+    extensions: installedExtensions.map((extension) => ({ ...extension, canUpgrade: false })),
+    marketplace,
+    diagnostics: [],
+    automations,
   },
 };
