@@ -392,6 +392,37 @@ describe("extensionService", () => {
     expect(second.installedSource.source_ref).toBe("https://example/repo#main:planner");
   });
 
+  test("clears source_ref when a reinstall comes from a source without one", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner-local",
+      extensionId: "pstdio.planner-local",
+      name: "planner-local",
+      displayName: "Planner",
+      sourceKind: "git",
+      sourcePath: "/extensions/planner-local",
+      sourceRef: "https://example/repo#main:planner",
+      manifest: {},
+    });
+
+    const second = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner-local",
+      extensionId: "pstdio.planner-local",
+      name: "planner-local",
+      displayName: "Planner",
+      sourceKind: "local_path",
+      sourcePath: "/extensions/planner-local",
+      sourceRef: null,
+      manifest: {},
+    });
+
+    expect(second.installedSource.source_kind).toBe("local_path");
+    expect(second.installedSource.source_ref).toBeNull();
+  });
+
   test("emits the removed project instance row with its scope", async () => {
     const eventBus = new EventBus();
     const events: Array<{ table: string; op: string; data: unknown }> = [];
