@@ -1,5 +1,14 @@
 # pstdio-planner
 
+## 0.36.1
+
+_2026-09-28_
+
+### Patch Changes
+
+- a4f8c23: Ship a lockfile so installs download only runtime dependencies.
+- d54b7aa: The implement-ticket skill now writes PR descriptions with the repository PR template.
+
 ## 0.36.0
 
 _2026-09-28_

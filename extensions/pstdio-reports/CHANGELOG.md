@@ -1,5 +1,13 @@
 # pstdio-reports
 
+## 0.36.1
+
+_2026-09-28_
+
+### Patch Changes
+
+- a4f8c23: Ship a lockfile so installs download only runtime dependencies.
+
 ## 0.36.0
 
 _2026-09-28_
