@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { app, autoUpdater, clipboard, dialog, ipcMain, Menu, protocol, shell } from "electron";
-import electronSquirrelStartup from "electron-squirrel-startup";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
 import { createMacOSCliSetup } from "./cli/macos-cli-setup";
+import { runWindowsInstallerEvent, windowsInstallerEvent } from "./cli/windows-installer";
 import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
 import { registerDesktopIpc } from "./ipc/register-desktop-ipc";
 import {
@@ -310,8 +310,15 @@ const bootstrap = async () => {
   void cliSetup?.onFirstLaunch();
 };
 
-if (electronSquirrelStartup) {
-  app.quit();
+const installerEvent = app.isPackaged ? windowsInstallerEvent(process.platform, process.argv) : null;
+if (installerEvent) {
+  void runWindowsInstallerEvent(installerEvent, process.execPath, process.resourcesPath).then(
+    () => app.exit(0),
+    (error) => {
+      logger.error({ event: "desktop.install.failed", message: String(error) }, "Desktop installation failed");
+      app.exit(1);
+    },
+  );
 } else if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
