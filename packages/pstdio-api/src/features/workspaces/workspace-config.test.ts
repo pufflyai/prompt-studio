@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
@@ -80,6 +80,17 @@ describe("workspace config ownership", () => {
   it("names the other project when the folder belongs to it", async () => {
     await writeConfig(repoPath, { project_id: "other-project", workspace_id: "other-workspace" });
     await expect(ensure(repoPath, homeId)).rejects.toThrow("other-project");
+  });
+
+  it("keeps a project-only config that another workspace of the project owns through an alias", async () => {
+    const alias = `${worktreePath}-alias`;
+    await symlink(worktreePath, alias);
+    await host.deps.workspaceService.createStandalone({ project_id: projectId, root_path: alias });
+    await writeConfig(worktreePath, { project_id: projectId });
+    const error = await ensure(worktreePath, workspaceId).catch((reason: Error) => reason);
+    rmSync(alias, { force: true });
+    expect(error?.message).not.toContain("undefined");
+    expect(readConfig(worktreePath)).toEqual({ project_id: projectId });
   });
 
   it("allows only one owner when independent hosts race for an empty folder", async () => {

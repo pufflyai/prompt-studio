@@ -70,11 +70,12 @@ const canReplaceConfig = async (deps: ConfigDeps, base: Config, dir: string, wor
 
 const ownershipError = (path: string, base: Config | null, projectId: string) => {
   if (!base) return `${path} is not a valid Prompt Studio folder config. Fix or delete it to set up the folder here.`;
-  const owner =
-    base.project_id === projectId
-      ? `workspace ${base.workspace_id} of this project`
-      : `another Prompt Studio project (project ${base.project_id})`;
-  return `This folder is already set up for ${owner}. Open it from there, or delete ${path} to set up the folder here.`;
+  const fix = `Open it from there, or delete ${path} to set up the folder here.`;
+  if (base.project_id !== projectId)
+    return `This folder is already set up for another Prompt Studio project (project ${base.project_id}). ${fix}`;
+  // Older configs name only the project, so the owning workspace may be unknown.
+  const workspace = base.workspace_id ? `workspace ${base.workspace_id}` : "another workspace";
+  return `This folder is already set up for ${workspace} of this project. ${fix}`;
 };
 
 export const ensureWorkspaceConfig = async (
