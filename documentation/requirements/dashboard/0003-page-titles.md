@@ -3,7 +3,7 @@ status: "proposed"
 created: "2026-03-18T12:00:00Z"
 ---
 
-# Dashboard browser page titles
+# PRD: Dashboard browser page titles
 
 ## Status
 

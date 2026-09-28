@@ -20,16 +20,16 @@ import { qualifyRef } from "@pstdio/sdk/extensions";
 const ticketPage = qualifyRef("pstdio.pstdio-planner", { kind: "page", id: "ticket" });
 
 await ctx.notify.action({
-  title: "Review proposal: PS-42",
-  body: "The proposal is ready for approval.",
+  title: "Review PRD: PS-42",
+  body: "The PRD is ready for approval.",
   kind: "needs_review",
   priority: "high",
   target: { type: "ticket", id: "ticket-42", label: "PS-42" },
-  dedupeKey: "pstdio-planner:ticket:PS-42:proposal-refined",
+  dedupeKey: "pstdio-planner:ticket:PS-42:prd-refined",
   actions: [
     {
       id: "review",
-      label: "Review proposal",
+      label: "Review PRD",
       kind: "navigate",
       target: { kind: "page", page: ticketPage, resource: { type: "ticket", id: "ticket-42" } },
       primary: true,
@@ -64,4 +64,4 @@ await ctx.notify.resolve({
 });
 ```
 
-Use `resolve` for state-driven completion such as proposal approved, workspace merged, or ticket leaving blocked. Use `dismiss` only when the producer wants to remove an item without claiming the underlying work is complete.
+Use `resolve` for state-driven completion such as PRD approved, workspace merged, or ticket leaving blocked. Use `dismiss` only when the producer wants to remove an item without claiming the underlying work is complete.

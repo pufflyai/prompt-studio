@@ -1,4 +1,4 @@
-# Beta features
+# PRD: Beta features
 
 Open Settings → Experimental → Beta features to enable Notifications. The page uses a flask icon. Notifications start disabled on new and existing installations. The setting applies to every project and dashboard connected to this installation.
 

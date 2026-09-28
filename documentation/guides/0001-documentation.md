@@ -23,7 +23,7 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 | --- | --- |
 | `guides` | Setup, development, testing, and task walkthroughs |
 | `references` | API contracts, CLI commands, schemas, and architecture |
-| `requirements` | Product requirements, with current/proposed/superseded status |
+| `requirements` | PRDs (product requirements documents), with current or proposed status |
 | `adrs` | Architecture decisions, including temporary limitations and removal criteria |
 | `lessons-learned` | Diagnosed failures and rules that prevent recurrence |
 
@@ -31,7 +31,7 @@ Use topic folders within categories. References are grouped into `architecture/`
 
 Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
 
-Use relative Markdown links so these pages work in repository browsers and editors. Treat source-linked type declarations as the signature authority. Requirements marked proposed describe future behavior; superseded records explain retired decisions.
+Use relative Markdown links so these pages work in repository browsers and editors. Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
 
 ## Guides
 
@@ -125,36 +125,34 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0003 — Contribution ownership](../references/workbench/0003-contribution-ownership.md)
 - [0004 — Workbench navigation](../references/workbench/0004-navigation.md)
 
-## Requirements
+## PRDs
 
 ### API
 
-- [0001 — Product Requirements Document: API and Runtime Logs](../requirements/api/0001-error-logs.md)
+- [0001 — PRD: API and Runtime Logs](../requirements/api/0001-error-logs.md)
 
 ### CLI
 
-- [0001 — CLI feedback and help](../requirements/cli/0001-feedback.md)
-- [0002 — Superseded: generalized cross-session follow-up](../requirements/cli/0002-proposals-cross-session-follow-up.md)
+- [0001 — PRD: CLI feedback and help](../requirements/cli/0001-feedback.md)
 
 ### Dashboard
 
-- [0001 — Beta features](../requirements/dashboard/0001-beta-features.md)
-- [0002 — Repository documentation and the retired core docs panel](../requirements/dashboard/0002-documentation.md)
-- [0003 — Dashboard browser page titles](../requirements/dashboard/0003-page-titles.md)
-- [0004 — Product Requirements Document: Dashboard Sessions](../requirements/dashboard/0004-sessions.md)
-- [0005 — Dashboard settings and folder projects](../requirements/dashboard/0005-settings.md)
+- [0001 — PRD: Beta features](../requirements/dashboard/0001-beta-features.md)
+- [0003 — PRD: Dashboard browser page titles](../requirements/dashboard/0003-page-titles.md)
+- [0004 — PRD: Dashboard Sessions](../requirements/dashboard/0004-sessions.md)
+- [0005 — PRD: Dashboard settings and folder projects](../requirements/dashboard/0005-settings.md)
 
 ### Extensions
 
-- [0001 — Project extension runtime snapshot requirements](../requirements/extensions/0001-runtime-snapshots.md)
+- [0001 — PRD: Project extension runtime snapshot requirements](../requirements/extensions/0001-runtime-snapshots.md)
 
 ### Platform
 
-- [0001 — Cross-Platform Support](../requirements/platform/0001-cross-platform-support.md)
-- [0002 — Desktop distribution and updates](../requirements/platform/0002-desktop-distribution.md)
-- [0003 — Product Requirements Document: Real-time Updates](../requirements/platform/0003-realtime-updates.md)
-- [0004 — Templates and skills](../requirements/platform/0004-templates-and-skills.md)
-- [0005 — Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
+- [0001 — PRD: Cross-Platform Support](../requirements/platform/0001-cross-platform-support.md)
+- [0002 — PRD: Desktop distribution and updates](../requirements/platform/0002-desktop-distribution.md)
+- [0003 — PRD: Real-time Updates](../requirements/platform/0003-realtime-updates.md)
+- [0004 — PRD: Templates and skills](../requirements/platform/0004-templates-and-skills.md)
+- [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
 
 ## ADRs
 

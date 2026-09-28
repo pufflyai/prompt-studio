@@ -3,7 +3,7 @@ status: "draft"
 created: "2026-03-10T20:12:05Z"
 ---
 
-# Product Requirements Document: Dashboard Sessions
+# PRD: Dashboard Sessions
 
 ## Summary
 

@@ -3,7 +3,7 @@ status: "draft"
 created: "2026-03-10T20:12:05Z"
 ---
 
-# CLI feedback and help
+# PRD: CLI feedback and help
 
 This page defines how the CLI responds to missing subcommands, unknown commands, and invalid arguments.
 

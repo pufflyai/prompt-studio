@@ -1,4 +1,4 @@
-# Desktop distribution and updates
+# PRD: Desktop distribution and updates
 
 Prompt Studio publishes desktop installers on the same GitHub release as the
 matching `pstdio` runtime. A desktop application and its bundled sidecar always

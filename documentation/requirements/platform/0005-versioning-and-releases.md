@@ -3,7 +3,7 @@ status: "accepted"
 created: "2026-03-10T20:12:05Z"
 ---
 
-# Versioning and releases
+# PRD: Versioning and releases
 
 Prompt Studio ships one version across pstdio, SDK, UI, workbench, desktop and every core extension. Changesets owns their versions through one fixed group in `.changeset/config.json`. See [ADR 0031](../../adrs/0031-release-all-core-packages-under-one-version.md).
 

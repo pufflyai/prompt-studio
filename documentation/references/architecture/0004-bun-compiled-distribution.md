@@ -1,6 +1,6 @@
 # Compiled CLI distribution
 
-The CLI is built from `packages/pstdio/src/index.ts` with Bun's standalone compiler. The same executable runs commands and the shared API/dashboard runtime. This page describes the implemented build, replacing the original pre-implementation proposal.
+The CLI is built from `packages/pstdio/src/index.ts` with Bun's standalone compiler. The same executable runs commands and the shared API/dashboard runtime. This page describes the implemented build.
 
 ## Runtime entry points
 

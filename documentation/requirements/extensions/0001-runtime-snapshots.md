@@ -3,7 +3,7 @@ status: "current"
 created: "2026-08-18T17:03:48.668Z"
 ---
 
-# Project extension runtime snapshot requirements
+# PRD: Project extension runtime snapshot requirements
 
 ## Problem
 

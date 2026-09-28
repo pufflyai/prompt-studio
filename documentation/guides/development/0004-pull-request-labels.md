@@ -46,7 +46,7 @@ Opening, reopening, pushing commits, editing the base, and editing labels also r
 
 ## Current enforcement and merge queue
 
-PS-78 implements Planner proposal PS-76. As checked on 2026-09-28, the active `main` ruleset uses a merge queue and requires `ci_passed`. It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
+PS-78 implements PRD PS-76. As checked on 2026-09-28, the active `main` ruleset uses a merge queue and requires `ci_passed`. It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
 
 The area-label workflow evaluates pull request heads and manual dispatches. It does not handle `merge_group` or publish a separation status on a queue group. Before requiring this context for queued merges, add group handling that evaluates each constituent PR independently. Separate SDK-only and extension-only PRs in one group must remain valid.
 

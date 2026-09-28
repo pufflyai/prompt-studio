@@ -4,7 +4,7 @@ status: "draft"
 created: "2026-03-25T07:17:32.006Z"
 ---
 
-# Cross-Platform Support
+# PRD: Cross-Platform Support
 
 ## Summary
 

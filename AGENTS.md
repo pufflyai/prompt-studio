@@ -262,7 +262,8 @@ If a job times out, report what became slower and by how much. Then fix the slow
 - Use `guides/` for setup and workflows, `references/` for APIs and architecture, `requirements/` for PRDs, `adrs/` for decisions, and `lessons-learned/` for recurring failures.
 - Group related documents in topic folders, such as `references/architecture/`, `references/sdk/`, `guides/development/`, and `requirements/dashboard/`. Do not repeat the folder's topic in every filename.
 - Every document uses `NNNN-kebab-case.md`. Number independently within each folder, keep assigned numbers stable, and use the next available number in that folder. Keep ADRs and lessons in their existing folders and do not reuse their removed numbers.
-- Update links and check claims against current source when changing documentation. Clearly mark proposed or superseded requirements.
+- Call requirements documents PRDs (product requirements documents), not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Keep remaining document numbers stable after deletion.
+- Update links and check claims against current source when changing documentation.
 
 - Use the pstdio command-line tool to manage tickets.
 - After editing a ticket, save it with `pst tickets save --id PS-XXX`.
