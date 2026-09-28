@@ -36,7 +36,9 @@ export const composeOpencodeSnapshot = (known: readonly SessionMessage[], native
   return newTurns.flatMap((turn) => {
     const prompt = submittedPrompt(turn[0]);
     let previous = synthetic(turn[0]) ? undefined : byId.get(turn[0].id);
-    if (previous && submittedPrompt(previous[0]) !== prompt) throw new HistoryConflict("conflicting_user_content");
+    // OpenCode saves a message before its parts, so an earlier poll may have seen the
+    // prompt half-written. OpenCode owns that text, so its current version wins.
+    const promptChanged = previous !== undefined && submittedPrompt(previous[0]) !== prompt;
     if (!previous) {
       const matches = (byPrompt.get(prompt) ?? []).filter((candidate) => synthetic(candidate[0]) || synthetic(turn[0]));
       if (matches.length === 1 && newCounts.get(prompt) === 1) previous = matches[0];
@@ -51,6 +53,7 @@ export const composeOpencodeSnapshot = (known: readonly SessionMessage[], native
     if (!previous) return turn;
     const oldMessages = new Map(previous.map((message) => [message.id, message]));
     const merged = turn.map((message, index) => {
+      if (index === 0 && promptChanged) return message;
       const old = index === 0 ? previous[0] : oldMessages.get(message.id);
       return old ? mergeHistoryMetadata(old, message) : message;
     });

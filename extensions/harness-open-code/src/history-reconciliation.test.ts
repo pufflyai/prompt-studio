@@ -46,3 +46,9 @@ test("a positional OpenCode id cannot hand a removed turn's attachment to the tu
   // OpenCode dropped the first turn, so the second turn now sits at position 0.
   expect(() => composeOpencodeSnapshot([attached, second], [positional(0)])).toThrow(HistoryConflict);
 });
+
+test("a prompt OpenCode is still writing takes its finished text on the next poll", () => {
+  const writing: SessionMessage = { id: "msg_1", role: "user", parts: [] };
+  const written: SessionMessage = { ...writing, parts: [{ type: "text", text: "hello" }] };
+  expect(composeOpencodeSnapshot([writing, failure], [written])).toEqual([written, failure]);
+});

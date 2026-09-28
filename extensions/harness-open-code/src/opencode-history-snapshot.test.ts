@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { SessionMessage } from "@pstdio/sdk/extensions";
-import { appendFailureMessage, readSessionSnapshot } from "./opencode-session-poller";
-import { recordingSink, userMessage } from "./opencode-session-poller.test-helpers";
+import { appendFailureMessage, pollOpencodeMessages, readSessionSnapshot } from "./opencode-session-poller";
+import { completedAssistant, recordingSink, userMessage } from "./opencode-session-poller.test-helpers";
 
 const failure: SessionMessage = {
   id: "opencode-error-s-1",
@@ -21,7 +21,6 @@ test("a poll reads the current owner after its native read finishes", async () =
     loadMessages: () => native.promise,
     lastObserved: [],
     lastSnapshot: "",
-    latestMessages: [],
   });
   sink.push({ op: "replace", path: "/messages", value: [user, failure] });
   native.resolve([userMessage("again")]);
@@ -41,7 +40,6 @@ test("ambiguous poll metadata reports a history issue without publishing a repla
       loadMessages: async () => [userMessage("again"), userMessage("again")],
       lastObserved: [],
       lastSnapshot: "",
-      latestMessages: [],
     }),
   ).rejects.toThrow();
   expect(sink.getMessages()).toEqual([user, failure]);
@@ -53,4 +51,19 @@ test("a generated failure appends to the current conversation", () => {
   sink.push({ op: "replace", path: "/messages", value: [user, failure] });
   appendFailureMessage({ events: sink, sessionId: "s", failureMessage: "new failure" });
   expect(sink.getMessages().slice(0, 2)).toEqual([user, failure]);
+});
+
+test("an earlier generated failure does not fail a later successful turn", async () => {
+  const { sink } = recordingSink();
+  sink.push({ op: "replace", path: "/messages", value: [user, failure] });
+  const result = await pollOpencodeMessages({
+    events: sink,
+    sessionId: "s",
+    cwd: undefined,
+    loadMessages: async () => [userMessage("again"), userMessage("retry"), completedAssistant("done")],
+    baselineCount: 1,
+    messageComplete: Promise.resolve(),
+  });
+  expect(sink.getMessages()).toContainEqual(failure);
+  expect(result).toEqual({ status: "completed" });
 });

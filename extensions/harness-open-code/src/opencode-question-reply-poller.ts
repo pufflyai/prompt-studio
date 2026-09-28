@@ -7,6 +7,7 @@ import {
   disconnectStaleTurn,
   failTurn,
   hasErrorParts,
+  nativeMessages,
   OPENCODE_STALE_TURN_TIMEOUT_MS,
   type PollSnapshot,
   type PostState,
@@ -24,7 +25,6 @@ const OPENCODE_QUESTION_REPLY_IDLE_GRACE_MS = 10_000;
 
 interface QuestionReplyPollState {
   lastSnapshot: string;
-  latestMessages: SessionMessage[];
   lastObserved: OpencodeSessionMessage[];
   lastProgressAt: number | null;
   terminalSnapshot: string | null;
@@ -39,7 +39,6 @@ interface QuestionReplyPollSignals {
 
 const createQuestionReplyPollState = () => ({
   lastSnapshot: "",
-  latestMessages: [],
   lastObserved: [],
   lastProgressAt: null,
   terminalSnapshot: null,
@@ -132,7 +131,6 @@ const markQuestionToolAnswered = (input: {
 const applyQuestionReplySnapshot = (state: QuestionReplyPollState, snapshot: PollSnapshot) => {
   state.lastObserved = snapshot.lastObserved;
   state.lastSnapshot = snapshot.lastSnapshot;
-  state.latestMessages = snapshot.latestMessages;
 };
 
 const trackQuestionReplyProgress = (state: QuestionReplyPollState, snapshotChanged: boolean, now: number) => {
@@ -239,7 +237,6 @@ export const pollOpencodeQuestionReply = async (input: {
       events,
       lastObserved: state.lastObserved,
       lastSnapshot: state.lastSnapshot,
-      latestMessages: state.latestMessages,
     });
     applyQuestionReplySnapshot(state, snapshot);
 
@@ -281,12 +278,15 @@ export const pollOpencodeQuestionReply = async (input: {
     });
   }
 
-  if (isFailedQuestionStatus(replyState?.status) || hasErrorParts(state.latestMessages)) {
+  const messages = nativeMessages(state.lastObserved);
+  // Only the answered turn decides the outcome; earlier turns may have failed on their own.
+  const questionIndex = state.lastObserved.findIndex((message) => getQuestionReplyState([message], questionTool));
+  if (isFailedQuestionStatus(replyState?.status) || hasErrorParts(messages.slice(Math.max(questionIndex, 0)))) {
     return failTurn(events);
   }
 
-  const answeredMessages = markQuestionToolAnswered({ messages: state.latestMessages, questionTool, questionResponse });
-  if (answeredMessages !== state.latestMessages) {
+  const answeredMessages = markQuestionToolAnswered({ messages, questionTool, questionResponse });
+  if (answeredMessages !== messages) {
     events.push({ op: "replace", path: "/messages", value: composeOwnedOpencodeSnapshot(events, answeredMessages) });
   }
 
