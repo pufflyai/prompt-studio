@@ -1,5 +1,6 @@
-import type { SessionMessage } from "@pstdio/ui/chat-ui";
+import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { SessionAttachment } from "pstdio-api-contracts";
+import type { SessionNotice } from "../data/session-notice";
 
 export type PendingFollowUpState = {
   prompt: string;
@@ -8,6 +9,9 @@ export type PendingFollowUpState = {
   assistantMessageId: string;
   sessionId: string | null;
   attachments?: SessionAttachment[];
+  questionResponse?: ChatInputQuestionResponse;
+  // Set when the message could not be sent; it then stays in the conversation until resent or removed.
+  failure?: SessionNotice;
 };
 
 export const createPendingFollowUpState = (input: {
@@ -16,6 +20,7 @@ export const createPendingFollowUpState = (input: {
   pendingId: string;
   sessionId?: string | null;
   attachments?: SessionAttachment[];
+  questionResponse?: ChatInputQuestionResponse;
 }): PendingFollowUpState => {
   return {
     prompt: input.prompt,
@@ -24,8 +29,16 @@ export const createPendingFollowUpState = (input: {
     assistantMessageId: `${input.pendingId}-assistant`,
     sessionId: input.sessionId ?? null,
     attachments: input.attachments,
+    questionResponse: input.questionResponse,
   };
 };
+
+// Only the submission that failed is marked; a newer submission keeps its own state.
+export const failPendingFollowUp = (
+  current: PendingFollowUpState | null,
+  pending: PendingFollowUpState,
+  failure: SessionNotice,
+) => (current?.userMessageId === pending.userMessageId ? { ...current, failure } : current);
 
 const attachmentParts = (attachments: SessionAttachment[] = []) =>
   attachments.map((attachment) => ({
@@ -48,12 +61,14 @@ export const assignPendingFollowUpSession = (
 };
 
 export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState): SessionMessage[] => {
+  const userMessage: SessionMessage = {
+    id: pending.userMessageId,
+    role: "user",
+    parts: [{ type: "text", text: pending.prompt }, ...attachmentParts(pending.attachments)],
+  };
+  if (pending.failure) return [{ ...userMessage, delivery: "unsent" }];
   return [
-    {
-      id: pending.userMessageId,
-      role: "user",
-      parts: [{ type: "text", text: pending.prompt }, ...attachmentParts(pending.attachments)],
-    },
+    userMessage,
     {
       id: pending.assistantMessageId,
       role: "assistant",

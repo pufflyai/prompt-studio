@@ -1,6 +1,7 @@
 import { Box, Button, Icon, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
+import { AlertMessage } from "@/components/primitives/alert";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 import { ChatWorkspaceHub } from "./workspace-hub";
@@ -212,6 +213,77 @@ export const WorkspaceSetupFailed: Story = {
           </Button>
         }
       />
+    ),
+  },
+};
+
+const retry = (
+  <Button size="2xs" variant="outline">
+    Retry
+  </Button>
+);
+
+const sentConversation: SessionMessage[] = [
+  { id: "user-sent", role: "user", parts: [{ type: "text", text: "Check the board" }], createdAt: Date.now() - 60_000 },
+  { id: "assistant-reply", role: "assistant", parts: [{ type: "text", text: "The board has 32 active tickets." }] },
+];
+
+// The chat has no banners: problems appear in the conversation, where the user is looking.
+export const MessageNotSent: Story = {
+  render: (args) => (
+    <Box {...container}>
+      <ChatPanel {...args} />
+    </Box>
+  ),
+  args: {
+    ...baseArgs,
+    messages: [
+      ...sentConversation,
+      {
+        id: "user-unsent",
+        role: "user",
+        parts: [{ type: "text", text: "Summarize the open tickets." }],
+        delivery: "unsent",
+      },
+    ],
+    conversationNotices: (
+      <AlertMessage status="error" title="Message not sent" onClose={() => {}} endElement={retry}>
+        The network is unavailable.
+      </AlertMessage>
+    ),
+  },
+};
+
+export const ConversationCouldNotLoad: Story = {
+  render: (args) => (
+    <Box {...container}>
+      <ChatPanel {...args} />
+    </Box>
+  ),
+  args: {
+    ...baseArgs,
+    messages: sentConversation,
+    conversationNotices: (
+      <AlertMessage status="error" title="Could not load conversation" onClose={() => {}} endElement={retry}>
+        The server had a temporary problem.
+      </AlertMessage>
+    ),
+  },
+};
+
+export const ConversationGone: Story = {
+  render: (args) => (
+    <Box {...container}>
+      <ChatPanel {...args} />
+    </Box>
+  ),
+  args: {
+    ...baseArgs,
+    messages: [],
+    conversationNotices: (
+      <AlertMessage status="error" title="Could not load conversation" onClose={() => {}}>
+        This session no longer exists.
+      </AlertMessage>
     ),
   },
 };

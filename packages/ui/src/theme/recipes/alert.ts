@@ -25,17 +25,6 @@ export const alertSlotRecipe = defineSlotRecipe({
       textStyle: "paragraph/S/regular",
     },
   },
-  variants: {
-    // Chakra's alert recipe styles these; they are listed so the compound variants below can name them.
-    status: { info: {}, warning: {}, success: {}, error: {}, neutral: {} },
-    variant: { subtle: {}, surface: {}, outline: {}, solid: {} },
-    // A banner spans the edge of its panel, so it has square corners.
-    layout: {
-      inline: {},
-      banner: { root: { borderRadius: "0" } },
-    },
-  },
-  defaultVariants: { layout: "inline" },
   compoundVariants: [
     {
       status: "info",

@@ -47,6 +47,8 @@ export interface ChatPanelProps {
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
   approvalPrompt?: ReactNode;
+  /** Problems shown at the end of the conversation, such as a failed load or a message that was not sent. */
+  conversationNotices?: ReactNode;
   /** Optional workspace status/control surface rendered above the conversation viewport. */
   workspaceHub?: ReactNode;
   workspaceInitializing?: boolean;
@@ -85,6 +87,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onClearAttachments,
     attachmentList,
     approvalPrompt,
+    conversationNotices,
     workspaceHub,
     workspaceInitializing = false,
     inputDisabled = false,
@@ -148,18 +151,21 @@ export const ChatPanel = (props: ChatPanelProps) => {
         <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
         <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
           {hasMessages ? (
-            <ChatMessageList
-              key={messageListIdentity}
-              leadingResponses={leadingResponses}
-              groups={groups}
-              streaming={streaming}
-              hideActiveQuestionForms={hideActiveQuestionForms}
-              expandedStickyMessageIds={expandedStickyMessageIds}
-              onToggleStickyMessage={toggleStickyMessageExpanded}
-              onReady={() => setReadyMessageListKey(messageListIdentity)}
-            />
+            <>
+              <ChatMessageList
+                key={messageListIdentity}
+                leadingResponses={leadingResponses}
+                groups={groups}
+                streaming={streaming}
+                hideActiveQuestionForms={hideActiveQuestionForms}
+                expandedStickyMessageIds={expandedStickyMessageIds}
+                onToggleStickyMessage={toggleStickyMessageExpanded}
+                onReady={() => setReadyMessageListKey(messageListIdentity)}
+              />
+              {conversationNotices}
+            </>
           ) : (
-            emptyContent
+            (conversationNotices ?? emptyContent)
           )}
         </ChatPrimitives.Viewport>
         {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}

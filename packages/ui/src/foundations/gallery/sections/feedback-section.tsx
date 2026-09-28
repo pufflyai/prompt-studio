@@ -55,7 +55,6 @@ export const FeedbackSection = () => {
         <AlertMessage status="warning" title="Merge conflicts detected" />
         <AlertMessage status="error" title="Hook failed" />
         <AlertMessage
-          layout="banner"
           status="error"
           title="Could not load conversation"
           onClose={() => {}}
@@ -67,7 +66,7 @@ export const FeedbackSection = () => {
         >
           <Text>The server had a temporary problem.</Text>
         </AlertMessage>
-        <AlertMessage layout="banner" status="error" title="Could not load conversation" onClose={() => {}}>
+        <AlertMessage status="error" title="Could not load conversation" onClose={() => {}}>
           <Text>This session no longer exists.</Text>
         </AlertMessage>
       </GalleryCard>

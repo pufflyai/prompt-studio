@@ -4,10 +4,12 @@ import type { SessionAttachment } from "pstdio-api-contracts";
 import type { Dispatch, SetStateAction } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
 import type { HarnessParamValues } from "../components/harness-param-values";
+import { toSessionNotice } from "../data/session-notice";
 import { rememberDashboardSessionResource } from "../state/session-selection";
 import {
   assignPendingFollowUpSession,
   createPendingFollowUpState,
+  failPendingFollowUp,
   type PendingFollowUpState,
 } from "./session-chat-state";
 
@@ -121,11 +123,6 @@ const clearPendingFollowUpForCreatedSession = (
   return assignPendingFollowUpSession(current, sessionId);
 };
 
-const clearPendingFollowUpForFailedSession = (current: PendingFollowUpState | null, pending: PendingFollowUpState) => {
-  if (!current || current.userMessageId !== pending.userMessageId) return current;
-  return null;
-};
-
 const submitNewSessionMessage = (input: {
   projectId: string | undefined;
   agent: string | null;
@@ -154,7 +151,7 @@ const submitNewSessionMessage = (input: {
   });
   input.setPendingFollowUp(pending);
 
-  return new Promise<void>((resolve, reject) =>
+  return new Promise<void>((resolve) =>
     input.createSession.mutate(
       {
         projectId,
@@ -174,9 +171,12 @@ const submitNewSessionMessage = (input: {
           input.onSessionCreated?.(sessionId);
           resolve();
         },
+        // The message stays in the conversation as unsent, so the composer can clear.
         onError: (error) => {
-          input.setPendingFollowUp((current) => clearPendingFollowUpForFailedSession(current, pending));
-          reject(error ?? new Error("Could not create the session."));
+          const failure = toSessionNotice(error ?? new Error("Could not create the session."));
+          input.setPendingFollowUp((current) => failPendingFollowUp(current, pending, failure));
+          input.onSubmitted?.();
+          resolve();
         },
       },
     ),
@@ -185,6 +185,9 @@ const submitNewSessionMessage = (input: {
 
 const submitFollowUpMessage = (input: {
   sessionId: string;
+  messages: SessionMessage[];
+  pendingId: string;
+  setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   agent: string | null;
   model: string | undefined;
   params?: HarnessParamValues;
@@ -196,7 +199,17 @@ const submitFollowUpMessage = (input: {
   onSubmitted?: () => void;
   onQuestionResponseError?: () => void;
 }) => {
-  return new Promise<void>((resolve, reject) =>
+  const pending = createPendingFollowUpState({
+    prompt: input.text,
+    messageCount: input.messages.length,
+    pendingId: input.pendingId,
+    sessionId: input.sessionId,
+    attachments: input.attachments,
+    questionResponse: input.questionResponse,
+  });
+  input.setPendingFollowUp(pending);
+
+  return new Promise<void>((resolve) =>
     input.followUp.mutate(
       {
         sessionId: input.sessionId,
@@ -213,9 +226,13 @@ const submitFollowUpMessage = (input: {
           input.reconnect();
           resolve();
         },
+        // The message stays in the conversation as unsent, so the composer can clear.
         onError: (error) => {
           input.onQuestionResponseError?.();
-          reject(error ?? new Error("Could not send the follow-up."));
+          const failure = toSessionNotice(error ?? new Error("Could not send the follow-up."));
+          input.setPendingFollowUp((current) => failPendingFollowUp(current, pending, failure));
+          input.onSubmitted?.();
+          resolve();
         },
       },
     ),
@@ -265,6 +282,9 @@ export const submitSessionMessage = (input: {
 
   return submitFollowUpMessage({
     sessionId: input.sessionId,
+    messages: input.messages,
+    pendingId,
+    setPendingFollowUp: input.setPendingFollowUp,
     agent: input.agent,
     model: input.model,
     params: input.params,

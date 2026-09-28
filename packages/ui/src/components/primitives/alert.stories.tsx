@@ -22,12 +22,11 @@ export const Statuses: Story = {
   ),
 };
 
-// Banners the user cannot act on are not shown. Every banner can be closed; only a temporary failure offers Retry.
-export const Banners: Story = {
+// A problem the user can act on can be closed; only a temporary failure offers Retry.
+export const Recoverable: Story = {
   render: () => (
     <Stack gap="sm">
       <AlertMessage
-        layout="banner"
         status="error"
         title="Could not load conversation"
         onClose={() => {}}
@@ -39,7 +38,7 @@ export const Banners: Story = {
       >
         The server had a temporary problem.
       </AlertMessage>
-      <AlertMessage layout="banner" status="error" title="Could not load conversation" onClose={() => {}}>
+      <AlertMessage status="error" title="Could not load conversation" onClose={() => {}}>
         This session no longer exists.
       </AlertMessage>
     </Stack>

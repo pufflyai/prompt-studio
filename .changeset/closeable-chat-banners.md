@@ -3,4 +3,4 @@
 "@pstdio/ui": minor
 ---
 
-Chat banners have square corners and can be closed, and they offer Retry only for temporary failures. `AlertMessage` gains an `onClose` close button and a `layout="banner"` variant.
+Chat problems appear in the conversation instead of banners, a message that cannot be sent stays in the conversation as "Not sent", and Retry is offered only for temporary failures. `@pstdio/ui` adds `AlertMessage` `onClose`, `ChatPanel` `conversationNotices`, and the `delivery: "unsent"` message state.

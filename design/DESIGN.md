@@ -37,17 +37,17 @@ Read this file before working on UI or design. Use these patterns across the app
 - Once all tabs reach 48 px, scroll the tab strip horizontally. Do not shrink tabs further or wrap them onto another row.
 - Scroll the active tab fully into view when a tab is opened or selected, including when closing a tab selects its neighbor.
 
-## Banners
+## Problems in the chat
 
-- Show a banner only when the user can act on it. The product recovers from internal problems, such as saved and agent history that disagree, on its own and shows no banner.
-- Every banner has a close button. Closing hides that message; a new failure shows its own banner.
-- Offer Retry only for a temporary failure, one that can succeed on a later try: no response, a server error (5xx), a timeout (408), or rate limiting (429). A permanent failure, such as a missing session (404), shows no Retry.
-- Use `AlertMessage` with `layout="banner"`, `endElement` for Retry (a `2xs` outline button), and `onClose` for the close button. Banners span their panel edge with square corners; inline alerts keep the alert radius.
-- Chat banners:
-  - "Could not load conversation" (error): Retry reconnects the conversation.
-  - "Could not update queued prompts" (warning): Retry reloads the queued prompts.
-  - The server reports a failure to read the queue as temporary.
-- Error parts inside the conversation and failed tool calls are part of the conversation, not banners. They have no close or retry action.
+- The chat has no banners. A problem appears in the conversation, where the user is looking, styled like an agent error (`AlertMessage`, `status="error"`).
+- Show a problem only when the user can act on it. The product recovers from internal problems, such as saved and agent history that disagree, on its own.
+- Every problem has a close button (`onClose`). Offer Retry (`endElement`, a `2xs` outline button) only for a temporary failure, one that can succeed on a later try: no response, a server error (5xx), a timeout (408), or rate limiting (429). A permanent failure, such as a missing session (404), shows no Retry.
+- A message the user sends appears in the conversation right away. If it cannot be sent, it stays there, dimmed and marked "Not sent", followed by "Message not sent". Retry sends it again. Close removes it and puts its text and attachments back in the composer, so nothing the user typed is lost.
+- Other chat problems appear at the end of the conversation:
+  - "Could not load conversation": Retry reconnects the conversation.
+  - "Could not update queued prompts": Retry reloads the queued prompts. The server reports a failure to read the queue as temporary.
+- Closing a problem hides that message; a new failure shows its own problem.
+- Error parts from the agent and failed tool calls are part of the conversation and have no close or retry action.
 
 ## Motion experiments
 

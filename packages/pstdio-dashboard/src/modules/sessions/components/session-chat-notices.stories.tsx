@@ -11,6 +11,15 @@ const meta = {
 } satisfies Meta<typeof SessionChatNotices>;
 export default meta;
 type Story = StoryObj<typeof SessionChatNotices>;
+export const MessageNotSent: Story = {
+  args: {
+    unsent: {
+      notice: { message: "The network is unavailable.", temporary: true },
+      onRetry: () => {},
+      onClose: () => {},
+    },
+  },
+};
 export const TemporaryHistoryError: Story = {
   args: { error: { message: "The server had a temporary problem.", temporary: true } },
 };

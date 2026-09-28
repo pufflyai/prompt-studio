@@ -1,9 +1,10 @@
 import { Box, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import { ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
+import { type ChatInputQuestionResponse, ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
+import type { SessionAttachment } from "pstdio-api-contracts";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -134,7 +135,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   }, [view]);
 
   useEffect(() => {
-    if (!pendingFollowUp) return;
+    // An unsent message stays until the user resends or removes it.
+    if (!pendingFollowUp || pendingFollowUp.failure) return;
     if (messages.length > pendingFollowUp.messageCount) setPendingFollowUp(null);
   }, [messages, pendingFollowUp]);
 
@@ -149,8 +151,40 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
   );
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId);
-  const effectiveStreaming = streaming || view.status === "in_progress" || Boolean(pendingFollowUp);
+  const effectiveStreaming =
+    streaming || view.status === "in_progress" || Boolean(pendingFollowUp && !pendingFollowUp.failure);
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
+
+  const send = (
+    text: string,
+    attachments: SessionAttachment[],
+    questionResponse: ChatInputQuestionResponse | undefined,
+    onSubmitted?: () => void,
+  ) =>
+    submitSessionMessage({
+      sessionId,
+      projectId,
+      agent: selectedAgent || null,
+      model: selectedModel || undefined,
+      params: nonEmptyHarnessParams(harnessParamOverrides),
+      workspaceId: selectedWorkspaceId || undefined,
+      text,
+      attachments,
+      questionResponse,
+      messages,
+      pendingIdRef,
+      setPendingFollowUp,
+      createSession,
+      followUp,
+      reconnect,
+      onSubmitted,
+      onSessionCreated: (sessionId) => {
+        if (!projectId) return;
+        openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId });
+      },
+    });
+  const unsent =
+    pendingFollowUp?.failure && shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null;
 
   const { handleQueuedFollowUpUpdate, handleQueuedFollowUpRemove, handleQueuedFollowUpMove } = useQueuedSessionMessages(
     { sessionId, queuedFollowUps: splitDisplay.queuedFollowUps, refreshQueue },
@@ -161,13 +195,36 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     // to the region bounds and scrolls its messages internally instead of growing.
     <Box position="relative" h="full" w="full">
       <Box position="absolute" inset="0" overflow="hidden" display="flex" flexDirection="column">
-        <SessionChatNotices error={error} queueError={queueError} reconnect={reconnect} refreshQueue={refreshQueue} />
         <Box flex="1" minH="0" overflow="hidden">
           <ChatPanel
             // Keying on the session id gives each session its own draft and scroll
             // state, so switching sessions in the bubble is a real switch.
             conversationKey={`dashboard-workbench-session:${view.id}`}
             messages={splitDisplay.messages}
+            conversationNotices={
+              <SessionChatNotices
+                error={error}
+                queueError={queueError}
+                reconnect={reconnect}
+                refreshQueue={refreshQueue}
+                unsent={
+                  unsent?.failure
+                    ? {
+                        notice: unsent.failure,
+                        onRetry: () => {
+                          setPendingFollowUp(null);
+                          void send(unsent.prompt, unsent.attachments ?? [], unsent.questionResponse);
+                        },
+                        onClose: () => {
+                          setPendingFollowUp(null);
+                          chatDraft.restore(unsent.prompt);
+                          draftAttachments.restoreAttachments(unsent.attachments ?? []);
+                        },
+                      }
+                    : undefined
+                }
+              />
+            }
             queuedFollowUps={splitDisplay.queuedFollowUps}
             onQueuedFollowUpUpdate={sessionId ? handleQueuedFollowUpUpdate : undefined}
             onQueuedFollowUpRemove={sessionId ? handleQueuedFollowUpRemove : undefined}
@@ -232,34 +289,12 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
                 action={workspaceAction}
               />
             }
-            onSubmitMessage={(text, _attachments, questionResponse) => {
-              const submittedAttachments = draftAttachments.attachments;
-              return submitSessionMessage({
-                sessionId,
-                projectId,
-                agent: selectedAgent || null,
-                model: selectedModel || undefined,
-                params: nonEmptyHarnessParams(harnessParamOverrides),
-                workspaceId: selectedWorkspaceId || undefined,
-                text,
-                attachments: submittedAttachments,
-                questionResponse,
-                messages,
-                pendingIdRef,
-                setPendingFollowUp,
-                createSession,
-                followUp,
-                reconnect,
-                onSubmitted: () => {
-                  chatDraft.clear();
-                  draftAttachments.clearSubmittedAttachments();
-                },
-                onSessionCreated: (sessionId) => {
-                  if (!projectId) return;
-                  openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId });
-                },
-              });
-            }}
+            onSubmitMessage={(text, _attachments, questionResponse) =>
+              send(text, draftAttachments.attachments, questionResponse, () => {
+                chatDraft.clear();
+                draftAttachments.clearSubmittedAttachments();
+              })
+            }
             onInterrupt={sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined}
           />
         </Box>

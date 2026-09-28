@@ -7,12 +7,7 @@ import {
   type DashboardSessionMessagePatch,
   visibleSessionMessages,
 } from "./session-messages";
-
-export interface SessionNotice {
-  message: string;
-  // Only a temporary failure is worth retrying; a permanent one would fail the same way.
-  temporary: boolean;
-}
+import { type SessionNotice, toSessionNotice } from "./session-notice";
 
 export interface SessionHistoryState {
   messages: SessionMessage[];
@@ -35,14 +30,7 @@ interface HistoryControllerInput {
   initialState?: SessionHistoryState;
   initialSession?: SyncedRow;
 }
-// No response at all, a server error, a timeout, or rate limiting can succeed on a later try.
-const notice = (error: unknown): SessionNotice => {
-  const status = (error as { status?: unknown } | null)?.status;
-  return {
-    message: error instanceof Error ? error.message : String(error),
-    temporary: typeof status !== "number" || status >= 500 || status === 408 || status === 429,
-  };
-};
+
 export const createSessionHistoryController = (input: HistoryControllerInput) => {
   const { sessionId, ownerKey, reads, transport, onChange } = input;
   const isQueued = (message: SessionMessage) => message.id.startsWith(`queued-prompt-${sessionId}-`);
@@ -76,7 +64,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
           queued = value.messages;
           publish({ queueError: undefined });
         },
-        onError: (error) => publish({ queueError: notice(error) }),
+        onError: (error) => publish({ queueError: toSessionNotice(error) }),
       },
       reason,
     );
@@ -95,7 +83,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
           confirmed = value.messages.filter((message) => !isQueued(message));
           publish({ loading: false, error: undefined });
         },
-        onError: (error) => publish({ loading: false, error: notice(error) }),
+        onError: (error) => publish({ loading: false, error: toSessionNotice(error) }),
       },
       "refresh",
     );
@@ -153,7 +141,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         },
         onError: (error) => {
           if (!active()) return;
-          publish({ loading: false, streaming: false, error: notice(error) });
+          publish({ loading: false, streaming: false, error: toSessionNotice(error) });
         },
       },
       { attempt: current },
