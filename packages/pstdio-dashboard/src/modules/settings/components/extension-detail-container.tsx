@@ -46,8 +46,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     (diagnostic) => diagnostic.extensionId === extension.extensionId,
   );
 
-  // Adopting the source waiting on disk is the same operation as retrying a failed source: validate
-  // what is there now, then adopt it. Only the wording differs.
+  // Reloading validates the source waiting on disk, then adopts it.
   const handleReload = () => {
     reload.mutate(
       { instanceId: extension.id },
@@ -57,21 +56,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
             updated.status === "loaded"
               ? { type: "success", title: t("projectSettings.extensionsPanel.reload.succeeded") }
               : { type: "error", title: t("projectSettings.extensionsPanel.reload.failed") },
-          );
-        },
-      },
-    );
-  };
-
-  const handleRetry = () => {
-    reload.mutate(
-      { instanceId: extension.id },
-      {
-        onSuccess: (updated) => {
-          toaster.create(
-            updated.status === "loaded"
-              ? { type: "success", title: t("projectSettings.extensionsPanel.health.retrySucceeded") }
-              : { type: "error", title: t("projectSettings.extensionsPanel.health.retryFailed") },
           );
         },
       },
@@ -127,7 +111,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         diagnostics={diagnostics}
         settings={settingsQuery.data?.settings ?? []}
         toggling={setEnabled.isPending}
-        retrying={reload.isPending}
         reloading={reload.isPending}
         upgrading={upgrade.isPending}
         uninstalling={uninstall.isPending}
@@ -140,7 +123,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           setAutomationEnabled.mutate({ instanceId: extension.id, automationId: automation.id, enabled })
         }
         onChangeSetting={(key, value) => updateSetting.mutate({ instanceId: extension.id, key, value })}
-        onRetry={handleRetry}
         onReload={handleReload}
         onUpgrade={handleUpgrade}
         onUninstall={() => setConfirmingUninstall(true)}

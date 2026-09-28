@@ -1,4 +1,5 @@
 import type {
+  AddLocalExtensionFolderResponse,
   CommandExecuteResponse,
   ExtensionSettingValueRecord,
   InstallMarketplaceExtensionResponse,
@@ -83,6 +84,22 @@ export const installMarketplaceExtension = (projectId: string, installName: stri
     `/v1/projects/${projectId}/extensions/marketplace/${encodeURIComponent(installName)}/install`,
     { method: "POST" },
   );
+
+export interface DroppedExtensionFolder {
+  name: string;
+  /** Each file's name is its path relative to the folder root. */
+  files: File[];
+}
+
+export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtensionFolder) => {
+  const body = new FormData();
+  body.append("name", folder.name);
+  for (const file of folder.files) body.append("files", file, file.name);
+  return apiRequest<AddLocalExtensionFolderResponse>(`/v1/projects/${projectId}/extensions/local`, {
+    method: "POST",
+    body,
+  });
+};
 
 export const setProjectExtensionEnabled = (projectId: string, instanceId: string, enabled: boolean) =>
   apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}`, {

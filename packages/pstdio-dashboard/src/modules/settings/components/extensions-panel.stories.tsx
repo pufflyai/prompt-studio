@@ -133,8 +133,6 @@ const marketplace = [
 
 const noop = () => {};
 
-const healthActions = () => ({ onRetry: noop, onUpgrade: noop });
-
 const openFirstHealthPopover = (canvasElement: HTMLElement) => {
   canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
 };
@@ -145,6 +143,7 @@ const meta: Meta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
   parameters: { layout: "fullscreen" },
+  args: { onUpgrade: noop, onDropFolder: noop },
 };
 
 export default meta;
@@ -195,7 +194,6 @@ export const HealthPopoverOpen: Story = {
     marketplace,
     diagnostics,
     automations,
-    healthActions,
   },
   play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
@@ -207,12 +205,11 @@ export const FailedCatalogExtension: Story = {
     marketplace,
     diagnostics: [],
     automations: [],
-    healthActions,
   },
   play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
 
-// A local source is fixed where it lives, so the popover offers Retry and Copy error only.
+// A local source is fixed where it lives, so the popover offers Copy error only.
 export const FailedLocalExtension: Story = {
   args: {
     extensions: [
@@ -226,19 +223,29 @@ export const FailedLocalExtension: Story = {
     marketplace,
     diagnostics: [],
     automations: [],
-    healthActions,
   },
   play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
 
-// At least one extension can take a newer release, so the header offers one action for all of them.
+// Each row that can take a newer release shows an upgrade button, and the header offers one action
+// for all of them.
 export const UpgradesAvailable: Story = {
   args: {
     extensions: installedExtensions,
     marketplace,
     diagnostics: [],
     automations,
-    onUpgradeAll: () => {},
+    onUpgradeAll: noop,
+  },
+};
+
+export const UpgradingOneExtension: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    upgradingInstanceIds: ["planner-instance"],
   },
 };
 
@@ -252,11 +259,22 @@ export const UpgradingAll: Story = {
   },
 };
 
+// No row can take a newer release, so there are no row upgrade buttons and no Upgrade all.
 export const NothingToUpgrade: Story = {
   args: {
     extensions: installedExtensions.map((extension) => ({ ...extension, canUpgrade: false })),
     marketplace,
     diagnostics: [],
     automations,
+  },
+};
+
+export const AddingLocalFolder: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    addingFolderName: "my-extension",
   },
 };

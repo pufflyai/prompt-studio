@@ -8,7 +8,8 @@ import type {
 import { ArrowUpCircle, Search } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ExtensionHealthPopoverProps } from "./extension-health-popover";
+import type { DroppedExtensionFolder } from "@/shared/extensions/api";
+import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { ExtensionListRow } from "./extension-list-row";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
@@ -18,16 +19,17 @@ export interface ExtensionsPanelViewProps {
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
   togglingInstanceId?: string;
+  upgradingInstanceIds?: string[];
   onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
+  onUpgrade?: (extension: ProjectExtensionInstance) => void;
   onOpen?: (extension: ProjectExtensionInstance) => void;
   installingMarketplaceNames?: string[];
   onInstallMarketplace?: (extension: MarketplaceExtension) => void;
   onOpenMarketplace?: (extension: MarketplaceExtension) => void;
-  healthActions?: (
-    extension: ProjectExtensionInstance,
-  ) => Omit<ExtensionHealthPopoverProps, "extension" | "diagnostics">;
   upgradingAll?: boolean;
   onUpgradeAll?: (extensions: ProjectExtensionInstance[]) => void;
+  addingFolderName?: string;
+  onDropFolder?: (folder: DroppedExtensionFolder) => void;
 }
 
 const getDiagnosticsByExtensionId = (extensions: ProjectExtensionInstance[], diagnostics: ExtensionDiagnostic[]) => {
@@ -68,14 +70,17 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     diagnostics,
     automations,
     togglingInstanceId,
+    upgradingInstanceIds = [],
     installingMarketplaceNames = [],
     onToggle,
+    onUpgrade,
     onOpen,
     onInstallMarketplace,
     onOpenMarketplace,
-    healthActions,
     upgradingAll,
     onUpgradeAll,
+    addingFolderName,
+    onDropFolder,
   } = props;
   const { t } = useTranslation("projects");
   const [search, setSearch] = useState("");
@@ -156,13 +161,12 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         <ExtensionListRow
           key={extension.id}
           extension={extension}
-          health={{
-            diagnostics: diagnosticsByExtensionId.get(extension.extensionId) ?? [],
-            ...healthActions?.(extension),
-          }}
+          diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
           automations={automations.filter((automation) => automation.extensionId === extension.extensionId)}
           toggling={togglingInstanceId === extension.id}
+          upgrading={upgradingInstanceIds.includes(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
+          onUpgrade={() => onUpgrade?.(extension)}
           onOpen={() => onOpen?.(extension)}
         />
       ))}
@@ -189,6 +193,10 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           onOpen={() => onOpenMarketplace?.(extension)}
         />
       ))}
+
+      <Stack padding="lg">
+        <ExtensionFolderDropZone addingName={addingFolderName} onDropFolder={(folder) => onDropFolder?.(folder)} />
+      </Stack>
     </Stack>
   );
 };

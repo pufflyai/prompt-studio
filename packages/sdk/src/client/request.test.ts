@@ -276,3 +276,25 @@ describe("createRequest", () => {
     expect(result).toBeUndefined();
   });
 });
+
+describe("createRequest multipart bodies", () => {
+  it("sends FormData bodies as multipart uploads", async () => {
+    const calls: unknown[][] = [];
+    const body = new FormData();
+    body.append("files", new File(["{}"], "package.json"));
+    const request = createRequest({
+      baseUrl: "http://test:1234",
+      fetch: mockFetchFn((...args) => {
+        calls.push(args);
+        return Promise.resolve(jsonResponse({ ok: true }));
+      }),
+    });
+
+    await request("/v1/uploads", { method: "POST", body });
+
+    const init = calls[0]![1] as RequestInit;
+    expect(init.body).toBe(body);
+    // fetch sets the multipart content type itself, with the boundary the body needs.
+    expect((init.headers as Record<string, string>)["content-type"]).toBeUndefined();
+  });
+});

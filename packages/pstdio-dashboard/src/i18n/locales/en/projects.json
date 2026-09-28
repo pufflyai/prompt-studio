@@ -233,9 +233,6 @@
         "issues_other": "{{count}} issues",
         "lastLoaded": "Last loaded {{time}}",
         "unknownError": "The extension failed to load.",
-        "retry": "Retry",
-        "retrySucceeded": "Extension loaded",
-        "retryFailed": "Extension still fails to load",
         "copyError": "Copy error",
         "errorCopied": "Error copied"
       },
@@ -257,6 +254,14 @@
         "hint": "The source folder changed. Reload to use the new version.",
         "succeeded": "Local changes loaded",
         "failed": "Local changes refused"
+      },
+      "dropZone": {
+        "title": "Drop an extension folder here",
+        "hint": "It is copied to .pstdio/extensions and loaded from there.",
+        "uploading": "Adding {{name}}…",
+        "succeeded": "{{name}} added",
+        "failed": "Could not add the extension folder",
+        "notFolder": "Drop a folder, not a single file."
       },
       "automations": {
         "title": "Automations",

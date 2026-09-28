@@ -1,20 +1,18 @@
 import { Button, HStack } from "@chakra-ui/react";
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { AlertMessage, toaster } from "@pstdio/ui";
-import { ArrowUpCircle, Copy, RotateCw } from "lucide-react";
+import { ArrowUpCircle, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { loadErrorClipboardText, loadErrorField } from "./extension-load-error";
 
 export interface ExtensionDetailHealthProps {
   extension: ProjectExtensionInstance;
-  retrying?: boolean;
   upgrading?: boolean;
-  onRetry: () => void;
   onUpgrade: () => void;
 }
 
 export const ExtensionDetailHealth = (props: ExtensionDetailHealthProps) => {
-  const { extension, retrying, upgrading, onRetry, onUpgrade } = props;
+  const { extension, upgrading, onUpgrade } = props;
   const { t } = useTranslation("projects");
   const code = loadErrorField(extension.lastError, "code");
   const incompatible = code === "extension_manifest_unsupported_api_version";
@@ -47,10 +45,6 @@ export const ExtensionDetailHealth = (props: ExtensionDetailHealthProps) => {
               {t("projectSettings.extensionsPanel.upgrade.action")}
             </Button>
           )}
-          <Button variant="outline" size="2xs" onClick={onRetry} loading={retrying} data-testid="extension-retry">
-            <RotateCw size={12} />
-            {t("projectSettings.extensionsPanel.health.retry")}
-          </Button>
           <Button variant="ghost" size="2xs" onClick={() => void copyError()} data-testid="extension-copy-error">
             <Copy size={12} />
             {t("projectSettings.extensionsPanel.health.copyError")}

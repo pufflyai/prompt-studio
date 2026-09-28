@@ -236,9 +236,6 @@
         "issues_other": "{{count}} problèmes",
         "lastLoaded": "Dernier chargement {{time}}",
         "unknownError": "L'extension n'a pas pu être chargée.",
-        "retry": "Réessayer",
-        "retrySucceeded": "Extension chargée",
-        "retryFailed": "L'extension ne se charge toujours pas",
         "copyError": "Copier l'erreur",
         "errorCopied": "Erreur copiée"
       },
@@ -260,6 +257,14 @@
         "hint": "Le dossier source a changé. Rechargez pour utiliser la nouvelle version.",
         "succeeded": "Modifications locales chargées",
         "failed": "Modifications locales refusées"
+      },
+      "dropZone": {
+        "title": "Déposez un dossier d'extension ici",
+        "hint": "Il est copié dans .pstdio/extensions et chargé depuis cet emplacement.",
+        "uploading": "Ajout de {{name}}…",
+        "succeeded": "{{name}} ajoutée",
+        "failed": "Impossible d'ajouter le dossier de l'extension",
+        "notFolder": "Déposez un dossier, pas un fichier."
       },
       "automations": {
         "title": "Automatisations",

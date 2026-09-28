@@ -107,7 +107,9 @@ Installs and updates are explicit. Source that appears in the extensions root is
 - A catalog extension shows **Upgrade** when its recorded commit differs from the catalog release.
   Upgrade fetches that origin, validates it in staging, replaces the installed source, and adopts it.
   Healthy local-path extensions stay under local control.
-- **Upgrade all** in the extension panel runs Upgrade for every extension that offers it.
+- In the extension panel, every row that can take a newer release shows an upgrade button next to
+  its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
+  Upgrade for every extension that offers it, and only appears when at least one does.
 - `pst extensions update [name]` runs that same host-owned upgrade path for the project in the
   current folder, or the one named with `--project-id`. When `name` is omitted, it upgrades every
   instance the host marks as eligible. The command does not replace healthy local sources or change
@@ -118,8 +120,17 @@ Installs and updates are explicit. Source that appears in the extensions root is
 - An adopted extension whose `engines.pstdio` does not match the host is shown as an error in the
   extension list and detail view. The error names both API versions. When the host can replace the
   source with a release, it tells the owner to upgrade; otherwise it tells the owner to fix the source.
-- Every load error offers Retry and Copy error. Copy error puts the error code and message on the
-  clipboard. Catalog extensions that can take a newer release also offer Upgrade.
+- Every load error offers Copy error. Copy error puts the error code and message on the clipboard.
+  Catalog extensions that can take a newer release also offer Upgrade. A local extension is fixed in
+  its source folder, and **Reload** then adopts the fixed source.
+- Dropping an extension folder on the drop zone at the bottom of the extension panel copies it to
+  `<repo>/.pstdio/extensions/<folder-name>` and loads it as a repo extension. The dashboard skips
+  `node_modules` and `.git`. The host installs the folder the same way `pst extensions add <path>`
+  does: it installs dependencies, validates the extension in staging, and moves it into place. It
+  refuses a folder without a `package.json`, a file path that leaves the folder, and a folder name
+  that already exists under `.pstdio/extensions`. The request is
+  `POST /v1/projects/{projectId}/extensions/local` with multipart form data: a `name` field and one
+  `files` part per file, whose file name is its path relative to the folder root.
 
 The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to a local JSON file or
 an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is

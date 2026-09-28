@@ -1,6 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
+import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps, ExtensionWebviewRouteDeps } from "./deps";
+import { addLocalExtensionFolderHandler, addLocalExtensionFolderRoute } from "./endpoints/add-local-extension-folder";
 import {
   createExtensionNotificationHandler,
   createExtensionNotificationRoute,
@@ -132,6 +134,7 @@ const registerProjectExtensionRoutes = (
 ) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
   routes.openapi(installMarketplaceExtensionRoute, installMarketplaceExtensionHandler(deps));
+  routes.openapi(addLocalExtensionFolderRoute, addLocalExtensionFolderHandler(deps));
   routes.openapi(getMarketplaceExtensionContributionsRoute, getMarketplaceExtensionContributionsHandler(deps));
   routes.openapi(getExtensionContributionsRoute, getExtensionContributionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));
@@ -157,7 +160,10 @@ const registerExtensionSettingsRoutes = (routes: ExtensionRoutes, deps: Extensio
 };
 
 export const createExtensionRoutes = (
-  deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps & ExtensionWebviewRouteDeps,
+  deps: ExtensionsRouteDeps &
+    ExtensionWebviewMetadataDeps &
+    ExtensionWebviewRouteDeps &
+    Pick<RouteDeps, "installedExtensionSourcesService">,
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
 

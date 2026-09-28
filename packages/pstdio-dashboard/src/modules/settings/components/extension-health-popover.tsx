@@ -1,21 +1,19 @@
 import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import type { ExtensionDiagnostic, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { toaster } from "@pstdio/ui";
-import { ArrowUpCircle, CircleAlert, Copy, RotateCw, TriangleAlert } from "lucide-react";
+import { ArrowUpCircle, CircleAlert, Copy, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { loadErrorClipboardText, loadErrorField } from "./extension-load-error";
 
 export interface ExtensionHealthPopoverProps {
   extension: ProjectExtensionInstance;
   diagnostics: ExtensionDiagnostic[];
-  retrying?: boolean;
   upgrading?: boolean;
-  onRetry?: () => void;
   onUpgrade?: () => void;
 }
 
 export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
-  const { extension, diagnostics, retrying, upgrading, onRetry, onUpgrade } = props;
+  const { extension, diagnostics, upgrading, onUpgrade } = props;
   const { t } = useTranslation("projects");
 
   // Red is reserved for a real load failure; a loaded extension's diagnostics are
@@ -111,18 +109,6 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
                       >
                         <ArrowUpCircle size={12} />
                         {t("projectSettings.extensionsPanel.upgrade.action")}
-                      </Button>
-                    )}
-                    {onRetry && (
-                      <Button
-                        variant="outline"
-                        size="2xs"
-                        onClick={onRetry}
-                        loading={retrying}
-                        data-testid="extension-retry"
-                      >
-                        <RotateCw size={12} />
-                        {t("projectSettings.extensionsPanel.health.retry")}
                       </Button>
                     )}
                     <Button

@@ -1,4 +1,5 @@
 export type {
+  AddLocalExtensionFolderResponse,
   CommandExecuteRequest,
   CommandExecuteResponse,
   ConfigureExtensionConnectionInput,

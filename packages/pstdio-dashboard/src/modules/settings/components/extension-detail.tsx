@@ -24,7 +24,6 @@ export interface ExtensionDetailProps {
   diagnostics: ExtensionDiagnostic[];
   settings: ExtensionSettingValueRecord[];
   toggling?: boolean;
-  retrying?: boolean;
   reloading?: boolean;
   upgrading?: boolean;
   uninstalling?: boolean;
@@ -33,7 +32,6 @@ export interface ExtensionDetailProps {
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => void;
   onChangeSetting: (key: string, value: unknown) => void;
-  onRetry: () => void;
   onReload: () => void;
   onUpgrade: () => void;
   onUninstall: () => void;
@@ -48,7 +46,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     diagnostics,
     settings,
     toggling,
-    retrying,
     reloading,
     upgrading,
     uninstalling,
@@ -57,7 +54,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onToggle,
     onToggleAutomation,
     onChangeSetting,
-    onRetry,
     onReload,
     onUpgrade,
     onUninstall,
@@ -165,15 +161,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Text>
         </Stack>
 
-        {failed && (
-          <ExtensionDetailHealth
-            extension={extension}
-            retrying={retrying}
-            upgrading={upgrading}
-            onRetry={onRetry}
-            onUpgrade={onUpgrade}
-          />
-        )}
+        {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
 
         {!failed && diagnostics.length > 0 && (
           <AlertMessage

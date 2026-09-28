@@ -231,9 +231,6 @@
         "issues_other": "{{count}} 個問題",
         "lastLoaded": "上次載入於 {{time}}",
         "unknownError": "擴充功能載入失敗。",
-        "retry": "重試",
-        "retrySucceeded": "擴充功能已載入",
-        "retryFailed": "擴充功能仍然無法載入",
         "copyError": "複製錯誤",
         "errorCopied": "錯誤已複製"
       },
@@ -253,6 +250,14 @@
         "hint": "來源資料夾已變更。重新載入以使用新版本。",
         "succeeded": "已載入本機變更",
         "failed": "本機變更遭拒絕"
+      },
+      "dropZone": {
+        "title": "將擴充功能資料夾拖放到這裡",
+        "hint": "它會被複製到 .pstdio/extensions 並從那裡載入。",
+        "uploading": "正在新增 {{name}}…",
+        "succeeded": "已新增 {{name}}",
+        "failed": "無法新增擴充功能資料夾",
+        "notFolder": "請拖放資料夾，而非檔案。"
       },
       "automations": {
         "title": "自動化",

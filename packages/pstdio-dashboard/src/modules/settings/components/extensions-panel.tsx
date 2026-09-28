@@ -3,13 +3,14 @@ import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk
 import { toaster } from "@pstdio/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import {
+  useAddLocalExtensionFolder,
   useInstallMarketplaceExtension,
   useMarketplaceExtensionContributions,
   useProjectExtensionMetadata,
   useProjectExtensionSync,
   useProjectExtensions,
-  useReloadProjectExtension,
   useSetProjectExtensionEnabled,
   useUpgradeProjectExtension,
   useUpgradeProjectExtensions,
@@ -29,13 +30,14 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const extensionsQuery = useProjectExtensions(projectId);
   const metadataQuery = useProjectExtensionMetadata(projectId);
   const setEnabled = useSetProjectExtensionEnabled(projectId);
-  const reload = useReloadProjectExtension(projectId);
   const upgrade = useUpgradeProjectExtension(projectId);
   const installMarketplace = useInstallMarketplaceExtension(projectId);
   const upgradeAll = useUpgradeProjectExtensions(projectId);
+  const addLocalFolder = useAddLocalExtensionFolder(projectId);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   const [selectedMarketplaceName, setSelectedMarketplaceName] = useState<string | null>(null);
   const [installingMarketplaceNames, setInstallingMarketplaceNames] = useState<string[]>([]);
+  const [upgradingInstanceIds, setUpgradingInstanceIds] = useState<string[]>([]);
   const marketplaceContributions = useMarketplaceExtensionContributions(
     projectId,
     selectedMarketplaceName ?? undefined,
@@ -153,25 +155,45 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     );
   };
 
-  const healthActions = (extension: ProjectExtensionInstance) => ({
-    retrying: reload.isPending && reload.variables?.instanceId === extension.id,
-    upgrading: upgrade.isPending && upgrade.variables?.instanceId === extension.id,
-    onRetry: () => reload.mutate({ instanceId: extension.id }),
-    // A successful upgrade shows in the row itself; only a failure needs a message.
-    onUpgrade: () =>
-      upgrade.mutate(
-        { instanceId: extension.id },
-        {
-          onError: (error) => {
-            toaster.create({
-              type: "error",
-              title: t("projectSettings.extensionsPanel.upgrade.failed"),
-              description: error instanceof Error ? error.message : undefined,
-            });
-          },
-        },
-      ),
-  });
+  // Each row upgrades on its own, so several upgrades can run at once and each reports its own result.
+  const handleUpgrade = async (extension: ProjectExtensionInstance) => {
+    setUpgradingInstanceIds((current) => [...new Set([...current, extension.id])]);
+    try {
+      const result = await upgrade.mutateAsync({ instanceId: extension.id });
+      toaster.create({
+        type: "success",
+        title: t(
+          result.changed
+            ? "projectSettings.extensionsPanel.upgrade.succeeded"
+            : "projectSettings.extensionsPanel.upgrade.current",
+        ),
+      });
+    } catch (error) {
+      toaster.create({
+        type: "error",
+        title: t("projectSettings.extensionsPanel.upgrade.failed"),
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setUpgradingInstanceIds((current) => current.filter((id) => id !== extension.id));
+    }
+  };
+
+  const handleDropFolder = async (folder: DroppedExtensionFolder) => {
+    try {
+      const { extension } = await addLocalFolder.mutateAsync(folder);
+      toaster.create({
+        type: "success",
+        title: t("projectSettings.extensionsPanel.dropZone.succeeded", { name: extension.displayName }),
+      });
+    } catch (error) {
+      toaster.create({
+        type: "error",
+        title: t("projectSettings.extensionsPanel.dropZone.failed"),
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
 
   return (
     <ExtensionsPanelView
@@ -180,14 +202,17 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       diagnostics={metadataQuery.data?.diagnostics ?? []}
       automations={metadataQuery.data?.automations ?? []}
       togglingInstanceId={setEnabled.isPending ? (setEnabled.variables?.instanceId ?? undefined) : undefined}
+      upgradingInstanceIds={upgradingInstanceIds}
       installingMarketplaceNames={installingMarketplaceNames}
       onToggle={handleToggle}
+      onUpgrade={(extension) => void handleUpgrade(extension)}
       onOpen={(extension) => setSelectedInstanceId(extension.id)}
       onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}
       onOpenMarketplace={(extension) => setSelectedMarketplaceName(extension.installName)}
-      healthActions={healthActions}
       upgradingAll={upgradeAll.isPending}
       onUpgradeAll={handleUpgradeAll}
+      addingFolderName={addLocalFolder.isPending ? addLocalFolder.variables?.name : undefined}
+      onDropFolder={(folder) => void handleDropFolder(folder)}
     />
   );
 };

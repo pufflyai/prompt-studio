@@ -211,7 +211,7 @@ const sourceScope = (sourcePath: string, allowUnsupportedApiVersion: boolean) =>
 
 const resolveExtensionsRoot = (input: InstallExtensionSourceInput, pstdioHome: string, sourcePath: string) => {
   const { manifest, scope } = sourceScope(sourcePath, input.allowUnsupportedApiVersion === true);
-  if (scope === "repo") {
+  if ((input.scope ?? scope) === "repo") {
     if (!input.repoPath) throw new RepoScopedExtensionNeedsProjectFolderError(manifest.id);
     return join(input.repoPath, ".pstdio", "extensions");
   }

@@ -231,9 +231,6 @@
         "issues_other": "{{count}} 个问题",
         "lastLoaded": "上次加载于 {{time}}",
         "unknownError": "扩展加载失败。",
-        "retry": "重试",
-        "retrySucceeded": "扩展已加载",
-        "retryFailed": "扩展仍然无法加载",
         "copyError": "复制错误",
         "errorCopied": "错误已复制"
       },
@@ -253,6 +250,14 @@
         "hint": "源文件夹已更改。重新加载以使用新版本。",
         "succeeded": "已加载本地更改",
         "failed": "本地更改被拒绝"
+      },
+      "dropZone": {
+        "title": "将扩展文件夹拖放到此处",
+        "hint": "它会被复制到 .pstdio/extensions 并从那里加载。",
+        "uploading": "正在添加 {{name}}…",
+        "succeeded": "已添加 {{name}}",
+        "failed": "无法添加扩展文件夹",
+        "notFolder": "请拖放文件夹，而不是文件。"
       },
       "automations": {
         "title": "自动化",

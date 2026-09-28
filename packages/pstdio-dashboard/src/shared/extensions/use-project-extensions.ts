@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import {
+  addLocalExtensionFolder,
+  type DroppedExtensionFolder,
   executeExtensionCommand,
   getExtensionContributions,
   getMarketplaceExtensionContributions,
@@ -67,6 +69,18 @@ export const useInstallMarketplaceExtension = (projectId: string | undefined) =>
     mutationFn: ({ installName }: { installName: string }) => {
       if (!projectId) throw new Error("Project id is required to install extensions.");
       return installMarketplaceExtension(projectId, installName);
+    },
+    onSuccess: (result) => cache.storeExtension(result.extension),
+  });
+};
+
+export const useAddLocalExtensionFolder = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  const cache = createProjectExtensionCache(queryClient, projectId);
+  return useMutation({
+    mutationFn: (folder: DroppedExtensionFolder) => {
+      if (!projectId) throw new Error("Project id is required to add extensions.");
+      return addLocalExtensionFolder(projectId, folder);
     },
     onSuccess: (result) => cache.storeExtension(result.extension),
   });

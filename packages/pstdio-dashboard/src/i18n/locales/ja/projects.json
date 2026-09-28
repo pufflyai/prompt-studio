@@ -231,9 +231,6 @@
         "issues_other": "{{count}}件の問題",
         "lastLoaded": "最終読み込み {{time}}",
         "unknownError": "拡張機能の読み込みに失敗しました。",
-        "retry": "再試行",
-        "retrySucceeded": "拡張機能を読み込みました",
-        "retryFailed": "拡張機能の読み込みに依然として失敗しています",
         "copyError": "エラーをコピー",
         "errorCopied": "エラーをコピーしました"
       },
@@ -253,6 +250,14 @@
         "hint": "ソースフォルダーが変更されました。新しいバージョンを使うには再読み込みしてください。",
         "succeeded": "ローカルの変更を読み込みました",
         "failed": "ローカルの変更は拒否されました"
+      },
+      "dropZone": {
+        "title": "拡張機能のフォルダーをここにドロップ",
+        "hint": ".pstdio/extensions にコピーされ、そこから読み込まれます。",
+        "uploading": "{{name}} を追加しています…",
+        "succeeded": "{{name}} を追加しました",
+        "failed": "拡張機能のフォルダーを追加できませんでした",
+        "notFolder": "ファイルではなくフォルダーをドロップしてください。"
       },
       "automations": {
         "title": "自動化",

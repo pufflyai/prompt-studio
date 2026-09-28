@@ -1,12 +1,17 @@
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "pstdio-api-contracts";
 import { apiLogger } from "../../lib/logger";
+import { ProjectNotFoundError } from "../../services/extension-service";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-service";
+import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "./deps";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
+import { InvalidExtensionFolderError, installLocalExtensionFolder } from "./local-extension-folder";
 import { toProjectExtensionInstance } from "./project-extension-instance";
+import { syncRepoExtensionsForProject } from "./repo-extensions";
 
 type LifecycleDeps = ExtensionsRouteDeps & {
+  installedExtensionSourcesService: RouteDeps["installedExtensionSourcesService"];
   provisionProjectWorkspaces?: typeof provisionProjectWorkspaces;
 };
 
@@ -48,6 +53,33 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const result = await marketplace.installMarketplaceExtension(projectId, installName);
     await provisionWhenRequired(projectId, await changesWorkspaceProvisioning(result.installedSource));
     return { extension: await projectExtension(result.instance, result.installedSource) };
+  };
+
+  // The copied folder becomes a project extension the same way a folder placed there by hand does:
+  // repo discovery registers it, and enables it unless another source already provides its id.
+  const addLocalFolder = async (projectId: string, folder: { name: string; files: File[] }) => {
+    const workspace = await deps.workspaceService.getDefault(projectId);
+    if (!workspace) throw new ProjectNotFoundError(projectId);
+    const repoPath = workspace.root_path;
+    if (!repoPath) throw new InvalidExtensionFolderError("This project has no local folder to copy extensions into.");
+
+    const installed = await installLocalExtensionFolder({ ...folder, repoPath });
+    await syncRepoExtensionsForProject({
+      extensionService: deps.extensionService,
+      installedExtensionSourcesService: deps.installedExtensionSourcesService,
+      projectId,
+      repoPath,
+    });
+    const record = (await deps.extensionService.listProjectExtensionInstances(projectId)).find(
+      (candidate) => candidate.installedSource.source_path === installed.targetPath,
+    );
+    if (!record) throw new Error(`Extension folder was copied but could not be loaded: ${installed.targetPath}`);
+
+    await provisionWhenRequired(
+      projectId,
+      record.instance.enabled && (await changesWorkspaceProvisioning(record.installedSource)),
+    );
+    return { extension: await projectExtension(record.instance, record.installedSource) };
   };
 
   const setEnabled = async (projectId: string, instanceId: string, enabled: boolean) => {
@@ -126,5 +158,5 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     return result.retainedData ? ("retained-disabled" as const) : ("removed" as const);
   };
 
-  return { installMarketplace, setAutomationEnabled, setEnabled, uninstall };
+  return { addLocalFolder, installMarketplace, setAutomationEnabled, setEnabled, uninstall };
 };

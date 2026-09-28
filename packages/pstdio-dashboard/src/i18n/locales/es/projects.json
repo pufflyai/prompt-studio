@@ -236,9 +236,6 @@
         "issues_other": "{{count}} problemas",
         "lastLoaded": "Última carga {{time}}",
         "unknownError": "La extensión no se pudo cargar.",
-        "retry": "Reintentar",
-        "retrySucceeded": "Extensión cargada",
-        "retryFailed": "La extensión sigue sin cargarse",
         "copyError": "Copiar error",
         "errorCopied": "Error copiado"
       },
@@ -260,6 +257,14 @@
         "hint": "La carpeta de origen cambió. Recarga para usar la nueva versión.",
         "succeeded": "Cambios locales cargados",
         "failed": "Cambios locales rechazados"
+      },
+      "dropZone": {
+        "title": "Suelta aquí una carpeta de extensión",
+        "hint": "Se copia en .pstdio/extensions y se carga desde allí.",
+        "uploading": "Añadiendo {{name}}…",
+        "succeeded": "{{name}} añadida",
+        "failed": "No se pudo añadir la carpeta de la extensión",
+        "notFolder": "Suelta una carpeta, no un archivo."
       },
       "automations": {
         "title": "Automatizaciones",
