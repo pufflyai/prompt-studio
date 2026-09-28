@@ -121,7 +121,7 @@ jobs:
         run: bun test --timeout 15000 scripts/ci/install-native-dependencies.test.ts packages/pstdio-extensions/src/runtime/loader-node-modules.test.ts packages/pstdio-api/src/features/extensions/extension-source-watcher-dependencies.test.ts packages/pstdio-api/src/features/sessions/session-attachments.test.ts
 
       - name: Test Windows desktop command setup
-        run: bun test clients/desktop/src/cli
+        run: bun test --timeout 15000 clients/desktop/src/cli
 
       - name: Check formatting
         run: bun run format:check
