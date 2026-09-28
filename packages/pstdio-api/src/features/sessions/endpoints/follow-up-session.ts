@@ -1,6 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { HarnessAttachment, HarnessParams } from "pstdio-api-contracts";
-import { sessionHistoryIssueSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { composeSummary } from "../compose-summary";
 import type { SessionsRouteDeps } from "../deps";
@@ -8,7 +7,6 @@ import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } fr
 import { getSessionMessages } from "../get-session-messages";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
-import { SessionHistoryError } from "../session-history";
 import { createSessionScheduler } from "../session-scheduler";
 
 export const followUpSessionRoute = createRoute({
@@ -24,12 +22,6 @@ export const followUpSessionRoute = createRoute({
     },
   },
   responses: {
-    409: {
-      description: "Conversation sources need review.",
-      content: {
-        "application/json": { schema: z.object({ error: z.string(), historyIssue: sessionHistoryIssueSchema }) },
-      },
-    },
     200: {
       description: "Follow-up accepted.",
       content: { "application/json": { schema: followUpResponseSchema } },
@@ -141,8 +133,6 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       }
       return c.json({ ...result, follow_up: decision }, 200);
     } catch (error) {
-      if (error instanceof SessionHistoryError)
-        return c.json({ error: error.message, historyIssue: error.historyIssue }, 409);
       if (error instanceof SessionAttachmentError) {
         return c.json({ error: error.message }, 400);
       }

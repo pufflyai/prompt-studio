@@ -12,7 +12,6 @@ export type {
   SessionAttachmentRef,
   SessionConversationResponse,
   SessionConversationSources,
-  SessionHistoryIssue,
   SessionQueuedMessagesResponse,
 } from "pstdio-api-contracts";
 

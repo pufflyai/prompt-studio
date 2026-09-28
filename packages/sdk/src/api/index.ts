@@ -68,7 +68,6 @@ export type {
   SessionAttachmentRef,
   SessionConversationResponse,
   SessionConversationSources,
-  SessionHistoryIssue,
   SessionQueuedMessagesResponse,
 } from "./sessions";
 export { sessionAttachmentMimeTypesByExtension } from "./sessions";

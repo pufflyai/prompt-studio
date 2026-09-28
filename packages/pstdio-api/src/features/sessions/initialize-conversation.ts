@@ -1,7 +1,7 @@
 import type { ApprovalRequest, SessionMessage } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { checkpointConversation } from "./session-checkpoint";
-import { loadSessionHistory, SessionHistoryError } from "./session-history";
+import { loadSessionHistory } from "./session-history";
 
 type InitializationDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService" | "harnessRegistry"> &
   Partial<Pick<SessionsRouteDeps, "workspaceSessionService">>;
@@ -32,8 +32,6 @@ export const initializeConversation = (
       signal?.throwIfAborted();
       const history = await loadSessionHistory(sessionId, deps, retained);
       signal?.throwIfAborted();
-      if (history.historyIssue && history.historyIssue.code !== "native_unavailable")
-        throw new SessionHistoryError(history.historyIssue);
       return history;
     },
   );
