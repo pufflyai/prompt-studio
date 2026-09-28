@@ -16,6 +16,7 @@ import { openPglite } from "./open-pglite";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
+import { removeSharedWorkspaceFolders } from "./shared-workspace-folders";
 import { prepareWorkspaceLocations } from "./workspace-location-migration";
 
 type EmbeddedFile = Blob & { name: string };
@@ -129,6 +130,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       );
       if (legacy.rows[0]?.legacy) await migrateThrough(db, migrationsFolder, 31);
       await prepareWorkspaceLocations(openedPglite);
+      await removeSharedWorkspaceFolders(openedPglite, db, migrationsFolder);
       await migrate(db, { migrationsFolder });
     }
 

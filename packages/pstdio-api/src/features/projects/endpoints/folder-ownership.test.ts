@@ -126,7 +126,7 @@ test("legacy bindings for the same project gain workspace identity without losin
   });
 });
 
-test("obsolete linked-folder configs can be replaced without taking a live workspace's folder", async () => {
+test("obsolete linked-folder configs can be replaced, and a workspace folder opens its project", async () => {
   const home = await folder("migration-home");
   const project = await open(first, home);
   const discarded = await folder("discarded-link");
@@ -142,11 +142,6 @@ test("obsolete linked-folder configs can be replaced without taking a live works
   await mkdir(join(working, ".pstdio"));
   await writeFile(configPath(working), JSON.stringify({ project_id: project.id, workspace_id: workspace.id }));
   const original = await readConfig(working);
-  const rejected = await open(first, working);
-  expect((await first.deps.workspaceService.getDefault(rejected.id))?.setup_error).toBeTruthy();
-  expect(await readConfig(working)).toBe(original);
-  await first.deps.workspaceService.archive(workspace.id);
-  await open(first, working);
-  expect((await first.deps.workspaceService.getDefault(rejected.id))?.setup_error).toBeTruthy();
+  expect((await open(first, working)).id).toBe(project.id);
   expect(await readConfig(working)).toBe(original);
 });

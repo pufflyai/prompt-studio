@@ -9,7 +9,7 @@ import {
 } from "../../db/schemas.pg";
 import { renameWorkspace } from "./rename-workspace";
 import { createWorkspaceAnchorMutations } from "./workspace-anchors";
-import { attachInitialProvider, findDefaultByPath } from "./workspace-location";
+import { attachInitialProvider, findByPath } from "./workspace-location";
 import {
   buildWorkspaceRecord,
   type CreateInput,
@@ -301,7 +301,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
       attachInitialProvider(db, id, input),
     getDefault: (projectId: string) => selectDefaultWorkspace(db, projectId),
     ...createWorkspaceAnchorMutations(db),
-    findDefaultByPath: (rootPath: string) => findDefaultByPath(db, rootPath),
+    findByPath: (rootPath: string) => findByPath(db, rootPath),
     get,
     list,
     listForProviderReconciliation,
