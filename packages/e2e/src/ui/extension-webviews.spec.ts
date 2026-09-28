@@ -207,6 +207,14 @@ test.describe("Extension webviews", () => {
     await labFrame.getByRole("button", { name: "Say hello" }).click();
     await expect(page.getByText("Hello from Extension Lab")).toBeVisible();
 
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await labFrame.getByRole("button", { name: "Copy extension draft" }).click();
+    await expect(labFrame.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
+    await page.bringToFront();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      "A draft ready to paste.\n\nKeep the exact spacing.",
+    );
+
     await labFrame.getByRole("button", { name: "Test file capabilities" }).click();
     await expect(labFrame.getByText("Upload, read, list, and delete passed.")).toBeVisible();
   });

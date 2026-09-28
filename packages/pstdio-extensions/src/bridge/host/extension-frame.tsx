@@ -11,6 +11,7 @@ import type {
 import { createHostCapabilityGate } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
 import type { HostEventPublisher } from "./host-event-publisher";
+import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
 export interface ExtensionFrameProps {
@@ -280,7 +281,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}
         ref={iframeRef}
         title={title ?? view.label}
-        allow="fullscreen"
+        allow={extensionIframeAllow(view.webview.capabilities)}
         allowFullScreen
         sandbox={EXTENSION_IFRAME_SANDBOX}
         // Match the host theme so the empty/loading iframe paints the right canvas

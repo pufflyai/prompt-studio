@@ -1,6 +1,11 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
-import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
+import {
+  createWebviewDiagnostics,
+  ExtensionFrame,
+  type ExtensionFrameProps,
+  extensionIframeAllow,
+} from "pstdio-extensions/bridge/host";
 import { useState } from "react";
 import { buildApiUrl } from "@/lib/api";
 
@@ -58,7 +63,7 @@ export const StaticWebviewSurface = (props: {
       {state === "error" ? <WebviewLoadError /> : null}
       <iframe
         title={title}
-        allow="fullscreen"
+        allow={extensionIframeAllow(webview.capabilities)}
         allowFullScreen
         src={src}
         sandbox={sandbox}

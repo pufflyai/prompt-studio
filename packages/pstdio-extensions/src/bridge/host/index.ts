@@ -7,4 +7,5 @@ export {
   logExtensionHostDiagnostic,
 } from "./host-diagnostics";
 export { createHostEventPublisher, type HostEventPublisher } from "./host-event-publisher";
+export { extensionIframeAllow } from "./iframe-permissions";
 export { collectChakraThemeVariables, postThemeToFrame } from "./theme";

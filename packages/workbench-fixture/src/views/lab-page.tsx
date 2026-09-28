@@ -1,4 +1,5 @@
 import { Container, Grid, Heading, Stack, Text } from "@chakra-ui/react";
+import { ClipboardCard } from "../components/clipboard-card";
 import { CounterCard } from "../components/counter-card";
 import { FileCapabilitiesCard } from "../components/file-capabilities-card";
 import { HostNotificationCard } from "../components/host-notification-card";
@@ -28,6 +29,7 @@ export const LabPage = () => {
         </Stack>
 
         <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap="md" alignItems="start">
+          <ClipboardCard />
           <CounterCard />
           <ThemeCard />
           <HostNotificationCard />

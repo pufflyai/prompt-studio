@@ -12,6 +12,7 @@ export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 
 // Capabilities a webview must declare in its manifest before the bridge will route them.
 export const WEBVIEW_DECLARABLE_CAPABILITIES = [
+  "clipboard.write",
   "commands.execute",
   "navigation.open",
   "placement.close",
@@ -40,7 +41,7 @@ export const WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES = ["artifacts.read"] as cons
 export const ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES = ["host.dispatchKeyboardEvent"] as const;
 
 export const WEBVIEW_HOST_CAPABILITIES = [
-  ...WEBVIEW_DECLARABLE_CAPABILITIES,
+  ...WEBVIEW_DECLARABLE_CAPABILITIES.filter((capability) => capability !== "clipboard.write"),
   ...WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
   ...ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
 ] as const;
