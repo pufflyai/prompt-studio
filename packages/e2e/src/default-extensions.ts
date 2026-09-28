@@ -12,6 +12,7 @@ const e2eExtension = (name: string) => ({
   skipInstall: !name.startsWith(".pstdio/extensions/"),
 });
 
+// Each extension is also an e2e devDependency, so CI runs e2e for pull requests that change it.
 const e2eDefaultExtensions = [
   e2eExtension("pstdio-base-themes"),
   e2eExtension("pstdio-artifacts"),
