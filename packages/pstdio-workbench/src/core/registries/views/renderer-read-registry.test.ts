@@ -130,3 +130,72 @@ test("a deadline aborts the transport but does not release uncooperative work", 
   child.resolve(1);
   await registry.dispose();
 });
+
+test("progressive reads publish available data and reject late updates after their query changes", async () => {
+  const registry = createRendererReadRegistry();
+  const binding = registry.bind("settings");
+  const complete = Promise.withResolvers<string>();
+  const values: string[] = [];
+  let publish: ((value: string) => void) | undefined;
+  binding.request<string>({
+    queryKey: "first",
+    load: (_signal, report) => {
+      publish = report;
+      report("static entries");
+      return complete.promise;
+    },
+    onProgress: (value) => values.push(value),
+    onValue: (value) => values.push(value),
+    onError: () => {},
+  });
+  try {
+    await Bun.sleep(0);
+    expect(values).toEqual(["static entries"]);
+    publish!("first collection");
+    expect(values).toEqual(["static entries", "first collection"]);
+    binding.request({
+      queryKey: "second",
+      load: () => "new project",
+      onValue: (value) => values.push(value),
+      onError: () => {},
+    });
+    publish!("old collection");
+    complete.resolve("old final");
+    await Bun.sleep(0);
+    expect(values).toEqual(["static entries", "first collection", "new project"]);
+  } finally {
+    complete.resolve("done");
+    binding.dispose();
+    await registry.dispose();
+  }
+});
+
+test.each([
+  false,
+  true,
+])("a settled read cannot publish into a later same-query refresh (failed: %s)", async (fails) => {
+  const registry = createRendererReadRegistry();
+  const binding = registry.bind("settings");
+  const values: string[] = [];
+  let publish: ((value: string) => void) | undefined;
+  binding.request<string>({
+    queryKey: "same",
+    load: (_signal, report) => {
+      publish = report;
+      if (fails) throw new Error("failed");
+      return "complete";
+    },
+    onProgress: (value) => values.push(value),
+    onValue: () => {},
+    onError: () => {},
+  });
+  await Bun.sleep(0);
+  const next = Promise.withResolvers<string>();
+  binding.request({ queryKey: "same", load: () => next.promise, onValue: () => {}, onError: () => {} });
+  await Bun.sleep(0);
+  publish!("late");
+  expect(values).toEqual([]);
+  next.resolve("next");
+  binding.dispose();
+  await registry.dispose();
+});

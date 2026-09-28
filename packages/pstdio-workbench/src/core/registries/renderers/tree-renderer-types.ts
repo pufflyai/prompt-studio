@@ -9,6 +9,8 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 
 export interface TreeQueryContext {
   signal?: AbortSignal;
+  /** Publish available sections while the rest of the current read is still loading. */
+  onProgress?(sections: TreeViewSection[]): void;
   filter?: string;
   resource?: ResourceRef;
   /** Widget/view contribution id for trees rendered through a view-backed widget. */

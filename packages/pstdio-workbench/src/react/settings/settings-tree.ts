@@ -8,6 +8,7 @@ import type {
   TreeNode,
   TreeViewSection,
 } from "../../core";
+import { settleReadBatch } from "../../core/registries/views/settle-read-batch";
 import {
   isSettingsScopeVisible,
   settingsItemResource,
@@ -42,7 +43,12 @@ const orderGroupKeys = (keys: string[], order: string[] | undefined) => {
   return [...keys].sort((left, right) => indexOf(left) - indexOf(right));
 };
 const collectionChildren = async (panel: CollectionSettingsPanel): Promise<TreeNode[]> => {
-  const items = await Promise.resolve(panel.items()).catch(() => []);
+  let items: unknown[];
+  try {
+    items = await panel.items();
+  } catch {
+    items = [];
+  }
   if (!panel.groupBy) return items.map((item) => collectionItemNode(panel, item));
   const groupBy = panel.groupBy;
   const byKey = new Map<string, unknown[]>();
@@ -60,7 +66,7 @@ const collectionChildren = async (panel: CollectionSettingsPanel): Promise<TreeN
     children: (byKey.get(key) ?? []).map((item) => collectionItemNode(panel, item)),
   }));
 };
-const panelToNode = async (panel: RegisteredSettingsPanel): Promise<TreeNode> => {
+const panelToNode = (panel: RegisteredSettingsPanel): TreeNode => {
   if (panel.kind === "collection") {
     return {
       id: `settings-collection:${panel.id}`,
@@ -68,7 +74,7 @@ const panelToNode = async (panel: RegisteredSettingsPanel): Promise<TreeNode> =>
       icon: panel.icon,
       collapsible: true,
       actions: toTreeActions(panel.actions),
-      children: await collectionChildren(panel),
+      children: [],
     };
   }
   const resource = settingsPanelResource(panel);
@@ -88,12 +94,15 @@ export interface BuildSettingsTreeInput {
   settings: SettingsRegistry;
   hasProjectScope: boolean;
   matchesWhen(expression?: string): boolean;
+  signal?: AbortSignal;
+  onProgress?(sections: TreeViewSection[]): void;
 }
 // Derives the settings navigation tree from the registry: one section per registered
 // section (headerless when titleless), schema/custom panels as leaves, and collection
 // panels expanded into per-item nodes (optionally grouped). Scope gates project entries.
 export const buildSettingsTreeBody = async (input: BuildSettingsTreeInput): Promise<TreeViewSection[]> => {
-  const { settings, hasProjectScope, matchesWhen } = input;
+  const { settings, hasProjectScope, matchesWhen, signal, onProgress } = input;
+  signal?.throwIfAborted();
   const sections = settings.listSections();
   const sectionsById = new Map(sections.map((section) => [section.id, section]));
   const panels = settings
@@ -110,7 +119,8 @@ export const buildSettingsTreeBody = async (input: BuildSettingsTreeInput): Prom
   if (bySection.has(FALLBACK_SECTION_ID) && !sectionsById.has(FALLBACK_SECTION_ID)) {
     renderOrder.push(FALLBACK_SECTION_ID);
   }
-  const result: TreeViewSection[] = [];
+  let result: TreeViewSection[] = [];
+  const collections: CollectionSettingsPanel[] = [];
   for (const sectionId of renderOrder) {
     const section = sectionsById.get(sectionId);
     // Sections are containers — only hide one that is *explicitly* project-scoped.
@@ -119,10 +129,25 @@ export const buildSettingsTreeBody = async (input: BuildSettingsTreeInput): Prom
     const sectionPanels = bySection.get(sectionId) ?? [];
     const actions = toTreeActions(section?.actions);
     if (sectionPanels.length === 0 && !actions) continue;
-    const nodes: TreeNode[] = [];
-    for (const panel of sectionPanels) nodes.push(await panelToNode(panel));
+    const nodes = sectionPanels.map(panelToNode);
+    for (const panel of sectionPanels) if (panel.kind === "collection") collections.push(panel);
     // Settings groups are plain labels, not accordions — the whole tree stays visible.
     result.push({ id: sectionId, label: section?.title, actions, nodes, collapsible: false });
   }
+  onProgress?.(result);
+  await settleReadBatch(
+    collections.map((panel) => async (signal) => {
+      const children = await collectionChildren(panel);
+      signal.throwIfAborted();
+      result = result.map((section) => ({
+        ...section,
+        nodes: section.nodes.map((node) =>
+          node.id === `settings-collection:${panel.id}` ? { ...node, children } : node,
+        ),
+      }));
+      onProgress?.(result);
+    }),
+    signal,
+  );
   return result;
 };

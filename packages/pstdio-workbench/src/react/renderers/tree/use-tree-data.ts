@@ -3,7 +3,12 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useRendererRead } from "../use-renderer-read";
-import { expandDefaultTreeSections, loadExpandedTreeChildren, loadTreeData } from "./tree-view-load";
+import {
+  expandDefaultTreeSections,
+  type LoadedTreeData,
+  loadExpandedTreeChildren,
+  loadTreeData,
+} from "./tree-view-load";
 
 export const useTreeData = (
   workbench: WorkbenchCore,
@@ -46,13 +51,13 @@ export const useTreeData = (
     queryKey,
     byNodeId: {},
   });
-  const read = useRendererRead({
+  const read = useRendererRead<LoadedTreeData & { children: Record<string, TreeNode[]> }>({
     workbench,
     ownerKey,
     queryKey,
-    load: async (signal) => {
+    load: async (signal, publish) => {
       const ctx = { resource, viewId, filter, signal };
-      const data = await loadTreeData(trees, treeViewId, ctx);
+      const data = await loadTreeData(trees, treeViewId, ctx, (available) => publish({ ...available, children: {} }));
       signal.throwIfAborted();
       const children =
         data && trees.getTreeRenderer(treeViewId)

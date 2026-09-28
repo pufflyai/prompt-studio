@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Keep shared session and settings navigation mounted when the selected item changes.
+Keep shared session and settings navigation mounted during selection changes and show settings entries as their data becomes available.
