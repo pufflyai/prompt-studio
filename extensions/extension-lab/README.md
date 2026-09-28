@@ -39,4 +39,4 @@ pst extension-lab state read --name kiln
 
 `chrome` assigns views to the mode's nav, sidenav, activity bar, or status bar. Use `false` to hide a region. Omit a region to retain host chrome. Sizes and collapsibility belong in `regionSettings`. Set `showHeader: false` on a docked panel when the example supplies its own controls, as Boombox does for its player.
 
-Start with [the example definitions](src/examples), [view mounting](src/create-view.tsx), and [state commands](src/state-commands.ts). See [mode contracts](../../.pstdio/docs/extensions/modes-and-layout.md) for the host API.
+Start with [the example definitions](src/examples), [view mounting](src/create-view.tsx), and [state commands](src/state-commands.ts). See [mode contracts](../../documentation/references/0028-extensions-modes-and-layout.md) for the host API.

@@ -1,0 +1,213 @@
+# Workspace Diff Presentation
+
+How Prompt Studio presents workspace diffs to users in the dashboard.
+
+## Scope
+
+Covers the workspace screen and diff summary badges:
+
+- Page: the generic workspace page declared by the workspaces module; ticket navigation supplies context without owning its route.
+- Diff source: `GET /v1/workspaces/:id/diff-files` plus on-demand `GET /v1/workspaces/:id/diff-file`; both accept `mode=current|fork_point`
+- File source: workspace file, directory, and entry endpoints under `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
+- Renderers: workspace-owned `Files` and `Changes` Main sub-panels
+
+## Where Users See Diffs
+
+### 1) Ticket board cards (summary only)
+
+Each ticket card resolves its latest attempt and shows addition/deletion totals inside the workspace badge. Clicking the workspace badge opens the workspace page for that attempt.
+
+### 2) Ticket details header button (summary only)
+
+Shows attempt count and latest diff totals. Clicking opens the latest workspace when attempts exist.
+
+### 3) Workspace Main Panel (`Files` + `Diffs`)
+
+The workspace stays the selected resource. The Main Panel has two resource-owned sub-panels:
+
+Files and Changes are auxiliary slots of the workspace page. Closing either keeps the workspace
+route and the other panel open. Closing both shows an empty state with Add panel available to
+reopen either view. The workspace page declares its routed resource separately and uses `main: { kind: "panels", empty }`. Closing all Main panels shows the empty view while retaining the workspace route.
+
+- `Files` — a searchable file tree in the left Panel menu and a shared file renderer in the body
+- `Diffs` — changed-file metadata and an on-demand diff body
+
+`Diffs` is active on the first visit. Resource-owned layout state restores the last valid sub-panel and Files menu state on later visits. File selection uses `workspaceView: "files"` and `workspaceFilePath` metadata on the same workspace resource URI.
+
+### 4) Workspaces list (summary only)
+
+The list shows Name, Type, Location, Created at, and Diff by default. Statistics and diagnostic columns stay available from the display menu. The Diff column asks for a summary only when the workspace provider declares the `diff` capability. A workspace without it shows "Not supported"; a supported workspace with no changes shows `+0 -0`.
+
+Workspace resources take their icon from their kind: a folder for the project folder, a Git branch for a Git worktree, and a cloud for a remote workspace. Breadcrumbs show that icon on every route, including after a reload.
+
+## End-to-End Flow
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Dashboard
+  participant API as pstdio-api
+  participant Git as pstdio-wt (git)
+
+  User->>Dashboard: Open workspace attempt
+  Dashboard->>API: GET /v1/workspaces/:id/diff-files?mode=fork_point
+  API->>Git: Resolve base via reflog fork point (preferred) or merge-base fallback
+  API->>Git: Collect changed-file metadata and line counts
+  API-->>Dashboard: { files, totals } without file bodies
+  Dashboard-->>User: File tree and collapsed summary cards
+  User->>Dashboard: Select or expand a file
+  Dashboard->>API: GET /v1/workspaces/:id/diff-file?mode=fork_point&path=...
+  API->>Git: Load that file's old/new content
+  API-->>Dashboard: Single file diff body
+  Dashboard-->>User: Inline Monaco diff for the selected file
+```
+
+The Files flow uses the same workspace resource:
+
+1. `GET /v1/workspaces/:id/files` lists direct children or bounded search results.
+2. `GET /v1/workspaces/:id/file?path=...` reads one existing text file or supported image.
+3. Editable text opens in Monaco. Opening does not format, change, or save the file.
+4. `PUT /v1/workspaces/:id/file?path=...` replaces an existing UTF-8 text file after an edit.
+5. `POST /v1/workspaces/:id/file?path=...` creates a file under an existing directory.
+6. `POST /v1/workspaces/:id/directory?path=...` creates a directory under an existing directory.
+7. `PATCH /v1/workspaces/:id/entry?path=...` moves a file without replacing an existing destination.
+8. `DELETE /v1/workspaces/:id/entry?path=...` deletes a file or directory after confirmation.
+9. A successful mutation invalidates file-list, selected-file, diff-files, diff-file, and diff-summary queries.
+
+Workspace file paths are POSIX-style paths relative to the trusted workspace file root. A worktree workspace uses `workspace.root_path`. The default folder workspace uses its recorded `root_path`. The shared mount rejects absolute, drive-letter, UNC, traversal, separator-confusion, null-byte, and symlink-escape paths. It skips `.git`, limits reads and writes to 1 MiB, and requires the parent directory to exist before creating an entry.
+
+## Backend Diff Generation
+
+### Endpoint
+
+The workspace page uses metadata-first endpoints in `pstdio-api`:
+
+- `GET /v1/workspaces/:id/diff-files` — changed-file metadata, counts, and totals without file bodies
+- `GET /v1/workspaces/:id/diff-file?path=...` — old/new content for one requested file
+
+`GET /v1/workspaces/:id/diff` remains available when callers need the complete diff response in one request.
+
+### Validation
+
+1. Resolve workspace by id
+2. Require a ready provider with the diff capability and a linked file root
+3. Resolve the comparison base from the requested mode
+
+Returns typed errors (400/404) on failure.
+
+### Diff Calculation
+
+The API defaults to `current`, which compares working files with `HEAD`. A worktree's dashboard view requests `fork_point` to include the attempt's committed changes. The API resolves the base, then delegates Git diff work to `pstdio-wt`:
+
+1. **Resolve base commit** (`resolve-base.ts`): prefer the reflog fork point (the commit the worktree branch was created from), falling back to `merge-base HEAD main/master`, then the repo root commit.
+2. **Discover changed files**: union of `git diff --name-status <base> HEAD` (committed), `git diff --name-status HEAD` (uncommitted), and `git ls-files --others --exclude-standard` (untracked).
+3. **Full diff**: fetch old/new content and numstat per file. **Summary**: aggregate numstat totals without reading file content.
+
+In `fork_point` mode, the user sees both committed and uncommitted changes since the branch's base.
+
+### Response Shape (workspace file metadata)
+
+- `workspace_id` — the host workspace identifier
+- `base_ref` / `head_ref` — labels for the comparison base and current branch
+- `files` — per-file diff objects with path, change type, additions, and deletions; content fields are omitted until requested
+- `totals` — additions, deletions, file count
+
+### Response Shape (single file body)
+
+- `filePath` — requested path
+- `change` — added, deleted, modified, renamed, copied, or permissionChange
+- `oldPath` / `newPath` — optional resolved diff paths
+- `oldContent` / `newContent` — file content for inline rendering
+- `additions` / `deletions` — line counts for the file
+
+### Response Shape (summary)
+
+A lightweight `GET /v1/workspaces/:id/diff-summary` endpoint returns totals only — no file content:
+
+- `workspace_id` — the host workspace identifier
+- `additions` — total added lines
+- `deletions` — total removed lines
+- `file_count` — number of changed files
+
+Used by ticket board cards and the ticket details header to avoid fetching full file diffs.
+
+## Frontend Rendering Pipeline
+
+### Fetching
+
+- **Board cards and ticket header**: use the lightweight diff-summary endpoint. Queries are enabled when the workspace is ready and its provider supports diffs. Session terminal status is not the query gate.
+- **Workspace Diffs sub-panel**: fetches changed-file metadata first. It requests a body only for the selected summary file. A normal expanded but unselected card does not issue a body request.
+- **Workspace Files sub-panel**: fetches tree entries on demand. Search is bounded and server-backed. The selected file has its own query.
+- Refetches on window focus
+
+### Type Mapping
+
+API file diff objects are transformed into UI diff types. Rename paths fall back to the primary file path when absent.
+
+### Panel Layout
+
+- `Files` and `Diffs` are sub-panels owned by the workspace Main location.
+- The Files left Panel menu hosts the searchable workspace tree.
+- The Files body uses the shared workbench file renderer.
+- Markdown, plain text, extensionless files, and code use Monaco when the workspace contribution marks them as editable text.
+- Supported images use the shared read-only image preview.
+- No selection, unsupported files, oversized files, and API errors show deliberate states instead of blank editors.
+- The default folder workspace supports Files through its `root_path`. It does not advertise Git diff.
+- The Sidenav continues to show workspace sessions. Files and Diffs are not duplicated there.
+
+### File Cards
+
+One card per changed file:
+
+- **Modified/Added**: normal file path in header
+- **Deleted**: struck-through file path
+- **Renamed**: old path arrow new path
+- Addition/deletion counts shown as a badge
+- Body renders a read-only inline diff after the selected file body is loaded
+- Diffs over the large-file threshold show `Large diffs are hidden by default` until explicitly loaded
+
+## Artifact Source Of Truth
+
+Ticket attachments are planner-owned. Agent-produced validation, review, test,
+and implementation evidence is report-owned and lives under `.pstdio/reports/`.
+The dashboard loads planner ticket file metadata/content through planner
+commands and should not treat ticket folders as the source of truth for result
+artifacts.
+
+When planner file metadata changes, the ticket detail surface refreshes the
+planner file query so re-saved artifact content updates in place.
+
+## Artifact Persistence Flow
+
+`pst tickets save --id <ticket>` uploads planning/support files from:
+
+- `.pstdio/tickets/<ticket>/files/` as regular ticket attachments
+
+`pst reports save --name <name>` uploads report evidence from
+`.pstdio/reports/<name>/files/` into report-owned blob storage.
+
+## Errors and Empty States
+
+### API errors
+
+- 404 — workspace not found
+- 400 — a workspace does not support diff or its Git provider reference is unavailable
+- File requests return 404 when no trusted workspace file root can be resolved
+- 500 — git diff failure
+
+### UI behavior
+
+- No workspace selected: diff query disabled
+- No files: panel shows an empty state
+- Reports but no changed files: report links remain available from the ticket or workspace context
+
+## Verification
+
+1. Open a worktree workspace and confirm `Files` and `Diffs` are present with `Diffs` active.
+2. Open Files, search for an unchanged markdown or extensionless text file, and confirm it opens in Monaco.
+3. Confirm opening the file does not issue a write.
+4. Edit and save the file, then open Diffs and confirm the file and saved body appear.
+5. Confirm the initial Diffs load calls `/diff-files` once and calls `/diff-file` only for the selected file.
+6. Confirm a supported image uses the shared preview.
+7. Open the default folder workspace and confirm Files browses and edits its exact folder through Monaco.
+8. Confirm unsafe paths return `400` and a workspace without file capability gets a clear Files error.

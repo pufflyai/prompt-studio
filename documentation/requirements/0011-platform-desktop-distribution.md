@@ -1,0 +1,194 @@
+# Desktop distribution and updates
+
+Prompt Studio publishes desktop installers on the same GitHub release as the
+matching `pstdio` runtime. A desktop application and its bundled sidecar always
+share one version; mixing files from different releases is unsupported.
+
+## Install
+
+Choose the artifact for the computer that will run Prompt Studio:
+
+| Platform | Install artifact | Alternative |
+| --- | --- | --- |
+| Apple Silicon macOS | `Prompt-Studio-<version>-darwin-arm64.dmg` | matching ZIP |
+| Intel macOS | `Prompt-Studio-<version>-darwin-x64.dmg` | matching ZIP |
+| Linux x64 | `Prompt-Studio-<version>-linux-x64.deb` | portable ZIP |
+| Windows x64 | `Prompt-Studio-<version>-win32-x64-Setup.exe` | — |
+
+On macOS, drag the app to Applications and open it. On the first launch from
+Applications, the app links `/usr/local/bin/pst` to its bundled runtime. macOS asks
+for an administrator password if the directory requires it. Cancelling leaves
+the app usable and does not repeat the prompt on later launches. Choose
+**Prompt Studio → Install pst Command…** to retry or restore a removed link.
+Apps running from the DMG or another unpacked folder do not install the command.
+
+The Linux DEB installs `/usr/bin/pst` and removes its own link when uninstalled.
+The Windows Setup installer creates a `pst.cmd` launcher in the installation's
+stable `bin` folder and adds that folder to the current user's `PATH`. Setup does
+not require an administrator password. Close and reopen your terminal after installation,
+then run `pst --version`. The launcher follows the new bundled runtime on every
+Squirrel update. Uninstall removes the desktop-owned launcher and its PATH entry.
+Other PATH entries, including environment-variable references, are preserved.
+Windows release availability still depends on the signing lane described below.
+
+None of these installers requires Bun, Node.js, or a separate CLI download.
+Desktop updates keep `pst` on the matching bundled runtime.
+
+Existing commands are preserved. Remove a separate CLI installation before
+retrying setup to use the desktop's bundled version. A command earlier on a custom
+`PATH` takes priority; run `command -v pst` on macOS/Linux or `where.exe pst` on
+Windows to check which one runs. Deleting the
+macOS app leaves its link behind; remove that link with `rm /usr/local/bin/pst`
+(use `sudo` if needed).
+
+The Linux ZIP is portable rather than system-integrated. Extract it to a stable
+directory without spaces, preserve executable permissions, and launch
+`prompt-studio` from the extracted directory. Electron's SUID sandbox currently
+cannot launch an executable whose full path contains spaces. The DEB installs
+under its normal system path and participates in the distribution's package
+inventory. See [the temporary path restriction](../adrs/0019-temporary-linux-desktop-package-paths.md).
+
+## Verify a download
+
+Each release includes `checksums-desktop-<version>.sha256` plus target-specific
+checksum files. Run the platform's SHA-256 tool from the directory containing the
+download and checksum file.
+
+On macOS, Finder/Gatekeeper validates the notarized Developer ID application.
+Operators can additionally run:
+
+```bash
+codesign --verify --deep --strict --verbose=2 "/Applications/Prompt Studio.app"
+spctl --assess --type execute --verbose=2 "/Applications/Prompt Studio.app"
+xcrun stapler validate "/Applications/Prompt Studio.app"
+```
+
+On Windows, run the Setup installer. Its verified publisher is **Pufflig AB**.
+The application, bundled runtime, installer, and update payload carry trusted
+Authenticode signatures and timestamps. To inspect the downloaded installer:
+
+```powershell
+Get-FileHash .\Prompt-Studio-VERSION-win32-x64-Setup.exe -Algorithm SHA256
+Get-AuthenticodeSignature .\Prompt-Studio-VERSION-win32-x64-Setup.exe |
+  Format-List Status, SignerCertificate, TimeStamperCertificate
+```
+
+Require `Valid` and compare the hash with the release's checksum file. Do not
+distribute an unsigned development package as a supported desktop release.
+
+## Updates
+
+Packaged macOS and Windows applications query the public GitHub Releases API for the newest
+complete `pstdio@<version>` release. They then point Electron's native updater at
+that release's architecture-aware JSON metadata on macOS, or its `RELEASES` and
+full nupkg files on Windows. Source builds do not use the
+native updater. A check compares the published version with the installed desktop
+version before downloading. Equal or older releases are not downloaded.
+
+**Prompt Studio → Check for Updates…** shows a native dialog for each result:
+
+| Result | Feedback |
+| --- | --- |
+| No newer version | **You're up to date.**, with the installed version |
+| Download verified and complete | **Your update is ready to install.**, with the downloaded version and instructions to quit and reopen |
+| New version starts after a downloaded update | **Prompt Studio was updated successfully.**, with the running desktop version; shown once |
+| Lookup, download, or verification fails | **Prompt Studio couldn't complete the update.**, with retry and log guidance |
+
+Dismiss these dialogs with **OK**. A downloaded update is installed when the app
+quits normally. Reopening runs the new version. The existing active-work
+confirmation still applies to quitting; downloading does not stop work.
+
+The desktop keeps the downloaded version in its application support directory
+until a later launch can confirm the matching version is running. First launches
+and launches where the update was not installed do not show an installation
+success message. Updating the desktop bundle does not replace an independently
+running persistent CLI runtime.
+
+Electron has no built-in Linux updater. Use the package manager for DEB installs,
+or download and replace the portable directory from the GitHub release page.
+The desktop **Check for updates** capability opens that release page on Linux.
+
+## Release ownership and secrets
+
+The configured publication channel is this repository's `pstdio@<version>`
+GitHub release. The release owner must approve this channel before the first
+production publish. `.github/workflows/release-packages.yml` creates it as a draft and calls
+`.github/workflows/release-desktop.yml`. Only the final publish job can write
+release contents. Native build artifacts are retained by Actions for 14 days.
+
+Repository administrators provision these GitHub Actions secrets:
+
+| Secret | Purpose |
+| --- | --- |
+| `MACOS_CERTIFICATE` | Base64 PKCS#12 Developer ID Application certificate |
+| `MACOS_CERTIFICATE_PASSWORD` | PKCS#12 password |
+| `MACOS_SIGN_IDENTITY` | Exact Developer ID Application identity |
+| `APPLE_API_KEY` | Base64 App Store Connect `.p8` notarization key |
+| `APPLE_API_KEY_ID` | App Store Connect key ID |
+| `APPLE_API_ISSUER` | App Store Connect issuer UUID |
+
+Windows uses Azure Artifact Signing with GitHub OIDC. The private key stays in
+Azure; no `.pfx` file or client secret is needed. The account, Public Trust profile,
+endpoint, and Azure identity IDs are repository Actions variables. See
+[Windows signing setup](../../clients/desktop/docs/windows-signing.md).
+All six Azure variables are required for Windows releases. The release workflow
+must run from the authorized `main` branch, even when it checks out a release tag.
+
+Credentials are decoded only into the native runner's temporary directory. The
+macOS certificate is imported into an ephemeral keychain that is deleted even
+when the job fails. Never print, upload, or commit decoded credentials.
+
+## Release readiness evidence
+
+Each native target launches the actual application produced by Forge after the
+target's signing step. The packaged suite must prove all of the following before
+the target artifacts are eligible for publication:
+
+- a clean desktop-owned start reaches the dashboard within eight seconds and
+  binds the sidecar to literal `127.0.0.1`;
+- browser REST uses a renderer-inaccessible HttpOnly cookie, while the bundled
+  CLI discovers the same runtime and uses descriptor bearer authentication;
+- arbitrary browser origins and unauthenticated readiness requests are rejected,
+  and the runtime credential is absent from HTML, URLs, and JavaScript cookies;
+- `pst serve` promotes ownership without changing the runtime PID, closing the
+  desktop detaches, and a warm relaunch reaches the same persistent runtime
+  within three seconds with project data and the selected workbench resource
+  intact;
+- `pst close` announces an intentional shutdown, removes the matching descriptor,
+  and closes the connected desktop; and
+- an injected sidecar exit displays recovery within 500 milliseconds, then Retry
+  starts a replacement runtime in the existing Electron process.
+
+Hosted Intel macOS runners are slow and costly. The Intel target runs only the
+packaged tests tagged `@essential`. They prove the clean start, both transport
+paths, `pst close`, and a terminal and extension page in the x64 build. The Intel
+clean start may take up to 20 seconds. The other targets run the full suite.
+
+The workflow uploads the Playwright JSON result as
+`release-readiness-<platform>-<architecture>` with 14-day retention. A release
+owner links every native job run and their evidence artifacts from the
+ticket validation report. Contract tests in the owning packages separately
+cover active-work refusal/confirmation, indefinite graceful wait, lock and bind
+failures, corrupt PGlite recovery classification, exact instance targeting,
+window/IPC restrictions, checksums, fuses, update metadata, and version drift.
+
+A local unsigned run is useful implementation evidence, but it is not a
+substitute for both native workflow results. Never record 5/5 release
+confidence until the signed and notarized macOS checks, Linux package inspection,
+native packaged suites, and complete published release set all pass for the same
+version.
+
+## Release troubleshooting
+
+- **Release remains a draft:** open the native matrix and identify the first
+  failed target. The draft is the safety boundary; do not publish it manually.
+- **Missing credential:** provision the exact secret named in the failure and
+  rerun the desktop workflow for the existing version/tag.
+- **macOS notarization or Gatekeeper failure:** verify the Developer ID identity,
+  App Store Connect key permissions, Team ownership, timestamp service, and
+  stapling result. Do not disable hardened runtime or signature validation.
+- **Version or checksum drift:** regenerate the version PR and rebuild all native
+  targets. Never edit an installer name, `RELEASES`, sidecar manifest, or checksum
+  after verification.
+- **Wrong architecture:** discard the artifact and download the explicitly named
+  target. The application refuses to launch a mismatched sidecar.

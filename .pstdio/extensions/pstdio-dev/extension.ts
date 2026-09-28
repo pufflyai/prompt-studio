@@ -15,7 +15,7 @@ const PROVISION_COMMAND = ["sh", "-c", `${INSTALL_COMMAND.join(" ")} && ${BUILD_
 const ISOLATED_COMMAND = ["bun", "run", "dev:isolated"];
 const HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT = [
   "Inspect this repository for one high-impact user-facing bug, reliability failure, data-loss risk, security weakness, or material violation of its documented architecture.",
-  "Read the applicable AGENTS.md files and relevant documents under .pstdio/docs/architecture/. Run `bun run verify:boundaries`, then inspect documented ownership, layering, dependency direction, public/private package boundaries, and declared sources of truth. Treat only those documents and architecture checks as authoritative; do not invent architecture rules or propose preference-based rewrites.",
+  "Read the applicable AGENTS.md files and relevant documents under documentation/references/. Run `bun run verify:boundaries`, then inspect documented ownership, layering, dependency direction, public/private package boundaries, and declared sources of truth. Treat only those documents and architecture checks as authoritative; do not invent architecture rules or propose preference-based rewrites.",
   "Apply these gates in order:",
   "1. Identify a plausible high-impact bug, security, reliability, data-integrity, or documented architecture-conformance issue. Reject routine maintenance, cleanup, documentation, test-only, dependency-hygiene, cosmetic, and developer-experience chores unless they demonstrate a material architecture violation.",
   "2. Check existing open and archived planner tickets. Stop if an equivalent issue is already tracked, was archived after being addressed, or was previously rejected; use the archived ticket's history and rejection rationale instead of recreating it.",

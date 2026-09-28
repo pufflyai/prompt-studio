@@ -55,7 +55,7 @@ describe("pull request CI scope", () => {
   });
 
   test("documentation outside packages runs no heavy jobs", () => {
-    const scope = pullRequest(["README.md", ".pstdio/docs/contributing/tests.md", "design/website.pen", "LICENSE"]);
+    const scope = pullRequest(["README.md", "documentation/guides/0003-testing.md", "design/website.pen", "LICENSE"]);
 
     expect(scope).toEqual({ lernaFilter: "--since HEAD~1", windows: false, e2e: false, license: false });
   });

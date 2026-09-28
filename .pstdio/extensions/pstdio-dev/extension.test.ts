@@ -34,7 +34,7 @@ describe("Prompt Studio Dev extension", () => {
     });
     expect(prompt).toBeString();
     expect(prompt).toContain("AGENTS.md");
-    expect(prompt).toContain(".pstdio/docs/architecture/");
+    expect(prompt).toContain("documentation/references/");
     expect(prompt).toContain("bun run verify:boundaries");
     expect(prompt).toMatch(/existing .*tickets/i);
     expect(prompt).toMatch(/archived .*tickets/i);

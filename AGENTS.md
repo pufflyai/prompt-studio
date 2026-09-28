@@ -8,7 +8,7 @@ Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass
 - Write **TypeScript only**.
 - Use **bun**. Do not use `npm`, `yarn`, or `pnpm`.
 - A task is not complete until all tests pass.
-- If you get stuck, read the relevant [lessons learned](.pstdio/docs/lessons-learned/) before trying another approach.
+- If you get stuck, read the relevant [lessons learned](documentation/lessons-learned/) before trying another approach.
 
 # Language
 
@@ -54,7 +54,7 @@ Follow these principles:
 - If a solution needs a workaround flag, a special case, duplicate data, or exposes internal details between layers, reconsider the design before continuing.
 - Tests should prove that the correct behavior and system rules have been restored, not preserve the details of a workaround.
 
-If an external limit makes a workaround unavoidable, create an architecture decision record (ADR) in `.pstdio/docs/adrs` before writing the workaround. Use the next four-digit number and a kebab-case filename.
+If an external limit makes a workaround unavoidable, create an architecture decision record (ADR) in `documentation/adrs` before writing the workaround. Use the next four-digit number and a kebab-case filename.
 
 Every ADR must record its proposal date as `Proposed: YYYY-MM-DD` below the title. Preserve that date when the decision changes. If the original date is unknown, use the earliest Git addition date.
 
@@ -257,6 +257,11 @@ If a job times out, report what became slower and by how much. Then fix the slow
 ---
 
 # Project planning and documentation
+
+- Central documentation lives in `documentation/`. Start with the [documentation guide](documentation/guides/0001-documentation.md).
+- Use `guides/` for setup and workflows, `references/` for APIs and architecture, `requirements/` for PRDs, `adrs/` for decisions, and `lessons-learned/` for recurring failures.
+- Every document in these categories uses `NNNN-kebab-case.md`. Number within each category, keep assigned numbers stable, and use the next available number. Do not reuse removed ADR or lesson numbers.
+- Update links and check claims against current source when changing documentation. Clearly mark proposed or superseded requirements.
 
 - Use the pstdio command-line tool to manage tickets.
 - After editing a ticket, save it with `pst tickets save --id PS-XXX`.
