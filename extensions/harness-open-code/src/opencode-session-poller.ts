@@ -1,6 +1,4 @@
 import type { HarnessEventSink, HarnessExit, SessionMessage } from "@pstdio/sdk/extensions";
-import { HistoryConflict } from "@pstdio/sdk/extensions";
-import { composeOwnedOpencodeSnapshot } from "./history-reconciliation";
 import { normalizeErrorPart } from "./normalized-error";
 import { isTransportTimeout } from "./opencode-http";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
@@ -111,11 +109,11 @@ const shouldStopPolling = (input: {
 
 export const appendFailureMessage = (input: {
   sessionId: string;
+  latestMessages: SessionMessage[];
   events: HarnessEventSink;
   failureMessage: string;
 }): HarnessExit => {
-  const { sessionId, events, failureMessage } = input;
-  const latestMessages = events.getMessages();
+  const { sessionId, latestMessages, events, failureMessage } = input;
   const failurePart = normalizeErrorPart({ message: failureMessage });
   const normalizedFailureMessage: SessionMessage = {
     id: `opencode-error-${sessionId}-${latestMessages.length}`,
@@ -142,7 +140,7 @@ export const readSessionSnapshot = async (input: {
 
   try {
     const raw = await loadMessages(sessionId, cwd);
-    const normalized = composeOwnedOpencodeSnapshot(events, raw.map(normalizeOpencodeMessage));
+    const normalized = raw.map(normalizeOpencodeMessage);
     const snapshot = JSON.stringify(normalized);
 
     if (snapshot === input.lastSnapshot) {
@@ -161,8 +159,7 @@ export const readSessionSnapshot = async (input: {
       lastSnapshot: snapshot,
       latestMessages: normalized,
     } satisfies PollSnapshot;
-  } catch (error) {
-    if (error instanceof HistoryConflict) throw error;
+  } catch {
     return {
       snapshotChanged: false,
       lastObserved: input.lastObserved,
@@ -236,6 +233,7 @@ export const pollOpencodeMessages = async (input: {
   if (postState.failed) {
     return appendFailureMessage({
       sessionId,
+      latestMessages,
       events,
       failureMessage: postState.failureMessage,
     });

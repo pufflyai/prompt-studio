@@ -12,4 +12,4 @@
 "pstdio-skills": patch
 ---
 
-Preserve owned OpenCode snapshot metadata and complete the host API alpha.12 migration.
+Stop positional OpenCode message ids from moving a removed turn's attachments to another turn, and complete the host API alpha.12 migration.
