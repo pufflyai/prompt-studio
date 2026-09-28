@@ -68,6 +68,15 @@ const canReplaceConfig = async (deps: ConfigDeps, base: Config, dir: string, wor
   return true;
 };
 
+const ownershipError = (path: string, base: Config | null, projectId: string) => {
+  if (!base) return `${path} is not a valid Prompt Studio folder config. Fix or delete it to set up the folder here.`;
+  const owner =
+    base.project_id === projectId
+      ? `workspace ${base.workspace_id} of this project`
+      : `another Prompt Studio project (project ${base.project_id})`;
+  return `This folder is already set up for ${owner}. Open it from there, or delete ${path} to set up the folder here.`;
+};
+
 export const ensureWorkspaceConfig = async (
   workspaceDir: string,
   projectDir: string,
@@ -89,11 +98,8 @@ export const ensureWorkspaceConfig = async (
     const base = await readConfig(dst);
     const matches = base?.project_id === projectId && base.workspace_id === workspaceId;
     if (!matches) {
-      if (!base || !(await canReplaceConfig(deps, base, workspaceDir, workspaceId))) {
-        throw new Error(
-          `The folder config at ${dst} belongs to another workspace or cannot be read. Open it with its owning host, or remove the config to attach this folder here.`,
-        );
-      }
+      if (!base || !(await canReplaceConfig(deps, base, workspaceDir, workspaceId)))
+        throw new Error(ownershipError(dst, base, projectId));
       await writeFile(dst, `${JSON.stringify({ ...base, ...identity }, null, 2)}\n`);
     }
   }

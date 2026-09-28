@@ -29,18 +29,12 @@ export const attachInitialProvider = async (
   return rows.at(0) ?? null;
 };
 
-export const findDefaultByPath = async (db: DbClient, rootPath: string) => {
+// A folder belongs to at most one active workspace, so its path identifies the owning workspace.
+export const findByPath = async (db: DbClient, rootPath: string) => {
   const rows = await db
     .select({ workspace: workspaces })
     .from(workspaces)
     .innerJoin(projects, eq(workspaces.project_id, projects.id))
-    .where(
-      and(
-        eq(workspaces.root_path, rootPath),
-        eq(workspaces.is_default, true),
-        isNull(workspaces.deleted_at),
-        isNull(projects.deleted_at),
-      ),
-    );
+    .where(and(eq(workspaces.root_path, rootPath), isNull(workspaces.deleted_at), isNull(projects.deleted_at)));
   return rows.at(0)?.workspace ?? null;
 };

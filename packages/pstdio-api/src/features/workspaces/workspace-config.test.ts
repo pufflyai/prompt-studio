@@ -69,17 +69,32 @@ describe("workspace config ownership", () => {
     expect(readConfig(worktreePath)).toEqual({ project_id: projectId, existing: "value", workspace_id: workspaceId });
   });
 
-  it("allows only one owner when independent claims race for an empty folder", async () => {
-    const other = await host.deps.projectService.create({ name: "Other host" });
-    const otherWorkspace = await host.deps.workspaceService.ensureDefault({
+  it("takes the folder back from a removed workspace of the project", async () => {
+    const removed = await host.deps.workspaceService.createStandalone({ project_id: projectId });
+    await host.deps.workspaceService.softDelete(removed.id);
+    await writeConfig(repoPath, { project_id: projectId, workspace_id: removed.id, extra: "keep" });
+    await ensure(repoPath, homeId);
+    expect(readConfig(repoPath)).toEqual({ project_id: projectId, workspace_id: homeId, extra: "keep" });
+  });
+
+  it("names the other project when the folder belongs to it", async () => {
+    await writeConfig(repoPath, { project_id: "other-project", workspace_id: "other-workspace" });
+    await expect(ensure(repoPath, homeId)).rejects.toThrow("other-project");
+  });
+
+  it("allows only one owner when independent hosts race for an empty folder", async () => {
+    const otherHost = await createTestApp();
+    const other = await otherHost.deps.projectService.create({ name: "Other host" });
+    const otherWorkspace = await otherHost.deps.workspaceService.ensureDefault({
       project_id: other.id,
       root_path: worktreePath,
       name: "Other folder",
     });
     const results = await Promise.allSettled([
       ensure(worktreePath, workspaceId),
-      ensureWorkspaceConfig(worktreePath, worktreePath, otherWorkspace.id, other.id, host.deps),
+      ensureWorkspaceConfig(worktreePath, worktreePath, otherWorkspace.id, other.id, otherHost.deps),
     ]);
+    await otherHost.close();
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
     const winner =
