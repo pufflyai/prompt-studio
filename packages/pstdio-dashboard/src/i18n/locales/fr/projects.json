@@ -239,9 +239,8 @@
         "retry": "Réessayer",
         "retrySucceeded": "Extension chargée",
         "retryFailed": "L'extension ne se charge toujours pas",
-        "attemptFix": "Tenter une correction",
-        "fixSessionStarted": "Session de correction démarrée",
-        "fixSessionFailed": "Échec du démarrage de la session de correction"
+        "copyError": "Copier l'erreur",
+        "errorCopied": "Erreur copiée"
       },
       "upgrade": {
         "action": "Mettre à niveau",

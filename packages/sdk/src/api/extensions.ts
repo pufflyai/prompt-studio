@@ -1,5 +1,4 @@
 export type {
-  AttemptExtensionFixResponse,
   CommandExecuteRequest,
   CommandExecuteResponse,
   ConfigureExtensionConnectionInput,

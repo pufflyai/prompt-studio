@@ -234,9 +234,8 @@
         "retry": "重试",
         "retrySucceeded": "扩展已加载",
         "retryFailed": "扩展仍然无法加载",
-        "attemptFix": "尝试修复",
-        "fixSessionStarted": "修复会话已启动",
-        "fixSessionFailed": "启动修复会话失败"
+        "copyError": "复制错误",
+        "errorCopied": "错误已复制"
       },
       "upgrade": {
         "action": "升级",

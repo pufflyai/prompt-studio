@@ -116,9 +116,10 @@ Installs and updates are explicit. Source that appears in the extensions root is
   make an extension a default. The packaged catalog defaults to the harnesses, base themes, and
   Prompt Studio skills.
 - An adopted extension whose `engines.pstdio` does not match the host is shown as an error in the
-  extension list and detail view. The error names both API versions. It offers Upgrade when the host
-  can replace the source with a release, and otherwise tells the owner to fix the source and offers
-  Retry and Attempt fix.
+  extension list and detail view. The error names both API versions. When the host can replace the
+  source with a release, it tells the owner to upgrade; otherwise it tells the owner to fix the source.
+- Every load error offers Retry and Copy error. Copy error puts the error code and message on the
+  clipboard. Catalog extensions that can take a newer release also offer Upgrade.
 
 The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to a local JSON file or
 an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is

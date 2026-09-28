@@ -27,7 +27,6 @@ export interface ExtensionDetailProps {
   retrying?: boolean;
   reloading?: boolean;
   upgrading?: boolean;
-  fixing?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
   onBack: () => void;
@@ -37,7 +36,6 @@ export interface ExtensionDetailProps {
   onRetry: () => void;
   onReload: () => void;
   onUpgrade: () => void;
-  onAttemptFix: () => void;
   onUninstall: () => void;
 }
 
@@ -53,7 +51,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     retrying,
     reloading,
     upgrading,
-    fixing,
     uninstalling,
     togglingAutomationId,
     onBack,
@@ -63,7 +60,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onRetry,
     onReload,
     onUpgrade,
-    onAttemptFix,
     onUninstall,
   } = props;
   const { t } = useTranslation("projects");
@@ -109,7 +105,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Stack>
           {extension.canUpgrade && (
             <Button
-              variant="solid"
+              variant="primary"
               size="2xs"
               onClick={onUpgrade}
               loading={upgrading}
@@ -122,7 +118,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           )}
           {showReload && (
             <Button
-              variant="solid"
+              variant="primary"
               size="2xs"
               onClick={onReload}
               loading={reloading}
@@ -173,9 +169,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           <ExtensionDetailHealth
             extension={extension}
             retrying={retrying}
-            fixing={fixing}
+            upgrading={upgrading}
             onRetry={onRetry}
-            onAttemptFix={onAttemptFix}
+            onUpgrade={onUpgrade}
           />
         )}
 

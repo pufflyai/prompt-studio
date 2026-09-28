@@ -72,11 +72,6 @@ export const setExtensionAutomationEnabledRequestSchema = z.object({
   enabled: z.boolean(),
 });
 
-export const attemptExtensionFixResponseSchema = z.object({
-  sessionId: z.string(),
-  title: z.string(),
-});
-
 export const upgradeProjectExtensionResponseSchema = z.object({
   changed: z.boolean(),
   extension: projectExtensionInstanceSchema,
@@ -107,7 +102,6 @@ export type MarketplaceExtension = z.infer<typeof marketplaceExtensionSchema>;
 export type ListProjectExtensionsResponse = z.infer<typeof listProjectExtensionsResponseSchema>;
 export type SetProjectExtensionEnabledRequest = z.infer<typeof setProjectExtensionEnabledRequestSchema>;
 export type SetExtensionAutomationEnabledRequest = z.infer<typeof setExtensionAutomationEnabledRequestSchema>;
-export type AttemptExtensionFixResponse = z.infer<typeof attemptExtensionFixResponseSchema>;
 export type UpgradeProjectExtensionResponse = z.infer<typeof upgradeProjectExtensionResponseSchema>;
 export type InstallMarketplaceExtensionResponse = z.infer<typeof installMarketplaceExtensionResponseSchema>;
 export type SetupProjectExtensionResponse = z.infer<typeof setupProjectExtensionResponseSchema>;

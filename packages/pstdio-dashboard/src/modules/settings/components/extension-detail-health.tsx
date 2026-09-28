@@ -1,30 +1,28 @@
 import { Button, HStack } from "@chakra-ui/react";
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { AlertMessage } from "@pstdio/ui";
-import { RotateCw, Wrench } from "lucide-react";
+import { AlertMessage, toaster } from "@pstdio/ui";
+import { ArrowUpCircle, Copy, RotateCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { loadErrorClipboardText, loadErrorField } from "./extension-load-error";
 
 export interface ExtensionDetailHealthProps {
   extension: ProjectExtensionInstance;
   retrying?: boolean;
-  fixing?: boolean;
+  upgrading?: boolean;
   onRetry: () => void;
-  onAttemptFix: () => void;
+  onUpgrade: () => void;
 }
 
-const errorText = (error: Record<string, unknown> | null | undefined, key: "code" | "message") => {
-  const value = error?.[key];
-  return typeof value === "string" ? value : undefined;
-};
-
 export const ExtensionDetailHealth = (props: ExtensionDetailHealthProps) => {
-  const { extension, retrying, fixing, onRetry, onAttemptFix } = props;
+  const { extension, retrying, upgrading, onRetry, onUpgrade } = props;
   const { t } = useTranslation("projects");
-  const code = errorText(extension.lastError, "code");
+  const code = loadErrorField(extension.lastError, "code");
   const incompatible = code === "extension_manifest_unsupported_api_version";
-  // A catalog extension is repaired by the Upgrade action in the header. Any other source is fixed
-  // where it lives, so retrying it after the fix, or asking an agent to fix it, are the ways forward.
-  const repairedByUpgrade = incompatible && extension.canUpgrade;
+
+  const copyError = async () => {
+    await navigator.clipboard.writeText(loadErrorClipboardText(extension.lastError));
+    toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.health.errorCopied") });
+  };
 
   return (
     <AlertMessage
@@ -36,27 +34,31 @@ export const ExtensionDetailHealth = (props: ExtensionDetailHealthProps) => {
       }
       data-testid="extension-detail-health"
       endElement={
-        repairedByUpgrade ? undefined : (
-          <HStack gap="xs" flexShrink="0">
-            <Button variant="outline" size="2xs" onClick={onRetry} loading={retrying} data-testid="extension-retry">
-              <RotateCw size={12} />
-              {t("projectSettings.extensionsPanel.health.retry")}
-            </Button>
+        <HStack gap="xs" flexShrink="0">
+          {extension.canUpgrade && (
             <Button
-              variant="ghost"
+              variant="primary"
               size="2xs"
-              onClick={onAttemptFix}
-              loading={fixing}
-              data-testid="extension-attempt-fix"
+              onClick={onUpgrade}
+              loading={upgrading}
+              data-testid="extension-health-upgrade"
             >
-              <Wrench size={12} />
-              {t("projectSettings.extensionsPanel.health.attemptFix")}
+              <ArrowUpCircle size={12} />
+              {t("projectSettings.extensionsPanel.upgrade.action")}
             </Button>
-          </HStack>
-        )
+          )}
+          <Button variant="outline" size="2xs" onClick={onRetry} loading={retrying} data-testid="extension-retry">
+            <RotateCw size={12} />
+            {t("projectSettings.extensionsPanel.health.retry")}
+          </Button>
+          <Button variant="ghost" size="2xs" onClick={() => void copyError()} data-testid="extension-copy-error">
+            <Copy size={12} />
+            {t("projectSettings.extensionsPanel.health.copyError")}
+          </Button>
+        </HStack>
       }
     >
-      {errorText(extension.lastError, "message") ?? t("projectSettings.extensionsPanel.health.unknownError")}
+      {loadErrorField(extension.lastError, "message") ?? t("projectSettings.extensionsPanel.health.unknownError")}
       {extension.lastLoadedAt
         ? ` · ${t("projectSettings.extensionsPanel.health.lastLoaded", {
             time: new Date(extension.lastLoadedAt).toLocaleString(),

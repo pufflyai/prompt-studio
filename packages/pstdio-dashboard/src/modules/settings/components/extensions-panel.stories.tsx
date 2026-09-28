@@ -131,6 +131,16 @@ const marketplace = [
   },
 ];
 
+const noop = () => {};
+
+const healthActions = () => ({ onRetry: noop, onUpgrade: noop });
+
+const openFirstHealthPopover = (canvasElement: HTMLElement) => {
+  canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
+};
+
+const failedExtension = installedExtensions[1]!;
+
 const meta: Meta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
@@ -185,10 +195,40 @@ export const HealthPopoverOpen: Story = {
     marketplace,
     diagnostics,
     automations,
+    healthActions,
   },
-  play: async ({ canvasElement }) => {
-    canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
+  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
+};
+
+// A catalog extension that fails to load can take a newer release, so the popover offers Upgrade.
+export const FailedCatalogExtension: Story = {
+  args: {
+    extensions: [{ ...failedExtension, canUpgrade: true }],
+    marketplace,
+    diagnostics: [],
+    automations: [],
+    healthActions,
   },
+  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
+};
+
+// A local source is fixed where it lives, so the popover offers Retry and Copy error only.
+export const FailedLocalExtension: Story = {
+  args: {
+    extensions: [
+      {
+        ...failedExtension,
+        scope: "repo",
+        sourcePath: "/repo/.pstdio/extensions/issue-tracker",
+        canUpgrade: false,
+      },
+    ],
+    marketplace,
+    diagnostics: [],
+    automations: [],
+    healthActions,
+  },
+  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
 };
 
 // At least one extension can take a newer release, so the header offers one action for all of them.

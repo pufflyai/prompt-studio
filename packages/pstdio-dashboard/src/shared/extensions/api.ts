@@ -1,5 +1,4 @@
 import type {
-  AttemptExtensionFixResponse,
   CommandExecuteResponse,
   ExtensionSettingValueRecord,
   InstallMarketplaceExtensionResponse,
@@ -109,11 +108,6 @@ export const reloadProjectExtension = (projectId: string, instanceId: string) =>
 
 export const upgradeProjectExtension = (projectId: string, instanceId: string) =>
   apiRequest<UpgradeProjectExtensionResponse>(`/v1/projects/${projectId}/extensions/${instanceId}/upgrade`, {
-    method: "POST",
-  });
-
-export const attemptExtensionFix = (projectId: string, instanceId: string) =>
-  apiRequest<AttemptExtensionFixResponse>(`/v1/projects/${projectId}/extensions/${instanceId}/attempt-fix`, {
     method: "POST",
   });
 

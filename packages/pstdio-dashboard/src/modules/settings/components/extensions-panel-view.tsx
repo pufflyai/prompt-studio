@@ -107,7 +107,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           </Text>
           {upgradable.length > 0 && (
             <Button
-              variant="solid"
+              variant="primary"
               size="sm"
               flexShrink="0"
               loading={upgradingAll}

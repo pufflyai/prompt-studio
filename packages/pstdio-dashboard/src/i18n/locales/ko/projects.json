@@ -234,9 +234,8 @@
         "retry": "다시 시도",
         "retrySucceeded": "확장이 로드되었습니다",
         "retryFailed": "확장이 여전히 로드되지 않습니다",
-        "attemptFix": "수정 시도",
-        "fixSessionStarted": "수정 세션이 시작되었습니다",
-        "fixSessionFailed": "수정 세션 시작에 실패했습니다"
+        "copyError": "오류 복사",
+        "errorCopied": "오류를 복사했습니다"
       },
       "upgrade": {
         "action": "업그레이드",

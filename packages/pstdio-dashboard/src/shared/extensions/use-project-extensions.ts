@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import {
-  attemptExtensionFix,
   executeExtensionCommand,
   getExtensionContributions,
   getMarketplaceExtensionContributions,
@@ -152,15 +151,6 @@ export const useUpgradeProjectExtensions = (projectId: string | undefined) => {
     },
     onSettled: () => {
       void invalidateExtensionQueries(queryClient, projectId);
-    },
-  });
-};
-
-export const useAttemptExtensionFix = (projectId: string | undefined) => {
-  return useMutation({
-    mutationFn: ({ instanceId }: { instanceId: string }) => {
-      if (!projectId) throw new Error("Project id is required to fix extensions.");
-      return attemptExtensionFix(projectId, instanceId);
     },
   });
 };

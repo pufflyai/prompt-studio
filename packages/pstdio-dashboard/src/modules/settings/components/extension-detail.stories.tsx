@@ -132,7 +132,6 @@ const meta: Meta<typeof ExtensionDetail> = {
     onRetry: noop,
     onReload: noop,
     onUpgrade: noop,
-    onAttemptFix: noop,
     onUninstall: noop,
   },
 };
@@ -143,6 +142,7 @@ type Story = StoryObj<typeof ExtensionDetail>;
 
 export const Loaded: Story = {};
 
+// A local source is fixed where it lives, so the alert offers Retry and Copy error.
 export const FailedToLoad: Story = {
   args: {
     extension: {
@@ -193,6 +193,23 @@ export const UpgradeAvailable: Story = {
   },
 };
 
+// A catalog extension can take a newer release, so the alert also offers Upgrade.
+export const FailedCatalogExtension: Story = {
+  args: {
+    extension: {
+      ...extension,
+      canUpgrade: true,
+      scope: "global",
+      sourcePath: "/home/user/.pstdio/extensions/pstdio-planner",
+      status: "error",
+      lastError: {
+        code: "extension_import_failed",
+        message: "Cannot find module './features/loops/index.js' — imported from extension.js.",
+      },
+    },
+  },
+};
+
 export const IncompatibleApi: Story = {
   args: {
     extension: {
@@ -210,7 +227,7 @@ export const IncompatibleApi: Story = {
   },
 };
 
-// A local source is fixed where it lives, so the alert offers Retry and Attempt fix instead of Upgrade.
+// A local source is fixed where it lives, so the alert offers Retry and Copy error but no Upgrade.
 export const IncompatibleLocalSource: Story = {
   args: {
     extension: {

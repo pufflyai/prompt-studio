@@ -236,9 +236,8 @@
         "retry": "Retry",
         "retrySucceeded": "Extension loaded",
         "retryFailed": "Extension still fails to load",
-        "attemptFix": "Attempt fix",
-        "fixSessionStarted": "Fix session started",
-        "fixSessionFailed": "Failed to start fix session"
+        "copyError": "Copy error",
+        "errorCopied": "Error copied"
       },
       "upgrade": {
         "action": "Upgrade",

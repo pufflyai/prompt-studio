@@ -2,10 +2,6 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps, ExtensionWebviewRouteDeps } from "./deps";
 import {
-  attemptFixProjectExtensionHandler,
-  attemptFixProjectExtensionRoute,
-} from "./endpoints/attempt-fix-project-extension";
-import {
   createExtensionNotificationHandler,
   createExtensionNotificationRoute,
 } from "./endpoints/create-extension-notification";
@@ -142,7 +138,6 @@ const registerProjectExtensionRoutes = (
   routes.openapi(setExtensionAutomationEnabledRoute, setExtensionAutomationEnabledHandler(deps));
   routes.openapi(reloadProjectExtensionRoute, reloadProjectExtensionHandler(deps));
   routes.openapi(upgradeProjectExtensionRoute, upgradeProjectExtensionHandler(deps));
-  routes.openapi(attemptFixProjectExtensionRoute, attemptFixProjectExtensionHandler(deps));
   routes.openapi(uninstallProjectExtensionRoute, uninstallProjectExtensionHandler(deps));
 };
 

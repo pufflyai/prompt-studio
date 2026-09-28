@@ -239,9 +239,8 @@
         "retry": "Reintentar",
         "retrySucceeded": "Extensión cargada",
         "retryFailed": "La extensión sigue sin cargarse",
-        "attemptFix": "Intentar corregir",
-        "fixSessionStarted": "Sesión de corrección iniciada",
-        "fixSessionFailed": "Error al iniciar la sesión de corrección"
+        "copyError": "Copiar error",
+        "errorCopied": "Error copiado"
       },
       "upgrade": {
         "action": "Actualizar versión",
