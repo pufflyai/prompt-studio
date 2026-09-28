@@ -74,6 +74,38 @@ describe("normalizeRollout", () => {
   });
 });
 
+describe("normalizeRollout in code mode", () => {
+  const codeMode = readFileSync(new URL("./mocks/code-mode-rollout.jsonl", import.meta.url), "utf8");
+
+  test("reads a code-mode turn from its completed items", () => {
+    const messages = normalizeRollout(codeMode);
+    expect(messages.map((message) => message.role)).toEqual([
+      "user",
+      "assistant",
+      "assistant",
+      "assistant",
+      "assistant",
+      "assistant",
+      "assistant",
+      "assistant",
+    ]);
+    const tools = messages.flatMap((message) => message.parts.filter((part): part is ToolPart => part.type === "tool"));
+    expect(tools.map((part) => [part.tool, part.status, part.state?.input])).toEqual([
+      ["shell", "completed", { command: ["/bin/zsh", "-lc", "pst tickets --help"] }],
+      ["shell", "failed", { command: ["/bin/zsh", "-lc", "printenv | rg 'PSTDIO|PST_'"] }],
+      ["shell", "completed", { command: ["/bin/zsh", "-lc", `bun -e 'console.log("ok")'`] }],
+      ["apply_patch", "completed", { changes: [{ path: "/repo/notes.md", kind: "update" }] }],
+    ]);
+    expect(messages[0].parts).toEqual([{ type: "text", text: "update the board" }]);
+  });
+
+  test("keeps turns recorded before code mode in the same thread", () => {
+    const messages = normalizeRollout(`${fixture}\n${codeMode}`);
+    expect(messages.slice(0, normalizeRollout(fixture).length)).toEqual(normalizeRollout(fixture));
+    expect(messages.slice(normalizeRollout(fixture).length)).toEqual(normalizeRollout(codeMode));
+  });
+});
+
 describe("findRolloutPath", () => {
   test("locates the rollout file for a thread id under nested date directories", () => {
     const root = mkdtempSync(join(tmpdir(), "codex-sessions-"));
