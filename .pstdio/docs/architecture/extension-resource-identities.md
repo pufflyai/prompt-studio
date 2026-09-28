@@ -10,11 +10,13 @@ Normalization reports duplicate literal or project-derived declarations. Project
 
 ## Planner migration
 
-Existing projects must run `pst pstdio-planner migrate-ticket-identities` from their repository before creating tickets with the updated Planner. Stop ticket writers and automation first, and run one migration command at a time. This maintenance operation renumbers saved tickets in stable order, beginning at 1 in a project with no previous host allocations. UUIDs remain unchanged.
+Planner automatically migrates existing ticket identities before creating a ticket or writing a draft. Users do not need to run a maintenance command. Concurrent creation requests and the optional `pstdio pstdio-planner migrate-ticket-identities` command share one migration per project in the host. The migration renumbers saved tickets in stable order, beginning at 1 in a project with no previous host allocations. UUIDs remain unchanged. Requests that start, join, or resume a migration resolve parent and dependency references through its original identity map.
 
-The command backs up all local ticket files under `.pstdio/ticket-identity-migration`, including unsaved edits and orphan files. It replaces `.pstdio/tickets` with files rebuilt from saved tickets, and refreshes session anchor labels and shorthands. Restore any wanted unsaved edits from the backup into the corresponding new ticket. Do not save old files by their old shorthand.
+The migration backs up all local ticket files under `.pstdio/ticket-identity-migration`, including unsaved edits and orphan files. It moves checked-out drafts and their files to the new paths, preserving unsaved content and updating identity references in frontmatter. Tickets without a checkout are rebuilt from saved content. Orphan files remain in the backup. Session anchor labels and shorthands are refreshed.
 
-A persisted migration journal and per-ticket allocation map allow an interrupted command to resume without allocating a second shorthand for tickets already mapped. A completed rerun does nothing. Keep writers stopped until it completes. Other clients must discard or back up their old local ticket files and pull fresh copies before saving.
+A persisted migration journal and per-ticket allocation map allow an interrupted migration to resume on the next creation attempt without allocating a second shorthand for tickets already mapped. New identities are allocated only after migration completes. A completed rerun does nothing and does not require local ticket files. Empty projects initialize directly without touching the local checkout. Other clients must discard or back up their old local ticket files and pull fresh copies before saving.
+
+The journal records when the original checkout backup is complete so retries never treat rewritten paths as original drafts. Ticket writes and identity changes share a per-ticket queue. Normal writes preserve the stored shorthand, so an editor holding an older snapshot cannot undo migration. Migration reads the current ticket inside that queue and skips tickets deleted while it was running.
 
 The result lists linked workspaces for manual review. It does not rename live Git branches or worktrees. Old external links and commit messages retain their old numbers.
 

@@ -5,7 +5,41 @@ export const TICKETS_COLLECTION = "tickets";
 export const STATUSES_COLLECTION = "ticket-statuses";
 export const TAGS_COLLECTION = "ticket-tags";
 
-export const ticketsCollection = (storage: ExtensionStorageApi) => storage.collection<StoredTicket>(TICKETS_COLLECTION);
+const ticketWrites = new Map<string, Promise<unknown>>();
+
+const withTicketWrite = async <T>(id: string, write: () => Promise<T>) => {
+  const previous = ticketWrites.get(id) ?? Promise.resolve();
+  const pending = previous.catch(() => {}).then(write);
+  ticketWrites.set(id, pending);
+  try {
+    return await pending;
+  } finally {
+    if (ticketWrites.get(id) === pending) ticketWrites.delete(id);
+  }
+};
+
+export const ticketsCollection = (storage: ExtensionStorageApi) => {
+  const collection = storage.collection<StoredTicket>(TICKETS_COLLECTION);
+  const write = (method: "put" | "update", id: string, ticket: StoredTicket) =>
+    withTicketWrite(id, async () => {
+      const existing = await collection.get(id);
+      // Identity belongs to the allocator and migration, never to an editor's snapshot.
+      await collection[method](id, { ...ticket, shorthand: existing?.shorthand ?? ticket.shorthand });
+    });
+  return {
+    ...collection,
+    put: (id: string, ticket: StoredTicket) => write("put", id, ticket),
+    update: (id: string, ticket: StoredTicket) => write("update", id, ticket),
+    delete: (id: string) => withTicketWrite(id, () => collection.delete(id)),
+  };
+};
+
+export const migrateTicketShorthand = (storage: ExtensionStorageApi, id: string, shorthand: string) =>
+  withTicketWrite(id, async () => {
+    const collection = storage.collection<StoredTicket>(TICKETS_COLLECTION);
+    const ticket = await collection.get(id);
+    if (ticket) await collection.update(id, { ...ticket, shorthand });
+  });
 
 export const statusesCollection = (storage: ExtensionStorageApi) =>
   storage.collection<StoredStatus>(STATUSES_COLLECTION);
