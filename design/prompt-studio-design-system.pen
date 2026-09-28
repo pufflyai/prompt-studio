@@ -26073,7 +26073,7 @@
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-bg-subtle",
-                      "cornerRadius": 8,
+                      "cornerRadius": 4,
                       "stroke": "$ds-border",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
