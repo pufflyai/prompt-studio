@@ -16,7 +16,6 @@ import {
 import {
   type ExpectedWebviewBuildSource,
   reloadInstalledSourceBySourcePath as reloadInstalledSourceBySourcePathImpl,
-  reloadInstalledSource as reloadInstalledSourceImpl,
   reportWebviewBuildFailure as reportWebviewBuildFailureImpl,
   reportWebviewBuildSuccess as reportWebviewBuildSuccessImpl,
 } from "./extension-reload";
@@ -323,7 +322,6 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     getProjectExtensionInstance,
     listEnabledSourcesForProject,
     listProjectExtensionInstances: listProjectInstances,
-    reloadInstalledSource: (installName: string) => reloadInstalledSourceImpl(reloadDeps, installName),
     reloadInstalledSourceBySourcePath: (sourcePath: string) =>
       reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
     removeProjectExtensionInstance,

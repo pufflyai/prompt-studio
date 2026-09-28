@@ -57,15 +57,15 @@ const createProject = async (name: string) => {
   return response.json();
 };
 
-const seedEnabledInstance = async (projectId: string) => {
+const seedEnabledInstance = async (projectId: string, options: { installName?: string; root?: string } = {}) => {
   counter += 1;
-  const installName = `reload-source-${counter}`;
+  const installName = options.installName ?? `reload-source-${counter}`;
   const name = `test-reload-${counter}`;
   const sourcePath = createTestExtensionSource({
     displayName: `Reload ${counter}`,
     installName,
     name,
-    root: tempRoot,
+    root: options.root ?? tempRoot,
     version: "1.0.0",
   });
   const loaded = await loadExtensionSource(sourcePath);
@@ -102,6 +102,25 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/reload", () => {
     const fixedBody = await fixed.json();
     expect(fixedBody.status).toBe("loaded");
     expect(fixedBody.lastError).toBeNull();
+  });
+
+  test("reloads the requested project's source when another project has the same install name", async () => {
+    const first = await createProject("Reload Shared Name A");
+    const second = await createProject("Reload Shared Name B");
+    await seedEnabledInstance(first.id, { installName: "shared-reload", root: join(tempRoot, "first") });
+    const { instanceId, sourcePath } = await seedEnabledInstance(second.id, {
+      installName: "shared-reload",
+      root: join(tempRoot, "second"),
+    });
+    writeFileSync(join(sourcePath, "extension.ts"), "export default {};\n// changed\n", "utf8");
+
+    const res = await app.request(`/v1/projects/${second.id}/extensions/${instanceId}/reload`, { method: "POST" });
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).sourcePath).toBe(sourcePath);
+    const list = await (await app.request(`/v1/projects/${second.id}/extensions`)).json();
+    const reloaded = list.extensions.find((extension: { id: string }) => extension.id === instanceId);
+    expect(reloaded).toMatchObject({ sourcePath, updateAvailable: false });
   });
 
   test("returns 404 for an unknown instance", async () => {

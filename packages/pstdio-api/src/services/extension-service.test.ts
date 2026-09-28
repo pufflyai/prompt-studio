@@ -462,7 +462,7 @@ describe("extensionService reload", () => {
 
       makeExtension(root, { name: "Reloaded Extension", version: "1.1.0", templateKey: "second" });
 
-      const result = await reloadingService.reloadInstalledSource("reload");
+      const result = await reloadingService.reloadInstalledSourceBySourcePath(root);
       const reloadEvents = await installedExtensionSourcesService.listReloadEvents(result.installedSource.id);
       const reloadEvent = reloadEvents.at(-1);
 
@@ -558,7 +558,7 @@ describe("extensionService reload", () => {
 
       writeFileSync(join(root, "extension.ts"), "throw new Error('reload boom');\n");
 
-      const result = await reloadingService.reloadInstalledSource("reload");
+      const result = await reloadingService.reloadInstalledSourceBySourcePath(root);
       const reloadEvents = await installedExtensionSourcesService.listReloadEvents(registered.id);
 
       expect(result.installedSource.status).toBe("error");
