@@ -1,8 +1,8 @@
 import { findClosingFrontmatterDelimiter, quoteYamlScalar, unquoteYamlScalar } from "@pstdio/sdk/data";
 import type { ArtifactMount, ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { ticketDir, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "./draft-storage";
-import { parseTicketFrontmatter } from "./frontmatter";
-import type { StoredTicket } from "./types";
+import { ticketDir, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "../../data/draft-storage";
+import { parseTicketFrontmatter } from "../../data/frontmatter";
+import type { StoredTicket } from "../../data/types";
 
 const updateDraftReferences = (content: string, shorthand: string, identities: Map<string, string>) => {
   const delimiter = content.startsWith("---") ? findClosingFrontmatterDelimiter(content) : null;

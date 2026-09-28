@@ -8,7 +8,7 @@ import {
 } from "../data/draft-storage";
 import { resolveStatusId, resolveTagOptionIds } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { prepareTicketIdentities } from "../data/ticket-identity";
+import { prepareTicketIdentities } from "../migrations/ticket-identities/references";
 
 // `pst tickets write`: create a draft ticket in extension storage and lay down its
 // local `.pstdio/tickets/<shorthand>/ticket.md` via the host file primitive. The
@@ -41,6 +41,8 @@ export const writeTicketCommand = defineCommand({
         ? await resolveStatusId(ctx.storage, commandParams.status)
         : (defaultStatus?.id ?? null);
     const tagIds = commandParams.tags !== undefined ? await resolveTagOptionIds(ctx.storage, commandParams.tags) : [];
+    // Temporary ticket identity migration (ADR 0047). When it is removed, resolve `parent` with
+    // resolveTicketId again.
     const identities = await prepareTicketIdentities(ctx, commandParams);
 
     const { id, shorthand } = await ctx.resources.allocate({ kind: "ticket" });

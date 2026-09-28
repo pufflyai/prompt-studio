@@ -1,5 +1,5 @@
 import { defineCommand, l10n } from "@pstdio/sdk/extensions";
-import { migrateTicketIdentities } from "../data/migrate-ticket-identities";
+import { migrateTicketIdentities } from "./migrate";
 
 export const migrateTicketIdentitiesCommand = defineCommand({
   id: "migrate-ticket-identities",

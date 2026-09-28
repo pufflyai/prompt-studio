@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
 import { projectEvents } from "@pstdio/sdk/extensions";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import extension from "../../extension";
-import { makeCommandContext } from "../commands/command-context.fixture";
-import { putTicket, ticketsCollection } from "../data/collections";
-import { projectOpenedHook } from "./project-opened";
+import extension from "../../../extension";
+import { makeCommandContext } from "../../commands/command-context.fixture";
+import { putTicket, ticketsCollection } from "../../data/collections";
+import { projectOpenedHook } from "./hook";
 
 test("opening an upgraded project migrates existing tickets without creating a ticket", async () => {
   const storage = createMemoryStorage();

@@ -8,9 +8,13 @@ Normalization reports duplicate literal or project-derived declarations. Project
 
 `ResourceRef.shorthand` carries display identity alongside the UUID. It is a value, not a persisted resource registry.
 
-## Planner migration
+## Startup upgrades
 
 On startup, the host upgrades unchanged global extensions installed from an older host release before initializing project data. Only catalog sources tied to the host release qualify. Repository copies, sources without release provenance, and local edits remain untouched. A failed source upgrade does not stop upgrades for other sources and is retried on the next startup.
+
+## Planner migration
+
+This is a temporary migration. [ADR 0047](../adrs/0047-temporary-planner-ticket-identity-migration.md) records its removal plan. Its code lives in `extensions/pstdio-planner/src/migrations/ticket-identities/`.
 
 Planner automatically migrates existing ticket identities when the host initializes each project's extensions. Startup delivers `projectEvents.opened` after release upgrades and workspace recovery. Adopting upgraded or reloaded source delivers it to every project that enables that source, including projects with no open dashboard. Planner handles this event through its public SDK hook. The host does not know about tickets or Planner's migration journal.
 

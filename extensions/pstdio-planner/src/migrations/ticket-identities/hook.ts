@@ -1,6 +1,6 @@
 import { defineHook, projectEvents } from "@pstdio/sdk/extensions";
-import { migrateTicketIdentities } from "../data/migrate-ticket-identities";
-import { plannerTicketsChanged } from "../events";
+import { plannerTicketsChanged } from "../../events";
+import { migrateTicketIdentities } from "./migrate";
 
 export const projectOpenedHook = defineHook({
   id: "migrate-ticket-identities",

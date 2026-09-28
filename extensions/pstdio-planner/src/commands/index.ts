@@ -1,3 +1,4 @@
+import { migrateTicketIdentitiesCommand } from "../migrations/ticket-identities/command";
 import { applyTicketTemplateCommand } from "./apply-ticket-template";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
@@ -24,7 +25,6 @@ import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
-import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
 import { pullTicketCommand } from "./pull-ticket";
 import { queryTicketsCommand } from "./query-tickets";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
@@ -91,6 +91,7 @@ import { writeTicketCommand } from "./write-ticket";
 export const plannerCommands = [
   linkTicketCommand,
   unlinkTicketCommand,
+  // Temporary ticket identity migration (ADR 0047).
   migrateTicketIdentitiesCommand,
   listTemplatesCommand,
   readTemplateCommand,

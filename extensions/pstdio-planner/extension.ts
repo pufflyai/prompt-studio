@@ -14,8 +14,8 @@ import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
-import { projectOpenedHook } from "./src/hooks/project-opened";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
+import { projectOpenedHook } from "./src/migrations/ticket-identities/hook";
 import { notifyBlocked } from "./src/planner-notifications";
 import { ticketStatuses } from "./src/ticket-status-provider";
 import { createPlannerUi, plannerSettingsSection, ticketResourceKind } from "./src/ui-contributions";
@@ -91,6 +91,7 @@ export default defineExtension({
   settingsSections: [plannerSettingsSection],
 
   hooks: [
+    // Temporary ticket identity migration (ADR 0047).
     projectOpenedHook,
     worktreeCreatedHook,
     defineHook({

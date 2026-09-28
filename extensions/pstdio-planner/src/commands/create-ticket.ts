@@ -3,10 +3,10 @@ import { putTicket, ticketsCollection } from "../data/collections";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
 import { resolveStatusId, resolveTagOptionIds } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { prepareTicketIdentities } from "../data/ticket-identity";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
+import { prepareTicketIdentities } from "../migrations/ticket-identities/references";
 import { deriveTitle } from "../utils/derive-title";
 
 // Backs the board's "new ticket" and the `pst tickets create`/`add` CLI path. The
@@ -62,6 +62,8 @@ export const createTicketCommand = defineCommand({
       commandParams.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : (commandParams.tagIds ?? attributeTagIds);
+    // Temporary ticket identity migration (ADR 0047). When it is removed, resolve `parent` with
+    // resolveTicketId and `dependsOn` with resolveDependencyIds again.
     const identities = await prepareTicketIdentities(ctx, commandParams);
     const parentId = identities.parentId ?? commandParams.parentId ?? null;
 

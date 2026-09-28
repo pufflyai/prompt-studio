@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
-import { putTicket, ticketsCollection } from "../data/collections";
-import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
-import { createTicketCommand } from "./create-ticket";
-import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
+import { makeCommandArgs, makeCommandContext } from "../../commands/command-context.fixture";
+import { createTicketCommand } from "../../commands/create-ticket";
+import { putTicket, ticketsCollection } from "../../data/collections";
+import { migrateTicketIdentitiesCommand } from "./command";
 
 test("migration renumbers saved tickets, backs up local files, refreshes anchors, and resumes safely", async () => {
   const storage = createMemoryStorage();

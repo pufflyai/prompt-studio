@@ -1,7 +1,7 @@
 import { resolveByIdOrName } from "@pstdio/sdk/data";
 import type { CommandContext } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "./collections";
-import { IDENTITY_MIGRATION, identityMigrations, migrateTicketIdentities } from "./migrate-ticket-identities";
+import { ticketsCollection } from "../../data/collections";
+import { IDENTITY_MIGRATION, identityMigrations, migrateTicketIdentities } from "./migrate";
 
 export const prepareTicketIdentities = async (
   ctx: CommandContext,

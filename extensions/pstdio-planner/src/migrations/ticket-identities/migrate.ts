@@ -1,8 +1,9 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
-import { migrateTicketShorthand, ticketsCollection } from "./collections";
-import { requireTicketDraftFiles, TICKETS_DIR } from "./draft-storage";
-import { migrateTicketDraft } from "./migrate-ticket-drafts";
-import { ticketResourceReference } from "./ticket-resource-hierarchy";
+import { TICKETS_COLLECTION, ticketsCollection } from "../../data/collections";
+import { requireTicketDraftFiles, TICKETS_DIR } from "../../data/draft-storage";
+import { ticketResourceReference } from "../../data/ticket-resource-hierarchy";
+import { migrateTicketDraft } from "./drafts";
+import { migrateTicketShorthand } from "./identity-guard";
 
 export interface TicketIdentityMigration {
   tickets: { id: string; shorthand: string }[];
@@ -54,7 +55,7 @@ const runTicketIdentityMigration = async (ctx: ExtensionContextBase) => {
   }
   for (const original of migration.tickets) {
     const identity = (await allocations.get(original.id))!;
-    await migrateTicketShorthand(ctx.storage, original.id, identity.shorthand);
+    await migrateTicketShorthand(ctx.storage, TICKETS_COLLECTION, original.id, identity.shorthand);
   }
   // A project can reach the migration with no drafts checked out, and a resumed run
   // has already removed them, so only clear the directory when it is there.
