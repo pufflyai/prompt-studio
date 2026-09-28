@@ -19,8 +19,10 @@ import {
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
 import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import {
+  forgetHandedOffPendingFollowUp,
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
+  peekHandedOffPendingFollowUp,
   shouldShowPendingFollowUp,
 } from "../chat/session-chat-state";
 import { type DashboardSessionView, draftSessionViewId } from "../data/dashboard-sessions";
@@ -113,7 +115,9 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     selectedModel,
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
-  const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
+  const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(() =>
+    peekHandedOffPendingFollowUp(sessionId),
+  );
   const pendingIdRef = useRef(0);
   const previousSelectedAgentRef = useRef(selectedAgent);
   const previousViewRef = useRef(view);
@@ -133,6 +137,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     if (updates.model !== undefined) setSelectedModel(updates.model);
     if (updates.workspaceId !== undefined) setSelectedWorkspaceId(updates.workspaceId);
   }, [view]);
+
+  useEffect(() => {
+    forgetHandedOffPendingFollowUp(sessionId);
+  }, [sessionId]);
 
   useEffect(() => {
     // An unsent message stays until the user resends or removes it.
@@ -178,9 +186,9 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
       followUp,
       reconnect,
       onSubmitted,
-      onSessionCreated: (sessionId) => {
+      onSessionCreated: (sessionId, pending) => {
         if (!projectId) return;
-        openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId });
+        openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId, pending });
       },
     });
   const unsent =

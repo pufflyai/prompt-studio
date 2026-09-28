@@ -10,6 +10,7 @@ import {
   assignPendingFollowUpSession,
   createPendingFollowUpState,
   failPendingFollowUp,
+  handOffPendingFollowUp,
   type PendingFollowUpState,
 } from "./session-chat-state";
 
@@ -92,6 +93,7 @@ export const openCreatedSessionFromDraft = (args: {
   sessionId: string;
   prompt: string;
   projectId: string;
+  pending?: PendingFollowUpState;
 }) => {
   const title = createSessionTitle(args.prompt);
   const resource = createDashboardResource("session", args.sessionId, title, "MessageCircle", args.projectId);
@@ -103,6 +105,8 @@ export const openCreatedSessionFromDraft = (args: {
     return identity;
   }
   if (identity?.kind === "page") {
+    // The session page mounts a new chat panel; it starts from the draft's first message.
+    if (args.pending) handOffPendingFollowUp(args.pending);
     const result = args.input.workbench.pageLocations.navigate({
       kind: "page",
       page: workbenchPages.session,
@@ -136,7 +140,7 @@ const submitNewSessionMessage = (input: {
   setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   createSession: CreateSessionMutation;
   onSubmitted?: () => void;
-  onSessionCreated?: (sessionId: string) => void;
+  onSessionCreated?: (sessionId: string, pending?: PendingFollowUpState) => void;
 }) => {
   if (!input.projectId || !input.agent)
     return Promise.reject(new Error("Select a project and an agent before sending."));
@@ -168,7 +172,11 @@ const submitNewSessionMessage = (input: {
           input.setPendingFollowUp((current) =>
             status === "queued" ? null : clearPendingFollowUpForCreatedSession(current, pending, sessionId),
           );
-          input.onSessionCreated?.(sessionId);
+          // A queued session shows its prompt in the queued list, so only a started one hands it off.
+          input.onSessionCreated?.(
+            sessionId,
+            status === "queued" ? undefined : assignPendingFollowUpSession(pending, sessionId),
+          );
           resolve();
         },
         // The message stays in the conversation as unsent, so the composer can clear.
@@ -260,7 +268,7 @@ export const submitSessionMessage = (input: {
   reconnect: () => void;
   onSubmitted?: () => void;
   onQuestionResponseError?: () => void;
-  onSessionCreated?: (sessionId: string) => void;
+  onSessionCreated?: (sessionId: string, pending?: PendingFollowUpState) => void;
 }) => {
   const pendingId = `pending-${input.pendingIdRef.current}`;
   input.pendingIdRef.current += 1;

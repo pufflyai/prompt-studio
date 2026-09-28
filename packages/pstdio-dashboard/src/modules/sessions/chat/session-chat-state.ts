@@ -60,6 +60,18 @@ export const assignPendingFollowUpSession = (
   };
 };
 
+// Opening a created session can mount a new chat panel. The draft hands its first message to that
+// panel, so the message stays visible until the session's own conversation includes it.
+const handedOff = new Map<string, PendingFollowUpState>();
+export const handOffPendingFollowUp = (pending: PendingFollowUpState) => {
+  if (pending.sessionId) handedOff.set(pending.sessionId, pending);
+};
+export const peekHandedOffPendingFollowUp = (sessionId: string | null) =>
+  (sessionId && handedOff.get(sessionId)) || null;
+export const forgetHandedOffPendingFollowUp = (sessionId: string | null) => {
+  if (sessionId) handedOff.delete(sessionId);
+};
+
 export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState): SessionMessage[] => {
   const userMessage: SessionMessage = {
     id: pending.userMessageId,
