@@ -194,7 +194,7 @@ describe("runTicketsQuery workspace badges", () => {
     expect(result.rows[0]?.attributes.workspaceItems).toMatchObject([
       {
         id: "workspace-2",
-        label: "T-1_A2",
+        label: "Latest attempt",
         icon: "Cloud",
         resource: {
           type: "workspace",
@@ -214,7 +214,7 @@ describe("runTicketsQuery workspace badges", () => {
       },
       {
         id: "workspace-1",
-        label: "T-1_A1",
+        label: "First attempt",
         icon: "GitBranch",
         resource: {
           type: "workspace",
