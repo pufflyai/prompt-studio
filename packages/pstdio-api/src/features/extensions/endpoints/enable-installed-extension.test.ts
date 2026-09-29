@@ -134,7 +134,7 @@ describe("POST /v1/projects/:projectId/extensions/installed/:installName/enable"
         version: "1.0.0",
         publisher: "test",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       }),
     );
     writeFileSync(join(sourcePath, "extension.ts"), "export default {};\n");

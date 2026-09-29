@@ -65,7 +65,7 @@ const writeExtension = (dir: string, name: string) => {
       displayName: name,
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(dir, "extension.ts"), "export default {};\n");

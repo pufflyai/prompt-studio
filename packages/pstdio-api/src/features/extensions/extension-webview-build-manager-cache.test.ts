@@ -16,7 +16,7 @@ const writeExtension = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('webview');");
@@ -42,7 +42,7 @@ const writeExtensionWithIndependentWebviews = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('main');");
@@ -148,7 +148,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
         displayName: "Lab",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         dependencies: { react: "^19.0.0" },
       }),
     );

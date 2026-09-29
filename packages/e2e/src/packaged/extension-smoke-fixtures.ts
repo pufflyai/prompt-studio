@@ -28,7 +28,7 @@ export const writeSmokeExtension = (
       version: "1.0.0",
       type: "module",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       ...(behavior === "repo" ? { pstdio: { scope: "repo" } } : {}),
       dependencies: { "smoke-dependency": "file:./dependency" },
     }),

@@ -1,5 +1,4 @@
 import type { ContributionKind } from "@pstdio/sdk/extensions";
-import { EXTENSION_API_VERSION, supportsExtensionApiVersion } from "pstdio-api-contracts/extension-kernel";
 import type { NormalizedExtension } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
@@ -41,21 +40,6 @@ const contributionKeys = new Set(
     workspaceTypes: true,
   }),
 );
-
-const removedAlpha4ContributionKeys = new Set([
-  "controlsRenderers",
-  "dataTableRenderers",
-  "fileRenderers",
-  "initialSetup",
-  "kanbanRenderers",
-  "migrate",
-  "panels",
-  "resourcePanels",
-  "routes",
-  "statusItems",
-  "treeItems",
-  "treeRenderers",
-]);
 
 const collectionKinds = new Map<string, ContributionKind>([
   ["activityItems", "activity-item"],
@@ -199,24 +183,7 @@ export const validateExtensionDefinition = (
   source: LoadedExtensionSource,
   runtime: Accumulator,
 ) => {
-  let valid = true;
   for (const key of Object.keys(source.definition).sort()) {
-    if (
-      supportsExtensionApiVersion(source.manifest.enginesPstdio, EXTENSION_API_VERSION) &&
-      removedAlpha4ContributionKeys.has(key)
-    ) {
-      valid = false;
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "removed_extension_contribution",
-          message: `Extension "${ext.id}" uses removed alpha.3 contribution "${key}"`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { key },
-        }),
-      );
-      continue;
-    }
     if (contributionKeys.has(key)) continue;
     runtime.diagnostics.push(
       createDiagnostic({
@@ -228,5 +195,5 @@ export const validateExtensionDefinition = (
       }),
     );
   }
-  return validateContributionCollections(ext, source, runtime) && valid;
+  return validateContributionCollections(ext, source, runtime);
 };

@@ -18,7 +18,7 @@ test("resource removal publishes a scoped fact to every subscriber and rejects f
       publisher: "example",
       version: "1.0.0",
       main: "extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     };
     await Bun.write(join(sourcePath, "package.json"), JSON.stringify(manifest));
     await Bun.write(

@@ -23,7 +23,7 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: EXTENSION_API_VERSION,
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
   },
   definition,
 });
