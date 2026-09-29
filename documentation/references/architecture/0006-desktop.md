@@ -145,6 +145,19 @@ update metadata.
 | Linux x64 | DEB and portable ZIP | DEB inspection and clean-home launch | Distribution package manager or GitHub release page |
 | Windows x64 | Setup EXE, full nupkg, and RELEASES | Trusted Authenticode signatures and timestamps on app, sidecar, installer, and update payload; clean-home launch | Electron Squirrel updater through release-owned RELEASES metadata |
 
+Each target calls `release-desktop-native.yml`, which separates building from
+validation. The build job uploads `out` and `dist` in a tar archive before tests
+run. This preserves executable permissions and signed macOS bundle symlinks.
+The validation job downloads that exact build on a fresh native runner, then
+runs the source tests, packaged tests, and release verification. Each job has a
+15-minute limit, splitting the former 30-minute budget. App startup limits are
+unchanged.
+
+To retry a failed check, rerun the failed validation job in the same workflow run.
+GitHub retains the successful build job and its artifact for 14 days, so this
+does not repeat compilation, signing, or notarization. Rebuilding is required
+after the artifact expires or when the release source changes.
+
 Every target audits the packaged Electron fuse wire and emits a target manifest
 plus SHA-256 checksums. The publish job requires the complete four-target set,
 revalidates every checksum and component version, uploads the artifacts to the
