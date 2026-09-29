@@ -36,6 +36,7 @@ const createBrowser = () => {
 const createPersistence = () => {
   const values = new Map<string, PageLocation>();
   const persistence: WorkbenchPageLocationPersistence = {
+    loadLevels: () => ({}),
     load: (projectId) => values.get(projectId),
     save: (projectId, location) => values.set(projectId, location),
   };

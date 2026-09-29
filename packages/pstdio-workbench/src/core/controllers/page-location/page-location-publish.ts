@@ -2,6 +2,7 @@ import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/pag
 import type { WorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
+import { resolveNavigationLevel } from "./navigation-level";
 import type { createPageHistoryEntry } from "./page-location-history-entry";
 import type { CreateWorkbenchPageLocationControllerInput } from "./page-location-types";
 
@@ -32,7 +33,21 @@ export const createPageLocationPublisher = <Value>(
       historyState.commitIndex(nextIndex, history === "push");
       beforePublish?.();
       internals.publish(state, action);
-      runWorkbenchEffect(`page location cache for ${projectId}`, () => input.persistence.save(projectId, location));
+      runWorkbenchEffect(`page location cache for ${projectId}`, () => {
+        const page = state.activePageId ? state.pages[state.activePageId] : undefined;
+        const level =
+          input.navigationTrees && page
+            ? resolveNavigationLevel({
+                location,
+                pages: Object.values(state.pages),
+                navigationTrees: input.navigationTrees,
+                mode: { id: page.modeId, label: page.modeId },
+              })
+            : undefined;
+        const key = level?.owner.id ?? page?.modeId;
+        const levels = input.persistence.loadLevels(projectId);
+        input.persistence.save(projectId, location, key ? { ...levels, [key]: location } : levels);
+      });
       if (history !== "none") historyState.publish();
       return { ok: true, location } as const;
     });

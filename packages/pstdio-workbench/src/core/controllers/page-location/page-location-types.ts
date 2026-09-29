@@ -5,6 +5,7 @@ import type {
   PlacementIdentity,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
+import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 
@@ -24,7 +25,8 @@ export interface WorkbenchPageLocationBrowser {
 
 export interface WorkbenchPageLocationPersistence {
   load(projectId: string): PageLocation | undefined;
-  save(projectId: string, location: PageLocation): void;
+  save(projectId: string, location: PageLocation, levels?: Readonly<Record<string, PageLocation>>): void;
+  loadLevels(projectId: string): Readonly<Record<string, PageLocation>>;
 }
 
 export interface WorkbenchPageLocationDiagnostic {
@@ -50,10 +52,12 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   browser: WorkbenchPageLocationBrowser;
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
+  navigationTrees?: NavigationTreeRegistry;
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
 }
 
 export interface WorkbenchPageLocationController {
+  getLevelLocation(key: string): PageLocation | undefined;
   historyStore: WorkbenchStore<WorkbenchPageLocationHistoryState>;
   setProject(projectId: string): void;
   clearProject(): void;

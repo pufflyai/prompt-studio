@@ -16,7 +16,6 @@ const ticketWorkspaceBackStoryId = "dashboard-sidenav--ticket-workspace-back-jou
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
 const allSectionRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
 const projectSectionRowNames = allSectionRowNames.filter((name) => name !== "Workspaces");
-const sessionSectionRowNames = projectSectionRowNames.filter((name) => name !== "Sessions");
 
 const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
@@ -131,10 +130,8 @@ test("removes and restores owner-scoped collections across project and session p
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
-  await expectSidenavSections(
-    sidenav,
-    allSectionRowNames.filter((name) => name !== "Sessions"),
-  );
+  await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
+  await expect(row(sidenav, "Search")).toBeVisible();
   await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
   await expect(sidenav.locator('[data-tree-list-node-id="workspace-sessions"]')).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
@@ -229,7 +226,8 @@ test("renders the ticket tree inside the Sidenav resource section", async ({ pag
   await card.getByText(ticket.title, { exact: true }).click();
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expectSidenavSections(sidenav);
+  await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
+  await expect(row(sidenav, "Search")).toBeVisible();
   await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand}(?:\\s|$)`) })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
 });
@@ -263,7 +261,10 @@ test.describe("Dashboard Sidenav stories", () => {
       await expect(
         page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /Prompt Studio$/ }),
       ).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-      await expectSidenavSections(sidenav, storyId === sessionModeStoryId ? sessionSectionRowNames : undefined);
+      if ([ticketModeStoryId, ticketWorkspaceBackStoryId, sessionModeStoryId].includes(storyId)) {
+        await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
+        await expect(row(sidenav, "Search")).toBeVisible();
+      } else await expectSidenavSections(sidenav);
       await expect(row(sidenav, "Workspaces")).toHaveCount(0);
       if (storyId === ticketModeStoryId) {
         await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();

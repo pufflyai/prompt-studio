@@ -61,7 +61,7 @@ export const filterVisibleSections = (
       continue;
     }
     const filteredNodes = filterNodes(section.nodes, nodeOverrides);
-    if (filteredNodes.length === 0 && !section.emptyState) {
+    if (filteredNodes.length === 0 && !section.emptyState && !section.actions?.length) {
       changed = true;
       continue;
     }

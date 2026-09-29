@@ -110,11 +110,11 @@ describe("openCreatedSessionFromDraft", () => {
       title: "Session",
       body: { kind: "react", render: () => null },
     });
-    workbench.modes.registerMode({ id: "sessions", activate: () => undefined });
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
     workbench.pages.registerPage({
       id: "sessions",
       ref: workbenchPages.sessions,
-      modeId: "sessions",
+      modeId: "project",
       path: "sessions",
       main: {
         kind: "view",
@@ -130,7 +130,7 @@ describe("openCreatedSessionFromDraft", () => {
       id: "session",
       parentId: "sessions",
       ref: workbenchPages.session,
-      modeId: "sessions",
+      modeId: "project",
       path: "session",
       resource: {
         kinds: [

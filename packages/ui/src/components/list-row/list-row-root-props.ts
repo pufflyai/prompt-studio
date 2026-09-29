@@ -1,5 +1,6 @@
-import type { chakra } from "@chakra-ui/react";
+import { type chakra, useRecipe } from "@chakra-ui/react";
 import type { ComponentPropsWithoutRef } from "react";
+import { listRowRecipe } from "@/theme/recipes/list-row";
 import type { ListRowProps } from "./list-row.types";
 
 type ListRowRootProps = ComponentPropsWithoutRef<typeof chakra.div>;
@@ -10,7 +11,7 @@ export const computePaddingLeft = (depth: number) => {
 };
 
 const isFixedHeightDenseVariant = (variant: ListRowProps["variant"]) =>
-  variant === "compact" || variant === "full-width" || variant === "empty-state";
+  variant === "back" || variant === "compact" || variant === "full-width" || variant === "empty-state";
 
 export const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
   if (variant === "collection" && !hasDescription) {
@@ -100,4 +101,9 @@ export const createListRowRootProps = (input: {
     textDecoration: "none",
   };
   return props;
+};
+
+export const useListRowStyles = (variant: ListRowProps["variant"]) => {
+  const recipe = useRecipe({ recipe: listRowRecipe });
+  return recipe({ variant: variant === "back" ? "back" : undefined });
 };

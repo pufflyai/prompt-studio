@@ -10,7 +10,12 @@ import {
 import type { ListRowItem, ListRowProps } from "./list-row.types";
 import { ListRowChrome } from "./list-row-chrome";
 import { ListRowContent } from "./list-row-content";
-import { computePaddingLeft, createListRowRootProps, resolveListRowSizing } from "./list-row-root-props";
+import {
+  computePaddingLeft,
+  createListRowRootProps,
+  resolveListRowSizing,
+  useListRowStyles,
+} from "./list-row-root-props";
 
 export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const {
@@ -144,25 +149,28 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const { rowHeight, minHeight } = resolveListRowSizing(variant, hasDescription);
   const rowRole = roleProp ?? (hasMenuItems ? "button" : "option");
 
-  const rowProps = createListRowRootProps({
-    rootProps,
-    labelId,
-    hasEndContent: Boolean(item.endContent),
-    rowRole,
-    className,
-    isSelected,
-    isExpanded,
-    showChevron,
-    rowHeight,
-    minHeight,
-    verticalPadding,
-    paddingLeft,
-    selectedBg,
-    hoverBg,
-    tone,
-    isDisabled,
-    variant,
-  });
+  const rowProps = {
+    css: useListRowStyles(variant),
+    ...createListRowRootProps({
+      rootProps,
+      labelId,
+      hasEndContent: Boolean(item.endContent),
+      rowRole,
+      className,
+      isSelected,
+      isExpanded,
+      showChevron,
+      rowHeight,
+      minHeight,
+      verticalPadding,
+      paddingLeft,
+      selectedBg,
+      hoverBg,
+      tone,
+      isDisabled,
+      variant,
+    }),
+  };
 
   const content = (
     <ListRowContent

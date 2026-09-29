@@ -213,6 +213,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   const pageLocations = createWorkbenchPageLocationController({
     registry: pages,
+    navigationTrees,
     browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
     startPage: input.startPage ?? workbenchPages.start,

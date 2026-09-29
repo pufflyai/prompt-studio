@@ -1,46 +1,34 @@
-import type { TreeViewSection, WorkbenchModuleContext } from "@pstdio/workbench";
+import {
+  createNavigationBackNode,
+  resolveNavigationLevel,
+  type TreeViewSection,
+  type WorkbenchModuleContext,
+} from "@pstdio/workbench";
 import { subscribeSessionListData } from "@/modules/sessions/data/session-data-subscription";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
-import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 
 const activeModeOwner = (ctx: WorkbenchModuleContext, modeId: string) =>
   ctx.navigationTrees.resolveOwner("mode", modeId) ?? { kind: "mode" as const, id: modeId, extensionId: "pstdio" };
-const activePageOwner = (ctx: WorkbenchModuleContext) => {
+const activeLevel = (ctx: WorkbenchModuleContext) => {
   const state = ctx.pages.store.getState();
-  const page = state.activePageId ? state.pages[state.activePageId] : undefined;
-  if (!page) return undefined;
-  return { kind: "page" as const, id: page.id, extensionId: page.ref.extensionId ?? "pstdio" };
+  const mode = ctx.modes.getMode(ctx.modes.getActiveModeId() ?? "");
+  if (!mode) return undefined;
+  return resolveNavigationLevel({
+    location: state.location,
+    pages: Object.values(state.pages),
+    navigationTrees: ctx.navigationTrees,
+    mode: { id: mode.id, label: mode.label ?? mode.id },
+  });
 };
-const sidenavModeOwners = (ctx: WorkbenchModuleContext, modeId: string) => {
-  if (modeId !== "sessions") return [activeModeOwner(ctx, modeId)];
-  return [activeModeOwner(ctx, "project"), activeModeOwner(ctx, modeId)];
-};
-const sidenavModeQueries = (ctx: WorkbenchModuleContext, modeId: string) =>
-  sidenavModeOwners(ctx, modeId).map((owner) => ({
-    owner,
-    // Borrowed project links keep their project context inside Sessions mode.
-    resource: owner.id === modeId ? ctx.getPrimaryResource() : undefined,
-  }));
 const sidenavReadKey = (ctx: WorkbenchModuleContext) => {
   const mode = ctx.modes.getActiveModeId();
-  const keys = mode
-    ? sidenavModeQueries(ctx, mode).map(({ owner, resource }) => ctx.navigationTrees.getReadKey(owner, { resource }))
-    : [];
-  const page = activePageOwner(ctx);
-  if (page) keys.push(ctx.navigationTrees.getReadKey(page, { resource: ctx.getPrimaryResource() }));
+  if (!mode) return "[]";
+  const level = activeLevel(ctx);
+  const keys = [ctx.navigationTrees.getReadKey(activeModeOwner(ctx, mode), { resource: ctx.getPrimaryResource() })];
+  if (level) keys.push(ctx.navigationTrees.getReadKey(level.owner, { resource: level.location.resource }));
   return JSON.stringify(keys);
 };
-const withoutSessionsLink = (sections: Awaited<ReturnType<WorkbenchModuleContext["navigationTrees"]["getSections"]>>) =>
-  sections
-    .map((section) => ({
-      ...section,
-      nodes: section.nodes.filter((node) => node.id !== dashboardViews.sessions.id),
-    }))
-    .filter((section) => section.nodes.length > 0);
-// The unified sidenav composes its body/footer from mode-gated contributions. The active
-// mode is the gate, so dashboard-owned modes (project/sessions) and extension-declared
-// modes (e.g. ticket) reshape the same widget without opening a different one.
 const composeSidenavSlot = async (
   ctx: WorkbenchModuleContext,
   slot: "header" | "content" | "footer",
@@ -49,18 +37,20 @@ const composeSidenavSlot = async (
   const mode = ctx.modes.getActiveModeId();
   const resource = ctx.getPrimaryResource();
   if (!mode) return [];
-  const context = { resource, signal };
-  const modeSections: TreeViewSection[] = [];
-  for (const { owner, resource } of sidenavModeQueries(ctx, mode)) {
+  const level = activeLevel(ctx);
+  const modeOwner = activeModeOwner(ctx, mode);
+  const owners = slot === "content" && level ? [level.owner] : [modeOwner, ...(level ? [level.owner] : [])];
+  const sections: TreeViewSection[] = [];
+  for (const owner of owners) {
     signal?.throwIfAborted();
-    const sections = await ctx.navigationTrees.getSections(owner, slot, { resource, signal });
-    modeSections.push(...(mode === "sessions" && owner.id === "project" ? withoutSessionsLink(sections) : sections));
+    const ownerResource = owner.kind === "page" ? level?.location.resource : resource;
+    sections.push(...(await ctx.navigationTrees.getSections(owner, slot, { resource: ownerResource, signal })));
   }
   signal?.throwIfAborted();
-  const pageOwner = activePageOwner(ctx);
-  if (!pageOwner) return modeSections;
-  const pageSections = await ctx.navigationTrees.getSections(pageOwner, slot, context);
-  return [...modeSections, ...pageSections];
+  if (slot !== "content" || !level) return sections;
+  const back = createNavigationBackNode(level, ctx.pageLocations.getLevelLocation(level.parent.key));
+  // A fixed, unlabelled first section keeps Back visible even when content sections are hidden or collapsed.
+  return [{ id: "navigation.level", canHide: false, canReorder: false, nodes: [back] }, ...sections];
 };
 // Mode and page contributions share one host navigation view.
 export const updateDashboardSidenav = (
@@ -74,18 +64,15 @@ export const updateDashboardSidenav = (
     ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
   }
   const mode = ctx.modes.getActiveModeId();
-  if (mode) {
-    for (const owner of sidenavModeOwners(ctx, mode)) {
-      for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(owner)) {
+  const level = activeLevel(ctx);
+  const owners = mode ? [activeModeOwner(ctx, mode), ...(level ? [level.owner] : [])] : [];
+  for (const owner of owners) {
+    const slots =
+      level && owner.kind === "mode" ? (["header", "footer"] as const) : (["header", "content", "footer"] as const);
+    for (const slot of slots)
+      for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(owner, slot)) {
         ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
       }
-    }
-  }
-  const pageOwner = activePageOwner(ctx);
-  if (pageOwner) {
-    for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(pageOwner)) {
-      ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
-    }
   }
   ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
 };
@@ -145,7 +132,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   // unlike the beforeOpen refresh that runs before it.
   const primaryResourceSubscription = ctx.onDidChangePrimaryResource(refresh);
   const pageSubscription = ctx.pages.store.subscribeSelector(
-    (state) => state.activePageId,
+    (state) => state.location,
     () => updateDashboardSidenav(ctx),
   );
   const unsubscribeDashboardData = subscribeSessionListData(refresh);

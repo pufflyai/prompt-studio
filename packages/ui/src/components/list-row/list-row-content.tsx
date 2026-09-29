@@ -96,6 +96,7 @@ const RowContent = (props: RowContentProps & { labelId: string }) => {
   const { item, isExpanded, showChevron, isDisabled, variant, tone, labelId } = props;
   const isEmptyStateVariant = variant === "empty-state";
   const isDenseVariant =
+    variant === "back" ||
     variant === "compact" ||
     variant === "collection" ||
     variant === "full-width" ||

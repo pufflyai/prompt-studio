@@ -58,3 +58,20 @@ describe("applyTreeListOrder", () => {
     expect(result).toBe(baseSections);
   });
 });
+
+test("keeps fixed sections and rows in their declared positions when restoring saved order", () => {
+  const sections = [
+    { id: "back", canReorder: false, nodes: [{ id: "back", label: "Back", canReorder: false }] },
+    {
+      id: "files",
+      nodes: [
+        { id: "pinned", label: "Pinned", canReorder: false },
+        { id: "one", label: "One" },
+        { id: "two", label: "Two" },
+      ],
+    },
+  ];
+  const result = applyTreeListOrder(sections, ["files"], { files: ["two", "one"] });
+  expect(result.map((section) => section.id)).toEqual(["back", "files"]);
+  expect(result[1].nodes.map((node) => node.id)).toEqual(["pinned", "two", "one"]);
+});

@@ -14,6 +14,7 @@ import { createSessionsModule } from "./module";
 describe("createSessionsModule", () => {
   test("registers the session resource kind", () => {
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionsModule());
     expect(workbench.resources.getKind("session")).toMatchObject({
       label: "Session",
@@ -22,19 +23,20 @@ describe("createSessionsModule", () => {
     expect(workbench.views.getView(dashboardWidgetIds.session)).toBeDefined();
     expect(workbench.pages.getPage(dashboardViews.sessions.id)).toMatchObject({
       ref: workbenchPages.sessions,
-      modeId: "sessions",
+      modeId: "project",
       path: "sessions",
     });
   });
-  test("renders aggregate sessions in sessions mode and scoped sessions for a workspace resource", async () => {
+  test("renders aggregate sessions in the Sessions level and scoped sessions for a workspace resource", async () => {
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     const workspace = createDashboardResource("workspace", "workspace-1", "Workspace one", "GitBranch", "project-1");
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-1", "FileText", "project-1");
     workbench.registerModule(createSessionsModule());
     const nodeIdsForContext = async (mode: string, resource?: typeof workspace) =>
       (
         await workbench.navigationTrees.getSections(
-          { kind: "mode", id: mode, extensionId: "pstdio" },
+          { kind: mode === "sessions" ? "page" : "mode", id: mode, extensionId: "pstdio" },
           "content",
           resource ? { resource } : {},
         )
@@ -48,6 +50,7 @@ describe("createSessionsModule", () => {
   });
   test("adds sessions navigation as a sidenav section", async () => {
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionsModule());
     const sessionsNode = (
       await workbench.navigationTrees.getSections({ kind: "mode", id: "project", extensionId: "pstdio" })
@@ -60,6 +63,7 @@ describe("createSessionsModule", () => {
   });
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
       status: "completed",
     });
@@ -75,6 +79,7 @@ describe("createSessionsModule", () => {
   });
   test("reuses the main tab when another session is selected", () => {
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     const first = createDashboardResource("session", "session-1", "First session", "MessageCircle", "project-1");
     const second = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1");
     workbench.context.set(dashboardSelectedProjectIdContextKey, "project-1");
@@ -87,6 +92,7 @@ describe("createSessionsModule", () => {
   });
   test("updates the breadcrumb when starting a new session from sessions", async () => {
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
       status: "completed",
     });
@@ -99,6 +105,7 @@ describe("createSessionsModule", () => {
   });
   test("navigates back from a session to the sessions root", async () => {
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     const session = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1", {
       status: "completed",
     });
@@ -152,6 +159,7 @@ describe("createSessionsModule", () => {
   test("opens the project-owned sessions aggregate from global navigation", async () => {
     seedContractSessions();
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSessionsModule());
     await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
@@ -161,6 +169,7 @@ describe("createSessionsModule", () => {
   test("returns to the last opened session from global navigation", async () => {
     seedContractSessions();
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     const session = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1", {
       status: "completed",
     });
@@ -174,9 +183,10 @@ describe("createSessionsModule", () => {
   test("opens command palette session resources in the project Session Panel", async () => {
     seedContractSessions();
     const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSessionBubbleModule());
-    workbench.registerModule(createWorkspacesModule());
+
     workbench.registerModule(createSessionsModule());
     workbench.sidePanel.setMode("closed");
     openWorkspacesPage(workbench);

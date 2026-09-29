@@ -64,3 +64,11 @@ The source of this shipped skill is `extensions/pstdio-skills/skills/create-pstd
 Update `pstdio-skills` with the SDK release, then run `pst agents install-skills <agent-id>` from the project folder. The installer adds missing skills and replaces each existing same-name skill directory. Before running it, copy any local edits outside that directory or move them into the extension's source skill. The installer does not merge local edits. Restart the agent session to read the updated files. For source development, first load the skill extension through `pst extensions dev <path-to-pstdio-skills>`.
 
 Commands and row activation callbacks request navigation with `ctx.navigation.open(target)` and return data. After committing deletion, call `await ctx.resources.removed(resource)`. The host removes clean resource bindings across clients and inactive pages. Other active resources stay selected. Dirty editors retain their draft and stop saving until explicitly closed. Keep missing-resource loads for disconnected clients and use update-only writes for existing documents.
+
+## Sidenav levels
+
+A page-owned content navigation tree starts a sidenav level. Its sections replace the mode content while that page or any child location is open. The nearest owner in the page location parent chain wins, so levels can nest. Pages with only header or footer trees do not start a level.
+
+The host adds a fixed Back row named after the parent level resource or page, or the mode label (Project at the main level). Back restores the last page visited at that level. This memory is saved per project and survives reloads. On a first visit, Back opens the parent level owner, the declared parent location, or Start. Header and footer keep the mode sections followed by the level owner's sections. Search stays in the header and opens the command palette.
+
+For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.

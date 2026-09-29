@@ -6,6 +6,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { treeViewBody, treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { createSidenavModule } from "../sidenav/module";
+import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
 
 test("shows existing sessions immediately on the sessions aggregate", async () => {
@@ -27,6 +28,7 @@ test("shows existing sessions immediately on the sessions aggregate", async () =
 
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   workbench.registerModule(createSidenavModule());
+  workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
 
   openSessionsPage(workbench);
@@ -44,6 +46,7 @@ test("session navigation keeps its data scope while resource-dependent contribut
   const workbench = createWorkbench();
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   workbench.registerModule(createSidenavModule());
+  workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   const open = (id: string) => openSessionsPage(workbench, { type: "session", id });
   const readKey = () => treeViewBody(workbench, dashboardWidgetIds.dashboardSidenav).getReadKey?.({});
@@ -55,7 +58,7 @@ test("session navigation keeps its data scope while resource-dependent contribut
 
   workbench.navigationTrees.registerContribution({
     id: "extension.session-actions",
-    owner: { kind: "mode", id: "sessions", extensionId: "pstdio" },
+    owner: { kind: "mode", id: "project", extensionId: "pstdio" },
     sourceExtensionId: "extension",
     declarationIndex: 0,
     getSections: () => [],

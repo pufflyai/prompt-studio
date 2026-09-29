@@ -244,3 +244,8 @@ describe("buildTreeVisibilityMenuActions", () => {
     expect(toggled).toEqual(["search", "help"]);
   });
 });
+
+test("keeps an empty section with actions so users can create its first item", () => {
+  const sections = [{ id: "notes", label: "Notes", actions: [{ id: "create", label: "New note" }], nodes: [] }];
+  expect(filterVisibleSections(sections, {}, {})).toEqual(sections);
+});

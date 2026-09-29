@@ -1,4 +1,4 @@
-import { isLocalizedString, type NavigationTargetPage, type PageLocation, type PageRef } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, PageLocation, PageRef } from "@pstdio/sdk/extensions";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageRegistry,
@@ -8,22 +8,11 @@ import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-r
 import { createDisposable } from "../../shared/disposable";
 import type { WorkbenchBreadcrumbController, WorkbenchBreadcrumbItem } from "../breadcrumbs/breadcrumb-registry";
 import type { WorkbenchPageLocationController } from "./page-location-controller";
+import { pageLocationTitle, targetFromLocation } from "./page-location-presentation";
 
 const pageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:${ref.id}`;
 const locationsFromRoot = (location: PageLocation): PageLocation[] =>
   location.parent ? [...locationsFromRoot(location.parent), location] : [location];
-const targetFromLocation = (location: PageLocation): NavigationTargetPage => ({
-  kind: "page",
-  page: location.page,
-  ...(location.resource ? { resource: location.resource } : {}),
-  ...(location.section ? { section: location.section } : {}),
-  ...(location.parent ? { parent: targetFromLocation(location.parent) } : {}),
-});
-const pageTitle = (page: WorkbenchPageContribution) => {
-  if (page.title === undefined) return page.ref.id;
-  if (!isLocalizedString(page.title)) return page.title;
-  return page.title.default ?? page.title.$l10n;
-};
 export const createWorkbenchPageBreadcrumbItems = (input: {
   location: PageLocation;
   pages: readonly WorkbenchPageContribution[];
@@ -35,7 +24,7 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
   return locations.map((location, index) => {
     const page = pagesByRef.get(pageRefKey(location.page));
     const item: WorkbenchBreadcrumbItem = {
-      title: location.resource?.label ?? (page ? pageTitle(page) : location.page.id),
+      title: pageLocationTitle(location, input.pages),
       icon: location.resource?.icon ?? page?.icon,
       ...(location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };

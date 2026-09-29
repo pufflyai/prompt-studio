@@ -1,5 +1,15 @@
 import type { TreeListSection } from "./tree-list.types";
 
+const keepFixedPositions = <T extends { id: string; canReorder?: boolean }>(original: T[], ordered: T[]) => {
+  const movable = ordered.filter((item) => item.canReorder !== false);
+  let index = 0;
+  const fixed = original
+    .map((item) => (item.canReorder === false ? item : movable[index++]))
+    .filter((item): item is T => Boolean(item));
+  fixed.push(...movable.slice(index));
+  return fixed.every((item, index) => item === ordered[index]) && fixed.length === ordered.length ? ordered : fixed;
+};
+
 const reorderBy = <T extends { id: string }>(items: T[], order: string[]): T[] => {
   if (order.length === 0) return items;
 
@@ -39,14 +49,16 @@ export const applyTreeListOrder = (
   nodeOrderBySection: Record<string, string[]>,
 ): TreeListSection[] => {
   let changed = false;
-  const reorderedSections = reorderBy(sections, sectionOrder);
+  const reorderedSections = keepFixedPositions(sections, reorderBy(sections, sectionOrder));
   if (reorderedSections !== sections) changed = true;
 
   const nodesById = new Map(sections.flatMap((section) => section.nodes.map((node) => [node.id, node] as const)));
   const assignedNodeIds = new Set(
     Object.entries(nodeOrderBySection)
       .filter(([sectionId]) => sections.some((section) => section.id === sectionId))
-      .flatMap(([, nodeIds]) => nodeIds.filter((nodeId) => nodesById.has(nodeId))),
+      .flatMap(([, nodeIds]) =>
+        nodeIds.filter((nodeId) => nodesById.has(nodeId) && nodesById.get(nodeId)?.canReorder !== false),
+      ),
   );
 
   const next: TreeListSection[] = [];
@@ -64,10 +76,10 @@ export const applyTreeListOrder = (
 
     const orderedNodes = (nodeOrder ?? []).flatMap((nodeId) => {
       const node = nodesById.get(nodeId);
-      return node ? [node] : [];
+      return node && node.canReorder !== false ? [node] : [];
     });
     const remainingNodes = section.nodes.filter((node) => !assignedNodeIds.has(node.id));
-    const reorderedNodes = [...orderedNodes, ...remainingNodes];
+    const reorderedNodes = keepFixedPositions(section.nodes, [...orderedNodes, ...remainingNodes]);
     if (
       reorderedNodes.length !== section.nodes.length ||
       reorderedNodes.some((node, index) => node !== section.nodes[index])

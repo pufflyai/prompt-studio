@@ -169,3 +169,31 @@ describe("navigation tree registry", () => {
     ]);
   });
 });
+
+test("lazy children retain their owner resource and use the current cancellation signal", async () => {
+  const registry = createNavigationTreeRegistry();
+  const ticket = { type: "ticket", id: "parent-ticket" };
+  const seen: unknown[] = [];
+  registry.registerContribution({
+    id: "files",
+    owner: { kind: "page", id: "ticket", extensionId: "planner" },
+    sourceExtensionId: "planner",
+    declarationIndex: 0,
+    getSections: () => [
+      { id: "files", nodes: [{ id: "folder", label: "Folder", children: [{ id: "nested", label: "Nested" }] }] },
+    ],
+    getChildren: (_node, context) => {
+      seen.push(context);
+      return [{ id: "deeper", label: "Deeper" }];
+    },
+  });
+  const [section] = await registry.getSections({ kind: "page", id: "ticket", extensionId: "planner" }, "content", {
+    resource: ticket,
+  });
+  const signal = new AbortController().signal;
+  const context = { resource: { type: "file", id: "active-child" }, signal };
+  const children = await registry.getChildren(section!.nodes[0]!, context);
+  await registry.getChildren(children[0]!, context);
+  await registry.getChildren(section!.nodes[0]!.children![0]!, context);
+  expect(seen).toEqual(Array.from({ length: 3 }, () => ({ resource: ticket, signal })));
+});

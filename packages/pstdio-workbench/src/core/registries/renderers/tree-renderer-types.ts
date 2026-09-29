@@ -37,7 +37,7 @@ export interface TreeAction {
   run?(args?: unknown): Promise<void> | void;
 }
 
-export type TreeNodeRowVariant = "empty-state";
+export type TreeNodeRowVariant = "empty-state" | "back";
 
 export interface TreeNodeInlineInput {
   ariaLabel: string;

@@ -248,3 +248,11 @@ package `planner`, the theme ID is `acme.planner.theme.monokai`.
 The host saves user-created views per project, extension instance and local board ID. Query-returned attributes and status options are used to validate settings and filters. Keep field IDs stable across releases. A successful query can clean removed options from saved views; a failed query never removes them.
 
 Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` supplies shared views and asynchronous mutations to the UI renderer. The workbench accepts a subscribable views provider from its host; standalone callers without one show their built-ins read-only.
+
+## Sidenav levels
+
+A page-owned content navigation tree starts a sidenav level. Its sections replace the mode content while that page or any child location is open. The nearest owner in the page location parent chain wins, so levels can nest. Pages with only header or footer trees do not start a level.
+
+The host adds a fixed Back row named after the parent level resource or page, or the mode label (Project at the main level). Back restores the last page visited at that level. This memory is saved per project and survives reloads. On a first visit, Back opens the parent level owner, the declared parent location, or Start. Header and footer keep the mode sections followed by the level owner's sections. Search stays in the header and opens the command palette.
+
+For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.

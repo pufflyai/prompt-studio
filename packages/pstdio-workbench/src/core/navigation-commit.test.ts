@@ -46,6 +46,7 @@ function harness(
       },
     },
     pageLocationPersistence: {
+      loadLevels: () => ({}),
       load: () => saved,
       save(_id, location) {
         if (armed && failure === "location-cache") throw new Error("Location cache is full");
