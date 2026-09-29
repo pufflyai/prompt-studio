@@ -77,7 +77,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
         commandId: dashboardCommandIds.openSessionPanel,
         args: {
           resource: session.resource,
-          replaceDraft: instance.resource?.type === "session-draft" ? instance.placementIdentity : undefined,
+          replacePanel: instance.placementIdentity,
         },
       },
     }));

@@ -29,10 +29,11 @@ export const selectSidenavSessionNode = (ctx: WorkbenchModuleContext, resource: 
 interface OpenDashboardSessionPanelInput extends OpenSessionBubbleWidgetsInput {
   resource: ResourceRef;
   preservePanelMode?: boolean;
-  replaceDraft?: PlacementIdentity;
+  replacePanel?: PlacementIdentity;
 }
-const replaceDraftPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSessionPanelInput) => {
-  const identity = input.replaceDraft;
+// A tab's own session menu switches that tab; a session already open elsewhere keeps its one tab.
+const replaceSessionPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSessionPanelInput) => {
+  const identity = input.replacePanel;
   if (identity?.kind !== "mode") return undefined;
   const placements = ctx.layout.getLayout().regions.side.widgets;
   const destination = placements.find(
@@ -46,8 +47,7 @@ const replaceDraftPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSess
     (placement) =>
       placement.placementIdentity?.kind === "mode" &&
       placement.placementIdentity.placementId === identity.placementId &&
-      placement.placementIdentity.instanceKey === identity.instanceKey &&
-      placement.resource?.type === "session-draft",
+      placement.placementIdentity.instanceKey === identity.instanceKey,
   );
   if (!origin) return undefined;
   ctx.modePlacements.updatePlacement(identity, { resource: input.resource, title: input.resource.label });
@@ -59,7 +59,7 @@ export const openDashboardSessionPanel = (ctx: WorkbenchModuleContext, input: Op
   rememberDashboardSessionResource(ctx, input.resource);
   const previousPanelMode = ctx.sidePanel.getMode();
   const bubble =
-    replaceDraftPanel(ctx, input) ??
+    replaceSessionPanel(ctx, input) ??
     openSessionBubbleWidgets(ctx, {
       resource: input.resource,
       title: input.resource.label,
