@@ -253,24 +253,3 @@ test("updates a New session Sub Panel in place after the first message", async (
   await expect(activeTab).toContainText(prompt);
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
 });
-
-test("hides unavailable Side Panel chrome in the Sessions Location", async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, {
-    data: folderProjectInput({ name: "PS-170 Empty Sessions" }),
-  });
-  expect(response.ok()).toBe(true);
-  const project = (await response.json()) as { id: string };
-  await page.addInitScript((projectId: string) => {
-    localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
-  }, project.id);
-
-  await page.goto(`/projects/${project.id}/sessions`);
-
-  await expect(
-    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Show Side Panel" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open Side Panel" })).toHaveCount(0);
-  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
-});

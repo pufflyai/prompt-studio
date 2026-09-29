@@ -45,4 +45,11 @@ describe("sidenav levels", () => {
       ["ticket", nested],
     ]);
   });
+  test("keeps one level per owner when a page opens inside itself", () => {
+    const { own, resolve } = setup();
+    own("ticket");
+    const root = { page: ticketRef, resource: { type: "ticket", id: "root", label: "Root" } };
+    const child = { page: ticketRef, resource: { type: "ticket", id: "child", label: "Child" }, parent: root };
+    expect(resolve(child).map((level) => [level.owner.id, level.location.resource?.id])).toEqual([["ticket", "child"]]);
+  });
 });

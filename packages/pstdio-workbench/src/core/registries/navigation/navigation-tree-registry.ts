@@ -122,9 +122,10 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       ...node,
       id: scopedId(contribution.idScope, node.id),
       moveScope,
-      // Mode rows are navigation links users may hide; page-owned level rows are data such as notes.
+      // Mode rows are navigation links users may hide and arrange; page-owned level rows are data such as notes
+      // or sessions, which keep the order their owner gives them unless a row opts in.
       canHide: node.canHide ?? contribution.owner.kind === "mode",
-      canReorder: node.canReorder ?? true,
+      canReorder: node.canReorder ?? contribution.owner.kind === "mode",
       children: node.children?.map((child) => projectNode(child, contribution, moveScope, resource)),
     };
     nodeSources.set(projected, { contribution, node, resource });

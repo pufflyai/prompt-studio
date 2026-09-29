@@ -19,3 +19,10 @@ export const showHiddenSidenavEntry = async (page: Page, label: string) => {
   await page.keyboard.press("Escape");
   return entry;
 };
+
+// Leaves the open Sidenav level: the breadcrumb's project button returns to the project start page.
+export const openProjectHome = (page: Page, projectName: string) =>
+  page
+    .locator('[data-workbench-region="nav"]')
+    .getByRole("button", { name: new RegExp(`${projectName}$`) })
+    .click();

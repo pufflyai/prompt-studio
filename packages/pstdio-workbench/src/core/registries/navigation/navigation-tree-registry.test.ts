@@ -157,7 +157,7 @@ describe("navigation tree registry", () => {
     expect(section?.nodes[0]?.children?.[0]?.moveScope).toBe("mode:pstdio:project");
   });
 
-  test("keeps page-owned level rows fixed while their sections stay hideable", async () => {
+  test("keeps page-owned level rows fixed unless they opt in, while their sections stay customizable", async () => {
     const registry = createNavigationTreeRegistry();
     const notesPage = { kind: "page" as const, id: "notes", extensionId: "notes" };
     registry.registerContribution({
@@ -171,7 +171,7 @@ describe("navigation tree registry", () => {
           label: "Notes",
           nodes: [
             { id: "note", label: "Note" },
-            { id: "pinned", label: "Pinned", canHide: true },
+            { id: "pinned", label: "Pinned", canHide: true, canReorder: true },
           ],
         },
       ],
@@ -179,7 +179,9 @@ describe("navigation tree registry", () => {
 
     const section = (await registry.getSections(notesPage, "content"))[0];
     expect(section?.canHide).toBe(true);
+    expect(section?.canReorder).toBe(true);
     expect(section?.nodes.map((node) => node.canHide)).toEqual([false, true]);
+    expect(section?.nodes.map((node) => node.canReorder)).toEqual([false, true]);
   });
 
   test("keeps projected tree ids separate and delegates lazy children to their source", async () => {
