@@ -146,7 +146,8 @@ update metadata.
 | Windows x64 | Setup EXE, full nupkg, and RELEASES | Trusted Authenticode signatures and timestamps on app, sidecar, installer, and update payload; clean-home launch | Electron Squirrel updater through release-owned RELEASES metadata |
 
 Each target calls `release-desktop-native.yml`, which separates building from
-validation. The build job uploads `out` and `dist` in a tar archive before tests
+validation. The build job uploads desktop `out` and `dist`, plus the SDK and UI
+build outputs used by the packaged Lab fixture, in a tar archive before tests
 run. This preserves executable permissions and signed macOS bundle symlinks.
 The validation job downloads that exact build on a fresh native runner, then
 runs the source tests, packaged tests, and release verification. Each job has a

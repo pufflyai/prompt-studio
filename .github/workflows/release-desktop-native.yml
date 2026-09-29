@@ -147,9 +147,12 @@ jobs:
         run: bun run --cwd clients/desktop make -- --arch=${{ inputs.arch }}
 
       # Tar preserves executable modes and the symlinks in signed macOS bundles.
+      # The packaged Lab fixture also uses the built workspace SDK and UI.
       - name: Archive native build
         shell: bash
-        run: tar -cf native-build.tar -C clients/desktop out dist
+        run: >-
+          tar -cf native-build.tar clients/desktop/out clients/desktop/dist
+          packages/sdk/dist packages/ui/dist packages/ui/dist-monaco
 
       - name: Upload native build
         uses: actions/upload-artifact@v4
@@ -206,7 +209,7 @@ jobs:
 
       - name: Restore native build
         shell: bash
-        run: tar -xf .native-build/native-build.tar -C clients/desktop
+        run: tar -xf .native-build/native-build.tar
 
       - name: Configure Linux Chromium sandbox
         if: inputs.platform == 'linux'
