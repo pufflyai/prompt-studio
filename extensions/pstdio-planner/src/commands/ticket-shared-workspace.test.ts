@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { archiveTicketCommand } from "./archive-ticket";
-import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
 import { listTicketFilesTreeCommand } from "./ticket-files";
@@ -76,7 +76,7 @@ describe("ticket work in shared folders", () => {
       if (!supportsArchive) throw new Error("This provider does not support archiving");
       return remote;
     });
-    const action = mock(makeCommandContext({ storage, params: {} }).notify.action);
+    const action = mock(makeCommandArgs({ storage, params: {} })[0].notify.action);
     const result = await archiveTicketCommand.run(
       ...makeCommandArgs({
         storage,
