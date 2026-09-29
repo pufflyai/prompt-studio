@@ -1,11 +1,12 @@
 import type { Localizable } from "@pstdio/sdk/extensions";
 import type { CommandParamSchema } from "../../core";
+import { metadataCommandId } from "../host/workbench-extension-metadata-ref";
 
 type LocalizableText = Localizable<string> | undefined;
 type ParamLocalizer = (value: LocalizableText, fallback?: string) => string;
 
 type ContributedParamSchema =
-  | Record<string, { type: string; label?: LocalizableText; description?: LocalizableText }>
+  | Record<string, { type: string; label?: LocalizableText; description?: LocalizableText; options?: unknown }>
   | undefined;
 
 /**
@@ -13,7 +14,11 @@ type ContributedParamSchema =
  * surfaces render plain strings. Resolve at the boundary so no l10n object
  * reaches a renderer and gets stringified as "[object Object]".
  */
-export const localizeParamSchema = (params: ContributedParamSchema, localize: ParamLocalizer) => {
+export const localizeParamSchema = (
+  params: ContributedParamSchema,
+  localize: ParamLocalizer,
+  ownerExtensionId?: string,
+) => {
   if (!params) return undefined;
 
   return Object.fromEntries(
@@ -21,9 +26,30 @@ export const localizeParamSchema = (params: ContributedParamSchema, localize: Pa
       id,
       {
         ...descriptor,
+        ...(descriptor.options && !Array.isArray(descriptor.options)
+          ? { options: localizeOptionSource(descriptor.options, ownerExtensionId) }
+          : {}),
         label: descriptor.label === undefined ? undefined : localize(descriptor.label, id),
         description: descriptor.description === undefined ? undefined : localize(descriptor.description),
       },
     ]),
   ) as CommandParamSchema;
+};
+
+const localizeOptionSource = (value: unknown, ownerExtensionId?: string) => {
+  const source = value as {
+    command: { id: string; extensionId?: string };
+    valueField: string;
+    labelField: string;
+    params?: Record<string, unknown>;
+  };
+  return {
+    valueField: source.valueField,
+    labelField: source.labelField,
+    params: source.params,
+    commandId: metadataCommandId({
+      id: source.command.id,
+      extensionId: source.command.extensionId ?? ownerExtensionId ?? "pstdio",
+    }),
+  };
 };

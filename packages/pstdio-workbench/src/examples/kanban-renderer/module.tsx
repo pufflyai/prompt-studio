@@ -103,6 +103,14 @@ export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution =
       body: {
         kind: "kanban",
         resourceKind: kanbanRendererStoryViewKind,
+        toolbarActions: [
+          {
+            id: "configure",
+            label: "Configure attributes",
+            commandId: configureAttributesCommandId,
+            presentation: "primary",
+          },
+        ],
         attributes: storySchemaStore.source,
         defaultSettings,
         getBoardColumnConfig: resolveBoardColumnConfig,

@@ -121,3 +121,7 @@ export const UnavailableGroups: Story = {
 export const OnlyUnsetGroup: Story = {
   args: { options: [], defaultValue: "", group: { ...group, options: [group.options[0]], defaultValue: "" } },
 };
+
+export const CustomChoices: Story = {
+  args: { allowCustomValues: true, multiSelect: true, defaultValue: ["custom,value"], options: [main, develop] },
+};

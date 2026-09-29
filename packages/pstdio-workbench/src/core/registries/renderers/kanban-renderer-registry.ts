@@ -15,6 +15,7 @@ import type {
   ResourceContextAction,
 } from "./kanban-renderer-contracts";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
+import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export interface KanbanRendererQueryState {
   settings: KanbanRendererSettings;
@@ -28,6 +29,7 @@ export interface KanbanRendererContribution<
 > {
   id: string;
   title: string;
+  toolbarActions?: ViewToolbarAction[];
   resourceKind?: string;
   /** Host-owned scope for persisted display settings. */
   storageScope?: string;

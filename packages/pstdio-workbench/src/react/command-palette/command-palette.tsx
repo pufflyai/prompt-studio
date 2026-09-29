@@ -334,6 +334,9 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
       <CommandParamsDialog
         request={paramsRequest}
         renderParamField={renderParamField}
+        executeOptionCommand={(id, args, signal) =>
+          workbench.commands.executeCommand(id, args, { ...paramsRequest?.context, signal })
+        }
         prepareArgs={(input) =>
           workbench.commands.prepareCommandArgs(input.commandId, input.args, input.context, input.onArgsChange)
         }

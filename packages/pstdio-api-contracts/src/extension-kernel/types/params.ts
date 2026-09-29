@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { CommandRef } from "./commands";
 import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
 
@@ -73,11 +74,21 @@ export type BooleanParam<TRequired extends boolean | undefined = boolean | undef
   type: "boolean";
 };
 
-type ParamOption = { label: string; value: string; icon?: string };
+export type ParamValueRef = { kind: "param-value"; key: string };
+
+export interface ParamOptionSource {
+  command: CommandRef;
+  valueField: string;
+  labelField: string;
+  params?: Record<string, unknown | ParamValueRef>;
+}
+
+export type ParamOption = { label: string; value: string; icon?: string };
 
 export type SelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
   type: "select";
-  options: ParamOption[];
+  options: ParamOption[] | ParamOptionSource;
+  allowCustomValues?: boolean;
 };
 
 export type MultiSelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
@@ -85,7 +96,8 @@ export type MultiSelectParam<TRequired extends boolean | undefined = boolean | u
   TRequired
 > & {
   type: "multi-select";
-  options: ParamOption[];
+  options: ParamOption[] | ParamOptionSource;
+  allowCustomValues?: boolean;
 };
 
 export type HarnessParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<

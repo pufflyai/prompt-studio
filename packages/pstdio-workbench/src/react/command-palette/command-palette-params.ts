@@ -77,7 +77,7 @@ const resourceContextValue = (entry: CommandParamEntry, context: WorkbenchComman
   return undefined;
 };
 const dedupeOptions = (options: CommandParamDescriptor["options"]) => {
-  if (!options) return options;
+  if (!Array.isArray(options)) return options;
   const seen = new Set<string>();
   return options.filter((option) => {
     if (seen.has(option.value)) return false;
@@ -168,7 +168,12 @@ export const normalizeCommandParamValues = (
   }
   return normalized;
 };
-export const mergeCommandParamArgs = (baseArgs: unknown, params: Record<string, unknown>) => ({
-  ...(isRecord(baseArgs) ? baseArgs : {}),
-  ...params,
-});
+export const mergeCommandParamArgs = (
+  baseArgs: unknown,
+  params: Record<string, unknown>,
+  schema: CommandParamSchema | undefined,
+) => {
+  const base = isRecord(baseArgs) ? { ...baseArgs } : {};
+  for (const entry of listCommandParamEntries(schema)) delete base[entry.key];
+  return { ...base, ...params };
+};

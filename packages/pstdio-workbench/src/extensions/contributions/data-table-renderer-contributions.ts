@@ -11,6 +11,7 @@ import type {
 import { WorkbenchIcon } from "../../react";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { createExtensionSlot, executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
+import { mapViewToolbarActions } from "./view-toolbar-actions";
 
 const localize = (value: unknown, fallback = "") => text(value as Parameters<typeof text>[0], fallback);
 type WireColumn = NonNullable<WorkbenchExtensionDataTableRendererRecord["columns"]>[number];
@@ -87,6 +88,7 @@ const registerRenderer = (
     body: {
       kind: "dataTable",
       resourceKind: record.resourceKind,
+      toolbarActions: mapViewToolbarActions(record),
       columns: record.columns?.map(toColumn),
       initialPageSize: record.initialPageSize,
       pageSizeOptions: record.pageSizeOptions,

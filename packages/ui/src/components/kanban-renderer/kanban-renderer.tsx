@@ -61,6 +61,7 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
   hideToolbar?: boolean;
+  toolbarActions?: ReactNode;
   toolbarLeading?: ReactNode;
   onRowClick?: (row: TRow) => void;
   /** Called when a row attribute changes through drag/drop, board movement, or inline controls. */
@@ -102,6 +103,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     getBoardColumnConfig,
     getRowContextMenuActions,
     hideToolbar = false,
+    toolbarActions,
     toolbarLeading,
   } = props;
 
@@ -228,6 +230,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           defaultViews={defaultViews}
           defaultActiveViewId={defaultActiveViewId}
           leading={toolbarLeading}
+          actions={toolbarActions}
         />
       )}
 

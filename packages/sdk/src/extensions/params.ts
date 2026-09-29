@@ -8,6 +8,9 @@ import type {
   MarkdownParam,
   MultiSelectParam,
   NumberParam,
+  ParamOption,
+  ParamOptionSource,
+  ParamValueRef,
   ResourceParam,
   SelectParam,
   TemplateParam,
@@ -18,6 +21,7 @@ import type {
 type RequiredOf<TOptions> = TOptions extends { required: infer TRequired extends boolean } ? TRequired : undefined;
 
 type ParamOptions<TParam extends { type: string }> = Omit<TParam, "type">;
+type SelectionOptions<TOptions> = TOptions extends ParamOption[] ? ParamOption[] : ParamOptionSource;
 
 /**
  * Builders for typed parameter descriptors. Each builder produces a discriminated
@@ -30,6 +34,8 @@ type ParamOptions<TParam extends { type: string }> = Omit<TParam, "type">;
  *   }
  */
 export const params = {
+  valueOf: (key: string) => ({ kind: "param-value", key }) satisfies ParamValueRef,
+
   text: <const TOptions extends ParamOptions<TextParam> | undefined = undefined>(
     options?: TOptions,
   ): TextParam<RequiredOf<TOptions>> => ({ type: "text", ...options }) as TextParam<RequiredOf<TOptions>>,
@@ -54,16 +60,15 @@ export const params = {
     options?: TOptions,
   ): BooleanParam<RequiredOf<TOptions>> => ({ type: "boolean", ...options }) as BooleanParam<RequiredOf<TOptions>>,
 
-  select: <const TOptions extends ParamOptions<SelectParam>>(options: TOptions): SelectParam<RequiredOf<TOptions>> =>
-    ({ type: "select", ...options }) as unknown as SelectParam<RequiredOf<TOptions>>,
+  select: <const TOptions extends ParamOptions<SelectParam>>(options: TOptions) =>
+    ({ type: "select", ...options }) as unknown as Omit<SelectParam<RequiredOf<TOptions>>, "options"> & {
+      options: SelectionOptions<TOptions["options"]>;
+    },
 
-  multiSelect: <const TOptions extends ParamOptions<MultiSelectParam>>(
-    options: TOptions,
-  ): MultiSelectParam<RequiredOf<TOptions>> =>
-    ({
-      type: "multi-select",
-      ...options,
-    }) as unknown as MultiSelectParam<RequiredOf<TOptions>>,
+  multiSelect: <const TOptions extends ParamOptions<MultiSelectParam>>(options: TOptions) =>
+    ({ type: "multi-select", ...options }) as unknown as Omit<MultiSelectParam<RequiredOf<TOptions>>, "options"> & {
+      options: SelectionOptions<TOptions["options"]>;
+    },
 
   harness: <const TOptions extends ParamOptions<HarnessParam> | undefined = undefined>(
     options?: TOptions,

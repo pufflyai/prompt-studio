@@ -143,6 +143,7 @@ export const ParamEditorField = (props: ParamEditorFieldProps) => {
           clearable={param.clearable}
           disabled={param.disabled}
           searchable={param.searchable}
+          allowCustomValues={param.allowCustomValues}
           searchPlaceholder={param.searchPlaceholder}
           emptyText={param.emptyText}
           group={

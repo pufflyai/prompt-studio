@@ -4,6 +4,7 @@ import {
   createCommandFilesParamValue,
   hasCommandParameters,
   listCommandParamEntries,
+  mergeCommandParamArgs,
   normalizeCommandParamValues,
 } from "./command-palette-params";
 
@@ -130,5 +131,13 @@ describe("command palette params", () => {
         { files: createCommandFilesParamValue() },
       ),
     ).toThrow("Missing required parameter: Data files");
+  });
+});
+
+test("cleared optional input values replace static action defaults", () => {
+  const schema = { locale: { type: "select" }, tags: { type: "multi-select" } };
+  const normalized = normalizeCommandParamValues(schema, { locale: "", tags: [] });
+  expect(mergeCommandParamArgs({ source: "toolbar", locale: "de", tags: ["old"] }, normalized, schema)).toEqual({
+    source: "toolbar",
   });
 });

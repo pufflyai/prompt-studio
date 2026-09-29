@@ -16,14 +16,17 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
+import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { useRendererRead } from "../use-renderer-read";
+import { ViewToolbarActions } from "../view-toolbar-actions";
 import { bindReactKanbanPresentation } from "./kanban-presentation";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 
 interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
+  renderParamField?: CommandParamFieldRenderer;
   contribution: RegisteredKanbanRendererContribution;
   placement: WorkbenchPanelInstance;
 }
@@ -164,6 +167,14 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         onCreateRow={contribution.onCreateRow}
         onColumnAction={contribution.onColumnAction}
         getRowContextMenuActions={getRowContextMenuActions}
+        toolbarActions={
+          <ViewToolbarActions
+            workbench={workbench}
+            actions={contribution.toolbarActions}
+            context={{ resource: placement.resource }}
+            renderParamField={props.renderParamField}
+          />
+        }
       />
     </WorkbenchKanbanViewFrame>
   );

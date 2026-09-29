@@ -4,6 +4,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
+import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export interface DataTableRendererThemeColor {
   light: string;
@@ -90,6 +91,7 @@ export interface DataTableRendererSelectionAction {
 export interface DataTableRendererContribution {
   id: string;
   title: string;
+  toolbarActions?: ViewToolbarAction[];
   resourceKind?: string;
   columns?: DataTableRendererColumn[];
   selectionMode?: "none" | "multiple";

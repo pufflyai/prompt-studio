@@ -14,7 +14,11 @@ const asList = (value: CommandParamValue) => (Array.isArray(value) ? value : [])
 export const commandParamName = (entry: CommandParamEntry) => entry.label;
 
 const commandParamOptions = (entry: CommandParamEntry): SelectionOption[] =>
-  (entry.options ?? []).map((option) => ({ id: option.value, name: option.label, icon: option.icon }));
+  (Array.isArray(entry.options) ? entry.options : []).map((option) => ({
+    id: option.value,
+    name: option.label,
+    icon: option.icon,
+  }));
 
 // Structured params (harness, resource, workspace) are normally rendered by the host,
 // which knows how to fetch their options. Without a host renderer they fall back
@@ -49,18 +53,20 @@ export const buildCommandParam = (entry: CommandParamEntry, value: CommandParamV
     return {
       ...base,
       type: "selection",
+      allowCustomValues: entry.allowCustomValues,
       defaultValue: asList(value),
       options: commandParamOptions(entry),
       multiSelect: true,
       placeholder: `Select ${entry.label.toLowerCase()}`,
-      searchable: (entry.options?.length ?? 0) > 5,
+      searchable: (Array.isArray(entry.options) ? entry.options.length : 0) > 5,
     };
   }
 
-  if ((entry.type === "select" || entry.type === "template") && entry.options?.length) {
+  if ((entry.type === "select" || entry.type === "template") && Array.isArray(entry.options)) {
     return {
       ...base,
       type: "selection",
+      allowCustomValues: entry.allowCustomValues,
       defaultValue: asText(value),
       options: commandParamOptions(entry),
       placeholder: `Select ${entry.label.toLowerCase()}`,

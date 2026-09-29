@@ -194,3 +194,61 @@ export const FilesParameter: Story = {
     },
   },
 };
+
+const dynamicRequest = {
+  label: "Run experiment",
+  record: {
+    command: {
+      id: "run",
+      label: "Run experiment",
+      params: {
+        region: {
+          type: "select",
+          label: "Region",
+          defaultValue: "eu",
+          options: [
+            { value: "eu", label: "Europe" },
+            { value: "us", label: "United States" },
+          ],
+        },
+        locale: {
+          type: "select",
+          label: "Locale",
+          required: true,
+          options: {
+            commandId: "locales",
+            valueField: "id",
+            labelField: "name",
+            params: { region: { kind: "param-value", key: "region" } },
+          },
+        },
+      },
+    },
+  },
+};
+export const DependentOptions: Story = {
+  render: (args) => <CommandParameterExample {...args} />,
+  args: {
+    request: dynamicRequest,
+    executeOptionCommand: async (_id, args) => [
+      { id: args.region === "eu" ? "de" : "en", name: args.region === "eu" ? "German" : "English" },
+    ],
+  },
+};
+export const LoadingOptions: Story = {
+  ...DependentOptions,
+  args: { request: dynamicRequest, executeOptionCommand: () => new Promise(() => {}) },
+};
+export const FailedOptions: Story = {
+  ...DependentOptions,
+  args: {
+    request: dynamicRequest,
+    executeOptionCommand: async () => {
+      throw new Error("Could not load locales.");
+    },
+  },
+};
+export const EmptyOptions: Story = {
+  ...DependentOptions,
+  args: { request: dynamicRequest, executeOptionCommand: async () => [] },
+};

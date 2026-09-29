@@ -12,6 +12,7 @@ export type {
   CommandHandler,
   CommandParamDescriptor,
   CommandParamOption,
+  CommandParamOptionSource,
   CommandParamSchema,
   CommandRegistry,
   RegisteredCommand,

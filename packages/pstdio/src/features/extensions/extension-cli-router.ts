@@ -92,6 +92,8 @@ const normalizeParamName = (name: string) =>
 const JSON_PARAM_TYPES = new Set(["json", "harness", "resource", "workspace"]);
 
 const describeParamValue = (param: ParamDescriptor) => {
+  if ((param.type === "select" || param.type === "multi-select") && param.options && !Array.isArray(param.options))
+    return " <value> (command-backed)";
   if (param.type === "boolean") return "";
   if (param.type === "number") return " <number>";
   if (param.type === "list") return " <value...>";

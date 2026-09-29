@@ -13,6 +13,7 @@ import {
 import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-renderer-contributions";
 import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanban-renderer-contributions";
 import { registerWorkbenchExtensionNavigationItems } from "../contributions/navigation-item-contributions";
+import { localizeParamSchema } from "../contributions/param-schema-localization";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
 import {
   createExtensionSlot,
@@ -59,7 +60,7 @@ const registerCommands = (
         id: command.id,
         label: text(command.title, command.id),
         description: text(command.description),
-        params: command.params,
+        params: localizeParamSchema(command.params, text, command.extensionId),
       },
       {
         prepareArgs: (args, executionContext, onArgsChange) =>
@@ -68,6 +69,7 @@ const registerCommands = (
           executeWorkbenchExtensionCommand(context, command.id, {
             params: asParams(args),
             resource: executionContext?.resource,
+            signal: executionContext?.signal,
           }),
       },
     ),

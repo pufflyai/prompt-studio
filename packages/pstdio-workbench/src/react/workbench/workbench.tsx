@@ -146,8 +146,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     renderParamField,
     onSidenavContextActionsChange: setSidenavContextActions,
   });
-  installWorkbenchKanbanRenderer(workbench);
-  installWorkbenchDataTableRenderer(workbench);
+  installWorkbenchKanbanRenderer(workbench, { renderParamField });
+  installWorkbenchDataTableRenderer(workbench, { renderParamField });
   installWorkbenchFileRenderer(workbench);
   installWorkbenchControlsRenderer(workbench);
   const [attachedSidePanelSlot, setAttachedSidePanelSlot] = useState<HTMLDivElement | null>(null);

@@ -28,6 +28,7 @@ export interface KanbanRendererToolbarProps<TRow extends KanbanRendererRow = Kan
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
   leading?: ReactNode;
+  actions?: ReactNode;
   displayControl?: ReactNode;
   align?: "split" | "end";
 }
@@ -42,6 +43,7 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
     defaultViews,
     defaultActiveViewId,
     leading,
+    actions,
     displayControl,
     align = "split",
   } = props;
@@ -116,6 +118,7 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
       categories={categoryOptions}
       filters={filters}
       leading={leading}
+      actions={actions}
       filterControl={filterControl}
       displayControl={resolvedDisplayControl}
       align={align}
