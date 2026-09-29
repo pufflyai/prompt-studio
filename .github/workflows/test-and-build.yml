@@ -22,6 +22,7 @@ jobs:
       windows: ${{ steps.scope.outputs.windows }}
       e2e: ${{ steps.scope.outputs.e2e }}
       license: ${{ steps.scope.outputs.license }}
+      published_extensions: ${{ steps.scope.outputs.publishedExtensions }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -93,6 +94,22 @@ jobs:
 
       - name: Test monorepo (non-e2e)
         run: bunx lerna run test --ignore e2e ${{ needs.scope.outputs.lerna_filter }}
+
+  published_extensions:
+    needs: scope
+    if: needs.scope.outputs.published_extensions == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Check extensions against published SDK and UI packages
+        run: bun run --cwd scripts verify:published-extensions
 
   windows_test_and_build:
     needs: scope
@@ -345,7 +362,7 @@ jobs:
   # Pull requests may skip jobs their changes do not need. In the merge queue every job must pass.
   ci_passed:
     if: always()
-    needs: [scope, test_and_build, windows_test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, license_check, build_docker]
+    needs: [scope, published_extensions, test_and_build, windows_test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, license_check, build_docker]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

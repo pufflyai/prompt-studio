@@ -46,6 +46,12 @@ Pull requests run only what their changes need. The `scope` job runs `scripts/ci
 
 On a pull request, `ci_passed` accepts skipped jobs. A Windows or e2e failure that a pull request skipped appears in the merge queue instead, and removes the pull request from the queue.
 
+## Published extension dependencies
+
+Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `tsc --noEmit`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.
+
+The CI job runs for extension, SDK, UI, and API contract changes, and for repository tooling changes that already run all jobs. It always runs in the merge queue. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
+
 ## Isolation
 
 Bun tests preload `scripts/test-setup.ts`. It removes inherited `PSTDIO_*` runtime settings, creates a temporary home, and restores the environment around each test. Tests that need runtime settings must supply them inside their setup or to the process they start. Do not run tests that mutate `process.env` concurrently in one process.

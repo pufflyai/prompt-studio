@@ -30,7 +30,7 @@ const KilnPlayback = () => {
         aria-label={state.playing ? "Pause animation" : "Play animation"}
         aria-pressed={state.playing}
         size="xs"
-        variant="primary"
+        variant="solid"
         onClick={() =>
           kilnStore.setState({ playing: !state.playing, playbackStartedAt: Date.now(), frame: state.frame })
         }
