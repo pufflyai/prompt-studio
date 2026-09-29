@@ -90,6 +90,14 @@ export const useSessionDraftAttachments = (projectId: string | undefined) => {
       .catch(() => undefined);
   };
 
+  // An unsent message returns its attachments to the draft when the user takes it back.
+  const restoreAttachments = (restored: SessionAttachment[]) => {
+    setAttachments((current) => [
+      ...restored,
+      ...current.filter((attachment) => !restored.some((item) => item.file_id === attachment.file_id)),
+    ]);
+  };
+
   const clearSubmittedAttachments = () => {
     clearSubmittedDraftAttachments({ attachmentsRef, setAttachments });
   };
@@ -98,6 +106,7 @@ export const useSessionDraftAttachments = (projectId: string | undefined) => {
     attachments,
     clearSubmittedAttachments,
     removeAttachment,
+    restoreAttachments,
     uploadFiles,
     uploadText,
     uploading,

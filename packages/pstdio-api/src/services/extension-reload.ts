@@ -39,6 +39,27 @@ export const buildErrorJson = (code: string, error: unknown, details: JsonRecord
   };
 };
 
+// Carries the first validation error, so the stored load error names the actual problem
+// (for example an unsupported API version) instead of a generic reload failure.
+class ExtensionValidationError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly diagnostics: unknown[],
+  ) {
+    super(message);
+  }
+}
+
+const validationError = (diagnostics: Array<{ code: string; message: string; severity: string }>) => {
+  const first = diagnostics.find((diagnostic) => diagnostic.severity === "error");
+  return new ExtensionValidationError(
+    first?.code ?? "extension_reload_failed",
+    first?.message ?? "Extension validation failed",
+    diagnostics,
+  );
+};
+
 const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSource) => {
   const hash = deps.hashExtension ?? hashExtensionSource;
   const check = deps.checkExtension ?? checkExtensionSource;
@@ -47,9 +68,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
   try {
     nextSourceHash = hash(existing.source_path);
     const result = await check(existing.source_path, dirname(existing.source_path));
-    if (!result.loaded || result.check.errorCount > 0) {
-      throw Object.assign(new Error("Extension validation failed"), { diagnostics: result.check.diagnostics });
-    }
+    if (!result.loaded || result.check.errorCount > 0) throw validationError(result.check.diagnostics);
 
     const nextRevision = crypto.randomUUID();
     const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, {
@@ -92,7 +111,8 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     deps.emitInstalledSource(completed);
     return { installedSource: completed, check: result.check };
   } catch (error) {
-    const currentErrorJson = buildErrorJson("extension_reload_failed", error);
+    const code = error instanceof ExtensionValidationError ? error.code : "extension_reload_failed";
+    const currentErrorJson = buildErrorJson(code, error);
     // Source that failed validation is never adopted: keep the hash the project accepted so the
     // extension still reports an update waiting rather than looking up to date and broken.
     const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
@@ -116,13 +136,6 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     await deps.notifyInstalledSourcesChanged(existing.source_path);
     return { installedSource: updated, check: null };
   }
-};
-
-export const reloadInstalledSource = async (deps: ReloadDeps, installName: string) => {
-  const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
-  if (!existing) throw new Error(`Installed extension not found: ${installName}`);
-
-  return reloadInstalledSourceRow(deps, existing);
 };
 
 export const reloadInstalledSourceBySourcePath = async (deps: ReloadDeps, sourcePath: string) => {

@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import {
-  attemptExtensionFix,
+  addLocalExtensionFolder,
+  type DroppedExtensionFolder,
   executeExtensionCommand,
   getExtensionContributions,
   getMarketplaceExtensionContributions,
@@ -73,6 +74,18 @@ export const useInstallMarketplaceExtension = (projectId: string | undefined) =>
   });
 };
 
+export const useAddLocalExtensionFolder = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+  const cache = createProjectExtensionCache(queryClient, projectId);
+  return useMutation({
+    mutationFn: (folder: DroppedExtensionFolder) => {
+      if (!projectId) throw new Error("Project id is required to add extensions.");
+      return addLocalExtensionFolder(projectId, folder);
+    },
+    onSuccess: (result) => cache.storeExtension(result.extension),
+  });
+};
+
 export const useSetProjectExtensionEnabled = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
   const cache = createProjectExtensionCache(queryClient, projectId);
@@ -131,15 +144,8 @@ export const useUpgradeProjectExtension = (projectId: string | undefined) => {
   });
 };
 
-export const useAttemptExtensionFix = (projectId: string | undefined) => {
-  return useMutation({
-    mutationFn: ({ instanceId }: { instanceId: string }) => {
-      if (!projectId) throw new Error("Project id is required to fix extensions.");
-      return attemptExtensionFix(projectId, instanceId);
-    },
-  });
-};
-
+// Upgrades run one at a time: each one fetches and installs a release, and one failure must not stop
+// the rest. Failures come back as messages so the caller can report them together.
 export const useExtensionContributions = (projectId: string | undefined, instanceId: string | undefined) => {
   return useQuery({
     queryKey: ["extension-contributions", projectId, instanceId],

@@ -1,6 +1,7 @@
+import { Flex } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
 import type { HarnessParamValues } from "./harness-param-values";
 
@@ -14,10 +15,13 @@ const meta = {
         label: "Reasoning effort",
         defaultValue: "medium",
         options: [
+          { label: "None", value: "none", icon: "CircleSlash" },
+          { label: "Minimal", value: "minimal", icon: "level-low" },
           { label: "Low", value: "low", icon: "level-low" },
           { label: "Medium", value: "medium", icon: "level-mid" },
           { label: "High", value: "high", icon: "level-high" },
           { label: "Extra high", value: "xhigh", icon: "level-xhigh" },
+          { label: "Max", value: "max", icon: "flame" },
         ],
       },
     },
@@ -33,13 +37,38 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const EffortLevels: Story = {};
+export const LevelColors: Story = {
+  render: (props) => (
+    <Flex gap="4" wrap="wrap">
+      {meta.args.schema.effort.options.map((option) => (
+        <HarnessParamInlineControls key={option.value} {...props} overrides={{ effort: option.value }} />
+      ))}
+    </Flex>
+  ),
+};
 export const ChangeEffort: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(canvas.getByRole("button", { name: "Reasoning effort: Medium" }));
-    await userEvent.click(page.getByRole("menuitem", { name: "Extra high" }));
+    await userEvent.click(page.getByRole("menuitemradio", { name: "Extra high" }));
     await expect(canvas.getByRole("button", { name: "Reasoning effort: Extra high" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Reasoning effort: Extra high" }));
+    await expect(page.getByRole("menuitemradio", { name: "Extra high" })).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(page.getByRole("menuitem", { name: "Reset to default" }));
+    await expect(canvas.getByRole("button", { name: "Reasoning effort: Medium" })).toBeVisible();
+  },
+};
+export const ChangeEffortWithKeyboard: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+    const trigger = canvas.getByRole("button", { name: "Reasoning effort: Medium" });
+    trigger.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() => expect(page.getByRole("menu")).toHaveFocus());
+    await userEvent.keyboard("{End}{Enter}");
+    await expect(canvas.getByRole("button", { name: "Reasoning effort: Max" })).toBeVisible();
   },
 };
 export const Disabled: Story = { args: { disabled: true } };

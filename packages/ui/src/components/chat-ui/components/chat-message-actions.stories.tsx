@@ -93,8 +93,8 @@ export default meta;
 type Story = StoryObj<typeof ChatPanel>;
 
 const panelProps = {
-  emptyStateTitle: "No active conversations",
-  emptyStateDescription: "Start a conversation to see messages here.",
+  emptyStateTitle: "No messages yet",
+  emptyStateDescription: "Send a message to start this session.",
   chatInputPlaceholder: "Type a message...",
 };
 

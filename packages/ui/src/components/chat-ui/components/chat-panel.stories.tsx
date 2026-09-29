@@ -439,8 +439,8 @@ export const Empty: Story = {
   args: {
     messages: [],
     streaming: false,
-    emptyStateTitle: "No active conversations",
-    emptyStateDescription: "Start a conversation to see messages here.",
+    emptyStateTitle: "No messages yet",
+    emptyStateDescription: "Send a message to start this session.",
     chatInputPlaceholder: "Type a message...",
     actions: defaultActions,
     onSubmitMessage: (text: string, attachments: string[]) => {

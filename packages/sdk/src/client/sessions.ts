@@ -10,7 +10,6 @@ import type {
   SessionAttachment,
   SessionConversationResponse,
   SessionConversationSources,
-  SessionHistoryIssue,
   SessionQueuedMessagesResponse,
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
@@ -61,7 +60,6 @@ export type SessionStreamHandlers = {
   onReady?: (data: unknown) => void;
   onPatch?: (data: unknown) => void;
   onApprovalRequest?: (data: unknown) => void;
-  onHistoryIssue?: (data: SessionHistoryIssue) => void;
   onQueuedMessages?: (data: SessionQueuedMessagesResponse | { error: string }) => void;
   onEnd?: (data: unknown) => void;
   onError?: (error: unknown) => void;
@@ -117,11 +115,6 @@ const dispatchSessionStreamEvent = (event: SseEvent, handlers: SessionStreamHand
 
   if (event.event === "approval_request") {
     handlers.onApprovalRequest?.(parseEventData(event.data));
-    return;
-  }
-
-  if (event.event === "history_issue") {
-    handlers.onHistoryIssue?.(parseEventData(event.data) as SessionHistoryIssue);
     return;
   }
 

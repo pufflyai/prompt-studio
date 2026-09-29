@@ -72,17 +72,29 @@ export const setExtensionAutomationEnabledRequestSchema = z.object({
   enabled: z.boolean(),
 });
 
-export const attemptExtensionFixResponseSchema = z.object({
-  sessionId: z.string(),
-  title: z.string(),
-});
-
 export const upgradeProjectExtensionResponseSchema = z.object({
   changed: z.boolean(),
   extension: projectExtensionInstanceSchema,
 });
 
 export const installMarketplaceExtensionResponseSchema = z.object({
+  extension: projectExtensionInstanceSchema,
+});
+
+/**
+ * A folder dropped on the extension panel. Each file's name is its path relative to the folder
+ * root, so one field carries both the content and where it goes.
+ */
+export const addLocalExtensionFolderRequestSchema = z.object({
+  name: z.string().min(1),
+  // A form with one file sends a single value, not a list.
+  files: z.preprocess(
+    (value) => (Array.isArray(value) ? value : [value]),
+    z.array(z.instanceof(File).meta({ type: "string", format: "binary" })).min(1),
+  ),
+});
+
+export const addLocalExtensionFolderResponseSchema = z.object({
   extension: projectExtensionInstanceSchema,
 });
 
@@ -107,7 +119,7 @@ export type MarketplaceExtension = z.infer<typeof marketplaceExtensionSchema>;
 export type ListProjectExtensionsResponse = z.infer<typeof listProjectExtensionsResponseSchema>;
 export type SetProjectExtensionEnabledRequest = z.infer<typeof setProjectExtensionEnabledRequestSchema>;
 export type SetExtensionAutomationEnabledRequest = z.infer<typeof setExtensionAutomationEnabledRequestSchema>;
-export type AttemptExtensionFixResponse = z.infer<typeof attemptExtensionFixResponseSchema>;
 export type UpgradeProjectExtensionResponse = z.infer<typeof upgradeProjectExtensionResponseSchema>;
 export type InstallMarketplaceExtensionResponse = z.infer<typeof installMarketplaceExtensionResponseSchema>;
+export type AddLocalExtensionFolderResponse = z.infer<typeof addLocalExtensionFolderResponseSchema>;
 export type SetupProjectExtensionResponse = z.infer<typeof setupProjectExtensionResponseSchema>;

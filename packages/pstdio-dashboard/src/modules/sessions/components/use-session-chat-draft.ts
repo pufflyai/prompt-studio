@@ -21,5 +21,10 @@ export const useSessionChatDraft = (drafts: DashboardSessionDraftPersistence | u
       drafts?.setDraft(draftKey, "");
       setSeed("");
     },
+    // Puts text back in the composer, for example from a message that could not be sent.
+    restore: (text: string) => {
+      drafts?.setDraft(draftKey, text);
+      setSeed(text);
+    },
   };
 };

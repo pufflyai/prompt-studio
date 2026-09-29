@@ -1,24 +1,19 @@
 import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import type { ExtensionDiagnostic, ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { CircleAlert, RotateCw, TriangleAlert, Wrench } from "lucide-react";
+import { toaster } from "@pstdio/ui";
+import { ArrowUpCircle, CircleAlert, Copy, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { loadErrorClipboardText, loadErrorField } from "./extension-load-error";
 
 export interface ExtensionHealthPopoverProps {
   extension: ProjectExtensionInstance;
   diagnostics: ExtensionDiagnostic[];
-  retrying?: boolean;
-  fixing?: boolean;
-  onRetry?: () => void;
-  onAttemptFix?: () => void;
+  upgrading?: boolean;
+  onUpgrade?: () => void;
 }
 
-const errorText = (error: Record<string, unknown> | null | undefined, key: "code" | "message") => {
-  const value = error?.[key];
-  return typeof value === "string" ? value : undefined;
-};
-
 export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
-  const { extension, diagnostics, retrying, fixing, onRetry, onAttemptFix } = props;
+  const { extension, diagnostics, upgrading, onUpgrade } = props;
   const { t } = useTranslation("projects");
 
   // Red is reserved for a real load failure; a loaded extension's diagnostics are
@@ -26,11 +21,16 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
   const failed = extension.status === "error";
   const issues = diagnostics.filter((diagnostic) => diagnostic.severity !== "info");
   const count = failed ? 1 + issues.length : issues.length;
-  const errorCode = errorText(extension.lastError, "code");
+  const errorCode = loadErrorField(extension.lastError, "code");
   const errorTitle =
     errorCode === "extension_manifest_unsupported_api_version"
       ? t("projectSettings.extensionsPanel.health.incompatibleVersions")
       : errorCode;
+
+  const copyError = async () => {
+    await navigator.clipboard.writeText(loadErrorClipboardText(extension.lastError));
+    toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.health.errorCopied") });
+  };
 
   if (count === 0) return null;
 
@@ -85,7 +85,7 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
                         </Text>
                       )}
                       <Text textStyle="label/XS" color="fg.muted">
-                        {errorText(extension.lastError, "message") ??
+                        {loadErrorField(extension.lastError, "message") ??
                           t("projectSettings.extensionsPanel.health.unknownError")}
                       </Text>
                     </>
@@ -97,32 +97,29 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
                   ))}
                 </Stack>
 
-                {failed && (onRetry || onAttemptFix) && (
+                {failed && (
                   <HStack paddingX="md" paddingY="sm" borderTopWidth="1px" borderColor="border.subtle" gap="xs">
-                    {onRetry && (
+                    {extension.canUpgrade && onUpgrade && (
                       <Button
-                        variant="outline"
+                        variant="primary"
                         size="2xs"
-                        onClick={onRetry}
-                        loading={retrying}
-                        data-testid="extension-retry"
+                        onClick={onUpgrade}
+                        loading={upgrading}
+                        data-testid="extension-health-upgrade"
                       >
-                        <RotateCw size={12} />
-                        {t("projectSettings.extensionsPanel.health.retry")}
+                        <ArrowUpCircle size={12} />
+                        {t("projectSettings.extensionsPanel.upgrade.action")}
                       </Button>
                     )}
-                    {onAttemptFix && (
-                      <Button
-                        variant="ghost"
-                        size="2xs"
-                        onClick={onAttemptFix}
-                        loading={fixing}
-                        data-testid="extension-attempt-fix"
-                      >
-                        <Wrench size={12} />
-                        {t("projectSettings.extensionsPanel.health.attemptFix")}
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="2xs"
+                      onClick={() => void copyError()}
+                      data-testid="extension-copy-error"
+                    >
+                      <Copy size={12} />
+                      {t("projectSettings.extensionsPanel.health.copyError")}
+                    </Button>
                   </HStack>
                 )}
               </Stack>

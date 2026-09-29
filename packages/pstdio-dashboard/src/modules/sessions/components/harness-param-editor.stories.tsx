@@ -12,10 +12,13 @@ const codexSchema = {
     label: "Reasoning effort",
     defaultValue: "medium",
     options: [
+      { label: "None", value: "none", icon: "CircleSlash" },
       { label: "Minimal", value: "minimal", icon: "level-low" },
       { label: "Low", value: "low", icon: "level-low" },
       { label: "Medium", value: "medium", icon: "level-mid" },
       { label: "High", value: "high", icon: "level-high" },
+      { label: "XHigh", value: "xhigh", icon: "level-xhigh" },
+      { label: "Max", value: "max", icon: "flame" },
     ],
   },
   model_reasoning_summary: {

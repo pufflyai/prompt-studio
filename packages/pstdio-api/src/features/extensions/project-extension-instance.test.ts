@@ -60,6 +60,30 @@ describe("toProjectExtensionInstance", () => {
     expect(result.lastError?.message).toContain(EXTENSION_API_VERSION);
   });
 
+  test("tells the owner of an incompatible local source to fix engines.pstdio", () => {
+    const result = toProjectExtensionInstance(
+      instance,
+      { ...installedSource, manifest_json: { name: "extension-lab", enginesPstdio: "1.0.0-alpha.1" } },
+      "hash-1",
+      { canUpgrade: false },
+    );
+
+    expect(result.lastError?.message).toContain(`"${EXTENSION_API_VERSION}" to engines.pstdio`);
+    expect(result.lastError?.message).not.toContain("Upgrade");
+  });
+
+  test("tells the user to upgrade an incompatible catalog extension", () => {
+    const result = toProjectExtensionInstance(
+      instance,
+      { ...installedSource, manifest_json: { name: "extension-lab", enginesPstdio: "1.0.0-alpha.1" } },
+      "hash-1",
+      { canUpgrade: true },
+    );
+
+    expect(result.lastError?.message).toContain("Upgrade");
+    expect(result.lastError?.message).not.toContain("engines.pstdio");
+  });
+
   test("does not offer an upgrade when the upgrade service refuses it", () => {
     const result = toProjectExtensionInstance(instance, { ...installedSource, source_kind: "local_path" }, "hash-1", {
       canUpgrade: false,

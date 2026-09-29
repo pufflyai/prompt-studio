@@ -7,7 +7,8 @@ Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass
 - This is a **Lerna monorepo** managed with **Bun**. It uses **Nx caching**.
 - Write **TypeScript only**.
 - Use **bun**. Do not use `npm`, `yarn`, or `pnpm`.
-- A task is not complete until all tests pass.
+- A task is not complete until the relevant tests and checks for the change pass.
+- If you get stuck, read the relevant [lessons learned](documentation/lessons-learned/) before trying another approach.
 
 # Language
 
@@ -53,7 +54,7 @@ Follow these principles:
 - If a solution needs a workaround flag, a special case, duplicate data, or exposes internal details between layers, reconsider the design before continuing.
 - Tests should prove that the correct behavior and system rules have been restored, not preserve the details of a workaround.
 
-If an external limit makes a workaround unavoidable, create an architecture decision record (ADR) in `.pstdio/docs/adrs` before writing the workaround. Use the next four-digit number and a kebab-case filename.
+If an external limit makes a workaround unavoidable, create an architecture decision record (ADR) in `documentation/adrs` before writing the workaround. Use the next four-digit number and a kebab-case filename.
 
 Every ADR must record its proposal date as `Proposed: YYYY-MM-DD` below the title. Preserve that date when the decision changes. If the original date is unknown, use the earliest Git addition date.
 
@@ -126,7 +127,7 @@ Run tests often, but run only the tests for the code you changed:
 - One package: `bun run --cwd packages/<name> test`
 - One e2e spec: `bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts`
 
-Do not run the full monorepo tests, full e2e suites, or `bun run validate` after each change. They take many minutes. Run `bun run validate` once, in step 4.
+Choose the smallest test scope that covers the changed behavior. Include affected callers or integration tests when the change crosses a package boundary. Do not run the full monorepo tests, full e2e suites, or `bun run validate` unless the user explicitly asks for full validation.
 
 ### 3. Refactor: clean up
 
@@ -142,17 +143,17 @@ Tests must stay green.
 
 ### 4. Prove it works (required)
 
-(Skip this step for changes that only affect documentation.)
+For code changes, run targeted tests and the relevant package checks, such as type checking, linting, or a build. Match the checks to the affected behavior and dependencies. Fix reported issues, then rerun only the failed or affected checks. Do not repeat passing checks without a new change or unresolved concern.
 
-When the change is complete, run `bun run validate` once. Fix every reported issue, then rerun only the checks that failed before a final `bun run validate`.
+For documentation-only changes, check the content, links, paths, and formatting. Do not run application tests or full validation merely because a documentation path appears in a source comment, prompt, or test fixture.
 
 Always validate UI changes using Playwright.
 
 ### 5. Test packaged files
 
-- If bundled runtime files change, update the packaged smoke test. These files include built-in templates, prompts, skills, and other packaged defaults.
+- If bundled runtime behavior, assets, or file inclusion change, update the relevant packaged smoke test. This includes built-in templates, prompts, skills, and other packaged defaults. Documentation-reference-only edits do not require packaged tests.
 - Keep `packages/e2e/src/packaged/packaged-serve-smoke.test.ts` in sync with the packaged files.
-- Run `bun run --cwd scripts verify:packages` to check packaged output.
+- For those runtime or package changes, run `bun run --cwd scripts verify:packages` to check packaged output.
 
 ### 6. Changesets
 
@@ -256,6 +257,13 @@ If a job times out, report what became slower and by how much. Then fix the slow
 ---
 
 # Project planning and documentation
+
+- Central documentation lives in `documentation/`. Start with the [documentation guide](documentation/guides/0001-documentation.md).
+- Use `guides/` for setup and workflows, `references/` for APIs and architecture, `requirements/` for PRDs, `adrs/` for decisions, and `lessons-learned/` for recurring failures.
+- Group related documents in topic folders, such as `references/architecture/`, `references/sdk/`, `guides/development/`, and `requirements/dashboard/`. Do not repeat the folder's topic in every filename.
+- Every document uses `NNNN-kebab-case.md`. Number independently within each folder, keep assigned numbers stable, and use the next available number in that folder. Keep ADRs and lessons in their existing folders and do not reuse their removed numbers.
+- Call requirements documents PRDs (product requirements documents), not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Keep remaining document numbers stable after deletion.
+- Update links and check claims against current source when changing documentation.
 
 - Use the pstdio command-line tool to manage tickets.
 - After editing a ticket, save it with `pst tickets save --id PS-XXX`.

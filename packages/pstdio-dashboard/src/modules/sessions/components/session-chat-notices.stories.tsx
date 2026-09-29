@@ -5,23 +5,27 @@ const meta = {
   title: "Sessions/Chat notices",
   component: SessionChatNotices,
   args: {
+    reconnect: () => {},
     refreshQueue: () => {},
   },
 } satisfies Meta<typeof SessionChatNotices>;
 export default meta;
 type Story = StoryObj<typeof SessionChatNotices>;
-export const ConflictingHistory: Story = {
-  args: { historyIssue: { code: "reconciliation_conflict", category: "ambiguous_turns" } },
+export const MessageNotSent: Story = {
+  args: {
+    unsent: {
+      notice: { message: "The network is unavailable.", temporary: true },
+      onRetry: () => {},
+      onClose: () => {},
+    },
+  },
 };
-export const SavedConversationFallback: Story = {
-  args: { historyIssue: { code: "native_unavailable", category: "native_unavailable" } },
+export const TemporaryHistoryError: Story = {
+  args: { error: { message: "The server had a temporary problem.", temporary: true } },
 };
-export const HistoryLoadError: Story = {
-  args: { error: "Could not load the conversation." },
+export const PermanentHistoryError: Story = {
+  args: { error: { message: "This session no longer exists.", temporary: false } },
 };
-export const UnreadableSavedHistory: Story = {
-  args: { historyIssue: { code: "checkpoint_unreadable", category: "checkpoint_unreadable" } },
-};
-export const QueueLoadError: Story = {
-  args: { queueError: "Could not load queued prompts." },
+export const TemporaryQueueError: Story = {
+  args: { queueError: { message: "The server had a temporary problem.", temporary: true } },
 };

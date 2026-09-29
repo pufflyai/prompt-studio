@@ -4,7 +4,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ExtensionsPanelView } from "./extensions-panel";
+import { ExtensionsPanelView } from "./extensions-panel-view";
 
 const installedExtensions: ProjectExtensionInstance[] = [
   {
@@ -131,10 +131,19 @@ const marketplace = [
   },
 ];
 
+const noop = () => {};
+
+const openFirstHealthPopover = (canvasElement: HTMLElement) => {
+  canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
+};
+
+const failedExtension = installedExtensions[1]!;
+
 const meta: Meta<typeof ExtensionsPanelView> = {
   title: "ProjectSettings/ExtensionsPanel",
   component: ExtensionsPanelView,
   parameters: { layout: "fullscreen" },
+  args: { onUpgrade: noop, onDropFolder: noop },
 };
 
 export default meta;
@@ -186,7 +195,90 @@ export const HealthPopoverOpen: Story = {
     diagnostics,
     automations,
   },
-  play: async ({ canvasElement }) => {
-    canvasElement.querySelector<HTMLButtonElement>('[data-testid="extension-health-trigger"]')?.click();
+  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
+};
+
+// A catalog extension that fails to load can take a newer release, so the popover offers Upgrade.
+export const FailedCatalogExtension: Story = {
+  args: {
+    extensions: [{ ...failedExtension, canUpgrade: true }],
+    marketplace,
+    diagnostics: [],
+    automations: [],
+  },
+  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
+};
+
+// A local source is fixed where it lives, so the popover offers Copy error only.
+export const FailedLocalExtension: Story = {
+  args: {
+    extensions: [
+      {
+        ...failedExtension,
+        scope: "repo",
+        sourcePath: "/repo/.pstdio/extensions/issue-tracker",
+        canUpgrade: false,
+      },
+    ],
+    marketplace,
+    diagnostics: [],
+    automations: [],
+  },
+  play: async ({ canvasElement }) => openFirstHealthPopover(canvasElement),
+};
+
+// Each row that can take a newer release shows an upgrade button, and the header offers one action
+// for all of them.
+export const UpgradesAvailable: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    onUpgradeAll: noop,
+  },
+};
+
+export const UpgradingOneExtension: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    upgradingInstanceIds: ["planner-instance"],
+  },
+};
+
+// Upgrade all marks every row it will upgrade, so rows still waiting their turn show a spinner too.
+export const UpgradingAll: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    upgradingAll: true,
+    upgradingInstanceIds: installedExtensions
+      .filter((extension) => extension.canUpgrade)
+      .map((extension) => extension.id),
+  },
+};
+
+// No row can take a newer release, so there are no row upgrade buttons and no Upgrade all.
+export const NothingToUpgrade: Story = {
+  args: {
+    extensions: installedExtensions.map((extension) => ({ ...extension, canUpgrade: false })),
+    marketplace,
+    diagnostics: [],
+    automations,
+  },
+};
+
+export const AddingLocalFolder: Story = {
+  args: {
+    extensions: installedExtensions,
+    marketplace,
+    diagnostics: [],
+    automations,
+    addingFolderName: "my-extension",
   },
 };

@@ -4,6 +4,11 @@ import type { SessionMessage } from "./session-messages";
 
 const user = (text: string): SessionMessage => ({ id: text, role: "user", parts: [{ type: "text", text }] });
 const reply = (text: string): SessionMessage => ({ ...user(text), role: "assistant" });
+const call = (tool: string): SessionMessage => ({
+  id: tool,
+  role: "assistant",
+  parts: [{ type: "tool", tool, state: { input: {} } }],
+});
 const recover = (knownMessages: SessionMessage[], nativeMessages: SessionMessage[]) =>
   reconcileMessageHistory({ knownMessages, nativeMessages });
 
@@ -21,14 +26,15 @@ test("assistant evidence aligns repeated prompts around a missing middle turn", 
   expect(recover(complete, partial)).toEqual({ kind: "recovered", messages: complete });
 });
 
-test("ambiguous repeated prompts do not assign saved attachments by array position", () => {
+test("ambiguous repeated prompts keep the saved turns instead of guessing", () => {
   const attached = {
     ...user("again"),
     parts: [...user("again").parts, { type: "file" as const, fileId: "file", url: "/file" }],
   };
-  expect(recover([attached, user("again")], [user("again"), reply("first"), user("again"), reply("second")]).kind).toBe(
-    "conflict",
-  );
+  expect(recover([attached, user("again")], [user("again"), reply("first"), user("again"), reply("second")])).toEqual({
+    kind: "recovered",
+    messages: [attached, user("again")],
+  });
 });
 
 test("multi-part submitted text is preserved once", () => {
@@ -66,9 +72,34 @@ test("recovery preserves a completed reply when the native tail is partial", () 
   });
 });
 
-test("conflicting intervals return a conflict instead of guessing order", () => {
-  expect(recover([user("one"), reply("a")], [user("one"), reply("b")]).kind).toBe("conflict");
-  expect(recover([user("repeat"), user("repeat")], [user("repeat")]).kind).toBe("conflict");
+test("spans the sources record differently keep the saved messages", () => {
+  expect(recover([user("one"), reply("a")], [user("one"), reply("b")])).toEqual({
+    kind: "recovered",
+    messages: [user("one"), reply("a")],
+  });
+  expect(recover([user("repeat"), user("repeat")], [user("repeat")])).toEqual({
+    kind: "recovered",
+    messages: [user("repeat"), user("repeat")],
+  });
+});
+
+test("anchors the sources order differently keep the saved order", () => {
+  const saved = [user("one"), call("a"), call("b")];
+  expect(recover(saved, [user("one"), call("b"), call("a")])).toEqual({ kind: "recovered", messages: saved });
+});
+
+test("native messages written after the saved history ends are recovered", () => {
+  const at = (message: SessionMessage, createdAt: number) => ({ ...message, createdAt });
+  const saved = [at(user("one"), 1), at(call("seen"), 2)];
+  const native = [at(user("one"), 1), at(call("earlier"), 1), at(call("after"), 3)];
+  expect(recover(saved, native)).toEqual({ kind: "recovered", messages: [...saved, native[2]] });
+});
+
+test("native text the saved turn already shows is not repeated", () => {
+  const saved = [user("run"), call("status"), reply("Checked. "), reply("All clean.")];
+  const native = [user("run"), reply("Checked. "), call("status"), reply("All clean.")];
+  const joined = { ...reply("Checked. "), parts: [{ type: "text" as const, text: "Checked. All clean." }] };
+  expect(recover(saved, native)).toEqual({ kind: "recovered", messages: [user("run"), call("status"), joined] });
 });
 
 test("a saved history cut short inside repeated calls keeps every native occurrence", () => {

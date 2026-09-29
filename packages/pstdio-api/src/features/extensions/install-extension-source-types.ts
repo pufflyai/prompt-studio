@@ -13,6 +13,8 @@ export type InstallExtensionSourceInput = {
   /** Running host release used by catalog origins whose ref is `{hostRelease}`. */
   hostReleaseRef?: string;
   repoPath?: string;
+  /** Where the source is installed. Defaults to the scope its manifest declares. */
+  scope?: "repo" | "user";
   isPackagedRuntime?: () => boolean;
   bunCacheDir?: string;
   prepareNamedSource?: (

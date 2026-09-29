@@ -1,10 +1,4 @@
-import {
-  type EventStore,
-  type JsonPatch,
-  type SessionHistoryIssue,
-  type SessionMessage,
-  sessionHistoryIssueSchema,
-} from "pstdio-api-contracts";
+import type { EventStore, JsonPatch, SessionMessage } from "pstdio-api-contracts";
 
 const applyMessagePatch = (messages: SessionMessage[], patch: JsonPatch) => {
   if (patch.path === "/messages" && (patch.op === "add" || patch.op === "replace")) {
@@ -26,28 +20,22 @@ const applyMessagePatch = (messages: SessionMessage[], patch: JsonPatch) => {
 export const createSessionConversation = (
   events: EventStore & { close(): void },
   initialMessages: SessionMessage[] = [],
-  initialHistoryIssue?: SessionHistoryIssue,
 ) => {
   let messages = [...initialMessages];
   let closed = false;
-  let historyIssue = initialHistoryIssue;
   return {
     get closed() {
       return closed;
     },
-    get historyIssue() {
-      return historyIssue;
-    },
     push(patch: JsonPatch) {
       if (closed) throw new Error("Conversation is closed");
-      if (patch.path === "/history_issue") historyIssue = sessionHistoryIssueSchema.parse(patch.value);
       messages = applyMessagePatch(messages, patch);
       events.push(patch);
     },
     getMessages: () => [...messages],
     snapshotAndSubscribe() {
       const iterator = events.subscribe()[Symbol.asyncIterator]();
-      return { messages: [...messages], historyIssue, stream: { [Symbol.asyncIterator]: () => iterator } };
+      return { messages: [...messages], stream: { [Symbol.asyncIterator]: () => iterator } };
     },
     close() {
       closed = true;

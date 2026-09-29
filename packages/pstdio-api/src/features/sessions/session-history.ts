@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { SessionConversationSources, SessionHistoryIssue, SessionMessage } from "pstdio-api-contracts";
+import type { SessionConversationSources, SessionMessage } from "pstdio-api-contracts";
 import { sessionMessageSchema } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
@@ -11,12 +11,6 @@ type HistoryDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService" | "h
 export class SessionNotFoundError extends Error {
   constructor() {
     super("Session not found");
-  }
-}
-
-export class SessionHistoryError extends Error {
-  constructor(readonly historyIssue: SessionHistoryIssue) {
-    super("Conversation history needs review before resuming");
   }
 }
 
@@ -61,41 +55,22 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
   return { sources, session, harness, workspace };
 };
 
+// The saved conversation is what the user saw. Native history adds only what it lacks, and
+// an unreadable source is skipped, so a session always has a history it can continue from.
 export const loadSessionHistory = async (
   sessionId: string,
   deps: HistoryDeps,
   retained?: readonly SessionMessage[],
 ) => {
   const { sources, session, harness, workspace } = await readSessionHistorySources(sessionId, deps);
-  const saved = sources.checkpoint ?? (sources.checkpointError ? null : []);
-  const known = retained ? [...retained] : saved;
-  if (retained === undefined && sources.checkpoint === null && sources.nativeError) {
-    throw new SessionHistoryError({ code: "native_unavailable", category: "no_readable_source" });
-  }
-  if (known === null && sources.native === null)
-    throw new SessionHistoryError({ code: "checkpoint_unreadable", category: "no_readable_source" });
-  if (known === null)
-    return {
-      messages: sources.native!,
-      historyIssue: { code: "checkpoint_unreadable", category: "checkpoint_unreadable" } satisfies SessionHistoryIssue,
-    };
-  if (sources.native === null)
-    return {
-      messages: known,
-      historyIssue: sources.nativeError
-        ? ({ code: "native_unavailable", category: sources.nativeError } satisfies SessionHistoryIssue)
-        : undefined,
-    };
+  const known = retained ? [...retained] : sources.checkpoint;
+  if (!known) return sources.native ?? [];
+  if (!sources.native) return known;
   const result = await harness!.recoverMessages(
     { knownMessages: known, nativeMessages: sources.native, cwd: session.cwd ?? undefined, workspace },
     { projectId: session.project_id ?? undefined },
   );
-  if (result.kind === "conflict")
-    return {
-      messages: known,
-      historyIssue: { code: "reconciliation_conflict", category: result.category } satisfies SessionHistoryIssue,
-    };
-  return { messages: result.messages, historyIssue: undefined };
+  return result.kind === "recovered" ? result.messages : known;
 };
 
 export const getSessionHistory = async (sessionId: string, deps: HistoryDeps) => {
@@ -105,7 +80,7 @@ export const getSessionHistory = async (sessionId: string, deps: HistoryDeps) =>
       try {
         const conversation = await entry.conversationReady;
         if (deps.sessionService.store.get(sessionId) !== entry) continue;
-        return { messages: conversation.getMessages(), historyIssue: conversation.historyIssue };
+        return conversation.getMessages();
       } catch (error) {
         if (deps.sessionService.store.get(sessionId) !== entry) continue;
         throw error;

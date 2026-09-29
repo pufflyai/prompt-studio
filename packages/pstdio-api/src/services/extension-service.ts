@@ -16,7 +16,6 @@ import {
 import {
   type ExpectedWebviewBuildSource,
   reloadInstalledSourceBySourcePath as reloadInstalledSourceBySourcePathImpl,
-  reloadInstalledSource as reloadInstalledSourceImpl,
   reportWebviewBuildFailure as reportWebviewBuildFailureImpl,
   reportWebviewBuildSuccess as reportWebviewBuildSuccessImpl,
 } from "./extension-reload";
@@ -88,6 +87,24 @@ type ExtensionServiceDeps = {
   ) => Promise<void>;
 };
 
+const registrationValues = (
+  input: RegisterInstalledSourceInput,
+  existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>,
+) => ({
+  display_name: input.displayName,
+  extension_id: input.extensionId,
+  manifest_json: input.manifest,
+  source_hash: input.sourceHash ?? existing?.source_hash ?? null,
+  source_kind: input.sourceKind ?? existing?.source_kind ?? "local_path",
+  source_path: input.sourcePath,
+  // `null` means the new source has no git ref, so an older ref must not survive a reinstall.
+  source_ref: input.sourceRef === undefined ? (existing?.source_ref ?? null) : input.sourceRef,
+  status: "loaded" as const,
+  version: input.version ?? null,
+  last_loaded_at: new Date().toISOString(),
+  last_error_json: null,
+});
+
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const emitInstalledSource = (source: unknown) => {
     deps.eventBus?.emit("installed_extension_sources", "set", source);
@@ -111,19 +128,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
 
   const registerInstalledSource = async (input: RegisterInstalledSourceInput) => {
     const existing = await findInstalledSourceForRegistration(deps.installedExtensionSourcesService, input);
-    const values = {
-      display_name: input.displayName,
-      extension_id: input.extensionId,
-      manifest_json: input.manifest,
-      source_hash: input.sourceHash ?? existing?.source_hash ?? null,
-      source_kind: input.sourceKind ?? existing?.source_kind ?? "local_path",
-      source_path: input.sourcePath,
-      source_ref: input.sourceRef ?? existing?.source_ref ?? null,
-      status: "loaded" as const,
-      version: input.version ?? null,
-      last_loaded_at: new Date().toISOString(),
-      last_error_json: null,
-    };
+    const values = registrationValues(input, existing);
 
     if (existing) {
       if (hasUnchangedInstalledSourceRegistration(existing, values)) return existing;
@@ -323,7 +328,6 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     getProjectExtensionInstance,
     listEnabledSourcesForProject,
     listProjectExtensionInstances: listProjectInstances,
-    reloadInstalledSource: (installName: string) => reloadInstalledSourceImpl(reloadDeps, installName),
     reloadInstalledSourceBySourcePath: (sourcePath: string) =>
       reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
     removeProjectExtensionInstance,

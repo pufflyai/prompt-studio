@@ -220,6 +220,7 @@ export const pollOpencodeQuestionReply = async (input: {
   messageComplete: Promise<void>;
   abortSignal?: AbortSignal;
   pollIntervalMs?: number;
+  onHistoryRecovery?: () => void;
 }) => {
   const { loadMessages, sessionId, cwd, events, questionTool, questionResponse, messageComplete, abortSignal } = input;
   const state: QuestionReplyPollState = createQuestionReplyPollState();
@@ -237,6 +238,7 @@ export const pollOpencodeQuestionReply = async (input: {
       events,
       lastObserved: state.lastObserved,
       lastSnapshot: state.lastSnapshot,
+      onHistoryRecovery: input.onHistoryRecovery,
     });
     applyQuestionReplySnapshot(state, snapshot);
 
@@ -287,7 +289,11 @@ export const pollOpencodeQuestionReply = async (input: {
 
   const answeredMessages = markQuestionToolAnswered({ messages, questionTool, questionResponse });
   if (answeredMessages !== messages) {
-    events.push({ op: "replace", path: "/messages", value: composeOwnedOpencodeSnapshot(events, answeredMessages) });
+    events.push({
+      op: "replace",
+      path: "/messages",
+      value: composeOwnedOpencodeSnapshot(events, answeredMessages, input.onHistoryRecovery),
+    });
   }
 
   return completeTurn(events);

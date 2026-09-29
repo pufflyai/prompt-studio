@@ -1,4 +1,3 @@
-import type { SessionHistoryIssue } from "@pstdio/sdk/api";
 import type { SessionStreamConnection, SessionStreamHandlers } from "@pstdio/sdk/client";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { RendererReadBinding, RendererReadRegistry } from "@pstdio/workbench";
@@ -8,20 +7,17 @@ import {
   type DashboardSessionMessagePatch,
   visibleSessionMessages,
 } from "./session-messages";
+import { type SessionNotice, toSessionNotice } from "./session-notice";
 
 export interface SessionHistoryState {
   messages: SessionMessage[];
   loading: boolean;
   streaming: boolean;
-  historyIssue?: SessionHistoryIssue;
-  error?: string;
-  queueError?: string;
+  error?: SessionNotice;
+  queueError?: SessionNotice;
 }
 interface HistoryTransport {
-  getConversation(
-    id: string,
-    signal?: AbortSignal,
-  ): Promise<{ messages: SessionMessage[]; historyIssue?: SessionHistoryIssue }>;
+  getConversation(id: string, signal?: AbortSignal): Promise<{ messages: SessionMessage[] }>;
   getQueuedMessages(id: string, options?: { signal?: AbortSignal }): Promise<{ messages: SessionMessage[] }>;
   connectStream(id: string, handlers: SessionStreamHandlers, options?: { attempt?: number }): SessionStreamConnection;
 }
@@ -34,7 +30,7 @@ interface HistoryControllerInput {
   initialState?: SessionHistoryState;
   initialSession?: SyncedRow;
 }
-const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
 export const createSessionHistoryController = (input: HistoryControllerInput) => {
   const { sessionId, ownerKey, reads, transport, onChange } = input;
   const isQueued = (message: SessionMessage) => message.id.startsWith(`queued-prompt-${sessionId}-`);
@@ -68,7 +64,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
           queued = value.messages;
           publish({ queueError: undefined });
         },
-        onError: (error) => publish({ queueError: errorText(error) }),
+        onError: (error) => publish({ queueError: toSessionNotice(error) }),
       },
       reason,
     );
@@ -85,9 +81,9 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         onValue: (value) => {
           if (current !== generation || startedRevision !== revision) return;
           confirmed = value.messages.filter((message) => !isQueued(message));
-          publish({ loading: false, error: undefined, historyIssue: value.historyIssue });
+          publish({ loading: false, error: undefined });
         },
-        onError: (error) => publish({ loading: false, error: errorText(error) }),
+        onError: (error) => publish({ loading: false, error: toSessionNotice(error) }),
       },
       "refresh",
     );
@@ -123,26 +119,18 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
             historyBinding?.dispose();
             historyBinding = undefined;
           }
-          publish({
-            loading: false,
-            streaming: true,
-            error: undefined,
-            ...(patch.path === "/messages" ? { historyIssue: undefined } : {}),
-          });
+          publish({ loading: false, streaming: true, error: undefined });
         },
         onQueuedMessages: (value) => {
           if (!active()) return;
           queueRevision++;
           queueBinding?.dispose();
           queueBinding = undefined;
-          if ("error" in value) publish({ queueError: value.error });
+          if ("error" in value) publish({ queueError: { message: value.error, temporary: true } });
           else {
             queued = value.messages;
             publish({ queueError: undefined });
           }
-        },
-        onHistoryIssue: (historyIssue) => {
-          if (active()) publish({ historyIssue });
         },
         onEnd: () => {
           if (!active()) return;
@@ -153,7 +141,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         },
         onError: (error) => {
           if (!active()) return;
-          publish({ loading: false, streaming: false, error: errorText(error) });
+          publish({ loading: false, streaming: false, error: toSessionNotice(error) });
         },
       },
       { attempt: current },

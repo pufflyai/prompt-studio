@@ -15,12 +15,14 @@ bun add @pstdio/sdk
 | `@pstdio/sdk/resources` | Product resource types |
 | `@pstdio/sdk/prompts` | Prompt rendering |
 | `@pstdio/sdk/hooks` | Hook API contracts |
+| `@pstdio/sdk/data` | Draft layout, frontmatter, and ID/name resolution helpers |
+| `@pstdio/sdk/testing` | Command contexts and in-memory adapters for extension tests |
 
 Native extension entries work without React. The React entry requires its declared React and TanStack Query peers. Public declarations include their private contract dependencies and support `skipLibCheck: false` outside the repository.
 
 ## Build an extension
 
-Start with the [workbench cookbook](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/extensions/cookbook.md) and [Extension Lab](https://github.com/pufflyai/prompt-studio/blob/main/extensions/extension-lab/README.md). Existing examples cover saved edits, inspectors, shared panels, custom modes, provider refs, and webview cleanup.
+Start with the [workbench cookbook](https://github.com/pufflyai/prompt-studio/blob/main/documentation/guides/extensions/0002-workbench-cookbook.md) and [Extension Lab](https://github.com/pufflyai/prompt-studio/blob/main/extensions/extension-lab/README.md). Existing examples cover saved edits, inspectors, shared panels, custom modes, provider refs, and webview cleanup.
 
 Keep package identity in `package.json`. Export `defineExtension(...)` from the manifest's `main`. Install through `pst extensions dev <path>` from a linked project. The same workflow watches native TypeScript, contribution declarations, and webview assets.
 
@@ -94,7 +96,7 @@ Host authors should use the [workbench guide](https://github.com/pufflyai/prompt
 
 ## Workspace contracts
 
-The alpha.13 host opens one folder per project and uses workspace APIs for execution and files.
+The host opens one folder per project and uses workspace APIs for execution and files.
 Use `ctx.projectFiles` for the project's default workspace and `ctx.workspaceFiles`
 for the invocation's working files. Project file operations check the current workspace
 readiness and file capabilities. Remote workspaces never fall back to local files.
@@ -114,8 +116,8 @@ Directory creation accepts one child name under an existing parent.
 Webviews can set `workspaceId` in `createWebviewClient(host, { workspaceId })`
 to run commands in that workspace. The host validates project ownership.
 
-Extensions that work with both host contracts can declare the exact versions
-`1.0.0-alpha.12 || 1.0.0-alpha.13` in `engines.pstdio`.
+The current host API version is `1.0.0-alpha.14`. Extensions that also work with the
+previous contract can declare `1.0.0-alpha.13 || 1.0.0-alpha.14` in `engines.pstdio`.
 General version ranges and wildcards remain unsupported.
 The compatible extension release must precede the host cutover.
-See [the staged release ADR](../../.pstdio/docs/adrs/0030-temporary-workspace-contract-release-bridge.md).
+See [the staged release ADR](../../documentation/adrs/0030-temporary-workspace-contract-release-bridge.md).

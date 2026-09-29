@@ -24,7 +24,7 @@ export type {
   WorkspaceProviderDescriptor,
 } from "pstdio-api-contracts";
 export type {
-  AttemptExtensionFixResponse,
+  AddLocalExtensionFolderResponse,
   CommandExecuteRequest,
   CommandExecuteResponse,
   ConfigureExtensionConnectionInput,
@@ -68,7 +68,6 @@ export type {
   SessionAttachmentRef,
   SessionConversationResponse,
   SessionConversationSources,
-  SessionHistoryIssue,
   SessionQueuedMessagesResponse,
 } from "./sessions";
 export { sessionAttachmentMimeTypesByExtension } from "./sessions";

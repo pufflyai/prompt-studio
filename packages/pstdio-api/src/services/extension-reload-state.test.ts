@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createDb, createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { reloadInstalledSource } from "./extension-reload";
+import { reloadInstalledSourceBySourcePath } from "./extension-reload";
 
 const cleanup: Array<() => Promise<void> | void> = [];
 
@@ -12,7 +12,7 @@ afterEach(async () => {
   for (const dispose of cleanup.splice(0).reverse()) await dispose();
 });
 
-const writeExtension = (root: string) => {
+const writeExtension = (root: string, enginesPstdio = EXTENSION_API_VERSION) => {
   mkdirSync(root, { recursive: true });
   writeFileSync(
     join(root, "package.json"),
@@ -22,13 +22,13 @@ const writeExtension = (root: string) => {
       displayName: "Reload State",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: enginesPstdio },
     }),
   );
   writeFileSync(join(root, "extension.ts"), "export default {};\n");
 };
 
-describe("reloadInstalledSource published state", () => {
+describe("reloadInstalledSourceBySourcePath published state", () => {
   test("does not expose loaded state or a new revision before runtime refresh completes", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-reload-pending-test-"));
     cleanup.push(() => rmSync(root, { recursive: true, force: true }));
@@ -59,7 +59,7 @@ describe("reloadInstalledSource published state", () => {
       finishRefresh = resolve;
     });
 
-    const reload = reloadInstalledSource(
+    const reload = reloadInstalledSourceBySourcePath(
       {
         emitInstalledSource: () => {},
         installedExtensionSourcesService: sources,
@@ -68,7 +68,7 @@ describe("reloadInstalledSource published state", () => {
           await refreshFinished;
         },
       },
-      "reload-state-pending",
+      root,
     );
 
     await refreshStarted;
@@ -107,7 +107,7 @@ describe("reloadInstalledSource published state", () => {
     });
     const emitted: unknown[] = [];
 
-    const result = await reloadInstalledSource(
+    const result = await reloadInstalledSourceBySourcePath(
       {
         emitInstalledSource: (source) => emitted.push(source),
         installedExtensionSourcesService: sources,
@@ -117,11 +117,48 @@ describe("reloadInstalledSource published state", () => {
           await sources.updateLoadState(source.id, { loaded_revision: "published-revision" });
         },
       },
-      "reload-state",
+      root,
     );
 
     expect(result.installedSource.loaded_revision).toBe("published-revision");
     expect(emitted).toHaveLength(1);
     expect(emitted[0]).toMatchObject({ loaded_revision: "published-revision" });
+  });
+
+  test("reports why the changed source failed validation", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-reload-incompatible-test-"));
+    cleanup.push(() => rmSync(root, { recursive: true, force: true }));
+    writeExtension(root, "1.0.0-alpha.1");
+
+    const database = await createDb({ path: ":memory:" });
+    cleanup.push(database.close);
+    const sources = createInstalledExtensionSourcesDBService(database.db);
+    await sources.register({
+      display_name: "Reload State",
+      extension_id: "pstdio.reload-state",
+      install_name: "reload-state-incompatible",
+      manifest_json: {},
+      source_hash: "old-hash",
+      source_kind: "local_path",
+      source_path: root,
+      source_ref: null,
+      status: "loaded",
+      version: "1.0.0",
+    });
+
+    const result = await reloadInstalledSourceBySourcePath(
+      {
+        emitInstalledSource: () => {},
+        installedExtensionSourcesService: sources,
+        notifyInstalledSourcesChanged: async () => {},
+      },
+      root,
+    );
+
+    expect(result.installedSource.status).toBe("error");
+    expect(result.installedSource.last_error_json).toMatchObject({
+      code: "extension_manifest_unsupported_api_version",
+      message: expect.stringContaining(`add "${EXTENSION_API_VERSION}" to engines.pstdio`),
+    });
   });
 });

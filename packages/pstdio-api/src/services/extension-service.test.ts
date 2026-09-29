@@ -392,6 +392,37 @@ describe("extensionService", () => {
     expect(second.installedSource.source_ref).toBe("https://example/repo#main:planner");
   });
 
+  test("clears source_ref when a reinstall comes from a source without one", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+
+    await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner-local",
+      extensionId: "pstdio.planner-local",
+      name: "planner-local",
+      displayName: "Planner",
+      sourceKind: "git",
+      sourcePath: "/extensions/planner-local",
+      sourceRef: "https://example/repo#main:planner",
+      manifest: {},
+    });
+
+    const second = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "planner-local",
+      extensionId: "pstdio.planner-local",
+      name: "planner-local",
+      displayName: "Planner",
+      sourceKind: "local_path",
+      sourcePath: "/extensions/planner-local",
+      sourceRef: null,
+      manifest: {},
+    });
+
+    expect(second.installedSource.source_kind).toBe("local_path");
+    expect(second.installedSource.source_ref).toBeNull();
+  });
+
   test("emits the removed project instance row with its scope", async () => {
     const eventBus = new EventBus();
     const events: Array<{ table: string; op: string; data: unknown }> = [];
@@ -462,7 +493,7 @@ describe("extensionService reload", () => {
 
       makeExtension(root, { name: "Reloaded Extension", version: "1.1.0", templateKey: "second" });
 
-      const result = await reloadingService.reloadInstalledSource("reload");
+      const result = await reloadingService.reloadInstalledSourceBySourcePath(root);
       const reloadEvents = await installedExtensionSourcesService.listReloadEvents(result.installedSource.id);
       const reloadEvent = reloadEvents.at(-1);
 
@@ -558,12 +589,12 @@ describe("extensionService reload", () => {
 
       writeFileSync(join(root, "extension.ts"), "throw new Error('reload boom');\n");
 
-      const result = await reloadingService.reloadInstalledSource("reload");
+      const result = await reloadingService.reloadInstalledSourceBySourcePath(root);
       const reloadEvents = await installedExtensionSourcesService.listReloadEvents(registered.id);
 
       expect(result.installedSource.status).toBe("error");
       expect(result.installedSource.manifest_json).toEqual({ id: "pstdio.reload", templates: ["ticket"] });
-      expect(result.installedSource.last_error_json).toMatchObject({ code: "extension_reload_failed" });
+      expect(result.installedSource.last_error_json).toMatchObject({ code: "extension_import_failed" });
       expect(reloadEvents.at(-1)?.status).toBe("error");
       // A refused update keeps the adopted hash, so the source still reads as having an update waiting.
       expect(result.installedSource.source_hash).toBe("old-hash");

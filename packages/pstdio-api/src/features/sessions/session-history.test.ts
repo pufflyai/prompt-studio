@@ -12,7 +12,7 @@ test("a reader waiting on an obsolete initializer follows the new conversation o
   store.create(
     "s",
     () => {},
-    async () => ({ messages: await first.promise }),
+    () => first.promise,
   );
   const deps = { sessionService: { store } } as Parameters<typeof getSessionHistory>[1];
   const reading = getSessionHistory("s", deps);
@@ -20,10 +20,10 @@ test("a reader waiting on an obsolete initializer follows the new conversation o
   const messages: SessionMessage[] = [{ id: "new", role: "user", parts: [{ type: "text", text: "next" }] }];
   (await next.conversationReady).push({ op: "replace", path: "/messages", value: messages });
   first.resolve([]);
-  expect((await reading).messages).toEqual(messages);
+  expect(await reading).toEqual(messages);
 });
 
-test("an unavailable native transcript and no saved checkpoint cannot become a successful empty history", async () => {
+test("an unreadable native transcript without a saved conversation starts from an empty history", async () => {
   const deps = {
     sessionService: { get: async () => ({ id: "s", agent: "agent", agent_session_id: "thread" }) },
     harnessRegistry: {
@@ -35,8 +35,8 @@ test("an unavailable native transcript and no saved checkpoint cannot become a s
       }),
     },
   } as never;
-  await expect(loadSessionHistory("s", deps)).rejects.toThrow("history");
-  expect((await loadSessionHistory("s", deps, [])).messages).toEqual([]);
+  expect(await loadSessionHistory("s", deps)).toEqual([]);
+  expect(await loadSessionHistory("s", deps, [])).toEqual([]);
 });
 
 test("saved conversation history survives removal of its workspace worktree", async () => {
@@ -77,10 +77,7 @@ test("saved conversation history survives removal of its workspace worktree", as
     },
   } as never;
   try {
-    expect(await loadSessionHistory("s", deps)).toEqual({
-      messages,
-      historyIssue: { code: "native_unavailable", category: "native_unavailable" },
-    });
+    expect(await loadSessionHistory("s", deps)).toEqual(messages);
     expect(nativeReads).toBe(0);
   } finally {
     await rm(root, { recursive: true, force: true });
