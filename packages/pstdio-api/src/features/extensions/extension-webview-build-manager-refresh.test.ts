@@ -85,7 +85,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -136,10 +136,10 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
-      reportBuildSuccess: async (_installName, webviewId) => {
+      reportBuildSuccess: async (_installedExtensionId, webviewId) => {
         successes.push(webviewId);
       },
       buildWebview: async (input) => {
@@ -190,7 +190,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -237,10 +237,10 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
-      reportBuildSuccess: async (_installName, webviewId) => {
+      reportBuildSuccess: async (_installedExtensionId, webviewId) => {
         successes.push(webviewId);
       },
       buildWebview: async (input) => {
@@ -288,7 +288,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {
         reports.push("failure");

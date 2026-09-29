@@ -92,11 +92,16 @@ describe("extension webview setup", () => {
       expect(labView?.body.kind).toBe("webview");
       if (labView?.body.kind !== "webview") throw new Error("Extension Lab view is not a webview.");
 
+      const installedExtensionId = metadata.extensions.find(
+        (extension) => extension.id === labView.extensionId,
+      )?.installedExtensionId;
+      expect(installedExtensionId).toBeString();
+      const scopePath = `${installedExtensionId}/pstdio.workbench-fixture.view.lab-page`;
       expect(labView.body.webview.runtimeUrl).toMatch(
-        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/workbench-fixture\/pstdio\.workbench-fixture\.view\.lab-page\/runtime$/,
+        new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/runtime$`),
       );
       expect(labView.body.webview.moduleUrl).toMatch(
-        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/workbench-fixture\/pstdio\.workbench-fixture\.view\.lab-page\/assets\/module\.js\?h=.+$/,
+        new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/assets/module\\.js\\?h=.+$`),
       );
 
       const module = await waitForOk(`${api.url}${labView.body.webview.moduleUrl}`);

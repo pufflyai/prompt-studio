@@ -51,11 +51,11 @@ export const resolvePackageAssetFile = (asset: PackageAssetDescriptor) =>
 export const safeWebviewId = (webviewId: string) => webviewId.replace(/[^a-zA-Z0-9._-]/g, "_");
 
 export const resolveManagedWebviewPaths = (input: {
-  installName: string;
+  installedExtensionId: string;
   webviewCacheRoot: string;
   webviewId: string;
 }) => {
-  const root = join(input.webviewCacheRoot, input.installName, safeWebviewId(input.webviewId));
+  const root = join(input.webviewCacheRoot, input.installedExtensionId, safeWebviewId(input.webviewId));
   return {
     distDir: join(root, "dist"),
     root,

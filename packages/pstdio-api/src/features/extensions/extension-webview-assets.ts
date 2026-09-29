@@ -5,7 +5,7 @@ import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-we
 import { resolvePstdioHome } from "./install-extension-source";
 import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
-type InstalledSourceLookup = Pick<ReturnType<typeof createExtensionService>, "getInstalledSource">;
+type InstalledSourceLookup = Pick<ReturnType<typeof createExtensionService>, "getInstalledSourceById">;
 
 export type WebviewBuildError = {
   message: string;
@@ -14,9 +14,9 @@ export type WebviewBuildError = {
 
 export const findWebviewBuildError = async (
   deps: { extensionService: InstalledSourceLookup },
-  input: { installName: string; webviewId: string },
+  input: { installedExtensionId: string; webviewId: string },
 ): Promise<WebviewBuildError | null> => {
-  const source = await deps.extensionService.getInstalledSource(input.installName);
+  const source = await deps.extensionService.getInstalledSourceById(input.installedExtensionId);
   if (!source?.last_error_json || typeof source.last_error_json !== "object") return null;
 
   const record = source.last_error_json as Record<string, unknown>;
@@ -69,9 +69,9 @@ const defaultWebviewCacheRoot = () => join(resolvePstdioHome({ env: process.env 
 
 export const resolveWebviewAssetFile = async (
   deps: ExtensionWebviewAssetDeps,
-  input: { assetPath?: string; installName: string; webviewId: string },
+  input: { assetPath?: string; installedExtensionId: string; webviewId: string },
 ) => {
-  const source = await deps.extensionService.getInstalledSource(input.installName);
+  const source = await deps.extensionService.getInstalledSourceById(input.installedExtensionId);
   if (!source) return null;
 
   const runtime = await deps.extensionRuntimeCatalog.getInstalledSourceRuntime(source);
@@ -83,7 +83,7 @@ export const resolveWebviewAssetFile = async (
 
   const requested = input.assetPath?.replace(/^\/+/, "") ?? "";
   const root = resolveManagedWebviewPaths({
-    installName: source.install_name,
+    installedExtensionId: source.id,
     webviewCacheRoot: deps.webviewCacheRoot ?? defaultWebviewCacheRoot(),
     webviewId: input.webviewId,
   }).distDir;

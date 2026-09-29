@@ -2,7 +2,7 @@ type InstalledSourceSignatureInput = {
   source_path: string;
 };
 
-export const processKey = (installName: string, webviewId: string) => `${installName}\0${webviewId}`;
+export const processKey = (installedExtensionId: string, webviewId: string) => `${installedExtensionId}\0${webviewId}`;
 
 export const signatureFor = (
   row: InstalledSourceSignatureInput,

@@ -9,7 +9,7 @@ const CAPABILITY_PATH = /\/v1\/extensions\/webviews\/[^/\s?#]+/g;
 const ARTIFACT_URL_TTL_SECONDS = 10 * 60;
 
 export interface ExtensionWebviewScope {
-  installName: string;
+  installedExtensionId: string;
   webviewId: string;
 }
 
@@ -61,16 +61,16 @@ const encodeAssetPath = (assetPath: string) =>
 const parseRequestPath = (path: string) => {
   if (!path.startsWith(WEBVIEW_PATH_PREFIX)) return null;
 
-  const [capability, encodedInstallName, encodedWebviewId, resource, ...rest] = path
+  const [capability, encodedInstalledExtensionId, encodedWebviewId, resource, ...rest] = path
     .slice(WEBVIEW_PATH_PREFIX.length)
     .split("/");
-  if (!capability || !encodedInstallName || !encodedWebviewId || !resource) return null;
+  if (!capability || !encodedInstalledExtensionId || !encodedWebviewId || !resource) return null;
 
-  const installName = decodeRouteSegment(encodedInstallName);
+  const installedExtensionId = decodeRouteSegment(encodedInstalledExtensionId);
   const webviewId = decodeRouteSegment(encodedWebviewId);
-  if (!installName || !webviewId) return null;
+  if (!installedExtensionId || !webviewId) return null;
 
-  return { capability, resource, rest, scope: { installName, webviewId } };
+  return { capability, resource, rest, scope: { installedExtensionId, webviewId } };
 };
 
 export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccessInput = {}): ExtensionWebviewAccess => {
@@ -78,7 +78,11 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
   const now = input.now ?? Date.now;
 
   const capabilityFor = (scope: ExtensionWebviewScope) =>
-    createHmac("sha256", signingKey).update(scope.installName).update("\0").update(scope.webviewId).digest("base64url");
+    createHmac("sha256", signingKey)
+      .update(scope.installedExtensionId)
+      .update("\0")
+      .update(scope.webviewId)
+      .digest("base64url");
 
   // Artifact capabilities sign the full grant (mount, path, project, expiry), so a
   // webview asset URL never authorizes artifact reads and the other way around.
@@ -90,7 +94,7 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
     createHmac("sha256", signingKey)
       .update("artifact")
       .update("\0")
-      .update(scope.installName)
+      .update(scope.installedExtensionId)
       .update("\0")
       .update(scope.webviewId)
       .update("\0")
@@ -104,7 +108,7 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
       .digest("base64url");
 
   const scopePath = (scope: ExtensionWebviewScope) =>
-    `${encodeURIComponent(scope.installName)}/${encodeURIComponent(scope.webviewId)}`;
+    `${encodeURIComponent(scope.installedExtensionId)}/${encodeURIComponent(scope.webviewId)}`;
 
   const basePath = (scope: ExtensionWebviewScope) =>
     `${WEBVIEW_PATH_PREFIX}${capabilityFor(scope)}/${scopePath(scope)}`;

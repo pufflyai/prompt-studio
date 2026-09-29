@@ -63,13 +63,13 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-cache-recovery-test-"));
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
-    const distPath = join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist");
+    const distPath = join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist");
     writeExtension(sourcePath);
     let buildCount = 0;
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -106,12 +106,12 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
-      reportBuildFailure: async (_installName, webviewId) => {
+      reportBuildFailure: async (_installedExtensionId, webviewId) => {
         failures.push(webviewId);
       },
-      reportBuildSuccess: async (_installName, webviewId) => {
+      reportBuildSuccess: async (_installedExtensionId, webviewId) => {
         successes.push(webviewId);
       },
       buildWebview: async (input) => {
@@ -128,7 +128,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
       expect(failures).toEqual(["pstdio.lab.view.faultyPage"]);
       expect(successes).toEqual(["pstdio.lab.view.labPage"]);
-      expect(existsSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
+      expect(existsSync(join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -156,7 +156,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -179,7 +179,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
       await manager.refresh();
 
       expect(buildCount).toBe(1);
-      expect(existsSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
+      expect(existsSync(join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -197,9 +197,9 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
-      reportBuildFailure: async (_installName, webviewId) => {
+      reportBuildFailure: async (_installedExtensionId, webviewId) => {
         failures.push(webviewId);
       },
       reportBuildSuccess: async () => {},
@@ -223,7 +223,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
       expect(buildCount).toBe(2);
       expect(failures).toEqual([]);
-      expect(existsSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
+      expect(existsSync(join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
