@@ -43,7 +43,7 @@ const serveArtifact = async (
   let resolved: Awaited<ReturnType<typeof resolveExtensionArtifactMount>>;
   try {
     resolved = await resolveExtensionArtifactMount(deps, {
-      installName: authorized.installName,
+      installedExtensionId: authorized.installedExtensionId,
       mountId: authorized.mountId,
       projectId: authorized.projectId,
     });
@@ -76,10 +76,10 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
 
   if (authorized.kind === "artifact") return serveArtifact(c, deps, authorized);
 
-  const { assetPath, installName, webviewId } = authorized;
+  const { assetPath, installedExtensionId, webviewId } = authorized;
   // Build failures must win over any previous bundle left on disk.
   if (assetPath === "module.js") {
-    const buildError = await findWebviewBuildError(deps, { installName, webviewId });
+    const buildError = await findWebviewBuildError(deps, { installedExtensionId, webviewId });
     if (buildError) {
       return new Response(renderWebviewBuildErrorModule(buildError), {
         headers: { "content-type": "application/javascript; charset=utf-8" },
@@ -87,7 +87,7 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
     }
   }
 
-  const asset = await resolveWebviewAssetFile(deps, { assetPath, installName, webviewId });
+  const asset = await resolveWebviewAssetFile(deps, { assetPath, installedExtensionId, webviewId });
   if (!asset) return notFound(c);
 
   return new Response(Bun.file(asset.filePath), {

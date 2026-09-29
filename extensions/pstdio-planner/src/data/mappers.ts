@@ -91,14 +91,15 @@ const workspaceToBadgeItem = (
   session: TicketWorkspaceSession | undefined,
 ): TicketWorkspaceBadgeItem => {
   const { icon, workspaceType } = workspacePresentation(workspace);
+  const label = workspaceDisplayName(workspace);
   return {
     id: workspace.id,
-    label: workspace.workspace_shorthand?.trim() || workspaceDisplayName(workspace),
+    label,
     icon,
     resource: {
       type: "workspace",
       id: workspace.id,
-      label: workspaceDisplayName(workspace),
+      label,
       metadata: {
         workspaceId: workspace.id,
         workspaceType,

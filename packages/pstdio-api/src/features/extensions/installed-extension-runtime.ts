@@ -95,15 +95,20 @@ export const createInstalledExtensionRuntime = async (input: {
   const webviewBuildManager: RuntimeProcess = input.webviewBuilds
     ? createWebviewBuildManager({
         listInstalledSources: listExistingInstalledSources,
-        reportBuildFailure: (installName, webviewId, error, expectedSource) => {
+        reportBuildFailure: (installedExtensionId, webviewId, error, expectedSource) => {
           // A snapshot serves each webview's built module URL, so a finished build — for
           // better or worse — changes what the snapshot must say.
           input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
-          return input.extensionService.reportWebviewBuildFailure(installName, webviewId, error, expectedSource);
+          return input.extensionService.reportWebviewBuildFailure(
+            installedExtensionId,
+            webviewId,
+            error,
+            expectedSource,
+          );
         },
-        reportBuildSuccess: (installName, webviewId, expectedSource) => {
+        reportBuildSuccess: (installedExtensionId, webviewId, expectedSource) => {
           input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
-          return input.extensionService.reportWebviewBuildSuccess(installName, webviewId, expectedSource);
+          return input.extensionService.reportWebviewBuildSuccess(installedExtensionId, webviewId, expectedSource);
         },
         onError: reportError,
       })

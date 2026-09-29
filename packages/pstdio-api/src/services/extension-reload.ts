@@ -147,13 +147,13 @@ export const reloadInstalledSourceBySourcePath = async (deps: ReloadDeps, source
 
 export const reportWebviewBuildFailure = async (
   deps: ReloadDeps,
-  installName: string,
+  installedExtensionId: string,
   webviewId: string,
   error: unknown,
   expectedSource?: ExpectedWebviewBuildSource,
 ) => {
-  const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
-  if (!existing) throw new Error(`Installed extension not found: ${installName}`);
+  const existing = await deps.installedExtensionSourcesService.get(installedExtensionId);
+  if (!existing) throw new Error(`Installed extension not found: ${installedExtensionId}`);
   if (
     expectedSource &&
     (existing.source_hash !== (expectedSource.sourceHash ?? null) || existing.source_path !== expectedSource.sourcePath)
@@ -166,7 +166,7 @@ export const reportWebviewBuildFailure = async (
     status: "error",
     last_error_json: currentErrorJson,
   });
-  if (!updated) throw new Error(`Installed extension not found: ${installName}`);
+  if (!updated) throw new Error(`Installed extension not found: ${installedExtensionId}`);
 
   await deps.installedExtensionSourcesService.recordReload({
     installed_extension_id: existing.id,
@@ -184,12 +184,12 @@ export const reportWebviewBuildFailure = async (
 
 export const reportWebviewBuildSuccess = async (
   deps: ReloadDeps,
-  installName: string,
+  installedExtensionId: string,
   webviewId: string,
   expectedSource?: ExpectedWebviewBuildSource,
 ) => {
-  const existing = await deps.installedExtensionSourcesService.getByInstallName(installName);
-  if (!existing) throw new Error(`Installed extension not found: ${installName}`);
+  const existing = await deps.installedExtensionSourcesService.get(installedExtensionId);
+  if (!existing) throw new Error(`Installed extension not found: ${installedExtensionId}`);
   if (
     expectedSource &&
     (existing.source_path !== expectedSource.sourcePath ||
@@ -211,7 +211,7 @@ export const reportWebviewBuildSuccess = async (
     loaded_revision: crypto.randomUUID(),
     ...(shouldClear ? { status: "loaded" as const, last_error_json: null } : {}),
   });
-  if (!updated) throw new Error(`Installed extension not found: ${installName}`);
+  if (!updated) throw new Error(`Installed extension not found: ${installedExtensionId}`);
 
   deps.emitInstalledSource(updated);
   return updated;

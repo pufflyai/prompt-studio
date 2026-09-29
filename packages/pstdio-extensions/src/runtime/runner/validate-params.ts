@@ -1,4 +1,4 @@
-import type { ParamDescriptor, ParamObjectSchema } from "@pstdio/sdk/extensions";
+import type { ParamDescriptor, ParamObjectSchema, WorkspaceParam } from "@pstdio/sdk/extensions";
 
 export type ValidateParamsResult = { ok: true } | { ok: false; reason: string };
 
@@ -12,6 +12,16 @@ const describeValue = (value: unknown) => {
   if (value === null) return "null";
   if (Array.isArray(value)) return "array";
   return typeof value;
+};
+
+const checkWorkspace = (key: string, descriptor: WorkspaceParam, value: unknown) => {
+  if (!isPlainObject(value) || typeof value.providerId !== "string")
+    return `Param "${key}" must be a workspace choice with a string "providerId"`;
+  if (value.params !== undefined && !isPlainObject(value.params))
+    return `Param "${key}" workspace params must be an object`;
+  if (descriptor.providers && !descriptor.providers.includes(value.providerId))
+    return `Param "${key}" must use one of these workspace providers: ${descriptor.providers.join(", ")}`;
+  return undefined;
 };
 
 const checkDescriptor = (key: string, descriptor: ParamDescriptor, value: unknown): string | undefined => {
@@ -41,6 +51,8 @@ const checkDescriptor = (key: string, descriptor: ParamDescriptor, value: unknow
       if (!isPlainObject(value) || typeof value.type !== "string" || typeof value.id !== "string")
         return `Param "${key}" must be a resource reference with string "type" and "id"`;
       return undefined;
+    case "workspace":
+      return checkWorkspace(key, descriptor, value);
     case "json":
       return undefined;
     default:

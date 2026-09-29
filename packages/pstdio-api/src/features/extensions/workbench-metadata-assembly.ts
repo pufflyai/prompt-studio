@@ -63,11 +63,14 @@ const supplementalMetadata = (runtime: ExtensionRuntime) => ({
 export const assembleAvailableExtensionMetadata = (
   deps: ExtensionWebviewMetadataDeps,
   runtime: ExtensionRuntime,
-  source: { extensionId: string; installName: string },
+  source: { extensionId: string; installName: string; installedExtensionId?: string },
 ) => {
   const webviewCacheRoot = join(resolvePstdioHome({ env: process.env }), "cache", "extension-webviews");
   return {
     ...buildWorkbenchExtensionMetadata({
+      installedExtensionIdsByExtensionId: source.installedExtensionId
+        ? new Map([[source.extensionId, source.installedExtensionId]])
+        : undefined,
       installNamesByExtensionId: new Map([[source.extensionId, source.installName]]),
       runtime,
       webviewCacheRoot,

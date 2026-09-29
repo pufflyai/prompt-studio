@@ -190,7 +190,7 @@ export const getExtensionArtifactImageUrlHandler = (
     if (!file) return c.json({ error: `Artifact not found: ${path}` }, 404);
 
     const url = deps.extensionWebviewAccess.artifactUrl(
-      { installName: resolved.installName, webviewId },
+      { installedExtensionId: resolved.installedExtensionId, webviewId },
       { artifactPath: safePath, mountId: resolved.runtimeMount.localId, projectId: params.projectId },
     );
     return c.json({ url }, 200);

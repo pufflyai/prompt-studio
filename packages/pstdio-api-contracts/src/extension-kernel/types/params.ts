@@ -14,6 +14,7 @@ export type ParamType =
   | "harness"
   | "template"
   | "resource"
+  | "workspace"
   | "json"
   | "list";
 
@@ -110,6 +111,18 @@ export type ResourceParam<TRequired extends boolean | undefined = boolean | unde
   resourceType: string;
 };
 
+// Where the command's work runs: a workspace provider and the params it declares,
+// e.g. `{ providerId: "pstdio.worktree", params: { base: "main" } }`. The host
+// renders the same provider form as its "Create workspace" dialog.
+export type WorkspaceParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  { providerId: string; params?: JsonObject },
+  TRequired
+> & {
+  type: "workspace";
+  /** Provider ids the user may choose from. Omit to offer every provider. */
+  providers?: string[];
+};
+
 export type JsonParam<T = unknown, TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
   T,
   TRequired
@@ -135,6 +148,7 @@ export type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefi
   | HarnessParam<TRequired>
   | TemplateParam<TRequired>
   | ResourceParam<TRequired>
+  | WorkspaceParam<TRequired>
   | JsonParam<TValue, TRequired>
   | ListParam<TRequired>;
 
