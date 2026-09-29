@@ -17,7 +17,7 @@ const packageDirs = [
 const pullRequest = (changedFiles: string[], affectedPackages: string[] = []) =>
   resolveCiScope({ event: "pull_request", changedFiles, packageDirs, affectedPackages });
 
-const everything = { lernaFilter: "", windows: true, e2e: true, license: true };
+const everything = { lernaFilter: "", windows: true, e2e: true, license: true, publishedExtensions: true };
 
 describe("pull request CI scope", () => {
   test("the merge queue runs every job on every package", () => {
@@ -34,7 +34,13 @@ describe("pull request CI scope", () => {
   test("a package change tests changed packages and skips unrelated heavy jobs", () => {
     const scope = pullRequest(["clients/landing-page/src/pages/index.astro"], ["@pstdio/landing-page"]);
 
-    expect(scope).toEqual({ lernaFilter: "--since HEAD~1", windows: false, e2e: false, license: false });
+    expect(scope).toEqual({
+      lernaFilter: "--since HEAD~1",
+      windows: false,
+      e2e: false,
+      license: false,
+      publishedExtensions: false,
+    });
   });
 
   test("a change in a filesystem or process package runs Windows", () => {
@@ -62,7 +68,13 @@ describe("pull request CI scope", () => {
       "LICENSE",
     ]);
 
-    expect(scope).toEqual({ lernaFilter: "--since HEAD~1", windows: false, e2e: false, license: false });
+    expect(scope).toEqual({
+      lernaFilter: "--since HEAD~1",
+      windows: false,
+      e2e: false,
+      license: false,
+      publishedExtensions: false,
+    });
   });
 
   test("any other change outside packages runs everything", () => {
@@ -74,4 +86,16 @@ describe("pull request CI scope", () => {
   test("a repository tooling change runs everything", () => {
     expect(pullRequest(["scripts/test-setup.ts"], ["pstdio-scripts"])).toEqual(everything);
   });
+});
+
+test("published extensions are checked for extension and public contract changes", () => {
+  for (const file of [
+    "extensions/pstdio-planner/extension.ts",
+    "packages/sdk/src/index.ts",
+    "packages/ui/src/index.ts",
+    "packages/pstdio-api-contracts/src/index.ts",
+  ]) {
+    expect(pullRequest([file]).publishedExtensions).toBe(true);
+  }
+  expect(pullRequest(["packages/pstdio-dashboard/src/main.tsx"]).publishedExtensions).toBe(false);
 });
