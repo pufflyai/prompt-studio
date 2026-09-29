@@ -57,20 +57,15 @@ export const params = {
     options?: TOptions,
   ): BooleanParam<RequiredOf<TOptions>> => ({ type: "boolean", ...options }) as BooleanParam<RequiredOf<TOptions>>,
 
-  select: <const TOptions extends ParamOptions<SelectParam>>(
-    options: TOptions,
-  ): Omit<SelectParam<RequiredOf<TOptions>>, "options"> & { options: TOptions["options"] } =>
-    ({ type: "select", ...options }) as Omit<SelectParam<RequiredOf<TOptions>>, "options"> & {
-      options: TOptions["options"];
-    },
+  select: <const TOptions extends ParamOptions<SelectParam>>(options: TOptions) => ({
+    type: "select" as const,
+    ...options,
+  }),
 
-  multiSelect: <const TOptions extends ParamOptions<MultiSelectParam>>(
-    options: TOptions,
-  ): Omit<MultiSelectParam<RequiredOf<TOptions>>, "options"> & { options: TOptions["options"] } =>
-    ({
-      type: "multi-select",
-      ...options,
-    }) as Omit<MultiSelectParam<RequiredOf<TOptions>>, "options"> & { options: TOptions["options"] },
+  multiSelect: <const TOptions extends ParamOptions<MultiSelectParam>>(options: TOptions) => ({
+    type: "multi-select" as const,
+    ...options,
+  }),
 
   harness: <const TOptions extends ParamOptions<HarnessParam> | undefined = undefined>(
     options?: TOptions,
