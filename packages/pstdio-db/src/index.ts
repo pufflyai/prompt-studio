@@ -3,11 +3,11 @@ export type { DbClient } from "./db/connection.pglite";
 export { createDb } from "./db/connection.pglite";
 export { legacyTemplateOwnerSourcePath } from "./db/legacy-template-migration";
 export { resolveDbPath } from "./db/paths";
-
 export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
 export { createActivityEventsDBService } from "./services/activity-events/activity-events";
 export { createAutomationDBService } from "./services/automation/automation";
+export { createBoardViewsDBService } from "./services/board-views/board-views";
 export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
 export { createExtensionConnectionsDBService } from "./services/extension-connections/extension-connections";

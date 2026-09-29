@@ -12,6 +12,7 @@ import type {
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
+  KanbanRendererViewsProvider,
   ResourceContextAction,
 } from "./kanban-renderer-contracts";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
@@ -54,6 +55,7 @@ export interface KanbanRendererContribution<
   /** Initial settings/filters applied when the kanban renderer mounts. */
   defaultSettings?: Partial<KanbanRendererSettings>;
   defaultFilters?: KanbanRendererFilterState;
+  viewsProvider?: KanbanRendererViewsProvider;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
 

@@ -659,6 +659,7 @@ interface KanbanRendererSavedView {
   title: Localizable<string>;
   settings: KanbanRendererSettings;
   filters: KanbanRendererFilterState;
+  /** @deprecated */
   isDefault?: boolean;
 }
 interface KanbanRendererQueryParams {

@@ -133,8 +133,6 @@ const DatasetDataTable = (props: DataTableProps) => {
   });
   const filters = useKanbanRendererStore(resolvedToolbarStorageKey, (state) => state.filters, {
     settings: { viewMode: "list" },
-    views: props.defaultViews,
-    activeViewId: props.defaultActiveViewId,
   });
   const filteredRendererRows = filterDataTableRows(rendererRows, filters, rendererAttributes);
   const filteredData = filteredRendererRows.map((row) => row.sourceRow);

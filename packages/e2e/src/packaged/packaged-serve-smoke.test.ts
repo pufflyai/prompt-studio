@@ -9,6 +9,7 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
+import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
@@ -382,3 +383,5 @@ test("packaged CLI includes automation and machine authentication", () => {
 });
 
 registerExtensionAutomationSmokeTests();
+
+registerBoardViewsSmokeTests();

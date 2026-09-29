@@ -48,7 +48,7 @@ const kanbanRendererAttributeSchema = z.object({
   display: kanbanRendererAttributeDisplaySchema.optional(),
 });
 
-const kanbanRendererSettingsSchema = z.object({
+export const kanbanRendererSettingsSchema = z.object({
   viewMode: z.enum(["board", "list"]),
   columnGrouping: z.string(),
   rowGrouping: z.string(),
@@ -59,7 +59,7 @@ const kanbanRendererSettingsSchema = z.object({
   displayProperties: z.array(z.string()),
 });
 
-const kanbanRendererSavedViewSchema = z.object({
+export const kanbanRendererSavedViewSchema = z.object({
   id: z.string(),
   title: localizableStringSchema,
   settings: kanbanRendererSettingsSchema,

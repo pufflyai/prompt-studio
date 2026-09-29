@@ -4,11 +4,15 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { FilterCategoryView } from "./kanban-renderer-helpers";
-import type { KanbanRendererFilterState, KanbanRendererSavedView } from "./types";
-import { isActiveKanbanRendererViewDirty, useKanbanRendererStore } from "./use-kanban-renderer-store";
+import { isKanbanRendererViewDirty } from "./kanban-renderer-views";
+import type { KanbanRendererFilterState, KanbanRendererSavedView, KanbanRendererViewsSource } from "./types";
+import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
 interface KanbanRendererViewBarProps {
   storageKey: string;
+  views: (KanbanRendererSavedView & { builtIn: boolean })[];
+  defaultViewId?: string;
+  viewsSource?: KanbanRendererViewsSource;
   categories: FilterCategoryView[];
   filters: KanbanRendererFilterState;
   leading?: ReactNode;
@@ -18,21 +22,10 @@ interface KanbanRendererViewBarProps {
   align?: "split" | "end";
 }
 
-const nextViewIdentity = (views: KanbanRendererSavedView[]) => {
+const nextViewTitle = (views: KanbanRendererSavedView[]) => {
   let index = views.length + 1;
-  while (views.some((view) => view.id === `view-${index.toString()}`)) index += 1;
-  return { id: `view-${index.toString()}`, title: `View ${index.toString()}` };
-};
-
-const duplicateIdentity = (view: KanbanRendererSavedView, views: KanbanRendererSavedView[]) => {
-  const baseId = `${view.id}-copy`;
-  let index = 1;
-  let id = baseId;
-  while (views.some((entry) => entry.id === id)) {
-    index += 1;
-    id = `${baseId}-${index.toString()}`;
-  }
-  return { id, title: `${view.title} copy` };
+  while (views.some((view) => view.title === `View ${index}`)) index += 1;
+  return `View ${index}`;
 };
 
 const filterValueLabel = (category: FilterCategoryView | undefined, values: string[]) =>
@@ -130,43 +123,74 @@ const RenameViewDialog = (props: {
 export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
   const { actions } = props;
   const { storageKey, categories, filters, leading, filterControl, displayControl, align = "split" } = props;
-  const views = useKanbanRendererStore(storageKey, (state) => state.views);
+  const { views, viewsSource, defaultViewId } = props;
   const activeViewId = useKanbanRendererStore(storageKey, (state) => state.activeViewId);
-  const dirty = useKanbanRendererStore(storageKey, isActiveKanbanRendererViewDirty);
+  const settings = useKanbanRendererStore(storageKey, (state) => state.settings);
+  const activeView = views.find((view) => view.id === activeViewId);
+  const dirty = isKanbanRendererViewDirty(activeView, { settings, filters });
   const activateView = useKanbanRendererStore(storageKey, (state) => state.activateView);
-  const createView = useKanbanRendererStore(storageKey, (state) => state.createView);
-  const saveActiveView = useKanbanRendererStore(storageKey, (state) => state.saveActiveView);
-  const resetActiveView = useKanbanRendererStore(storageKey, (state) => state.resetActiveView);
   const clearFilter = useKanbanRendererStore(storageKey, (state) => state.clearFilter);
-  const renameView = useKanbanRendererStore(storageKey, (state) => state.renameView);
-  const duplicateView = useKanbanRendererStore(storageKey, (state) => state.duplicateView);
-  const deleteView = useKanbanRendererStore(storageKey, (state) => state.deleteView);
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await action();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const createView = async (input: Parameters<KanbanRendererViewsSource["onCreateView"]>[0]) => {
+    if (viewsSource) activateView(await viewsSource.onCreateView(input));
+  };
   const [renameTarget, setRenameTarget] = useState<KanbanRendererSavedView>();
   const activeFilters = Object.entries(filters).filter(([, values]) => values.length > 0);
   const showFilterRow = dirty || activeFilters.length > 0;
 
-  const actionsFor = (view: KanbanRendererSavedView): ResourceContextAction[] => [
-    {
-      key: "rename",
-      label: "Rename",
-      icon: <Icon as={Pencil} boxSize="0.875rem" />,
-      onClick: () => setRenameTarget(view),
-    },
-    {
-      key: "duplicate",
-      label: "Duplicate",
-      icon: <Icon as={Copy} boxSize="0.875rem" />,
-      onClick: () => duplicateView(view.id, duplicateIdentity(view, views)),
-    },
-    {
-      key: "delete",
-      label: "Delete view",
-      icon: <Icon as={Trash2} boxSize="0.875rem" />,
-      isDisabled: views.length === 1,
-      separatorBefore: true,
-      onClick: () => deleteView(view.id),
-    },
-  ];
+  const actionsFor = (view: KanbanRendererSavedView & { builtIn: boolean }): ResourceContextAction[] =>
+    viewsSource
+      ? [
+          {
+            key: "rename",
+            label: "Rename",
+            isDisabled: view.builtIn || busy,
+            icon: <Icon as={Pencil} boxSize="0.875rem" />,
+            onClick: () => setRenameTarget(view),
+          },
+          {
+            key: "duplicate",
+            label: "Duplicate",
+            icon: <Icon as={Copy} boxSize="0.875rem" />,
+            onClick: () =>
+              run(() =>
+                createView({
+                  settings: view.settings,
+                  filters: view.filters,
+                  title: `${view.title} copy`,
+                  copyFrom: view.id,
+                }),
+              ),
+            isDisabled: busy,
+          },
+          {
+            key: "delete",
+            label: "Delete view",
+            icon: <Icon as={Trash2} boxSize="0.875rem" />,
+            isDisabled: view.builtIn || busy,
+            separatorBefore: true,
+            onClick: () => run(() => viewsSource.onDeleteView(view.id)),
+          },
+          {
+            key: "default",
+            label: view.id === defaultViewId ? "Clear default" : "Set as default",
+            isDisabled: busy,
+            onClick: () => run(() => viewsSource.onSetDefaultView(view.id === defaultViewId ? null : view.id)),
+          },
+        ]
+      : [];
 
   return (
     <Stack
@@ -184,7 +208,10 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
           variant="subtle"
           minW="0"
           overflow="hidden"
-          onValueChange={(details) => activateView(details.value)}
+          onValueChange={(details) => {
+            const view = views.find((view) => view.id === details.value);
+            if (view) activateView(view);
+          }}
         >
           <Tabs.List overflowX="auto" overflowY="hidden">
             {views.map((view) => (
@@ -210,7 +237,8 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
             aria-label="Add view"
             size="2xs"
             variant="ghost"
-            onClick={() => createView(nextViewIdentity(views))}
+            disabled={!viewsSource || busy}
+            onClick={() => viewsSource && run(() => createView({ title: nextViewTitle(views), settings, filters }))}
           >
             <Icon as={Plus} />
           </IconButton>
@@ -243,25 +271,47 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
           <Box flex="1" />
           {dirty ? (
             <>
-              <Button size="2xs" variant="outline" onClick={resetActiveView}>
+              <Button size="2xs" variant="outline" onClick={() => activeView && activateView(activeView)}>
                 <RotateCcw />
                 Reset
               </Button>
-              <Button size="2xs" variant="primary" onClick={saveActiveView}>
-                Save view
+              <Button
+                size="2xs"
+                variant="primary"
+                disabled={!viewsSource || busy}
+                onClick={() =>
+                  viewsSource &&
+                  activeView &&
+                  run(() =>
+                    activeView.builtIn
+                      ? createView({
+                          title: `${activeView.title} copy`,
+                          settings,
+                          filters,
+                        })
+                      : viewsSource.onUpdateView(activeView.id, { settings, filters }),
+                  )
+                }
+              >
+                {activeView?.builtIn ? "Save as new view" : "Save view"}
               </Button>
             </>
           ) : null}
         </HStack>
       ) : null}
 
+      {error ? (
+        <Text role="alert" color="fg.error" textStyle="label/S" padding="xs">
+          {error}
+        </Text>
+      ) : null}
       {renameTarget ? (
         <RenameViewDialog
           key={renameTarget.id}
           open
           title={renameTarget.title}
           onOpenChange={(open) => !open && setRenameTarget(undefined)}
-          onRename={(title) => renameView(renameTarget.id, title)}
+          onRename={(title) => viewsSource && run(() => viewsSource.onUpdateView(renameTarget.id, { title }))}
         />
       ) : null}
     </Stack>

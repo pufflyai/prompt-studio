@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext } from "react";
 
-/** Synchronous snapshot storage supplied by the host before rendering saved views. */
+/** Local interaction-state storage supplied by the host before rendering a board. */
 export interface KanbanRendererStorage {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
@@ -14,7 +14,7 @@ interface KanbanRendererStorageProviderProps {
   children: ReactNode;
 }
 
-/** Hosts can persist views outside the browser origin, such as in a desktop profile. */
+/** Hosts can persist local board state outside the browser origin. Shared view definitions stay on the server. */
 export const KanbanRendererStorageProvider = (props: KanbanRendererStorageProviderProps) => {
   const { storage, children } = props;
   return <StorageContext value={storage}>{children}</StorageContext>;

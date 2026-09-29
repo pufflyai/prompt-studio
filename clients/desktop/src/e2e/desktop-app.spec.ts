@@ -167,7 +167,6 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "quitApp",
       "retryRuntime",
       "revealInFinder",
-      "setKanbanView",
       "setPageLocation",
       "setProjectTabs",
       "setSelectedProjectId",

@@ -66,6 +66,7 @@ export interface KanbanRendererSavedView {
   title: Localizable<string>;
   settings: KanbanRendererSettings;
   filters: KanbanRendererFilterState;
+  /** @deprecated Use the renderer's defaultActiveViewId instead. */
   isDefault?: boolean;
 }
 

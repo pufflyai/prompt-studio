@@ -15,8 +15,10 @@ import type {
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
+  KanbanRendererViewsSource,
 } from "./types";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
+import { useKanbanViews } from "./use-kanban-views";
 import { useResolvedAttributes } from "./use-resolved-attributes";
 
 export interface KanbanRendererToolbarProps<TRow extends KanbanRendererRow = KanbanRendererRow> {
@@ -25,6 +27,7 @@ export interface KanbanRendererToolbarProps<TRow extends KanbanRendererRow = Kan
   attributes: AttributeDescriptor[];
   defaultSettings?: Partial<KanbanRendererSettings>;
   defaultFilters?: KanbanRendererFilterState;
+  viewsSource?: KanbanRendererViewsSource;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
   leading?: ReactNode;
@@ -40,14 +43,13 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
     attributes: rawAttributes,
     defaultSettings,
     defaultFilters,
-    defaultViews,
-    defaultActiveViewId,
     leading,
     actions,
     displayControl,
     align = "split",
   } = props;
 
+  const viewState = useKanbanViews(props);
   const attributes = useResolvedAttributes(rawAttributes);
   const groupingOptions = buildGroupingOptions(attributes);
   const orderingOptions = buildOrderingOptions(attributes);
@@ -56,8 +58,6 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
   const initialState = {
     settings: defaultSettings,
     filters: defaultFilters,
-    views: defaultViews,
-    activeViewId: defaultActiveViewId,
   };
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
   const filters = useKanbanRendererStore(storageKey, (state) => state.filters, initialState);
@@ -114,6 +114,9 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
 
   return (
     <KanbanRendererViewBar
+      views={viewState.views}
+      defaultViewId={viewState.defaultId}
+      viewsSource={props.viewsSource}
       storageKey={storageKey}
       categories={categoryOptions}
       filters={filters}

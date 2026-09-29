@@ -1,6 +1,9 @@
 import { isNull } from "drizzle-orm";
+import { boardDefaultSyncRow } from "pstdio-api-contracts";
 import type { DbClient } from "pstdio-db";
 import {
+  board_default_views,
+  board_views,
   extension_instances,
   files,
   installed_extension_sources,
@@ -12,7 +15,9 @@ import {
   workspaces,
 } from "pstdio-db";
 
-const tableMap = {
+export const tableMap = {
+  board_views,
+  board_default_views,
   settings,
   projects,
   installed_extension_sources,
@@ -37,7 +42,12 @@ export const getFullState = async (db: DbClient) => {
       const rows = hasDeletedAt(table)
         ? await query.where(isNull(table.deleted_at as Parameters<typeof isNull>[0]))
         : await query;
-      return [name, rows] as const;
+      return [
+        name,
+        name === "board_default_views"
+          ? rows.map((row) => boardDefaultSyncRow(row as typeof board_default_views.$inferSelect))
+          : rows,
+      ] as const;
     }),
   );
 

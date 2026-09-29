@@ -163,7 +163,6 @@ const editableViews: KanbanRendererSavedView[] = [
   {
     id: "all",
     title: "All",
-    isDefault: true,
     settings: {
       viewMode: "list",
       columnGrouping: "none",

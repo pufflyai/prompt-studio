@@ -1,6 +1,5 @@
 import { Stack } from "@chakra-ui/react";
 import { type ReactNode, useState } from "react";
-
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import type {
   KanbanRendererBoardColumn,
@@ -27,9 +26,11 @@ import type {
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
+  KanbanRendererViewsSource,
 } from "./types";
 import { findAttribute, NO_GROUPING } from "./types";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
+import { useKanbanViews } from "./use-kanban-views";
 import { useResolvedAttributes } from "./use-resolved-attributes";
 
 /** Board-column behavior and menu configuration for a resolved column group. */
@@ -58,6 +59,7 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   contentPlaceholder?: ReactNode;
   defaultSettings?: Partial<KanbanRendererSettings>;
   defaultFilters?: KanbanRendererFilterState;
+  viewsSource?: KanbanRendererViewsSource;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
   hideToolbar?: boolean;
@@ -92,6 +94,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     contentPlaceholder,
     defaultSettings,
     defaultFilters,
+    viewsSource,
     defaultViews,
     defaultActiveViewId,
     onRowClick,
@@ -107,13 +110,12 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     toolbarLeading,
   } = props;
 
+  useKanbanViews(props);
   const attributes = useResolvedAttributes(rawAttributes);
   const [createColumnId, setCreateColumnId] = useState<string | null>(null);
   const initialState = {
     settings: defaultSettings,
     filters: defaultFilters,
-    views: defaultViews,
-    activeViewId: defaultActiveViewId,
   };
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
   const filters = useKanbanRendererStore(storageKey, (state) => state.filters, initialState);
@@ -227,6 +229,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           attributes={attributes}
           defaultSettings={defaultSettings}
           defaultFilters={defaultFilters}
+          viewsSource={viewsSource}
           defaultViews={defaultViews}
           defaultActiveViewId={defaultActiveViewId}
           leading={toolbarLeading}

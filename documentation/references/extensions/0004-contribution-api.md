@@ -240,3 +240,11 @@ export default defineExtension({ themes: [monokai] });
 
 The runtime qualifies the ref with the extension owner. For publisher `acme` and
 package `planner`, the theme ID is `acme.planner.theme.monokai`.
+
+## Shared kanban views
+
+`defaultViews` defines extension-owned, read-only built-ins. `defaultActiveViewId` chooses the extension fallback. The deprecated `isDefault` flag remains a fallback when `defaultActiveViewId` is absent; use `defaultActiveViewId` in new extensions. The project's shared default takes precedence over both. Do not copy or save built-ins into extension storage.
+
+The host saves user-created views per project, extension instance and local board ID. Query-returned attributes and status options are used to validate settings and filters. Keep field IDs stable across releases. A successful query can clean removed options from saved views; a failed query never removes them.
+
+Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` supplies shared views and asynchronous mutations to the UI renderer. The workbench accepts a subscribable views provider from its host; standalone callers without one show their built-ins read-only.

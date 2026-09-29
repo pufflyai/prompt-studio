@@ -64,6 +64,8 @@ export type {
   KanbanRendererQueryState,
   KanbanRendererRow,
   KanbanRendererSettings,
+  KanbanRendererViewsProvider,
+  KanbanRendererViewsSource,
   Keybinding,
   KeybindingRegistry,
   KeybindingSequence,
