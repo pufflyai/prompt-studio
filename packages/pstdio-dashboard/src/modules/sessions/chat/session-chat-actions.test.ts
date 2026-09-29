@@ -14,6 +14,7 @@ import {
   handOffPendingFollowUp,
   type PendingFollowUpState,
   peekHandedOffPendingFollowUp,
+  shouldShowPendingFollowUp,
 } from "./session-chat-state";
 
 const draftResource: ResourceRef = {
@@ -282,6 +283,8 @@ describe("first message handoff", () => {
       },
     });
     expect(created).toMatchObject({ prompt: "Start here", sessionId: "session-9" });
+    // The draft keeps its first message on screen until the created session's page replaces it.
+    expect(shouldShowPendingFollowUp(pendingFollowUp, null)).toBe(true);
     handOffPendingFollowUp(created!);
     expect(peekHandedOffPendingFollowUp("session-9")).toMatchObject({ prompt: "Start here" });
     forgetHandedOffPendingFollowUp("session-9");
