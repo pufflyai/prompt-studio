@@ -1,5 +1,17 @@
 # harness-open-code
 
+## 0.37.0
+
+_2026-09-29_
+
+### Patch Changes
+
+- 18d3235: Keep OpenCode turns running when saved history has ambiguous metadata ownership.
+- 7453c45: Answering an OpenCode question no longer fails because an earlier turn in the same session failed.
+- 7453c45: Require SDK 0.36.0 so OpenCode snapshots keep host-owned attachments and generated errors, and Codex recovers repeated identical commands after a crash.
+- 9ef96aa: Declare compatibility with explicit navigation and resource removal on extension API alpha.14.
+- c0dff06: Match thinking-level icons to planner priority colors and use a flame for Max.
+
 ## 0.36.1
 
 _2026-09-28_

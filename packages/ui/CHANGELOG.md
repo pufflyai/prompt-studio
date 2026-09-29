@@ -1,5 +1,20 @@
 # @pstdio/ui
 
+## 0.37.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- b9791ba: Chat problems appear in the conversation instead of banners, a message that cannot be sent stays in the conversation as "Not sent", and Retry is offered only for temporary failures. `@pstdio/ui` adds `AlertMessage` `onClose`, `ChatPanel` `conversationNotices`, and the `delivery: "unsent"` message state.
+- d0b80f6: Add declared clipboard writes and a shared CopyButton for extension drafts.
+- 4c5c343: Add Upgrade all and per-row Upgrade buttons to extension settings, add a drop zone that copies an extension folder into .pstdio/extensions, show Reload with source-fix advice for local extensions, offer Copy error and Upgrade on load errors, and make Reload act on the requesting project's source and report the real validation error.
+
+### Patch Changes
+
+- 99c3471: A short conversation shows at once instead of blanking for a few frames, so a new session's first message no longer flickers.
+- d0b80f6: Keep controls Apply clear of the side panel button and save edited numbers on blur.
+
 ## 0.36.1
 
 _2026-09-28_

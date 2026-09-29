@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.37.0
+
+_2026-09-29_
+
+### Patch Changes
+
+- 9ef96aa: Declare compatibility with explicit navigation and resource removal on extension API alpha.14.
+
 ## 0.36.1
 
 _2026-09-28_

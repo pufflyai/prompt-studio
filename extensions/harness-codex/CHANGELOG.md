@@ -1,5 +1,16 @@
 # harness-codex
 
+## 0.37.0
+
+_2026-09-29_
+
+### Patch Changes
+
+- d01e4e9: Codex sessions that ran commands in code mode can continue again after a turn: their history is read from the items Codex records, and matched tool calls keep what the chat showed.
+- 7453c45: Require SDK 0.36.0 so OpenCode snapshots keep host-owned attachments and generated errors, and Codex recovers repeated identical commands after a crash.
+- 9ef96aa: Declare compatibility with explicit navigation and resource removal on extension API alpha.14.
+- c0dff06: Match thinking-level icons to planner priority colors and use a flame for Max.
+
 ## 0.36.1
 
 _2026-09-28_

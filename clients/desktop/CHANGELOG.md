@@ -1,5 +1,14 @@
 # @pstdio/desktop
 
+## 0.37.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- d0b80f6: Add declared clipboard writes and a shared CopyButton for extension drafts.
+- b5d8767: Make the bundled pst command available from macOS, Windows, and Linux desktop installations.
+
 ## 0.36.1
 
 _2026-09-28_
