@@ -1,5 +1,6 @@
 import { type AgentClient, createAgentClient } from "./agents";
 import { type AutomationClient, createAutomationClient } from "./automation";
+import { type BoardViewsClient, createBoardViewsClient } from "./board-views";
 import { createExtensionClient, type ExtensionClient } from "./extensions";
 import { createFilesystemClient, type FilesystemClient } from "./filesystem";
 import { createNotificationsClient, type NotificationsClient } from "./notifications";
@@ -14,6 +15,7 @@ import { createSyncClient, type SyncClient } from "./sync";
 import { createWorkspaceClient, type WorkspaceClient } from "./workspaces";
 
 export type PstdioClient = {
+  views: BoardViewsClient;
   projects: ProjectClient;
   filesystem: FilesystemClient;
   workspaces: WorkspaceClient;
@@ -31,6 +33,7 @@ export type PstdioClient = {
 export const createClient = (options: ClientOptions = {}): PstdioClient => {
   const request = createRequest(options);
   return {
+    views: createBoardViewsClient(request),
     projects: createProjectClient(request),
     filesystem: createFilesystemClient(request),
     workspaces: createWorkspaceClient(request),

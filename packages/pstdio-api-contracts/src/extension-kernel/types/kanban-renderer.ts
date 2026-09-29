@@ -65,7 +65,6 @@ export interface KanbanRendererSavedView {
   title: Localizable<string>;
   settings: KanbanRendererSettings;
   filters: KanbanRendererFilterState;
-  isDefault?: boolean;
 }
 
 export interface KanbanRendererQueryParams {

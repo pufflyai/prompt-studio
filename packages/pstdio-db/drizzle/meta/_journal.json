@@ -239,6 +239,13 @@
       "when": 1790609159652,
       "tag": "0033_mushy_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790706689880,
+      "tag": "0034_strong_natasha_romanoff",
+      "breakpoints": true
     }
   ]
 }

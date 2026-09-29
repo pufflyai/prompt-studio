@@ -96,11 +96,15 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useResolvedContributionAttributes(contribution.attributes);
   const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);
+  const provider = contribution.viewsProvider;
+  const viewsSource = useSyncExternalStore(
+    provider?.subscribe ?? noopSubscribe,
+    provider?.getSnapshot ?? (() => undefined),
+    provider?.getSnapshot ?? (() => undefined),
+  );
   const initialState = {
     settings: contribution.defaultSettings,
     filters: contribution.defaultFilters,
-    views: contribution.defaultViews,
-    activeViewId: contribution.defaultActiveViewId,
   };
 
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
@@ -144,27 +148,32 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   return (
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
       {read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
-      <KanbanRenderer
-        rows={rows}
-        contentPlaceholder={read.value ? undefined : contentPlaceholder}
-        storageKey={storageKey}
-        attributes={attributes}
-        defaultSettings={contribution.defaultSettings}
-        defaultFilters={contribution.defaultFilters}
-        defaultViews={contribution.defaultViews}
-        defaultActiveViewId={contribution.defaultActiveViewId}
-        emptyTitle={contribution.emptyTitle}
-        emptyDescription={contribution.emptyDescription}
-        getBoardColumnConfig={contribution.getBoardColumnConfig}
-        hideToolbar={contribution.hideToolbar}
-        onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
-        onAttributeChange={contribution.onAttributeChange}
-        onReorder={contribution.onReorder}
-        createRow={contribution.createRow}
-        onCreateRow={contribution.onCreateRow}
-        onColumnAction={contribution.onColumnAction}
-        getRowContextMenuActions={getRowContextMenuActions}
-      />
+      {provider && !viewsSource ? (
+        <Skeleton minH="12rem" w="full" />
+      ) : (
+        <KanbanRenderer
+          viewsSource={viewsSource}
+          rows={rows}
+          contentPlaceholder={read.value ? undefined : contentPlaceholder}
+          storageKey={storageKey}
+          attributes={attributes}
+          defaultSettings={contribution.defaultSettings}
+          defaultFilters={contribution.defaultFilters}
+          defaultViews={contribution.defaultViews}
+          defaultActiveViewId={contribution.defaultActiveViewId}
+          emptyTitle={contribution.emptyTitle}
+          emptyDescription={contribution.emptyDescription}
+          getBoardColumnConfig={contribution.getBoardColumnConfig}
+          hideToolbar={contribution.hideToolbar}
+          onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
+          onAttributeChange={contribution.onAttributeChange}
+          onReorder={contribution.onReorder}
+          createRow={contribution.createRow}
+          onCreateRow={contribution.onCreateRow}
+          onColumnAction={contribution.onColumnAction}
+          getRowContextMenuActions={getRowContextMenuActions}
+        />
+      )}
     </WorkbenchKanbanViewFrame>
   );
 };

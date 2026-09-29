@@ -49,15 +49,17 @@ export type {
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
+  KanbanRendererViewsSource,
   SortDirection,
   ViewMode,
 } from "./types";
 export {
+  DEFAULT_KANBAN_RENDERER_SETTINGS,
   findAttribute,
   isAttributesSource,
   isEnumOptionsSource,
   MANUAL_ORDERING,
   NO_GROUPING,
 } from "./types";
-export { isActiveKanbanRendererViewDirty, useKanbanRendererStore } from "./use-kanban-renderer-store";
+export { useKanbanRendererStore } from "./use-kanban-renderer-store";
 export { resolveAttributeOptions, useResolvedAttributes } from "./use-resolved-attributes";

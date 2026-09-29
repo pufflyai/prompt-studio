@@ -8,7 +8,6 @@ export interface DesktopAppInfo {
 export interface DesktopWorkbenchState {
   selectedProjectId?: string;
   pageLocations: Record<string, string>;
-  kanbanViews: Record<string, string>;
 }
 
 export interface DesktopProjectTabsState {
@@ -31,7 +30,6 @@ export interface PromptStudioDesktopApi {
   getWorkbenchState: () => Promise<DesktopWorkbenchState>;
   getProjectTabs: () => Promise<DesktopProjectTabsState>;
   setProjectTabs: (state: DesktopProjectTabsState) => Promise<void>;
-  setKanbanView: (key: string, value: string | null) => Promise<void>;
   setPageLocation: (projectId: string, value: string | null) => Promise<void>;
   setSelectedProjectId: (projectId: string | null) => Promise<void>;
 }
@@ -55,7 +53,6 @@ export const DESKTOP_CHANNELS = {
   getWorkbenchState: "pstdio:desktop:get-workbench-state",
   getProjectTabs: "pstdio:desktop:get-project-tabs",
   setProjectTabs: "pstdio:desktop:set-project-tabs",
-  setKanbanView: "pstdio:desktop:set-kanban-view",
   setPageLocation: "pstdio:desktop:set-page-location",
   setSelectedProjectId: "pstdio:desktop:set-selected-project-id",
 } as const;

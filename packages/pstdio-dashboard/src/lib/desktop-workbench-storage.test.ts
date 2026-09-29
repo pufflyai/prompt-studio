@@ -20,8 +20,7 @@ describe("createDesktopWorkbenchStorage", () => {
   test("hydrates a synchronous storage adapter and forwards later changes", async () => {
     const changes: Array<[string, string | null]> = [];
     const storage = await createDesktopWorkbenchStorage({
-      getWorkbenchState: async () => ({ pageLocations: {}, kanbanViews: {}, selectedProjectId: "project-one" }),
-      setKanbanView: async () => {},
+      getWorkbenchState: async () => ({ pageLocations: {}, selectedProjectId: "project-one" }),
       setPageLocation: async (projectId, value) => {
         changes.push([`page-location:${projectId}`, value]);
       },
@@ -50,8 +49,7 @@ describe("createDesktopWorkbenchStorage", () => {
     const browserStorage = createStorage();
     const storage = await createDesktopWorkbenchStorage(
       {
-        getWorkbenchState: async () => ({ pageLocations: {}, kanbanViews: {} }),
-        setKanbanView: async () => {},
+        getWorkbenchState: async () => ({ pageLocations: {} }),
         setPageLocation: async (projectId, value) => {
           changes.push([`page-location:${projectId}`, value]);
         },
@@ -67,25 +65,4 @@ describe("createDesktopWorkbenchStorage", () => {
     expect(browserStorage.getItem("dashboard-wb2:session-drafts:project-one")).toBe('{"session-one":"private draft"}');
     expect(changes).toEqual([]);
   });
-});
-
-test("restores kanban views when the desktop browser session is replaced", async () => {
-  const key = "pstdio/ui/kanban-renderer/project-one/tickets";
-  const values: Record<string, string> = {};
-  const bridge = {
-    getWorkbenchState: async () => ({ pageLocations: {}, kanbanViews: { ...values } }),
-    setPageLocation: async () => {},
-    setSelectedProjectId: async () => {},
-    setKanbanView: async (key: string, value: string | null) => {
-      if (value === null) delete values[key];
-      else values[key] = value;
-    },
-  };
-  const first = await createDesktopWorkbenchStorage(bridge, createStorage());
-  const snapshot = JSON.stringify({ views: [{ id: "saved", title: "Restart check" }], activeViewId: "saved" });
-  first!.setItem(key, snapshot);
-  const restarted = await createDesktopWorkbenchStorage(bridge, createStorage());
-  expect(restarted!.getItem(key)).toBe(snapshot);
-  restarted!.removeItem!(key);
-  expect((await createDesktopWorkbenchStorage(bridge, createStorage()))!.getItem(key)).toBeNull();
 });

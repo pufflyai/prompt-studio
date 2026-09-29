@@ -10,6 +10,7 @@ import * as notificationsCommand from "./notifications";
 import * as projectsCommand from "./projects";
 import * as serveCommand from "./serve";
 import * as sessionsCommand from "./sessions";
+import * as viewsCommand from "./views";
 import * as workspaceCommand from "./workspace";
 
 export const topLevelCommandModules = [
@@ -22,6 +23,7 @@ export const topLevelCommandModules = [
   inboxCommand,
   logsCommand,
   notificationsCommand,
+  viewsCommand,
   projectsCommand,
   serveCommand,
   sessionsCommand,

@@ -134,7 +134,6 @@ export interface KanbanRendererSavedView {
   title: string;
   settings: KanbanRendererSettings;
   filters: KanbanRendererFilterState;
-  isDefault?: boolean;
 }
 
 export type KanbanRendererCreateFieldType =
@@ -202,3 +201,20 @@ export const findAttribute = (attributes: AttributeDescriptor[], id: string | un
   if (!id || id === NO_GROUPING || id === MANUAL_ORDERING) return undefined;
   return attributes.find((attribute) => attribute.id === id);
 };
+
+export interface KanbanRendererViewsSource {
+  views: (KanbanRendererSavedView & { builtIn: boolean })[];
+  defaultViewId: string;
+  onCreateView: (input: {
+    title: string;
+    settings: KanbanRendererSettings;
+    filters: KanbanRendererFilterState;
+    copyFrom?: string;
+  }) => Promise<KanbanRendererSavedView>;
+  onUpdateView: (
+    id: string,
+    input: { title?: string; settings?: KanbanRendererSettings; filters?: KanbanRendererFilterState },
+  ) => Promise<void>;
+  onDeleteView: (id: string) => Promise<void>;
+  onSetDefaultView: (id: string | null) => Promise<void>;
+}

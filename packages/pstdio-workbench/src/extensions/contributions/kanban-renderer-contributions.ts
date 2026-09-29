@@ -32,6 +32,9 @@ import {
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
 
 export interface WorkbenchExtensionKanbanRendererAdapter {
+  createViewsProvider?: (
+    record: WorkbenchExtensionKanbanRendererRecord,
+  ) => import("../../core").KanbanRendererViewsProvider;
   /** Override label resolution. Defaults to workbench's `text(value, fallback)`. */
   resolveLabel?: Localizer;
   /** Post-process an attribute descriptor (after localization). Defaults to identity. */
@@ -263,6 +266,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           attributes: attributes.source,
           defaultSettings: record.defaultSettings,
           defaultFilters: record.defaultFilters,
+          viewsProvider: adapter.createViewsProvider?.(record),
           defaultViews: record.defaultViews?.map((view) => ({
             ...view,
             title: localize(view.title, view.id),

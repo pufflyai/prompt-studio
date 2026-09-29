@@ -11,7 +11,7 @@ const memoryStorage = () => {
   };
 };
 
-test("restores saved views, edits, selection, and deletions from host storage", () => {
+test("restores local selection and unsaved settings from host storage", () => {
   const storage = memoryStorage();
   const options = { storageKey: "project-one/tickets", storage };
   const first = createKanbanRendererStore(options);
@@ -22,27 +22,25 @@ test("restores saved views, edits, selection, and deletions from host storage", 
   state.setOrdering({ attributeId: "updated", direction: "desc" });
   state.setDisplayProperties(["status", "priority"]);
   state.setFilter("status", ["todo"]);
-  state.createView({ id: "saved", title: "Restart check" });
-  state.setDefaultView("saved");
-  state.renameView("saved", "Renamed");
-  state.createView({ id: "removed", title: "Remove me" });
-  state.deleteView("removed");
+  state.activateView({
+    id: "saved",
+    title: "Server view",
+    settings: first.getState().settings,
+    filters: first.getState().filters,
+  });
+  state.setFilter("status", ["done"]);
   const restored = createKanbanRendererStore(options).getState();
-  expect(restored.views).toEqual(first.getState().views);
-  expect(restored.views.map((view) => view.title)).toEqual(["All", "Renamed"]);
-  expect(restored.views[1]?.isDefault).toBe(true);
   expect(restored.activeViewId).toBe("saved");
   expect(restored.settings).toEqual(first.getState().settings);
-  expect(restored.filters).toEqual({ status: ["todo"] });
-  expect(createKanbanRendererStore({ ...options, storageKey: "project-two/tickets" }).getState().views).toHaveLength(1);
+  expect(restored.filters).toEqual({ status: ["done"] });
 });
 
 test("shares stores only within the same host and storage key", () => {
   const storage = memoryStorage();
   const first = getKanbanRendererStore("tickets", undefined, storage);
-  first.getState().createView({ id: "saved", title: "Saved" });
+  first.getState().setFilter("status", ["todo"]);
   expect(getKanbanRendererStore("tickets", undefined, storage)).toBe(first);
-  expect(getKanbanRendererStore("tickets", undefined, memoryStorage()).getState().views).toHaveLength(1);
+  expect(getKanbanRendererStore("tickets", undefined, memoryStorage()).getState().filters).toEqual({});
 });
 
 test("supports host storage methods on a class prototype", () => {
@@ -56,6 +54,6 @@ test("supports host storage methods on a class prototype", () => {
     }
   }
   const options = { storageKey: "tickets", storage: new Storage() };
-  createKanbanRendererStore(options).getState().createView({ id: "saved", title: "Saved" });
-  expect(createKanbanRendererStore(options).getState().activeViewId).toBe("saved");
+  createKanbanRendererStore(options).getState().setFilter("status", ["todo"]);
+  expect(createKanbanRendererStore(options).getState().filters).toEqual({ status: ["todo"] });
 });
