@@ -41,7 +41,7 @@ test.each([
       publisher: "example",
       version: "1.0.0",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   await writeFile(join(source, "extension.ts"), 'import "./missing-dependency.ts"; export default {};');

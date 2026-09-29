@@ -47,7 +47,7 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.4",
+    enginesPstdio: "^0.1.0",
   },
   definition,
 });

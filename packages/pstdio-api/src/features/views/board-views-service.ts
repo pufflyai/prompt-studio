@@ -35,9 +35,12 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
       );
     const views = [...board.builtIns, ...rows.filter((row) => row !== null).map((row) => savedView(board, row))];
     const chosen = (await db.getDefault(board.scope))?.default_view_id;
-    const defaultViewId = [chosen, board.body.defaultActiveViewId, views[0].id].find((id) =>
-      views.some((view) => view.id === id),
-    )!;
+    const defaultViewId = [
+      chosen,
+      board.body.defaultActiveViewId,
+      board.body.defaultViews?.find((view) => view.isDefault)?.id,
+      views[0].id,
+    ].find((id) => views.some((view) => view.id === id))!;
     return { views, defaultViewId };
   };
   const getSaved = async (projectId: string, id: string, allowOrphan = false) => {

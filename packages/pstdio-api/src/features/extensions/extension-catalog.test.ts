@@ -27,7 +27,7 @@ const writeCatalogExtension = (root: string, options?: { escapeTemplate?: boolea
       displayName: "Test Catalog",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(sourcePath, "templates", "lab-ticket.md"), "# Lab Ticket\n", "utf8");

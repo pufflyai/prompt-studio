@@ -33,7 +33,12 @@ export const useKanbanViews = (input: KanbanViewsInput) => {
         },
       ];
   const views = input.viewsSource?.views ?? defaults.map((view) => ({ ...view, builtIn: true }));
-  const defaultId = input.viewsSource?.defaultViewId ?? input.defaultActiveViewId ?? views[0]?.id;
+  const defaultId = [
+    input.viewsSource?.defaultViewId,
+    input.defaultActiveViewId,
+    input.defaultViews?.find((view) => view.isDefault)?.id,
+    views[0]?.id,
+  ].find((id) => views.some((view) => view.id === id));
   const previous = useRef<{ views: KanbanRendererSavedView[]; active?: KanbanRendererSavedView }>(undefined);
   useEffect(() => {
     const state = store.getState();

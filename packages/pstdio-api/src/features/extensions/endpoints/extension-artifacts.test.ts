@@ -31,7 +31,7 @@ const writeExtension = (name: string, withMount: boolean) => {
       displayName: name,
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   const mounts = withMount

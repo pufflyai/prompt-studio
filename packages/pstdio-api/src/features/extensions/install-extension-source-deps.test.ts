@@ -16,7 +16,7 @@ const writeExtension = (dir: string) => {
         displayName: "Source Extension",
         publisher: "test",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         type: "module",
         packageManager: "bun@1.3.13",
         dependencies: { "@pstdio/sdk": "^0.8.0" },

@@ -80,9 +80,12 @@ export const createSharedBoardViews = (
       }));
       const views = [...builtIns, ...saved];
       const chosen = getIndexedRows("board_default_views", "project_id", projectId).find(matches)?.default_view_id;
-      const defaultViewId = [chosen, record.defaultActiveViewId, views[0].id].find((id) =>
-        views.some((view) => view.id === id),
-      ) as string;
+      const defaultViewId = [
+        chosen,
+        record.defaultActiveViewId,
+        record.defaultViews?.find((view) => view.isDefault)?.id,
+        views[0].id,
+      ].find((id) => views.some((view) => view.id === id)) as string;
       version = current;
       cached = { views, defaultViewId, ...actions };
       return cached;

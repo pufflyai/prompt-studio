@@ -134,6 +134,8 @@ export interface KanbanRendererSavedView {
   title: string;
   settings: KanbanRendererSettings;
   filters: KanbanRendererFilterState;
+  /** @deprecated Use defaultActiveViewId instead. */
+  isDefault?: boolean;
 }
 
 export type KanbanRendererCreateFieldType =

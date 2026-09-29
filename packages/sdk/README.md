@@ -118,8 +118,8 @@ Directory creation accepts one child name under an existing parent.
 Webviews can set `workspaceId` in `createWebviewClient(host, { workspaceId })`
 to run commands in that workspace. The host validates project ownership.
 
-The current host API version is `1.0.0-alpha.14`. Extensions that also work with the
-previous contract can declare `1.0.0-alpha.13 || 1.0.0-alpha.14` in `engines.pstdio`.
-General version ranges and wildcards remain unsupported.
-The compatible extension release must precede the host cutover.
-See [the staged release ADR](../../documentation/adrs/0030-temporary-workspace-contract-release-bridge.md).
+`EXTENSION_API_VERSION` is the current host API version, such as `0.1.0`. Declare a caret
+range in `engines.pstdio`, such as `^0.1.0`, so the extension keeps loading across additive
+host releases. Raise the minimum only when the extension uses a newer API. On `0.x`, a new
+minor is a breaking release. See
+[API versioning](../../documentation/references/extensions/0014-api-versioning.md).

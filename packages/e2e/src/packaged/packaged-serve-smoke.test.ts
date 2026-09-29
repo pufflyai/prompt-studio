@@ -221,7 +221,7 @@ test(
     let child: ChildProcess | null = null;
 
     try {
-      const extensionSource = writeExtensionWithDependency(tempRoot, `1.0.0-alpha.13 || ${EXTENSION_API_VERSION}`);
+      const extensionSource = writeExtensionWithDependency(tempRoot, `^0.0.9 || ^${EXTENSION_API_VERSION}`);
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
       const navigationProbe = writeNavigationExtension(tempRoot);
       const started = await startPackagedServe(tempRoot, {

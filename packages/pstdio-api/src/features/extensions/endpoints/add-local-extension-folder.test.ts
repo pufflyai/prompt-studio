@@ -49,7 +49,7 @@ const packageJson = (name: string) =>
     displayName: "Dropped Extension",
     publisher: "test",
     main: "./extension.ts",
-    engines: { pstdio: EXTENSION_API_VERSION },
+    engines: { pstdio: `^${EXTENSION_API_VERSION}` },
   });
 
 const extensionFiles = (name: string) => ({
@@ -128,7 +128,7 @@ describe("POST /v1/projects/:projectId/extensions/local", () => {
 
   test("rejects an extension built for another API version with the advice to fix it", async () => {
     const project = await createProject("Drop Incompatible Project");
-    const manifest = { ...JSON.parse(packageJson("old-api")), engines: { pstdio: "1.0.0-alpha.1" } };
+    const manifest = { ...JSON.parse(packageJson("old-api")), engines: { pstdio: "^0.0.9" } };
 
     const response = await addFolder(project.id, "old-api", {
       ...extensionFiles("old-api"),
@@ -136,7 +136,7 @@ describe("POST /v1/projects/:projectId/extensions/local", () => {
     });
 
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain(`add "${EXTENSION_API_VERSION}" to engines.pstdio`);
+    expect((await response.json()).error).toContain(`add "^${EXTENSION_API_VERSION}" to engines.pstdio`);
   });
 
   test("refuses to replace a folder that already exists", async () => {

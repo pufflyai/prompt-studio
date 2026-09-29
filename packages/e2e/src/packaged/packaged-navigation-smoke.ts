@@ -14,7 +14,7 @@ export const writeNavigationExtension = (root: string) => {
       publisher: "test",
       main: "./extension.ts",
       type: "module",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(

@@ -36,7 +36,7 @@ beforeEach(async () => {
       publisher: "test",
       version: "1.0.0",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(
@@ -46,7 +46,7 @@ let values=[{value:"todo",label:"To do"},{value:"gone",label:"Gone"}], fail=fals
 const settings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",ordering:{attributeId:"manual",direction:"asc"},displayProperties:["state"]};
 export default {
 commands:[{id:"remove",ref:{kind:"command",id:"remove"},title:"Remove",params:{},run:()=>{values=values.slice(0,1);return null;}},{id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{fail=true;return null;}}],
-views:[{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filters:{}}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}}]
+views:[...["legacy","explicit"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",defaultActiveViewId:id==="explicit"?"first":undefined,defaultViews:[{id:"first",title:"First",settings,filters:{}},{id:"flagged",title:"Flagged",settings,filters:{},isDefault:true}],query:()=>({rows:[]})}})),{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filters:{}}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}}]
 };`,
   );
   handle = await createTestApp();
@@ -76,6 +76,16 @@ afterEach(async () => {
   if (priorExtensions === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
   else process.env.PSTDIO_DEFAULT_EXTENSIONS = priorExtensions;
   rmSync(root, { recursive: true, force: true });
+});
+
+test("uses deprecated default flags only below explicit and project defaults", async () => {
+  const path = "/boards/test.boards.view.legacy/views";
+  expect(await (await request(path)).json()).toMatchObject({ defaultViewId: "flagged" });
+  expect(await (await request("/boards/test.boards.view.explicit/views")).json()).toMatchObject({
+    defaultViewId: "first",
+  });
+  expect((await request(`${path}/default`, "PUT", { viewId: "first" })).status).toBe(200);
+  expect(await (await request(path)).json()).toMatchObject({ defaultViewId: "first" });
 });
 
 test("exposes runtime fields, protects built-ins, and shares create/default/order/delete", async () => {

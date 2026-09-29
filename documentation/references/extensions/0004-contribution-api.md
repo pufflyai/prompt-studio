@@ -204,7 +204,7 @@ package `planner`, the theme ID is `acme.planner.theme.monokai`.
 
 ## Shared kanban views
 
-`defaultViews` defines extension-owned, read-only built-ins. `defaultActiveViewId` chooses the extension fallback; there is no `isDefault` property on a view. The project can choose a saved or built-in view as its shared default. Do not copy or save built-ins into extension storage.
+`defaultViews` defines extension-owned, read-only built-ins. `defaultActiveViewId` chooses the extension fallback. The deprecated `isDefault` flag remains a fallback when `defaultActiveViewId` is absent; use `defaultActiveViewId` in new extensions. The project's shared default takes precedence over both. Do not copy or save built-ins into extension storage.
 
 The host saves user-created views per project, extension instance and local board ID. Query-returned attributes and status options are used to validate settings and filters. Keep field IDs stable across releases. A successful query can clean removed options from saved views; a failed query never removes them.
 

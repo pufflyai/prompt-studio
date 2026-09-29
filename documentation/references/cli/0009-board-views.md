@@ -21,7 +21,7 @@ Commands print JSON. Use `--project-id` outside a linked folder. `--columns <fie
 
 Built-in extension views are read-only. Duplicate a built-in to change it. Any saved or built-in view can become the project default. Change the shared default only when requested. Deleting its saved view clears that default choice.
 
-The default order is the chosen project default, then the extension's `defaultActiveViewId`, then the first available view. Built-ins appear first; saved views follow their stored order. Missing options and fields are cleaned when the API reads views. A failed query preserves saved values.
+The default order is the chosen project default, then the extension's `defaultActiveViewId`, then a built-in with the deprecated `isDefault` flag, then the first available view. Built-ins appear first; saved views follow their stored order. Missing options and fields are cleaned when the API reads views. A failed query preserves saved values.
 
 Disabled boards are unavailable but retain data. Uninstall keeps a disabled instance when it has user data, unless data deletion is requested. Removed board declarations leave orphaned views that can be listed and deleted.
 
@@ -42,4 +42,4 @@ All paths below start with `/v1/projects/{projectId}`.
 | PUT | `/boards/{boardId}/views/order` | Exact saved-view order: `{viewIds}` |
 | PUT | `/boards/{boardId}/views/default` | Set or clear: `{viewId: string \| null}` |
 
-Use `createClient().views` in the SDK. Built-in mutations return 409 with duplication guidance. Invalid fields or option values return 400 and list valid IDs. See [the ownership decision](../../adrs/0047-shared-project-board-views.md).
+Use `createClient().views` in the SDK. Built-in mutations return 409 with duplication guidance. Invalid fields or option values return 400 and list valid IDs. See [the ownership decision](../../adrs/0048-shared-project-board-views.md).

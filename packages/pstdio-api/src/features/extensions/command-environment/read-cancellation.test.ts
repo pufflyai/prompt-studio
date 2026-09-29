@@ -99,7 +99,7 @@ test("a cancelled real command invocation cannot continue into later host reader
         name: "read-boundary",
         version: "1.0.0",
         main: "./extension.ts",
-        enginesPstdio: EXTENSION_API_VERSION,
+        enginesPstdio: `^${EXTENSION_API_VERSION}`,
       },
       definition: {
         commands: [

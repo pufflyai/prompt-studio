@@ -63,6 +63,7 @@ export const kanbanRendererSavedViewSchema = z.object({
   title: localizableStringSchema,
   settings: kanbanRendererSettingsSchema,
   filters: z.record(z.string(), z.array(z.string())),
+  isDefault: z.boolean().optional(),
 });
 
 const extensionKanbanRendererCreateRowSchema = z.object({
