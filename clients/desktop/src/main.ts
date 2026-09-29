@@ -65,7 +65,10 @@ const setState = (next: DesktopState) => {
   state = next;
   windowController?.updateState(next);
   setApplicationCommandsEnabled(Menu.getApplicationMenu(), next.kind === "workbench");
-  logger.info({ event: "desktop.state.changed", state: next.kind }, "Desktop lifecycle state changed");
+  logger.info(
+    { event: "desktop.state.changed", state: next.kind, phase: next.kind === "starting" ? next.phase : undefined },
+    "Desktop lifecycle state changed",
+  );
 };
 
 const recoveryCode = (detail: string): DesktopRecoveryError["code"] => {

@@ -97,6 +97,10 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
 };
 
 export const createDb = async (options?: { path?: string; onLockAcquired?: () => void }) => {
+  const startup = Date.now();
+  const phase = (name: string) =>
+    console.log(`[database-startup] ${name} ${Date.now() - startup}ms ${new Date().toISOString()}`);
+  phase("start");
   const requestedPath = resolveDbPath(options?.path);
   ensureDbDirectory(requestedPath);
   const dbPath = requestedPath === ":memory:" ? requestedPath : fs.realpathSync(requestedPath);
@@ -107,9 +111,11 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
   try {
     options?.onLockAcquired?.();
     const pgliteOpts = await resolvePgliteOptions();
+    phase("wasm-ready");
     pglite = openPglite(dbPath, pgliteOpts);
     const openedPglite = pglite;
     await openedPglite.waitReady;
+    phase("database-ready");
     console.log("[createDb] PGlite ready");
 
     const db = drizzle(openedPglite, { schema });
@@ -132,6 +138,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       await prepareWorkspaceLocations(openedPglite);
       await removeSharedWorkspaceFolders(openedPglite, db, migrationsFolder);
       await migrate(db, { migrationsFolder });
+      phase("migrations-ready");
     }
 
     let closed = false;
