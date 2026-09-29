@@ -1,5 +1,13 @@
 # pstdio-planner
 
+## 0.38.0
+
+_2026-09-29_
+
+### Patch Changes
+
+- a08f886: Show the workspace name on ticket workspace badges, so the default workspace reads as the project folder name instead of "default".
+
 ## 0.37.0
 
 _2026-09-29_

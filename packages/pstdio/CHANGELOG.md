@@ -1,5 +1,19 @@
 # pstdio
 
+## 0.38.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- 2c33616: Add a `workspace` command param that lets users pick a workspace type and its fields, such as the base branch, like in Create workspace.
+
+### Patch Changes
+
+- 5183e5f: Remove the Prompt Studio Planner Automation extension from the Marketplace.
+- 788c117: Open new terminals in the project root instead of the app's working folder when no workspace is selected.
+- 93785d5: Fix extension views that failed to load when another folder had an extension with the same name.
+
 ## 0.37.0
 
 _2026-09-29_

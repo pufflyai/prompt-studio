@@ -1,6 +1,6 @@
 {
   "name": "pstdio-skills",
-  "version": "0.37.0",
+  "version": "0.38.0",
   "displayName": "Prompt Studio Skills",
   "description": "Built-in Prompt Studio skills for using Prompt Studio and authoring extensions.",
   "publisher": "pstdio",
