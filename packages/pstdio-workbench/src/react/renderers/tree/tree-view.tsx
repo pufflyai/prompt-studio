@@ -260,7 +260,8 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               expandedSectionIds={treeState.expandedSectionIds}
               activeNodeId={headerActiveNodeId}
               rowVariant="compact"
-              sectionGap="md"
+              // Header sections separate owners (host Back, mode Search), so their rows read as one list.
+              sectionGap="1px"
               nodeGap="1px"
               onToggleSection={toggleSection}
               onToggleNode={toggleNode}
