@@ -411,6 +411,75 @@ export const Reorderable: Story = {
   },
 };
 
+const pinnedSections: TreeListSection[] = [
+  { id: "pinned", nodes: [{ id: "search", label: "Search", icon: <Search size={14} /> }] },
+  {
+    id: "navigation",
+    nodes: [
+      { id: "sessions", label: "Sessions", icon: <FileText size={14} /> },
+      { id: "notes", label: "Notes", icon: <FileText size={14} /> },
+    ],
+  },
+];
+
+// A bare section users emptied, like a header whose rows all moved away, still takes rows back while dragging.
+const EmptiedSectionStory = () => {
+  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
+  const [nodeOrderBySection, setNodeOrderBySection] = useState<Record<string, string[]>>({});
+  return (
+    <Stack maxW="20rem" borderWidth="1px" p="xs">
+      <TreeList
+        sections={applyTreeListOrder(pinnedSections, sectionOrder, nodeOrderBySection)}
+        rowVariant="compact"
+        sectionGap="md"
+        nodeGap="1px"
+        draggable
+        onReorderSections={setSectionOrder}
+        onReorderNodes={(sectionId, nextNodeIds) =>
+          setNodeOrderBySection((current) => ({ ...current, [sectionId]: nextNodeIds }))
+        }
+      />
+    </Stack>
+  );
+};
+
+export const EmptiedSectionAcceptsRows: Story = {
+  render: () => <EmptiedSectionStory />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const rowNames = () => canvas.getAllByRole("option").map((row) => row.textContent);
+    const row = (name: string) => canvas.getByRole("option", { name });
+    const center = (element: Element, offsetY = 0) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.left + 20, y: rect.top + rect.height / 2 + offsetY };
+    };
+    // One user-event instance keeps the pressed pointer between the move and the release.
+    const user = userEvent.setup();
+    const drag = async (from: Element, to: () => { x: number; y: number }) => {
+      await user.pointer([
+        { keys: "[MouseLeft>]", target: from, coords: center(from) },
+        { target: from, coords: center(from, 8) },
+      ]);
+      const coords = await waitFor(to);
+      await user.pointer({ coords });
+      await waitFor(() => expect(canvasElement.querySelector("[data-tree-list-drop-indicator]")).toBeInTheDocument());
+      await user.pointer({ keys: "[/MouseLeft]", coords });
+    };
+
+    await drag(row("Search"), () => center(row("Notes"), 4));
+    await waitFor(() => expect(rowNames()).toEqual(["Sessions", "Notes", "Search"]));
+
+    // The emptied section shows a drop zone only while dragging.
+    await expect(canvasElement.querySelector("[data-tree-list-empty-drop-zone]")).toBeNull();
+    await drag(row("Notes"), () => {
+      const zone = canvasElement.querySelector("[data-tree-list-empty-drop-zone]");
+      expect(zone).toBeInTheDocument();
+      return center(zone!);
+    });
+    await waitFor(() => expect(rowNames()).toEqual(["Notes", "Sessions", "Search"]));
+  },
+};
+
 export const Visibility: Story = {
   render: () => <VisibilityStory />,
 };

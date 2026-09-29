@@ -233,6 +233,53 @@ test("renders the ticket tree inside the Sidenav resource section", async ({ pag
   await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
 });
 
+test("moves rows back into an emptied header or footer", async ({ page, request }) => {
+  const project = await createProject(request);
+  await waitForTicketsExtension(request, project.id);
+  await prepareDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}`);
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  const option = (name: string) => sidenav.getByRole("option", { name, exact: true });
+  const zone = sidenav.locator("[data-tree-list-empty-drop-zone]");
+  await expect(option("Tickets")).toBeVisible({ timeout: 30_000 });
+  const lowerHalfOf = (target: Locator) => async () => {
+    const box = (await target.boundingBox())!;
+    return box.y + box.height * 0.75;
+  };
+  const middleOf = (target: Locator) => async () => {
+    await expect(target).toHaveCount(1);
+    const box = (await target.boundingBox())!;
+    return box.y + box.height / 2;
+  };
+  const drag = async (source: Locator, targetY: () => Promise<number>) => {
+    const from = (await source.boundingBox())!;
+    await page.mouse.move(from.x + 40, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 40, from.y + from.height / 2 + 8, { steps: 4 });
+    await page.mouse.move(from.x + 40, await targetY(), { steps: 12 });
+    await expect(sidenav.locator("[data-tree-list-drop-indicator]")).toHaveCount(1);
+    await page.mouse.up();
+    // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click.
+    await page.waitForTimeout(100);
+  };
+  const top = async (target: Locator) => (await target.boundingBox())!.y;
+
+  await drag(option("Search"), lowerHalfOf(option("Tickets")));
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).not.toHaveAttribute(
+    "data-tree-list-node-id",
+    "search",
+  );
+  await expect(zone).toHaveCount(0);
+  await drag(option("Search"), middleOf(zone));
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
+
+  await drag(option("Settings"), lowerHalfOf(option("Tickets")));
+  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Tickets")));
+  expect(await top(option("Settings"))).toBeLessThan(await top(option("Scribble")));
+  await drag(option("Settings"), middleOf(zone));
+  expect(await top(option("Settings"))).toBeGreaterThan(await top(option("Scribble")));
+});
+
 test.describe("Dashboard Sidenav stories", () => {
   test.slow();
 

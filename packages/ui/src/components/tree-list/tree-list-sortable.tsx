@@ -32,6 +32,7 @@ interface SortableSectionGroupProps {
   onToggleNode?: (nodeId: string) => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
   indicator: TreeListDropIndicator | null;
+  dragging: boolean;
 }
 
 const SortableSectionGroup = (props: SortableSectionGroupProps) => {
@@ -48,6 +49,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
     onToggleNode,
     onSectionContextMenu,
     indicator,
+    dragging,
   } = props;
 
   const headerRow = sectionRows.find((row) => row.kind === "section-header");
@@ -82,6 +84,10 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
                 onContextMenu={onSectionContextMenu}
               />
             </Box>
+          ) : null}
+          {/* An empty bare section is invisible until a drag starts; then it offers a row-sized drop zone. */}
+          {dragging && !headerRow && nodeRows.length === 0 ? (
+            <Box h="tree-empty-drop-zone" data-tree-list-empty-drop-zone="" />
           ) : null}
           <SortableContext items={topLevelNodeIds} strategy={verticalListSortingStrategy}>
             <Stack gap={nodeGap} w="full" minW="0">
@@ -209,6 +215,7 @@ const SortableSections = (props: SortableSectionsProps) => {
               onToggleNode={rest.onToggleNode}
               onSectionContextMenu={rest.onSectionContextMenu}
               indicator={indicator}
+              dragging={Boolean(active)}
             />
             <SectionGap
               sectionId={section.id}
