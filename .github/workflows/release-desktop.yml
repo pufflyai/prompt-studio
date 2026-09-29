@@ -34,7 +34,7 @@ on:
         type: string
 
 concurrency:
-  group: desktop-release-${{ inputs.tag }}
+  group: desktop-release-diagnostics-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -63,18 +63,10 @@ jobs:
             arch: x64
             os: macos-15-intel
             essential_only: true
-          - target: linux-x64
-            platform: linux
-            arch: x64
-            os: ubuntu-latest
-          - target: win32-x64
-            platform: win32
-            arch: x64
-            os: windows-2025
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Isolate hosted Intel runner indexing
@@ -146,7 +138,7 @@ jobs:
       - name: Build signed macOS distributions
         if: matrix.platform == 'darwin'
         env:
-          DEBUG: electron-notarize*
+          DEBUG: electron-notarize*,electron-installer-dmg
           PSTDIO_DESKTOP_RELEASE: "1"
           MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
           APPLE_API_KEY: ${{ runner.temp }}/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
@@ -206,7 +198,7 @@ jobs:
         if: matrix.platform != 'linux'
         env:
           DEBUG: pw:api,pw:browser
-        run: bun run --cwd clients/desktop test:packaged ${{ matrix.essential_only && '--grep @essential' || '' }}
+        run: bun clients/desktop/scripts/profile-packaged-startup.ts
 
       - name: Smoke packaged Linux application
         if: matrix.platform == 'linux'
@@ -219,7 +211,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-readiness-${{ matrix.target }}
-          path: clients/desktop/test-results
+          path: |
+            clients/desktop/test-results
+            clients/desktop/startup-diagnostics
           if-no-files-found: error
           retention-days: 14
 
@@ -290,6 +284,7 @@ jobs:
         run: security delete-keychain "$KEYCHAIN_PATH" || true
 
   publish:
+    if: false
     needs: native
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -298,7 +293,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
