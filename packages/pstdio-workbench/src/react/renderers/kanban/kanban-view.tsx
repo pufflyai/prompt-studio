@@ -145,35 +145,41 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <Skeleton minH="12rem" w="full" />
   );
 
+  const readNotice = read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null;
+  if (provider && !viewsSource) {
+    return (
+      <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
+        {readNotice}
+        <Skeleton minH="12rem" w="full" />
+      </WorkbenchKanbanViewFrame>
+    );
+  }
+
   return (
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
-      {read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
-      {provider && !viewsSource ? (
-        <Skeleton minH="12rem" w="full" />
-      ) : (
-        <KanbanRenderer
-          viewsSource={viewsSource}
-          rows={rows}
-          contentPlaceholder={read.value ? undefined : contentPlaceholder}
-          storageKey={storageKey}
-          attributes={attributes}
-          defaultSettings={contribution.defaultSettings}
-          defaultFilters={contribution.defaultFilters}
-          defaultViews={contribution.defaultViews}
-          defaultActiveViewId={contribution.defaultActiveViewId}
-          emptyTitle={contribution.emptyTitle}
-          emptyDescription={contribution.emptyDescription}
-          getBoardColumnConfig={contribution.getBoardColumnConfig}
-          hideToolbar={contribution.hideToolbar}
-          onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
-          onAttributeChange={contribution.onAttributeChange}
-          onReorder={contribution.onReorder}
-          createRow={contribution.createRow}
-          onCreateRow={contribution.onCreateRow}
-          onColumnAction={contribution.onColumnAction}
-          getRowContextMenuActions={getRowContextMenuActions}
-        />
-      )}
+      {readNotice}
+      <KanbanRenderer
+        viewsSource={viewsSource}
+        rows={rows}
+        contentPlaceholder={read.value ? undefined : contentPlaceholder}
+        storageKey={storageKey}
+        attributes={attributes}
+        defaultSettings={contribution.defaultSettings}
+        defaultFilters={contribution.defaultFilters}
+        defaultViews={contribution.defaultViews}
+        defaultActiveViewId={contribution.defaultActiveViewId}
+        emptyTitle={contribution.emptyTitle}
+        emptyDescription={contribution.emptyDescription}
+        getBoardColumnConfig={contribution.getBoardColumnConfig}
+        hideToolbar={contribution.hideToolbar}
+        onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
+        onAttributeChange={contribution.onAttributeChange}
+        onReorder={contribution.onReorder}
+        createRow={contribution.createRow}
+        onCreateRow={contribution.onCreateRow}
+        onColumnAction={contribution.onColumnAction}
+        getRowContextMenuActions={getRowContextMenuActions}
+      />
     </WorkbenchKanbanViewFrame>
   );
 };

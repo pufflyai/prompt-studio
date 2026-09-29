@@ -120,18 +120,8 @@ const RenameViewDialog = (props: {
 };
 
 export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
-  const {
-    storageKey,
-    views,
-    viewsSource,
-    defaultViewId,
-    categories,
-    filters,
-    leading,
-    filterControl,
-    displayControl,
-    align = "split",
-  } = props;
+  const { storageKey, categories, filters, leading, filterControl, displayControl, align = "split" } = props;
+  const { views, viewsSource, defaultViewId } = props;
   const activeViewId = useKanbanRendererStore(storageKey, (state) => state.activeViewId);
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings);
   const activeView = views.find((view) => view.id === activeViewId);
