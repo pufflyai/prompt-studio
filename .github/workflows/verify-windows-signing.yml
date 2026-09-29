@@ -45,6 +45,12 @@ jobs:
 
       - name: Smoke signed packaged application
         run: bun run --cwd clients/desktop test:packaged
+      - name: "TEMPORARY: repeat detached process startups"
+        if: always()
+        run: |
+          Copy-Item clients/desktop/test-results/packaged-release-readiness.json clients/desktop/full-suite.json
+          bun run --cwd clients/desktop test:packaged src/e2e/packaged-detached-process.spec.ts --repeat-each 8 --output test-results/repeat
+          Move-Item clients/desktop/full-suite.json clients/desktop/test-results/full-suite.json
       - name: Verify installed Windows command
         run: bun clients/desktop/scripts/verify-windows-cli-install.ts
       - name: Upload evidence

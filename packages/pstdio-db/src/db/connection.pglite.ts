@@ -106,11 +106,14 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
   let pglite: PGlite | undefined;
   try {
     options?.onLockAcquired?.();
+    // Elapsed times since process start show which step spends the desktop readiness budget.
+    console.log(`[createDb] lock acquired at ${Math.round(performance.now())}ms`);
     const pgliteOpts = await resolvePgliteOptions();
+    console.log(`[createDb] PGlite options resolved at ${Math.round(performance.now())}ms`);
     pglite = openPglite(dbPath, pgliteOpts);
     const openedPglite = pglite;
     await openedPglite.waitReady;
-    console.log("[createDb] PGlite ready");
+    console.log(`[createDb] PGlite ready at ${Math.round(performance.now())}ms`);
 
     const db = drizzle(openedPglite, { schema });
     const migrationsFolder = await resolveMigrationsFolder();
@@ -132,6 +135,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       await prepareWorkspaceLocations(openedPglite);
       await removeSharedWorkspaceFolders(openedPglite, db, migrationsFolder);
       await migrate(db, { migrationsFolder });
+      console.log(`[createDb] migrations applied at ${Math.round(performance.now())}ms`);
     }
 
     let closed = false;
