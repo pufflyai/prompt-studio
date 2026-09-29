@@ -80,7 +80,6 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-dashboard",
     "pstdio-notes",
     "pstdio-planner",
-    "pstdio-planner-loops",
     "pstdio-reports",
     "pstdio-skills",
     "remote-workspaces",

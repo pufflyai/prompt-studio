@@ -298,11 +298,6 @@ describe("GET /v1/projects/:projectId/extensions", () => {
           },
           publisher: "pufflyai",
         }),
-        expect.objectContaining({
-          displayName: "Prompt Studio Planner Automation",
-          installName: "pstdio-planner-loops",
-          installed: false,
-        }),
       ]),
     );
     expect(body.marketplace.every((entry: Record<string, unknown>) => !("repositoryPath" in entry))).toBe(true);

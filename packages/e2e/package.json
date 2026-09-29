@@ -30,7 +30,6 @@
     "pstdio-extensions": "workspace:*",
     "pstdio-notes": "workspace:*",
     "pstdio-planner": "workspace:*",
-    "pstdio-planner-loops": "workspace:*",
     "pstdio-reports": "workspace:*",
     "pstdio-skills": "workspace:*",
     "pstdio-wt": "workspace:*",

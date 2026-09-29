@@ -7,7 +7,6 @@ const WORKING_TREE_EXTENSIONS = [
   ["pstdio-base-themes", "extensions/pstdio-base-themes"],
   ["pstdio-notes", "extensions/pstdio-notes"],
   ["pstdio-planner", "extensions/pstdio-planner"],
-  ["pstdio-planner-loops", ".pstdio/extensions/pstdio-planner-loops"],
   ["pstdio-reports", "extensions/pstdio-reports"],
   ["pstdio-skills", "extensions/pstdio-skills"],
   ["extension-lab", "extensions/extension-lab"],

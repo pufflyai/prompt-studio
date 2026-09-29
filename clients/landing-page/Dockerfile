@@ -12,7 +12,6 @@ COPY extensions extensions
 COPY infra/local/extensions infra/local/extensions
 COPY .pstdio/extensions/font-editor/package.json .pstdio/extensions/font-editor/package.json
 COPY .pstdio/extensions/pstdio-dev/package.json .pstdio/extensions/pstdio-dev/package.json
-COPY .pstdio/extensions/pstdio-planner-loops/package.json .pstdio/extensions/pstdio-planner-loops/package.json
 COPY scripts scripts
 
 RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/landing-page

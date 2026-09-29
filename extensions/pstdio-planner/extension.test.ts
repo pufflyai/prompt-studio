@@ -242,9 +242,7 @@ describe("pstdio planner workspace contributions", () => {
       rmSync(worktreePath, { recursive: true, force: true });
     }
   });
-  // Session-start ticket movement and loop automations live in the repo-local
-  // pstdio-planner-loops extension; the planner keeps only worktreeCreated and the
-  // blocked-notification hook.
+  // The planner keeps only worktreeCreated and the blocked-notification hook.
   test("contributes no session-start or git hooks", () => {
     expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
       "session-awaiting-input",

@@ -93,19 +93,6 @@
       "default": false
     },
     {
-      "installName": "pstdio-planner-loops",
-      "displayName": "Prompt Studio Planner Automation",
-      "description": "Repository-owned planner refinement, implementation, reconciliation, and review automation.",
-      "origin": {
-        "kind": "git",
-        "url": "https://github.com/pufflyai/prompt-studio",
-        "path": ".pstdio/extensions/pstdio-planner-loops",
-        "ref": "{hostRelease}"
-      },
-      "publisher": "pufflyai",
-      "default": false
-    },
-    {
       "installName": "pstdio-reports",
       "displayName": "Prompt Studio Reports",
       "description": "Workspace reports for agent handoffs.",
