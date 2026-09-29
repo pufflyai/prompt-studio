@@ -33,9 +33,9 @@ test("shows existing sessions immediately on the sessions aggregate", async () =
 
   openSessionsPage(workbench);
 
-  const sessionRows = (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
-    .flatMap((section) => section.nodes)
-    .find((node) => node.id === "workspace-sessions")?.children;
+  const sessionRows = (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav)).find(
+    (section) => section.id === "session-list",
+  )?.nodes;
 
   expect(sessionRows?.filter((node) => node.resource || node.target).map((node) => node.label)).toEqual([
     "Existing session",

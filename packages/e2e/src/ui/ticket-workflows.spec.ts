@@ -174,6 +174,7 @@ test("opens ticket action sessions and hides the lone Sessions page tab", async 
     await expect(sidePanel.locator('[data-testid="content-editable"][contenteditable="true"]:visible')).toBeVisible();
     await expect(page).toHaveURL(ticketUrl);
   }
+  await page.locator('[data-tree-list-node-id="navigation.back"]').click();
   await page.getByRole("option", { name: "Sessions", exact: true }).first().click();
   await page.getByRole("option", { name: /Break into sub-tickets:/ }).click();
   await expect(page).toHaveURL(new RegExp(`/session\\?resource=.*${sessionId}`));

@@ -24,7 +24,7 @@ import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { openResourceSessionPreview } from "./session-auto-open";
-import { createSessionsSidenavSections } from "./sessions-sidenav-tree";
+import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
 
 const SessionViewWidget = lazy(() =>
   import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionViewWidget })),
@@ -144,8 +144,7 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
     owner: { kind: "page", id: dashboardViews.sessions.id, extensionId: "pstdio" },
     sourceExtensionId: "pstdio",
     declarationIndex: 0,
-    getSections: () =>
-      createSessionsSidenavSections({ projectId: getDashboardSelectedProjectId(ctx), nodeTarget: "resource" }),
+    getSections: () => buildSessionsLevelSections(createDashboardSessions(getDashboardSelectedProjectId(ctx))),
   });
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.project-nav",
@@ -159,11 +158,7 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
     getSections: (_workbench, input) => {
       const workspace = input.resource?.type === "workspace" ? input.resource : undefined;
       if (!workspace) return [];
-      return createSessionsSidenavSections({
-        projectId: getDashboardSelectedProjectId(ctx),
-        workspace,
-        nodeTarget: "side",
-      });
+      return buildWorkspaceSessionsSections(createDashboardSessions(getDashboardSelectedProjectId(ctx)), workspace);
     },
   });
 };

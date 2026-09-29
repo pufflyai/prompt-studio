@@ -47,9 +47,9 @@ const composeSidenavSlot = async (
     sections.push(...(await ctx.navigationTrees.getSections(owner, slot, { resource: ownerResource, signal })));
   }
   signal?.throwIfAborted();
-  if (slot !== "content" || !level) return sections;
+  if (slot !== "header" || !level) return sections;
   const back = createNavigationBackNode(level, ctx.pageLocations.getLevelLocation(level.parent.key));
-  // A fixed, unlabelled first section keeps Back visible even when content sections are hidden or collapsed.
+  // A fixed, unlabelled first header section keeps Back at the very top, above Search, and out of reordering.
   return [{ id: "navigation.level", canHide: false, canReorder: false, nodes: [back] }, ...sections];
 };
 // Mode and page contributions share one host navigation view.

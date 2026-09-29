@@ -176,7 +176,7 @@ describe("registerDashboardSidenav", () => {
 });
 
 describe("dashboard sidenav levels", () => {
-  test("replaces mode content, preserves chrome, and refreshes siblings and inherited levels", async () => {
+  test("replaces mode content, pins Back above the header, and refreshes siblings and inherited levels", async () => {
     const wb = createWorkbench();
     wb.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     const home = registerModePage(wb, "project", "home");
@@ -204,24 +204,28 @@ describe("dashboard sidenav levels", () => {
     const target = (id: string) => ({ kind: "page" as const, page: ticket, resource: { type: "ticket", id } });
     wb.pageLocations.navigate(target("one"));
     const body = () => treeViewSections(wb, dashboardWidgetIds.dashboardSidenav);
-    expect((await body()).flatMap((s) => s.nodes).map((n) => n.id)).toEqual(["navigation.back", "one"]);
-    const back = (await body())[0]!.nodes[0]!;
-    expect(back.target).toEqual({ kind: "page", page: home });
-    wb.pageLocations.navigate(target("two"));
-    expect((await body())[1]!.nodes[0]!.id).toBe("two");
-    wb.pageLocations.navigate({ kind: "page", page: child, parent: target("two") });
-    expect((await body())[1]!.nodes[0]!.id).toBe("two");
-    for (const slot of ["header", "footer"] as const) {
+    const readSlot = (slot: "header" | "footer") => {
       const tree = treeViewBody(wb, dashboardWidgetIds.dashboardSidenav);
       const read = slot === "header" ? tree.getHeader : tree.getFooter;
-      const sections = await read!({
+      return read!({
         state: wb.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav),
         refresh: () => undefined,
         setSelectedNode: () => undefined,
       });
-      expect(sections[0]!.nodes[0]!.id).toBe(slot);
-    }
+    };
+    expect((await body()).flatMap((s) => s.nodes).map((n) => n.id)).toEqual(["one"]);
+    const header = await readSlot("header");
+    expect(header[0]).toMatchObject({ id: "navigation.level", canHide: false, canReorder: false });
+    expect(header.flatMap((s) => s.nodes).map((n) => n.id)).toEqual(["navigation.back", "header"]);
+    const back = header[0]!.nodes[0]!;
+    expect(back.target).toEqual({ kind: "page", page: home });
+    wb.pageLocations.navigate(target("two"));
+    expect((await body())[0]!.nodes[0]!.id).toBe("two");
+    wb.pageLocations.navigate({ kind: "page", page: child, parent: target("two") });
+    expect((await body())[0]!.nodes[0]!.id).toBe("two");
+    expect((await readSlot("footer"))[0]!.nodes[0]!.id).toBe("footer");
     await wb.navigation.openTarget(back.target!);
     expect((await body())[0]!.nodes[0]!.id).toBe("content");
+    expect((await readSlot("header")).flatMap((s) => s.nodes).map((n) => n.id)).toEqual(["header"]);
   });
 });

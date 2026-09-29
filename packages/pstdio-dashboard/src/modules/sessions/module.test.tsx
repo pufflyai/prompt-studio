@@ -33,17 +33,15 @@ describe("createSessionsModule", () => {
     const workspace = createDashboardResource("workspace", "workspace-1", "Workspace one", "GitBranch", "project-1");
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-1", "FileText", "project-1");
     workbench.registerModule(createSessionsModule());
-    const nodeIdsForContext = async (mode: string, resource?: typeof workspace) =>
-      (
-        await workbench.navigationTrees.getSections(
-          { kind: mode === "sessions" ? "page" : "mode", id: mode, extensionId: "pstdio" },
-          "content",
-          resource ? { resource } : {},
-        )
-      )
-        .flatMap((section) => section.nodes)
-        .map((node) => node.id);
-    expect(await nodeIdsForContext("sessions")).toContain("workspace-sessions");
+    const sections = (owner: "sessions" | "project", resource?: typeof workspace) =>
+      workbench.navigationTrees.getSections(
+        { kind: owner === "sessions" ? "page" : "mode", id: owner, extensionId: "pstdio" },
+        "content",
+        resource ? { resource } : {},
+      );
+    const nodeIdsForContext = async (owner: "project", resource?: typeof workspace) =>
+      (await sections(owner, resource)).flatMap((section) => section.nodes).map((node) => node.id);
+    expect((await sections("sessions")).map((section) => section.id)).toEqual(["session-list"]);
     expect(await nodeIdsForContext("project", workspace)).toContain("workspace-sessions");
     expect(await nodeIdsForContext("project", ticket)).not.toContain("workspace-sessions");
     expect(await nodeIdsForContext("project")).not.toContain("workspace-sessions");

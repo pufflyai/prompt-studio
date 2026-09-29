@@ -133,7 +133,11 @@ test("removes and restores owner-scoped collections across project and session p
   await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
   await expect(row(sidenav, "Search")).toBeVisible();
   await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
-  await expect(sidenav.locator('[data-tree-list-node-id="workspace-sessions"]')).toBeVisible();
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute(
+    "data-tree-list-node-id",
+    "navigation.back",
+  );
+  await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Settings", exact: true })).toBeVisible();

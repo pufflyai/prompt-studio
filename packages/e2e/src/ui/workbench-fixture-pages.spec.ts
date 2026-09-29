@@ -56,12 +56,13 @@ test("an extension page navigates through the public API and browser history", a
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
   const labFrame = page.frameLocator('iframe[title="Lab"]');
   await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible({ timeout: 30_000 });
-  await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
-  await expect(sidenav.getByRole("option", { name: /Session 1 — first contact/ })).toBeVisible();
+  await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
+  const selectedTape = sidenav.getByRole("option", { name: /Session 1 — first contact/ });
+  await expect(selectedTape).toBeVisible();
 
   const historyLength = await page.evaluate(() => window.history.length);
   for (let click = 0; click < 20; click += 1) {
-    await sidenav.getByRole("option", { name: "Lab", exact: true }).click();
+    await selectedTape.click();
   }
   expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
 
@@ -99,30 +100,6 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   await expect(page.getByRole("tab", { name: "Tickets", exact: true })).toHaveCount(0);
 });
 
-test("Sessions mode reuses project navigation without duplicate chrome", async ({ page, request }) => {
-  const project = await createProject(request);
-  await prepareDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}`);
-
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
-  await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toHaveCount(0);
-  await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
-
-  await sidenav.locator('[data-tree-list-node-id="sessions"]').click();
-
-  await expect(
-    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
-  ).toBeVisible();
-  await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
-  await expect(sidenav.locator('[data-tree-list-node-id="workspace-sessions"]')).toBeVisible();
-  await expect(sidenav.getByRole("option", { name: "Search", exact: true })).toBeVisible();
-  await expect(sidenav.getByRole("option", { name: /^Notifications(?:\s|$)/ })).toBeVisible();
-  await expect(sidenav.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
-  await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
-  await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
-});
-
 test("Lab replaces an active session page in main", async ({ page, request }) => {
   const project = await createProject(request);
   const sessionTitle = "Session replaced by Lab";
@@ -136,6 +113,7 @@ test("Lab replaces an active session page in main", async ({ page, request }) =>
   await expect(sidenav.getByRole("option", { name: sessionTitle, exact: true })).toBeVisible();
   await sidenav.getByRole("option", { name: sessionTitle, exact: true }).click();
   await expect(page.getByText(`Fake Agent: completed "${sessionTitle}"`).first()).toBeVisible({ timeout: 30_000 });
+  await sidenav.locator('[data-tree-list-node-id="navigation.back"]').click();
   await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
 
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);

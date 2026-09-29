@@ -48,6 +48,12 @@ test("Notes, Sessions and tickets retain their levels and return to the remember
   await expect(page).toHaveURL(ticketsUrl);
   await row("Sessions").click();
   await expect(back).toHaveText("Project");
+  // Back is pinned as the first header row, above Search.
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute(
+    "data-tree-list-node-id",
+    "navigation.back",
+  );
+  await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await row("Level session").click();
   await expect(page).toHaveURL(/\/session\?/);
   await expect(back).toBeVisible();
