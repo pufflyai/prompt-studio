@@ -27,6 +27,13 @@ Read this file before working on UI or design. Use these patterns across the app
 - Use one ellipsis, for example `project…n.ts` or `/Users/alex/…ssets`.
 - Make the full value available on hover and keyboard focus. Copy actions must copy the full value.
 
+## Backend connection
+
+- Show an amber Reconnecting indicator in the trailing status bar while the backend connection is lost.
+- Explain the connection loss and automatic retry in a tooltip available on hover and keyboard focus.
+- Keep loaded navigation visible. Connection failures do not show a view error banner.
+- Remove the warning when live sync reconnects. Ordinary view failures still show their error notice.
+
 ## Tabs
 
 - A Main view that supports only one resource has no close action or tab strip. Selecting another resource replaces its content.

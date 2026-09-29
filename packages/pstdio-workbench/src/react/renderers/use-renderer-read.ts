@@ -1,5 +1,7 @@
+import { PstdioConnectionError } from "@pstdio/sdk/client";
 import { useEffect, useRef, useState } from "react";
 import type { Disposable, RendererReadBinding, WorkbenchCore } from "../../core";
+import { useWorkbenchConnection } from "./workbench-connection-provider";
 
 interface RendererReadOptions<T> {
   workbench: WorkbenchCore;
@@ -18,6 +20,7 @@ interface ReadState<T> {
 
 export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   const { workbench, ownerKey, queryKey } = options;
+  const connected = useWorkbenchConnection();
   const [state, setState] = useState<ReadState<T>>({ queryKey, loading: true });
   const retryRef = useRef<(() => void) | undefined>(undefined);
   const callbacks = useRef(options);
@@ -26,6 +29,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   });
   // Query identity controls ownership. Rendering a new callback must not start another read.
   useEffect(() => {
+    if (!connected) return;
     const binding: RendererReadBinding = workbench.views.reads.bind(ownerKey);
     let hasCompletedRead = false;
     const request = {
@@ -39,13 +43,17 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
         hasCompletedRead = true;
         setState({ queryKey, value, loading: false });
       },
-      onError: (error: unknown) =>
+      onError: (error: unknown) => {
+        const connectionLost = error instanceof PstdioConnectionError;
+        const message = error instanceof Error ? error.message : String(error);
         setState((previous) => ({
           queryKey,
           value: previous.queryKey === queryKey ? previous.value : undefined,
-          loading: false,
-          error: error instanceof Error ? error.message : String(error),
-        })),
+          loading: connectionLost && !(previous.queryKey === queryKey && previous.value),
+          // The host reports connection loss once, outside individual views.
+          error: connectionLost ? undefined : message,
+        }));
+      },
     };
     const refresh = () => binding.request(request);
     retryRef.current = () => {
@@ -60,7 +68,12 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
       if (typeof subscription === "function") subscription();
       else subscription.dispose();
     };
-  }, [workbench, ownerKey, queryKey]);
+  }, [workbench, ownerKey, queryKey, connected]);
   const current = state.queryKey === queryKey ? state : { queryKey, loading: true };
-  return { ...current, retry: () => retryRef.current?.() };
+  return {
+    ...current,
+    error: connected ? current.error : undefined,
+    loading: current.loading || (!connected && current.value === undefined),
+    retry: () => retryRef.current?.(),
+  };
 };

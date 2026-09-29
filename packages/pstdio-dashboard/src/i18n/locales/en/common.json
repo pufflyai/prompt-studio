@@ -1,4 +1,7 @@
 {
+  "connection": {
+    "lost": "Backend connection lost. Reconnecting automatically."
+  },
   "buttons": {
     "save": "Save",
     "cancel": "Cancel",

@@ -108,7 +108,7 @@ const createHeartbeatMonitor = (input: { intervalMs: number; threshold: number; 
     start: () => {
       timer = setInterval(() => {
         missedHeartbeats += 1;
-        if (missedHeartbeats >= input.threshold) {
+        if (missedHeartbeats === input.threshold) {
           input.onConnectionLost?.();
         }
       }, input.intervalMs);
@@ -133,10 +133,16 @@ export const createSyncClient = (clientOptions: ClientOptions): SyncClient => ({
     const heartbeatMonitor = createHeartbeatMonitor({
       intervalMs: input.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS,
       threshold: input.heartbeatThreshold ?? DEFAULT_HEARTBEAT_THRESHOLD,
-      onConnectionLost: input.onConnectionLost,
+      onConnectionLost: () => {
+        heartbeatMonitor.recordHeartbeat();
+        setDisconnected();
+        input.onConnectionLost?.();
+        abortController?.abort();
+      },
     });
 
     const setConnected = () => {
+      heartbeatMonitor.recordHeartbeat();
       const wasConnected = state.connected;
       state.connected = true;
       if (!wasConnected) input.onConnected?.();
@@ -178,8 +184,8 @@ export const createSyncClient = (clientOptions: ClientOptions): SyncClient => ({
       abortController = new AbortController();
       try {
         await readConnection(abortController.signal);
-      } catch (err) {
-        if (closed || (err as Error).name === "AbortError") return;
+      } catch {
+        if (closed) return;
       }
 
       if (closed) return;
