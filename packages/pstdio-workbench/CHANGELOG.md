@@ -1,5 +1,18 @@
 # @pstdio/workbench
 
+## 0.37.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- 498fa1f: Require explicit navigation and resource removal on extension API alpha.14.
+
+### Patch Changes
+
+- 4ec57a5: Keep shared navigation mounted during selection changes, support project-scoped extension navigation, and show settings entries as their data becomes available.
+- d0b80f6: Keep controls Apply clear of the side panel button and save edited numbers on blur.
+
 ## 0.36.1
 
 _2026-09-28_

@@ -1,5 +1,14 @@
 # harness-claude-code
 
+## 0.37.0
+
+_2026-09-29_
+
+### Patch Changes
+
+- 9ef96aa: Declare compatibility with explicit navigation and resource removal on extension API alpha.14.
+- c0dff06: Match thinking-level icons to planner priority colors and use a flame for Max.
+
 ## 0.36.1
 
 _2026-09-28_
