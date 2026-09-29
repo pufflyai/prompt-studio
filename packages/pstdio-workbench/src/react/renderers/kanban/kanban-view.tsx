@@ -148,14 +148,6 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
       {read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <KanbanRenderer
-        toolbarActions={
-          <ViewToolbarActions
-            workbench={workbench}
-            actions={contribution.toolbarActions}
-            context={{ resource: placement.resource }}
-            renderParamField={props.renderParamField}
-          />
-        }
         rows={rows}
         contentPlaceholder={read.value ? undefined : contentPlaceholder}
         storageKey={storageKey}
@@ -175,6 +167,14 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         onCreateRow={contribution.onCreateRow}
         onColumnAction={contribution.onColumnAction}
         getRowContextMenuActions={getRowContextMenuActions}
+        toolbarActions={
+          <ViewToolbarActions
+            workbench={workbench}
+            actions={contribution.toolbarActions}
+            context={{ resource: placement.resource }}
+            renderParamField={props.renderParamField}
+          />
+        }
       />
     </WorkbenchKanbanViewFrame>
   );

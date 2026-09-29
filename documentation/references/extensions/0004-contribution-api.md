@@ -179,29 +179,6 @@ Workspace resources use the host project mode. Target workspace actions with
 
 See [Dashboard UI attachments](0013-workbench-attachments.md) and [Extension modes](0009-modes-and-layout.md) for the current product contract.
 
-## Appearance Contributions
-
-Themes and file icon themes use contribution arrays. Define each theme with a
-local ID and register the returned definition. Use its typed ref for a mode's
-`defaultTheme`.
-
-```ts
-import { defineExtension, defineTheme, packageAsset } from "@pstdio/sdk/extensions";
-
-const monokai = defineTheme({
-  id: "monokai",
-  title: "Monokai",
-  format: "vscode-color-theme",
-  mode: "dark",
-  source: packageAsset("./themes/monokai.json", import.meta.url),
-});
-
-export default defineExtension({ themes: [monokai] });
-```
-
-The runtime qualifies the ref with the extension owner. For publisher `acme` and
-package `planner`, the theme ID is `acme.planner.theme.monokai`.
-
 ## Native view toolbar actions
 
 Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
@@ -239,3 +216,27 @@ arguments. An input schema opens the command dialog. It supports
 Use `presentation: "primary"` for the main action and `"secondary"` for other
 actions. Secondary is the default. More than one primary action produces a
 warning, and an unknown command produces an error diagnostic.
+
+
+## Appearance Contributions
+
+Themes and file icon themes use contribution arrays. Define each theme with a
+local ID and register the returned definition. Use its typed ref for a mode's
+`defaultTheme`.
+
+```ts
+import { defineExtension, defineTheme, packageAsset } from "@pstdio/sdk/extensions";
+
+const monokai = defineTheme({
+  id: "monokai",
+  title: "Monokai",
+  format: "vscode-color-theme",
+  mode: "dark",
+  source: packageAsset("./themes/monokai.json", import.meta.url),
+});
+
+export default defineExtension({ themes: [monokai] });
+```
+
+The runtime qualifies the ref with the extension owner. For publisher `acme` and
+package `planner`, the theme ID is `acme.planner.theme.monokai`.
