@@ -36,10 +36,12 @@ export const runAttemptCommand = defineCommand({
   ],
   params: {
     ...ticketActionParams,
-    base: params.text({ label: "Base revision", defaultValue: "HEAD" }),
+    // Attempts review and merge Git commits, so only a Git worktree can run one.
+    workspace: params.workspace({ label: "Workspace", providers: ["pstdio.worktree"] }),
   },
   async run(ctx, commandParams) {
     const { agent } = commandParams;
+    const chosenBase = commandParams.workspace?.params?.base;
     const ticketRef = resolveTicket(ctx, commandParams);
     const ticketIdentity = await resolveTicketIdentity(ctx, ticketRef);
     const claims = launchClaimsCollection(ctx.storage);
@@ -60,7 +62,9 @@ export const runAttemptCommand = defineCommand({
     }
 
     try {
-      const { readiness } = await loadAttemptReadiness(ctx, ticketRef, commandParams);
+      const { readiness } = await loadAttemptReadiness(ctx, ticketRef, {
+        base: typeof chosenBase === "string" ? chosenBase : undefined,
+      });
       if (readiness.decision === "wait") {
         const storedTicket = await findTicket(ctx.storage, ticketRef);
         if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {

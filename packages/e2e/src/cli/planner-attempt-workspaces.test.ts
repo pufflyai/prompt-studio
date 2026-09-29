@@ -106,7 +106,7 @@ describe("planner attempt workspaces", () => {
         source: "api",
         params: {
           agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
-          base: "HEAD",
+          workspace: { providerId: "pstdio.worktree", params: { base: "HEAD" } },
         },
         resource: {
           type: "ticket",

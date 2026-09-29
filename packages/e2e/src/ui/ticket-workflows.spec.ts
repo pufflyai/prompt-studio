@@ -180,3 +180,33 @@ test("opens ticket action sessions and hides the lone Sessions page tab", async 
   await expect(page.getByRole("tab", { name: "Session", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Close Session", exact: true })).toHaveCount(0);
 });
+
+test("Run attempt starts from the chosen base branch", async ({ page, fixture }) => {
+  const git = (...args: string[]) => execFileSync("git", ["-C", fixture.repo, ...args], { encoding: "utf8" }).trim();
+  git("checkout", "-q", "-b", "feature/base");
+  writeFileSync(resolve(fixture.repo, "base.txt"), "Base branch\n");
+  git("add", "base.txt");
+  git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "base");
+  const baseSha = git("rev-parse", "HEAD");
+  git("checkout", "-q", "main");
+
+  await openTicket(page, fixture.project.id);
+  await page
+    .getByRole("button", { name: `Actions for ${fixture.ticket.shorthand} Ticket workflow`, exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: "Run attempt", exact: true }).click();
+  const dialog = page.getByRole("dialog").filter({ has: page.getByText("Run attempt", { exact: true }) });
+  await expect(dialog.getByRole("button", { name: "Git worktree", exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "main", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "feature/base", exact: true }).click();
+  const response = page.waitForResponse(
+    (response) => response.request().method() === "POST" && response.url().includes("command.run-attempt/execute"),
+  );
+  await dialog.getByRole("button", { name: "Run", exact: true }).click();
+  const outcome = (await (await response).json()).outcome;
+  expect(outcome.ok).toBe(true);
+  expect(outcome.value.decision).toBe("started");
+  expect(
+    execFileSync("git", ["-C", outcome.value.workspace.root_path, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  ).toBe(baseSha);
+});
