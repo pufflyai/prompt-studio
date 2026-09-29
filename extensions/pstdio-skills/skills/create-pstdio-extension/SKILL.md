@@ -56,8 +56,6 @@ metadata:
 
 ## References
 
-- [references/native-actions.md](references/native-actions.md) - native toolbar commands and command-backed choices.
-
 - [references/extension-api.md](references/extension-api.md) - package manifest, contribution types, ids, context APIs, and asset rules.
 - [references/host-storage-and-workspaces.md](references/host-storage-and-workspaces.md) - harness state, worktree cleanup, workspace identity, and repo file storage.
 - [references/examples.md](references/examples.md) - compact examples for common extension use cases.

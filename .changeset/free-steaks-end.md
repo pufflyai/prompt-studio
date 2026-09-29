@@ -1,7 +1,6 @@
 ---
 "@pstdio/workbench": minor
 "pstdio": minor
-"pstdio-skills": patch
 "@pstdio/sdk": minor
 "@pstdio/ui": minor
 ---

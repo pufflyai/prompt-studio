@@ -47,7 +47,6 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
       files: expect.arrayContaining([
         expect.objectContaining({ path: "SKILL.md" }),
         expect.objectContaining({ path: "references/extension-api.md" }),
-        expect.objectContaining({ path: "references/native-actions.md" }),
         expect.objectContaining({ path: "references/examples.md" }),
         expect.objectContaining({ path: "references/examples/scribble.ts" }),
         expect.objectContaining({ path: "references/examples/zipline.ts" }),
