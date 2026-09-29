@@ -97,6 +97,8 @@ export interface TreeViewSection {
   /** Host-owned customization boundary. Extension callbacks cannot set it. */
   moveScope?: string;
   label?: string;
+  /** Names a section without a visible header in the customize menu. */
+  menuLabel?: string;
   actions?: TreeAction[];
   collapsible?: boolean;
   emptyState?: TreeSectionEmptyState;

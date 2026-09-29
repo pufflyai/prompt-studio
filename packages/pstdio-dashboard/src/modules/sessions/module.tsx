@@ -18,7 +18,10 @@ import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
+import {
+  dashboardNavigationSections,
+  registerDashboardNavigationContribution,
+} from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
@@ -149,7 +152,7 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.project-nav",
     modes: ["project"],
-    getSections: () => [{ id: "navigation.root", nodes: [createSessionsNavigationNode()] }],
+    getSections: () => [{ ...dashboardNavigationSections.root, nodes: [createSessionsNavigationNode()] }],
   });
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.list",

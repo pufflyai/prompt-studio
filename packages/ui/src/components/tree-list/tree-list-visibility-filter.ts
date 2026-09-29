@@ -94,6 +94,7 @@ const visibilityEndContent = (effective: VisibilityOverride, options: BuildMenuO
 
 const buildSectionAction = (
   section: TreeListSection,
+  label: string,
   sectionOverrides: Record<string, VisibilityOverride>,
   actions: TreeVisibilityMenuActions,
   options: BuildMenuOptions,
@@ -102,7 +103,7 @@ const buildSectionAction = (
   const effective = resolveVisibility(sectionOverrides[section.id], hiddenByDefault);
   return {
     key: `section:${section.id}`,
-    label: section.label ?? section.id,
+    label,
     onClick: () => actions.onToggleSection(section.id, hiddenByDefault),
     endContent: visibilityEndContent(effective, options),
   };
@@ -150,8 +151,10 @@ export const buildTreeVisibilityMenuActions = (
   const actionsForSections = (sections: TreeListSection[]) => {
     const sectionActions: ResourceContextAction[] = [];
     for (const section of sections) {
-      if (isCustomizable(section)) {
-        sectionActions.push(buildSectionAction(section, sectionOverrides, actions, options));
+      // Without a name, a section toggle would show its internal id; its rows keep their own toggles.
+      const label = section.label ?? section.menuLabel;
+      if (label && isCustomizable(section)) {
+        sectionActions.push(buildSectionAction(section, label, sectionOverrides, actions, options));
       }
       // Top-level rows that opt in (e.g. a "Tickets" nav entry) are hideable too; their leaf
       // children are not visited, so files/sessions inside a category stay non-hideable.

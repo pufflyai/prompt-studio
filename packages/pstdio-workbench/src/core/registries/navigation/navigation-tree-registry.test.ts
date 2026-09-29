@@ -138,6 +138,31 @@ describe("navigation tree registry", () => {
     expect(section?.nodes[0]?.children?.[0]?.moveScope).toBe("mode:pstdio:project");
   });
 
+  test("keeps page-owned level rows fixed while their sections stay hideable", async () => {
+    const registry = createNavigationTreeRegistry();
+    const notesPage = { kind: "page" as const, id: "notes", extensionId: "notes" };
+    registry.registerContribution({
+      id: "notes.list",
+      owner: notesPage,
+      sourceExtensionId: "notes",
+      declarationIndex: 0,
+      getSections: () => [
+        {
+          id: "notes",
+          label: "Notes",
+          nodes: [
+            { id: "note", label: "Note" },
+            { id: "pinned", label: "Pinned", canHide: true },
+          ],
+        },
+      ],
+    });
+
+    const section = (await registry.getSections(notesPage, "content"))[0];
+    expect(section?.canHide).toBe(true);
+    expect(section?.nodes.map((node) => node.canHide)).toEqual([false, true]);
+  });
+
   test("keeps projected tree ids separate and delegates lazy children to their source", async () => {
     const registry = createNavigationTreeRegistry();
     const sourceNode = { id: "folder", label: "Folder", collapsible: true };

@@ -168,6 +168,9 @@ test("customizes the Sidenav from any point and persists section visibility", as
   const workspacesToggle = page.getByRole("menuitem", { name: /Workspaces/ });
   await expect(searchToggle).toBeVisible();
   await expect(workspacesToggle).toBeVisible();
+  for (const name of ["Header", "Navigation", "Footer"]) {
+    await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
+  }
   await workspacesToggle.click();
   await expect(row(sidenav, "Workspaces")).toBeVisible();
   await searchToggle.click();

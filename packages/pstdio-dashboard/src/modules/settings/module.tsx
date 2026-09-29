@@ -6,7 +6,10 @@ import {
 } from "@pstdio/workbench";
 import { createWorkbenchSettingsModule, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
-import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
+import {
+  dashboardNavigationSections,
+  registerDashboardNavigationContribution,
+} from "@/shared/workbench/dashboard-navigation-contribution";
 import { toDisposables } from "@/shared/workbench/disposable";
 import { dashboardSettingsDefaultPanel, registerDashboardSettingsContributions } from "./settings-contributions";
 
@@ -27,7 +30,7 @@ const registerSettingsSidenavs = (ctx: WorkbenchModuleContext) => {
     id: "dashboard.settings.footer",
     modes: ["project"],
     slot: "footer",
-    getSections: () => [{ id: "navigation.footer", nodes: [createSettingsFooterNode()] }],
+    getSections: () => [{ ...dashboardNavigationSections.footer, nodes: [createSettingsFooterNode()] }],
   });
 };
 

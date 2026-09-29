@@ -217,6 +217,20 @@ describe("buildTreeVisibilityMenuActions", () => {
     expect(actions.map((action) => action.key)).toEqual(["node:tickets", "__reset-visibility"]);
   });
 
+  test("names headerless sections by their menu label and leaves unnamed sections out", () => {
+    const actions = buildTreeVisibilityMenuActions(
+      {
+        headerSections: [{ id: "header", menuLabel: "Header", canHide: true, nodes: [] }],
+        sections: [{ id: "unnamed", canHide: true, nodes: [{ id: "row", label: "Row", canHide: true }] }],
+      },
+      {},
+      {},
+      noopActions,
+      options,
+    );
+    expect(actions.map((action) => action.label)).toEqual(["Header", "Row", "Reset to default"]);
+  });
+
   test("shows the eye on visible entries and eye-off on hidden entries", () => {
     const actions = buildTreeVisibilityMenuActions({ sections }, {}, {}, noopActions, options);
     const findKey = (key: string) => actions.find((a) => a.key === key);
