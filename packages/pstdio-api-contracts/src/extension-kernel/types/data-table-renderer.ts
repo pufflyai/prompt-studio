@@ -4,6 +4,7 @@ import type { RendererCallback } from "./context";
 import type { JsonValue, Struct } from "./json";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
+import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export type DataTableRendererResourceRef = ResourceRef;
 
@@ -73,6 +74,7 @@ export interface DataTableRendererSelectionAction<TParams extends Struct = Struc
 export type DataTableRendererRowActivationHandler = RendererCallback<{ row: DataTableRendererRow }, void>;
 
 export interface DataTableRendererContribution extends RendererContributionBase {
+  toolbarActions?: ViewToolbarAction[];
   columns?: DataTableRendererColumn[];
   query: RendererCallback<DataTableRendererQueryParams, DataTableRendererQueryResult>;
   selectionMode?: "none" | "multiple";

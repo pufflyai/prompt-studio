@@ -16,6 +16,7 @@ import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-dia
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
+import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -223,11 +224,13 @@ test(
       const extensionSource = writeExtensionWithDependency(tempRoot, `1.0.0-alpha.13 || ${EXTENSION_API_VERSION}`);
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
       const navigationProbe = writeNavigationExtension(tempRoot);
+      const nativeActions = writeNativeActionsExtension(tempRoot);
       const started = await startPackagedServe(tempRoot, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
+          { source: nativeActions, installName: "native-actions" },
         ]),
         HTTPS_PROXY: "http://127.0.0.1:9",
         NPM_CONFIG_REGISTRY: "http://127.0.0.1:9",
@@ -258,6 +261,11 @@ test(
       expect(extension).toMatchObject({
         enabled: true,
         name: "dep-ext",
+      });
+      await expectPackagedNativeActions({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
       });
       await expectPackagedNavigation({
         baseUrl: started.baseUrl,

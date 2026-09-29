@@ -15,7 +15,7 @@ import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections"
 import type { ExtensionNetApi, ExtensionProcessApi } from "./context";
 import type { ContributionDefinition } from "./contribution-identity";
 import type { MaybePromise } from "./json";
-import type { BooleanParam, SelectParam } from "./params";
+import type { BooleanParam, ParamOption, SelectParam } from "./params";
 
 export type { AgentModel } from "../../agents";
 export type {
@@ -97,7 +97,9 @@ export interface HarnessSkillsLayout {
 /** A reattach error is permanent unless the provider explicitly marks it retryable. */
 export type RetryableHarnessReattachError = Error & { readonly retryable: true };
 
-export type HarnessParamDescriptor = SelectParam | BooleanParam;
+export type HarnessParamDescriptor =
+  | (Omit<SelectParam, "options" | "allowCustomValues"> & { options: ParamOption[] })
+  | BooleanParam;
 export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
 
 /**

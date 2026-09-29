@@ -19,6 +19,7 @@ export type WorkbenchCommandExecutionErrorListener = (event: WorkbenchCommandExe
 
 export interface WorkbenchCommandExecutionContext {
   resource?: ResourceRef;
+  signal?: AbortSignal;
   source?: "panel-add";
 }
 
@@ -28,13 +29,21 @@ export interface CommandParamOption {
   icon?: string;
 }
 
+export interface CommandParamOptionSource {
+  commandId: string;
+  valueField: string;
+  labelField: string;
+  params?: Record<string, unknown>;
+}
+
 export interface CommandParamDescriptor {
   type: string;
   label?: string;
   description?: string;
   required?: boolean;
   defaultValue?: unknown;
-  options?: CommandParamOption[];
+  options?: CommandParamOption[] | CommandParamOptionSource;
+  allowCustomValues?: boolean;
   templateType?: string;
   resourceType?: string;
   /** Workspace provider ids a `workspace` param may offer. */

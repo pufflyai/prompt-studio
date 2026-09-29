@@ -201,3 +201,41 @@ export default defineExtension({ themes: [monokai] });
 
 The runtime qualifies the ref with the extension owner. For publisher `acme` and
 package `planner`, the theme ID is `acme.planner.theme.monokai`.
+
+## Native view toolbar actions
+
+Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
+visible when a query returns no rows. Use them for commands such as creating a
+record or starting an experiment.
+
+```ts
+const experiments = defineView({
+  id: "experiments",
+  title: "Experiments",
+  body: {
+    kind: "dataTable",
+    query: () => ({ rows: [] }),
+    toolbarActions: [{
+      id: "run",
+      label: "Run experiment",
+      icon: "play",
+      presentation: "primary",
+      command: runExperiment.ref,
+      params: { source: "experiments" },
+      input: { name: params.text({ required: true }) },
+      submitLabel: "Start experiment",
+    }],
+  },
+});
+```
+
+Actions use the shared command path and current resource context. `params`
+provides static arguments; values collected by `input` override matching static
+arguments. An input schema opens the command dialog. It supports
+[command-backed choices](0003-command-and-process-api.md#command-backed-choices).
+`when` uses the workbench context expression to control visibility, and
+`disabled` disables an action. Command visibility and enablement still apply.
+
+Use `presentation: "primary"` for the main action and `"secondary"` for other
+actions. Secondary is the default. More than one primary action produces a
+warning, and an unknown command produces an error diagnostic.

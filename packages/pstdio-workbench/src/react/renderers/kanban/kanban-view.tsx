@@ -16,14 +16,17 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
+import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { useRendererRead } from "../use-renderer-read";
+import { ViewToolbarActions } from "../view-toolbar-actions";
 import { bindReactKanbanPresentation } from "./kanban-presentation";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 
 interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
+  renderParamField?: CommandParamFieldRenderer;
   contribution: RegisteredKanbanRendererContribution;
   placement: WorkbenchPanelInstance;
 }
@@ -145,6 +148,14 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
       {read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <KanbanRenderer
+        toolbarActions={
+          <ViewToolbarActions
+            workbench={workbench}
+            actions={contribution.toolbarActions}
+            context={{ resource: placement.resource }}
+            renderParamField={props.renderParamField}
+          />
+        }
         rows={rows}
         contentPlaceholder={read.value ? undefined : contentPlaceholder}
         storageKey={storageKey}

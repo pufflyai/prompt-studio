@@ -24,6 +24,7 @@ import { regionSettingsSchema, workbenchPlacementPresentationSchema } from "./pl
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import { placementItemSchema } from "./resource-binding-metadata";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
+import { viewToolbarActionSchema } from "./view-toolbar-action";
 
 const contributionRefSchema = <Kind extends string>(kind: Kind) =>
   z.object({ extensionId: z.string(), kind: z.literal(kind), id: z.string() });
@@ -89,18 +90,20 @@ const controlsBodySchema = extensionControlsRendererRecordSchema
   .omit(rendererBaseOmissions)
   .extend({ kind: z.literal("controls") });
 const kanbanBodySchema = extensionKanbanRendererRecordSchema
-  .omit({ ...rendererBaseOmissions, createRow: true, rowActions: true })
+  .omit({ ...rendererBaseOmissions, createRow: true, rowActions: true, toolbarActions: true })
   .extend({
     kind: z.literal("kanban"),
     createRow: kanbanCreateRowSchema.optional(),
     rowActions: z.array(commandActionSchema).optional(),
+    toolbarActions: z.array(viewToolbarActionSchema.extend({ command: commandRefSchema })).optional(),
   });
 const dataTableBodySchema = extensionDataTableRendererRecordSchema
-  .omit({ ...rendererBaseOmissions, selectionActions: true, rowActions: true })
+  .omit({ ...rendererBaseOmissions, selectionActions: true, rowActions: true, toolbarActions: true })
   .extend({
     kind: z.literal("dataTable"),
     selectionActions: z.array(commandActionSchema).optional(),
     rowActions: z.array(commandActionSchema).optional(),
+    toolbarActions: z.array(viewToolbarActionSchema.extend({ command: commandRefSchema })).optional(),
   });
 
 export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [

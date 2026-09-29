@@ -211,82 +211,85 @@ const DatasetDataTable = (props: DataTableProps) => {
         storageKey={resolvedToolbarStorageKey}
         attributes={rendererAttributes}
         columnControl={columnControl}
+        actions={props.toolbarActions}
         defaultViews={props.defaultViews}
         defaultActiveViewId={props.defaultActiveViewId}
       />
-      <Box position="relative" flex="1" minHeight="0">
-        <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
-          <Table.Root
-            className={`data-table${fullWidth ? " full-width" : ""}`}
-            style={{ ...columnSizeVars, width: fullWidth ? "100%" : table.getTotalSize() }}
-          >
-            <Table.Header>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <Fragment key={headerGroup.id}>
-                  <Table.Row
-                    className="data-table-column-header-row"
-                    borderRight={noBorder ? "none" : "1px solid"}
-                    borderColor="border.subtle"
-                  >
-                    {headerGroup.headers.map((header) => (
-                      <DataTableColumnHeader
-                        key={header.id}
-                        header={header}
-                        headerGroup={headerGroup}
-                        table={table}
-                        fullWidth={fullWidth}
-                        hasDescription={Boolean(columnDescriptions?.[header.column.id])}
-                      />
-                    ))}
-                  </Table.Row>
-                  {columnStats && showStats ? (
-                    <Suspense fallback={null}>
-                      <DataTableStatsRow
-                        headerGroup={headerGroup}
-                        rows={filteredData}
-                        columnStats={columnStats}
-                        noBorder={noBorder}
-                        fullWidth={fullWidth}
-                      />
-                    </Suspense>
-                  ) : null}
-                </Fragment>
-              ))}
-            </Table.Header>
-            <Table.Body>
-              {table.getRowModel().rows.map((row) => {
-                const rowIsInteractive = onRowClick ? (isRowInteractive?.(row.original) ?? true) : false;
-                const rowIsActive = shouldHighlightActiveRow({ enableRowActivation, activeRowId, rowId: row.id });
-                const rowIsSelected = row.getIsSelected();
+      {props.contentPlaceholder ?? (
+        <Box position="relative" flex="1" minHeight="0">
+          <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
+            <Table.Root
+              className={`data-table${fullWidth ? " full-width" : ""}`}
+              style={{ ...columnSizeVars, width: fullWidth ? "100%" : table.getTotalSize() }}
+            >
+              <Table.Header>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <Fragment key={headerGroup.id}>
+                    <Table.Row
+                      className="data-table-column-header-row"
+                      borderRight={noBorder ? "none" : "1px solid"}
+                      borderColor="border.subtle"
+                    >
+                      {headerGroup.headers.map((header) => (
+                        <DataTableColumnHeader
+                          key={header.id}
+                          header={header}
+                          headerGroup={headerGroup}
+                          table={table}
+                          fullWidth={fullWidth}
+                          hasDescription={Boolean(columnDescriptions?.[header.column.id])}
+                        />
+                      ))}
+                    </Table.Row>
+                    {columnStats && showStats ? (
+                      <Suspense fallback={null}>
+                        <DataTableStatsRow
+                          headerGroup={headerGroup}
+                          rows={filteredData}
+                          columnStats={columnStats}
+                          noBorder={noBorder}
+                          fullWidth={fullWidth}
+                        />
+                      </Suspense>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </Table.Header>
+              <Table.Body>
+                {table.getRowModel().rows.map((row) => {
+                  const rowIsInteractive = onRowClick ? (isRowInteractive?.(row.original) ?? true) : false;
+                  const rowIsActive = shouldHighlightActiveRow({ enableRowActivation, activeRowId, rowId: row.id });
+                  const rowIsSelected = row.getIsSelected();
 
-                return (
-                  <DataTableBodyRow
-                    key={row.id}
-                    row={row}
-                    noBorder={noBorder}
-                    rowIsInteractive={rowIsInteractive}
-                    rowIsActive={rowIsActive}
-                    rowIsSelected={rowIsSelected}
-                    wrapRows={wrapRows}
-                    onRowClick={onRowClick}
-                    getCellContextMenuActions={getCellContextMenuActions}
-                  />
-                );
-              })}
-            </Table.Body>
-          </Table.Root>
-        </ScrollArea>
-        {enableSelection && selectedRows.length > 0 ? (
-          <SelectionToolbar
-            selectedCount={selectedRows.length}
-            totalCount={allRows.length}
-            onClearSelection={() => table.toggleAllRowsSelected(false)}
-            onSelectAll={() => table.toggleAllRowsSelected(true)}
-            actions={selectionActions}
-            selectedRows={selectedOriginalRows}
-          />
-        ) : null}
-      </Box>
+                  return (
+                    <DataTableBodyRow
+                      key={row.id}
+                      row={row}
+                      noBorder={noBorder}
+                      rowIsInteractive={rowIsInteractive}
+                      rowIsActive={rowIsActive}
+                      rowIsSelected={rowIsSelected}
+                      wrapRows={wrapRows}
+                      onRowClick={onRowClick}
+                      getCellContextMenuActions={getCellContextMenuActions}
+                    />
+                  );
+                })}
+              </Table.Body>
+            </Table.Root>
+          </ScrollArea>
+          {enableSelection && selectedRows.length > 0 ? (
+            <SelectionToolbar
+              selectedCount={selectedRows.length}
+              totalCount={allRows.length}
+              onClearSelection={() => table.toggleAllRowsSelected(false)}
+              onSelectAll={() => table.toggleAllRowsSelected(true)}
+              actions={selectionActions}
+              selectedRows={selectedOriginalRows}
+            />
+          ) : null}
+        </Box>
+      )}
       {table.getPageCount() > 1 && (
         <DatasetPagination table={table} pagination={pagination} pageSizeOptions={pageSizeOptions} />
       )}

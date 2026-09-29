@@ -28,6 +28,7 @@ import {
   toCreateFields,
   toWorkbenchRow,
 } from "./kanban-renderer-contribution-helpers";
+import { mapViewToolbarActions } from "./view-toolbar-actions";
 
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
 
@@ -259,6 +260,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         body: {
           kind: "kanban",
           resourceKind: record.resourceKind,
+          toolbarActions: mapViewToolbarActions(record),
           storageScope: context.projectId,
           attributes: attributes.source,
           defaultSettings: record.defaultSettings,

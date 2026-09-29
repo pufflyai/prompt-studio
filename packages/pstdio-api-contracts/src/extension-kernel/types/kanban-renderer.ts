@@ -6,6 +6,7 @@ import type { Struct } from "./json";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
+import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export type KanbanRendererViewMode = "board" | "list";
 export type KanbanRendererSortDirection = "asc" | "desc";
@@ -134,6 +135,7 @@ export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
 export type KanbanRendererRowActivationHandler = RendererCallback<{ row: KanbanRendererRow }, void>;
 
 export interface KanbanRendererContribution extends RendererContributionBase {
+  toolbarActions?: ViewToolbarAction[];
   attributes?: KanbanRendererAttributeDescriptor[];
   query: RendererCallback<KanbanRendererQueryParams, KanbanRendererQueryResult>;
   onAttributeChange?: RendererCallback<{ rowId: string; attributeId: string; value: unknown }, unknown>;

@@ -90,6 +90,10 @@ const toNativeViewBody = (
       selectionMode: body.selectionMode,
       selectionActions: commandActions(body.selectionActions, view.extensionId),
       rowActions: commandActions(body.rowActions, view.extensionId),
+      toolbarActions: commandActions(body.toolbarActions, view.extensionId)?.map((action) => ({
+        ...action,
+        params: action.params ? { ...action.params } : undefined,
+      })),
       rowActivationHandlerId: handlers.rowActivationHandlerId as string | undefined,
       initialPageSize: body.initialPageSize,
       pageSizeOptions: body.pageSizeOptions,
@@ -124,6 +128,10 @@ const toNativeViewBody = (
         }
       : undefined,
     rowActions: commandActions(body.rowActions, view.extensionId),
+    toolbarActions: commandActions(body.toolbarActions, view.extensionId)?.map((action) => ({
+      ...action,
+      params: action.params ? { ...action.params } : undefined,
+    })),
     defaultSettings: body.defaultSettings,
     defaultFilters: body.defaultFilters,
     defaultViews: body.defaultViews,

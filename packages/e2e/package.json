@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@pstdio/sdk": "workspace:*",
     "extension-lab": "workspace:*",
     "harness-claude-code": "workspace:*",
     "harness-codex": "workspace:*",

@@ -16,10 +16,12 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
+import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { useRendererRead } from "../use-renderer-read";
+import { ViewToolbarActions } from "../view-toolbar-actions";
 import {
   buildDataTableRendererData,
   resolveDataTableRendererColumns,
@@ -31,6 +33,7 @@ import {
 
 interface WorkbenchDataTableViewProps {
   workbench: WorkbenchCore;
+  renderParamField?: CommandParamFieldRenderer;
   contribution: RegisteredDataTableRendererContribution;
   placement: WorkbenchPanelInstance;
 }
@@ -115,18 +118,28 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     );
   }
   if (!read.value && read.error) return <RendererReadNotice error={read.error} retry={read.retry} />;
-  if (result.rows.length === 0) {
-    return (
-      <Stack h="full" gap="0">
-        {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
-        <EmptyState h="full" title={contribution.emptyTitle ?? "No rows"} description={contribution.emptyDescription} />
-      </Stack>
-    );
-  }
+
   return (
     <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <DataTable
+        toolbarActions={
+          <ViewToolbarActions
+            workbench={workbench}
+            actions={contribution.toolbarActions}
+            context={{ resource: placement.resource }}
+            renderParamField={props.renderParamField}
+          />
+        }
+        contentPlaceholder={
+          result.rows.length === 0 ? (
+            <EmptyState
+              h="full"
+              title={contribution.emptyTitle ?? "No rows"}
+              description={contribution.emptyDescription}
+            />
+          ) : undefined
+        }
         data={model.data}
         getRowId={(data) => model.rowByData.get(data)?.id ?? ""}
         toolbarStorageKey={resolveDataTableRendererStorageKey(contribution.id, placement)}

@@ -322,6 +322,7 @@
       "name": "e2e",
       "devDependencies": {
         "@playwright/test": "^1.60.0",
+        "@pstdio/sdk": "workspace:*",
         "extension-lab": "workspace:*",
         "harness-claude-code": "workspace:*",
         "harness-codex": "workspace:*",
@@ -740,7 +741,7 @@
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
         "@pstdio/sdk": "^0.35.0",
-        "@pstdio/ui": "0.36.0",
+        "@pstdio/ui": "workspace:*",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "zustand": "^5.0.0",
@@ -1634,6 +1635,18 @@
     "@posthog/types": ["@posthog/types@1.411.1", "", {}, "sha512-Gd7tnSYctcSXup3naVlAgavvenByRao6rsSYdMgWgP35KE9jFn+rMHNRJeI5LNjJuLzMXHEVcgzAN7xcATefdw=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
+
+    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.38.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-MU/eBzOJ1nZDcwY5mWWj4Bwo2K5XFhPsgfSEUX1T7BlB57IId68BCoQXrpmbqFBMdWkr7Blyp3oDSp0jT2SoAw=="],
+
+    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.38.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-mo2Ocg60UoTc2i9dTNS0Erg7GbvM2HF+Wip6o2mAL+xXFlIM+Vm7RuzYp9yr5SwqIcF9N7Nl0oejBal9L+oeJg=="],
+
+    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.38.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-VsdUrVuBuKUYANgkWd3uxkYybiznJLX2BFn986NWM8DSQ+GVXwJLxI3iHmWmQlJ6PsWGEAu105YhIVk2LcPOCg=="],
+
+    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.38.0", "", { "os": "linux", "cpu": "x64" }, "sha512-MN6H+B1y+D/Z7mIW6JKWNwXuddi5r0zmqU3zkSvnhCl/cvN74IkjWDxEZcx9jjcp+6tpQ07Q7CNeX904mQGrMA=="],
+
+    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.38.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-97pLUDxC/+Sewp3AutG+MD9WKV6OwZ//htaQWankmbkp6cTRSs+y22f5XCXEmtAycRuCX7gJRhtf/qrrLCqARQ=="],
+
+    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.38.0", "", { "os": "win32", "cpu": "x64" }, "sha512-f+9Mh6+PSpErzTemjsIukMTZ+ptiiyJcHPbG2yTD37J4cdrDYPKP99jye+4TtJ75IhJYaE1nRPGwTT16X6XblA=="],
 
     "@pstdio/desktop": ["@pstdio/desktop@workspace:clients/desktop"],
 

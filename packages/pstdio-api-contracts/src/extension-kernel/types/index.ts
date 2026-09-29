@@ -23,6 +23,7 @@ export type * from "./resources";
 export type * from "./slots";
 export type * from "./statuses";
 export type * from "./tree-renderer";
+export type * from "./view-toolbar-action";
 export type * from "./views";
 export * from "./webview-capabilities";
 export type * from "./workspaces";

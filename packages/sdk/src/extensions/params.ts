@@ -8,6 +8,7 @@ import type {
   MarkdownParam,
   MultiSelectParam,
   NumberParam,
+  ParamValueRef,
   ResourceParam,
   SelectParam,
   TemplateParam,
@@ -30,6 +31,8 @@ type ParamOptions<TParam extends { type: string }> = Omit<TParam, "type">;
  *   }
  */
 export const params = {
+  valueOf: (key: string) => ({ kind: "param-value", key }) satisfies ParamValueRef,
+
   text: <const TOptions extends ParamOptions<TextParam> | undefined = undefined>(
     options?: TOptions,
   ): TextParam<RequiredOf<TOptions>> => ({ type: "text", ...options }) as TextParam<RequiredOf<TOptions>>,
@@ -54,16 +57,20 @@ export const params = {
     options?: TOptions,
   ): BooleanParam<RequiredOf<TOptions>> => ({ type: "boolean", ...options }) as BooleanParam<RequiredOf<TOptions>>,
 
-  select: <const TOptions extends ParamOptions<SelectParam>>(options: TOptions): SelectParam<RequiredOf<TOptions>> =>
-    ({ type: "select", ...options }) as unknown as SelectParam<RequiredOf<TOptions>>,
+  select: <const TOptions extends ParamOptions<SelectParam>>(
+    options: TOptions,
+  ): Omit<SelectParam<RequiredOf<TOptions>>, "options"> & { options: TOptions["options"] } =>
+    ({ type: "select", ...options }) as Omit<SelectParam<RequiredOf<TOptions>>, "options"> & {
+      options: TOptions["options"];
+    },
 
   multiSelect: <const TOptions extends ParamOptions<MultiSelectParam>>(
     options: TOptions,
-  ): MultiSelectParam<RequiredOf<TOptions>> =>
+  ): Omit<MultiSelectParam<RequiredOf<TOptions>>, "options"> & { options: TOptions["options"] } =>
     ({
       type: "multi-select",
       ...options,
-    }) as unknown as MultiSelectParam<RequiredOf<TOptions>>,
+    }) as Omit<MultiSelectParam<RequiredOf<TOptions>>, "options"> & { options: TOptions["options"] },
 
   harness: <const TOptions extends ParamOptions<HarnessParam> | undefined = undefined>(
     options?: TOptions,

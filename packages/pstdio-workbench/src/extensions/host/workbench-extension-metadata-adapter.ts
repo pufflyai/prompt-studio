@@ -92,6 +92,7 @@ const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenc
             }
           : undefined,
         rowActions: commandActions(body.rowActions),
+        toolbarActions: commandActions(body.toolbarActions),
       },
     ];
   });
@@ -111,6 +112,7 @@ const dataTableRenderers = (
         resourceKind: resourceKindForView(metadata, view.id),
         selectionActions: commandActions(body.selectionActions),
         rowActions: commandActions(body.rowActions),
+        toolbarActions: commandActions(body.toolbarActions),
       },
     ];
   });

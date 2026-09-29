@@ -12,6 +12,7 @@ interface KanbanRendererViewBarProps {
   categories: FilterCategoryView[];
   filters: KanbanRendererFilterState;
   leading?: ReactNode;
+  actions?: ReactNode;
   filterControl: ReactNode;
   displayControl: ReactNode;
   align?: "split" | "end";
@@ -127,7 +128,7 @@ const RenameViewDialog = (props: {
 };
 
 export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
-  const { storageKey, categories, filters, leading, filterControl, displayControl, align = "split" } = props;
+  const { storageKey, categories, filters, leading, actions, filterControl, displayControl, align = "split" } = props;
   const views = useKanbanRendererStore(storageKey, (state) => state.views);
   const activeViewId = useKanbanRendererStore(storageKey, (state) => state.activeViewId);
   const dirty = useKanbanRendererStore(storageKey, isActiveKanbanRendererViewDirty);
@@ -216,6 +217,7 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
         {align === "split" ? <Box flex="1" /> : null}
         {filterControl}
         {displayControl}
+        {actions}
       </HStack>
 
       {showFilterRow ? (

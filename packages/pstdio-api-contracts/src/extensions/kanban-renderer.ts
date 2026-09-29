@@ -2,6 +2,7 @@ import { z } from "zod";
 import { extensionParamObjectSchema } from "./commands";
 import { localizableStringSchema } from "./common";
 import { extensionRendererRecordBaseSchema } from "./renderers";
+import { viewToolbarActionRecordSchema } from "./view-toolbar-action";
 
 const kanbanRendererEnumOptionSchema = z.object({
   value: z.string(),
@@ -99,6 +100,7 @@ const extensionKanbanRendererRowActionSchema = z.object({
 });
 
 export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
+  toolbarActions: z.array(viewToolbarActionRecordSchema).optional(),
   extensionInstanceId: z.string().optional(),
   attributes: z.array(kanbanRendererAttributeSchema).optional(),
   queryHandlerId: z.string(),
