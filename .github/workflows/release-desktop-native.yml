@@ -151,7 +151,7 @@ jobs:
       - name: Archive native build
         shell: bash
         run: >-
-          tar -cf native-build.tar clients/desktop/out clients/desktop/dist
+          tar -cf native-build.tar clients/desktop/out clients/desktop/dist clients/desktop/.sidecar
           packages/sdk/dist packages/ui/dist packages/ui/dist-monaco
 
       - name: Upload native build
