@@ -73,6 +73,13 @@ matching extension-owned template type and renders a dropdown. Use `params.resou
 for project resources. The dashboard lists registered resources of that type and passes the selected `{ type, id }`
 reference to the command.
 
+Use `params.workspace({ providers: ["pstdio.worktree"] })` when a command creates a workspace. The dashboard shows
+the same fields as **Create workspace**: a workspace type, then that provider's parameters, such as **Base branch** for
+a Git worktree. The command receives `{ providerId, params }` and passes it to `ctx.workspaces.create`. Leave out
+`providers` to offer every workspace type. On the CLI, pass the value as JSON:
+`--workspace '{"providerId":"pstdio.worktree","params":{"base":"main"}}'`. `harness` and `resource` params also accept
+JSON on the CLI.
+
 ## Named connections
 
 Extensions declare remote HTTP access by name. The host stores the base URL and credential. Extension code receives request and stream methods, never the secret value.

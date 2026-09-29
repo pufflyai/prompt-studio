@@ -1,35 +1,12 @@
 import { Button, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
-import { isLocalizedString } from "@pstdio/sdk/extensions";
-import { ParamEditorRow } from "@pstdio/ui/param-editor";
-import type { CommandParamSchema } from "@pstdio/workbench";
 import {
   buildCommandParamInitialValues,
-  CommandParamField,
   type CommandParamValue,
-  listCommandParamEntries,
   normalizeCommandParamValues,
 } from "@pstdio/workbench/react";
-import { type ReactNode, useState } from "react";
-import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
-
-const label = (value: unknown) =>
-  typeof value === "string" || isLocalizedString(value) ? resolveLocalizableString(value) : "";
-
-const schemaFor = (provider: WorkspaceProviderDescriptor): CommandParamSchema =>
-  Object.fromEntries(
-    Object.entries(provider.params).map(([key, param]) => [
-      key,
-      {
-        ...param,
-        label: label(param.label) || key,
-        description: label(param.description),
-        ...(Array.isArray(param.options)
-          ? { options: param.options.map((option) => ({ ...option, label: label(option.label) })) }
-          : {}),
-      },
-    ]),
-  ) as CommandParamSchema;
+import { useState } from "react";
+import { WorkspaceProviderFields, workspaceProviderParamSchema } from "@/shared/workspaces/workspace-provider-fields";
 
 interface WorkspaceProviderFormProps {
   providers: WorkspaceProviderDescriptor[];
@@ -39,16 +16,17 @@ interface WorkspaceProviderFormProps {
 }
 
 interface ProviderParametersProps {
+  providers: WorkspaceProviderDescriptor[];
   provider: WorkspaceProviderDescriptor;
   busy?: boolean;
-  children: ReactNode;
+  onProviderChange: (providerId: string) => void;
   onCancel: WorkspaceProviderFormProps["onCancel"];
   onSubmit: WorkspaceProviderFormProps["onSubmit"];
 }
 
 const ProviderParameters = (props: ProviderParametersProps) => {
-  const { provider, busy, children, onCancel, onSubmit } = props;
-  const schema = schemaFor(provider);
+  const { providers, provider, busy, onProviderChange, onCancel, onSubmit } = props;
+  const schema = workspaceProviderParamSchema(provider);
   const [values, setValues] = useState<Record<string, CommandParamValue>>(() => buildCommandParamInitialValues(schema));
   const [error, setError] = useState("");
   const submit = async () => {
@@ -64,16 +42,15 @@ const ProviderParameters = (props: ProviderParametersProps) => {
     <>
       <Dialog.Body>
         <Stack gap="sm">
-          {children}
-          {listCommandParamEntries(schema).map((entry) => (
-            <CommandParamField
-              key={entry.key}
-              entry={entry}
-              value={values[entry.key]}
-              disabled={Boolean(busy)}
-              onChange={(value) => setValues((current) => ({ ...current, [entry.key]: value }))}
-            />
-          ))}
+          <WorkspaceProviderFields
+            typeLabel="Workspace type"
+            providers={providers}
+            provider={provider}
+            values={values}
+            disabled={Boolean(busy)}
+            onProviderChange={onProviderChange}
+            onValueChange={(key, value) => setValues((current) => ({ ...current, [key]: value }))}
+          />
           {error && (
             <Text role="alert" color="fg.error">
               {error}
@@ -119,22 +96,14 @@ export const WorkspaceProviderForm = (props: WorkspaceProviderFormProps) => {
     );
   }
   return (
-    <ProviderParameters key={selected.id} provider={selected} busy={busy} onCancel={onCancel} onSubmit={onSubmit}>
-      <ParamEditorRow
-        param={{
-          id: "workspace-type",
-          type: "selection",
-          name: "Workspace type",
-          description: label(selected.description),
-          options: providers.map((provider) => ({ id: provider.id, name: label(provider.label), icon: provider.icon })),
-          defaultValue: selected.id,
-          clearable: false,
-        }}
-        readOnly={Boolean(busy)}
-        onChange={(_id, value) => {
-          if (typeof value === "string") setSelectedId(value);
-        }}
-      />
-    </ProviderParameters>
+    <ProviderParameters
+      key={selected.id}
+      providers={providers}
+      provider={selected}
+      busy={busy}
+      onProviderChange={setSelectedId}
+      onCancel={onCancel}
+      onSubmit={onSubmit}
+    />
   );
 };

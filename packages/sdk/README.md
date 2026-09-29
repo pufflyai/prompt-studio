@@ -105,6 +105,8 @@ readiness and file capabilities. Remote workspaces never fall back to local file
 `ctx.workspaces.listProviders()` returns available providers, their optional `icon`, and their parameters.
 Render these declared parameters after the user selects a workspace type. The Git
 provider supplies a **Base branch** selection; cloud providers supply their own fields.
+A command that creates a workspace can declare `params.workspace({ providers })`. The
+dashboard then renders this same form, and the command receives `{ providerId, params }`.
 Local setup failures reject creation with the saved workspace ID and setup error.
 The workspace remains available for diagnosis and retry.
 Workspace context records expose `root_path` for a local directory. Remote workspaces have no local root.
