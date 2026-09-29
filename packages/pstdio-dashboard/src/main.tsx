@@ -70,7 +70,7 @@ const renderDashboard = async () => {
     <StrictMode>
       <QueryClientProvider client={dashboardQueryClient}>
         <HostStorageProvider storage={storage}>
-          <SyncProvider>
+          <SyncProvider workbench={dashboardWorkbench}>
             <Workbench
               workbench={dashboardWorkbench}
               themeStorage={storage}

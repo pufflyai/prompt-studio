@@ -2,5 +2,8 @@
   "browserSignIn": {
     "title": "터미널에서 Prompt Studio를 여세요",
     "description": "이 브라우저는 로그인되어 있지 않습니다. 터미널에서 이 명령을 실행하면 로그인된 대시보드가 열립니다."
+  },
+  "connection": {
+    "lost": "서버 연결이 끊어졌습니다. 자동으로 다시 연결하는 중입니다."
   }
 }
