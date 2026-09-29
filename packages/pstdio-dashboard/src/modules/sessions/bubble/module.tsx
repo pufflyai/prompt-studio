@@ -161,19 +161,19 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           preservePanelMode = false,
           selectWorkspaceSidenav = true,
           tabRetention,
-          replaceDraft,
+          replacePanel,
         } = (args ?? {}) as {
           resource?: ResourceRef;
           preservePanelMode?: boolean;
           selectWorkspaceSidenav?: boolean;
           tabRetention?: WorkbenchTabRetention;
-          replaceDraft?: PlacementIdentity;
+          replacePanel?: PlacementIdentity;
         };
         if (resource?.type !== "session" || !resource.id) return undefined;
         const bubble = openDashboardSessionPanel(ctx, {
           resource,
           tabRetention,
-          replaceDraft,
+          replacePanel,
           preservePanelMode,
         });
         if (
