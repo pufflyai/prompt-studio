@@ -98,7 +98,7 @@ test.each([
       publisher: "acme",
       version: "1.0.0",
       main: "./extension.ts",
-      enginesPstdio: EXTENSION_API_VERSION,
+      enginesPstdio: `^${EXTENSION_API_VERSION}`,
     },
     definition,
   };

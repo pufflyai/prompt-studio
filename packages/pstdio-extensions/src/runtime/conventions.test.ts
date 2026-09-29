@@ -25,7 +25,7 @@ const wrap = (name: string, definition: LoadedExtensionSource["definition"]): Lo
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.8",
+    enginesPstdio: "^0.1.0",
   },
   definition,
 });

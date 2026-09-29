@@ -110,7 +110,7 @@ describe("syncInstalledExtensionsForProject", () => {
 
   test("keeps an incompatible installed extension discoverable for dashboard recovery", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-incompatible-"));
-    writeExtension(join(root, "pstdio-planner"), "pstdio-planner", undefined, "1.0.0-alpha.1");
+    writeExtension(join(root, "pstdio-planner"), "pstdio-planner", undefined, "^0.0.9");
     const calls: Array<Record<string, unknown>> = [];
     const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
@@ -127,7 +127,7 @@ describe("syncInstalledExtensionsForProject", () => {
       expect(synced).toEqual([{ installName: "pstdio-planner", sourceHash: expect.any(String) }]);
       expect(calls[0]).toMatchObject({
         installName: "pstdio-planner",
-        manifest: { enginesPstdio: "1.0.0-alpha.1", version: "1.0.0" },
+        manifest: { enginesPstdio: "^0.0.9", version: "1.0.0" },
         version: "1.0.0",
       });
     } finally {

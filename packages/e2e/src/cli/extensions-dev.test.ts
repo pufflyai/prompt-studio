@@ -35,7 +35,7 @@ const writeExtension = (
         displayName: "Dev Smoke",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         dependencies,
         pstdio: input.scope ? { scope: input.scope } : undefined,
         type: "module",

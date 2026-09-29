@@ -12,7 +12,7 @@ afterEach(async () => {
   for (const dispose of cleanup.splice(0).reverse()) await dispose();
 });
 
-const writeExtension = (root: string, enginesPstdio = EXTENSION_API_VERSION) => {
+const writeExtension = (root: string, enginesPstdio = `^${EXTENSION_API_VERSION}`) => {
   mkdirSync(root, { recursive: true });
   writeFileSync(
     join(root, "package.json"),
@@ -128,7 +128,7 @@ describe("reloadInstalledSourceBySourcePath published state", () => {
   test("reports why the changed source failed validation", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-reload-incompatible-test-"));
     cleanup.push(() => rmSync(root, { recursive: true, force: true }));
-    writeExtension(root, "1.0.0-alpha.1");
+    writeExtension(root, "^0.0.9");
 
     const database = await createDb({ path: ":memory:" });
     cleanup.push(database.close);
@@ -158,7 +158,7 @@ describe("reloadInstalledSourceBySourcePath published state", () => {
     expect(result.installedSource.status).toBe("error");
     expect(result.installedSource.last_error_json).toMatchObject({
       code: "extension_manifest_unsupported_api_version",
-      message: expect.stringContaining(`add "${EXTENSION_API_VERSION}" to engines.pstdio`),
+      message: expect.stringContaining(`add "^${EXTENSION_API_VERSION}" to engines.pstdio`),
     });
   });
 });

@@ -42,7 +42,7 @@ const writeSkillExtension = (root: string) => {
       displayName: "Test Skill Catalog",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(skillRoot, "SKILL.md"), "# Catalog Skill\n", "utf8");

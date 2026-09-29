@@ -22,7 +22,7 @@ export const verifyProviderPackageConsumer = (root: string, sdkArchive: string) 
       main: "./extension.ts",
       exports: { ".": "./extension.ts", "./contracts": "./contracts.ts" },
       files: ["*.ts"],
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       dependencies: { "@pstdio/sdk": `file:${sdkArchive}` },
     }),
   );

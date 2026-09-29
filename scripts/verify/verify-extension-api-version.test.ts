@@ -4,70 +4,34 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkExtensionApiVersions, readExtensionManifests } from "./verify-extension-api-version";
 
-const HOST_VERSION = "1.0.0-alpha.1";
+const HOST_VERSION = "0.4.3";
+const manifest = (enginesPstdio: string) => [{ file: "extensions/planner/package.json", enginesPstdio }];
 
 describe("checkExtensionApiVersions", () => {
   test.each([
-    "1.0.0-alpha.10",
-    "1.0.0-alpha.11",
-  ])("accepts an explicitly declared compatible host %s", (hostVersion) => {
-    expect(
-      checkExtensionApiVersions(
-        [{ file: "extensions/planner/package.json", enginesPstdio: "1.0.0-alpha.10 || 1.0.0-alpha.11" }],
-        hostVersion,
-      ),
-    ).toEqual([]);
+    "^0.4.0",
+    "^0.4.3",
+    "^0.3.0 || ^0.4.0",
+  ])("accepts a manifest whose range includes the host: %s", (enginesPstdio) => {
+    expect(checkExtensionApiVersions(manifest(enginesPstdio), HOST_VERSION)).toEqual([]);
   });
 
-  test.each([
-    "1.0.0-alpha.10",
-    "1.0.0-alpha.10 || 1.0.0-alpha.12",
-  ])("rejects an extension that does not explicitly support alpha.11: %s", (enginesPstdio) => {
-    expect(
-      checkExtensionApiVersions([{ file: "extensions/planner/package.json", enginesPstdio }], "1.0.0-alpha.11"),
-    ).toHaveLength(1);
-  });
-
-  test("rejects a wildcard even when the current version is also listed", () => {
-    expect(
-      checkExtensionApiVersions(
-        [{ file: "extensions/planner/package.json", enginesPstdio: `${HOST_VERSION} || *` }],
-        HOST_VERSION,
-      ),
-    ).toHaveLength(1);
-  });
-
-  test("accepts manifests declaring the host version", () => {
-    const errors = checkExtensionApiVersions(
-      [
-        { file: "extensions/planner/package.json", enginesPstdio: HOST_VERSION },
-        { file: ".pstdio/extensions/dev/package.json", enginesPstdio: HOST_VERSION },
-      ],
-      HOST_VERSION,
-    );
-
-    expect(errors).toEqual([]);
-  });
-
-  test("catches a manifest left on the previous alpha", () => {
-    const errors = checkExtensionApiVersions(
-      [{ file: "extensions/planner/package.json", enginesPstdio: "1.0.0-alpha.0" }],
-      HOST_VERSION,
-    );
+  test.each(["^0.3.0", "^0.4.4"])("names a manifest the host would refuse: %s", (enginesPstdio) => {
+    const errors = checkExtensionApiVersions(manifest(enginesPstdio), HOST_VERSION);
 
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain("extensions/planner/package.json");
-    expect(errors[0]).toContain("1.0.0-alpha.0");
+    expect(errors[0]).toContain(enginesPstdio);
     expect(errors[0]).toContain(HOST_VERSION);
   });
 
-  test("catches a range", () => {
-    const errors = checkExtensionApiVersions(
-      [{ file: "extensions/planner/package.json", enginesPstdio: `^${HOST_VERSION}` }],
-      HOST_VERSION,
-    );
-
-    expect(errors).toHaveLength(1);
+  test.each([
+    HOST_VERSION,
+    "*",
+    "^0.4.0 || *",
+    "1.0.0-alpha.14",
+  ])("rejects a declaration that is not caret terms: %s", (enginesPstdio) => {
+    expect(checkExtensionApiVersions(manifest(enginesPstdio), HOST_VERSION)).toHaveLength(1);
   });
 });
 
@@ -83,15 +47,15 @@ describe("readExtensionManifests", () => {
     };
 
     const files = [
-      write("extensions/planner", HOST_VERSION),
-      write(".pstdio/extensions/dev", "1.0.0-alpha.0"),
+      write("extensions/planner", `^${HOST_VERSION}`),
+      write(".pstdio/extensions/dev", "^0.3.0"),
       write("packages/ui", null),
     ];
 
     try {
       expect(readExtensionManifests(root, files)).toEqual([
-        { file: join("extensions", "planner", "package.json"), enginesPstdio: HOST_VERSION },
-        { file: join(".pstdio", "extensions", "dev", "package.json"), enginesPstdio: "1.0.0-alpha.0" },
+        { file: join("extensions", "planner", "package.json"), enginesPstdio: `^${HOST_VERSION}` },
+        { file: join(".pstdio", "extensions", "dev", "package.json"), enginesPstdio: "^0.3.0" },
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });

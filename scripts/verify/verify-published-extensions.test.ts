@@ -25,7 +25,7 @@ test("finds registry-backed extensions across workspace locations and excludes l
   await write(root, ".changeset/config.json", { fixed: [["released-tool"]] });
   const manifest = (sdk: string) => ({
     name: "released-tool",
-    engines: { pstdio: "1.0.0" },
+      engines: { pstdio: "^0.1.0" },
     dependencies: { "@pstdio/sdk": sdk },
   });
   await write(root, "extensions/published/package.json", manifest("^0.35.0"));

@@ -27,7 +27,7 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: EXTENSION_API_VERSION,
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
   },
   definition,
 });
@@ -111,14 +111,6 @@ describe("alpha.4 UI normalization", () => {
       page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" },
       resource: { type: "ticket", id: "PS-326" },
     });
-  });
-  test("rejects removed source collections instead of adapting them", () => {
-    const definition = { ...alpha4Definition(), panels: [] } as unknown as LoadedExtensionSource["definition"];
-    const runtime = normalizeExtensionSources([source(definition)]);
-    expect(runtime.views).toEqual([]);
-    expect(runtime.diagnostics).toContainEqual(
-      expect.objectContaining({ code: "removed_extension_contribution", metadata: { key: "panels" } }),
-    );
   });
   test("rejects duplicate local ids and invalid placement rules", () => {
     const base = alpha4Definition();

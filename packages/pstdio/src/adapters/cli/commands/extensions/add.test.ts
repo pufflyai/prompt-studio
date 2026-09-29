@@ -17,7 +17,7 @@ const installed = {
     name: "planner",
     displayName: "Planner",
     version: "1.0.0",
-    enginesPstdio: "^1.0.0",
+    enginesPstdio: "^0.1.0",
   },
   manifest: { id: "pstdio.planner" },
   sourceHash: "hash",

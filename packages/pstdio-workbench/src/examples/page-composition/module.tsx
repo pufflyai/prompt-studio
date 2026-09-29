@@ -53,7 +53,7 @@ const pages: readonly PageExample[] = [
     modeId: "lab",
     path: "extension-lab",
     description: "Inspect the installed Planner extension and its workbench contributions.",
-    details: ["Extension: pstdio-planner", "API: 1.0.0-alpha.10", "State: enabled"],
+    details: ["Extension: pstdio-planner", "API: 0.1.0", "State: enabled"],
     layout: "Main + Side + Secondary",
     sidenav: { title: "Contributions", detail: "2 pages · 4 views · 6 commands" },
     auxiliary: {

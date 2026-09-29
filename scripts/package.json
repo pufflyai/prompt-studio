@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit",
     "validate:changesets": "bun --cwd .. ./scripts/release/validate-changesets.ts",
     "verify:boundaries": "bun --cwd .. ./scripts/verify/verify-boundaries.ts",
+    "verify:extension-api-report": "bun --cwd .. ./scripts/verify/verify-extension-api-report.ts",
     "verify:extension-api-version": "bun --cwd .. ./scripts/verify/verify-extension-api-version.ts",
     "verify:lockfile": "bun --cwd .. ./scripts/verify/verify-lockfile.ts",
     "verify:published-extensions": "bun --cwd .. ./scripts/verify/verify-published-extensions.ts",

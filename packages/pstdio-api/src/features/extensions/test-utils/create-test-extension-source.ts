@@ -20,7 +20,7 @@ export const createTestExtensionSource = (fields: {
         displayName: fields.displayName,
         publisher: "test",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       },
       null,
       2,

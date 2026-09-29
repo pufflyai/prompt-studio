@@ -25,7 +25,7 @@ const writeRuntimeExtension = (root: string, commandName: string, options: { bro
       displayName: "Hello",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   const body = options.broken
