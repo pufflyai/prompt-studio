@@ -1,5 +1,13 @@
 # @pstdio/workbench
 
+## 0.38.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- 2c33616: Add a `workspace` command param that lets users pick a workspace type and its fields, such as the base branch, like in Create workspace.
+
 ## 0.37.0
 
 _2026-09-29_
