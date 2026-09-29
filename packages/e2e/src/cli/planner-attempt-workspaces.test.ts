@@ -1,46 +1,17 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
-import { packWorkspacePackageTarball } from "../local-workspace-registry";
 import { cleanupDirs } from "./helpers";
 import { createInitializedRepo, createRun, getProjectId, type HookTestContext, waitFor } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 let api: ApiInstance;
-let registryRoot: string;
 const ctx: HookTestContext = { api: null!, dirs: [] };
 
 beforeAll(async () => {
-  registryRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-registry-"));
-  const repoRoot = join(import.meta.dirname, "../../../..");
-  const sdkTarballPath = packWorkspacePackageTarball(
-    join(repoRoot, "packages/sdk"),
-    join(registryRoot, "workspace-packages"),
-  );
-
-  const plannerLoopsPath = join(registryRoot, "pstdio-planner-loops");
-  cpSync(join(repoRoot, ".pstdio/extensions/pstdio-planner-loops"), plannerLoopsPath, { recursive: true });
-  const plannerLoopsManifestPath = join(plannerLoopsPath, "package.json");
-  const plannerLoopsManifest = JSON.parse(readFileSync(plannerLoopsManifestPath, "utf8")) as {
-    dependencies: Record<string, string>;
-  };
-  plannerLoopsManifest.dependencies["@pstdio/sdk"] = `file:${sdkTarballPath}`;
-  writeFileSync(plannerLoopsManifestPath, `${JSON.stringify(plannerLoopsManifest, null, 2)}\n`);
-
-  const defaultExtensions = JSON.parse(e2eExtensions("pstdio-planner", "workbench-fixture")) as {
-    defaultExtensions: Array<Record<string, unknown>>;
-  };
-  defaultExtensions.defaultExtensions.push({
-    source: plannerLoopsPath,
-    installName: "pstdio-planner-loops",
-    skipInstall: false,
-  });
   api = await startApi({
     env: {
-      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaultExtensions),
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture"),
     },
   });
   ctx.api = api;
@@ -48,7 +19,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await api?.stop();
-  rmSync(registryRoot, { recursive: true, force: true });
 });
 
 afterEach(() => {
@@ -119,18 +89,13 @@ const uploadPlannerFile = async (
   };
 };
 
-describe("planner automations", () => {
+describe("planner attempt workspaces", () => {
   test(
     "derives live workspace activity from ticket attempt sessions",
     async () => {
       const run = createRun(ctx);
-      const repo = createInitializedRepo(ctx, "planner-automations");
+      const repo = createInitializedRepo(ctx, "planner-attempt-workspaces");
       const projectId = getProjectId(repo);
-
-      // The materialized repo-local extension must resolve @pstdio/sdk from the
-      // workspace, never from the npm registry — registry coupling here breaks
-      // every branch whose sdk range lags the latest published version.
-      expect(existsSync(join(repo, ".pstdio/extensions/pstdio-planner-loops/node_modules/@pstdio/sdk"))).toBe(true);
 
       const ticket = JSON.parse(run(`tickets create --content "# Workspace activity proof"`, repo)) as {
         id: string;

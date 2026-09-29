@@ -11,9 +11,6 @@
 !.pstdio/extensions/pstdio-dev/
 .pstdio/extensions/pstdio-dev/*
 !.pstdio/extensions/pstdio-dev/package.json
-!.pstdio/extensions/pstdio-planner-loops/
-.pstdio/extensions/pstdio-planner-loops/*
-!.pstdio/extensions/pstdio-planner-loops/package.json
 .nx
 .vscode
 .idea
