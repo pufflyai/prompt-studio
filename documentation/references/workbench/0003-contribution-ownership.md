@@ -23,7 +23,7 @@ type PlacementIdentity =
 
 An owner owns its placements, not a whole region. The active page and mode may both place content in one region. Reconciliation removes a placement only when its exact owner identity leaves or its open state changes.
 
-Resource identity forms the instance key for a resource-bound slot. The same resource in two slots is two independent placements. Region, label, active tab, and registration timing do not define ownership.
+Resource identity forms the instance key for a resource-bound slot. The same resource in two slots is two independent placements. An update can change a placement's resource, and the placement keeps its instance key. Opening a resource finds the placement that shows it now. A new placement never takes a key that another placement already holds. Region, label, active tab, and registration timing do not define ownership.
 
 ## Navigation tree ownership
 
