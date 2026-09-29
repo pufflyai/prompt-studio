@@ -183,6 +183,39 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   await expect(page.getByRole("region", { name: "Side Panel" })).toBeVisible();
 });
 
+test("switches a pinned Session tab in place from its menu", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Pinned Session tab menu" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  await createSession(request, project.id, "First context session");
+  await createSession(request, project.id, "Second context session");
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+  }, project.id);
+  await page.goto(`/projects/${project.id}/`);
+  await page.getByRole("button", { name: "Open Side Panel" }).click();
+  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const sessionTabs = sideHeader.getByRole("tab");
+  await expect(sessionTabs).toHaveCount(1);
+  const previewId = await sessionTabs.first().getAttribute("id");
+  // The + button opens a pinned tab; its menu must switch that tab and leave the preview alone.
+  await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  await expect(sessionTabs).toHaveCount(2);
+  const pinned = sideHeader.locator(`[role="tab"]:not([id="${previewId}"])`);
+  for (const title of ["First context session", "Second context session"]) {
+    await openTabCustomMenu(pinned);
+    await page.getByRole("menu").getByRole("menuitem", { name: title, exact: true }).click();
+    await expect(sessionTabs).toHaveCount(2);
+    await expect(pinned).toHaveText(title);
+    await expect(pinned).toHaveAttribute("aria-selected", "true");
+    await expect(sideHeader.locator(`[id="${previewId}"]`)).toHaveText("New session");
+  }
+});
+
 test("updates a New session Sub Panel in place after the first message", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "PS-170 Draft Session" }),
