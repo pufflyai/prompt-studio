@@ -145,3 +145,25 @@ pst reports delete [--workspace <id>] [--name <name>]
 | Extensions fail validation | Run `pst extensions check`, then inspect the diagnostics. |
 | Runtime is unreachable | Run `pst serve`, then `pst logs`. |
 | Workspace cleanup failed | Run `pst workspaces list`, then remove the exact workspace when its work is safe. |
+
+## Shared board views
+
+Use `pst views boards` to discover board IDs, fields, and current options. Use
+`pst views list --board <boardId>` to inspect built-in and saved views. Create a
+shared view with `pst views create --board <boardId> --title "Urgent bugs"
+--filter priority=Urgent --filter type=Bug`. Filter values can be IDs or labels;
+use IDs when a label is ambiguous. Commands print JSON. Use `--project-id` outside
+a linked project folder.
+
+Use `pst views update --id <viewId> --title "New name"` to edit a saved view and
+`pst views delete --id <viewId>` to remove it. Duplicate a view with
+`pst views create --board <boardId> --title "Copy" --copy-from <viewId>`.
+Built-in views are read-only. Use `pst views set-default --board <boardId>
+--id <viewId>` only when asked to change the shared project default; pass `none`
+to clear it. Reorder saved views with `pst views reorder --board <boardId>
+--ids <firstId>,<secondId>`. List removed boards' saved views with
+`pst views list --orphaned` and delete them by ID.
+
+Saved views and defaults are project data. Active selection and unsaved edits
+stay local to each client. Old locally saved views are dropped. See the
+[board view reference](https://github.com/pufflyai/prompt-studio/blob/main/documentation/references/cli/0009-board-views.md).

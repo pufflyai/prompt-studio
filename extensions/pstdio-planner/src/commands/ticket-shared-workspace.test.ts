@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { archiveTicketCommand } from "./archive-ticket";
-import { makeCommandArgs } from "./command-context.fixture";
+import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
 import { listTicketFilesTreeCommand } from "./ticket-files";
@@ -55,21 +55,28 @@ describe("ticket work in shared folders", () => {
   }) => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Remote" } }));
-    const remote = {
+    const remote: ExtensionWorkspace = {
       ...home,
       id: "remote",
       is_default: false,
       provider_id: "example.cloud",
       execution_kind: "remote" as const,
       root_path: null,
-      provider_capabilities_json: { archive: supportsArchive },
+      provider_capabilities_json: {
+        files: "none",
+        diff: false,
+        merge: false,
+        rebase: false,
+        delete: false,
+        archive: supportsArchive,
+      },
       anchors_json: [{ type: "ticket", id: ticket.id, shorthand: ticket.shorthand }],
     };
     const archive = mock(async () => {
       if (!supportsArchive) throw new Error("This provider does not support archiving");
       return remote;
     });
-    const action = mock(async () => undefined);
+    const action = mock(makeCommandContext({ storage, params: {} }).notify.action);
     const result = await archiveTicketCommand.run(
       ...makeCommandArgs({
         storage,

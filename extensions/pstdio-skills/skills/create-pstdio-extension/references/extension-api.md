@@ -438,3 +438,18 @@ export default defineExtension({ harnesses: [myAgent] });
   a period without events.
 - Implement `reattach` (and advertise `SessionReattach`) to re-bind orphaned provider sessions after a host restart.
 - Consumers select a harness with `ctx.sessions.create({ harness: { harnessId, model } })` using the namespaced id.
+
+### Shared kanban views
+
+The host owns saved views per project, extension instance, and local board ID.
+Do not persist user-created board views in extension storage. Keep board and
+field IDs stable across releases. Return complete attributes from board queries;
+the host uses them and status providers to validate saved settings and filters.
+A successful query can remove filters for deleted fields and options. A failed
+query preserves saved filters.
+
+`defaultViews` declares read-only built-ins. Use `defaultActiveViewId` for the
+extension fallback. Saved view declarations have no `isDefault` property. People
+and agents can choose any saved or built-in view as the shared project default.
+Disabled boards retain saved data; removing a board leaves orphaned views that
+agents can inspect with `pst views list --orphaned`.
