@@ -3,6 +3,7 @@ import type { CommandParamFieldProps } from "@pstdio/workbench/react";
 import { HarnessParamField } from "./harness-param-field";
 import { ResourceParamField } from "./resource-param-field";
 import { TemplateParamField } from "./template-param-field";
+import { WorkspaceParamField } from "./workspace-param-field";
 
 // Maps the host-specific param types the workbench cannot render to dashboard
 // selectors backed by project data. Other types fall back to the built-in field.
@@ -10,5 +11,6 @@ export const createDashboardParamFieldRenderer = (workbench: WorkbenchCore) => (
   if (props.entry.type === "harness") return <HarnessParamField workbench={workbench} {...props} />;
   if (props.entry.type === "resource") return <ResourceParamField workbench={workbench} {...props} />;
   if (props.entry.type === "template") return <TemplateParamField workbench={workbench} {...props} />;
+  if (props.entry.type === "workspace") return <WorkspaceParamField workbench={workbench} {...props} />;
   return undefined;
 };

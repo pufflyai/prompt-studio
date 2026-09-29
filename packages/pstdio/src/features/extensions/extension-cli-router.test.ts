@@ -159,6 +159,29 @@ describe("extension CLI router", () => {
     });
     expect(parseExtensionCommandArgs(command, ["--tag", "solo"]).params).toEqual({ tag: ["solo"] });
   });
+
+  test("parses structured params from JSON flags", () => {
+    const command: ExtensionCommandRecord = {
+      id: "planner.run",
+      extensionId: "pstdio.pstdio-planner",
+      title: "Run attempt",
+      cliPath: "planner run",
+      params: { workspace: { type: "workspace" }, agent: { type: "harness" } },
+    };
+
+    expect(
+      parseExtensionCommandArgs(command, [
+        "--workspace",
+        '{"providerId":"pstdio.worktree","params":{"base":"main"}}',
+        "--agent",
+        '{"harnessId":"codex"}',
+      ]).params,
+    ).toEqual({
+      workspace: { providerId: "pstdio.worktree", params: { base: "main" } },
+      agent: { harnessId: "codex" },
+    });
+    expect(() => parseExtensionCommandArgs(command, ["--agent", "codex"])).toThrow("--agent expects a JSON value");
+  });
 });
 
 describe("extension CLI router dispatch", () => {

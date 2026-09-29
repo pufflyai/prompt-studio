@@ -85,6 +85,11 @@ describe("command param descriptors", () => {
       singleLine: false,
       defaultValue: '{"harnessId":"a"}',
     });
+    expect(buildCommandParam(entry({ key: "workspace", type: "workspace" }), '{"providerId":"a"}')).toMatchObject({
+      type: "text",
+      singleLine: false,
+      defaultValue: '{"providerId":"a"}',
+    });
   });
 
   test("narrows editor values back to command param values", () => {

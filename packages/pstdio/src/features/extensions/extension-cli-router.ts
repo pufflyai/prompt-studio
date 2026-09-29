@@ -89,17 +89,30 @@ const formatParamName = (name: string) => `--${name.replace(/[A-Z]/g, (value) =>
 const normalizeParamName = (name: string) =>
   name.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
 
+const JSON_PARAM_TYPES = new Set(["json", "harness", "resource", "workspace"]);
+
 const describeParamValue = (param: ParamDescriptor) => {
   if (param.type === "boolean") return "";
   if (param.type === "number") return " <number>";
   if (param.type === "list") return " <value...>";
+  if (JSON_PARAM_TYPES.has(param.type)) return " <json>";
   return " <value>";
 };
 
-const coerceParam = (descriptor: ParamDescriptor | undefined, value: string | boolean) => {
+const parseJsonParam = (name: string, value: string) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw new Error(`${formatParamName(name)} expects a JSON value (got ${value})`);
+  }
+};
+
+const coerceParam = (name: string, descriptor: ParamDescriptor | undefined, value: string | boolean) => {
   if (descriptor?.type === "number") return typeof value === "number" ? value : Number(value);
   if (descriptor?.type === "boolean") return value === true || value === "true";
-  if (descriptor?.type === "json" && typeof value === "string") return JSON.parse(value);
+  if (descriptor && JSON_PARAM_TYPES.has(descriptor.type) && typeof value === "string") {
+    return parseJsonParam(name, value);
+  }
   return value;
 };
 
@@ -295,7 +308,7 @@ const assignParamValue = (
 ) => {
   if (descriptor?.type !== "list") {
     const scalarValue = typeof value === "string" || typeof value === "boolean" ? value : true;
-    params[name] = coerceParam(descriptor, scalarValue);
+    params[name] = coerceParam(name, descriptor, scalarValue);
     return;
   }
 

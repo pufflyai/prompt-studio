@@ -12,6 +12,7 @@ import type {
   SelectParam,
   TemplateParam,
   TextParam,
+  WorkspaceParam,
 } from "pstdio-api-contracts/extension-kernel";
 
 type RequiredOf<TOptions> = TOptions extends { required: infer TRequired extends boolean } ? TRequired : undefined;
@@ -67,6 +68,11 @@ export const params = {
   harness: <const TOptions extends ParamOptions<HarnessParam> | undefined = undefined>(
     options?: TOptions,
   ): HarnessParam<RequiredOf<TOptions>> => ({ type: "harness", ...options }) as HarnessParam<RequiredOf<TOptions>>,
+
+  workspace: <const TOptions extends ParamOptions<WorkspaceParam> | undefined = undefined>(
+    options?: TOptions,
+  ): WorkspaceParam<RequiredOf<TOptions>> =>
+    ({ type: "workspace", ...options }) as WorkspaceParam<RequiredOf<TOptions>>,
 
   template: <const TOptions extends Omit<TemplateParam, "type" | "templateType"> & { type: string }>(
     options: TOptions,

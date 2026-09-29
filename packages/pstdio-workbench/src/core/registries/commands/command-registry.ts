@@ -37,6 +37,8 @@ export interface CommandParamDescriptor {
   options?: CommandParamOption[];
   templateType?: string;
   resourceType?: string;
+  /** Workspace provider ids a `workspace` param may offer. */
+  providers?: string[];
   accept?: string;
   multiple?: boolean;
   metadata?: Record<string, unknown>;

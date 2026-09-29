@@ -13,7 +13,7 @@ export interface CommandParamFieldProps {
 }
 
 // Lets the host supply field UI for param types the workbench cannot render on its
-// own (e.g. harness/repo selectors backed by host data). Returning a falsy value
+// own (e.g. harness/workspace selectors backed by host data). Returning a falsy value
 // defers to the built-in field for that entry.
 export type CommandParamFieldRenderer = (props: CommandParamFieldProps) => ReactNode;
 
