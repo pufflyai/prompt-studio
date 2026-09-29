@@ -20,7 +20,7 @@ const installedSource = {
   version: "0.7.2",
   manifest_json: {
     name: "extension-lab",
-    enginesPstdio: EXTENSION_API_VERSION,
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
   },
   source_hash: "hash-1",
   status: "loaded" as const,
@@ -45,7 +45,7 @@ describe("toProjectExtensionInstance", () => {
         ...installedSource,
         manifest_json: {
           name: "extension-lab",
-          enginesPstdio: "1.0.0-alpha.1",
+          enginesPstdio: "^0.0.9",
         },
       },
       "hash-1",
@@ -56,26 +56,26 @@ describe("toProjectExtensionInstance", () => {
     expect(result.lastError).toMatchObject({
       code: "extension_manifest_unsupported_api_version",
     });
-    expect(result.lastError?.message).toContain("1.0.0-alpha.1");
+    expect(result.lastError?.message).toContain("^0.0.9");
     expect(result.lastError?.message).toContain(EXTENSION_API_VERSION);
   });
 
   test("tells the owner of an incompatible local source to fix engines.pstdio", () => {
     const result = toProjectExtensionInstance(
       instance,
-      { ...installedSource, manifest_json: { name: "extension-lab", enginesPstdio: "1.0.0-alpha.1" } },
+      { ...installedSource, manifest_json: { name: "extension-lab", enginesPstdio: "^0.0.9" } },
       "hash-1",
       { canUpgrade: false },
     );
 
-    expect(result.lastError?.message).toContain(`"${EXTENSION_API_VERSION}" to engines.pstdio`);
+    expect(result.lastError?.message).toContain(`"^${EXTENSION_API_VERSION}" to engines.pstdio`);
     expect(result.lastError?.message).not.toContain("Upgrade");
   });
 
   test("tells the user to upgrade an incompatible catalog extension", () => {
     const result = toProjectExtensionInstance(
       instance,
-      { ...installedSource, manifest_json: { name: "extension-lab", enginesPstdio: "1.0.0-alpha.1" } },
+      { ...installedSource, manifest_json: { name: "extension-lab", enginesPstdio: "^0.0.9" } },
       "hash-1",
       { canUpgrade: true },
     );

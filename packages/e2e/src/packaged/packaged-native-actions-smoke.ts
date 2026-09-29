@@ -14,7 +14,7 @@ export const writeNativeActionsExtension = (root: string) => {
       version: "1.0.0",
       main: "./extension.ts",
       type: "module",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(

@@ -15,7 +15,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.14"
+    "pstdio": "^0.1.0"
   },
   "pstdio": {
     "scope": "user"
@@ -25,7 +25,7 @@ Every extension package must include a `package.json` next to its entry file.
 
 Required fields:
 
-- `engines.pstdio`: one exact supported host contract version, or an explicit list separated by `||`. This host uses `1.0.0-alpha.14`. For example, `1.0.0-alpha.12 || 1.0.0-alpha.13 || 1.0.0-alpha.14` declares compatibility with those three contracts. Ranges, wildcards, and untested versions are not accepted. The declaration must include the running host's `EXTENSION_API_VERSION`.
+- `engines.pstdio`: one or more caret ranges of the extension API, separated by `||`, such as `^0.1.0` or `^0.4.2 || ^0.5.0`. The ranges must include the running host's `EXTENSION_API_VERSION`. Exact versions, tilde ranges, wildcards, and prerelease tags are not accepted. See [API versioning](0014-api-versioning.md).
 - `name`: package name and project-facing scope, matching `^[a-z][a-z0-9-]*$`.
 - `version`: extension package semver.
 - `publisher`: publisher id segment, matching `^[a-z][a-z0-9-]*$`.
@@ -57,14 +57,14 @@ errors are reported for each checked root.
 | Component | Version source | Compatibility rule |
 | --- | --- | --- |
 | CLI | Installed `pstdio` package | Owns the bundled runtime and dashboard release. |
-| Extension API | `EXTENSION_API_VERSION` | Must be included in the exact versions declared by `engines.pstdio`. |
+| Extension API | `EXTENSION_API_VERSION` | Must be included in the caret ranges declared by `engines.pstdio`. |
 | SDK | `SDK_VERSION` from `@pstdio/sdk/extensions` | Shares the public fixed release group; its package number is separate from the host contract version. |
 | Dashboard | The CLI's bundled dashboard release | Each declared contribution must have a supported host capability. |
 
 An extension that targets an older API is repaired where it comes from. A catalog extension is
 upgraded to its build for this host. Any other extension is fixed in its source folder: update the
-code for this API, add the host's API version to `engines.pstdio` in its `package.json`, then reload
-it. An extension that requires a newer API needs a newer Prompt Studio release or an extension build
+code for this API, add a caret range for the host's API version to `engines.pstdio` in its
+`package.json`, then reload it. An extension that requires a newer API needs a newer Prompt Studio release or an extension build
 for this host.
 
 ## Installing And Updating
@@ -151,18 +151,9 @@ user. The copy you were already running keeps the id until you say otherwise.
 The extension detail view shows the source folder of each installed extension, which is what tells
 two copies of the same extension apart.
 
-## Releasing A Breaking Contract Change
+## Changing The Extension API
 
-The extension API version, the host, and the bundled extensions move together.
-
-Stage breaking contracts so each release remains usable:
-
-1. Publish any compatible public SDK preparation before extensions import its new APIs.
-2. In an extension PR, publish compatible code and explicit host-version declarations. Declare an upcoming host version only after validating its contract.
-3. Release the host contract change after compatible extension builds are available.
-4. Remove obsolete compatibility only when supported consumers no longer need it.
-
-The repository's public packages share a fixed release group, but extension adoption still depends on published public APIs. `bun run verify:extension-api-version` checks manifest support for the current host. See [release bridge ADR](../../adrs/0030-temporary-workspace-contract-release-bridge.md), [release versioning](../../requirements/platform/0005-versioning-and-releases.md), and [PR separation](../../guides/development/0004-pull-request-labels.md).
+[API versioning](0014-api-versioning.md) defines the change levels, the one-step-per-release rule, and how to deprecate and remove APIs. Bundled extensions and the host still move together: update every first-party extension and its manifest before a breaking release. `bun run verify:extension-api-version` lists any tracked manifest the host would refuse. See [release versioning](../../requirements/platform/0005-versioning-and-releases.md) and [PR separation](../../guides/development/0004-pull-request-labels.md).
 
 ## Source Layout
 

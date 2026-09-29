@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { defineCommand, defineExtension, defineView } from "@pstdio/sdk/extensions";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "../../runtime/loader";
 import { normalizeExtensionSources } from "../../runtime/normalize";
 import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
@@ -15,7 +16,7 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.14",
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
   },
   definition,
 });

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 
-export const writeExtensionWithDependency = (root: string, apiVersions = EXTENSION_API_VERSION) => {
+export const writeExtensionWithDependency = (root: string, apiVersions = `^${EXTENSION_API_VERSION}`) => {
   const extDir = join(root, "extensions", "dep-ext");
   const depDist = join(extDir, "node_modules", "test-dep", "dist");
   const sdkDir = join(extDir, "node_modules", "@pstdio", "sdk");
@@ -88,7 +88,7 @@ export const writeExtensionInstallEnvironmentProbe = (root: string) => {
       publisher: "test",
       main: "./extension.ts",
       type: "module",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       dependencies: { "install-env-recorder": "file:./install-env-recorder" },
       trustedDependencies: ["install-env-recorder"],
     }),

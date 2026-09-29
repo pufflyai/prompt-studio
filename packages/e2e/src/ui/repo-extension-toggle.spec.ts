@@ -22,7 +22,7 @@ const writeRepoExtension = (repoPath: string, name: string, displayName: string)
         displayName,
         publisher: "e2e",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         pstdio: { scope: "repo" },
       },
       null,

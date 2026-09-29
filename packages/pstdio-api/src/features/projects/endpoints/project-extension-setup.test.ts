@@ -36,7 +36,7 @@ const extension = async (name: string, broken = false) => {
       publisher: "example",
       version: "1.0.0",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   await writeFile(

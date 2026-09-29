@@ -43,7 +43,7 @@ test("publishes qualified mode theme and chrome references through the metadata 
       publisher: "example",
       version: "1.0.0",
       main: "./extension.ts",
-      enginesPstdio: "1.0.0-alpha.10",
+      enginesPstdio: "^0.1.0",
     },
     definition: defineExtension({ modes: [mode], themes: [theme], views: [view] }),
   };

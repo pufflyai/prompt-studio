@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
@@ -26,7 +27,7 @@ test("native view actions load dependent options and submit explicit values", as
       version: "0.1.0",
       main: "extension.ts",
       type: "module",
-      engines: { pstdio: "1.0.0-alpha.14" },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   const projectPath = join(sourcePath, "project");

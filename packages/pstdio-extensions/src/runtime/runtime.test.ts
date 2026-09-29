@@ -22,7 +22,7 @@ const writePackage = (dir: string, name: string, fields: Record<string, unknown>
         version: "1.0.0",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         ...fields,
       },
       null,

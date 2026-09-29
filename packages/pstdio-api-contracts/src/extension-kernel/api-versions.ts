@@ -1,14 +1,18 @@
 const numericIdentifier = "(?:0|[1-9]\\d*)";
-const prereleaseIdentifier = `(?:${numericIdentifier}|\\d*[A-Za-z-][0-9A-Za-z-]*)`;
-const exactVersion = new RegExp(
-  `^${numericIdentifier}\\.${numericIdentifier}\\.${numericIdentifier}(?:-${prereleaseIdentifier}(?:\\.${prereleaseIdentifier})*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$`,
-);
+const caretTerm = new RegExp(`^\\^(${numericIdentifier}\\.${numericIdentifier}\\.${numericIdentifier})$`);
 
-/** Authors certify each supported API version; a range must never imply support for another alpha. */
-export const parseExtensionApiVersions = (declaration: string) => {
-  const versions = declaration.split("||").map((version) => version.trim());
-  return versions.every((version) => exactVersion.test(version)) ? versions : null;
+/**
+ * Only caret terms are accepted because each one stops below the next breaking version, so a
+ * declaration can never claim support for a breaking API that did not exist when it was written.
+ * Returns the minimum API version of each term.
+ */
+export const parseExtensionApiDeclaration = (declaration: string) => {
+  const minimums = declaration.split("||").map((term) => caretTerm.exec(term.trim())?.[1]);
+  return minimums.every((minimum): minimum is string => minimum !== undefined) ? minimums : null;
 };
 
-export const supportsExtensionApiVersion = (declaration: string, hostVersion: string) =>
-  parseExtensionApiVersions(declaration)?.includes(hostVersion) ?? false;
+export const supportsExtensionApiVersion = (declaration: string, hostVersion: string) => {
+  const minimums = parseExtensionApiDeclaration(declaration);
+  // Rebuilt from the parsed terms because semver range syntax does not accept every whitespace `trim` removes.
+  return minimums !== null && Bun.semver.satisfies(hostVersion, minimums.map((minimum) => `^${minimum}`).join(" || "));
+};

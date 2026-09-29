@@ -12,7 +12,6 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { parseExtensionApiVersions } from "pstdio-api-contracts/extension-kernel";
 import { sourceImports } from "./source-imports";
 
 const ROOT = path.resolve(import.meta.dir, "../..");
@@ -212,13 +211,15 @@ const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, e
   }
 };
 
+const numericIdentifier = "(?:0|[1-9]\\d*)";
+const prereleaseIdentifier = `(?:${numericIdentifier}|\\d*[A-Za-z-][0-9A-Za-z-]*)`;
+const exactVersion = new RegExp(
+  `^${numericIdentifier}\\.${numericIdentifier}\\.${numericIdentifier}(?:-${prereleaseIdentifier}(?:\\.${prereleaseIdentifier})*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$`,
+);
+
 export const checkExtensionUiVersion = (pkg: WorkspacePackage, errors: string[]) => {
   const declaredVersion = pkg.dependencies["@pstdio/ui"];
-  if (
-    pkg.isExtension &&
-    declaredVersion &&
-    (parseExtensionApiVersions(declaredVersion)?.length !== 1 || declaredVersion.trim() !== declaredVersion)
-  ) {
+  if (pkg.isExtension && declaredVersion && !exactVersion.test(declaredVersion)) {
     errors.push(`${pkg.dir}: must pin @pstdio/ui to an exact published version instead of "${declaredVersion}"`);
   }
 };

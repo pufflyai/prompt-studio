@@ -111,6 +111,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0011 — Extension Notifications](../references/extensions/0011-notifications.md)
 - [0012 — Renderer Edit and Refresh Lifecycle](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
 - [0013 — Dashboard UI contributions](../references/extensions/0013-workbench-attachments.md)
+- [0014 — Extension API versioning](../references/extensions/0014-api-versioning.md)
 
 ### SDK
 
@@ -200,6 +201,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0044 — Temporary CI limits for heavy-setup tests](../adrs/0044-temporary-ci-limits-for-heavy-setup-tests.md)
 - [0045 — Temporary Remotion React subpath alias](../adrs/0045-temporary-remotion-react-subpath-alias.md)
 - [0046 — Let extension webviews write to the clipboard when they declare it](../adrs/0046-declared-webview-clipboard-writes.md)
+- [0047 — Semantic versioning for the extension API](../adrs/0047-semantic-versioning-for-the-extension-api.md)
 
 ## Lessons learned
 

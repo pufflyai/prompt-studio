@@ -215,7 +215,7 @@ Navigation and resource removal use explicit context APIs. The host no longer in
 - After deleting data, call `await ctx.resources.removed(resource)`. This reports the committed removal to every connected client, independently of command success. Keep missing-resource handling and update-only writes so a stale save cannot recreate deleted data.
 - Remove imports of the workbench's `toWorkbenchNavigationTargetResult` and `isExtensionNavigationTarget` aliases. Use the SDK's `isNavigationTarget` for explicit target validation and `toWorkbenchNavigationTarget` when adapting a target to the workbench.
 
-Core extensions already use these APIs. Publish their alpha.14 compatibility declarations before releasing the alpha.14 host, in a separate extension PR. Their existing published SDK dependency provides both APIs; this cleanup does not require an unpublished SDK in extension manifests. Existing exact alpha.12 and alpha.13 declarations remain valid for those hosts.
+Core extensions already use these APIs, and their existing published SDK dependency provides them.
 
 ## Workspace files and context
 

@@ -34,6 +34,14 @@ Do not:
 - Deep relative imports across packages
 - Importing from `clients/*`
 
+## Extension API changes
+
+Extensions outside this repo depend on the extension API: the public `@pstdio/sdk/extensions` types, manifest rules, bridge capabilities, and event payloads. For this API only, old APIs stay for a while. This overrides "Add backward compatibility only when it is specifically requested" and "Always remove old or unused code".
+
+- Deprecate first. Add the new API next to the old one. Mark the old one `@deprecated` and name the replacement.
+- Remove old APIs together. Collect deprecated APIs and remove them in one breaking release. Do not make one breaking release per removal.
+- Follow the change levels and the one-step-per-release rule in [API versioning](documentation/references/extensions/0014-api-versioning.md).
+
 ## First-principles engineering
 
 Fix the cause, not only the visible problem. Before writing code, answer these questions:
