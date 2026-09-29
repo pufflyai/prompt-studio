@@ -581,6 +581,7 @@ export default defineExtension({
       owner: workbenchModes.project,
       slot: "content",
       view: files.ref,
+      resourceScope: "project",
     }),
   ],
 });
@@ -589,6 +590,8 @@ export default defineExtension({
 `body` returns tree sections. Optional `children` and `footer` callbacks return nodes for lazy children and footer
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
+
+Navigation trees default to `resourceScope: "selection"`, so selecting a different resource starts a new read. Use `resourceScope: "project"` when the tree reads project data independently of the selected resource, such as a shared notes list. Its callbacks receive the project and no resource; selection changes keep its rows visible. Declared refresh events still update its data. The owner still controls where the tree appears.
 
 Set `selected: true` on the current node when several rows share a resource, such as
 documents within one ticket. The declaration stays on the node when trees are combined

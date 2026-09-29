@@ -177,6 +177,7 @@ const workbenchExtensionNavigationTreeRecordSchema = z.object({
   owner: z.union([modeRefSchema, pageRefSchema]),
   slot: z.enum(["header", "content", "footer"]),
   view: viewRefSchema,
+  resourceScope: z.enum(["project", "selection"]).optional(),
 });
 
 const workbenchExtensionResourceKindRecordSchema = z.object({

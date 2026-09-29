@@ -282,7 +282,11 @@ describe("createWorkbenchExtensionMetadata pages", () => {
       ],
     });
   });
-  test("publishes page-owned navigation trees with normalized refs", () => {
+  test.each([
+    undefined,
+    "selection",
+    "project",
+  ] as const)("publishes navigation tree resource scope and normalized refs (%s)", (resourceScope) => {
     const tree = defineView({
       id: "files",
       title: "Files",
@@ -305,7 +309,9 @@ describe("createWorkbenchExtensionMetadata pages", () => {
         defineExtension({
           views: [tree],
           pages: [page],
-          navigationTrees: [defineNavigationTree({ id: "files", owner: page.ref, slot: "footer", view: tree.ref })],
+          navigationTrees: [
+            defineNavigationTree({ id: "files", owner: page.ref, slot: "footer", view: tree.ref, resourceScope }),
+          ],
         }),
       ),
     ]);
@@ -317,6 +323,7 @@ describe("createWorkbenchExtensionMetadata pages", () => {
         owner: { extensionId: "pstdio.lab", kind: "page", id: "ticket" },
         slot: "footer",
         view: { extensionId: "pstdio.lab", kind: "view", id: "files" },
+        ...(resourceScope ? { resourceScope } : {}),
       },
     ]);
   });

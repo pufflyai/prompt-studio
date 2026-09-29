@@ -140,6 +140,8 @@ Tree queries include their bound resource, the current project and mode, and the
 
 Settings publishes its static navigation and collection parents before waiting for collection items. Visible collections load concurrently, including collapsed collections, and each publishes its items when ready. Native tree reads can publish partial sections through `TreeQueryContext.onProgress`. Progress belongs to the active read and is ignored after cancellation or completion. Background refreshes keep the last complete navigation until the replacement is ready.
 
+Static host navigation and extension links have no selected resource dependency. Links with resource-based visibility conditions retain it. Extension navigation trees can declare `resourceScope: "project"` when their data belongs to the project independently of the selected resource. The default `"selection"` scope preserves selected-resource reads and cancellation for other trees. Changing modes still replaces their navigation.
+
 ## Declared data dependencies
 
 Extensions use public `viewDataEvents` for host-owned session, workspace, and repository data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. File and notification churn does not broadcast a view refresh. Each renderer also declares its own extension data events.

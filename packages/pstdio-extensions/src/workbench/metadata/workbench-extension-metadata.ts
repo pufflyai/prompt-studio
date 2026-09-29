@@ -216,6 +216,7 @@ export const createWorkbenchExtensionMetadata = (
     owner: normalizedRef(tree.contribution.owner, tree.extensionId),
     slot: tree.contribution.slot ?? "content",
     view: normalizedRef(tree.contribution.view, tree.extensionId),
+    ...(tree.contribution.resourceScope ? { resourceScope: tree.contribution.resourceScope } : {}),
   })),
   statusBarItems: input.runtime.statusBarItems.map((item) => ({
     id: item.id,

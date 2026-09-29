@@ -19,6 +19,7 @@ interface DashboardNavigationContribution {
   modes: readonly (typeof dashboardModes)[number][];
   slot?: NavigationTreeSlot;
   defaultExpandedSectionIds?: string[];
+  /** Host navigation reads project data unless it declares a resource dependency. */
   resolveResource?(input: { modeId: string; resource?: ResourceRef }): ResourceRef | undefined;
   getSections(
     ctx: WorkbenchModuleContext,
@@ -42,11 +43,7 @@ export const registerDashboardNavigationContribution = (
       declarationIndex: declarationIndex < 0 ? declarations[slot].length : declarationIndex,
       slot,
       defaultExpandedSectionIds: contribution.defaultExpandedSectionIds,
-      ...(resolveResource
-        ? {
-            resolveResource: (resource: ResourceRef | undefined) => resolveResource({ modeId, resource }),
-          }
-        : {}),
+      resolveResource: (resource) => resolveResource?.({ modeId, resource }),
       getSections: ({ resource }) => contribution.getSections(ctx, { modeId, resource }),
     }),
   );
