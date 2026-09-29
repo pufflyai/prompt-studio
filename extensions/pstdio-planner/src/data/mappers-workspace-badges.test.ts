@@ -56,4 +56,17 @@ describe("ticket workspace badges", () => {
       },
     });
   });
+
+  test("labels the badge with the workspace name the dashboard shows", () => {
+    const workspace: ExtensionWorkspace = {
+      id: "workspace-default",
+      name: "prompt-studio",
+      workspace_shorthand: "default",
+      anchors_json: [{ type: "ticket", id: "ticket-1", shorthand: "T-1" }],
+    };
+
+    const badge = createTicketWorkspaceLookup([workspace]).get("T-1")?.[0];
+
+    expect(badge?.label).toBe("prompt-studio");
+  });
 });
