@@ -2,7 +2,7 @@
  * Repo-wide package boundary checks.
  *
  * Enforces the package layer map documented in
- * .pstdio/docs/architecture/package-boundaries.md:
+ * documentation/references/architecture/0013-package-boundaries.md:
  * - every workspace import must be declared in the importer's package.json
  * - workspace dependencies must stay within the allowed layer map below
  * - no dependency cycles among workspace packages

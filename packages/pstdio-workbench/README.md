@@ -1,6 +1,6 @@
 # @pstdio/workbench
 
-The headless composition model and React shell for Prompt Studio hosts. Extension authors use the [SDK cookbook](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/extensions/cookbook.md). This guide covers host integration.
+The headless composition model and React shell for Prompt Studio hosts. Extension authors use the [SDK cookbook](https://github.com/pufflyai/prompt-studio/blob/main/documentation/guides/extensions/0002-workbench-cookbook.md). This guide covers host integration.
 
 ## Entry points
 

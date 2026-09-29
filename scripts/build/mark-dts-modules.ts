@@ -1,7 +1,7 @@
 import { appendFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-// Temporary workaround, see .pstdio/docs/adrs/0040-temporary-dts-export-marker.md.
+// Temporary workaround, see documentation/adrs/0040-temporary-dts-export-marker.md.
 // `export {};` stops TypeScript from treating every top-level declaration in a .d.ts file as exported.
 export const markDtsModules = (dist: string) => {
   for (const file of readdirSync(dist).filter((name) => name.endsWith(".d.ts"))) {

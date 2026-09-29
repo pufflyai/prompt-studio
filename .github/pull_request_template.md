@@ -21,5 +21,5 @@ What does this PR add or change? List the affected modules and packages.
 
 <!--
 Why was it built this way? Explain choices a reviewer might question.
-Link any ADRs in .pstdio/docs/adrs, and call out hacks or temporary workarounds.
+Link any ADRs in documentation/adrs, and call out hacks or temporary workarounds.
 -->
