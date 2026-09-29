@@ -9,6 +9,8 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 
 export interface TreeQueryContext {
   signal?: AbortSignal;
+  /** Publish available sections while the rest of the current read is still loading. */
+  onProgress?(sections: TreeViewSection[]): void;
   filter?: string;
   resource?: ResourceRef;
   /** Widget/view contribution id for trees rendered through a view-backed widget. */
@@ -124,6 +126,8 @@ export interface TreeRendererContribution {
   when?: string;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
+  /** Identify the navigation data scope when it differs from the current page resource. */
+  getReadKey?(ctx: TreeQueryContext): string;
   getBody(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getHeader?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getFooter?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];

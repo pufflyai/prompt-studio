@@ -16,6 +16,21 @@ const sidenavModeOwners = (ctx: WorkbenchModuleContext, modeId: string) => {
   if (modeId !== "sessions") return [activeModeOwner(ctx, modeId)];
   return [activeModeOwner(ctx, "project"), activeModeOwner(ctx, modeId)];
 };
+const sidenavModeQueries = (ctx: WorkbenchModuleContext, modeId: string) =>
+  sidenavModeOwners(ctx, modeId).map((owner) => ({
+    owner,
+    // Borrowed project links keep their project context inside Sessions mode.
+    resource: owner.id === modeId ? ctx.getPrimaryResource() : undefined,
+  }));
+const sidenavReadKey = (ctx: WorkbenchModuleContext) => {
+  const mode = ctx.modes.getActiveModeId();
+  const keys = mode
+    ? sidenavModeQueries(ctx, mode).map(({ owner, resource }) => ctx.navigationTrees.getReadKey(owner, { resource }))
+    : [];
+  const page = activePageOwner(ctx);
+  if (page) keys.push(ctx.navigationTrees.getReadKey(page, { resource: ctx.getPrimaryResource() }));
+  return JSON.stringify(keys);
+};
 const withoutSessionsLink = (sections: Awaited<ReturnType<WorkbenchModuleContext["navigationTrees"]["getSections"]>>) =>
   sections
     .map((section) => ({
@@ -36,9 +51,9 @@ const composeSidenavSlot = async (
   if (!mode) return [];
   const context = { resource, signal };
   const modeSections: TreeViewSection[] = [];
-  for (const owner of sidenavModeOwners(ctx, mode)) {
+  for (const { owner, resource } of sidenavModeQueries(ctx, mode)) {
     signal?.throwIfAborted();
-    const sections = await ctx.navigationTrees.getSections(owner, slot, context);
+    const sections = await ctx.navigationTrees.getSections(owner, slot, { resource, signal });
     modeSections.push(...(mode === "sessions" && owner.id === "project" ? withoutSessionsLink(sections) : sections));
   }
   signal?.throwIfAborted();
@@ -93,6 +108,7 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
       title: "Sidenav",
       body: {
         kind: "tree",
+        getReadKey: () => sidenavReadKey(ctx),
         defaultExpandedNodeIds: ["workspace-sessions"],
         defaultExpandedSectionIds: ["sessions-wrap"],
         canMove: ({ source, destination }) => source.moveScope === destination.moveScope,

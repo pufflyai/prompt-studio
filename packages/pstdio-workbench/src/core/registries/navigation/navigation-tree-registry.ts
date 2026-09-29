@@ -1,3 +1,4 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
@@ -25,6 +26,8 @@ export interface NavigationTreeContribution {
   slot?: NavigationTreeSlot;
   viewId?: string;
   defaultExpandedSectionIds?: string[];
+  /** Resolve the data resource independently of the selected navigation item. */
+  resolveResource?(resource: ResourceRef | undefined): ResourceRef | undefined;
   getSections?(context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getChildren?(node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
 }
@@ -39,6 +42,7 @@ export interface CreateNavigationTreeRegistryInput {
 export interface NavigationTreeRegistry {
   registerContribution(contribution: NavigationTreeContribution): Disposable;
   resolveOwner(kind: NavigationTreeOwner["kind"], id: string): NavigationTreeOwner | undefined;
+  getReadKey(owner: NavigationTreeOwner, context?: NavigationTreeContext): string;
   getSections(
     owner: NavigationTreeOwner,
     slot?: NavigationTreeSlot,
@@ -69,6 +73,11 @@ const contributionOrder =
   };
 
 const scopedId = (scope: string | undefined, id: string) => (scope ? `${scope}:${id}` : id);
+
+const readContext = (contribution: NavigationTreeContribution, context: NavigationTreeContext) => ({
+  ...context,
+  resource: contribution.resolveResource ? contribution.resolveResource(context.resource) : context.resource,
+});
 
 const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => {
   const index = sections.findIndex((candidate) => candidate.id === section.id);
@@ -149,13 +158,25 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       )?.owner;
     },
 
+    getReadKey(owner, context = {}) {
+      return JSON.stringify(
+        (["header", "content", "footer"] as const).flatMap((slot) =>
+          matching(owner, slot).map((contribution) => [
+            contribution.id,
+            resourceKey(readContext(contribution, context).resource),
+          ]),
+        ),
+      );
+    },
+
     async getSections(owner, slot = "content", context = {}) {
       const sections: TreeViewSection[] = [];
       for (const contribution of matching(owner, slot)) {
         context.signal?.throwIfAborted();
+        const query = readContext(contribution, context);
         const sourceSections = contribution.viewId
-          ? await input.getViewSections?.(contribution.viewId, context)
-          : await contribution.getSections?.(context);
+          ? await input.getViewSections?.(contribution.viewId, query)
+          : await contribution.getSections?.(query);
         context.signal?.throwIfAborted();
         for (const section of sourceSections ?? []) {
           mergeSection(sections, projectSection(section, contribution, owner));
@@ -169,9 +190,10 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       const source = nodeSources.get(node);
       if (!source) return node.children ?? [];
       const moveScope = node.moveScope ?? ownerId(source.contribution.owner);
+      const query = readContext(source.contribution, context);
       const children = source.contribution.viewId
-        ? await input.getViewChildren?.(source.contribution.viewId, source.node, context)
-        : await source.contribution.getChildren?.(source.node, context);
+        ? await input.getViewChildren?.(source.contribution.viewId, source.node, query)
+        : await source.contribution.getChildren?.(source.node, query);
       if (!children) return node.children ?? [];
       return children.map((child) => projectNode(child, source.contribution, moveScope));
     },

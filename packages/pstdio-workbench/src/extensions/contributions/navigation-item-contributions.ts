@@ -88,6 +88,7 @@ const defaultExpandedGroupIds = (items: NavigationItem[]) => [
 const registerItems = (input: RegisterWorkbenchExtensionNavigationItemsInput) =>
   groupItems(input.metadata.navigationItems).map((items) => {
     const first = items[0]!;
+    const resourceDependent = items.some((item) => item.when?.resourceType?.length || item.when?.metadata);
     return input.workbench.navigationTrees.registerContribution({
       id: `${first.extensionId}.navigation-items.${first.owner.kind}.${metadataRefId(first.owner)}.${first.slot}`,
       owner: toOwner(first.owner),
@@ -95,6 +96,7 @@ const registerItems = (input: RegisterWorkbenchExtensionNavigationItemsInput) =>
       declarationIndex: input.metadata.navigationItems.indexOf(first),
       slot: first.slot,
       defaultExpandedSectionIds: defaultExpandedGroupIds(items),
+      ...(!resourceDependent ? { resolveResource: () => undefined } : {}),
       getSections: () => toSections(input.workbench, items, input.createWhenExpression),
     });
   });
@@ -110,6 +112,7 @@ const registerTrees = (input: RegisterWorkbenchExtensionNavigationItemsInput) =>
       declarationIndex: input.metadata.navigationItems.length + declarationIndex,
       slot: tree.slot as NavigationTreeSlot,
       viewId,
+      ...(tree.resourceScope === "project" ? { resolveResource: () => undefined } : {}),
     });
   });
 
