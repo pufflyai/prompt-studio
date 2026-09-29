@@ -128,6 +128,24 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
     action: previewNavigationTarget(item.action),
   }));
 
+  const navigationTrees = (definition.navigationTrees ?? []).map((tree) => ({
+    id: contributionId("navigation-tree", tree.id),
+    extensionId,
+    owner: normalizedRef(tree.owner),
+    slot: tree.slot ?? "content",
+    view: normalizedRef(tree.view),
+    ...(tree.resourceScope ? { resourceScope: tree.resourceScope } : {}),
+  }));
+
+  const resourceKinds = (definition.resourceKinds ?? []).map((kind) => ({
+    id: contributionId("resource-kind", kind.id),
+    localId: kind.id,
+    extensionId,
+    label: kind.label,
+    icon: kind.icon,
+    menuSlots: [],
+  }));
+
   const metadata = {
     ...emptyWorkbenchExtensionMetadata,
     extensions: [
@@ -143,6 +161,8 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
     statuses,
     pages,
     navigationItems,
+    navigationTrees,
+    resourceKinds,
   } as WorkbenchExtensionMetadata;
 
   return { handlers, metadata };
@@ -172,6 +192,6 @@ export const createExtensionPreview = (definition: ExtensionDefinition, pageId: 
 
   workbench.pageLocations.setProject("storybook");
   workbench.pageLocations.navigate({ kind: "page", page });
-  if (definition.navigationItems?.length) registerPreviewNavigation(workbench);
+  if (definition.navigationItems?.length || definition.navigationTrees?.length) registerPreviewNavigation(workbench);
   return workbench;
 };

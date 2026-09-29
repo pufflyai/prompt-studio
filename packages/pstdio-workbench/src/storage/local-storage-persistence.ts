@@ -38,7 +38,6 @@ export interface CreateLocalStorageWorkbenchPersistenceInput extends CreateWorkb
 interface PersistedWorkbenchPageLocation {
   version: 1;
   location: PageLocation;
-  levels: Readonly<Record<string, PageLocation>>;
 }
 
 const WORKBENCH_PAGE_LOCATION_VERSION = 1 as const;
@@ -55,18 +54,10 @@ export const createLocalStoragePageLocationPersistence = (
       );
       return persisted?.version === WORKBENCH_PAGE_LOCATION_VERSION ? persisted.location : undefined;
     },
-    loadLevels: (projectId) => {
-      const persisted = readJson<PersistedWorkbenchPageLocation>(
-        storage,
-        workbenchStoragePersistenceKey(input.namespace, "page-location", projectId),
-      );
-      return persisted?.version === WORKBENCH_PAGE_LOCATION_VERSION ? (persisted.levels ?? {}) : {};
-    },
-    save: (projectId, location, levels = {}) => {
+    save: (projectId, location) => {
       const persisted: PersistedWorkbenchPageLocation = {
         version: WORKBENCH_PAGE_LOCATION_VERSION,
         location,
-        levels,
       };
       storage.setItem(
         workbenchStoragePersistenceKey(input.namespace, "page-location", projectId),

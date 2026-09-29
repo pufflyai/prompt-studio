@@ -52,7 +52,7 @@ test("tree menus act on an inactive sub-ticket and preserve the open ticket", as
   expect((await getPlannerTicket(request, apiBase, project.id, child.id))?.archived).toBe(true);
   expect((await getPlannerTicket(request, apiBase, project.id, parent.id))?.archived).toBe(false);
 
-  await sidenav.locator('[data-tree-list-node-id="navigation.back"]').click();
+  await page.getByRole("button", { name: /Resource Actions$/ }).click();
   await showHiddenSidenavEntry(page, "Workspaces");
   await expect(page.getByRole("menu")).toHaveCount(0);
 });

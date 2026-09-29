@@ -56,7 +56,7 @@ test("an extension page navigates through the public API and browser history", a
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
   const labFrame = page.frameLocator('iframe[title="Lab"]');
   await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible({ timeout: 30_000 });
-  await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
+  await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toHaveCount(0);
   const selectedTape = sidenav.getByRole("option", { name: /Session 1 — first contact/ });
   await expect(selectedTape).toBeVisible();
 
@@ -113,7 +113,7 @@ test("Lab replaces an active session page in main", async ({ page, request }) =>
   await expect(sidenav.getByRole("option", { name: sessionTitle, exact: true })).toBeVisible();
   await sidenav.getByRole("option", { name: sessionTitle, exact: true }).click();
   await expect(page.getByText(`Fake Agent: completed "${sessionTitle}"`).first()).toBeVisible({ timeout: 30_000 });
-  await sidenav.locator('[data-tree-list-node-id="navigation.back"]').click();
+  await page.getByRole("button", { name: new RegExp(`${project.name}$`) }).click();
   await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
 
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);

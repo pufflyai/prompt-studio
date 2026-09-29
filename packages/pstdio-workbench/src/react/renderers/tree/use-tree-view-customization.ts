@@ -12,6 +12,7 @@ import {
   type VisibilityOverride,
 } from "@pstdio/ui";
 import type { ReactNode } from "react";
+import { withoutPinnedOnlyRows } from "./tree-pinned-only";
 
 interface TreeViewRegions {
   headerSections: TreeListSection[];
@@ -48,6 +49,7 @@ interface NodeVisibilityActions {
 
 interface TreeViewCustomizationOptions {
   suppressNodeContextMenus?: boolean;
+  pinnedOnlyNodeIds?: ReadonlySet<string>;
 }
 
 const toStringLabel = (label: ReactNode, fallback: string) => (typeof label === "string" ? label : fallback);
@@ -163,7 +165,7 @@ export const useTreeViewCustomization = (
     orderedSectionsBySlot[slot].push(section);
   }
   const orderedHeaderSections = orderedSectionsBySlot.header;
-  const orderedSections = orderedSectionsBySlot.content;
+  const orderedSections = withoutPinnedOnlyRows(orderedSectionsBySlot.content, options.pinnedOnlyNodeIds ?? new Set());
   const orderedFooterSections = orderedSectionsBySlot.footer;
   const includeNodeContextMenus = options.suppressNodeContextMenus !== true;
 

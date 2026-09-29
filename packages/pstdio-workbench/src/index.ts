@@ -231,7 +231,7 @@ export type {
 
 export {
   batchWorkbenchChanges,
-  createNavigationBackNode,
+  createLevelNavigation,
   createRendererReadRegistry,
   createStatusBarRegistry,
   createStatusRegistry,
@@ -254,7 +254,6 @@ export {
   type RendererReadRequest,
   rendererReadKey,
   resolveAnchorRegion,
-  resolveNavigationLevel,
   resourceContextMenuPath,
   resourceHierarchyCycleCode,
   settleReadBatch,

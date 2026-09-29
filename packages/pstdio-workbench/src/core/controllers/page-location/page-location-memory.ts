@@ -41,13 +41,8 @@ export const createMemoryWorkbenchPageLocationBrowser = (): WorkbenchPageLocatio
 
 export const createMemoryWorkbenchPageLocationPersistence = (): WorkbenchPageLocationPersistence => {
   const locations = new Map<string, PageLocation>();
-  const levels = new Map<string, Readonly<Record<string, PageLocation>>>();
   return {
     load: (projectId) => locations.get(projectId),
-    loadLevels: (projectId) => levels.get(projectId) ?? {},
-    save: (projectId, location, remembered = {}) => {
-      locations.set(projectId, location);
-      levels.set(projectId, remembered);
-    },
+    save: (projectId, location) => locations.set(projectId, location),
   };
 };

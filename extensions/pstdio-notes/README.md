@@ -6,7 +6,7 @@ it in the rich Markdown editor, which renders headings, lists, links, tables, an
 ## Multiple documents
 
 - Use **New note** next to **Notes** to create a titled document with an empty body.
-- The **Project** Back row returns to the last page opened at the main level. Clicking a note opens its tab and keeps the Notes level visible.
+- Clicking a note opens its tab and keeps the Notes level visible. Use the breadcrumb to return to the project.
 - Each note has a unique ID so people can create notes with the same title at the same time.
 - Titles are independent of the Markdown body. Editing or clearing the body keeps the title.
 - Right-click a note and choose **Rename note** to change its title. The sidebar and open tabs update without changing the body.

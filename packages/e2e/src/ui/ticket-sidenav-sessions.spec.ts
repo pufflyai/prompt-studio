@@ -72,7 +72,6 @@ test.describe("Ticket sidenav sessions", () => {
 
     // Ticket level renders the open ticket as a selected row in its own left sidenav.
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
     await expect(sidenav.getByRole("option", { name: "Tickets", exact: true })).toHaveCount(0);
     await expect(sidenav.getByRole("option", { name: new RegExp(ticket.shorthand) })).toBeVisible({ timeout: 15_000 });
 

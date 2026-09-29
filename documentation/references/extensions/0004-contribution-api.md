@@ -355,6 +355,6 @@ export default defineExtension({
 });
 ```
 
-The host pins a Back row at the top of the header, above Search. Users cannot move or hide it. It is named after the parent level resource or page, or the mode label (Project at the main level). Back restores the last page visited at that level. This memory is saved per project and survives reloads. On a first visit, Back opens the parent level owner, the declared parent location, or Start. Header and footer keep the mode sections followed by the level owner's sections. Search stays in the header and opens the command palette. In the Sidenav customize menu, users can hide a level's labeled sections but not its rows.
+The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels. Users leave a level through the breadcrumb or browser history; the Sidenav adds no Back row. In the Sidenav customize menu, users can hide a level's labeled sections but not its rows.
 
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.

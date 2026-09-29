@@ -23,6 +23,7 @@ import {
   toTreeListSection,
 } from "./tree-list-adapter";
 import { TreeParamsDialog } from "./tree-params-dialog";
+import { pinnedOnlyNodeIds } from "./tree-pinned-only";
 import { TreeViewBody } from "./tree-view-body";
 import { createMoveTreeNode } from "./tree-view-move";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
@@ -182,7 +183,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
       resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
     },
-    { suppressNodeContextMenus: Boolean(onSidenavContextActionsChange) },
+    { suppressNodeContextMenus: Boolean(onSidenavContextActionsChange), pinnedOnlyNodeIds: pinnedOnlyNodeIds(body) },
   );
   useSidenavContextActions(backgroundContextActions, customizationRevision, onSidenavContextActionsChange);
   if (!treeRenderer) {
@@ -260,7 +261,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               expandedSectionIds={treeState.expandedSectionIds}
               activeNodeId={headerActiveNodeId}
               rowVariant="compact"
-              // Header sections separate owners (host Back, mode Search), so their rows read as one list.
+              // Header sections separate owners (mode and levels), so their rows read as one list.
               sectionGap="1px"
               nodeGap="1px"
               onToggleSection={toggleSection}

@@ -1,0 +1,47 @@
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
+import * as OnboardingStories from "./onboarding.stories";
+import source from "./extensions/navigation-levels-extension.ts?raw";
+
+<Meta of={OnboardingStories} name="17. Sidenav levels" />
+
+# 17. Give a page its own Sidenav level
+
+A page can own a `content` navigation tree. Opening that page starts a Sidenav level: the page's sections replace the
+mode's body, so the Sidenav shows only what belongs to the page. Header and footer rows stay.
+
+Press Recipes to enter the level. The recipe list replaces the project rows, while Pantry stays in the header. Open a
+recipe: its page declares Recipes as its parent, so the level stays open. Press Pantry to return to the main level.
+The Sidenav has no Back row. Users leave a level through the breadcrumb or browser history.
+
+<Canvas of={OnboardingStories.SidenavLevels} sourceState="none" />
+
+## Complete example
+
+<Source code={source} language="tsx" />
+
+## What each field means
+
+- `defineNavigationItem({ owner: workbenchModes.project, slot: "header" })` adds a header row to the mode. Header and
+  footer rows accumulate from the mode through every open level, so they stay visible in nested levels.
+- `defineNavigationItem({ slot: "content", action: { kind: "page", page } })` adds the one main-level row that opens
+  the level page.
+- `defineNavigationTree({ owner: recipesPage.ref, slot: "content", view })` gives the page its own tree. A page owner
+  starts a level; a mode owner adds sections to the main level instead.
+- `resourceScope: "project"` reads the tree once for the project. Selecting a recipe keeps its rows visible.
+- `parent: recipesPage.ref` on the recipe page keeps the Recipes level open for every recipe. Levels follow the page
+  location's parent chain, so a level page opened from another level nests inside it.
+- Rows set `resource` as their action subject and `target` as their click destination.
+
+Users can drag rows into the header or footer. Those rows also stay visible inside levels. In the customize menu, users
+can hide a level's labeled sections but not its rows.
+
+## Host API
+
+`createLevelNavigation(workbench)` composes one navigation tree from the active mode and every open level. Hosts use
+it to fill their navigation view:
+
+- `getSections(slot, signal)` returns the sections for `header`, `content`, or `footer`.
+- `getReadKey()` changes when the owners or their resources change, so the tree starts a new read.
+- `getDefaultExpandedSectionIds()` lists the sections that start expanded.
+
+Outer body rows are returned with `pinnedOnly: true`. The tree view shows them only where users pinned them.

@@ -193,7 +193,7 @@ test.describe("Extension webviews", () => {
     await page.mouse.wheel(0, 200);
     await expect.poll(() => labBody.evaluate((body) => body.scrollTop)).toBeGreaterThan(0);
 
-    await page.locator('[data-tree-list-node-id="navigation.back"]').click();
+    await page.getByRole("button", { name: /Extension Webviews Project$/ }).click();
     await expect(labIframe).toBeHidden();
     await page.getByRole("button", { name: "Navigate back" }).click();
     await expect(page.getByRole("link", { name: "Lab", exact: true })).toBeVisible();

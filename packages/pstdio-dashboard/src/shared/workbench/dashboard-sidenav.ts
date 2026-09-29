@@ -1,57 +1,8 @@
-import {
-  createNavigationBackNode,
-  resolveNavigationLevel,
-  type TreeViewSection,
-  type WorkbenchModuleContext,
-} from "@pstdio/workbench";
+import { createLevelNavigation, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { subscribeSessionListData } from "@/modules/sessions/data/session-data-subscription";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 
-const activeModeOwner = (ctx: WorkbenchModuleContext, modeId: string) =>
-  ctx.navigationTrees.resolveOwner("mode", modeId) ?? { kind: "mode" as const, id: modeId, extensionId: "pstdio" };
-const activeLevel = (ctx: WorkbenchModuleContext) => {
-  const state = ctx.pages.store.getState();
-  const mode = ctx.modes.getMode(ctx.modes.getActiveModeId() ?? "");
-  if (!mode) return undefined;
-  return resolveNavigationLevel({
-    location: state.location,
-    pages: Object.values(state.pages),
-    navigationTrees: ctx.navigationTrees,
-    mode: { id: mode.id, label: mode.label ?? mode.id },
-  });
-};
-const sidenavReadKey = (ctx: WorkbenchModuleContext) => {
-  const mode = ctx.modes.getActiveModeId();
-  if (!mode) return "[]";
-  const level = activeLevel(ctx);
-  const keys = [ctx.navigationTrees.getReadKey(activeModeOwner(ctx, mode), { resource: ctx.getPrimaryResource() })];
-  if (level) keys.push(ctx.navigationTrees.getReadKey(level.owner, { resource: level.location.resource }));
-  return JSON.stringify(keys);
-};
-const composeSidenavSlot = async (
-  ctx: WorkbenchModuleContext,
-  slot: "header" | "content" | "footer",
-  signal?: AbortSignal,
-) => {
-  const mode = ctx.modes.getActiveModeId();
-  const resource = ctx.getPrimaryResource();
-  if (!mode) return [];
-  const level = activeLevel(ctx);
-  const modeOwner = activeModeOwner(ctx, mode);
-  const owners = slot === "content" && level ? [level.owner] : [modeOwner, ...(level ? [level.owner] : [])];
-  const sections: TreeViewSection[] = [];
-  for (const owner of owners) {
-    signal?.throwIfAborted();
-    const ownerResource = owner.kind === "page" ? level?.location.resource : resource;
-    sections.push(...(await ctx.navigationTrees.getSections(owner, slot, { resource: ownerResource, signal })));
-  }
-  signal?.throwIfAborted();
-  if (slot !== "header" || !level) return sections;
-  const back = createNavigationBackNode(level, ctx.pageLocations.getLevelLocation(level.parent.key));
-  // A fixed, unlabelled first header section keeps Back at the very top, above Search, and out of reordering.
-  return [{ id: "navigation.level", canHide: false, canReorder: false, nodes: [back] }, ...sections];
-};
 // Mode and page contributions share one host navigation view.
 export const updateDashboardSidenav = (
   ctx: WorkbenchModuleContext,
@@ -63,16 +14,8 @@ export const updateDashboardSidenav = (
   if ("selectedNode" in options) {
     ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
   }
-  const mode = ctx.modes.getActiveModeId();
-  const level = activeLevel(ctx);
-  const owners = mode ? [activeModeOwner(ctx, mode), ...(level ? [level.owner] : [])] : [];
-  for (const owner of owners) {
-    const slots =
-      level && owner.kind === "mode" ? (["header", "footer"] as const) : (["header", "content", "footer"] as const);
-    for (const slot of slots)
-      for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(owner, slot)) {
-        ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
-      }
+  for (const sectionId of createLevelNavigation(ctx).getDefaultExpandedSectionIds()) {
+    ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
   }
   ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
 };
@@ -89,19 +32,20 @@ const syncSidenavForActiveMode = (ctx: WorkbenchModuleContext) => {
 };
 export const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
 const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
+  const navigation = createLevelNavigation(ctx);
   ctx.views.registerView(
     {
       id: dashboardWidgetIds.dashboardSidenav,
       title: "Sidenav",
       body: {
         kind: "tree",
-        getReadKey: () => sidenavReadKey(ctx),
+        getReadKey: () => navigation.getReadKey(),
         defaultExpandedNodeIds: ["workspace-sessions"],
         defaultExpandedSectionIds: ["sessions-wrap"],
         canMove: ({ source, destination }) => source.moveScope === destination.moveScope,
-        getHeader: (context) => composeSidenavSlot(ctx, "header", context.signal),
-        getBody: (context) => composeSidenavSlot(ctx, "content", context.signal),
-        getFooter: (context) => composeSidenavSlot(ctx, "footer", context.signal),
+        getHeader: (context) => navigation.getSections("header", context.signal),
+        getBody: (context) => navigation.getSections("content", context.signal),
+        getFooter: (context) => navigation.getSections("footer", context.signal),
         getChildren: (node, context) => ctx.navigationTrees.getChildren(node, context),
       },
     },

@@ -59,6 +59,9 @@ export interface NavigationTreeRegistry {
 
 // The owner's top-level section. Extensions add ungrouped entries here and use a labeled section for a named group.
 export const navigationRootSectionId = "navigation.root";
+// Each slot keeps its own root, so pinned header and footer rows never share a section id with the body.
+export const navigationSlotRootSectionId = (slot: NavigationTreeSlot = "content") =>
+  slot === "content" ? navigationRootSectionId : `navigation.${slot}`;
 
 const ownerId = (owner: NavigationTreeOwner) => `${owner.kind}:${owner.extensionId}:${owner.id}`;
 
@@ -137,7 +140,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     ...section,
     id:
       contribution.sourceExtensionId !== owner.extensionId && !section.label
-        ? navigationRootSectionId
+        ? navigationSlotRootSectionId(contribution.slot)
         : scopedId(contribution.idScope, section.id),
     moveScope: ownerId(owner),
     canHide: section.canHide ?? true,

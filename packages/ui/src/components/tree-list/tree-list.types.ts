@@ -12,7 +12,7 @@ export type TreeListNavigationIntent = ListRowNavigationIntent;
 export type TreeListActionContext = ListRowActionContext;
 export type TreeListActionMenuItem = ListRowActionMenuItem;
 export type TreeListAction = ListRowAction;
-export type TreeListNodeRowVariant = Extract<ListRowVariant, "empty-state" | "back">;
+export type TreeListNodeRowVariant = Extract<ListRowVariant, "empty-state">;
 
 export interface TreeListInlineInput {
   ariaLabel: string;

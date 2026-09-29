@@ -45,7 +45,6 @@ const createHarness = () => {
     initialSidePanelMode: "closed",
     pageLocationBrowser: browser,
     pageLocationPersistence: {
-      loadLevels: () => ({}),
       load: (id) => persisted.get(id),
       save: (id, location) => {
         persisted.set(id, location);

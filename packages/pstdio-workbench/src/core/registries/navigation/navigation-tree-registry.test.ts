@@ -113,6 +113,25 @@ describe("navigation tree registry", () => {
     expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["search", "note-list:notes"]);
     expect(sections[0]?.nodes[1]?.children?.map((node) => node.id)).toEqual(["note-list:n1"]);
   });
+  test("keeps each slot's root section separate so pinned rows never merge into the body", async () => {
+    const registry = createNavigationTreeRegistry();
+    for (const slot of ["header", "content", "footer"] as const)
+      registry.registerContribution({
+        id: `lab.${slot}`,
+        owner: project,
+        sourceExtensionId: "pstdio.extension-lab",
+        declarationIndex: 0,
+        slot,
+        getSections: () => [{ id: "items", nodes: [{ id: slot, label: slot }] }],
+      });
+
+    const ids = await Promise.all(
+      (["header", "content", "footer"] as const).map(async (slot) =>
+        (await registry.getSections(project, slot)).map((section) => section.id),
+      ),
+    );
+    expect(ids).toEqual([["navigation.header"], ["navigation.root"], ["navigation.footer"]]);
+  });
   test("attaches one opaque owner key to every section and row", async () => {
     const registry = createNavigationTreeRegistry();
     registry.registerContribution({

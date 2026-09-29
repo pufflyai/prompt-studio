@@ -15,7 +15,7 @@ const dashboardModes = ["project"] as const;
 
 // Host sections render without headers, so the Sidenav customize menu names them here.
 export const dashboardNavigationSections = {
-  search: { id: "navigation.search", menuLabel: "Header" },
+  header: { id: "navigation.header", menuLabel: "Header" },
   root: { id: "navigation.root", menuLabel: "Navigation" },
   footer: { id: "navigation.footer", menuLabel: "Footer" },
 } as const;

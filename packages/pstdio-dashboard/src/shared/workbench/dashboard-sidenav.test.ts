@@ -3,7 +3,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerDashboardSidenav } from "./dashboard-sidenav";
-import { treeViewBody, treeViewSections } from "./workbench-view-test-helpers";
+import { treeViewSections } from "./workbench-view-test-helpers";
 
 const registerModePage = (workbench: WorkbenchCore, modeId: string, pageId: string, resourceKind?: string) => {
   const viewId = `test.${pageId}.view`;
@@ -172,60 +172,5 @@ describe("registerDashboardSidenav", () => {
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },
     ]);
     expect(resourceReads).toEqual([undefined, resourceKey(workspace), undefined]);
-  });
-});
-
-describe("dashboard sidenav levels", () => {
-  test("replaces mode content, pins Back above the header, and refreshes siblings and inherited levels", async () => {
-    const wb = createWorkbench();
-    wb.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    const home = registerModePage(wb, "project", "home");
-    const ticket = registerModePage(wb, "project", "ticket", "ticket");
-    const child = registerModePage(wb, "project", "child");
-    for (const slot of ["header", "content", "footer"] as const)
-      wb.navigationTrees.registerContribution({
-        id: slot,
-        owner: { kind: "mode", id: "project", extensionId: "pstdio" },
-        sourceExtensionId: "pstdio",
-        declarationIndex: 0,
-        slot,
-        getSections: () => [{ id: slot, nodes: [{ id: slot, label: slot }] }],
-      });
-    wb.navigationTrees.registerContribution({
-      id: "ticket-tree",
-      owner: { kind: "page", id: "test.page.ticket", extensionId: "test" },
-      sourceExtensionId: "test",
-      declarationIndex: 0,
-      getSections: ({ resource }) => [{ id: "ticket", nodes: [{ id: resource!.id, label: resource!.id }] }],
-    });
-    registerDashboardSidenav(wb);
-    wb.pageLocations.setProject("one");
-    wb.pageLocations.navigate({ kind: "page", page: home });
-    const target = (id: string) => ({ kind: "page" as const, page: ticket, resource: { type: "ticket", id } });
-    wb.pageLocations.navigate(target("one"));
-    const body = () => treeViewSections(wb, dashboardWidgetIds.dashboardSidenav);
-    const readSlot = (slot: "header" | "footer") => {
-      const tree = treeViewBody(wb, dashboardWidgetIds.dashboardSidenav);
-      const read = slot === "header" ? tree.getHeader : tree.getFooter;
-      return read!({
-        state: wb.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav),
-        refresh: () => undefined,
-        setSelectedNode: () => undefined,
-      });
-    };
-    expect((await body()).flatMap((s) => s.nodes).map((n) => n.id)).toEqual(["one"]);
-    const header = await readSlot("header");
-    expect(header[0]).toMatchObject({ id: "navigation.level", canHide: false, canReorder: false });
-    expect(header.flatMap((s) => s.nodes).map((n) => n.id)).toEqual(["navigation.back", "header"]);
-    const back = header[0]!.nodes[0]!;
-    expect(back.target).toEqual({ kind: "page", page: home });
-    wb.pageLocations.navigate(target("two"));
-    expect((await body())[0]!.nodes[0]!.id).toBe("two");
-    wb.pageLocations.navigate({ kind: "page", page: child, parent: target("two") });
-    expect((await body())[0]!.nodes[0]!.id).toBe("two");
-    expect((await readSlot("footer"))[0]!.nodes[0]!.id).toBe("footer");
-    await wb.navigation.openTarget(back.target!);
-    expect((await body())[0]!.nodes[0]!.id).toBe("content");
-    expect((await readSlot("header")).flatMap((s) => s.nodes).map((n) => n.id)).toEqual(["header"]);
   });
 });

@@ -48,10 +48,6 @@ export const createPageLocationControllerActions = <Value>(
 ): WorkbenchPageLocationController => {
   const { input } = actions;
   return {
-    getLevelLocation: (key) => {
-      const projectId = input.registry.store.getState().projectId;
-      return projectId ? input.persistence.loadLevels(projectId)[key] : undefined;
-    },
     historyStore: actions.historyStore,
     removeResource: actions.removeResource,
     setProject(projectId) {

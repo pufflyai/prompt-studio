@@ -130,13 +130,8 @@ test("removes and restores owner-scoped collections across project and session p
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
-  await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
-  await expect(row(sidenav, "Search")).toBeVisible();
   await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
-  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute(
-    "data-tree-list-node-id",
-    "navigation.back",
-  );
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
@@ -233,7 +228,6 @@ test("renders the ticket tree inside the Sidenav resource section", async ({ pag
   await card.getByText(ticket.title, { exact: true }).click();
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
   await expect(row(sidenav, "Search")).toBeVisible();
   await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand}(?:\\s|$)`) })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
@@ -269,7 +263,6 @@ test.describe("Dashboard Sidenav stories", () => {
         page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /Prompt Studio$/ }),
       ).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
       if ([ticketModeStoryId, ticketWorkspaceBackStoryId, sessionModeStoryId].includes(storyId)) {
-        await expect(sidenav.locator('[data-tree-list-node-id="navigation.back"]')).toHaveText("Project");
         await expect(row(sidenav, "Search")).toBeVisible();
       } else await expectSidenavSections(sidenav);
       await expect(row(sidenav, "Workspaces")).toHaveCount(0);

@@ -6,4 +6,4 @@
 "pstdio": minor
 ---
 
-Add persistent sidenav levels with fixed Back navigation and dedicated Notes and Sessions lists.
+Add Sidenav levels for pages, keep header rows and pinned rows visible inside levels, and give Notes and Sessions their own lists.

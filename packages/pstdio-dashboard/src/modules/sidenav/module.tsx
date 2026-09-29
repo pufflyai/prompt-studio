@@ -13,7 +13,7 @@ const registerSearchSection = (ctx: WorkbenchModuleContext) => {
     modes: ["project"],
     getSections: () => [
       {
-        ...dashboardNavigationSections.search,
+        ...dashboardNavigationSections.header,
         nodes: [
           {
             id: "search",
