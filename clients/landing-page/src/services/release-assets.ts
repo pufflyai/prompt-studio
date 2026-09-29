@@ -25,13 +25,12 @@ export interface DesktopRelease {
   downloads: DesktopDownload[];
 }
 
+// File suffixes match the names the desktop release workflow uploads.
 const PLATFORMS = [
-  { target: "darwin-arm64", platform: "macOS", architecture: "Apple silicon", formats: ["dmg"] },
-  { target: "darwin-x64", platform: "macOS", architecture: "Intel", formats: ["dmg"] },
-  { target: "linux-x64", platform: "Linux", architecture: "x64", formats: ["deb", "rpm", "AppImage", "zip"] },
-  { target: "linux-arm64", platform: "Linux", architecture: "ARM64", formats: ["deb", "rpm", "AppImage", "zip"] },
-  { target: "win32-x64", platform: "Windows", architecture: "x64", formats: ["exe"] },
-  { target: "win32-arm64", platform: "Windows", architecture: "ARM64", formats: ["exe"] },
+  { target: "darwin-arm64", platform: "macOS", architecture: "Apple silicon", suffixes: [".dmg"] },
+  { target: "darwin-x64", platform: "macOS", architecture: "Intel", suffixes: [".dmg"] },
+  { target: "linux-x64", platform: "Linux", architecture: "x64", suffixes: [".deb", ".zip"] },
+  { target: "win32-x64", platform: "Windows", architecture: "x64", suffixes: ["-Setup.exe"] },
 ];
 
 const versionParts = (tag: string) => /^pstdio@(\d+)\.(\d+)\.(\d+)$/.exec(tag)?.slice(1).map(Number);
@@ -47,12 +46,13 @@ const compareVersions = (left: GitHubRelease, right: GitHubRelease) => {
 
 export const desktopDownloads = (release: GitHubRelease) => {
   const version = release.tag_name.slice("pstdio@".length);
-  return PLATFORMS.flatMap(({ target, platform, architecture, formats }) =>
-    formats.flatMap((format) => {
+  return PLATFORMS.flatMap(({ target, platform, architecture, suffixes }) =>
+    suffixes.flatMap((suffix) => {
       const asset = release.assets.find(
-        (candidate) => candidate.name === `Prompt-Studio-${version}-${target}.${format}`,
+        (candidate) => candidate.name === `Prompt-Studio-${version}-${target}${suffix}`,
       );
       if (!asset) return [];
+      const format = suffix.slice(suffix.lastIndexOf(".") + 1);
       return [
         {
           id: `${target}-${format}`,
@@ -96,7 +96,6 @@ export const preferredDownload = (downloads: DesktopDownload[], userAgent: strin
 
 export const downloadDescription = (download: DesktopDownload) => {
   if (download.format === "deb") return "Debian / Ubuntu · DEB";
-  if (download.format === "rpm") return "Fedora / openSUSE · RPM";
   if (download.format === "zip") return "ZIP archive";
   return download.format.toUpperCase();
 };
