@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { checkExtensionApiReleaseStep } from "./extension-api-release-step";
 
-const check = (released: string, current: string, reportChanged = true) =>
-  checkExtensionApiReleaseStep({ released, current, reportChanged });
+const check = (released: string, current: string, reportChanged = true, onMain = released) =>
+  checkExtensionApiReleaseStep({ released, current, reportChanged, onMain });
 
 describe("extension API version between releases", () => {
   test("keeps the released version while the public API is unchanged", () => {
@@ -40,6 +40,14 @@ describe("extension API version between releases", () => {
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain(released);
     expect(errors[0]).toContain(current);
+  });
+
+  test("refuses a version below the one already on main", () => {
+    const errors = check("0.4.0", "0.4.1", true, "0.5.0");
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("0.5.0");
+    expect(check("0.4.0", "0.5.0", true, "0.4.1")).toEqual([]);
   });
 
   test("starts semver at 0.1.0 after the last alpha release", () => {

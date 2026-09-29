@@ -122,10 +122,9 @@ Extensions outside this repo depend on the API, so an API is never removed in th
 ## Checks
 
 - `bun run verify:extension-api-version` checks that every tracked manifest parses and accepts the host version. A breaking bump lists every manifest the new host would refuse.
-- `bun run verify:extension-api-report` rebuilds the public extension API report and compares it with [`packages/sdk/api-report`](../../../packages/sdk/api-report). It fails when the report is out of date, when the report changed since the last release but the version did not move, and when the version moved more than one step. Run it with `--write` to update the report after an intended API change, and commit the result.
-- The report is built by `bun run --cwd packages/sdk build:api-report`, which bundles `tsc` declarations without comments. Comment-only changes therefore do not change the report.
+- `bun run verify:extension-api-report` rebuilds the public extension API report and compares it with [`packages/sdk/api-report`](../../../packages/sdk/api-report). It fails when the report is out of date, when the report changed since the last release but the version did not move, when the version moved more than one step, and when the version is lower than the one on `main`, which catches a merge conflict resolved to an older value. Run it with `--write` to update the report after an intended API change, and commit the result.
+- The report is built by `bun run --cwd packages/sdk build:api-report`, which bundles `tsc` declarations. The check drops documentation comments and keeps each `@deprecated` tag as a bare marker. Editing docs therefore does not change the report, but deprecating an API does, so the check asks for the additive bump.
 - The report covers types only. Review must catch the other API changes, such as a new validation rule or a changed event payload.
-- The report also ignores `@deprecated` tags, because it drops comments. Deprecating an API is still an additive change, so move the version yourself.
 - A dependency update, such as a new `zod` version, can change the report because inferred types come from it. Those types are what extensions see, so treat the change like any other: classify it and move the version if needed.
 
 ## Changing the API

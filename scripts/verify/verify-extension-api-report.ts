@@ -21,13 +21,14 @@ const run = (command: string[], cwd = ROOT) => {
   return result.status === 0 ? result.stdout : null;
 };
 
-// Region comments name source files, so moving a file would otherwise look like an API change.
-const normalizeReport = (report: string) =>
+// Documentation and region comments (which name source files) are not API, so editing or moving them must
+// not look like an API change. A deprecation is an additive change, so its tag stays as a bare marker.
+export const normalizeReport = (report: string) =>
   `${report
+    .replace(/\/\*\*[\s\S]*?\*\//g, (comment) => (comment.includes("@deprecated") ? "/** @deprecated */" : ""))
     .split("\n")
-    .filter((line) => !line.startsWith("//#region") && !line.startsWith("//#endregion"))
-    .join("\n")
-    .trim()}\n`;
+    .filter((line) => line.trim() !== "" && !line.trimStart().startsWith("//"))
+    .join("\n")}\n`;
 
 const buildReport = () => {
   const result = spawnSync("bun", ["run", "build:api-report"], { cwd: SDK_DIR, encoding: "utf8" });
@@ -46,12 +47,14 @@ const readCheckedInReport = (file: string) => {
   return existsSync(reportPath) ? readFileSync(reportPath, "utf8") : null;
 };
 
+const readVersionAt = (ref: string) =>
+  run(["git", "show", `${ref}:${VERSION_FILE}`])?.match(/EXTENSION_API_VERSION = "([^"]+)"/)?.[1] ?? null;
+
 const readLastRelease = () => {
   const tag = run(["git", "describe", "--tags", "--match", "pstdio@*", "--abbrev=0", "HEAD"])?.trim();
   if (!tag) throw new Error("No pstdio@* release tag is reachable from HEAD. Fetch the tags and run again.");
 
-  const versionSource = run(["git", "show", `${tag}:${VERSION_FILE}`]);
-  const released = versionSource?.match(/EXTENSION_API_VERSION = "([^"]+)"/)?.[1];
+  const released = readVersionAt(tag);
   if (!released) throw new Error(`Could not read EXTENSION_API_VERSION at ${tag}.`);
 
   const reports = new Map(REPORT_FILES.map((file) => [file, run(["git", "show", `${tag}:${REPORT_DIR}/${file}`])]));
@@ -78,7 +81,8 @@ const main = () => {
 
   const { tag, released, reports } = readLastRelease();
   const reportChanged = [...built].some(([file, report]) => reports.get(file) !== report);
-  errors.push(...checkExtensionApiReleaseStep({ released, current: EXTENSION_API_VERSION, reportChanged }));
+  const onMain = readVersionAt("origin/main");
+  errors.push(...checkExtensionApiReleaseStep({ released, current: EXTENSION_API_VERSION, reportChanged, onMain }));
 
   if (errors.length > 0) {
     console.error(`Extension API report violations (${errors.length}):`);

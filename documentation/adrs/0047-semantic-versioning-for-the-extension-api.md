@@ -23,7 +23,7 @@ The API is also not settled. Breaking changes will keep coming for a while, and 
 - New APIs are added next to old ones, and the old ones are deprecated. Deprecated APIs are removed together in one breaking release. `AGENTS.md` states this rule.
 - `engines.pstdio` is one or more `^MAJOR.MINOR.PATCH` terms joined by `||`. Other forms are refused.
 - The host accepts an extension when its version satisfies the declaration.
-- CI keeps a checked-in report of the public `@pstdio/sdk/extensions` types. It fails when the report is out of date, when the report changed since the last release without a version bump, and when the version moved more than one step.
+- CI keeps a checked-in report of the public `@pstdio/sdk/extensions` types. It fails when the report is out of date, when the report changed since the last release without a version bump, when the version moved more than one step, and when the version is lower than the one on `main`. The report keeps `@deprecated` tags, so a deprecation also requires a bump.
 - The alpha status of the product lives in the `pstdio` package version, not in the API version.
 
 The report bundles `tsc` declarations instead of the SDK's published type bundle. The published bundle splits shared types into chunks with hashed names, and generating types while bundling prints some inferred unions in a different order on each run. A report must be stable, or every build would look like an API change.

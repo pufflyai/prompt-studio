@@ -16,9 +16,11 @@ interface ReleaseStepInput {
   current: string;
   /** Whether the API report differs from the report at the last release tag. */
   reportChanged: boolean;
+  /** EXTENSION_API_VERSION on main, or null when main is not available. */
+  onMain: string | null;
 }
 
-export const checkExtensionApiReleaseStep = ({ released, current, reportChanged }: ReleaseStepInput) => {
+export const checkExtensionApiReleaseStep = ({ released, current, reportChanged, onMain }: ReleaseStepInput) => {
   // The last alpha release has no semver version or report to step from.
   // Delete this branch once 0.1.0 is released.
   if (released.includes("-")) {
@@ -35,7 +37,13 @@ export const checkExtensionApiReleaseStep = ({ released, current, reportChanged 
   }
   if (reportChanged && current === released) {
     return [
-      `The public extension API changed since the ${released} release, but EXTENSION_API_VERSION is still ${released}. Move it one step using the change levels in the manifest reference.`,
+      `The public extension API changed since the ${released} release, but EXTENSION_API_VERSION is still ${released}. Move it one step using the change levels in the API versioning reference.`,
+    ];
+  }
+  // A branch that resolves a conflict with an older value would otherwise undo a bump already on main.
+  if (onMain && Bun.semver.order(current, onMain) < 0) {
+    return [
+      `EXTENSION_API_VERSION is ${current} but main already has ${onMain}. Keep ${onMain} or move one step from ${released}.`,
     ];
   }
   return [];
