@@ -10,7 +10,12 @@ import {
 import { createContext, type ReactNode } from "react";
 import type { TreeListSection } from "./tree-list.types";
 import type { TreeListMovePolicy } from "./tree-list-reorder";
-import { canDropOnTreeListTarget, computeReorderResult, fromSectionDragId } from "./tree-list-reorder";
+import {
+  canDropOnTreeListTarget,
+  computeReorderResult,
+  fromSectionDragId,
+  verticalTreeDrag,
+} from "./tree-list-reorder";
 
 export const SharedTreeListDragContext = createContext(false);
 
@@ -46,7 +51,12 @@ export const TreeListDragProvider = (props: TreeListDragProviderProps) => {
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragEnd={handleDragEnd}
+      {...verticalTreeDrag}
+    >
       <SharedTreeListDragContext.Provider value>{children}</SharedTreeListDragContext.Provider>
     </DndContext>
   );

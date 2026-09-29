@@ -1,3 +1,4 @@
+import type { Modifier } from "@dnd-kit/core";
 import type { TreeListSection } from "./tree-list.types";
 
 const SECTION_PREFIX = "section:";
@@ -210,4 +211,12 @@ export const computeReorderResult = (
     return isSectionDragId(overId) ? computeSectionReorder(sections, activeId, overId, canMove) : null;
   }
   return computeNodeReorder(sections, activeId, overId, canMove);
+};
+
+const lockToVerticalAxis: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+
+// Tree lists are vertical: sideways pointer movement neither picks drop targets nor scrolls containers.
+export const verticalTreeDrag = {
+  modifiers: [lockToVerticalAxis],
+  autoScroll: { threshold: { x: 0, y: 0.2 } },
 };

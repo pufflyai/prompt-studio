@@ -7,6 +7,7 @@ import {
   isSectionDragId,
   type TreeListMove,
   toSectionDragId,
+  verticalTreeDrag,
 } from "./tree-list-reorder";
 
 const sections: TreeListSection[] = [
@@ -108,4 +109,14 @@ describe("computeReorderResult", () => {
     expect(computeReorderResult(constrainedSections, "project", "search")).toBeNull();
     expect(computeReorderResult(constrainedSections, "search", "project")).toBeNull();
   });
+});
+
+test("tree drags follow the pointer vertically only", () => {
+  const [lockToVerticalAxis] = verticalTreeDrag.modifiers;
+  const transform = { x: 48, y: 12, scaleX: 1, scaleY: 1 };
+  expect(lockToVerticalAxis!({ transform } as Parameters<NonNullable<typeof lockToVerticalAxis>>[0])).toEqual({
+    ...transform,
+    x: 0,
+  });
+  expect(verticalTreeDrag.autoScroll.threshold.x).toBe(0);
 });

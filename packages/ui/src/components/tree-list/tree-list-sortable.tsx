@@ -21,6 +21,7 @@ import {
   computeReorderResult,
   type TreeListMovePolicy,
   toSectionDragId,
+  verticalTreeDrag,
 } from "./tree-list-reorder";
 import { TreeListSectionHeader } from "./tree-list-section-header";
 import { SortableHost } from "./tree-list-sortable-host";
@@ -291,7 +292,12 @@ export const TreeListSortable = (props: TreeListSortableProps) => {
   );
   if (usesSharedDragContext) return content;
   return (
-    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragEnd={handleDragEnd}
+      {...verticalTreeDrag}
+    >
       {content}
     </DndContext>
   );
