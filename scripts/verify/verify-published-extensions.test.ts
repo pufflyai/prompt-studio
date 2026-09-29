@@ -33,7 +33,10 @@ test("finds registry-backed extensions across workspace locations and excludes l
   await write(root, "extensions/local/package.json", manifest("workspace:*"));
   await write(root, ".pstdio/extensions/dev/package.json", manifest("^0.35.0"));
   await write(root, "packages/library/package.json", { dependencies: { "@pstdio/sdk": "^0.35.0" } });
-  expect(await publishedExtensionDirs(root)).toEqual([".pstdio/extensions/dev", "extensions/published"]);
+  expect(await publishedExtensionDirs(root)).toEqual([
+    join(".pstdio", "extensions", "dev"),
+    join("extensions", "published"),
+  ]);
 });
 
 test("stages source and test support outside the workspace without workspace dependencies or installed artifacts", async () => {
