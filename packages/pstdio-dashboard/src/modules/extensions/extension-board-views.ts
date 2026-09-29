@@ -13,6 +13,10 @@ import {
   type ResolvedWorkbenchExtensionMetadata,
   resolveLocalizableString,
 } from "@/shared/extensions/extension-localization";
+import {
+  subscribeToExtensionEventFeed,
+  subscribeToExtensionEventReset,
+} from "@/shared/extensions/extension-webview-broadcast";
 
 type BoardRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["createViewsProvider"]>>[0];
 export const createSharedBoardViews = (
@@ -89,8 +93,17 @@ export const createSharedBoardViews = (
       });
       const controller = new AbortController();
       // Reads also clean deleted field options; the normal sync stream publishes any cleanup.
-      void apiRequest<BoardViews>(path, { signal: controller.signal }).catch(() => undefined);
+      const refresh = () => {
+        void apiRequest<BoardViews>(path, { signal: controller.signal }).catch(() => undefined);
+      };
+      const stopEvents = subscribeToExtensionEventFeed((event) => {
+        if (event.projectId === projectId && record.refreshEventIds?.includes(event.id)) refresh();
+      });
+      const stopReset = subscribeToExtensionEventReset(refresh);
+      refresh();
       return () => {
+        stopEvents();
+        stopReset();
         controller.abort();
         unsubscribe();
       };

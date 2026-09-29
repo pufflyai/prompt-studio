@@ -110,6 +110,28 @@ test("shares saved ticket views while keeping active views local", async ({
     expect(agentView.filters).toEqual({ archived: ["active"] });
     await expect(page.getByRole("tab", { name: "Agent created", exact: true })).toBeVisible();
     await expect(second.getByRole("tab", { name: "Agent created", exact: true })).toBeVisible();
+    const execute = async (name: string, params: Record<string, unknown>) => {
+      const result = await request.post(
+        `/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.${name}/execute`,
+        { data: { params } },
+      );
+      expect(result.ok(), await result.text()).toBe(true);
+      const body = await result.json();
+      expect(body.outcome.ok).toBe(true);
+      return body.outcome.value;
+    };
+    const status = await execute("ticket-status.create", { label: "Temporary" });
+    const filtered = await request.post(boardPath, {
+      data: { title: "Temporary status", filters: { status: [status.id] } },
+    });
+    expect(filtered.ok(), await filtered.text()).toBe(true);
+    for (const client of [page, second]) {
+      await client.getByRole("tab", { name: "Temporary status", exact: true }).click();
+      await expect(client.getByRole("button", { name: "Remove Status filter", exact: true })).toBeVisible();
+    }
+    await execute("ticket-status.delete", { statusId: status.id });
+    for (const client of [page, second])
+      await expect(client.getByRole("button", { name: "Remove Status filter", exact: true })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath("shared-board-views.png") });
   } finally {
     await secondContext.close();
