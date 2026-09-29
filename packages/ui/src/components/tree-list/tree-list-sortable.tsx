@@ -5,14 +5,15 @@ import {
   DndContext,
   type DragEndEvent,
   PointerSensor,
+  useDndContext,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { type MouseEvent as ReactMouseEvent, useContext } from "react";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
 import { SharedTreeListDragContext } from "./tree-list-drag-provider";
+import { type TreeListDropIndicator, treeListDropIndicator } from "./tree-list-drop-indicator";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import {
@@ -22,40 +23,9 @@ import {
   toSectionDragId,
 } from "./tree-list-reorder";
 import { TreeListSectionHeader } from "./tree-list-section-header";
+import { SortableHost } from "./tree-list-sortable-host";
 
 type TreeListRowVariant = "compact" | "tree";
-
-interface SortableHostProps {
-  id: string;
-  disabled?: boolean;
-  children: (input: {
-    setNodeRef: (element: HTMLElement | null) => void;
-    listeners: ReturnType<typeof useSortable>["listeners"];
-    style: { transform?: string; transition?: string; opacity?: number };
-  }) => React.ReactNode;
-}
-
-// Render-prop sortable host. The child decides which DOM node receives the
-// drag listeners so we never paint a visible grip glyph — the row or section
-// header is itself the drag handle. Clicks pass through because the pointer
-// sensor activates only after the cursor moves 4px (configured below).
-const SortableHost = (props: SortableHostProps) => {
-  const sortable = useSortable({ id: props.id, disabled: props.disabled });
-  const style = {
-    transform: CSS.Transform.toString(sortable.transform),
-    transition: sortable.transition,
-    opacity: sortable.isDragging ? 0.5 : 1,
-  };
-  return (
-    <>
-      {props.children({
-        setNodeRef: sortable.setNodeRef,
-        listeners: sortable.listeners,
-        style,
-      })}
-    </>
-  );
-};
 
 interface SortableSectionGroupProps {
   section: TreeListSection;
@@ -69,6 +39,7 @@ interface SortableSectionGroupProps {
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
+  indicator: TreeListDropIndicator | null;
 }
 
 const SortableSectionGroup = (props: SortableSectionGroupProps) => {
@@ -84,6 +55,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
     onToggleSection,
     onToggleNode,
     onSectionContextMenu,
+    indicator,
   } = props;
 
   const headerRow = sectionRows.find((row) => row.kind === "section-header");
@@ -93,9 +65,14 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
     .map((row) => (row.kind === "node" ? row.node.id : ""));
 
   return (
-    <SortableHost id={toSectionDragId(section.id)} disabled={section.canReorder === false}>
-      {({ setNodeRef, listeners, style }) => (
-        <Box ref={setNodeRef} style={style} w="full" minW="0">
+    <SortableHost
+      id={toSectionDragId(section.id)}
+      disabled={section.canReorder === false}
+      indicator={indicator}
+      handle="child"
+    >
+      {(listeners) => (
+        <>
           {headerRow && headerRow.kind === "section-header" ? (
             // Drag listeners live on the header so dragging the section moves
             // it, while click-to-collapse still works via the activation
@@ -127,12 +104,13 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
                     linkComponent={linkComponent}
                     onNavigate={onNavigate}
                     onToggleNode={onToggleNode}
+                    indicator={indicator}
                   />
                 ) : null,
               )}
             </Stack>
           </SortableContext>
-        </Box>
+        </>
       )}
     </SortableHost>
   );
@@ -147,6 +125,7 @@ interface SortableOrPlainNodeRowProps {
   linkComponent?: TreeListLinkComponent;
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleNode?: (nodeId: string) => void;
+  indicator: TreeListDropIndicator | null;
 }
 
 const renderNodeRow = (input: {
@@ -178,24 +157,62 @@ const renderNodeRow = (input: {
 // Top-level nodes participate in their section's SortableContext and can move
 // between sections. Nested rows inherit position from their parent and render plain.
 const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
-  const { row, ...rest } = props;
+  const { row, indicator, ...rest } = props;
   if (row.level > 0) {
     return renderNodeRow({ node: row.node, sectionId: row.sectionId, level: row.level, ...rest });
   }
   return (
-    <SortableHost id={row.node.id} disabled={row.node.canReorder === false}>
-      {({ setNodeRef, listeners, style }) => (
-        <Box
-          ref={setNodeRef}
-          style={style}
-          w="full"
-          minW="0"
-          onPointerDownCapture={(event) => listeners?.onPointerDown?.(event)}
-        >
-          {renderNodeRow({ node: row.node, sectionId: row.sectionId, level: row.level, ...rest })}
-        </Box>
-      )}
+    <SortableHost
+      id={row.node.id}
+      disabled={row.node.canReorder === false}
+      indicator={indicator}
+      handle="self"
+      liftedBg="bg.hover"
+    >
+      {() => renderNodeRow({ node: row.node, sectionId: row.sectionId, level: row.level, ...rest })}
     </SortableHost>
+  );
+};
+
+type SortableSectionsProps = Omit<
+  TreeListSortableProps,
+  "onReorderSections" | "onReorderNodes" | "canMove" | "expandedSectionIds" | "expandedNodeIds"
+> & {
+  expandedSectionIds: string[];
+  expandedNodeIds: string[];
+};
+
+// Reads the drag state from the enclosing DndContext, which may be shared by several trees.
+const SortableSections = (props: SortableSectionsProps) => {
+  const { sections, expandedSectionIds, expandedNodeIds, sectionGap, ...rest } = props;
+  const { active, over } = useDndContext();
+  const indicator = active && over ? treeListDropIndicator(sections, String(active.id), String(over.id)) : null;
+  const rows = buildVirtualRows(sections, expandedSectionIds, expandedNodeIds);
+  return (
+    <SortableContext
+      items={sections.map((section) => toSectionDragId(section.id))}
+      strategy={verticalListSortingStrategy}
+    >
+      <Stack gap={sectionGap} w="full" minW="0" maxW="full">
+        {sections.map((section) => (
+          <SortableSectionGroup
+            key={section.id}
+            section={section}
+            sectionRows={rows.filter((row) => row.sectionId === section.id)}
+            expandedNodeIds={expandedNodeIds}
+            rowVariant={rest.rowVariant ?? "tree"}
+            nodeGap={rest.nodeGap}
+            activeNodeId={rest.activeNodeId}
+            linkComponent={rest.linkComponent}
+            onNavigate={rest.onNavigate}
+            onToggleSection={rest.onToggleSection}
+            onToggleNode={rest.onToggleNode}
+            onSectionContextMenu={rest.onSectionContextMenu}
+            indicator={indicator}
+          />
+        ))}
+      </Stack>
+    </SortableContext>
   );
 };
 
@@ -256,32 +273,21 @@ export const TreeListSortable = (props: TreeListSortableProps) => {
     }
   };
 
-  const rows = buildVirtualRows(sections, expandedSectionIds, expandedNodeIds);
-
   const content = (
-    <SortableContext
-      items={sections.map((section) => toSectionDragId(section.id))}
-      strategy={verticalListSortingStrategy}
-    >
-      <Stack gap={sectionGap} w="full" minW="0" maxW="full">
-        {sections.map((section) => (
-          <SortableSectionGroup
-            key={section.id}
-            section={section}
-            sectionRows={rows.filter((row) => row.sectionId === section.id)}
-            expandedNodeIds={expandedNodeIds}
-            activeNodeId={activeNodeId}
-            rowVariant={rowVariant}
-            nodeGap={nodeGap}
-            linkComponent={linkComponent}
-            onNavigate={onNavigate}
-            onToggleSection={onToggleSection}
-            onToggleNode={onToggleNode}
-            onSectionContextMenu={onSectionContextMenu}
-          />
-        ))}
-      </Stack>
-    </SortableContext>
+    <SortableSections
+      sections={sections}
+      expandedSectionIds={expandedSectionIds}
+      expandedNodeIds={expandedNodeIds}
+      activeNodeId={activeNodeId}
+      rowVariant={rowVariant}
+      sectionGap={sectionGap}
+      nodeGap={nodeGap}
+      linkComponent={linkComponent}
+      onNavigate={onNavigate}
+      onToggleSection={onToggleSection}
+      onToggleNode={onToggleNode}
+      onSectionContextMenu={onSectionContextMenu}
+    />
   );
   if (usesSharedDragContext) return content;
   return (

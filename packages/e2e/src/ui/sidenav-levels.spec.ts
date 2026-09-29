@@ -37,6 +37,8 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await page.mouse.move(from.x + 40, to.y + to.height * 0.75, { steps: 12 });
   await page.mouse.up();
   await expect(firstRow).toHaveText("Tickets");
+  // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click; a person never clicks that fast.
+  await page.waitForTimeout(100);
 
   await row("Notes").click();
   await expect(row("Sessions")).toHaveCount(0);
