@@ -1,36 +1,33 @@
 import type { TreeListSection } from "./tree-list.types";
-import { fromSectionDragId, isSectionDragId } from "./tree-list-reorder";
+import type { TreeListDropTarget } from "./tree-list-drop";
+import { findNodeLocation, toGapDragId, toSectionDragId } from "./tree-list-reorder";
 
 export interface TreeListDropIndicator {
-  id: string;
-  edge: "before" | "after";
+  // Drag id of the row, section, or section gap that draws the line.
+  lineId: string;
+  edge: "before" | "after" | "middle";
+  // A labeled section the item drops into; it is highlighted so "into" reads differently from "behind".
+  groupId?: string;
 }
 
-const nodeIndex = (sections: TreeListSection[], nodeId: string) => {
-  for (const section of sections) {
-    const index = section.nodes.findIndex((node) => node.id === nodeId);
-    if (index >= 0) return { sectionId: section.id, index };
-  }
-  return undefined;
-};
+const groupOf = (section: TreeListSection | undefined) => (section?.label ? section.id : undefined);
 
-// Mirrors where computeReorderResult places the item: moving down lands after the target, moving up or in from
-// another section lands before it, and dropping on a section appends to its end.
+// Only targets inside this tree's sections draw here; a shared drag context lets each tree draw its own part.
 export const treeListDropIndicator = (
   sections: TreeListSection[],
-  activeId: string,
-  overId: string,
+  target: TreeListDropTarget | null,
 ): TreeListDropIndicator | null => {
-  if (activeId === overId) return null;
-  if (isSectionDragId(activeId)) {
-    const ids = sections.map((section) => section.id);
-    const from = ids.indexOf(fromSectionDragId(activeId));
-    const to = ids.indexOf(fromSectionDragId(overId));
-    return { id: overId, edge: from >= 0 && from < to ? "after" : "before" };
+  if (!target) return null;
+  if (target.kind === "node") {
+    const location = findNodeLocation(sections, target.id);
+    return location ? { lineId: target.id, edge: target.edge, groupId: groupOf(location.section) } : null;
   }
-  if (isSectionDragId(overId)) return { id: overId, edge: "after" };
-  const source = nodeIndex(sections, activeId);
-  const target = nodeIndex(sections, overId);
-  const movesDown = source && target && source.sectionId === target.sectionId && source.index < target.index;
-  return { id: overId, edge: movesDown ? "after" : "before" };
+  const section = sections.find((candidate) => candidate.id === target.id);
+  if (!section) return null;
+  if (target.edge === "inside") {
+    const last = section.nodes.at(-1);
+    return { lineId: last ? last.id : toSectionDragId(section.id), edge: "after", groupId: groupOf(section) };
+  }
+  if (target.edge === "after") return { lineId: toGapDragId(section.id), edge: "middle" };
+  return { lineId: toSectionDragId(section.id), edge: "before" };
 };

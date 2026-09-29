@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Show an accent line where a dragged Sidenav row or section will land, keep the other rows in place, and drag only vertically.
+Show where a dragged Sidenav row lands, including after the last row of a group or header, tint a group the row drops into, and let rows be dragged out behind a group.

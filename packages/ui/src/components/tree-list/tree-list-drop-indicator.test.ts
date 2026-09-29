@@ -1,39 +1,44 @@
 import { describe, expect, test } from "bun:test";
 import type { TreeListSection } from "./tree-list.types";
 import { treeListDropIndicator } from "./tree-list-drop-indicator";
-import { toSectionDragId } from "./tree-list-reorder";
+import { toGapDragId, toSectionDragId } from "./tree-list-reorder";
 
 const sections: TreeListSection[] = [
-  { id: "nav", nodes: ["projects", "skills", "runs"].map((id) => ({ id, label: id })) },
-  { id: "tools", nodes: [{ id: "lab", label: "Lab" }] },
+  { id: "root", nodes: [{ id: "sessions", label: "Sessions" }] },
+  { id: "examples", label: "Examples", nodes: [{ id: "scribble", label: "Scribble" }] },
+  { id: "empty", label: "Empty", nodes: [] },
 ];
 
 describe("tree list drop indicator", () => {
-  test("marks the slot the row lands in within its section", () => {
-    expect(treeListDropIndicator(sections, "projects", "runs")).toEqual({ id: "runs", edge: "after" });
-    expect(treeListDropIndicator(sections, "runs", "projects")).toEqual({ id: "projects", edge: "before" });
-  });
-  test("marks rows from another section or tree before the hovered row", () => {
-    expect(treeListDropIndicator(sections, "lab", "skills")).toEqual({ id: "skills", edge: "before" });
-    expect(treeListDropIndicator(sections, "search", "skills")).toEqual({ id: "skills", edge: "before" });
-  });
-  test("marks the end of a section a row is dropped on", () => {
-    expect(treeListDropIndicator(sections, "projects", toSectionDragId("tools"))).toEqual({
-      id: toSectionDragId("tools"),
+  test("highlights a group only when the row drops into it", () => {
+    expect(treeListDropIndicator(sections, { kind: "node", id: "scribble", edge: "after" })).toEqual({
+      lineId: "scribble",
       edge: "after",
+      groupId: "examples",
     });
-  });
-  test("marks the slot a section lands in", () => {
-    expect(treeListDropIndicator(sections, toSectionDragId("nav"), toSectionDragId("tools"))).toEqual({
-      id: toSectionDragId("tools"),
-      edge: "after",
-    });
-    expect(treeListDropIndicator(sections, toSectionDragId("tools"), toSectionDragId("nav"))).toEqual({
-      id: toSectionDragId("nav"),
+    expect(treeListDropIndicator(sections, { kind: "node", id: "sessions", edge: "before" })).toEqual({
+      lineId: "sessions",
       edge: "before",
+      groupId: undefined,
     });
   });
-  test("shows nothing over the dragged item itself", () => {
-    expect(treeListDropIndicator(sections, "skills", "skills")).toBeNull();
+  test("draws the line in the gap behind a group", () => {
+    expect(treeListDropIndicator(sections, { kind: "section", id: "examples", edge: "after" })).toEqual({
+      lineId: toGapDragId("examples"),
+      edge: "middle",
+    });
+  });
+  test("draws a row joining a group after its last row, or on an empty group", () => {
+    expect(treeListDropIndicator(sections, { kind: "section", id: "examples", edge: "inside" })).toMatchObject({
+      lineId: "scribble",
+      groupId: "examples",
+    });
+    expect(treeListDropIndicator(sections, { kind: "section", id: "empty", edge: "inside" })).toMatchObject({
+      lineId: toSectionDragId("empty"),
+      groupId: "empty",
+    });
+  });
+  test("draws nothing for targets in another tree", () => {
+    expect(treeListDropIndicator(sections, { kind: "node", id: "search", edge: "after" })).toBeNull();
   });
 });

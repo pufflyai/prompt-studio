@@ -1,21 +1,8 @@
-import {
-  type CollisionDetection,
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { createContext, type ReactNode } from "react";
 import type { TreeListSection } from "./tree-list.types";
-import type { TreeListMovePolicy } from "./tree-list-reorder";
-import {
-  canDropOnTreeListTarget,
-  computeReorderResult,
-  fromSectionDragId,
-  verticalTreeDrag,
-} from "./tree-list-reorder";
+import { createTreeListDropHandler, treeListCollisionDetection } from "./tree-list-drag-handling";
+import { type TreeListMovePolicy, verticalTreeDrag } from "./tree-list-reorder";
 
 export const SharedTreeListDragContext = createContext(false);
 
@@ -30,25 +17,8 @@ interface TreeListDragProviderProps {
 export const TreeListDragProvider = (props: TreeListDragProviderProps) => {
   const { sections, canMove, onReorderSections, onReorderNodes, children } = props;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-  const collisionDetection: CollisionDetection = (input) =>
-    closestCenter(input).filter((collision) =>
-      canDropOnTreeListTarget(sections, String(input.active.id), String(collision.id), canMove),
-    );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    if (!event.over) return;
-    const activeId = String(event.active.id);
-    const overId = String(event.over.id);
-    const result = computeReorderResult(sections, activeId, overId, canMove);
-    if (!result) return;
-    if (result.kind === "section") {
-      onReorderSections?.(result.nextSectionIds, fromSectionDragId(activeId), fromSectionDragId(overId));
-      return;
-    }
-    for (const [sectionId, nextNodeIds] of Object.entries(result.orders)) {
-      onReorderNodes?.(sectionId, nextNodeIds);
-    }
-  };
+  const collisionDetection = treeListCollisionDetection(sections, canMove);
+  const handleDragEnd = createTreeListDropHandler({ sections, canMove, onReorderSections, onReorderNodes });
 
   return (
     <DndContext

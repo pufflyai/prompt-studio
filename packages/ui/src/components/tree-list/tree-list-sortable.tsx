@@ -1,30 +1,21 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
-import {
-  type CollisionDetection,
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  PointerSensor,
-  useDndContext,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+import { DndContext, PointerSensor, useDndContext, useDndMonitor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { type MouseEvent as ReactMouseEvent, useContext } from "react";
+import { Fragment, type MouseEvent as ReactMouseEvent, useContext, useState } from "react";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
+import {
+  createTreeListDropHandler,
+  dragPointerY,
+  dropTargetFor,
+  treeListCollisionDetection,
+} from "./tree-list-drag-handling";
 import { SharedTreeListDragContext } from "./tree-list-drag-provider";
 import { type TreeListDropIndicator, treeListDropIndicator } from "./tree-list-drop-indicator";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
-import {
-  canDropOnTreeListTarget,
-  computeReorderResult,
-  type TreeListMovePolicy,
-  toSectionDragId,
-  verticalTreeDrag,
-} from "./tree-list-reorder";
+import { type TreeListMovePolicy, toSectionDragId, verticalTreeDrag } from "./tree-list-reorder";
 import { TreeListSectionHeader } from "./tree-list-section-header";
-import { SortableHost } from "./tree-list-sortable-host";
+import { SectionGap, SortableHost } from "./tree-list-sortable-host";
 
 type TreeListRowVariant = "compact" | "tree";
 
@@ -71,6 +62,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
       disabled={section.canReorder === false}
       indicator={indicator}
       handle="child"
+      highlighted={indicator?.groupId === section.id}
     >
       {(listeners) => (
         <>
@@ -187,30 +179,44 @@ type SortableSectionsProps = Omit<
 const SortableSections = (props: SortableSectionsProps) => {
   const { sections, expandedSectionIds, expandedNodeIds, sectionGap, ...rest } = props;
   const { active, over } = useDndContext();
-  const indicator = active && over ? treeListDropIndicator(sections, String(active.id), String(over.id)) : null;
+  const [pointerY, setPointerY] = useState<number | null>(null);
+  useDndMonitor({
+    onDragMove: (event) => setPointerY(dragPointerY(event.activatorEvent, event.delta.y)),
+    onDragEnd: () => setPointerY(null),
+    onDragCancel: () => setPointerY(null),
+  });
+  const target = active && pointerY !== null ? dropTargetFor(String(active.id), over, pointerY) : null;
+  const indicator = treeListDropIndicator(sections, target);
   const rows = buildVirtualRows(sections, expandedSectionIds, expandedNodeIds);
   return (
     <SortableContext
       items={sections.map((section) => toSectionDragId(section.id))}
       strategy={verticalListSortingStrategy}
     >
-      <Stack gap={sectionGap} w="full" minW="0" maxW="full">
-        {sections.map((section) => (
-          <SortableSectionGroup
-            key={section.id}
-            section={section}
-            sectionRows={rows.filter((row) => row.sectionId === section.id)}
-            expandedNodeIds={expandedNodeIds}
-            rowVariant={rest.rowVariant ?? "tree"}
-            nodeGap={rest.nodeGap}
-            activeNodeId={rest.activeNodeId}
-            linkComponent={rest.linkComponent}
-            onNavigate={rest.onNavigate}
-            onToggleSection={rest.onToggleSection}
-            onToggleNode={rest.onToggleNode}
-            onSectionContextMenu={rest.onSectionContextMenu}
-            indicator={indicator}
-          />
+      <Stack gap="0" w="full" minW="0" maxW="full">
+        {sections.map((section, index) => (
+          <Fragment key={section.id}>
+            <SortableSectionGroup
+              section={section}
+              sectionRows={rows.filter((row) => row.sectionId === section.id)}
+              expandedNodeIds={expandedNodeIds}
+              rowVariant={rest.rowVariant ?? "tree"}
+              nodeGap={rest.nodeGap}
+              activeNodeId={rest.activeNodeId}
+              linkComponent={rest.linkComponent}
+              onNavigate={rest.onNavigate}
+              onToggleSection={rest.onToggleSection}
+              onToggleNode={rest.onToggleNode}
+              onSectionContextMenu={rest.onSectionContextMenu}
+              indicator={indicator}
+            />
+            <SectionGap
+              sectionId={section.id}
+              nextSectionId={sections[index + 1]?.id}
+              gap={sectionGap}
+              indicator={indicator}
+            />
+          </Fragment>
         ))}
       </Stack>
     </SortableContext>
@@ -256,23 +262,13 @@ export const TreeListSortable = (props: TreeListSortableProps) => {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const usesSharedDragContext = useContext(SharedTreeListDragContext);
-  const collisionDetection: CollisionDetection = (input) =>
-    closestCenter(input).filter((collision) =>
-      canDropOnTreeListTarget(sections, String(input.active.id), String(collision.id), canMove),
-    );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    if (!event.over) return;
-    const result = computeReorderResult(sections, String(event.active.id), String(event.over.id), canMove);
-    if (!result) return;
-    if (result.kind === "section") {
-      onReorderSections?.(result.nextSectionIds);
-    } else {
-      for (const [sectionId, nextNodeIds] of Object.entries(result.orders)) {
-        onReorderNodes?.(sectionId, nextNodeIds);
-      }
-    }
-  };
+  const collisionDetection = treeListCollisionDetection(sections, canMove);
+  const handleDragEnd = createTreeListDropHandler({
+    sections,
+    canMove,
+    onReorderSections: (nextSectionIds) => onReorderSections?.(nextSectionIds),
+    onReorderNodes,
+  });
 
   const content = (
     <SortableSections

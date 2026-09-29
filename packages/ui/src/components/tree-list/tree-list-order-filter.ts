@@ -48,14 +48,23 @@ export const applyTreeListOrder = (
   sectionOrder: string[],
   nodeOrderBySection: Record<string, string[]>,
 ): TreeListSection[] => {
-  let changed = false;
-  const reorderedSections = keepFixedPositions(sections, reorderBy(sections, sectionOrder));
-  if (reorderedSections !== sections) changed = true;
-
   const nodesById = new Map(sections.flatMap((section) => section.nodes.map((node) => [node.id, node] as const)));
+  // Order entries for ids no contributor declares are bare runs users made by dropping rows behind a group.
+  // They exist while at least one of their rows does.
+  const looseSections = Object.entries(nodeOrderBySection).flatMap(([id, nodeIds]) => {
+    if (sections.some((section) => section.id === id)) return [];
+    const first = nodeIds.map((nodeId) => nodesById.get(nodeId)).find((node) => node && node.canReorder !== false);
+    return first ? [{ id, moveScope: first.moveScope, nodes: [] }] : [];
+  });
+  const allSections = looseSections.length > 0 ? [...sections, ...looseSections] : sections;
+
+  let changed = allSections !== sections;
+  const reorderedSections = keepFixedPositions(allSections, reorderBy(allSections, sectionOrder));
+  if (reorderedSections !== allSections) changed = true;
+
   const assignedNodeIds = new Set(
     Object.entries(nodeOrderBySection)
-      .filter(([sectionId]) => sections.some((section) => section.id === sectionId))
+      .filter(([sectionId]) => allSections.some((section) => section.id === sectionId))
       .flatMap(([, nodeIds]) =>
         nodeIds.filter((nodeId) => nodesById.has(nodeId) && nodesById.get(nodeId)?.canReorder !== false),
       ),

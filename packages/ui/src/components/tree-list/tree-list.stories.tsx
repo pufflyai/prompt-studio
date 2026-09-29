@@ -375,32 +375,38 @@ export const Reorderable: Story = {
   render: () => <ReorderableStory />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const inbox = canvas.getByRole("option", { name: "Inbox" });
-    const archive = canvas.getByRole("option", { name: "Archive" });
-    const start = inbox.getBoundingClientRect();
-    const end = archive.getBoundingClientRect();
-    const at = (rect: DOMRect, offset = 0) => ({ x: rect.left + 20, y: rect.top + rect.height / 2 + offset });
+    const rowNames = () => canvas.getAllByRole("option").map((row) => row.textContent);
+    const row = (name: string) => canvas.getByRole("option", { name });
+    const center = (element: Element, offsetY = 0) => {
+      const rect = element.getBoundingClientRect();
+      return { x: rect.left + 20, y: rect.top + rect.height / 2 + offsetY };
+    };
     // One user-event instance keeps the pressed pointer between the move and the release.
     const user = userEvent.setup();
-    await user.pointer([
-      { keys: "[MouseLeft>]", target: inbox, coords: at(start) },
-      { target: inbox, coords: at(start, 8) },
-      { target: archive, coords: at(end) },
-    ]);
-    // Moving Inbox down past Archive lands it after Archive, so the accent line sits on Archive's lower edge.
-    await waitFor(() =>
-      expect(canvasElement.querySelector('[data-tree-list-drop-indicator="after"]')).toBeInTheDocument(),
-    );
-    await user.pointer({ keys: "[/MouseLeft]", target: archive, coords: at(end) });
-    await waitFor(() =>
-      expect(canvas.getAllByRole("option").map((row) => row.textContent)).toEqual([
-        "Drafts",
-        "Archive",
-        "Inbox",
-        "Alpha",
-        "Beta",
-      ]),
-    );
+    const drag = async (from: Element, to: { x: number; y: number }, expectDuring: () => void) => {
+      await user.pointer([
+        { keys: "[MouseLeft>]", target: from, coords: center(from) },
+        { target: from, coords: center(from, 8) },
+        { coords: to },
+      ]);
+      await waitFor(expectDuring);
+      await user.pointer({ keys: "[/MouseLeft]", coords: to });
+    };
+
+    // The lower half of the last row drops behind it, inside its group, and highlights the group.
+    await drag(row("Inbox"), center(row("Archive"), 4), () => {
+      expect(canvasElement.querySelector('[data-tree-list-drop-indicator="after"]')).toBeInTheDocument();
+      expect(canvasElement.querySelector("[data-tree-list-drop-group]")).toBeInTheDocument();
+    });
+    await waitFor(() => expect(rowNames()).toEqual(["Drafts", "Archive", "Inbox", "Alpha", "Beta"]));
+
+    // The gap after a group drops behind the group: the row leaves it as a bare row, with no group highlight.
+    const inbox = row("Inbox").getBoundingClientRect();
+    await drag(row("Drafts"), { x: inbox.left + 20, y: inbox.bottom + 6 }, () => {
+      expect(canvasElement.querySelector('[data-tree-list-drop-indicator="middle"]')).toBeInTheDocument();
+      expect(canvasElement.querySelector("[data-tree-list-drop-group]")).toBeNull();
+    });
+    await waitFor(() => expect(rowNames()).toEqual(["Archive", "Inbox", "Drafts", "Alpha", "Beta"]));
     await expect(canvasElement.querySelector("[data-tree-list-drop-indicator]")).toBeNull();
   },
 };

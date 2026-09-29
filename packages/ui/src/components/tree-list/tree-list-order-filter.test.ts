@@ -75,3 +75,22 @@ test("keeps fixed sections and rows in their declared positions when restoring s
   expect(result.map((section) => section.id)).toEqual(["fixed", "files"]);
   expect(result[1].nodes.map((node) => node.id)).toEqual(["pinned", "two", "one"]);
 });
+
+test("shows a bare run users created behind a group until its last row leaves", () => {
+  const sections = [
+    { id: "examples", label: "Examples", nodes: [{ id: "scribble", label: "Scribble", moveScope: "mode" }] },
+    { id: "lab", label: "Lab", nodes: [{ id: "lab-page", label: "Lab page" }] },
+  ];
+  const result = applyTreeListOrder(sections, ["examples", "loose-1", "lab"], {
+    examples: [],
+    "loose-1": ["scribble"],
+  });
+  expect(result.map((section) => [section.id, section.label, section.nodes.map((node) => node.id)])).toEqual([
+    ["examples", "Examples", []],
+    ["loose-1", undefined, ["scribble"]],
+    ["lab", "Lab", ["lab-page"]],
+  ]);
+  expect(result[1]!.moveScope).toBe("mode");
+  const emptied = applyTreeListOrder(sections, ["examples", "loose-1", "lab"], { "loose-1": ["gone"] });
+  expect(emptied.map((section) => section.id)).toEqual(["examples", "lab"]);
+});
