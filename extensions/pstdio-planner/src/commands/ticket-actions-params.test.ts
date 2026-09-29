@@ -5,7 +5,11 @@ import { breakIntoSubTicketsCommand, refineTicketCommand } from "./ticket-action
 
 describe("ticket action command params", () => {
   test("limits Run attempt to user-editable inputs", () => {
-    expect(Object.keys(runAttemptCommand.params ?? {})).toEqual(["ticket", "rowId", "agent", "base"]);
+    expect(Object.keys(runAttemptCommand.params ?? {})).toEqual(["ticket", "rowId", "agent", "workspace"]);
+  });
+
+  test("lets Run attempt choose a Git worktree and its base branch", () => {
+    expect(runAttemptCommand.params?.workspace).toMatchObject({ type: "workspace", providers: ["pstdio.worktree"] });
   });
 
   test("labels harness selectors as model selectors", () => {

@@ -76,8 +76,8 @@ describe("ticket work in shared folders", () => {
         params: {},
         overrides: {
           resource: { type: "ticket", id: ticket.id },
-          workspaces: { list: async () => [remote], archive },
-          notify: { action },
+          workspaces: { list: async () => [remote], archive } as never,
+          notify: { action } as never,
         },
       }),
     );

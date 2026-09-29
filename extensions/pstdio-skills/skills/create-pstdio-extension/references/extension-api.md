@@ -165,8 +165,9 @@ points with `menus` and a host-owned workbench target such as `workbench.nav.act
 `workbench.nav.overflow`. Add command palette entries explicitly with `palette`.
 
 Available param builders include `params.text`, `params.longText`, `params.number`, `params.boolean`,
-`params.select`, `params.multiSelect`, `params.harness`, `params.resource`, and
-`params.json`.
+`params.select`, `params.multiSelect`, `params.harness`, `params.resource`, `params.workspace`, and
+`params.json`. `params.workspace({ providers })` shows the host's workspace type and provider fields, such as a
+Git base branch, and passes `{ providerId, params }` to the command.
 
 Command params are the handler's second argument. `ctx` in a command includes:
 
