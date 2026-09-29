@@ -23,7 +23,7 @@ const writeExtension = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('webview');");
@@ -49,7 +49,7 @@ const writeTwoWebviewExtension = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src/first.tsx"), "console.log('first');");

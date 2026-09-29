@@ -73,7 +73,7 @@ describe("extensions check", () => {
               publisher: "test",
               version: "1.0.0",
               main: "extension.ts",
-              engines: { pstdio: name === scope ? EXTENSION_API_VERSION : "0.0.1" },
+              engines: { pstdio: name === scope ? `^${EXTENSION_API_VERSION}` : "^0.0.1" },
             }),
           );
         }

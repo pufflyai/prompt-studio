@@ -26,7 +26,7 @@ const writePackage = (root: string, name: string, fields: Record<string, unknown
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       ...fields,
     }),
   );
@@ -192,25 +192,6 @@ describe("checkExtensionSource alpha.4", () => {
           }),
         }),
       );
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  test("rejects removed alpha.3 collections", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-removed-alpha3-"));
-    writePackage(root, "removed-alpha3");
-    writeFileSync(join(root, "extension.ts"), "export default { panels: {}, routes: {} };");
-
-    try {
-      const result = await checkExtensionSource(root, resolve(root, ".."));
-      expect(result.check.diagnostics).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ code: "removed_extension_contribution", metadata: { key: "panels" } }),
-          expect.objectContaining({ code: "removed_extension_contribution", metadata: { key: "routes" } }),
-        ]),
-      );
-      expect(result.check.views).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

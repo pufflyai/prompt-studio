@@ -12,7 +12,7 @@ const packageManifest = (
     displayName: name ?? "Test Extension",
     publisher: id?.split(".")[0] ?? "test",
     main: "./extension.ts",
-    engines: { pstdio: EXTENSION_API_VERSION },
+    engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     ...rest,
   };
 };

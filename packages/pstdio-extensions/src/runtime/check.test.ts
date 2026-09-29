@@ -34,7 +34,7 @@ const writeExtension = (homeRoot: string, name: string, source: string) => {
         displayName: name === "extension-lab" ? "Extension Lab" : name,
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       },
       null,
       2,
@@ -137,7 +137,7 @@ describe("checkExtensions", () => {
         version: "0.1.0",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       }),
     );
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
@@ -254,7 +254,7 @@ describe("checkExtensionHostCompatibility", () => {
           version: "1.0.0",
           publisher: "pstdio",
           main: "./extension.ts",
-          enginesPstdio: EXTENSION_API_VERSION,
+          enginesPstdio: `^${EXTENSION_API_VERSION}`,
         },
         definition: defineExtension({
           views: [rows],

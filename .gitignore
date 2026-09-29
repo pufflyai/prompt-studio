@@ -88,6 +88,7 @@ out
 .nuxt
 dist
 dist-monaco
+.api-report
 
 # Gatsby files
 .cache/

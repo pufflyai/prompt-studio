@@ -19,7 +19,7 @@ const writeExtension = (
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       dependencies: options.dependencies,
     }),
   );

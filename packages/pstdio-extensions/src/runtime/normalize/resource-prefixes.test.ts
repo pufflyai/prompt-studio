@@ -13,7 +13,7 @@ const source = (name: string, prefix: unknown): LoadedExtensionSource => ({
     publisher: "pstdio",
     version: "1.0.0",
     main: "extension.ts",
-    enginesPstdio: EXTENSION_API_VERSION,
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
   },
   definition: { resourceKinds: [{ id: name, ref: { kind: "resource-kind", id: name }, prefix: prefix as never }] },
 });

@@ -68,7 +68,7 @@ describe("marketplace extension installation", () => {
         name: "repo-tools",
         displayName: "Repo Tools",
         version: "0.1.0",
-        enginesPstdio: "1.0.0-alpha.4",
+        enginesPstdio: "^0.1.0",
       },
       source: {
         kind: "local" as const,
