@@ -18,7 +18,7 @@ const createHarness = async () => {
       publisher: "example",
       version: "1.0.0",
       main: "extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     };
     writeFileSync(join(sourcePath, "package.json"), JSON.stringify(manifest));
     writeFileSync(

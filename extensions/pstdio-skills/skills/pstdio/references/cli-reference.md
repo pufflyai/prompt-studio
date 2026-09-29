@@ -22,7 +22,7 @@ pst projects view [--project-id <id>]
 pst projects delete <project-id>
 ```
 
-The alpha.12 host requires a Git repository and accepts `--repo <folder>`. The alpha.13 host accepts ordinary folders and uses `--path <folder>`. Run `pst projects create --help` to check your installed host.
+The host accepts ordinary folders and uses `--path <folder>`. Older hosts with extension API `1.0.0-alpha.12` require a Git repository and accept `--repo <folder>`. Run `pst projects create --help` to check your installed host.
 
 ## Agents
 
@@ -140,7 +140,7 @@ pst reports delete [--workspace <id>] [--name <name>]
 
 | Problem | Command or check |
 | --- | --- |
-| Project is not linked | Run `pst projects create` from the selected folder (a Git repository on alpha.12). |
+| Project is not linked | Run `pst projects create` from the selected folder. |
 | Skills are missing | Run `pst agents install-skills <agent-id>`. |
 | Extensions fail validation | Run `pst extensions check`, then inspect the diagnostics. |
 | Runtime is unreachable | Run `pst serve`, then `pst logs`. |

@@ -100,7 +100,7 @@ const loaded = {
     name: "dev-test",
     displayName: "Dev Test",
     version: "1.0.0",
-    enginesPstdio: "^1.0.0",
+    enginesPstdio: "^0.1.0",
   },
 };
 

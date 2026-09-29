@@ -38,7 +38,7 @@ const writeExtension = (dir: string, name: string, version: string) => {
       displayName: name,
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       type: "module",
     }),
   );

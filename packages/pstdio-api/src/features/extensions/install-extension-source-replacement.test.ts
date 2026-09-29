@@ -21,7 +21,7 @@ const writeExtension = (packageManager?: string) => {
       displayName: "Source Extension",
       publisher: "test",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       dependencies: { example: "1.0.0" },
       ...(packageManager ? { packageManager } : {}),
     }),

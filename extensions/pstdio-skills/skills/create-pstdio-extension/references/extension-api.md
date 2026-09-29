@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.12"
+    "pstdio": "^0.1.0"
   },
   "private": true,
   "type": "module",
@@ -31,6 +31,12 @@ Set `pstdio.projectFiles.tracked` when the extension uses its allocated project 
 Required fields are `name`, `version`, `publisher`, `main`, and `engines.pstdio`. The extension id is derived as
 `${publisher}.${name}`. Keep the package `name` lowercase kebab-case because it scopes command ids, catalog names,
 artifact roots, themes, and CLI paths.
+
+Set `engines.pstdio` to a caret range of the current extension API, such as `^0.1.0`. `pst extensions check` prints
+the current value. Leave it alone after host updates. Raise the minimum only when the extension starts using an API
+added in a newer version, such as `^0.1.3`. On `0.x`, a new minor is a breaking release: after fixing the code for
+`0.2.0`, declare `^0.2.0`, or `^0.1.3 || ^0.2.0` if the same code works on both. Exact versions, tilde ranges,
+wildcards, and prerelease tags are refused.
 
 ## Entry module
 
@@ -301,7 +307,7 @@ The target chooses the screen. The host never guesses a page or panel from the r
 
 ## Handler navigation and removal
 
-API alpha.14 removes the old command-result conventions. Before declaring alpha.14 support, replace returned navigation targets with `ctx.navigation.open(target)` and report committed deletions with `await ctx.resources.removed(resource)`. Table and kanban activation callbacks return void. A command's returned data does not trigger navigation or resource cleanup. These explicit APIs also work on alpha.12 and alpha.13 hosts, so extensions can declare those exact versions together during release preparation.
+Returned command data never triggers navigation or resource cleanup. Open targets with `ctx.navigation.open(target)` and report committed deletions with `await ctx.resources.removed(resource)`. Table and kanban activation callbacks return void.
 
 Commands and interaction callbacks use `ctx.navigation.open(target)`. It accepts the same `NavigationTarget` as webview `navigation.open`. The method records a request and returns void; it does not wait for the browser. Return ordinary data from the handler.
 
@@ -449,7 +455,9 @@ A successful query can remove filters for deleted fields and options. A failed
 query preserves saved filters.
 
 `defaultViews` declares read-only built-ins. Use `defaultActiveViewId` for the
-extension fallback. Saved view declarations have no `isDefault` property. People
+extension fallback. The deprecated `isDefault` flag is a fallback when that ID is
+absent; use `defaultActiveViewId` in new extensions. The project default takes
+precedence over both. People
 and agents can choose any saved or built-in view as the shared project default.
 Disabled boards retain saved data; removing a board leaves orphaned views that
 agents can inspect with `pst views list --orphaned`.

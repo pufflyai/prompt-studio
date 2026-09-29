@@ -15,7 +15,7 @@ const writeExtension = (root: string) => {
       displayName: "Font Editor",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src", "main.tsx"), "console.log('webview');");
