@@ -77,6 +77,17 @@ const retainResourceInstances = (
   );
   return [...retained, { ...next, open }];
 };
+// An instance keeps the key it opened with while updates change its resource, so an open
+// resource is found by what the instance shows now. A new instance never reuses a taken key.
+const resourceInstanceKey = (current: readonly OwnedResourceInstance[], resource: ResourceRef) => {
+  const key = resourceKey(resource);
+  const shown = current.find((instance) => resourceKey(instance.resource) === key);
+  if (shown) return shown.instanceKey;
+  const taken = new Set(current.map((instance) => instance.instanceKey));
+  let instanceKey = key;
+  for (let suffix = 2; taken.has(instanceKey); suffix += 1) instanceKey = `${key}#${suffix}`;
+  return instanceKey;
+};
 export const openResourcePlacement = (input: {
   label: string;
   id: string;
@@ -95,13 +106,14 @@ export const openResourcePlacement = (input: {
   if (input.open && item.binding.cardinality !== "many") {
     throw new Error(`${label} "${id}" accepts open intent only with many cardinality`);
   }
+  const current = state.resourceInstances.get(id) ?? [];
   const instance: OwnedResourceInstance = {
-    instanceKey: resourceKey(input.resource),
+    instanceKey: resourceInstanceKey(current, input.resource),
     resource: input.resource,
     ...(item.binding.cardinality === "many" ? { open: input.open ?? ("preview" as const) } : {}),
     ...(input.title ? { title: input.title } : {}),
   };
-  state.resourceInstances.set(id, retainResourceInstances(item, state.resourceInstances.get(id) ?? [], instance));
+  state.resourceInstances.set(id, retainResourceInstances(item, current, instance));
   return instance.instanceKey;
 };
 export const closeOwnedPlacementInstance = (input: {
