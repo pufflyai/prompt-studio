@@ -159,8 +159,9 @@ Resource menus work in the Sidenav and standalone trees. A row menu takes preced
 Right-clicking the background or a plain navigation row still opens the customization menu. Workspace rows use
 current host capability data, including default-workspace restrictions, when resolving their actions.
 
-The owner can be a mode or page ref. Mode sections appear before page sections. The Sidenav renders one tree with
-pinned `header` and `footer` slots and one scrolling `content` slot.
+The owner can be a mode or page ref. A mode-owned tree adds sections to that mode's navigation. A page-owned
+`content` tree starts a [Sidenav level](#sidenav-levels) instead. The Sidenav renders one tree with pinned
+`header` and `footer` slots and one scrolling `content` slot.
 
 Inside a command declaration, use a typed menu slot and limit visibility with `when`. Import `workspaceSlots` and `workbenchResourceKinds` from `@pstdio/sdk/extensions`:
 
@@ -253,6 +254,107 @@ Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflo
 
 A page-owned content navigation tree starts a sidenav level. Its sections replace the mode content while that page or any child location is open. The nearest owner in the page location parent chain wins, so levels can nest. Pages with only header or footer trees do not start a level.
 
-The host pins a Back row at the top of the header, above Search. Users cannot move or hide it. It is named after the parent level resource or page, or the mode label (Project at the main level). Back restores the last page visited at that level. This memory is saved per project and survives reloads. On a first visit, Back opens the parent level owner, the declared parent location, or Start. Header and footer keep the mode sections followed by the level owner's sections. Search stays in the header and opens the command palette. In the Sidenav customize menu, users can hide a level's sections but not its rows.
+This extension adds a Recipes row to the project navigation. The row opens the Recipes page. That page owns the `recipe-list` tree, so the recipes replace the project navigation. Opening a recipe keeps the level, because the Recipe page declares Recipes as its parent.
+
+```ts
+import {
+  defineExtension,
+  defineNavigationItem,
+  defineNavigationTree,
+  definePage,
+  defineResourceKind,
+  defineView,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
+
+const recipe = defineResourceKind({ id: "recipe", label: "Recipe", icon: "chef-hat" });
+const recipes = [
+  { id: "pancakes", title: "Pancakes" },
+  { id: "ramen", title: "Ramen" },
+];
+
+const recipeView = defineView({
+  id: "recipe",
+  title: "Recipe",
+  body: { kind: "controls", query: async () => ({ values: {} }) },
+});
+
+// Opening this page starts the Recipes level.
+const recipesPage = definePage({
+  id: "recipes",
+  title: "Recipes",
+  path: "recipes",
+  mode: workbenchModes.project,
+  main: { kind: "panels", empty: recipeView.ref },
+  slots: [],
+});
+
+// A child page keeps the Recipes level open through its declared parent.
+const recipePage = definePage({
+  id: "recipe",
+  title: "Recipe",
+  path: "recipe",
+  mode: workbenchModes.project,
+  parent: recipesPage.ref,
+  resource: { kinds: [recipe.ref] },
+  main: { kind: "view", view: recipeView.ref, cardinality: "one" },
+  slots: [],
+});
+
+const recipeList = defineView({
+  id: "recipe-list",
+  title: "Recipes",
+  body: {
+    kind: "tree",
+    body: async () => [
+      {
+        id: "recipes",
+        label: "Recipes",
+        collapsible: false,
+        nodes: recipes.map(({ id, title }) => {
+          const resource = { type: recipe.id, id, label: title };
+          return {
+            id,
+            label: title,
+            icon: "chef-hat",
+            resource,
+            target: { kind: "page", page: recipePage.ref, resource },
+          };
+        }),
+      },
+    ],
+  },
+});
+
+export default defineExtension({
+  resourceKinds: [recipe],
+  views: [recipeView, recipeList],
+  pages: [recipesPage, recipePage],
+  navigationItems: [
+    // The main level shows one row that opens the level.
+    defineNavigationItem({
+      id: "recipes",
+      owner: workbenchModes.project,
+      slot: "content",
+      label: "Recipes",
+      icon: "chef-hat",
+      group: "",
+      action: { kind: "page", page: recipesPage.ref },
+    }),
+  ],
+  navigationTrees: [
+    // A page owner starts a level instead of adding rows to the project navigation.
+    defineNavigationTree({
+      id: "recipe-list",
+      owner: recipesPage.ref,
+      slot: "content",
+      view: recipeList.ref,
+      resourceScope: "project",
+    }),
+  ],
+});
+```
+
+The host pins a Back row at the top of the header, above Search. Users cannot move or hide it. It is named after the parent level resource or page, or the mode label (Project at the main level). Back restores the last page visited at that level. This memory is saved per project and survives reloads. On a first visit, Back opens the parent level owner, the declared parent location, or Start. Header and footer keep the mode sections followed by the level owner's sections. Search stays in the header and opens the command palette. In the Sidenav customize menu, users can hide a level's labeled sections but not its rows.
 
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.
