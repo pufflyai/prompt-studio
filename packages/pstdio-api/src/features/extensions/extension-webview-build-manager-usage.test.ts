@@ -20,6 +20,7 @@ const writeExtension = (root: string) => {
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('webview');");
+  writeFileSync(join(root, "src/other.tsx"), "console.log('other');");
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
@@ -27,6 +28,10 @@ const writeExtension = (root: string) => {
         id: "labPage",
         title: "Lab",
         body: { kind: "webview", entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
+      }, {
+        id: "otherPage",
+        title: "Other",
+        body: { kind: "webview", entry: { kind: "package-asset", path: "./src/other.tsx", baseUrl: import.meta.url } },
       }],
     };`,
   );
@@ -81,9 +86,9 @@ describe("webview build usage", () => {
     const fixture = setup();
     try {
       const first = fixture.createManager();
-      await first.ensure("installed-lab");
+      await first.ensure("installed-lab", "pstdio.lab.view.labPage");
       first.dispose();
-      await fixture.createManager().ensure("installed-lab");
+      await fixture.createManager().ensure("installed-lab", "pstdio.lab.view.labPage");
       expect(fixture.builds).toHaveLength(1);
       expect(readFileSync(join(fixture.dist, "build-signature.txt"), "utf8")).toMatch(/^[a-f0-9]{64}$/);
     } finally {
@@ -95,10 +100,10 @@ describe("webview build usage", () => {
     const fixture = setup();
     try {
       const first = fixture.createManager();
-      await first.ensure("installed-lab");
+      await first.ensure("installed-lab", "pstdio.lab.view.labPage");
       first.dispose();
       writeFileSync(join(fixture.sourcePath, "src/main.tsx"), "export default 2;");
-      await fixture.createManager().ensure("installed-lab");
+      await fixture.createManager().ensure("installed-lab", "pstdio.lab.view.labPage");
       expect(fixture.builds).toHaveLength(2);
       expect(readFileSync(join(fixture.dist, "module.js"), "utf8")).toBe("export default 2;");
     } finally {
@@ -106,31 +111,45 @@ describe("webview build usage", () => {
     }
   });
 
-  test("builds only used extensions and shares concurrent usage checks", async () => {
+  test("builds only the requested webview, not the rest of its extension", async () => {
+    const fixture = setup();
+    try {
+      const manager = fixture.createManager();
+      await manager.ensure("installed-lab", "pstdio.lab.view.otherPage");
+      expect(fixture.builds).toEqual([join(fixture.sourcePath, "src/other.tsx")]);
+    } finally {
+      fixture.dispose();
+    }
+  });
+
+  test("builds only used webviews and shares concurrent usage checks", async () => {
     const fixture = setup();
     try {
       const manager = fixture.createManager();
       await manager.refresh();
       expect(fixture.builds).toHaveLength(0);
-      await Promise.all([manager.ensure("installed-lab"), manager.ensure("installed-lab")]);
-      await manager.ensure("installed-lab");
+      await Promise.all([
+        manager.ensure("installed-lab", "pstdio.lab.view.labPage"),
+        manager.ensure("installed-lab", "pstdio.lab.view.labPage"),
+      ]);
+      await manager.ensure("installed-lab", "pstdio.lab.view.labPage");
       expect(fixture.builds).toEqual([join(fixture.sourcePath, "src/main.tsx")]);
     } finally {
       fixture.dispose();
     }
   });
 
-  test("watcher changes build used extensions immediately and defer unused extensions", async () => {
+  test("watcher changes build used webviews immediately and defer unused webviews", async () => {
     const fixture = setup();
     try {
       const manager = fixture.createManager();
-      await manager.ensure("installed-lab");
+      await manager.ensure("installed-lab", "pstdio.lab.view.labPage");
       writeFileSync(join(fixture.sourcePath, "src/main.tsx"), "export default 2;");
       writeFileSync(join(fixture.unusedPath, "src/main.tsx"), "export default 3;");
       await manager.refresh(fixture.sourcePath);
       await manager.refresh(fixture.unusedPath);
       expect(fixture.builds).toHaveLength(2);
-      await manager.ensure("unused");
+      await manager.ensure("unused", "pstdio.lab.view.labPage");
       expect(fixture.builds).toHaveLength(3);
     } finally {
       fixture.dispose();
@@ -142,13 +161,13 @@ describe("webview build usage", () => {
     const define = extensionWebviewBuildOptions.define["process.env.NODE_ENV"];
     try {
       const first = fixture.createManager();
-      await first.ensure("installed-lab");
+      await first.ensure("installed-lab", "pstdio.lab.view.labPage");
       first.dispose();
       extensionWebviewBuildOptions.define["process.env.NODE_ENV"] = '"development"';
       const second = fixture.createManager();
-      await second.ensure("installed-lab");
+      await second.ensure("installed-lab", "pstdio.lab.view.labPage");
       second.dispose();
-      await fixture.createManager().ensure("installed-lab");
+      await fixture.createManager().ensure("installed-lab", "pstdio.lab.view.labPage");
       expect(fixture.builds).toHaveLength(2);
     } finally {
       extensionWebviewBuildOptions.define["process.env.NODE_ENV"] = define;
@@ -162,7 +181,7 @@ describe("webview build usage", () => {
       const parent = join(fixture.dist, "..");
       mkdirSync(join(parent, "dist.staging-interrupted"), { recursive: true });
       mkdirSync(join(parent, "source.staging-interrupted"), { recursive: true });
-      await fixture.createManager().ensure("installed-lab");
+      await fixture.createManager().ensure("installed-lab", "pstdio.lab.view.labPage");
       expect(existsSync(join(parent, "dist.staging-interrupted"))).toBe(false);
       expect(existsSync(join(parent, "source.staging-interrupted"))).toBe(false);
       expect(existsSync(join(fixture.dist, "module.js"))).toBe(true);

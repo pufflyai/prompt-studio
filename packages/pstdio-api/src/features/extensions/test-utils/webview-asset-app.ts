@@ -52,7 +52,7 @@ export const createApp = (input: {
   sources?: SourceRow[];
   failure?: string;
   onLoad?: () => void;
-  ensureWebviews?: (installedExtensionId: string) => Promise<void>;
+  ensureWebview?: (installedExtensionId: string, webviewId: string) => Promise<void>;
   onCatalog?: (catalog: ReturnType<typeof createProjectExtensionRuntimeCatalog>) => void;
 }) => {
   const app = new OpenAPIHono();
@@ -69,7 +69,7 @@ export const createApp = (input: {
   app.route(
     "/v1",
     createExtensionWebviewAssetRoutes({
-      ensureExtensionWebviews: input.ensureWebviews ?? (async () => {}),
+      ensureExtensionWebview: input.ensureWebview ?? (async () => {}),
       extensionRuntimeCatalog,
       extensionService: {
         getInstalledSourceById: async (id: string) => {

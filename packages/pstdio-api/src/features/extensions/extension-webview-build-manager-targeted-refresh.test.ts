@@ -139,7 +139,10 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
     });
 
     try {
-      const initialRefresh = manager.ensure("installed-lab");
+      const initialRefresh = Promise.all([
+        manager.ensure("installed-lab", "pstdio.lab.view.first"),
+        manager.ensure("installed-lab", "pstdio.lab.view.second"),
+      ]);
       await waitFor(
         () => firstBuildCount === 1 && secondBuildCount === 1,
         "Timed out waiting for the initial webview builds.",
@@ -196,7 +199,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
     });
 
     try {
-      const targetedRefresh = manager.ensure("installed-lab");
+      const targetedRefresh = manager.ensure("installed-lab", "pstdio.lab.view.labPage");
       await waitFor(() => runCount === 1, "Timed out waiting for targeted build.");
 
       writeFileSync(join(sourcePath, "extension.ts"), "export default { views: ;");

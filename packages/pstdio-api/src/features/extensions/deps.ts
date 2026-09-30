@@ -35,9 +35,8 @@ export type ExtensionsRouteDeps = Pick<
   terminal?: ExtensionTerminalApi;
 };
 
-export type ExtensionWebviewRouteDeps = Pick<RouteDeps, "extensionWebviewAccess" | "ensureExtensionWebviews">;
+export type ExtensionWebviewRouteDeps = Pick<RouteDeps, "extensionWebviewAccess" | "ensureExtensionWebview">;
 
 export interface ExtensionWebviewMetadataDeps {
-  ensureExtensionWebviews: RouteDeps["ensureExtensionWebviews"];
   extensionWebviewAccess: ExtensionWebviewUrlIssuer;
 }

@@ -77,7 +77,7 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
   if (authorized.kind === "artifact") return serveArtifact(c, deps, authorized);
 
   const { assetPath, installedExtensionId, webviewId } = authorized;
-  await deps.ensureExtensionWebviews(installedExtensionId);
+  await deps.ensureExtensionWebview(installedExtensionId, webviewId);
   // Build failures must win over any previous bundle left on disk.
   if (assetPath === "module.js") {
     const buildError = await findWebviewBuildError(deps, { installedExtensionId, webviewId });

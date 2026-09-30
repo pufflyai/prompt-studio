@@ -16,8 +16,8 @@ for (const method of ["GET", "HEAD"]) {
     const app = createApp({
       cacheRoot,
       sourcePath,
-      ensureWebviews: async (installName) => {
-        expect(installName).toBe("installed-lab");
+      ensureWebview: async (installName, webviewId) => {
+        expect([installName, webviewId]).toEqual(["installed-lab", "pstdio.lab.view.labPage"]);
         started.resolve();
         await released.promise;
         const dist = join(cacheRoot, "installed-lab/pstdio.lab.view.labPage/dist");

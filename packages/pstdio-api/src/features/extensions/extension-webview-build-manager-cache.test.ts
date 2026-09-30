@@ -83,7 +83,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
     });
 
     try {
-      await manager.ensure("installed-lab");
+      await manager.ensure("installed-lab", "pstdio.lab.view.labPage");
       rmSync(distPath, { recursive: true, force: true });
 
       await manager.refresh();
@@ -124,7 +124,10 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
     });
 
     try {
-      await manager.ensure("installed-lab");
+      await Promise.all([
+        manager.ensure("installed-lab", "pstdio.lab.view.labPage"),
+        manager.ensure("installed-lab", "pstdio.lab.view.faultyPage"),
+      ]);
 
       expect(failures).toEqual(["pstdio.lab.view.faultyPage"]);
       expect(successes).toEqual(["pstdio.lab.view.labPage"]);
@@ -173,7 +176,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
     });
 
     try {
-      await manager.ensure("installed-lab");
+      await manager.ensure("installed-lab", "pstdio.lab.view.labPage");
       mkdirSync(join(sourcePath, "node_modules", "react"), { recursive: true });
 
       await manager.refresh();
@@ -217,7 +220,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
     });
 
     try {
-      await manager.ensure("installed-lab");
+      await manager.ensure("installed-lab", "pstdio.lab.view.labPage");
       rmSync(markerPath);
       await manager.refresh();
 

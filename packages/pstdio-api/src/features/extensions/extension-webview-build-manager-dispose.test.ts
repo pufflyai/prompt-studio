@@ -66,7 +66,7 @@ describe("createExtensionWebviewBuildManager dispose", () => {
     });
 
     try {
-      const refresh = manager.ensure("installed-lab");
+      const refresh = manager.ensure("installed-lab", "pstdio.lab.view.labPage");
       await waitFor(() => runCount === 1, "Timed out waiting for build.");
 
       manager.dispose();
@@ -100,7 +100,7 @@ describe("createExtensionWebviewBuildManager dispose", () => {
     });
 
     try {
-      const refresh = manager.ensure("installed-lab");
+      const refresh = manager.ensure("installed-lab", "pstdio.lab.view.labPage");
       await waitFor(() => existsSync(loadStartedPath), "Timed out waiting for extension load.");
 
       manager.dispose();

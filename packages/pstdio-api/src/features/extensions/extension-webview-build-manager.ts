@@ -7,6 +7,7 @@ import {
   readWebviewBuildSignature,
   removeUnownedWebviewBuilds,
 } from "./extension-webview-build-cache";
+import { createWebviewBuildChecks } from "./extension-webview-build-checks";
 import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
 import {
   expectedWebviewBuildSource,
@@ -95,6 +96,9 @@ const createBuildReporters = (input: CreateExtensionWebviewBuildManagerInput) =>
   return { reportFailure, reportSuccess };
 };
 
+const managedWebviewsOf = (loaded: LoadedExtension) =>
+  collectExtensionWebviews(loaded).filter((webview) => classifyWebviewEntry(webview.entry).kind === "managed");
+
 const inspectWebviewBuild = (row: InstalledSourceWithManifest, packageName: string, webview: ManagedWebview) => {
   const sourceEntryPath = resolvePackageAssetFile(webview.entry);
   const buildInputs = inspectManagedWebviewBuildInputs({
@@ -109,9 +113,7 @@ const inspectWebviewBuild = (row: InstalledSourceWithManifest, packageName: stri
 
 export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
   const building = new Map<string, string>();
-  const inUse = new Set<string>();
-  const checked = new Set<string>();
-  const pending = new Map<string, Promise<void>>();
+  const checks = createWebviewBuildChecks();
   const activeStages = new Set<string>();
   const backoff = createWebviewBuildBackoff();
   const activeBuilds = new Set<AbortController>();
@@ -243,14 +245,16 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     return current.signature === result.signature ? currentRow : null;
   };
 
-  const refreshRow = async (row: InstalledSourceWithManifest, validatedSource?: LoadedExtension) => {
+  const refreshRow = async (
+    row: InstalledSourceWithManifest,
+    webviewIds: string[],
+    validatedSource?: LoadedExtension,
+  ) => {
     if (disposed) return;
     const loaded = validatedSource ?? (await loadExtensionSource(row.source_path));
     if (disposed) return;
 
-    const managedWebviews = collectExtensionWebviews(loaded).filter(
-      (webview) => classifyWebviewEntry(webview.entry).kind === "managed",
-    );
+    const managedWebviews = managedWebviewsOf(loaded).filter((webview) => webviewIds.includes(webview.id));
     await Promise.all(
       managedWebviews.map(async (webview) => {
         const key = processKey(row.id, webview.id);
@@ -271,31 +275,21 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     );
   };
 
-  const check = (installedExtensionId: string, validatedSource?: LoadedExtension) => {
-    const previous = pending.get(installedExtensionId);
+  const check = (installedExtensionId: string, webviewIds: string[], validatedSource?: LoadedExtension) => {
     const work = (async () => {
       if (disposed) return;
       const row = (await input.listInstalledSources()).find((row) => row.id === installedExtensionId);
-      if (row) await refreshRow(row, validatedSource);
+      if (row) await refreshRow(row, webviewIds, validatedSource);
     })().catch((error) => input.onError?.(error));
-    // Asset requests wait for all builds, while watcher refreshes can finish independently.
-    const completion = Promise.all([previous, work]).then(() => {
-      if (pending.get(installedExtensionId) !== completion) return;
-      pending.delete(installedExtensionId);
-      if (!disposed) checked.add(installedExtensionId);
-    });
-    pending.set(installedExtensionId, completion);
+    checks.track(installedExtensionId, webviewIds, work);
     return work;
   };
 
-  const ensure = (installedExtensionId: string) => {
+  // A webview is used when its assets are requested. Building only that webview keeps its
+  // first render from waiting behind webviews nobody opened.
+  const ensure = (installedExtensionId: string, webviewId: string) => {
     if (disposed) return Promise.resolve();
-    inUse.add(installedExtensionId);
-    const running = pending.get(installedExtensionId);
-    if (running) return running;
-    if (checked.has(installedExtensionId)) return Promise.resolve();
-    check(installedExtensionId);
-    return pending.get(installedExtensionId)!;
+    return checks.use(installedExtensionId, webviewId, () => check(installedExtensionId, [webviewId]));
   };
 
   const refresh = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
@@ -311,8 +305,12 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         rows
           .filter((row) => !sourcePath || row.source_path === sourcePath)
           .map((row) => {
-            checked.delete(row.id);
-            if (validatedSource || inUse.has(row.id)) return check(row.id, validatedSource);
+            const usedWebviewIds = checks.reset(row.id);
+            // An explicit reload validates the source, so it builds every webview at once to report errors.
+            const webviewIds = validatedSource
+              ? managedWebviewsOf(validatedSource).map((webview) => webview.id)
+              : usedWebviewIds;
+            if (webviewIds.length > 0) return check(row.id, webviewIds, validatedSource);
             return undefined;
           }),
       );
@@ -326,9 +324,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     for (const controller of activeBuilds) controller.abort();
     activeBuilds.clear();
     building.clear();
-    checked.clear();
-    pending.clear();
-    inUse.clear();
+    checks.clear();
     backoff.clear();
   };
 
