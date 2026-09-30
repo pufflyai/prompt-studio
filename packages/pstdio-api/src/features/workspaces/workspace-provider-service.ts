@@ -8,6 +8,7 @@ import {
   rootProviderId,
   worktreeProviderId,
 } from "./workspace-provider-identity";
+import { resolveWorkspaceParams } from "./workspace-provider-params";
 import type { WorkspaceRecord } from "./workspace-provider-projection";
 import { assertWorkspaceShorthand } from "./workspace-shorthand";
 import { setupWorkspaceWorktree } from "./worktree-setup";
@@ -50,7 +51,7 @@ export const createProviderBackedWorkspace = async (
 ) => {
   if (input.shorthandBase !== undefined) assertWorkspaceShorthand(input.shorthandBase);
   const providerId = input.providerId;
-  const params = input.params ?? {};
+  const params = await resolveWorkspaceParams(deps, input.projectId, providerId, input.params ?? {});
   const home = await deps.workspaceService.getDefault(input.projectId);
   if (providerId === rootProviderId && !input.isDefault) {
     if (home) return home;

@@ -1,6 +1,7 @@
 import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import type { WorkspacesRouteDeps } from "./deps";
 import { finalizeWorkspaceArchive } from "./workspace-provider-lifecycle";
+import { InvalidWorkspaceParamsError } from "./workspace-provider-params";
 import {
   failedOperationPatch,
   missingProviderPatch,
@@ -8,6 +9,7 @@ import {
   type WorkspaceProviderOperationKind,
   type WorkspaceRecord,
 } from "./workspace-provider-projection";
+import { persistRetryParams } from "./workspace-provider-retry-params";
 import {
   findWorkspaceProvider,
   runWorkspaceProviderCall,
@@ -99,6 +101,47 @@ const reconcileCancellation = async (
   await updateResult(deps, workspace, result);
 };
 
+const recoverProviderReference = async (
+  deps: WorkspacesRouteDeps,
+  workspace: WorkspaceRecord,
+  handle: WorkspaceProviderHandle,
+  options: ReconciliationOptions,
+) => {
+  const current = await persistRetryParams(deps, workspace, handle);
+  if (!current) return;
+  if (current.provider_ref_json) return current;
+  const kind = current.provider_operation_kind!;
+  const operationId = current.provider_operation_id!;
+  const result = await runWorkspaceProviderCall(
+    () =>
+      handle.provider.create(handle.context, {
+        operationId,
+        projectId: current.project_id,
+        workspaceId: current.id,
+        params: current.provider_params_json as JsonObject,
+      }),
+    { signal: options.signal, timeoutMs: options.providerTimeoutMs },
+  );
+  if (kind === "create") {
+    await updateResult(deps, current, result);
+    return;
+  }
+  const normalized = normalizeResult(current.provider_id, result);
+  const recoveredReference = normalized.provider_ref_json ?? null;
+  return (
+    (await deps.workspaceService.updateProviderOperationProjection(current.id, {
+      operationId,
+      operationKind: kind,
+      patch: {
+        ...normalized,
+        provider_state: pendingStateFor(kind),
+        provider_operation_id: recoveredReference ? crypto.randomUUID() : operationId,
+        provider_operation_kind: kind,
+      },
+    })) ?? undefined
+  );
+};
+
 const reconcileStoredOperation = async (
   deps: WorkspacesRouteDeps,
   workspace: WorkspaceRecord,
@@ -109,42 +152,9 @@ const reconcileStoredOperation = async (
   const operationId = workspace.provider_operation_id;
   if (!kind || !operationId) return false;
 
-  if (kind === "create" && !workspace.provider_ref_json) {
-    const result = await runWorkspaceProviderCall(
-      () =>
-        handle.provider.create(handle.context, {
-          operationId,
-          projectId: workspace.project_id,
-          workspaceId: workspace.id,
-          params: workspace.provider_params_json as JsonObject,
-        }),
-      { signal: options.signal, timeoutMs: options.providerTimeoutMs },
-    );
-    await updateResult(deps, workspace, result);
-    return true;
-  }
-
-  if (kind !== "create" && !workspace.provider_ref_json) {
-    const result = await runWorkspaceProviderCall(
-      () =>
-        handle.provider.create(handle.context, {
-          operationId,
-          projectId: workspace.project_id,
-          workspaceId: workspace.id,
-          params: workspace.provider_params_json as JsonObject,
-        }),
-      { signal: options.signal, timeoutMs: options.providerTimeoutMs },
-    );
-    const normalized = normalizeResult(workspace.provider_id, result);
-    const recoveredReference = normalized.provider_ref_json ?? null;
-    const recovered =
-      (await deps.workspaceService.updateProviderProjection(workspace.id, {
-        ...normalized,
-        provider_state: pendingStateFor(kind),
-        provider_operation_id: recoveredReference ? crypto.randomUUID() : operationId,
-        provider_operation_kind: kind,
-      })) ?? workspace;
-    if (!recovered.provider_ref_json) return true;
+  if (!workspace.provider_ref_json) {
+    const recovered = await recoverProviderReference(deps, workspace, handle, options);
+    if (!recovered?.provider_ref_json) return true;
     return reconcileStoredOperation(deps, recovered, handle, options);
   }
 
@@ -267,6 +277,24 @@ const reconcileProviderWorkspacePass = async (
       try {
         await reconcileWorkspace(deps, workspace, options);
       } catch (error) {
+        if (error instanceof InvalidWorkspaceParamsError) {
+          await deps.workspaceService.updateProviderOperationProjection(workspace.id, {
+            operationId: workspace.provider_operation_id!,
+            operationKind: workspace.provider_operation_kind!,
+            patch: {
+              provider_state: "failed",
+              provider_operation_id: null,
+              provider_operation_kind: null,
+              provider_error_json: {
+                code: "invalid_provider_params",
+                message: error.message,
+                retryable: false,
+                occurred_at: new Date().toISOString(),
+              },
+            },
+          });
+          return;
+        }
         const kind = workspace.provider_operation_kind ?? "create";
         await deps.workspaceService.updateProviderProjection(
           workspace.id,

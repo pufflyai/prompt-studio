@@ -3,6 +3,7 @@ import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { applyProjectHarnessSelection } from "../../harnesses/apply-harness-selection";
 import { ensureWorkspaceConfig } from "../../workspaces/workspace-config";
+import { InvalidWorkspaceParamsError } from "../../workspaces/workspace-provider-params";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
 import { retryProjectExtensions, setupProjectExtensions } from "../project-extension-setup";
@@ -73,21 +74,29 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : String(error) }, 400);
     }
-    return withFolderCreation(initial.path, async () => {
-      const existing = await openExistingProject(deps, initial);
-      if (existing) return c.json(existing, 200);
-      const existingProjects = await deps.projectService.list();
-      let extensionWarnings: ExtensionSetupWarning[] = [];
-      const project = await deps.projectService.create({ name: initial.name }, async (project) => {
-        await initializeProjectWorkspace(deps, project.id, initial.initial, async () => {
-          extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
-          if (input.agents)
-            await applyProjectHarnessSelection(deps, { projectId: project.id, selectedHarnessIds: input.agents });
-          return extensionWarnings;
+    try {
+      return await withFolderCreation(initial.path, async () => {
+        const existing = await openExistingProject(deps, initial);
+        if (existing) return c.json(existing, 200);
+        const existingProjects = await deps.projectService.list();
+        let extensionWarnings: ExtensionSetupWarning[] = [];
+        const project = await deps.projectService.create({ name: initial.name }, async (project) => {
+          await initializeProjectWorkspace(deps, project.id, initial.initial, async () => {
+            extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
+            if (input.agents)
+              await applyProjectHarnessSelection(deps, { projectId: project.id, selectedHarnessIds: input.agents });
+            return extensionWarnings;
+          });
         });
+        const response = toProjectResponse(project);
+        return c.json(
+          extensionWarnings.length ? { ...response, extension_warnings: extensionWarnings } : response,
+          201,
+        );
       });
-      const response = toProjectResponse(project);
-      return c.json(extensionWarnings.length ? { ...response, extension_warnings: extensionWarnings } : response, 201);
-    });
+    } catch (error) {
+      if (error instanceof InvalidWorkspaceParamsError) return c.json({ error: error.message }, 400);
+      throw error;
+    }
   };
 };

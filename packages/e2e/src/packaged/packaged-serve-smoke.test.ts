@@ -139,6 +139,13 @@ test(
       });
       expect(providersRes.status).toBe(200);
       expect(await providersRes.json()).toEqual([]);
+      const invalidWorkspace = await fetch(`${started.baseUrl}/v1/workspaces`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, provider_id: "pstdio.root", params: { typo: true } }),
+      });
+      expect(invalidWorkspace.status).toBe(400);
+      expect((await invalidWorkspace.json()).error).toContain("typo");
       const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });

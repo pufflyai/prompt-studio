@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,6 +15,21 @@ afterEach(() => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+// Worktree creation validates its base against the project repository's branches.
+const createGitRepo = () => {
+  const repoPath = mkdtempSync(join(tmpdir(), "pstdio-extension-workspace-repo-"));
+  tempRoots.push(repoPath);
+  execFileSync("git", ["init", "--quiet", "--initial-branch=main"], { cwd: repoPath });
+  writeFileSync(join(repoPath, "README.md"), "# Test\n");
+  execFileSync("git", ["add", "README.md"], { cwd: repoPath });
+  execFileSync(
+    "git",
+    ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "--quiet", "-m", "Initial"],
+    { cwd: repoPath },
+  );
+  return repoPath;
+};
 
 const makeEnabledSources = () => [
   {
@@ -456,6 +472,7 @@ describe("createCommandEnvironment", () => {
 
 describe("createCommandEnvironment workspaces", () => {
   test("creates anchored workspaces from extension context helpers", async () => {
+    const repoPath = createGitRepo();
     const created: unknown[] = [];
     const env = createCommandEnvironment(
       {
@@ -466,7 +483,7 @@ describe("createCommandEnvironment workspaces", () => {
           getDefault: async () => ({
             id: "home",
             project_id: "project-1",
-            root_path: "/repo",
+            root_path: repoPath,
             execution_kind: "local",
             provider_id: "pstdio.root",
             provider_state: "ready",
@@ -1063,6 +1080,7 @@ describe("createCommandEnvironment settings", () => {
 
 describe("createCommandEnvironment workspaces worktree mode", () => {
   test("provisions extension-created worktrees so harness hooks sync before sessions spawn", async () => {
+    const repoPath = createGitRepo();
     const provisioned: { projectId: string; workspace: { id: string }; repoPath: string }[] = [];
 
     const env = createCommandEnvironment(
@@ -1074,7 +1092,7 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
           getDefault: async () => ({
             id: "home",
             project_id: "project-1",
-            root_path: "/repo",
+            root_path: repoPath,
             execution_kind: "local",
             provider_id: "pstdio.root",
             provider_state: "ready",
@@ -1124,7 +1142,7 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
 
     expect(provisioned).toHaveLength(1);
     expect(provisioned[0]!.projectId).toBe("project-1");
-    expect(provisioned[0]!.repoPath).toBe("/repo");
+    expect(provisioned[0]!.repoPath).toBe(repoPath);
     expect(provisioned[0]!.workspace).toMatchObject({
       id: "ws-1",
       branch: "workspace/T-1_A1",

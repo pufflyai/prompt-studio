@@ -23,19 +23,21 @@ import {
 } from "./workspace-record";
 
 interface ProviderProjectionInput {
+  provider_params_json?: Record<string, unknown>;
   branch?: string | null;
   root_path?: string | null;
   provider_ref_json?: WorkspaceProviderRef | null;
-  provider_state: WorkspaceProviderState;
-  execution_kind: "local" | "remote";
+  provider_state?: WorkspaceProviderState;
+  execution_kind?: "local" | "remote";
   provider_operation_id?: string | null;
   provider_operation_kind?: "create" | "cancel" | "archive" | "delete" | null;
   provider_error_json?: WorkspaceProviderError | null;
-  provider_capabilities_json: WorkspaceCapabilities;
+  provider_capabilities_json?: WorkspaceCapabilities;
   display_path?: string | null;
 }
 
 const providerProjectionValues = (input: ProviderProjectionInput) => ({
+  ...(Object.hasOwn(input, "provider_params_json") ? { provider_params_json: input.provider_params_json } : {}),
   ...(Object.hasOwn(input, "branch") ? { branch: input.branch } : {}),
   ...(Object.hasOwn(input, "root_path") ? { root_path: input.root_path } : {}),
   ...(Object.hasOwn(input, "provider_ref_json") ? { provider_ref_json: input.provider_ref_json } : {}),

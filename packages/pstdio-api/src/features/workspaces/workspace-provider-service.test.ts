@@ -102,6 +102,7 @@ describe("createProviderBackedWorkspace", () => {
       },
     };
     const { deps } = makeCreateDeps({
+      params: { image: { type: "text" } },
       create: mock(async () => providerResult),
       resolve: mock(async () => providerResult),
     });

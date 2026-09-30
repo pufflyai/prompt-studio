@@ -12,7 +12,7 @@ Implement Planner tickets in a Prompt Studio workspace. Produce a committed revi
 Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
 
 - If you run inside a workspace from `pst pstdio-planner run-attempt`, work there.
-- When asked to implement tickets in a worktree, run `pst workspaces create --provider pstdio.worktree`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters.
+- When asked to implement tickets in a worktree, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters.
 - For several tickets in one workspace, create one workspace and link every ticket to it.
 - For one workspace per ticket, create and link a workspace for each ticket.
 
