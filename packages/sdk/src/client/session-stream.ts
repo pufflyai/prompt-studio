@@ -15,6 +15,7 @@ export interface SessionStreamListener {
 
 interface Subscription extends SessionStreamListener {
   sessionId: string;
+  started?: Promise<void>;
 }
 
 interface Connection {
@@ -30,17 +31,22 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
   const subscriptions = new Map<string, Subscription>();
   let connection: Connection | undefined;
 
-  const subscribe = (connectionId: string, id: string, subscription: Subscription) =>
-    request(`/v1/session-stream/${connectionId}/subscriptions`, {
+  const subscribe = (connectionId: string, id: string, subscription: Subscription) => {
+    subscription.started = request(`/v1/session-stream/${connectionId}/subscriptions`, {
       method: "POST",
       body: { subscription_id: id, session_id: subscription.sessionId },
-    }).catch((error: unknown) => {
-      if (subscriptions.get(id) !== subscription) return;
-      release(id, false);
-      subscription.onError(error);
-    });
+    }).then(
+      () => {},
+      (error: unknown) => {
+        if (subscriptions.get(id) !== subscription) return;
+        release(id, false);
+        subscription.onError(error);
+      },
+    );
+  };
 
   const release = (id: string, notifyServer: boolean) => {
+    const started = subscriptions.get(id)?.started;
     subscriptions.delete(id);
     if (!connection) return;
     if (subscriptions.size === 0) {
@@ -48,16 +54,18 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
       connection = undefined;
       return;
     }
+    if (!notifyServer || !started) return;
+    // Subscribe and unsubscribe can travel on different HTTP connections. An
+    // unsubscribe that overtook its subscribe would leave a run nobody stops.
     // A failed unsubscribe only leaves events the client already ignores.
-    if (notifyServer && connection.id) {
-      void request(`/v1/session-stream/${connection.id}/subscriptions/${id}`, { method: "DELETE" }).catch(() => {});
-    }
+    const path = `/v1/session-stream/${connection.id}/subscriptions/${id}`;
+    void started.then(() => request(path, { method: "DELETE" })).catch(() => {});
   };
 
   const dispatch = (current: Connection, event: string, payload: Envelope) => {
     if (event === "connected") {
       current.id = payload.connection_id;
-      for (const [id, subscription] of subscriptions) void subscribe(current.id!, id, subscription);
+      for (const [id, subscription] of subscriptions) subscribe(current.id!, id, subscription);
       return;
     }
     const subscription = subscriptions.get(payload.subscription_id ?? "");
@@ -100,7 +108,7 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
       const subscription = { ...listener, sessionId };
       subscriptions.set(id, subscription);
       const current = connection ?? open();
-      if (current.id) void subscribe(current.id, id, subscription);
+      if (current.id) subscribe(current.id, id, subscription);
       return {
         close: () => {
           if (subscriptions.get(id) === subscription) release(id, true);

@@ -11,8 +11,9 @@ type FakeCall = {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const createFakeStreamServer = () => {
+const createFakeStreamServer = ({ holdSubscribes = false } = {}) => {
   const calls: FakeCall[] = [];
+  const heldSubscribes: Array<() => void> = [];
   let stream: ReadableStreamDefaultController<Uint8Array> | undefined;
   const fetchFn = ((url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
@@ -23,6 +24,9 @@ const createFakeStreamServer = () => {
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
       signal: init?.signal,
     });
+    if (method === "POST" && holdSubscribes) {
+      return new Promise((resolve) => heldSubscribes.push(() => resolve(new Response(null, { status: 204 }))));
+    }
     if (method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -37,6 +41,9 @@ const createFakeStreamServer = () => {
     send: (event: string, data: unknown) =>
       stream!.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)),
     end: () => stream!.close(),
+    finishSubscribes: () => {
+      for (const finish of heldSubscribes.splice(0)) finish();
+    },
   };
 };
 
@@ -125,6 +132,27 @@ describe("session stream client", () => {
     second.close();
     await tick();
     expect(server.calls("GET")[0]!.signal?.aborted).toBe(true);
+  });
+
+  it("stops a session only after the server has started it", async () => {
+    const server = createFakeStreamServer({ holdSubscribes: true });
+    const client = createClient({ baseUrl: "http://test:1234", fetch: server.fetchFn });
+    const first = client.sessions.connectStream("s_1", {});
+    client.sessions.connectStream("s_2", {});
+    await tick();
+    server.send("connected", { connection_id: "c1" });
+    await tick();
+    const firstId = server.calls("POST")[0]!.body?.subscription_id;
+
+    first.close();
+    await tick();
+    expect(server.calls("DELETE")).toEqual([]);
+
+    server.finishSubscribes();
+    await tick();
+    expect(server.calls("DELETE").map((call) => call.url)).toEqual([
+      `http://test:1234/v1/session-stream/c1/subscriptions/${firstId}`,
+    ]);
   });
 
   it("reports a dropped connection to every open session", async () => {
