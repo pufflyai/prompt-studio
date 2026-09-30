@@ -1,5 +1,13 @@
 # pstdio-artifacts
 
+## 0.39.0
+
+_2026-09-30_
+
+### Minor Changes
+
+- 266e1fd: Declare the extension API as the caret range `^0.1.0` instead of a list of alpha versions.
+
 ## 0.38.0
 
 _2026-09-29_

@@ -1,5 +1,23 @@
 # @pstdio/ui
 
+## 0.39.0
+
+_2026-09-30_
+
+### Minor Changes
+
+- c223ff9: Add native view toolbar actions and command-backed parameter choices.
+- c2992ff: Share saved board views and defaults across project clients and agents.
+- 5208194: Add Sidenav levels for pages, keep header rows and pinned rows visible inside levels, and give Notes and Sessions their own lists.
+
+### Patch Changes
+
+- 8391ef1: Fix Markdown image insertion after fast keyboard selection.
+- 6a29e3c: Show numbers of 100 and above in full in chat and Markdown numbered lists.
+- 5208194: Scroll long right-click menus, such as Sidenav customization, inside the window.
+- 5208194: Show where a dragged Sidenav row lands, including after the last row of a group or header, tint a group the row drops into, let rows be dragged out behind a group, and keep an emptied header or footer as a drop target.
+- 2566264: Shrink crowded closable tabs before scrolling, keep other tabs at their content width, and keep panel tab dragging within its row.
+
 ## 0.38.0
 
 _2026-09-29_

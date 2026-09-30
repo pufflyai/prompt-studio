@@ -1,5 +1,31 @@
 # pstdio
 
+## 0.39.0
+
+_2026-09-30_
+
+### Minor Changes
+
+- 266e1fd: Version the extension API with semver starting at 0.1.0, so extensions declaring a caret range such as `^0.1.0` keep loading across additive host releases.
+- c223ff9: Add native view toolbar actions and command-backed parameter choices.
+- c2992ff: Share saved board views and defaults across project clients and agents.
+- 2177594: Open chats share one session stream connection, so they no longer use up the browser's connections and stall other views.
+- 1135bca: Resource kinds can name a `resolve` command, so an open page shows the resource's current title, icon, and menus after its data changes.
+- 5208194: Add Sidenav levels for pages, keep header rows and pinned rows visible inside levels, and give Notes and Sessions their own lists.
+
+### Patch Changes
+
+- 1160cde: Start faster by reusing unchanged extension webview bundles across restarts and checking them in the background.
+- 8391ef1: Fix Markdown image insertion after fast keyboard selection.
+- 6a29e3c: Show numbers of 100 and above in full in chat and Markdown numbered lists.
+- 5208194: Scroll long right-click menus, such as Sidenav customization, inside the window.
+- e367ed1: Tree and card menus check only the clicked resource's metadata, so they no longer pick up values from the open page.
+- 365c0c4: Keep a session picked from a tab's menu in that tab, and reuse the tab already showing a resource after it switched in place.
+- 5208194: Show where a dragged Sidenav row lands, including after the last row of a group or header, tint a group the row drops into, let rows be dragged out behind a group, and keep an emptied header or footer as a drop target.
+- 2177594: Views keep loading until slow reads finish instead of failing with "The view took too long to load" after 30 seconds.
+- cee29e1: Validate workspace provider params before creating environments.
+- 2566264: Shrink crowded closable tabs before scrolling, keep other tabs at their content width, and keep panel tab dragging within its row.
+
 ## 0.38.0
 
 _2026-09-29_

@@ -1,5 +1,21 @@
 # pstdio-planner
 
+## 0.39.0
+
+_2026-09-30_
+
+### Minor Changes
+
+- 266e1fd: Declare the extension API as the caret range `^0.1.0` instead of a list of alpha versions.
+- e367ed1: Restore archived tickets with `pst tickets unarchive` or the Unarchive action in the ticket header; ticket menus offer Archive only on active tickets and Unarchive only on archived ones.
+
+### Patch Changes
+
+- 017dd2c: Publish board refresh events after tag and option changes.
+- e367ed1: Translated ticket menus show "Archive" instead of "Archive all" for the single-ticket archive action.
+- db7d5fb: Let Run attempt choose the workspace type and base branch again, like Create workspace; the `base` param moved into `workspace`.
+- cee29e1: Validate workspace provider params before creating environments.
+
 ## 0.38.0
 
 _2026-09-29_

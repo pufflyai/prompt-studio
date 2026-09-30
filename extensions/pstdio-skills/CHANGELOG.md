@@ -1,5 +1,22 @@
 # Prompt Studio Skills
 
+## 0.39.0
+
+_2026-09-30_
+
+### Minor Changes
+
+- 266e1fd: Declare the extension API as the caret range `^0.1.0` instead of a list of alpha versions.
+- 5208194: Add Sidenav levels for pages, keep header rows and pinned rows visible inside levels, and give Notes and Sessions their own lists.
+
+### Patch Changes
+
+- 017dd2c: Document shared project board view commands and extension ownership.
+- e367ed1: Restore archived tickets with `pst tickets unarchive` or the Unarchive action in the ticket header; ticket menus offer Archive only on active tickets and Unarchive only on archived ones.
+- db7d5fb: Let Run attempt choose the workspace type and base branch again, like Create workspace; the `base` param moved into `workspace`.
+- cee29e1: Validate workspace provider params before creating environments.
+- a59662f: Document native view actions and command-backed parameter choices.
+
 ## 0.38.0
 
 _2026-09-29_
