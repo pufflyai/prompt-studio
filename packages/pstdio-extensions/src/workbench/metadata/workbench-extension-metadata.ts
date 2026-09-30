@@ -186,6 +186,7 @@ export const createWorkbenchExtensionMetadata = (
     extensionId: record.extensionId,
     label: record.contribution.label,
     icon: record.contribution.icon,
+    resolveCommand: record.resolveCommandId,
     menuSlots: Object.entries(record.contribution.menuSlots ?? {}).map(([id, slot]) => ({
       id,
       placement: slot.placement,

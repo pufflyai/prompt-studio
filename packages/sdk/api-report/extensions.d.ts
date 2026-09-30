@@ -39,12 +39,12 @@ declare const agentModelSchema: z.ZodObject<{
 }, z.core.$strip>;
 type AgentModel = z.infer<typeof agentModelSchema>;
 declare const automationRunStatusSchema: z.ZodEnum<{
-  rejected: "rejected";
   failed: "failed";
   running: "running";
   queued: "queued";
   cancelled: "cancelled";
   succeeded: "succeeded";
+  rejected: "rejected";
 }>;
 declare const createAutomationRunInputSchema: z.ZodObject<{
   commandId: z.ZodString;
@@ -69,12 +69,12 @@ declare const automationRunSchema: z.ZodObject<{
   projectId: z.ZodString;
   commandId: z.ZodString;
   status: z.ZodEnum<{
-    rejected: "rejected";
     failed: "failed";
     running: "running";
     queued: "queued";
     cancelled: "cancelled";
     succeeded: "succeeded";
+    rejected: "rejected";
   }>;
   createdAt: z.ZodString;
   startedAt: z.ZodNullable<z.ZodString>;
@@ -101,6 +101,48 @@ export declare const l10n: (key: string, defaultValue?: string) => {
   $l10n: string;
 };
 export declare const isLocalizedString: (value: unknown) => value is LocalizedString;
+declare const workbenchMenuTargets: readonly ["workbench.nav.actions", "workbench.nav.overflow"];
+declare const workbenchTreeTargets: readonly ["workbench.left.tree", "workbench.main.left.tree", "workbench.main.right.tree"];
+declare const workbenchViewTargets: readonly ["workbench.main", "workbench.main.left", "workbench.main.right", "workbench.secondary"];
+declare const workbenchSettingsTargets: readonly ["workbench.settings"];
+type WorkbenchMenuTarget = (typeof workbenchMenuTargets)[number];
+type WorkbenchTreeTarget = (typeof workbenchTreeTargets)[number];
+type WorkbenchViewTarget = (typeof workbenchViewTargets)[number];
+type WorkbenchSettingsTarget = (typeof workbenchSettingsTargets)[number];
+type WorkbenchAttachmentTarget = WorkbenchMenuTarget | WorkbenchTreeTarget | WorkbenchViewTarget | WorkbenchSettingsTarget;
+type ContributionKind = "activity-item" | "artifact-mount" | "command" | "command-palette-resource" | "connection" | "file-icon-theme" | "harness" | "hook" | "keybinding" | "middleware" | "mode" | "navigation-item" | "navigation-tree" | "page" | "placement" | "resource-hierarchy-provider" | "resource-kind" | "schedule" | "settings-panel" | "settings-section" | "skill" | "status" | "status-bar-item" | "template" | "template-type" | "theme" | "view" | "view-menu" | "workspace-type";
+interface ContributionRef<Kind extends ContributionKind> {
+  readonly extensionId?: string;
+  readonly kind: Kind;
+  readonly id: string;
+}
+interface ContributionDefinition<Kind extends ContributionKind> {
+  readonly id: string;
+  readonly ref: ContributionRef<Kind>;
+}
+type ContributionInput<Kind extends ContributionKind> = Omit<ContributionDefinition<Kind>, "ref">;
+type ConnectionRef = ContributionRef<"connection">;
+type ThemeRef = ContributionRef<"theme">;
+type ModeRef = ContributionRef<"mode">;
+type PageRef = ContributionRef<"page">;
+type PlacementRef = ContributionRef<"placement">;
+type ResourceKindRef = ContributionRef<"resource-kind">;
+type SettingsSectionRef = ContributionRef<"settings-section">;
+interface SettingsSlotRef {
+  readonly id: string;
+}
+interface StatusBarSlotRef {
+  readonly id: string;
+}
+type StatusRef = ContributionRef<"status">;
+type ViewRef = ContributionRef<"view">;
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonValue[] | JsonObject;
+type JsonObject = {
+  [key: string]: JsonValue;
+};
+type MaybePromise<T> = T | Promise<T>;
+type Struct = object;
 interface TerminalSessionRequest {
   command?: string[];
   cwd?: string;
@@ -156,67 +198,6 @@ type TerminalSessionResult = {
   operation: "write" | "resize" | "kill" | "subscribe";
   accepted: true;
 };
-declare const workbenchMenuTargets: readonly ["workbench.nav.actions", "workbench.nav.overflow"];
-declare const workbenchTreeTargets: readonly ["workbench.left.tree", "workbench.main.left.tree", "workbench.main.right.tree"];
-declare const workbenchViewTargets: readonly ["workbench.main", "workbench.main.left", "workbench.main.right", "workbench.secondary"];
-declare const workbenchSettingsTargets: readonly ["workbench.settings"];
-type WorkbenchMenuTarget = (typeof workbenchMenuTargets)[number];
-type WorkbenchTreeTarget = (typeof workbenchTreeTargets)[number];
-type WorkbenchViewTarget = (typeof workbenchViewTargets)[number];
-type WorkbenchSettingsTarget = (typeof workbenchSettingsTargets)[number];
-type WorkbenchAttachmentTarget = WorkbenchMenuTarget | WorkbenchTreeTarget | WorkbenchViewTarget | WorkbenchSettingsTarget;
-type ContributionKind = "activity-item" | "artifact-mount" | "command" | "command-palette-resource" | "connection" | "file-icon-theme" | "harness" | "hook" | "keybinding" | "middleware" | "mode" | "navigation-item" | "navigation-tree" | "page" | "placement" | "resource-hierarchy-provider" | "resource-kind" | "schedule" | "settings-panel" | "settings-section" | "skill" | "status" | "status-bar-item" | "template" | "template-type" | "theme" | "view" | "view-menu" | "workspace-type";
-interface ContributionRef<Kind extends ContributionKind> {
-  readonly extensionId?: string;
-  readonly kind: Kind;
-  readonly id: string;
-}
-interface ContributionDefinition<Kind extends ContributionKind> {
-  readonly id: string;
-  readonly ref: ContributionRef<Kind>;
-}
-type ContributionInput<Kind extends ContributionKind> = Omit<ContributionDefinition<Kind>, "ref">;
-type ConnectionRef = ContributionRef<"connection">;
-type ThemeRef = ContributionRef<"theme">;
-type ModeRef = ContributionRef<"mode">;
-type PageRef = ContributionRef<"page">;
-type PlacementRef = ContributionRef<"placement">;
-type ResourceKindRef = ContributionRef<"resource-kind">;
-type SettingsSectionRef = ContributionRef<"settings-section">;
-interface SettingsSlotRef {
-  readonly id: string;
-}
-interface StatusBarSlotRef {
-  readonly id: string;
-}
-type StatusRef = ContributionRef<"status">;
-type ViewRef = ContributionRef<"view">;
-type JsonPrimitive = string | number | boolean | null;
-type JsonValue = JsonPrimitive | JsonValue[] | JsonObject;
-type JsonObject = {
-  [key: string]: JsonValue;
-};
-type MaybePromise<T> = T | Promise<T>;
-type Struct = object;
-interface EventRef<TPayload extends Struct = Struct> {
-  readonly extensionId?: string;
-  readonly kind: "event";
-  readonly id: string;
-  payload?: TPayload;
-}
-interface EventDeliveryResult {
-  delivered: number;
-  diagnostics?: CommandDiagnostic[];
-}
-type RendererEventReference = EventRef | `${string}.${string}`;
-interface RendererContributionBase {
-  title: Localizable<string>;
-  icon?: string;
-  resourceKind?: string;
-  refreshEvents?: readonly RendererEventReference[];
-  emptyTitle?: Localizable<string>;
-  emptyDescription?: Localizable<string>;
-}
 type ResourceRole = "primary" | "context" | "source" | "result";
 interface ResourceRef {
   type: string;
@@ -263,46 +244,189 @@ interface PackageAssetDescriptor {
   path: string;
   baseUrl: string;
 }
-type FileRendererResourceRef = ResourceRef;
-interface FileRendererSectionAnchor {
+type NotificationKind = "needs_review" | "ready_to_merge" | "blocked" | "approval_required" | "failed" | "info";
+type NotificationStatus = "open" | "read" | "snoozed" | "done" | "dismissed" | "expired";
+type NotificationPriority = "low" | "normal" | "high" | "urgent";
+type NotificationActorType = "user" | "agent" | "system";
+type NotificationOrigin = "core" | "extension" | "agent";
+type NotificationAction = {
   id: string;
-  heading: string;
-  occurrence?: number;
+  label: string;
+  kind: "navigate";
+  target: NavigationTarget;
+  primary?: boolean;
+} | {
+  id: string;
+  label: string;
+  kind: "command";
+  command: string;
+  params?: JsonObject;
+  primary?: boolean;
+  destructive?: boolean;
+} | {
+  id: string;
+  label: string;
+  kind: "url";
+  href: string;
+  primary?: boolean;
+};
+interface Notification {
+  id: string;
+  projectId: string;
+  title: string;
+  body?: string | null;
+  kind: NotificationKind;
+  status: NotificationStatus;
+  priority: NotificationPriority;
+  source: CommandSource;
+  origin: NotificationOrigin;
+  sourceExtensionId?: string | null;
+  actorType?: NotificationActorType | null;
+  actorId?: string | null;
+  target?: ResourceRef | null;
+  related: ResourceRef[];
+  actions: NotificationAction[];
+  dedupeKey?: string | null;
+  metadata?: JsonObject | null;
+  createdAt: string;
+  updatedAt: string;
+  readAt?: string | null;
+  resolvedAt?: string | null;
+  snoozedUntil?: string | null;
+  expiresAt?: string | null;
 }
-interface FileRendererSectionTarget {
-  anchors: FileRendererSectionAnchor[];
+interface CreateNotificationInput {
+  projectId: string;
+  title: string;
+  body?: string;
+  kind: NotificationKind;
+  priority?: NotificationPriority;
+  target?: ResourceRef;
+  related?: ResourceRef[];
+  actions?: NotificationAction[];
+  dedupeKey?: string;
+  expiresAt?: string;
+  snoozedUntil?: string;
+  metadata?: JsonObject;
 }
-interface FileRendererLoadParams {
-  renderer: RendererContext;
+interface UpdateNotificationInput {
+  priority?: NotificationPriority;
+  snoozedUntil?: string | null;
+  metadata?: JsonObject;
 }
-interface FileRendererLoadResult {
-  fileName?: string;
-  mimeType?: string;
-  content?: string;
-  dataUrl?: string;
-  placeholder?: string;
-  editable?: boolean;
-  textRenderer?: "automatic" | "monaco";
-  emptyState?: {
-    title: string;
-    description?: string;
-  };
+interface ListNotificationsQuery {
+  status?: NotificationStatus | NotificationStatus[];
+  priority?: NotificationPriority | NotificationPriority[];
+  sourceExtensionId?: string;
+  resourceType?: string;
+  resourceId?: string;
+  cursor?: string;
+  limit?: number;
 }
-interface FileRendererSaveParams {
-  renderer: RendererContext;
-  content: string;
+interface ListNotificationsResponse {
+  items: Notification[];
+  nextCursor?: string | null;
 }
-interface FileRendererContribution extends RendererContributionBase {
-  load: RendererCallback<FileRendererLoadParams, FileRendererLoadResult>;
-  save?: RendererCallback<FileRendererSaveParams, unknown>;
+declare const sessionStatusSchema: z.ZodEnum<{
+  failed: "failed";
+  completed: "completed";
+  in_progress: "in_progress";
+  awaiting_input: "awaiting_input";
+  queued: "queued";
+  cancelled: "cancelled";
+  disconnected: "disconnected";
+}>;
+declare const sessionAttachmentRefSchema: z.ZodObject<{
+  file_id: z.ZodString;
+}, z.core.$strip>;
+type SessionStatus = z.infer<typeof sessionStatusSchema>;
+type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
+declare const skillSchema: z.ZodObject<{
+  id: z.ZodString;
+  project_id: z.ZodString;
+  name: z.ZodString;
+  title: z.ZodString;
+  description: z.ZodString;
+  source_kind: z.ZodEnum<{
+    project: "project";
+    extension: "extension";
+  }>;
+  files: z.ZodArray<z.ZodObject<{
+    path: z.ZodString;
+    content: z.ZodString;
+    encoding: z.ZodLiteral<"utf8">;
+  }, z.core.$strip>>;
+  editable: z.ZodBoolean;
+  extension_instance_id: z.ZodOptional<z.ZodString>;
+  extension_id: z.ZodOptional<z.ZodString>;
+  installed_extension_id: z.ZodOptional<z.ZodString>;
+  install_name: z.ZodOptional<z.ZodString>;
+  key: z.ZodOptional<z.ZodString>;
+  source: z.ZodOptional<z.ZodObject<{
+    kind: z.ZodLiteral<"package-asset">;
+    path: z.ZodString;
+    baseUrl: z.ZodString;
+  }, z.core.$strip>>;
+  enabled: z.ZodOptional<z.ZodBoolean>;
+  created_at: z.ZodString;
+  updated_at: z.ZodString;
+  deleted_at: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+type Skill = z.infer<typeof skillSchema>;
+interface ExtensionAutomationApi {
+  enqueue(input: {
+    command: CommandRef | string;
+    input: CreateAutomationRunInput["input"];
+    key: string;
+  }): Promise<AutomationRun>;
+  get(runId: string): Promise<AutomationRun | undefined>;
+  list(filter?: {
+    status?: AutomationRunStatus[];
+  }): Promise<AutomationRun[]>;
+  cancel(runId: string): Promise<AutomationRun>;
 }
-interface ResourceConstraint {
-  readonly kinds: readonly ResourceKindRef[];
+type ExtensionConnectionMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+interface ExtensionConnectionRequest {
+  method: ExtensionConnectionMethod;
+  path: string;
+  headers?: Record<string, string>;
+  body?: JsonValue;
+  timeoutMs?: number;
+  signal?: AbortSignal;
 }
-interface ResourceBinding extends ResourceConstraint {
-  readonly view: ViewRef;
-  readonly cardinality: "one" | "many";
-  readonly add?: NavigationTarget;
+interface ExtensionConnectionResponse<TBody = JsonValue> {
+  status: number;
+  headers: Record<string, string>;
+  body: TBody;
+}
+type ExtensionConnectionStreamEvent = {
+  type: "response";
+  status: number;
+  headers: Record<string, string>;
+} | {
+  type: "data";
+  data: Uint8Array;
+} | {
+  type: "end";
+};
+interface ExtensionConnectionsApi {
+  request<TBody = JsonValue>(connectionId: string, input: ExtensionConnectionRequest): Promise<ExtensionConnectionResponse<TBody>>;
+  stream(connectionId: string, input: ExtensionConnectionRequest): AsyncIterable<ExtensionConnectionStreamEvent>;
+}
+interface ExtensionLoggerApi {
+  info(message: string, metadata?: JsonObject): void;
+  warn(message: string, metadata?: JsonObject): void;
+  error(message: string, metadata?: JsonObject): void;
+}
+interface EventRef<TPayload extends Struct = Struct> {
+  readonly extensionId?: string;
+  readonly kind: "event";
+  readonly id: string;
+  payload?: TPayload;
+}
+interface EventDeliveryResult {
+  delivered: number;
+  diagnostics?: CommandDiagnostic[];
 }
 type UiSlotKind = "menu" | "panel" | "settings" | "renderer" | "kanbanRenderer" | "dataTableRenderer";
 interface SlotOptions<TKind extends UiSlotKind = UiSlotKind> {
@@ -323,6 +447,15 @@ interface SlotInvocationContext<TContext extends Struct = Struct> {
   id: string;
   kind: UiSlotKind;
   context: TContext;
+}
+type RendererEventReference = EventRef | `${string}.${string}`;
+interface RendererContributionBase {
+  title: Localizable<string>;
+  icon?: string;
+  resourceKind?: string;
+  refreshEvents?: readonly RendererEventReference[];
+  emptyTitle?: Localizable<string>;
+  emptyDescription?: Localizable<string>;
 }
 export declare const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 export declare const WEBVIEW_DECLARABLE_CAPABILITIES: readonly ["clipboard.write", "commands.execute", "navigation.open", "placement.close", "notification.show", "notification.action", "notification.resolve", "notification.dismiss", "preferences.get", "preferences.set", "extension.settings.all", "extension.settings.get", "extension.settings.set", "extension.settings.delete", "terminal.session", "files.upload", "files.list", "files.delete"];
@@ -904,6 +1037,237 @@ interface KeybindingContribution extends ContributionDefinition<"keybinding"> {
   action: NavigationTarget;
   when?: WhenExpression;
 }
+type SessionMessageRole = "user" | "assistant" | "tool" | "system" | "developer";
+type TextPart = {
+  type: "text";
+  text: string;
+};
+type ReasoningPart = {
+  type: "reasoning";
+  text: string;
+};
+type ToolPartActionType = "read" | "write" | "execute" | "network" | "other";
+type ToolPartStatus = "pending" | "running" | "completed" | "failed" | "denied";
+type ToolPart = {
+  type: "tool";
+  tool: string;
+  callId?: string;
+  actionType?: ToolPartActionType;
+  status?: ToolPartStatus;
+  state?: {
+    status?: string;
+    input?: unknown;
+    output?: unknown;
+    errorText?: string;
+    metadata?: unknown;
+  };
+};
+type StepStartPart = {
+  type: "step-start";
+  snapshot?: string;
+};
+type StepFinishPart = {
+  type: "step-finish";
+  reason?: string;
+  snapshot?: string;
+  cost?: number;
+  tokens?: unknown;
+};
+type PatchPart = {
+  type: "patch";
+  hash?: string;
+  files?: unknown;
+};
+type FilePart = {
+  type: "file";
+  fileId?: string;
+  mediaType?: string;
+  filename?: string;
+  size?: number;
+  url: string;
+};
+type LoadingPart = {
+  type: "loading";
+};
+type ErrorPart = {
+  type: "error";
+  errorType: "timeout" | "crash" | "permission" | "other";
+  message?: string;
+};
+type TokenUsagePart = {
+  type: "token_usage";
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+};
+type SessionMessagePart = TextPart | ReasoningPart | ToolPart | StepStartPart | StepFinishPart | PatchPart | FilePart | LoadingPart | ErrorPart | TokenUsagePart;
+type SessionMessage = {
+  id: string;
+  role: SessionMessageRole;
+  parts: SessionMessagePart[];
+  index?: number;
+  createdAt?: number;
+  modelId?: string;
+  providerId?: string;
+  tokens?: {
+    input?: number;
+    output?: number;
+    reasoning?: number;
+    cache?: {
+      read?: number;
+      write?: number;
+    };
+  };
+};
+type JsonPatch = {
+  op: "add" | "replace" | "remove";
+  path: string;
+  value?: unknown;
+};
+type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "SessionReattach";
+type QuestionResponse = {
+  answers: string[][];
+};
+type ApprovalRequest = {
+  id: string;
+  toolName: string;
+  toolInput: unknown;
+  toolUseId: string;
+};
+type ApprovalResponse = {
+  id: string;
+  decision: "approve" | "deny" | "timeout";
+};
+type TimeoutStrategy = "activity" | "provider";
+type HarnessEventSink = {
+  push(patch: JsonPatch): void;
+  getMessages(): readonly SessionMessage[];
+};
+type HarnessAttachment = {
+  fileId: string;
+  fileName: string;
+  mimeType: string | null;
+  sizeBytes: number;
+  localPath: string;
+  url: string;
+};
+type HarnessApprovalChannel = {
+  requestApproval(request: ApprovalRequest): Promise<ApprovalResponse>;
+};
+type HarnessParamValue = string | boolean;
+type HarnessParams = Record<string, HarnessParamValue>;
+type HarnessWorkspaceContext = {
+  workspaceId: string;
+  executionTarget: WorkspaceExecutionTarget;
+};
+type HarnessExitStatus = "completed" | "failed" | "cancelled" | "disconnected";
+type HarnessExit = {
+  status: HarnessExitStatus;
+};
+type HarnessSession = {
+  agentSessionId?: string;
+  done: Promise<HarnessExit>;
+  stop(): void | Promise<void>;
+  timeoutStrategy?: TimeoutStrategy;
+  pid?: number;
+};
+type HarnessStartInput = {
+  prompt: string;
+  sessionId: string;
+  cwd?: string;
+  workspace?: HarnessWorkspaceContext;
+  model?: string | null;
+  params?: HarnessParams;
+  attachments?: HarnessAttachment[];
+  events: HarnessEventSink;
+  signal?: AbortSignal;
+};
+type HarnessResumeInput = HarnessStartInput & {
+  agentSessionId: string;
+  messageOffset?: number;
+  questionResponse?: QuestionResponse;
+  approvals?: HarnessApprovalChannel;
+};
+type HarnessReattachInput = {
+  sessionId: string;
+  agentSessionId: string;
+  cwd?: string;
+  workspace?: HarnessWorkspaceContext;
+  events: HarnessEventSink;
+  signal?: AbortSignal;
+};
+type HarnessMessagesInput = {
+  agentSessionId: string;
+  cwd?: string;
+  workspace?: HarnessWorkspaceContext;
+};
+type HarnessRecoveryInput = {
+  knownMessages: readonly SessionMessage[];
+  nativeMessages: readonly SessionMessage[];
+  cwd?: string;
+  workspace?: HarnessWorkspaceContext;
+};
+type HarnessRecoveryResult = {
+  kind: "recovered";
+  messages: SessionMessage[];
+} | {
+  kind: "conflict";
+  category: string;
+};
+interface HarnessContext {
+  projectId?: string;
+  extensionId: string;
+  name: string;
+  process: ExtensionProcessApi;
+  net: ExtensionNetApi;
+  connections: ExtensionConnectionsApi;
+  logger: ExtensionLoggerApi;
+  state: HarnessStateApi;
+}
+interface HarnessStateApi {
+  get<T = unknown>(key: string): Promise<T | undefined>;
+  set<T = unknown>(key: string, value: T): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+interface HarnessDetectionResult {
+  available: boolean;
+  version?: string;
+  reason?: string;
+}
+interface HarnessSkillsLayout {
+  dir: string;
+  globalDir?: string;
+}
+type RetryableHarnessReattachError = Error & {
+  readonly retryable: true;
+};
+type HarnessParamDescriptor = (Omit<SelectParam, "options" | "allowCustomValues"> & {
+  options: ParamOption[];
+}) | BooleanParam;
+type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
+interface HarnessProvider extends ContributionDefinition<"harness"> {
+  label: Localizable<string>;
+  skills?: HarnessSkillsLayout;
+  params?: HarnessParamsSchema;
+  cwdRequirement?: "required" | "optional";
+  capabilities(ctx: HarnessContext): MaybePromise<AgentCapability[]>;
+  detect?(ctx: HarnessContext): MaybePromise<HarnessDetectionResult>;
+  listModels?(ctx: HarnessContext): MaybePromise<AgentModel[]>;
+  start(ctx: HarnessContext, input: HarnessStartInput): MaybePromise<HarnessSession>;
+  resume(ctx: HarnessContext, input: HarnessResumeInput): MaybePromise<HarnessSession>;
+  reattach?(ctx: HarnessContext, input: HarnessReattachInput): MaybePromise<HarnessSession>;
+  getMessages?(ctx: HarnessContext, input: HarnessMessagesInput): MaybePromise<SessionMessage[]>;
+  recoverMessages?(ctx: HarnessContext, input: HarnessRecoveryInput): MaybePromise<HarnessRecoveryResult>;
+}
+interface ResourceConstraint {
+  readonly kinds: readonly ResourceKindRef[];
+}
+interface ResourceBinding extends ResourceConstraint {
+  readonly view: ViewRef;
+  readonly cardinality: "one" | "many";
+  readonly add?: NavigationTarget;
+}
 interface BaseControl {
   id: string;
   name: string;
@@ -1415,552 +1779,6 @@ interface PageLocation {
   readonly resource?: ResourceRef;
   readonly section?: FileRendererSectionTarget;
   readonly parent?: PageLocation;
-}
-interface NavigationTargetPage {
-  kind: "page";
-  page: PageRef;
-  resource?: ResourceRef;
-  section?: FileRendererSectionTarget;
-  open?: PageOpenIntent;
-  parent?: NavigationTargetPage;
-}
-interface NavigationTargetPanel {
-  kind: "panel";
-  panel: PanelRef;
-  resource?: ResourceRef;
-  open?: PageOpenIntent;
-}
-interface NavigationTargetCommand {
-  kind: "command";
-  target: CommandTarget<JsonObject>;
-}
-interface NavigationTargetHref {
-  kind: "href";
-  href: string;
-}
-type NavigationTargetItem = NavigationTargetPage | NavigationTargetPanel | NavigationTargetCommand | NavigationTargetHref;
-interface NavigationTargetCompound {
-  kind: "compound";
-  targets: readonly (NavigationTargetPage | NavigationTargetPanel)[];
-}
-type NavigationTarget = NavigationTargetItem | NavigationTargetCompound;
-type CommandSource = "cli" | "dashboard" | "api" | "schedule" | "event" | "automation" | "command-panel";
-interface CommandRef<TParams extends Struct = Struct, TResult = unknown> extends ContributionRef<"command"> {
-  params?: TParams;
-  result?: TResult;
-}
-interface CommandTarget<TParams extends Struct = Struct> {
-  command: CommandRef<TParams, unknown>;
-  params?: TParams;
-}
-interface SerializedError {
-  name?: string;
-  message: string;
-  stack?: string;
-  cause?: JsonValue;
-}
-interface WorkbenchAttachmentInvocationContext {
-  target: WorkbenchAttachmentTarget;
-  mode?: string;
-  projectId?: string;
-  resource?: ResourceRef;
-}
-interface CommandInvocation<TParams extends Struct = Struct> {
-  params: TParams;
-  resource?: ResourceRef;
-  attachment?: WorkbenchAttachmentInvocationContext;
-  slot?: SlotInvocationContext;
-  metadata?: JsonObject;
-}
-interface CommandContinue {
-  type: "continue";
-}
-interface CommandPatchParams<TParams extends Struct = Struct> {
-  type: "patchParams";
-  params: Partial<TParams>;
-}
-interface CommandReplaceParams<TParams extends Struct = Struct> {
-  type: "replaceParams";
-  params: TParams;
-}
-interface CommandReplaceInvocation<TParams extends Struct = Struct> {
-  type: "replaceInvocation";
-  invocation: CommandInvocation<TParams>;
-}
-interface CommandReject {
-  type: "reject";
-  code?: string;
-  reason: string;
-  data?: JsonObject;
-}
-type CommandMiddlewareResult<TParams extends Struct = Struct> = void | CommandContinue | CommandPatchParams<TParams> | CommandReplaceParams<TParams> | CommandReplaceInvocation<TParams> | CommandReject;
-interface CommandNotice {
-  type: "info" | "success" | "warning" | "error";
-  title?: string;
-  message: string;
-  metadata?: JsonObject;
-}
-interface CommandDiagnostic {
-  code: string;
-  message: string;
-  severity: "info" | "warning" | "error";
-  extensionId?: string;
-  commandId?: string;
-  metadata?: JsonObject;
-}
-type CommandOutcome<TResult = unknown> = {
-  ok: true;
-  status: "success";
-  value: TResult;
-  navigationRequests?: NavigationTarget[];
-  notices?: CommandNotice[];
-  diagnostics?: CommandDiagnostic[];
-} | {
-  ok: false;
-  status: "rejected";
-  code?: string;
-  reason: string;
-  data?: JsonObject;
-  notices?: CommandNotice[];
-  diagnostics?: CommandDiagnostic[];
-} | {
-  ok: false;
-  status: "error";
-  code?: string;
-  reason: string;
-  error?: SerializedError;
-  notices?: CommandNotice[];
-  diagnostics?: CommandDiagnostic[];
-};
-interface CommandHelpersApi {
-  execute<TParams extends Struct = Struct, TResult = unknown>(command: CommandRef<TParams, TResult>, invocation: CommandInvocation<TParams>): Promise<CommandOutcome<TResult>>;
-  continue(): CommandContinue;
-  patchParams<TParams extends Struct = Struct>(params: Partial<TParams>): CommandPatchParams<TParams>;
-  replaceParams<TParams extends Struct = Struct>(params: TParams): CommandReplaceParams<TParams>;
-  replaceInvocation<TParams extends Struct = Struct>(invocation: CommandInvocation<TParams>): CommandReplaceInvocation<TParams>;
-  reject(input: Omit<CommandReject, "type">): CommandReject;
-}
-interface CommandRequestedEvent<TParams extends Struct = Struct> {
-  commandId: string;
-  invocationId: string;
-  source?: CommandSource;
-  params: TParams;
-  resource?: ResourceRef;
-}
-interface CommandStartedEvent<TParams extends Struct = Struct> extends CommandRequestedEvent<TParams> {}
-interface CommandCompletedEvent<TParams extends Struct = Struct, TResult = unknown> extends CommandStartedEvent<TParams> {
-  result: TResult;
-  elapsedMs: number;
-}
-interface CommandRejectedEvent<TParams extends Struct = Struct> extends CommandRequestedEvent<TParams> {
-  code?: string;
-  reason: string;
-  data?: JsonObject;
-}
-interface CommandFailedEvent<TParams extends Struct = Struct> extends CommandRequestedEvent<TParams> {
-  code?: string;
-  reason: string;
-  error?: SerializedError;
-  elapsedMs: number;
-}
-type CommandLifecyclePhase = "requested" | "started" | "completed" | "rejected" | "failed";
-type CommandLifecycleEventPayload<TPhase extends CommandLifecyclePhase, TParams extends Struct = Struct, TResult = unknown> = TPhase extends "requested" ? CommandRequestedEvent<TParams> : TPhase extends "started" ? CommandStartedEvent<TParams> : TPhase extends "completed" ? CommandCompletedEvent<TParams, TResult> : TPhase extends "rejected" ? CommandRejectedEvent<TParams> : CommandFailedEvent<TParams>;
-type NotificationKind = "needs_review" | "ready_to_merge" | "blocked" | "approval_required" | "failed" | "info";
-type NotificationStatus = "open" | "read" | "snoozed" | "done" | "dismissed" | "expired";
-type NotificationPriority = "low" | "normal" | "high" | "urgent";
-type NotificationActorType = "user" | "agent" | "system";
-type NotificationOrigin = "core" | "extension" | "agent";
-type NotificationAction = {
-  id: string;
-  label: string;
-  kind: "navigate";
-  target: NavigationTarget;
-  primary?: boolean;
-} | {
-  id: string;
-  label: string;
-  kind: "command";
-  command: string;
-  params?: JsonObject;
-  primary?: boolean;
-  destructive?: boolean;
-} | {
-  id: string;
-  label: string;
-  kind: "url";
-  href: string;
-  primary?: boolean;
-};
-interface Notification {
-  id: string;
-  projectId: string;
-  title: string;
-  body?: string | null;
-  kind: NotificationKind;
-  status: NotificationStatus;
-  priority: NotificationPriority;
-  source: CommandSource;
-  origin: NotificationOrigin;
-  sourceExtensionId?: string | null;
-  actorType?: NotificationActorType | null;
-  actorId?: string | null;
-  target?: ResourceRef | null;
-  related: ResourceRef[];
-  actions: NotificationAction[];
-  dedupeKey?: string | null;
-  metadata?: JsonObject | null;
-  createdAt: string;
-  updatedAt: string;
-  readAt?: string | null;
-  resolvedAt?: string | null;
-  snoozedUntil?: string | null;
-  expiresAt?: string | null;
-}
-interface CreateNotificationInput {
-  projectId: string;
-  title: string;
-  body?: string;
-  kind: NotificationKind;
-  priority?: NotificationPriority;
-  target?: ResourceRef;
-  related?: ResourceRef[];
-  actions?: NotificationAction[];
-  dedupeKey?: string;
-  expiresAt?: string;
-  snoozedUntil?: string;
-  metadata?: JsonObject;
-}
-interface UpdateNotificationInput {
-  priority?: NotificationPriority;
-  snoozedUntil?: string | null;
-  metadata?: JsonObject;
-}
-interface ListNotificationsQuery {
-  status?: NotificationStatus | NotificationStatus[];
-  priority?: NotificationPriority | NotificationPriority[];
-  sourceExtensionId?: string;
-  resourceType?: string;
-  resourceId?: string;
-  cursor?: string;
-  limit?: number;
-}
-interface ListNotificationsResponse {
-  items: Notification[];
-  nextCursor?: string | null;
-}
-declare const sessionStatusSchema: z.ZodEnum<{
-  completed: "completed";
-  failed: "failed";
-  in_progress: "in_progress";
-  awaiting_input: "awaiting_input";
-  queued: "queued";
-  cancelled: "cancelled";
-  disconnected: "disconnected";
-}>;
-declare const sessionAttachmentRefSchema: z.ZodObject<{
-  file_id: z.ZodString;
-}, z.core.$strip>;
-type SessionStatus = z.infer<typeof sessionStatusSchema>;
-type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
-declare const skillSchema: z.ZodObject<{
-  id: z.ZodString;
-  project_id: z.ZodString;
-  name: z.ZodString;
-  title: z.ZodString;
-  description: z.ZodString;
-  source_kind: z.ZodEnum<{
-    project: "project";
-    extension: "extension";
-  }>;
-  files: z.ZodArray<z.ZodObject<{
-    path: z.ZodString;
-    content: z.ZodString;
-    encoding: z.ZodLiteral<"utf8">;
-  }, z.core.$strip>>;
-  editable: z.ZodBoolean;
-  extension_instance_id: z.ZodOptional<z.ZodString>;
-  extension_id: z.ZodOptional<z.ZodString>;
-  installed_extension_id: z.ZodOptional<z.ZodString>;
-  install_name: z.ZodOptional<z.ZodString>;
-  key: z.ZodOptional<z.ZodString>;
-  source: z.ZodOptional<z.ZodObject<{
-    kind: z.ZodLiteral<"package-asset">;
-    path: z.ZodString;
-    baseUrl: z.ZodString;
-  }, z.core.$strip>>;
-  enabled: z.ZodOptional<z.ZodBoolean>;
-  created_at: z.ZodString;
-  updated_at: z.ZodString;
-  deleted_at: z.ZodNullable<z.ZodString>;
-}, z.core.$strip>;
-type Skill = z.infer<typeof skillSchema>;
-interface ExtensionAutomationApi {
-  enqueue(input: {
-    command: CommandRef | string;
-    input: CreateAutomationRunInput["input"];
-    key: string;
-  }): Promise<AutomationRun>;
-  get(runId: string): Promise<AutomationRun | undefined>;
-  list(filter?: {
-    status?: AutomationRunStatus[];
-  }): Promise<AutomationRun[]>;
-  cancel(runId: string): Promise<AutomationRun>;
-}
-type ExtensionConnectionMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-interface ExtensionConnectionRequest {
-  method: ExtensionConnectionMethod;
-  path: string;
-  headers?: Record<string, string>;
-  body?: JsonValue;
-  timeoutMs?: number;
-  signal?: AbortSignal;
-}
-interface ExtensionConnectionResponse<TBody = JsonValue> {
-  status: number;
-  headers: Record<string, string>;
-  body: TBody;
-}
-type ExtensionConnectionStreamEvent = {
-  type: "response";
-  status: number;
-  headers: Record<string, string>;
-} | {
-  type: "data";
-  data: Uint8Array;
-} | {
-  type: "end";
-};
-interface ExtensionConnectionsApi {
-  request<TBody = JsonValue>(connectionId: string, input: ExtensionConnectionRequest): Promise<ExtensionConnectionResponse<TBody>>;
-  stream(connectionId: string, input: ExtensionConnectionRequest): AsyncIterable<ExtensionConnectionStreamEvent>;
-}
-interface ExtensionLoggerApi {
-  info(message: string, metadata?: JsonObject): void;
-  warn(message: string, metadata?: JsonObject): void;
-  error(message: string, metadata?: JsonObject): void;
-}
-type SessionMessageRole = "user" | "assistant" | "tool" | "system" | "developer";
-type TextPart = {
-  type: "text";
-  text: string;
-};
-type ReasoningPart = {
-  type: "reasoning";
-  text: string;
-};
-type ToolPartActionType = "read" | "write" | "execute" | "network" | "other";
-type ToolPartStatus = "pending" | "running" | "completed" | "failed" | "denied";
-type ToolPart = {
-  type: "tool";
-  tool: string;
-  callId?: string;
-  actionType?: ToolPartActionType;
-  status?: ToolPartStatus;
-  state?: {
-    status?: string;
-    input?: unknown;
-    output?: unknown;
-    errorText?: string;
-    metadata?: unknown;
-  };
-};
-type StepStartPart = {
-  type: "step-start";
-  snapshot?: string;
-};
-type StepFinishPart = {
-  type: "step-finish";
-  reason?: string;
-  snapshot?: string;
-  cost?: number;
-  tokens?: unknown;
-};
-type PatchPart = {
-  type: "patch";
-  hash?: string;
-  files?: unknown;
-};
-type FilePart = {
-  type: "file";
-  fileId?: string;
-  mediaType?: string;
-  filename?: string;
-  size?: number;
-  url: string;
-};
-type LoadingPart = {
-  type: "loading";
-};
-type ErrorPart = {
-  type: "error";
-  errorType: "timeout" | "crash" | "permission" | "other";
-  message?: string;
-};
-type TokenUsagePart = {
-  type: "token_usage";
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens?: number;
-  cacheWriteTokens?: number;
-};
-type SessionMessagePart = TextPart | ReasoningPart | ToolPart | StepStartPart | StepFinishPart | PatchPart | FilePart | LoadingPart | ErrorPart | TokenUsagePart;
-type SessionMessage = {
-  id: string;
-  role: SessionMessageRole;
-  parts: SessionMessagePart[];
-  index?: number;
-  createdAt?: number;
-  modelId?: string;
-  providerId?: string;
-  tokens?: {
-    input?: number;
-    output?: number;
-    reasoning?: number;
-    cache?: {
-      read?: number;
-      write?: number;
-    };
-  };
-};
-type JsonPatch = {
-  op: "add" | "replace" | "remove";
-  path: string;
-  value?: unknown;
-};
-type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "SessionReattach";
-type QuestionResponse = {
-  answers: string[][];
-};
-type ApprovalRequest = {
-  id: string;
-  toolName: string;
-  toolInput: unknown;
-  toolUseId: string;
-};
-type ApprovalResponse = {
-  id: string;
-  decision: "approve" | "deny" | "timeout";
-};
-type TimeoutStrategy = "activity" | "provider";
-type HarnessEventSink = {
-  push(patch: JsonPatch): void;
-  getMessages(): readonly SessionMessage[];
-};
-type HarnessAttachment = {
-  fileId: string;
-  fileName: string;
-  mimeType: string | null;
-  sizeBytes: number;
-  localPath: string;
-  url: string;
-};
-type HarnessApprovalChannel = {
-  requestApproval(request: ApprovalRequest): Promise<ApprovalResponse>;
-};
-type HarnessParamValue = string | boolean;
-type HarnessParams = Record<string, HarnessParamValue>;
-type HarnessWorkspaceContext = {
-  workspaceId: string;
-  executionTarget: WorkspaceExecutionTarget;
-};
-type HarnessExitStatus = "completed" | "failed" | "cancelled" | "disconnected";
-type HarnessExit = {
-  status: HarnessExitStatus;
-};
-type HarnessSession = {
-  agentSessionId?: string;
-  done: Promise<HarnessExit>;
-  stop(): void | Promise<void>;
-  timeoutStrategy?: TimeoutStrategy;
-  pid?: number;
-};
-type HarnessStartInput = {
-  prompt: string;
-  sessionId: string;
-  cwd?: string;
-  workspace?: HarnessWorkspaceContext;
-  model?: string | null;
-  params?: HarnessParams;
-  attachments?: HarnessAttachment[];
-  events: HarnessEventSink;
-  signal?: AbortSignal;
-};
-type HarnessResumeInput = HarnessStartInput & {
-  agentSessionId: string;
-  messageOffset?: number;
-  questionResponse?: QuestionResponse;
-  approvals?: HarnessApprovalChannel;
-};
-type HarnessReattachInput = {
-  sessionId: string;
-  agentSessionId: string;
-  cwd?: string;
-  workspace?: HarnessWorkspaceContext;
-  events: HarnessEventSink;
-  signal?: AbortSignal;
-};
-type HarnessMessagesInput = {
-  agentSessionId: string;
-  cwd?: string;
-  workspace?: HarnessWorkspaceContext;
-};
-type HarnessRecoveryInput = {
-  knownMessages: readonly SessionMessage[];
-  nativeMessages: readonly SessionMessage[];
-  cwd?: string;
-  workspace?: HarnessWorkspaceContext;
-};
-type HarnessRecoveryResult = {
-  kind: "recovered";
-  messages: SessionMessage[];
-} | {
-  kind: "conflict";
-  category: string;
-};
-interface HarnessContext {
-  projectId?: string;
-  extensionId: string;
-  name: string;
-  process: ExtensionProcessApi;
-  net: ExtensionNetApi;
-  connections: ExtensionConnectionsApi;
-  logger: ExtensionLoggerApi;
-  state: HarnessStateApi;
-}
-interface HarnessStateApi {
-  get<T = unknown>(key: string): Promise<T | undefined>;
-  set<T = unknown>(key: string, value: T): Promise<void>;
-  delete(key: string): Promise<void>;
-}
-interface HarnessDetectionResult {
-  available: boolean;
-  version?: string;
-  reason?: string;
-}
-interface HarnessSkillsLayout {
-  dir: string;
-  globalDir?: string;
-}
-type RetryableHarnessReattachError = Error & {
-  readonly retryable: true;
-};
-type HarnessParamDescriptor = (Omit<SelectParam, "options" | "allowCustomValues"> & {
-  options: ParamOption[];
-}) | BooleanParam;
-type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
-interface HarnessProvider extends ContributionDefinition<"harness"> {
-  label: Localizable<string>;
-  skills?: HarnessSkillsLayout;
-  params?: HarnessParamsSchema;
-  cwdRequirement?: "required" | "optional";
-  capabilities(ctx: HarnessContext): MaybePromise<AgentCapability[]>;
-  detect?(ctx: HarnessContext): MaybePromise<HarnessDetectionResult>;
-  listModels?(ctx: HarnessContext): MaybePromise<AgentModel[]>;
-  start(ctx: HarnessContext, input: HarnessStartInput): MaybePromise<HarnessSession>;
-  resume(ctx: HarnessContext, input: HarnessResumeInput): MaybePromise<HarnessSession>;
-  reattach?(ctx: HarnessContext, input: HarnessReattachInput): MaybePromise<HarnessSession>;
-  getMessages?(ctx: HarnessContext, input: HarnessMessagesInput): MaybePromise<SessionMessage[]>;
-  recoverMessages?(ctx: HarnessContext, input: HarnessRecoveryInput): MaybePromise<HarnessRecoveryResult>;
 }
 interface WorkflowStatus {
   readonly id: string;
@@ -2501,6 +2319,188 @@ interface EventContext extends ExtensionContextBase {
 }
 type SetupContext = ExtensionContextBase;
 type MigrationContext = ExtensionContextBase;
+type FileRendererResourceRef = ResourceRef;
+interface FileRendererSectionAnchor {
+  id: string;
+  heading: string;
+  occurrence?: number;
+}
+interface FileRendererSectionTarget {
+  anchors: FileRendererSectionAnchor[];
+}
+interface FileRendererLoadParams {
+  renderer: RendererContext;
+}
+interface FileRendererLoadResult {
+  fileName?: string;
+  mimeType?: string;
+  content?: string;
+  dataUrl?: string;
+  placeholder?: string;
+  editable?: boolean;
+  textRenderer?: "automatic" | "monaco";
+  emptyState?: {
+    title: string;
+    description?: string;
+  };
+}
+interface FileRendererSaveParams {
+  renderer: RendererContext;
+  content: string;
+}
+interface FileRendererContribution extends RendererContributionBase {
+  load: RendererCallback<FileRendererLoadParams, FileRendererLoadResult>;
+  save?: RendererCallback<FileRendererSaveParams, unknown>;
+}
+interface NavigationTargetPage {
+  kind: "page";
+  page: PageRef;
+  resource?: ResourceRef;
+  section?: FileRendererSectionTarget;
+  open?: PageOpenIntent;
+  parent?: NavigationTargetPage;
+}
+interface NavigationTargetPanel {
+  kind: "panel";
+  panel: PanelRef;
+  resource?: ResourceRef;
+  open?: PageOpenIntent;
+}
+interface NavigationTargetCommand {
+  kind: "command";
+  target: CommandTarget<JsonObject>;
+}
+interface NavigationTargetHref {
+  kind: "href";
+  href: string;
+}
+type NavigationTargetItem = NavigationTargetPage | NavigationTargetPanel | NavigationTargetCommand | NavigationTargetHref;
+interface NavigationTargetCompound {
+  kind: "compound";
+  targets: readonly (NavigationTargetPage | NavigationTargetPanel)[];
+}
+type NavigationTarget = NavigationTargetItem | NavigationTargetCompound;
+type CommandSource = "cli" | "dashboard" | "api" | "schedule" | "event" | "automation" | "command-panel";
+interface CommandRef<TParams extends Struct = Struct, TResult = unknown> extends ContributionRef<"command"> {
+  params?: TParams;
+  result?: TResult;
+}
+interface CommandTarget<TParams extends Struct = Struct> {
+  command: CommandRef<TParams, unknown>;
+  params?: TParams;
+}
+interface SerializedError {
+  name?: string;
+  message: string;
+  stack?: string;
+  cause?: JsonValue;
+}
+interface WorkbenchAttachmentInvocationContext {
+  target: WorkbenchAttachmentTarget;
+  mode?: string;
+  projectId?: string;
+  resource?: ResourceRef;
+}
+interface CommandInvocation<TParams extends Struct = Struct> {
+  params: TParams;
+  resource?: ResourceRef;
+  attachment?: WorkbenchAttachmentInvocationContext;
+  slot?: SlotInvocationContext;
+  metadata?: JsonObject;
+}
+interface CommandContinue {
+  type: "continue";
+}
+interface CommandPatchParams<TParams extends Struct = Struct> {
+  type: "patchParams";
+  params: Partial<TParams>;
+}
+interface CommandReplaceParams<TParams extends Struct = Struct> {
+  type: "replaceParams";
+  params: TParams;
+}
+interface CommandReplaceInvocation<TParams extends Struct = Struct> {
+  type: "replaceInvocation";
+  invocation: CommandInvocation<TParams>;
+}
+interface CommandReject {
+  type: "reject";
+  code?: string;
+  reason: string;
+  data?: JsonObject;
+}
+type CommandMiddlewareResult<TParams extends Struct = Struct> = void | CommandContinue | CommandPatchParams<TParams> | CommandReplaceParams<TParams> | CommandReplaceInvocation<TParams> | CommandReject;
+interface CommandNotice {
+  type: "info" | "success" | "warning" | "error";
+  title?: string;
+  message: string;
+  metadata?: JsonObject;
+}
+interface CommandDiagnostic {
+  code: string;
+  message: string;
+  severity: "info" | "warning" | "error";
+  extensionId?: string;
+  commandId?: string;
+  metadata?: JsonObject;
+}
+type CommandOutcome<TResult = unknown> = {
+  ok: true;
+  status: "success";
+  value: TResult;
+  navigationRequests?: NavigationTarget[];
+  notices?: CommandNotice[];
+  diagnostics?: CommandDiagnostic[];
+} | {
+  ok: false;
+  status: "rejected";
+  code?: string;
+  reason: string;
+  data?: JsonObject;
+  notices?: CommandNotice[];
+  diagnostics?: CommandDiagnostic[];
+} | {
+  ok: false;
+  status: "error";
+  code?: string;
+  reason: string;
+  error?: SerializedError;
+  notices?: CommandNotice[];
+  diagnostics?: CommandDiagnostic[];
+};
+interface CommandHelpersApi {
+  execute<TParams extends Struct = Struct, TResult = unknown>(command: CommandRef<TParams, TResult>, invocation: CommandInvocation<TParams>): Promise<CommandOutcome<TResult>>;
+  continue(): CommandContinue;
+  patchParams<TParams extends Struct = Struct>(params: Partial<TParams>): CommandPatchParams<TParams>;
+  replaceParams<TParams extends Struct = Struct>(params: TParams): CommandReplaceParams<TParams>;
+  replaceInvocation<TParams extends Struct = Struct>(invocation: CommandInvocation<TParams>): CommandReplaceInvocation<TParams>;
+  reject(input: Omit<CommandReject, "type">): CommandReject;
+}
+interface CommandRequestedEvent<TParams extends Struct = Struct> {
+  commandId: string;
+  invocationId: string;
+  source?: CommandSource;
+  params: TParams;
+  resource?: ResourceRef;
+}
+interface CommandStartedEvent<TParams extends Struct = Struct> extends CommandRequestedEvent<TParams> {}
+interface CommandCompletedEvent<TParams extends Struct = Struct, TResult = unknown> extends CommandStartedEvent<TParams> {
+  result: TResult;
+  elapsedMs: number;
+}
+interface CommandRejectedEvent<TParams extends Struct = Struct> extends CommandRequestedEvent<TParams> {
+  code?: string;
+  reason: string;
+  data?: JsonObject;
+}
+interface CommandFailedEvent<TParams extends Struct = Struct> extends CommandRequestedEvent<TParams> {
+  code?: string;
+  reason: string;
+  error?: SerializedError;
+  elapsedMs: number;
+}
+type CommandLifecyclePhase = "requested" | "started" | "completed" | "rejected" | "failed";
+type CommandLifecycleEventPayload<TPhase extends CommandLifecyclePhase, TParams extends Struct = Struct, TResult = unknown> = TPhase extends "requested" ? CommandRequestedEvent<TParams> : TPhase extends "started" ? CommandStartedEvent<TParams> : TPhase extends "completed" ? CommandCompletedEvent<TParams, TResult> : TPhase extends "rejected" ? CommandRejectedEvent<TParams> : CommandFailedEvent<TParams>;
 export declare const dockedWorkbenchRegions: readonly ["sidenav", "main", "secondary", "side"];
 type DockedWorkbenchRegion = (typeof dockedWorkbenchRegions)[number];
 export declare const extensionPanelRegions: readonly ["main", "secondary", "side"];
@@ -2524,6 +2524,7 @@ interface ResourceKindDefinition extends ContributionDefinition<"resource-kind">
   readonly label?: Localizable<string>;
   readonly icon?: string;
   readonly menuSlots?: readonly ResourceMenuSlotDefinition[];
+  readonly resolve?: CommandRef;
 }
 interface ResourceHierarchyProvider extends ContributionDefinition<"resource-hierarchy-provider"> {
   resourceKind: ResourceKindRef;

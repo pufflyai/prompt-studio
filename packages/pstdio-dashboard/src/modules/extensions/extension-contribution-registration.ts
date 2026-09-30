@@ -33,6 +33,7 @@ import {
 } from "./extension-command-handler";
 import { createDashboardKanbanAdapter, toDashboardExtensionResource } from "./extension-kanban-adapter";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
+import { watchOpenExtensionResource } from "./extension-resource-sync";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
@@ -155,6 +156,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         workbench: input.ctx,
       }),
       registerExtensionResourceHierarchy(input.ctx, { metadata: input.metadata, projectId: input.projectId }),
+      watchOpenExtensionResource(input.ctx, input),
     );
   } catch (error) {
     disposeExtensionContributions(disposables);

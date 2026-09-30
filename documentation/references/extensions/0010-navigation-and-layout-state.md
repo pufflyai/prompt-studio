@@ -2,6 +2,8 @@
 
 A page location owns the page reference, optional resource, document section, and contextual parent. Browser URLs, Back/Forward, breadcrumbs, and saved navigation use that location. `ResourceRef` uses `type`, `id`, and optional label and ownership fields. URI conversion belongs to the host's routing and persistence adapters.
 
+A saved location keeps the resource as it was when the page opened, and a URL carries only its identity. A resource kind can name a `resolve` command so the open page follows its data. The host runs that command with `ctx.resource` set to the open resource when another resource opens and after the owning extension emits an event. The command returns the current reference, or `null`. The host takes its label, icon, shorthand, and metadata, and keeps the open resource's identity and route. Menus that match `when.metadata` then read current values. Return page state that arrived in `ctx.resource`, such as a selected document, with the result. Only the kind's own extension can provide the command.
+
 A page declares its routed resource constraint with `resource: { kinds }`. It chooses Main presentation separately. A Main view declares `cardinality`; multiple instances require a routed resource. A Main panel collection declares an `empty` view and shows peer editor panels from its slots. The route keeps workspace context while a file panel becomes active.
 
 Page slots and mode placements share static-view and resource-binding items. Both use Main, Side, and Secondary. Static presence is fixed, open, or closed. A binding has kinds, view, cardinality, and optional add navigation. Generated refs such as `page.panels.inspector` identify page panels.
