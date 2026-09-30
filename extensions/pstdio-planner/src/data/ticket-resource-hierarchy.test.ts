@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { JsonObject } from "@pstdio/sdk/extensions";
 import {
   linkedResourceParentMetadata,
   resolveTicketHierarchy,
-  ticketResourceHierarchyMetadata,
+  ticketResourceIdentity,
   ticketResourceReference,
 } from "./ticket-resource-hierarchy";
 import type { StoredTicket } from "./types";
@@ -74,7 +73,8 @@ describe("ticket resource hierarchy", () => {
       [child.id, child],
     ]);
 
-    expect(ticketResourceHierarchyMetadata(child, tickets)).toEqual({
+    expect(ticketResourceReference(child, tickets).metadata).toEqual({
+      archived: false,
       resourceParent: {
         type: "ticket",
         id: "parent",
@@ -109,6 +109,7 @@ describe("ticket resource hierarchy", () => {
       label: "PS-2 Ticket",
       shorthand: "PS-2",
       metadata: {
+        archived: false,
         resourceParent: {
           type: "ticket",
           id: "parent",
@@ -122,7 +123,7 @@ describe("ticket resource hierarchy", () => {
     });
   });
 
-  test("marks archived tickets and parents in their resource references", () => {
+  test("marks the ticket's archived state on its reference but not on its parents", () => {
     const parent = storedTicket({ id: "parent", shorthand: "PS-1", archived: true });
     const child = storedTicket({ id: "child", shorthand: "PS-2", parentId: parent.id });
     const tickets = new Map([
@@ -130,10 +131,19 @@ describe("ticket resource hierarchy", () => {
       [child.id, child],
     ]);
 
-    const reference = ticketResourceReference(child, tickets);
+    expect(ticketResourceReference(parent, tickets).metadata.archived).toBe(true);
+    expect(ticketResourceReference(child, tickets).metadata.archived).toBe(false);
+    expect(ticketResourceReference(child, tickets).metadata.resourceParent).toEqual(
+      ticketResourceIdentity(parent, tickets),
+    );
+  });
 
-    expect(reference.metadata.archived).toBeUndefined();
-    expect((reference.metadata.resourceParent as { metadata: JsonObject }).metadata.archived).toBe(true);
+  test("identifies a ticket without its archived state", () => {
+    const ticket = storedTicket({ id: "archived", shorthand: "PS-4", archived: true });
+
+    expect(ticketResourceIdentity(ticket).metadata).toEqual({
+      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+    });
   });
 
   test("links a workspace to the selected ticket resource", () => {

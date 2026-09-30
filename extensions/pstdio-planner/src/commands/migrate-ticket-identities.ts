@@ -8,7 +8,7 @@ import {
   ticketToMarkdown,
 } from "../data/draft-storage";
 import { IDENTITY_MIGRATION, identityMigrations } from "../data/ticket-identity";
-import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
 
 const BACKUP_ROOT = ".pstdio/ticket-identity-migration";
 
@@ -66,7 +66,7 @@ export const migrateTicketIdentitiesCommand = defineCommand({
     for (const session of await ctx.sessions.list()) {
       const anchors = (session.anchors_json ?? []).flatMap((anchor) => {
         const ticket = anchor.type === "ticket" ? byId.get(anchor.id) : undefined;
-        return ticket ? [{ ...anchor, ...ticketResourceReference(ticket, byId) }] : [];
+        return ticket ? [{ ...anchor, ...ticketResourceIdentity(ticket, byId) }] : [];
       });
       if (anchors.length) await ctx.sessions.addAnchors(session.id, anchors);
     }

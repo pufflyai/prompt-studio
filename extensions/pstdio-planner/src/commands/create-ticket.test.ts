@@ -108,6 +108,7 @@ describe("createTicketCommand", () => {
       icon: "component",
       shorthand: created.shorthand,
       metadata: {
+        archived: false,
         resourceParent: {
           type: "ticket",
           id: parent.id,

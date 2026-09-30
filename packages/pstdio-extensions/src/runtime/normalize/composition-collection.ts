@@ -6,9 +6,12 @@ import { contributionArray, contributionRecordBase, uniqueContributions } from "
 import {
   contributionId,
   normalizeContributionRef,
+  resolveContributionRefId,
   resolveResourceKindReference,
   resourceKindReferences,
 } from "./references";
+
+type ResourceKindResolver = NonNullable<ResourceKindDefinition["resolve"]>;
 
 const recordBase = (ext: NormalizedExtension, source: LoadedExtensionSource, localId: string) => ({
   id: contributionId(ext, localId),
@@ -61,6 +64,9 @@ export const collectCompositionContributions = (
       // A resource kind keeps the plain name it was declared with. See
       // `resolveResourceKindReference` for why the host must not namespace it.
       id: localId,
+      ...(isRecord(contribution.resolve)
+        ? { resolveCommandId: resolveContributionRefId(ext.id, contribution.resolve as ResourceKindResolver) }
+        : {}),
       contribution: {
         ...contribution,
         menuSlots,

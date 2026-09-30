@@ -19,12 +19,11 @@ const ticketsBrowseRootReference = (): JsonObject => ({
   viewId: "pstdio.pstdio-planner.view.tickets",
 });
 
-const createTicketResourceReference = (lineage: StoredTicket[], index: number): TicketResourceReference => {
+const createTicketResourceIdentity = (lineage: StoredTicket[], index: number): TicketResourceReference => {
   const ticket = lineage[index];
-  // Menus show Unarchive only when `archived` is set.
-  const metadata: JsonObject = ticket.archived ? { archived: true } : {};
-  metadata.resourceParent =
-    index > 0 ? createTicketResourceReference(lineage, index - 1) : ticketsBrowseRootReference();
+  const metadata: JsonObject = {
+    resourceParent: index > 0 ? createTicketResourceIdentity(lineage, index - 1) : ticketsBrowseRootReference(),
+  };
 
   return {
     type: "ticket",
@@ -47,12 +46,19 @@ export const resolveTicketHierarchy = (ticket: StoredTicket, parentLookup: Ticke
   }
 
   lineage.reverse();
-  const resourceReference = createTicketResourceReference(lineage, lineage.length - 1);
+  const identity = createTicketResourceIdentity(lineage, lineage.length - 1);
+  // Menus read the state of the open or clicked ticket. When expressions only match
+  // equal values, so the state is always present.
+  const resourceReference: TicketResourceReference = {
+    ...identity,
+    metadata: { archived: ticket.archived === true, ...identity.metadata },
+  };
 
   return {
     lineage,
     breadcrumb: lineage.map(({ shorthand }) => shorthand).join(" / "),
     parent: lineage[lineage.length - 2],
+    identity,
     resourceReference,
   };
 };
@@ -60,9 +66,11 @@ export const resolveTicketHierarchy = (ticket: StoredTicket, parentLookup: Ticke
 export const ticketResourceReference = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) =>
   resolveTicketHierarchy(ticket, parentLookup).resourceReference;
 
-export const ticketResourceHierarchyMetadata = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) =>
-  ticketResourceReference(ticket, parentLookup).metadata;
+// Stored links (session and workspace anchors) keep only the ticket's identity and
+// ancestry. Its state would go stale in the copy.
+export const ticketResourceIdentity = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) =>
+  resolveTicketHierarchy(ticket, parentLookup).identity;
 
 export const linkedResourceParentMetadata = (ticket: StoredTicket, parentLookup: TicketParentLookup = new Map()) => ({
-  resourceParent: ticketResourceReference(ticket, parentLookup),
+  resourceParent: ticketResourceIdentity(ticket, parentLookup),
 });

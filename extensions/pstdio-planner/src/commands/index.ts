@@ -31,6 +31,7 @@ import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 import { readTicketsCommand } from "./read-tickets";
 import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
 import { reorderTicketCommand } from "./reorder-ticket";
+import { resolveTicketResourceCommand } from "./resolve-ticket-resource";
 import { runAttemptCommand } from "./run-attempt";
 import { runReviewCommand } from "./run-review";
 import { saveTicketCommand } from "./save-ticket";
@@ -144,6 +145,7 @@ export const plannerCommands = [
   reorderTicketCommand,
   archiveTicketCommand,
   unarchiveTicketCommand,
+  resolveTicketResourceCommand,
   archiveTicketColumnActionCommand,
   deleteTicketCommand,
   writeTicketCommand,

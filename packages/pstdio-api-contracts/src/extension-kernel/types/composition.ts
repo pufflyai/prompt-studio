@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { CommandRef } from "./commands";
 import type { ExtensionContextBase } from "./context";
 import type { ContributionDefinition, ResourceKindRef } from "./contribution-identity";
 import type { MaybePromise } from "./json";
@@ -28,6 +29,14 @@ export interface ResourceKindDefinition extends ContributionDefinition<"resource
   readonly label?: Localizable<string>;
   readonly icon?: string;
   readonly menuSlots?: readonly ResourceMenuSlotDefinition[];
+  /**
+   * A command of this extension that returns the current reference for an open
+   * resource, or null. The host runs it with `ctx.resource` set to the open
+   * resource when the page opens and after the extension emits an event, and
+   * shows the returned label, icon, and metadata. Keep metadata the page owns,
+   * such as a selected document, from `ctx.resource`.
+   */
+  readonly resolve?: CommandRef;
 }
 
 export interface ResourceHierarchyProvider extends ContributionDefinition<"resource-hierarchy-provider"> {

@@ -195,7 +195,7 @@ const ticketToRowWithTags = (
       updated: ticket.updatedAt,
       id: hierarchy.breadcrumb,
       parent: hierarchy.parent?.shorthand ?? "",
-      ...ticketWorkspaceValues(ticket, workspaceLookup, hierarchy.resourceReference),
+      ...ticketWorkspaceValues(ticket, workspaceLookup, hierarchy.identity),
       ...ticketTagValues(ticket, tagOptions),
     },
   };

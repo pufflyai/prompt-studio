@@ -104,6 +104,7 @@ export const archiveTicketCommand = defineCommand({
       label: l10n("kanbanRenderers.tickets.rowActions.archive", "Archive"),
       icon: "archive",
       placement: "last",
+      when: { metadata: { archived: false } },
     },
   ],
   async run(ctx, commandParams) {

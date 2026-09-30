@@ -211,3 +211,36 @@ test("Run attempt starts from the chosen base branch", async ({ page, fixture })
     execFileSync("git", ["-C", outcome.value.workspace.root_path, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   ).toBe(baseSha);
 });
+
+test("the ticket header offers Archive or Unarchive for the ticket's current state", async ({ page, fixture }) => {
+  await openTicket(page, fixture.project.id);
+  const headerActions = page.locator("[data-workbench-breadcrumb-resource-actions]");
+  const menuItem = (name: string) => page.getByRole("menuitem", { name, exact: true });
+  const runHeaderAction = async (name: string, commandId: string) => {
+    const response = page.waitForResponse(
+      (candidate) => candidate.url().includes(`command.${commandId}/execute`) && candidate.ok(),
+    );
+    await menuItem(name).click();
+    await response;
+  };
+
+  await headerActions.click();
+  await expect(menuItem("Archive")).toBeVisible();
+  await expect(menuItem("Unarchive")).toHaveCount(0);
+  await runHeaderAction("Archive", "archive-ticket");
+
+  await expect(async () => {
+    await page.keyboard.press("Escape");
+    await headerActions.click();
+    await expect(menuItem("Unarchive")).toBeVisible({ timeout: 1_000 });
+  }).toPass();
+  await expect(menuItem("Archive")).toHaveCount(0);
+  await runHeaderAction("Unarchive", "unarchive-ticket");
+
+  await expect(async () => {
+    await page.keyboard.press("Escape");
+    await headerActions.click();
+    await expect(menuItem("Archive")).toBeVisible({ timeout: 1_000 });
+  }).toPass();
+  await expect(menuItem("Unarchive")).toHaveCount(0);
+});

@@ -129,7 +129,7 @@ so only that row is highlighted even though the ticket body and files share a ti
 | Unarchive              | `pstdio.pstdio-planner.command.unarchive-ticket`            |
 | Delete                 | `pstdio.pstdio-planner.command.delete-ticket`               |
 
-Unarchive only shows on archived tickets. An archived ticket's resource carries `archived: true` in its metadata, and the menu item matches it with `when.metadata`. Active tickets leave the key out.
+Archive shows on active tickets and Unarchive on archived ones. Every ticket resource carries `archived: true` or `archived: false` in its metadata, and each menu item matches it with `when.metadata`. The ticket resource kind resolves with `pstdio.pstdio-planner.command.resolve-ticket-resource`, so an open ticket page updates its title and header actions after the ticket changes. Workspace and session links store only the ticket's identity and parents, not its archived state.
 
 ## Rules & Constraints
 

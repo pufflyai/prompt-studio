@@ -1,7 +1,7 @@
 import type { TreeNode, TreeViewSection } from "@pstdio/sdk/extensions";
 import { ticketDisplayTitle } from "../data/mappers";
 import { ticketPageTarget } from "../data/ticket-page-target";
-import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
+import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { StoredStatus, StoredTicket } from "../data/types";
 
 const ticketShorthandSort = (left: StoredTicket, right: StoredTicket) =>
@@ -24,7 +24,7 @@ const subTicketNode = (
     id: ticket.id,
     shorthand: ticket.shorthand,
     label,
-    metadata: ticketResourceHierarchyMetadata(ticket, ticketsById),
+    metadata: ticketResourceReference(ticket, ticketsById).metadata,
   };
 
   return {
