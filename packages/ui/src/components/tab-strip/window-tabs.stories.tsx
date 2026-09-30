@@ -146,3 +146,17 @@ export const KeyboardSelection: Story = {
     await expect(canvas.getByRole("tab", { name: "Agentic design" })).toHaveAttribute("aria-selected", "true");
   },
 };
+
+export const Crowded: Story = {
+  render: () => (
+    <Box maxWidth="2xl">
+      <Example
+        initialTabs={[
+          ...projects,
+          { id: "research", label: "Research and documentation", icon: <Folder /> },
+          { id: "notes", label: "Notes", icon: <BookOpen /> },
+        ]}
+      />
+    </Box>
+  ),
+};

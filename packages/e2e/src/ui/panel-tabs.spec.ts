@@ -68,3 +68,55 @@ test("opens the active Session tab's custom menu", async ({ page, request }) => 
 
   await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
 });
+
+test("keeps panel drags in the tab row and supports pointer and keyboard reorder", async ({ page, request }) => {
+  await deleteAllProjects(request);
+  const project = await createProject(request);
+  await page.addInitScript((id: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", id);
+  }, project.id);
+  await page.goto(`/projects/${project.id}`);
+  await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  const header = page.locator('[data-workbench-panel-header="secondary"]');
+  for (let index = 0; index < 3; index += 1) {
+    await header.getByRole("button", { name: "Add panel", exact: true }).click();
+    await expect(header.getByRole("tab")).toHaveCount(index + 1);
+  }
+  const tabs = header.getByRole("tab");
+  const ids = await tabs.evaluateAll((elements) => elements.map((element) => element.id));
+  const first = page.locator(`[id="${ids[0]}"]`);
+  const viewport = header
+    .locator('[data-scope="scroll-area"][data-part="viewport"]')
+    .filter({ has: page.getByRole("tablist") });
+  for (const offset of [60, -60]) {
+    const box = (await first.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + Math.sign(offset) * 10, { steps: 3 });
+    await page.mouse.move(box.x + box.width / 2 + 5, box.y + box.height / 2 + offset, { steps: 8 });
+    await expect
+      .poll(() =>
+        viewport.evaluate((element) => ({
+          top: element.scrollTop,
+          overflow: element.scrollHeight - element.clientHeight,
+        })),
+      )
+      .toEqual({ top: 0, overflow: 0 });
+    await page.mouse.up();
+  }
+  const start = (await first.boundingBox())!;
+  const end = (await tabs.last().boundingBox())!;
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, { steps: 3 });
+  await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2, { steps: 10 });
+  await page.mouse.up();
+  const order = () => tabs.evaluateAll((elements) => elements.map((element) => element.id));
+  await expect.poll(order).toEqual([ids[1], ids[2], ids[0]]);
+  await first.press("Alt+ArrowLeft");
+  await expect.poll(order).toEqual([ids[1], ids[0], ids[2]]);
+  await first.press("Alt+ArrowRight");
+  await expect.poll(order).toEqual([ids[1], ids[2], ids[0]]);
+});

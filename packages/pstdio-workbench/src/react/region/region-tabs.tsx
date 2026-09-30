@@ -94,8 +94,15 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     viewport.addEventListener("wheel", onWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", onWheel);
   }, [viewport]);
-  if (!showTabs && !hasActions) return null;
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, regionState.activeWidgetId);
+  useEffect(() => {
+    if (!activeWidgetId) return;
+    viewport?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [activeWidgetId, viewport]);
+  if (!showTabs && !hasActions) return null;
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     if (command && hasCommandParameters(command.params)) {
@@ -162,17 +169,17 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
       onContextMenu={hasVisibilityMenu ? openVisibilityMenu : undefined}
     >
       {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
-            height so the active tab still meets the header's bottom edge. */}
+            height so the active tab still meets the header's bottom edge.
+          The content minimum overrides Zag's inline style; see ADR 0047. */}
       <ScrollArea
         viewportRef={setViewport}
         size="xs"
         h="full"
-        w="max-content"
         maxW="full"
         minW="0"
         showVerticalScrollbar={false}
         showHorizontalScrollbar
-        contentProps={{ h: "full" }}
+        contentProps={{ h: "full", w: "full", minW: "0!" }}
       >
         {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
             makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}

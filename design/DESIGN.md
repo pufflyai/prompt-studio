@@ -34,7 +34,8 @@ Read this file before working on UI or design. Use these patterns across the app
 
 - Keep tabs on one row. When they no longer fit, shrink them to a minimum width of 48 px per tab, including padding and controls.
 - Keep icons and the active tab's close button at their normal size. Give the label the remaining space and truncate it using the rule above.
-- Once all tabs reach 48 px, scroll the tab strip horizontally. Do not shrink tabs further or wrap them onto another row.
+- Project tabs stop at 64 px because they always show a close button.
+- Once all tabs reach their minimum, scroll the tab strip horizontally. Do not shrink tabs further or wrap them onto another row.
 - Scroll the active tab fully into view when a tab is opened or selected, including when closing a tab selects its neighbor.
 
 ## Problems in the chat

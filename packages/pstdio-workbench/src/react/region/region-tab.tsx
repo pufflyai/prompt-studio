@@ -164,7 +164,7 @@ const WorkbenchRegionTabLabel = (props: {
       ) : icon ? (
         <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" />
       ) : null}
-      <Text as="span" id={id} minW="0" truncate>
+      <Text as="span" id={id} data-tab-label>
         {label}
       </Text>
     </>
@@ -301,9 +301,6 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
       <Tabs.Trigger
         ref={setNodeRef}
         value={placement.widgetId}
-        maxW="12rem"
-        minW="0"
-        flexShrink={0}
         title={label}
         // Name the tab from its label element alone. Computing the name from the tab's
         // contents would fold in the nested Close button, so a closable tab would be

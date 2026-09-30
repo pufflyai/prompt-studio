@@ -52,12 +52,17 @@ export const SortableRegionTabList = (props: SortableRegionTabListProps) => {
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorderWidget}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={reorderWidget}
+      modifiers={[({ transform }) => ({ ...transform, y: 0 })]}
+    >
       <SortableContext
         items={placements.map((placement) => placement.widgetId)}
         strategy={horizontalListSortingStrategy}
       >
-        <Tabs.List h="full" minH="0" minW="max-content" alignItems="center" gap="2xs" justifyContent="flex-start">
+        <Tabs.List h="full" minH="0" w="full" alignItems="center" gap="2xs" justifyContent="flex-start">
           {placements.map((placement) => {
             const reorderableIndex = reorderable.findIndex((candidate) => candidate.widgetId === placement.widgetId);
             return (
