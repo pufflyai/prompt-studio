@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -57,6 +57,35 @@ export const registerLinkedWebviewSmokeTests = () => {
       const code = await moduleResponse.text();
       const module = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
       expect(module.default).toBe("loaded-via-exports-subpath");
+      const modulePath = new URL(view.body.webview.moduleUrl!, started.baseUrl).pathname.split("/");
+      const installedExtensionId = modulePath[5];
+      const bundle = join(
+        root,
+        "cache/extension-webviews",
+        installedExtensionId,
+        "test.dep-ext.view.linked/dist/module.js",
+      );
+      const published = statSync(bundle).mtimeMs;
+      await stopProcess(child);
+      const bootStarted = performance.now();
+      const restarted = await startPackagedServe(root, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" });
+      child = restarted.child;
+      const readyMs = Math.round(performance.now() - bootStarted);
+      expect(statSync(bundle).mtimeMs).toBe(published);
+      const restartedHeaders = runtimeAuthorization(restarted.descriptor);
+      const reopened = await fetch(`${restarted.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
+        headers: restartedHeaders,
+      });
+      const reopenedMetadata = (await reopened.json()) as WorkbenchExtensionMetadata;
+      const reopenedView = reopenedMetadata.views.find((view) => view.localId === "linked");
+      if (reopenedView?.body.kind !== "webview") throw new Error("Missing linked webview after restart");
+      const reused = await fetch(`${restarted.baseUrl}${reopenedView.body.webview.moduleUrl}`);
+      expect(reused.status).toBe(200);
+      expect(await reused.text()).toBe(code);
+      expect(statSync(bundle).mtimeMs).toBe(published);
+      console.info(
+        JSON.stringify({ readyMs, bundlesRewritten: 0, moduleServedMs: Math.round(performance.now() - bootStarted) }),
+      );
     } finally {
       if (child) await stopProcess(child);
       rmSync(root, { recursive: true, force: true });

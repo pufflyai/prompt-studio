@@ -35,6 +35,9 @@ export const getProjectExtensionUiHandler = (
     const { projectId } = c.req.param();
     try {
       const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+      for (const { installedSource } of snapshot.enabledSources) {
+        void deps.ensureExtensionWebviews(installedSource.id);
+      }
       return c.json(await assembleWorkbenchMetadata(deps, projectId, snapshot.runtime, snapshot.enabledSources), 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);

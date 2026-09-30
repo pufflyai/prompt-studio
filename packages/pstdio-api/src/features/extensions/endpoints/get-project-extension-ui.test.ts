@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -141,4 +141,34 @@ export default {
       title: "Midnight",
     });
   });
+});
+
+test("starts checks for enabled source IDs without waiting for webview builds", async () => {
+  const project = await createProject("Webview first use");
+  const sourcePath = createTestExtensionSource({
+    root: pstdioHome,
+    name: "first-use",
+    displayName: "First use",
+    installName: "first-use-source",
+  });
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: "First use",
+    extensionId: "test.first-use",
+    installName: "first-use-source",
+    manifest: { displayName: "First use", id: "test.first-use", name: "first-use" },
+    name: "first-use",
+    projectId: project.id,
+    sourcePath,
+  });
+  const sources = await handle.deps.extensionService.listEnabledSourcesForProject(project.id);
+  const release = Promise.withResolvers<void>();
+  const ensure = spyOn(handle.deps, "ensureExtensionWebviews").mockImplementation(() => release.promise);
+  try {
+    const response = await app.request(`/v1/projects/${project.id}/extensions/ui`);
+    expect(response.status).toBe(200);
+    expect(ensure.mock.calls).toEqual(sources.map(({ installedSource }) => [installedSource.id]));
+  } finally {
+    release.resolve();
+    ensure.mockRestore();
+  }
 });

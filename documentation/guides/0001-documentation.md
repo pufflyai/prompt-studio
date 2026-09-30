@@ -205,6 +205,8 @@ Use relative Markdown links so these pages work in repository browsers and edito
 
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
 
+- [0047 — Build extension webviews on use](../adrs/0047-build-extension-webviews-on-use.md)
+
 ## Lessons learned
 
 - [0001 — Check runtime support before using browser APIs](../lessons-learned/0001-no-bun-eventsource.md)

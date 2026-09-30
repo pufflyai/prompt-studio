@@ -45,6 +45,7 @@ class FakeWatcher {
 }
 
 const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
+  ensure: async () => {},
   dispose: () => {},
   refresh: onRefresh ?? (async () => {}),
 });
@@ -112,7 +113,6 @@ describe("createInstalledExtensionRuntime", () => {
       createWebviewBuildManager: () =>
         createProcess(async () => {
           webviewRefreshCount += 1;
-          if (webviewRefreshCount === 1) return;
           await backgroundBuild;
         }),
     });
@@ -120,7 +120,7 @@ describe("createInstalledExtensionRuntime", () => {
     const refresh = runtime.refresh();
     await wait();
 
-    expect(webviewRefreshCount).toBe(2);
+    expect(webviewRefreshCount).toBe(1);
     await expect(refresh).resolves.toBeUndefined();
 
     resolveBackgroundBuild?.();

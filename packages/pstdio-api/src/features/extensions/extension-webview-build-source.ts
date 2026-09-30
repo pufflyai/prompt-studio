@@ -12,6 +12,7 @@ import {
   symlinkSync,
 } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
+import { collectLocalCssInputs } from "./extension-webview-css-inputs";
 
 type PackageJson = {
   dependencies?: Record<string, unknown>;
@@ -144,6 +145,12 @@ const addHashEntry = (hash: ReturnType<typeof createHash>, path: string, content
   hash.update("\0");
 };
 
+const sourceImports = (filePath: string, content: Buffer) => {
+  if (extname(filePath) === ".css") return collectLocalCssInputs(content.toString()).map((path) => ({ path }));
+  if (![".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(filePath))) return [];
+  return new Bun.Transpiler({ loader: transpilerLoader(filePath) }).scanImports(content);
+};
+
 const inspectLocalImportGraph = (packagePath: string, entryPath: string) => {
   const hash = createHash("sha256");
   const pending = [entryPath];
@@ -157,13 +164,10 @@ const inspectLocalImportGraph = (packagePath: string, entryPath: string) => {
 
     const content = readFileSync(filePath);
     addHashEntry(hash, normalizedRelativePath(packagePath, filePath), content);
-    if (![".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(extname(filePath))) continue;
     if ([".tsx", ".jsx"].includes(extname(filePath))) packageImports.add("react");
 
     try {
-      const imports = new Bun.Transpiler({
-        loader: transpilerLoader(filePath),
-      }).scanImports(content);
+      const imports = sourceImports(filePath, content);
       for (const imported of imports) {
         const resolvedPath = resolveLocalImport(filePath, imported.path);
         if (resolvedPath) {

@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { extensionWebviewBuildOptions } from "./extension-webview-builder";
+
 type InstalledSourceSignatureInput = {
   source_path: string;
 };
@@ -9,7 +12,19 @@ export const signatureFor = (
   webviewId: string,
   entryPath: string,
   buildInputsSignature: string,
-) => [row.source_path, webviewId, entryPath, buildInputsSignature].join("\0");
+) =>
+  createHash("sha256")
+    .update(
+      [
+        row.source_path,
+        webviewId,
+        entryPath,
+        buildInputsSignature,
+        Bun.version,
+        JSON.stringify(extensionWebviewBuildOptions),
+      ].join("\0"),
+    )
+    .digest("hex");
 
 export const createWebviewBuildBackoff = () => {
   const failedBuilds = new Map<string, string>();

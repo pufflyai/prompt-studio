@@ -14,7 +14,13 @@ See [manifest and installation](../extensions/0002-manifest-and-installation.md)
 
 An ordinary file edit in an installed source does not adopt a new contribution contract. The project continues using its adopted snapshot until an explicit update, reload, install, or development-loop refresh validates and publishes a replacement.
 
-The installed-source watcher rebuilds webview assets. A completed or failed webview build invalidates the relevant projected metadata with reason `webviews_built`; it does not re-read source contributions merely because a file changed.
+Runtime startup does not build or check webviews. Project UI metadata starts checks for its enabled sources without waiting. Asset requests wait for those checks before serving bundles or build errors.
+
+A SHA-256 digest in each bundle's `dist/build-signature.txt` records its source graph, declared dependencies, Bun version, and builder options. The host reuses matching bundles across restarts and publishes new signatures with successful build output. Starting a replacement build invalidates the old signature. If a build fails and the source is later restored, the next check rebuilds once and clears the recorded failure through the normal success path. Interrupted staging folders are cleaned before the next build, without removing active builds.
+
+The installed-source watcher rebuilds webview assets only for extensions used during this runtime process. Other sources are checked on first use. Explicit reloads and installs build immediately using the validated source. Usage remains active until the process exits. Runtime refresh still removes cache roots no installed source owns. Bundles of removed webviews within an installed source remain for separate cleanup. See [the build decision](../../adrs/0047-build-extension-webviews-on-use.md).
+
+A completed or failed webview build invalidates the relevant projected metadata with reason `webviews_built`; it does not re-read source contributions merely because a file changed.
 
 `pst extensions dev` is an explicit authoring loop. A successful refresh publishes the current validated source. A failed candidate must not be described as adopted. Report its diagnostics and keep the previous valid development runtime according to the refresh contract.
 

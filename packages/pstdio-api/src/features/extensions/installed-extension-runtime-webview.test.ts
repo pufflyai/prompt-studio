@@ -4,6 +4,7 @@ import { createInstalledExtensionRuntime } from "./installed-extension-runtime";
 const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
+  ensure: async () => {},
   dispose: () => {},
   refresh: onRefresh ?? (async () => {}),
 });
@@ -42,7 +43,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       });
       await wait();
 
-      expect(refreshedSourcePaths).toEqual([undefined, "/extensions/lab"]);
+      expect(refreshedSourcePaths).toEqual(["/extensions/lab"]);
       expect(targetedRefreshFinished).toBe(false);
 
       releaseTargetedBuild();
@@ -88,7 +89,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       await wait();
 
       expect(rootRefreshCount).toBe(1);
-      expect(webviewRefreshes).toEqual([undefined, "/extensions/lab"]);
+      expect(webviewRefreshes).toEqual(["/extensions/lab"]);
     } finally {
       releaseUnexpectedRootRefresh();
       await targetedRefresh;
