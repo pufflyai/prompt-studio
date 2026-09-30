@@ -218,6 +218,7 @@ const WorkbenchRegionTabCloseButton = (props: {
       role="button"
       aria-label={`Close ${label}`}
       aria-disabled={disabled}
+      data-tab-close
       size="2xs"
       boxSize="1rem"
       minW="1rem"

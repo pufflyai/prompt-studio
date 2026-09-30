@@ -8,7 +8,8 @@ export const tabsSlotRecipe = defineSlotRecipe({
       "--tabs-trigger-radius": "radii.xs",
     },
     list: {
-      // The inline list would otherwise grow to its tabs' full labels, so they could never shrink.
+      // The inline list would otherwise grow past its container to the tabs' full labels,
+      // so crowded tabs could neither shrink nor scroll.
       maxW: "full",
       gap: "2xs",
       alignItems: "center",
@@ -21,11 +22,16 @@ export const tabsSlotRecipe = defineSlotRecipe({
       },
     },
     trigger: {
-      flex: "1 1 0",
-      minW: "tab-min",
-      maxW: "fit-content",
+      flexShrink: "0",
       overflow: "hidden",
-      // Crowded tabs shrink; keep bare-text labels on one line instead of wrapping.
+      // Only tabs with a close button share a crowded row; the minimum keeps the
+      // icon and close button whole. Other tabs keep their content width.
+      "&:has([data-tab-close])": {
+        flex: "1 1 0",
+        minW: "tab-min",
+        maxW: "fit-content",
+      },
+      // Keep bare-text labels on one line instead of wrapping.
       whiteSpace: "nowrap",
       "& [data-tab-label]": {
         minW: "0",

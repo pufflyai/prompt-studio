@@ -32,10 +32,11 @@ Read this file before working on UI or design. Use these patterns across the app
 - A Main view that supports only one resource has no close action or tab strip. Selecting another resource replaces its content.
 - A Main view that supports multiple open resources keeps its tab strip and close action even when only one resource is open.
 
-- Keep tabs on one row. When they no longer fit, shrink them to a minimum width of 48 px per tab, including padding and controls.
+- Keep tabs on one row. When they no longer fit, shrink tabs that have a close button to a minimum width of 48 px per tab, including padding and controls.
+- Tabs without a close button, such as saved view tabs, keep their content width. Only their label cap truncates them.
 - Keep icons and the active tab's close button at their normal size. Give the label the remaining space and truncate it using the rule above.
 - Project tabs stop at 64 px because they always show a close button.
-- Once all tabs reach their minimum, scroll the tab strip horizontally. Do not shrink tabs further or wrap them onto another row.
+- Once all shrinking tabs reach their minimum, scroll the tab strip horizontally. Do not shrink tabs further or wrap them onto another row.
 - Scroll the active tab fully into view when a tab is opened or selected, including when closing a tab selects its neighbor.
 
 ## Problems in the chat

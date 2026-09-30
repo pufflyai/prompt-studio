@@ -72931,7 +72931,7 @@
               "id": "L5lN7",
               "name": "Sizing rule",
               "fill": "$ds-fg",
-              "content": "Tabs share available width, then scroll at their minimum",
+              "content": "Tabs with a close button share available width, then scroll at their minimum",
               "fontFamily": "$font-heading",
               "fontSize": 18,
               "fontWeight": "normal"
