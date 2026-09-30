@@ -203,13 +203,21 @@ The bounded event store delivers patches; it is not a history database. Evicting
 
 ### Session message streaming via SSE
 
-GET /v1/sessions/:id/stream sends:
+A client holds one session stream for all the sessions it shows. Browsers allow six HTTP/1.1 connections per origin. One stream per open chat would leave too few connections for normal requests, so a client holds at most two long-lived connections: table sync and the session stream.
 
-- ready when connected;
+- `GET /v1/session-stream` opens the stream. It sends `connected` with a `connection_id`, then a `heartbeat` every 8 seconds.
+- `POST /v1/session-stream/:connectionId/subscriptions` with `{ subscription_id, session_id }` starts streaming one session. The client picks the subscription ID.
+- `DELETE /v1/session-stream/:connectionId/subscriptions/:subscriptionId` stops it. Closing the stream stops all its subscriptions.
+
+Every session event carries `{ subscription_id, data }`. A subscription sends:
+
+- ready when it starts;
 - one exact root snapshot after initialization, including an empty array;
 - subsequent patch and approval_request events;
-- heartbeat while waiting;
-- end when the run finishes without an immediate queued follow-up.
+- end when the run finishes without an immediate queued follow-up;
+- error when the server cannot stream the session.
+
+The SDK opens the stream for the first subscription and closes it after the last one. If the stream drops, every open subscription receives an error.
 
 Inactive streams use the same history loader as GET and send the readable snapshot and end. A waiting reader follows a replacement owner instead of publishing an obsolete initializer's result.
 
@@ -221,7 +229,7 @@ The session stream publishes `queued_messages` before its first snapshot and bef
 
 All session/workspace rows are synced to clients via the general-purpose SSE endpoint at `GET /v1/sync/stream`. This uses the `EventBus` which emits `set`/`delete` events with sequence numbers, allowing clients to resume with `?since={seq}`.
 
-Session message streaming is a separate SSE connection from table sync — table sync handles row-level changes (status, title, timestamps), while the session stream handles the message content patches.
+Session message streaming uses a separate SSE connection from table sync. Table sync handles row-level changes (status, title, timestamps), and the session stream handles message content patches.
 
 ## Diff inspection
 

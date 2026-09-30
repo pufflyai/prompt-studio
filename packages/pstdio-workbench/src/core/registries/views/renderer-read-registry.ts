@@ -33,7 +33,7 @@ export interface RendererReadRegistry {
   dispose(): Promise<void>;
 }
 
-export const createRendererReadRegistry = (options: { deadlineMs?: number } = {}): RendererReadRegistry => {
+export const createRendererReadRegistry = (): RendererReadRegistry => {
   const owners = new Map<string, ReadOwner>();
   let disposed = false;
   const release = (key: string, owner: ReadOwner) => {
@@ -57,20 +57,12 @@ export const createRendererReadRegistry = (options: { deadlineMs?: number } = {}
         return;
       }
       const controller = new AbortController();
-      const deadline = setTimeout(() => {
-        const error = new Error("The view took too long to load. Retry to load it again.");
-        controller.abort(error);
-        if (isCurrent(owner, job)) {
-          job.onError(error);
-        }
-      }, options.deadlineMs ?? 30_000);
       const settled = Promise.resolve()
         .then(() => job.run(controller.signal))
         .catch((error) => {
           if (!controller.signal.aborted && isCurrent(owner, job)) job.onError(error);
         })
         .finally(() => {
-          clearTimeout(deadline);
           owner.active = undefined;
           if (owner.pending) schedule(key, owner);
           release(key, owner);

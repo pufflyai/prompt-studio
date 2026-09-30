@@ -1,17 +1,43 @@
 import { describe, expect, it } from "bun:test";
 import { createClient } from "./client";
 
-const createSseResponse = (chunks: string[]) => {
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const chunk of chunks) {
-        controller.enqueue(new TextEncoder().encode(chunk));
-      }
-      controller.close();
-    },
-  });
+type FakeCall = {
+  method: string;
+  url: string;
+  auth: string | null;
+  body?: Record<string, string>;
+  signal?: AbortSignal | null;
+};
 
-  return new Response(stream, { status: 200 });
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+const createFakeStreamServer = () => {
+  const calls: FakeCall[] = [];
+  let stream: ReadableStreamDefaultController<Uint8Array> | undefined;
+  const fetchFn = ((url: string, init?: RequestInit) => {
+    const method = init?.method ?? "GET";
+    calls.push({
+      method,
+      url: String(url),
+      auth: new Headers(init?.headers).get("authorization"),
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      signal: init?.signal,
+    });
+    if (method !== "GET") return Promise.resolve(new Response(null, { status: 204 }));
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        stream = controller;
+      },
+    });
+    return Promise.resolve(new Response(body, { status: 200 }));
+  }) as unknown as typeof fetch;
+  return {
+    fetchFn,
+    calls: (method: string) => calls.filter((call) => call.method === method),
+    send: (event: string, data: unknown) =>
+      stream!.enqueue(new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)),
+    end: () => stream!.close(),
+  };
 };
 
 describe("session stream client", () => {
@@ -67,73 +93,72 @@ describe("session stream client", () => {
     });
   });
 
-  it("streams session SSE events through the sdk client", async () => {
-    const calls: string[] = [];
-    const events: { event: string; data: string }[] = [];
-    const fetchFn = ((url: string) => {
-      calls.push(String(url));
-      return Promise.resolve(
-        createSseResponse([
-          'event: ready\ndata: {"sessionId":"s_1"}\n\n',
-          'event: patch\ndata: {"op":"add","path":"/messages/0","value":{"text":"hi"}}\n\n',
-        ]),
-      );
-    }) as unknown as typeof fetch;
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+  it("carries every session on one authenticated connection", async () => {
+    const server = createFakeStreamServer();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: server.fetchFn, token: "secret" });
+    const patches: Array<[string, unknown]> = [];
+    const first = client.sessions.connectStream("s_1", { onPatch: (data) => patches.push(["s_1", data]) });
+    const second = client.sessions.connectStream("s_2", { onPatch: (data) => patches.push(["s_2", data]) });
+    await tick();
+    server.send("connected", { connection_id: "c1" });
+    await tick();
 
-    await client.sessions.stream("s_1", (event) => events.push(event));
-
-    expect(calls).toEqual(["http://test:1234/v1/sessions/s_1/stream"]);
-    expect(events).toEqual([
-      { event: "ready", data: '{"sessionId":"s_1"}' },
-      { event: "patch", data: '{"op":"add","path":"/messages/0","value":{"text":"hi"}}' },
+    expect(server.calls("GET").map((call) => [call.url, call.auth])).toEqual([
+      ["http://test:1234/v1/session-stream", "Bearer secret"],
     ]);
+    const subscriptions = server.calls("POST");
+    expect(subscriptions.map((call) => [call.url, call.body?.session_id])).toEqual([
+      ["http://test:1234/v1/session-stream/c1/subscriptions", "s_1"],
+      ["http://test:1234/v1/session-stream/c1/subscriptions", "s_2"],
+    ]);
+    const [firstId, secondId] = subscriptions.map((call) => call.body?.subscription_id);
+    server.send("patch", { subscription_id: secondId, data: { op: "add", path: "/messages/0" } });
+    await tick();
+    expect(patches).toEqual([["s_2", { op: "add", path: "/messages/0" }]]);
+
+    first.close();
+    await tick();
+    expect(server.calls("DELETE").map((call) => call.url)).toEqual([
+      `http://test:1234/v1/session-stream/c1/subscriptions/${firstId}`,
+    ]);
+    expect(server.calls("GET")[0]!.signal?.aborted).toBe(false);
+    second.close();
+    await tick();
+    expect(server.calls("GET")[0]!.signal?.aborted).toBe(true);
   });
 
-  it("connects browser session streams through authenticated fetch", async () => {
-    const calls: Array<{ url: string; auth: string | null; signal?: AbortSignal | null }> = [];
-    const events: string[] = [];
-    const fetchFn = ((url: string, init?: RequestInit) => {
-      calls.push({
-        url: String(url),
-        auth: new Headers(init?.headers).get("authorization"),
-        signal: init?.signal ?? null,
-      });
-      return Promise.resolve(
-        createSseResponse([
-          'event: ready\ndata: {"sessionId":"s_1"}\n\nevent: queued_messages\ndata: {"messages":[]}\n\n',
-        ]),
-      );
-    }) as unknown as typeof fetch;
-    const client = createClient({
-      baseUrl: "http://test:1234",
-      fetch: fetchFn,
-      token: "secret",
-    });
+  it("reports a dropped connection to every open session", async () => {
+    const server = createFakeStreamServer();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: server.fetchFn });
+    const errors: string[] = [];
+    client.sessions.connectStream("s_1", { onError: () => errors.push("s_1") });
+    client.sessions.connectStream("s_2", { onError: () => errors.push("s_2") });
+    await tick();
+    server.send("connected", { connection_id: "c1" });
+    await tick();
+    server.end();
+    await tick();
+    expect(errors).toEqual(["s_1", "s_2"]);
+  });
 
-    const connection = client.sessions.connectStream(
-      "s_1",
-      {
-        onReady: () => events.push("ready"),
-        onQueuedMessages: (data) => {
-          expect(data).toEqual({ messages: [] });
-          events.push("queued_messages");
-        },
-      },
-      { attempt: 2 },
-    );
+  it("streams one session until it ends", async () => {
+    const server = createFakeStreamServer();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: server.fetchFn });
+    const events: { event: string; data: string }[] = [];
+    const done = client.sessions.stream("s_1", (event) => events.push(event));
+    await tick();
+    server.send("connected", { connection_id: "c1" });
+    await tick();
+    const subscriptionId = server.calls("POST")[0]!.body?.subscription_id;
+    server.send("ready", { subscription_id: subscriptionId, data: { sessionId: "s_1" } });
+    server.send("end", { subscription_id: subscriptionId, data: { status: "completed" } });
+    await done;
+    await tick();
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    connection.close();
-
-    expect(calls).toEqual([
-      {
-        url: "http://test:1234/v1/sessions/s_1/stream?attempt=2",
-        auth: "Bearer secret",
-        signal: calls[0]!.signal,
-      },
+    expect(events).toEqual([
+      { event: "ready", data: '{"sessionId":"s_1"}' },
+      { event: "end", data: '{"status":"completed"}' },
     ]);
-    expect(calls[0]!.signal).toBeInstanceOf(AbortSignal);
-    expect(events).toEqual(["ready", "queued_messages"]);
+    expect(server.calls("GET")[0]!.signal?.aborted).toBe(true);
   });
 });
