@@ -30,6 +30,8 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "@pstdio/sdk": ["pstdio-api-contracts"],
   "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths"],
   "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions"],
+  // pstdio-api also declares the core extensions its tests install from source,
+  // so changing one marks pstdio-api as affected.
   "pstdio-api": [
     "pstdio-api-contracts",
     "pstdio-api-runtime-host",
@@ -40,6 +42,9 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-scheduler",
     "pstdio-storage",
     "pstdio-wt",
+    "extension-lab",
+    "pstdio-planner",
+    "pstdio-skills",
   ],
   pstdio: [
     "@pstdio/sdk",

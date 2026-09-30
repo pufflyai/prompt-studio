@@ -29,6 +29,11 @@ layer-map change.
    orchestration. They consume contracts and extension runtime packages, but they
    do not import public SDK authoring-only types.
 
+   `pstdio-api` declares the core extensions its tests install from source
+   (`extension-lab`, `pstdio-planner`, and `pstdio-skills`) as development
+   dependencies. It does not import them. The declarations let pull request CI
+   run the API tests when one of those extensions changes.
+
 5. **Primitive UI**
    `@pstdio/ui` owns reusable React primitives, visual components, theme tokens,
    editor widgets, and terminal-specific React UI through its `./terminal`
