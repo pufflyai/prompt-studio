@@ -6,7 +6,7 @@ import { join } from "node:path";
 test("resolves installed browser libraries from outside the extension directory", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "motion-shared-exports-"));
   try {
-    const source = `import { exportsFor } from ${JSON.stringify(new URL("./shared-exports.ts", import.meta.url).pathname)};
+    const source = `import { exportsFor } from ${JSON.stringify(new URL("./shared-exports.ts", import.meta.url).href)};
       console.log(JSON.stringify(await Promise.all(["@chakra-ui/react", "remotion", "motion-lab/kit"].map(exportsFor))));`;
     const child = Bun.spawn([process.execPath, "--conditions=source", "--eval", source], {
       cwd,
