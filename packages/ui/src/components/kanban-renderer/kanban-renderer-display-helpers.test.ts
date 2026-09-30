@@ -114,6 +114,19 @@ describe("getAttributeBadgeColorPalette", () => {
 });
 
 describe("collectDisplayCustomSlots", () => {
+  it("omits empty text and invalid link values", () => {
+    const displayAttributes: AttributeDescriptor[] = [
+      { id: "site", label: "Site", type: { kind: "string" }, display: { kind: "text" } },
+      { id: "url", label: "Source", type: { kind: "string" }, display: { kind: "link" } },
+    ];
+    const row: KanbanRendererRow = {
+      id: "one",
+      title: "Empty display",
+      attributes: { site: "", url: "javascript:alert(1)" },
+    };
+    expect(collectDisplayCustomSlots(row, displayAttributes, ["site", "url"])).toEqual([]);
+  });
+
   it("emits rendered display properties as custom slots", () => {
     const renderedAttributes: AttributeDescriptor[] = [
       {

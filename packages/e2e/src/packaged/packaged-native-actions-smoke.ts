@@ -28,7 +28,10 @@ export default {
     {id:"choices",ref:choices,title:"Choices",params:{},run:()=>[{id:"one",name:"One"}]},
     {id:"run",ref:run,title:"Run",params:input,run:(_ctx:unknown,params:unknown)=>params},
   ],
-  views:["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,query:()=>({rows:[]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
+  views:["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,query:()=>({rows:[]}),...(kind==="kanban"?{attributes:[
+    {id:"site",label:"Site",type:{kind:"string"},display:{kind:"text"},listColumn:{placement:"start",size:"sm"}},
+    {id:"url",label:"Open source",type:{kind:"string"},display:{kind:"link"},listColumn:{placement:"end",size:"xs"}}
+  ]}:{}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
 };
 `,
   );
@@ -55,6 +58,12 @@ export const expectPackagedNativeActions = async (input: {
       command: { id: "run", extensionId: "test.native-actions" },
       input: { value: { options: { command: { id: "choices", extensionId: "test.native-actions" } } } },
     });
+    if (kind === "kanban") {
+      expect(view.body.attributes).toMatchObject([
+        { id: "site", display: { kind: "text" }, listColumn: { placement: "start", size: "sm" } },
+        { id: "url", display: { kind: "link" }, listColumn: { placement: "end", size: "xs" } },
+      ]);
+    }
   }
   const execute = (command: string, params: unknown) =>
     fetch(`${root}/commands/test.native-actions.command.${command}/execute`, {

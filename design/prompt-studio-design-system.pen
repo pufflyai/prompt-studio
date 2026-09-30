@@ -63210,6 +63210,438 @@
         },
         {
           "type": "frame",
+          "id": "pTcqi",
+          "name": "Display · Fixed list columns",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "QhJvc",
+              "name": "Fixed columns caption",
+              "fill": "$ds-fg",
+              "content": "Fixed list columns · start and end cells keep empty space",
+              "fontFamily": "$font-heading",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "tEKbP",
+              "name": "Column sizes",
+              "fill": "$ds-fg-muted",
+              "content": "2xs 16 · xs 24 · sm 34 · md 52 · lg 72. The title fills the remaining width. Links open the source and show the URL on hover or focus.",
+              "fontFamily": "$font-body",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "KCrqF",
+              "name": "Fixed row 0",
+              "width": "fill_container",
+              "height": 34,
+              "fill": "$ds-surface",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "ikTlM",
+                  "name": "Status",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "circle",
+                  "library": "lucide",
+                  "fill": "$ds-info"
+                },
+                {
+                  "type": "frame",
+                  "id": "ZFV7m",
+                  "name": "Site",
+                  "width": 34,
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "r23Ahc",
+                      "name": "Site value",
+                      "fill": "$ds-fg-muted",
+                      "content": "RDT",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xoFBT",
+                  "name": "Mention",
+                  "width": 16,
+                  "height": "fill_container",
+                  "alignItems": "center"
+                },
+                {
+                  "type": "frame",
+                  "id": "Nae6x",
+                  "name": "Title",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n8N0Kq",
+                      "name": "Title value",
+                      "fill": "$ds-fg",
+                      "content": "Anyone built internal tools?",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Z5frL",
+                  "name": "Ideas",
+                  "width": 72,
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "g3tj4",
+                      "name": "Ideas value",
+                      "fill": "$ds-fg-muted",
+                      "content": "1 idea",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ilsVq",
+                  "name": "Source link",
+                  "width": 24,
+                  "height": 24,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "Ad4Jg",
+                      "name": "Open source",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "external-link",
+                      "library": "lucide",
+                      "fill": "$ds-fg"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QLRmy",
+                  "name": "Date",
+                  "width": 52,
+                  "height": "fill_container",
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "qugWo",
+                      "name": "Date value",
+                      "fill": "$ds-fg-muted",
+                      "content": "07:12",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "pLfOG",
+              "name": "Fixed row 1",
+              "width": "fill_container",
+              "height": 34,
+              "fill": "$ds-bg",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "uIKXZ",
+                  "name": "Status",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "circle",
+                  "library": "lucide",
+                  "fill": "$ds-info"
+                },
+                {
+                  "type": "frame",
+                  "id": "ktUWR",
+                  "name": "Site",
+                  "width": 34,
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "qq6l0",
+                      "name": "Site value",
+                      "fill": "$ds-fg-muted",
+                      "content": "X",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u5pxNL",
+                  "name": "Mention",
+                  "width": 16,
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "d0Us8E",
+                      "name": "Mention value",
+                      "fill": "$ds-fg-muted",
+                      "content": "@",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Mo7oT",
+                  "name": "Title",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SCkGG",
+                      "name": "Title value",
+                      "fill": "$ds-fg",
+                      "content": "Prompt Studio on Windows",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "DRWwl",
+                  "name": "Ideas",
+                  "width": 72,
+                  "height": "fill_container",
+                  "alignItems": "center"
+                },
+                {
+                  "type": "frame",
+                  "id": "O4kAjH",
+                  "name": "Source link",
+                  "width": 24,
+                  "height": 24,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "J8tLzx",
+                      "name": "Open source",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "external-link",
+                      "library": "lucide",
+                      "fill": "$ds-fg"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "BsCy2",
+                  "name": "Date",
+                  "width": 52,
+                  "height": "fill_container",
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "prHP1",
+                      "name": "Date value",
+                      "fill": "$ds-fg-muted",
+                      "content": "05:58",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eLRXs",
+              "name": "Fixed row 2",
+              "width": "fill_container",
+              "height": 34,
+              "fill": "$ds-bg",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "PQu5M",
+                  "name": "Status",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "circle",
+                  "library": "lucide",
+                  "fill": "$ds-info"
+                },
+                {
+                  "type": "frame",
+                  "id": "h0dd43",
+                  "name": "Site",
+                  "width": 34,
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dLqvR",
+                      "name": "Site value",
+                      "fill": "$ds-fg-muted",
+                      "content": "BSKY",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gsA6n",
+                  "name": "Mention",
+                  "width": 16,
+                  "height": "fill_container",
+                  "alignItems": "center"
+                },
+                {
+                  "type": "frame",
+                  "id": "jqppJ",
+                  "name": "Title",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SYyh7",
+                      "name": "Title value",
+                      "fill": "$ds-fg",
+                      "content": "A new tool for agent review",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "J6ENlH",
+                  "name": "Ideas",
+                  "width": 72,
+                  "height": "fill_container",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ieMZ8",
+                      "name": "Ideas value",
+                      "fill": "$ds-fg-muted",
+                      "content": "Demo",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dxYx6",
+                  "name": "Source link",
+                  "width": 24,
+                  "height": 24,
+                  "justifyContent": "center",
+                  "alignItems": "center"
+                },
+                {
+                  "type": "frame",
+                  "id": "DMYLJ",
+                  "name": "Date",
+                  "width": 52,
+                  "height": "fill_container",
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "O1C4AL",
+                      "name": "Date value",
+                      "fill": "$ds-fg-muted",
+                      "content": "07:10",
+                      "fontFamily": "$font-body",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "B2lRP",
           "name": "Display · Kanban",
           "width": "fill_container",

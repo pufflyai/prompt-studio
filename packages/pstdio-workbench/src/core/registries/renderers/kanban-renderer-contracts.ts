@@ -1,4 +1,4 @@
-import type { KanbanRendererAttributeDisplay } from "@pstdio/sdk/extensions";
+import type { KanbanRendererAttributeDescriptor, KanbanRendererAttributeDisplay } from "@pstdio/sdk/extensions";
 
 /**
  * Core-owned contracts for kanban renderer contributions. @pstdio/ui's
@@ -55,6 +55,7 @@ export interface AttributeDescriptor<TNode = unknown> {
   displayable?: boolean;
   editable?: boolean;
   display?: AttributeDisplayDescriptor;
+  listColumn?: KanbanRendererAttributeDescriptor["listColumn"];
   render?: (value: unknown, row: KanbanRendererRow) => TNode;
   compare?: (a: unknown, b: unknown) => number;
 }

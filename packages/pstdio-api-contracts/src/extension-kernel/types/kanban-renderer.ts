@@ -34,7 +34,10 @@ export interface CollectionBadgeItem {
   resource?: ResourceRef;
 }
 
-export type KanbanRendererAttributeDisplay = { kind: "badge-list"; itemsAttributeId: string };
+export type KanbanRendererAttributeDisplay =
+  | { kind: "badge-list"; itemsAttributeId: string }
+  | { kind: "text" }
+  | { kind: "link" };
 
 export interface KanbanRendererAttributeDescriptor {
   id: string;
@@ -46,6 +49,12 @@ export interface KanbanRendererAttributeDescriptor {
   displayable?: boolean;
   editable?: boolean;
   display?: KanbanRendererAttributeDisplay;
+  /** Fixed-width list cell. Selected through displayProperties; empty values keep their space. */
+  listColumn?: {
+    placement: "start" | "end";
+    size: "2xs" | "xs" | "sm" | "md" | "lg";
+    align?: "start" | "end";
+  };
 }
 
 export interface KanbanRendererSettings {

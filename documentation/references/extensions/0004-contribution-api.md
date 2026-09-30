@@ -250,6 +250,35 @@ The host saves user-created views per project, extension instance and local boar
 
 Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` supplies shared views and asynchronous mutations to the UI renderer. The workbench accepts a subscribable views provider from its host; standalone callers without one show their built-ins read-only.
 
+### Fixed list columns
+
+An attribute can declare `listColumn: { placement: "start" | "end", size, align? }`.
+The host places it before or after the title in list display. The title uses the
+remaining space. Sizes are `2xs` (16 px), `xs` (24 px), `sm` (34 px),
+`md` (52 px), and `lg` (72 px), from the shared design tokens. Alignment
+defaults to `"start"`; use `align: "end"` for values such as dates.
+
+`displayProperties` selects and orders the visible attributes, including these
+columns. Each selected column keeps its width when its value is empty. Group
+headers show their label and count. Board display keeps its usual card layout.
+
+Use `display: { kind: "text" }` for plain text and `display: { kind: "link" }`
+for a source link. A link reads an absolute HTTP or HTTPS URL from the attribute's
+value. Its accessible label is the attribute label. The full URL appears on hover
+or keyboard focus. It opens a new browser tab without activating the resource row.
+Empty or invalid URLs leave the cell empty.
+
+```ts
+{
+  id: "source",
+  label: "Open source",
+  type: { kind: "string" },
+  displayable: true,
+  display: { kind: "link" },
+  listColumn: { placement: "end", size: "xs" },
+}
+```
+
 ## Sidenav levels
 
 A page-owned content navigation tree starts a sidenav level. Its sections replace the mode content while that page or any child location is open. The nearest owner in the page location parent chain wins, so levels can nest. Pages with only header or footer trees do not start a level.

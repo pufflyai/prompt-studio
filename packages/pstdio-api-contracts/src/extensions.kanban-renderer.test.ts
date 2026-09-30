@@ -1,7 +1,54 @@
 import { describe, expect, test } from "bun:test";
+import type { KanbanRendererAttributeDescriptor } from "./extension-kernel";
 import { extensionKanbanRendererRecordSchema } from "./extensions";
 
 describe("extension kanban renderer contracts", () => {
+  test("preserves fixed list columns and text or link displays", () => {
+    const attributes: KanbanRendererAttributeDescriptor[] = [
+      {
+        id: "site",
+        label: "Site",
+        type: { kind: "string" },
+        display: { kind: "text" },
+        listColumn: { placement: "start", size: "sm" },
+      },
+      {
+        id: "url",
+        label: "Open source",
+        type: { kind: "string" },
+        display: { kind: "link" },
+        listColumn: { placement: "end", size: "xs", align: "end" },
+      },
+    ];
+    const record = extensionKanbanRendererRecordSchema.parse({
+      id: "threads",
+      extensionId: "example.radar",
+      title: "Threads",
+      queryHandlerId: "threads.query",
+      attributes,
+    });
+    expect(record.attributes).toEqual(attributes);
+  });
+
+  test("rejects an unsupported fixed column size", () => {
+    expect(
+      extensionKanbanRendererRecordSchema.safeParse({
+        id: "threads",
+        extensionId: "example.radar",
+        title: "Threads",
+        queryHandlerId: "threads.query",
+        attributes: [
+          {
+            id: "site",
+            label: "Site",
+            type: { kind: "string" },
+            listColumn: { placement: "start", size: "arbitrary" },
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
   test("preserves extension-declared default saved views", () => {
     const record = extensionKanbanRendererRecordSchema.parse({
       id: "planner.tickets",

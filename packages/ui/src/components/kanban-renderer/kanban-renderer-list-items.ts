@@ -37,6 +37,21 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
   } = input;
   const supportsManualReorder = settings.ordering.attributeId === MANUAL_ORDERING;
   const listDisplayProperties = settings.displayProperties.filter((property) => property !== "id");
+  const columns = listDisplayProperties.flatMap((id) => {
+    const attribute = findAttribute(attributes, id);
+    return attribute?.listColumn && attribute.displayable !== false ? [attribute] : [];
+  });
+  const flowingProperties = listDisplayProperties.filter((id) => !columns.some((column) => column.id === id));
+  const toCells = (row: TRow, placement: "start" | "end") =>
+    columns
+      .filter((column) => column.listColumn!.placement === placement)
+      .map((column) => ({
+        id: column.id,
+        size: column.listColumn!.size,
+        align: column.listColumn!.align,
+        badge: collectDisplayBadges(row, attributes, [column.id])[0],
+        content: collectDisplayCustomSlots(row, attributes, [column.id]),
+      }));
   const getStatusPresentation = (attributeId: string, key: string) => {
     const descriptor = findAttribute(attributes, attributeId);
     const option = descriptor ? findEnumOption(descriptor.type, key) : undefined;
@@ -59,8 +74,10 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
       eyebrow: shorthand && shorthand !== row.title ? shorthand : undefined,
       title: row.title,
       ...getRowStatusPresentation(row),
-      badges: collectDisplayBadges(row, attributes, listDisplayProperties),
-      customSlots: collectDisplayCustomSlots(row, attributes, listDisplayProperties),
+      badges: collectDisplayBadges(row, attributes, flowingProperties),
+      customSlots: collectDisplayCustomSlots(row, attributes, flowingProperties),
+      startCells: toCells(row, "start"),
+      endCells: toCells(row, "end"),
       contextMenuActions: getRowContextMenuActions?.(row),
       onClick: () => onRowClick?.(row),
       onBadgeChange: onAttributeChange

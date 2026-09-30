@@ -44,6 +44,11 @@ export const spacing = {
 };
 
 export const sizes = {
+  "kanban-column-2xs": { value: sp[200] },
+  "kanban-column-xs": { value: sp[300] },
+  "kanban-column-sm": { value: "2.125rem" },
+  "kanban-column-md": { value: "3.25rem" },
+  "kanban-column-lg": { value: sp[900] },
   "folder-picker-width": { value: "36.5rem" },
   "folder-picker-height": { value: "31rem" },
   "folder-picker-header": { value: "3.25rem" },

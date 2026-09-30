@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { toCreateFields } from "./kanban-renderer-contribution-helpers";
+import { createMutableAttributeSource, toCreateFields } from "./kanban-renderer-contribution-helpers";
 
 const localize = (value: unknown, fallback?: string) => {
   if (typeof value === "string") return value;
@@ -12,6 +12,42 @@ const localize = (value: unknown, fallback?: string) => {
 
 const recordWith = (params: Record<string, unknown>) =>
   ({ id: "r", extensionId: "e", title: "R", createRow: { commandId: "c", params } }) as never;
+
+test("extension list columns survive initial loading and query refreshes", () => {
+  const source = createMutableAttributeSource(
+    { id: "threads", extensionId: "example.radar", title: "Threads", queryHandlerId: "query" },
+    [
+      {
+        id: "site",
+        label: "Site",
+        type: { kind: "string" },
+        display: { kind: "text" },
+        listColumn: { placement: "start", size: "sm" },
+      },
+    ],
+    localize,
+    (_record, attribute) => attribute,
+  );
+  if (!("getSnapshot" in source.source)) throw new Error("Expected live attributes");
+  expect(source.source.getSnapshot()[0]).toMatchObject({
+    display: { kind: "text" },
+    listColumn: { placement: "start", size: "sm" },
+  });
+  source.set([
+    {
+      id: "url",
+      label: { $l10n: "source", default: "Open source" },
+      type: { kind: "string" },
+      display: { kind: "link" },
+      listColumn: { placement: "end", size: "xs" },
+    },
+  ]);
+  expect(source.source.getSnapshot()[0]).toMatchObject({
+    label: "Open source",
+    display: { kind: "link" },
+    listColumn: { placement: "end", size: "xs" },
+  });
+});
 
 describe("toCreateFields", () => {
   test("maps a markdown param to a markdown field", () => {

@@ -20,6 +20,16 @@ export interface MutableAttributeSource {
   set(attributes: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined): void;
 }
 type UnknownDisplayReporter = (attributeId: string, kind: string) => void;
+const resolveDisplay = (
+  display: NonNullable<WorkbenchExtensionKanbanRendererRecord["attributes"]>[number]["display"],
+) => {
+  if (display?.kind === "text") return { kind: "text" as const };
+  if (display?.kind === "link") return { kind: "link" as const };
+  if (display?.kind === "badge-list" && typeof display.itemsAttributeId === "string") {
+    return { kind: "badge-list" as const, itemsAttributeId: display.itemsAttributeId };
+  }
+  return undefined;
+};
 export type ResolveStatusOptions = (
   statuses: Extract<
     NonNullable<WorkbenchExtensionKanbanRendererRecord["attributes"]>[number]["type"],
@@ -40,10 +50,7 @@ const localizeAttributes = (
 ): AttributeDescriptor[] =>
   (attributes ?? []).map((attribute) => {
     const display = attribute.display;
-    const knownDisplay =
-      display?.kind === "badge-list" && typeof display.itemsAttributeId === "string"
-        ? { kind: "badge-list" as const, itemsAttributeId: display.itemsAttributeId }
-        : undefined;
+    const knownDisplay = resolveDisplay(display);
     if (display && !knownDisplay) reportUnknownDisplay?.(attribute.id, display.kind);
     const base: AttributeDescriptor = {
       ...attribute,

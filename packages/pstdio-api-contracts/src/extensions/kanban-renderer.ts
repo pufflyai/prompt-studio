@@ -30,10 +30,12 @@ const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
 
 const kanbanRendererAttributeDisplaySchema = z.union([
   z.object({ kind: z.literal("badge-list"), itemsAttributeId: z.string() }),
+  z.object({ kind: z.literal("text") }),
+  z.object({ kind: z.literal("link") }),
   z
     .object({ kind: z.string() })
     .passthrough()
-    .refine((display) => display.kind !== "badge-list"),
+    .refine((display) => !["badge-list", "text", "link"].includes(display.kind)),
 ]);
 
 const kanbanRendererAttributeSchema = z.object({
@@ -46,6 +48,13 @@ const kanbanRendererAttributeSchema = z.object({
   displayable: z.boolean().optional(),
   editable: z.boolean().optional(),
   display: kanbanRendererAttributeDisplaySchema.optional(),
+  listColumn: z
+    .object({
+      placement: z.enum(["start", "end"]),
+      size: z.enum(["2xs", "xs", "sm", "md", "lg"]),
+      align: z.enum(["start", "end"]).optional(),
+    })
+    .optional(),
 });
 
 export const kanbanRendererSettingsSchema = z.object({

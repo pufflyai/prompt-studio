@@ -1,10 +1,15 @@
-import { Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import { type ComponentType, type DragEvent, type ReactNode, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { ListRow } from "../list-row/list-row";
-import type { ListRowItem } from "../list-row/list-row.types";
-import { KanbanRendererAttributeBadge } from "./kanban-renderer-attribute-badge";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
+import type { KanbanRendererListCell } from "./kanban-renderer-list-cells";
+import {
+  hasKanbanRendererListEndContent,
+  KanbanRendererListEndContent,
+  KanbanRendererListIcon,
+  KanbanRendererListLabel,
+} from "./kanban-renderer-list-content";
 
 export interface KanbanRendererListItem {
   id: string;
@@ -18,6 +23,8 @@ export interface KanbanRendererListItem {
   statusColorPalette?: string;
   badges?: AttributeBadge[];
   customSlots?: ReactNode[];
+  startCells?: KanbanRendererListCell[];
+  endCells?: KanbanRendererListCell[];
   children?: KanbanRendererListItem[];
   onClick?: () => void;
   onBadgeChange?: (attributeId: string, value: unknown) => void;
@@ -100,64 +107,11 @@ const updateExpandedState = (expandedState: KanbanRendererListExpandedState, row
   return { ...expandedState, [rowId]: isExpanded };
 };
 
-const renderLabel = (item: KanbanRendererListItem, isGroup: boolean) => {
-  if (isGroup) {
-    return (
-      <HStack gap="xs" minW="0" maxW="full" flex="1">
-        <Text textStyle="label/S/medium" minW="0" truncate>
-          {item.title}
-        </Text>
-        <Text textStyle="label/XS" color="fg.muted" flexShrink={0}>
-          {item.countBadge}
-        </Text>
-      </HStack>
-    );
-  }
-
-  return (
-    <HStack gap="compact" minW="0" maxW="full" flex="1">
-      {item.eyebrow ? (
-        <Text data-testid="list-row-eyebrow" flexShrink={0} textStyle="mono/XS" color="fg.muted" truncate>
-          {item.eyebrow}
-        </Text>
-      ) : null}
-      <Text textStyle="paragraph/S/regular" minW="0" truncate>
-        {item.title}
-      </Text>
-    </HStack>
-  );
-};
-
-const renderEndContent = (item: KanbanRendererListItem) => {
-  const hasBadges = (item.badges?.length ?? 0) > 0 || (item.customSlots?.length ?? 0) > 0;
-
-  if (!hasBadges) return null;
-
-  return (
-    <HStack gap="xs" flexShrink={0}>
-      <Wrap gap="2xs" flexShrink={0}>
-        {item.badges?.map((badge) => (
-          <KanbanRendererAttributeBadge key={badge.attributeId} badge={badge} onChange={item.onBadgeChange} />
-        ))}
-        {item.customSlots}
-      </Wrap>
-    </HStack>
-  );
-};
-
-const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): ListRowItem => ({
+const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean) => ({
   id: item.id,
-  label: renderLabel(item, item.isGroup === true),
-  icon: item.statusIcon ? (
-    <Icon
-      data-testid={item.isGroup ? "list-status-icon" : "row-status-icon"}
-      as={item.statusIcon}
-      boxSize="1rem"
-      colorPalette={item.statusColorPalette ?? item.countColorPalette ?? "gray"}
-      color={item.statusColor ?? (item.isGroup || item.statusColorPalette ? "colorPalette.solid" : "fg.muted")}
-    />
-  ) : undefined,
-  endContent: renderEndContent(item),
+  label: <KanbanRendererListLabel item={item} />,
+  icon: item.statusIcon || item.startCells?.length ? <KanbanRendererListIcon item={item} /> : undefined,
+  endContent: hasKanbanRendererListEndContent(item) ? <KanbanRendererListEndContent item={item} /> : undefined,
   isContainer: hasChildren,
   contextMenuItems: item.contextMenuActions?.map((action) => ({
     id: action.key,
@@ -302,6 +256,8 @@ const KanbanRendererListRow = (props: KanbanRendererListRowProps) => {
     >
       <ListRow
         {...rowItem}
+        asChild={Boolean(item.startCells?.length || item.endCells?.length || item.customSlots?.length)}
+        tabIndex={0}
         aria-label={isGroup ? undefined : item.title}
         variant={isGroup ? "compact" : "collection"}
         depth={row.depth}

@@ -59,27 +59,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const labelId = useId();
 
-  const item: ListRowItem = {
-    id,
-    label,
-    description,
-    icon,
-    iconColor,
-    indicator,
-    endContent,
-    tooltip,
-    disabled,
-    isContainer,
-    isNavigable,
-    href,
-    navigationIntent,
-    menuItems,
-    menuPlacement,
-    contextMenuItems,
-    actions,
-    children,
-    onActivate,
-  };
+  const item: ListRowItem = props;
 
   const dragProps = { draggable, onDragStart, onDragOver, onDragEnd, onDrop };
 
@@ -125,7 +105,9 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(event);
     if (event.defaultPrevented) return;
+    if (event.target !== event.currentTarget) return;
     if (event.key !== "Enter" && event.key !== " ") return;
+    if (!onActivate && !hasMenuItems && !showChevron) return;
 
     event.preventDefault();
     if (isDisabled) return;
@@ -193,7 +175,14 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
 
   if (asChild) {
     return wrap(
-      <chakra.div ref={ref} {...rowProps} {...dragProps} {...activationProps} onPointerMove={onPointerMove}>
+      <chakra.div
+        ref={ref}
+        {...rowProps}
+        {...dragProps}
+        {...activationProps}
+        onKeyDown={handleKeyDown}
+        onPointerMove={onPointerMove}
+      >
         {content}
       </chakra.div>,
     );

@@ -42,7 +42,10 @@ export type AttributeKind = AttributeType["kind"];
 // Keep the display and badge contracts below aligned with
 // pstdio-api-contracts/src/extension-kernel/types/kanban-renderer.ts. This published
 // package cannot import the private contracts package, so it owns a structural copy.
-export type AttributeDisplayDescriptor = { kind: "badge-list"; itemsAttributeId: string };
+export type AttributeDisplayDescriptor =
+  | { kind: "badge-list"; itemsAttributeId: string }
+  | { kind: "text" }
+  | { kind: "link" };
 
 type CollectionBadgeJsonValue =
   | string
@@ -82,6 +85,11 @@ export interface AttributeDescriptor {
   displayable?: boolean;
   editable?: boolean;
   display?: AttributeDisplayDescriptor;
+  listColumn?: {
+    placement: "start" | "end";
+    size: "2xs" | "xs" | "sm" | "md" | "lg";
+    align?: "start" | "end";
+  };
   render?: (value: unknown, row: KanbanRendererRow) => ReactNode;
   compare?: (a: unknown, b: unknown) => number;
 }

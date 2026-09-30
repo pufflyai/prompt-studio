@@ -1,4 +1,5 @@
 import { defineCommand, defineExtension, definePage, defineView, params, workbenchModes } from "@pstdio/sdk/extensions";
+import { columns } from "./columns";
 
 const regions = defineCommand({
   id: "regions",
@@ -79,7 +80,7 @@ const board = defineView({
   title: "Experiments board",
   body: { kind: "kanban", toolbarActions, query: () => ({ rows: [] }) },
 });
-const pages = [table, board].map((view) =>
+const pages = [table, board, columns].map((view) =>
   definePage({
     id: view.id,
     title: view.title,
@@ -89,4 +90,4 @@ const pages = [table, board].map((view) =>
     slots: [],
   }),
 );
-export default defineExtension({ commands: [regions, locales, run], views: [table, board], pages });
+export default defineExtension({ commands: [regions, locales, run], views: [table, board, columns], pages });

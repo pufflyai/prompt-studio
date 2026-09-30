@@ -764,6 +764,10 @@ interface CollectionBadgeItem {
 type KanbanRendererAttributeDisplay = {
   kind: "badge-list";
   itemsAttributeId: string;
+} | {
+  kind: "text";
+} | {
+  kind: "link";
 };
 interface KanbanRendererAttributeDescriptor {
   id: string;
@@ -775,6 +779,11 @@ interface KanbanRendererAttributeDescriptor {
   displayable?: boolean;
   editable?: boolean;
   display?: KanbanRendererAttributeDisplay;
+  listColumn?: {
+    placement: "start" | "end";
+    size: "2xs" | "xs" | "sm" | "md" | "lg";
+    align?: "start" | "end";
+  };
 }
 interface KanbanRendererSettings {
   viewMode: KanbanRendererViewMode;

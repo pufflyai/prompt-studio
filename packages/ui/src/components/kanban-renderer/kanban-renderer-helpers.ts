@@ -1,7 +1,9 @@
 import { createElement, type ReactNode } from "react";
 import { CollectionBadge } from "./collection-badge";
+import { KanbanRendererAttributeDisplay } from "./kanban-renderer-attribute-display";
 import type { AttributeBadge } from "./kanban-renderer-badge-helpers";
 import { renderEnumBadge, renderMultiEnumBadge } from "./kanban-renderer-badge-helpers";
+import { resolveAttributeDisplay } from "./kanban-renderer-display-values";
 import { getEnumOptions, toTitleCase } from "./kanban-renderer-enum-helpers";
 import type {
   AttributeDescriptor,
@@ -169,7 +171,14 @@ export const collectDisplayCustomSlots = (
     if (!descriptor || descriptor.displayable === false) continue;
 
     const value = getAttributeValue(row, descriptor);
-    const slot = descriptor.render ? descriptor.render(value, row) : renderBadgeListDisplay(descriptor, value, row);
+    let slot: ReactNode;
+    if (descriptor.render) slot = descriptor.render(value, row);
+    else if (descriptor.display?.kind === "badge-list") slot = renderBadgeListDisplay(descriptor, value, row);
+    else {
+      const display = resolveAttributeDisplay(descriptor, value);
+      if (display)
+        slot = createElement(KanbanRendererAttributeDisplay, { key: descriptor.id, label: descriptor.label, display });
+    }
     if (isRenderableNode(slot)) slots.push(slot);
   }
   return slots;
