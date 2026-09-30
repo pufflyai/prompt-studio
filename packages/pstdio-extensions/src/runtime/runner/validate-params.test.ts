@@ -40,6 +40,24 @@ describe("validateCommandParams: workspace params", () => {
 });
 
 describe("declared provider params", () => {
+  test("accepts custom choices when the provider allows them", async () => {
+    const { resolveDeclaredParams } = await import("./validate-params");
+    const schema = {
+      image: params.select({ options: [{ label: "Small", value: "small" }], allowCustomValues: true }),
+    };
+    expect(resolveDeclaredParams(schema, { image: "custom" })).toEqual({ image: "custom" });
+  });
+
+  test("reports unsupported command-backed provider choices clearly", async () => {
+    const { resolveDeclaredParams } = await import("./validate-params");
+    const schema = {
+      image: params.select({
+        options: { command: { kind: "command", id: "images" }, valueField: "id", labelField: "name" },
+      }),
+    };
+    expect(() => resolveDeclaredParams(schema, { image: "small" })).toThrow("requires fixed options");
+  });
+
   test("fills defaults and rejects unknown keys and options", async () => {
     const { resolveDeclaredParams } = await import("./validate-params");
     const schema = {

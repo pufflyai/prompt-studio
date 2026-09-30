@@ -23,6 +23,7 @@ export const resolveWorkspaceParams = async (
     const base = schema.base;
     if (
       base.type === "select" &&
+      Array.isArray(base.options) &&
       typeof input.base === "string" &&
       !base.options.some((option) => option.value === input.base)
     ) {
@@ -51,7 +52,7 @@ export const validateWorkspaceParams = (providerId: string, schema: ParamObjectS
       Object.entries(schema)
         .map(([key, descriptor]) => {
           const options =
-            descriptor.type === "select" || descriptor.type === "multi-select"
+            (descriptor.type === "select" || descriptor.type === "multi-select") && Array.isArray(descriptor.options)
               ? ` (${descriptor.options.map((option) => option.value).join(", ")})`
               : ` (${descriptor.type})`;
           return `${key}${options}`;

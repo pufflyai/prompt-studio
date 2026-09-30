@@ -83,6 +83,17 @@ export const validateCommandParams = (schema: ParamObjectSchema, params: unknown
   return { ok: true };
 };
 
+const validateDeclaredChoice = (key: string, descriptor: ParamDescriptor, value: unknown) => {
+  if (value === undefined || (descriptor.type !== "select" && descriptor.type !== "multi-select")) return;
+  const options = descriptor.options;
+  if (!Array.isArray(options)) throw new Error(`Param "${key}" requires fixed options for a workspace provider`);
+  if (descriptor.allowCustomValues) return;
+  const values = Array.isArray(value) ? value : [value];
+  if (values.some((entry) => !options.some((option) => option.value === entry))) {
+    throw new Error(`Param "${key}" must use these options: ${options.map((option) => option.value).join(", ")}`);
+  }
+};
+
 export const resolveDeclaredParams = (schema: ParamObjectSchema, input: Record<string, unknown>) => {
   const unknown = Object.keys(input).filter((key) => !Object.hasOwn(schema, key));
   if (unknown.length) throw new Error(`Unknown params: ${unknown.join(", ")}`);
@@ -93,16 +104,7 @@ export const resolveDeclaredParams = (schema: ParamObjectSchema, input: Record<s
   const result = validateCommandParams(schema, params);
   if (!result.ok) throw new Error(result.reason);
   for (const [key, descriptor] of Object.entries(schema)) {
-    const value = params[key];
-    if (value === undefined) continue;
-    if (descriptor.type === "select" || descriptor.type === "multi-select") {
-      const values = Array.isArray(value) ? value : [value];
-      if (values.some((entry) => !descriptor.options.some((option) => option.value === entry))) {
-        throw new Error(
-          `Param "${key}" must use these options: ${descriptor.options.map((option) => option.value).join(", ")}`,
-        );
-      }
-    }
+    validateDeclaredChoice(key, descriptor, params[key]);
   }
   return params;
 };
