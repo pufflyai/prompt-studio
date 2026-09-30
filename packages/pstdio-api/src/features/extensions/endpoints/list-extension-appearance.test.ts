@@ -54,7 +54,7 @@ describe("list extension appearance", () => {
         displayName: "Lab",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       }),
     );
     writeFileSync(
@@ -121,7 +121,7 @@ describe("list extension appearance", () => {
         displayName: "Lab",
         publisher: "pstdio",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       }),
     );
     writeFileSync(

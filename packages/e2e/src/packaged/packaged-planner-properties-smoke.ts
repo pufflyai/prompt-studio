@@ -41,4 +41,20 @@ export const expectPlannerProperties = async (
       expect.objectContaining({ id: "status", type: "resource", editable: true }),
     ]),
   );
+  for (const [command, params] of [
+    ["ticket-tag.delete-option", { tagId: "default-priority", optionId: "default-priority-urgent" }],
+    ["ticket-tag.apply-draft", { tagId: "default-priority", optionIdsToDelete: ["default-priority-high"] }],
+    ["ticket-tag.delete", { tagId: "default-priority" }],
+  ] as const) {
+    const response = await fetch(`${commandUrl}/pstdio.pstdio-planner.command.${command}/execute`, {
+      method: "POST",
+      headers: commandHeaders,
+      body: JSON.stringify({ params }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      outcome: { ok: true },
+      eventIds: expect.arrayContaining(["pstdio.pstdio-planner.event.tickets.changed"]),
+    });
+  }
 };

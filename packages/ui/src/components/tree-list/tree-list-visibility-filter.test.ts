@@ -217,6 +217,20 @@ describe("buildTreeVisibilityMenuActions", () => {
     expect(actions.map((action) => action.key)).toEqual(["node:tickets", "__reset-visibility"]);
   });
 
+  test("names headerless sections by their menu label and leaves unnamed sections out", () => {
+    const actions = buildTreeVisibilityMenuActions(
+      {
+        headerSections: [{ id: "header", menuLabel: "Header", canHide: true, nodes: [] }],
+        sections: [{ id: "unnamed", canHide: true, nodes: [{ id: "row", label: "Row", canHide: true }] }],
+      },
+      {},
+      {},
+      noopActions,
+      options,
+    );
+    expect(actions.map((action) => action.label)).toEqual(["Header", "Row", "Reset to default"]);
+  });
+
   test("shows the eye on visible entries and eye-off on hidden entries", () => {
     const actions = buildTreeVisibilityMenuActions({ sections }, {}, {}, noopActions, options);
     const findKey = (key: string) => actions.find((a) => a.key === key);
@@ -243,4 +257,9 @@ describe("buildTreeVisibilityMenuActions", () => {
     actions.find((action) => action.key === "node:help")?.onClick();
     expect(toggled).toEqual(["search", "help"]);
   });
+});
+
+test("keeps an empty section with actions so users can create its first item", () => {
+  const sections = [{ id: "notes", label: "Notes", actions: [{ id: "create", label: "New note" }], nodes: [] }];
+  expect(filterVisibleSections(sections, {}, {})).toEqual(sections);
 });

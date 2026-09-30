@@ -64,6 +64,8 @@ export type {
   KanbanRendererQueryState,
   KanbanRendererRow,
   KanbanRendererSettings,
+  KanbanRendererViewsProvider,
+  KanbanRendererViewsSource,
   Keybinding,
   KeybindingRegistry,
   KeybindingSequence,
@@ -229,6 +231,7 @@ export type {
 
 export {
   batchWorkbenchChanges,
+  createLevelNavigation,
   createRendererReadRegistry,
   createStatusBarRegistry,
   createStatusRegistry,

@@ -24,7 +24,7 @@ const writeExtension = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src/first.tsx"), "console.log('first');");
@@ -50,7 +50,7 @@ const writeSingleWebviewExtension = (root: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('webview');");
@@ -77,7 +77,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -119,7 +119,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -146,7 +146,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
       );
       releaseInitialFirst();
       await waitFor(
-        () => existsSync(join(root, "cache/extension-lab/pstdio.lab.view.first/dist")),
+        () => existsSync(join(root, "cache/installed-lab/pstdio.lab.view.first/dist")),
         "First build was not published.",
       );
 
@@ -180,10 +180,10 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
-      reportBuildSuccess: async (_installName, _webviewId, expectedSource) => {
+      reportBuildSuccess: async (_installedExtensionId, _webviewId, expectedSource) => {
         successes.push(expectedSource);
       },
       buildWebview: async (input) => {

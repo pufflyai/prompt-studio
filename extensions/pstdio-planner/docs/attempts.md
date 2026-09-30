@@ -31,8 +31,8 @@ session starts.
 3. The implementation agent saves a change request report and calls
    `pstdio.pstdio-planner.command.submit-change-request`. Planner validates the session,
    workspace HEAD, report, and expected attempt state before appending a revision.
-4. The repo-local `pstdio-planner-loops` extension starts one review for the
-   oldest `review_ready` revision. The review session has `planner-review` and
+4. `pstdio.pstdio-planner.command.run-review` starts one review for the oldest
+   `review_ready` revision. The review session has `planner-review` and
    `planner-attempt` anchors.
 5. The reviewer calls `pstdio.pstdio-planner.command.submit-review` with an explicit verdict and
    structured threads. Requested changes return to the same implementation

@@ -1,8 +1,16 @@
-import { defineNavigationTree, defineView, l10n, params, viewDataEvents, workbenchModes } from "@pstdio/sdk/extensions";
+import {
+  defineNavigationItem,
+  defineNavigationTree,
+  defineView,
+  l10n,
+  params,
+  viewDataEvents,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
 import { createNoteCommand, deleteNoteCommand, renameNoteCommand } from "./commands";
 import { notesFileAccess } from "./file-access";
 import { listNotes } from "./notes";
-import { notesChanged, notesMount, noteTarget } from "./pages";
+import { notesChanged, notesMount, notesPage, noteTarget } from "./pages";
 
 const newNoteAction = {
   id: "create",
@@ -27,47 +35,40 @@ export const notesTree = defineView({
         {
           id: "notes",
           collapsible: false,
-          nodes: [
-            {
-              id: "notes",
-              label: l10n("navigation.notes", "Notes"),
-              icon: "notebook-pen",
-              collapsible: true,
-              actions: [{ ...newNoteAction, disabled: !writable }],
-              children: notes.map((note) => ({
-                id: note.id,
-                label: note.title,
-                icon: "file-text",
-                target: noteTarget(note.id, note.title),
-                contextMenuActions: [
-                  {
-                    id: "rename",
-                    label: l10n("tree.actions.renameNote", "Rename note"),
-                    icon: "pencil",
-                    command: renameNoteCommand.ref,
-                    disabled: !writable,
-                    params: { noteId: note.id },
-                    input: {
-                      title: params.text({
-                        label: l10n("params.title", "Title"),
-                        required: true,
-                        defaultValue: note.title,
-                      }),
-                    },
-                    submitLabel: "Rename",
-                  },
-                  {
-                    id: "delete",
-                    label: l10n("tree.actions.deleteNote", "Delete"),
-                    icon: "trash",
-                    command: deleteNoteCommand.ref,
-                    disabled: !writable,
-                    params: { noteId: note.id },
-                  },
-                ],
-              })),
-            },
-          ],
+          label: l10n("navigation.notes", "Notes"),
+          actions: [{ ...newNoteAction, disabled: !writable }],
+          nodes: notes.map((note) => ({
+            id: note.id,
+            label: note.title,
+            icon: "file-text",
+            target: noteTarget(note.id, note.title),
+            contextMenuActions: [
+              {
+                id: "rename",
+                label: l10n("tree.actions.renameNote", "Rename note"),
+                icon: "pencil",
+                command: renameNoteCommand.ref,
+                disabled: !writable,
+                params: { noteId: note.id },
+                input: {
+                  title: params.text({
+                    label: l10n("params.title", "Title"),
+                    required: true,
+                    defaultValue: note.title,
+                  }),
+                },
+                submitLabel: "Rename",
+              },
+              {
+                id: "delete",
+                label: l10n("tree.actions.deleteNote", "Delete"),
+                icon: "trash",
+                command: deleteNoteCommand.ref,
+                disabled: !writable,
+                params: { noteId: note.id },
+              },
+            ],
+          })),
         },
       ];
     },
@@ -76,7 +77,17 @@ export const notesTree = defineView({
 
 export const notesTreeNavigation = defineNavigationTree({
   id: "note-list",
-  owner: workbenchModes.project,
+  owner: notesPage.ref,
   slot: "content",
   view: notesTree.ref,
+});
+
+export const notesNavigationItem = defineNavigationItem({
+  id: "notes",
+  owner: workbenchModes.project,
+  slot: "content",
+  label: l10n("navigation.notes", "Notes"),
+  icon: "notebook-pen",
+  group: "",
+  action: { kind: "page", page: notesPage.ref },
 });

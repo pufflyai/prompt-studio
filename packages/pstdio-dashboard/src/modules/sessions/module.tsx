@@ -18,13 +18,16 @@ import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
+import {
+  dashboardNavigationSections,
+  registerDashboardNavigationContribution,
+} from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { openResourceSessionPreview } from "./session-auto-open";
-import { createSessionsSidenavSections } from "./sessions-sidenav-tree";
+import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
 
 const SessionViewWidget = lazy(() =>
   import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionViewWidget })),
@@ -76,7 +79,7 @@ const registerSessionsPage = (ctx: WorkbenchModuleContext) => {
     title: dashboardViews.sessions.label,
     icon: dashboardViews.sessions.icon,
     path: "sessions",
-    modeId: "sessions",
+    modeId: "project",
     main: {
       kind: "view",
       view: {
@@ -93,7 +96,7 @@ const registerSessionsPage = (ctx: WorkbenchModuleContext) => {
     title: "Session",
     icon: dashboardViews.sessions.icon,
     path: "session",
-    modeId: "sessions",
+    modeId: "project",
     parentId: dashboardViews.sessions.id,
     resource: {
       kinds: [
@@ -139,22 +142,26 @@ const syncSessionsPageSelection = (ctx: WorkbenchModuleContext) => {
   updateDashboardSidenav(ctx, { selectedNode: resourceKey(workbenchResource) });
 };
 const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
+  ctx.navigationTrees.registerContribution({
+    id: "dashboard.sessions.level",
+    owner: { kind: "page", id: dashboardViews.sessions.id, extensionId: "pstdio" },
+    sourceExtensionId: "pstdio",
+    declarationIndex: 0,
+    getSections: () => buildSessionsLevelSections(createDashboardSessions(getDashboardSelectedProjectId(ctx))),
+  });
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.project-nav",
     modes: ["project"],
-    getSections: () => [{ id: "navigation.root", nodes: [createSessionsNavigationNode()] }],
+    getSections: () => [{ ...dashboardNavigationSections.root, nodes: [createSessionsNavigationNode()] }],
   });
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.list",
-    modes: ["sessions", "project"],
+    modes: ["project"],
+    resolveResource: ({ resource }) => (resource?.type === "workspace" ? resource : undefined),
     getSections: (_workbench, input) => {
-      const workspace = input.modeId === "project" && input.resource?.type === "workspace" ? input.resource : undefined;
-      if (input.modeId === "project" && !workspace) return [];
-      return createSessionsSidenavSections({
-        projectId: getDashboardSelectedProjectId(ctx),
-        workspace,
-        nodeTarget: workspace ? "side" : "resource",
-      });
+      const workspace = input.resource?.type === "workspace" ? input.resource : undefined;
+      if (!workspace) return [];
+      return buildWorkspaceSessionsSections(createDashboardSessions(getDashboardSelectedProjectId(ctx)), workspace);
     },
   });
 };
@@ -178,7 +185,7 @@ interface CreateSessionsModuleInput {
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
   sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
 }
-// The sessions slice owns the sessions mode, sidenav, and chat view.
+// The sessions slice owns the Sessions pages, sidenav level, and chat view.
 export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
   ({
     id: "dashboard.sessions",
@@ -215,12 +222,6 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       // Persist the Side Panel's actual active session. Main-panel session navigation uses
       // the same in-memory selection context, but must not create a duplicate panel on boot.
       const unsubscribeSelection = registerSidePanelSessionPersistence(ctx, input.sessionSelectionPersistence);
-      ctx.modes.registerMode({
-        id: "sessions",
-        label: "Sessions",
-        panels: ["main", "side"],
-        activate: () => undefined,
-      });
       ctx.resources.registerProvider({
         id: "dashboard-workbench.sessions",
         kind: "session",

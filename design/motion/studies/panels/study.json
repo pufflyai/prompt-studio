@@ -1,0 +1,50 @@
+{
+  "title": "Panel reveals",
+  "description": "Panel contents retain their final geometry. Reverse midway and resize directly with the pointer.",
+  "duration": 14,
+  "markers": [
+    {
+      "at": 1,
+      "label": "Side opens"
+    },
+    {
+      "at": 3,
+      "label": "Side closes"
+    },
+    {
+      "at": 4,
+      "label": "Open"
+    },
+    {
+      "at": 4.09,
+      "label": "Reverse"
+    },
+    {
+      "at": 5,
+      "label": "Open again"
+    },
+    {
+      "at": 7,
+      "label": "Drag divider"
+    },
+    {
+      "at": 9,
+      "label": "Terminal opens"
+    },
+    {
+      "at": 11,
+      "label": "Terminal closes"
+    },
+    {
+      "at": 12,
+      "label": "Terminal opens"
+    },
+    {
+      "at": 12.09,
+      "label": "Reverse terminal"
+    }
+  ],
+  "group": "Workbench",
+  "canvas": "workbench",
+  "params": []
+}

@@ -1,0 +1,62 @@
+{
+  "title": "Streaming text",
+  "description": "Close-up of the session. Compare immediate append, a 240 ms chunk fade, and a word reveal over 600 ms. Word reveal delays readability within each received chunk; older text stays unchanged. Instant and reduced motion show text immediately.",
+  "duration": 14,
+  "markers": [
+    {
+      "at": 1,
+      "label": "First words"
+    },
+    {
+      "at": 3,
+      "label": "Burst"
+    },
+    {
+      "at": 5,
+      "label": "Code"
+    },
+    {
+      "at": 7,
+      "label": "Read earlier"
+    },
+    {
+      "at": 9,
+      "label": "Background arrivals"
+    },
+    {
+      "at": 11,
+      "label": "Follow response"
+    }
+  ],
+  "group": "Chat",
+  "canvas": {
+    "width": 420,
+    "height": 640
+  },
+  "params": [
+    {
+      "id": "streaming",
+      "name": "Text arrival",
+      "type": "selection",
+      "description": "Chunk fade: 240 ms. Word reveal: 600 ms per received chunk. Instant and reduced motion remove both effects.",
+      "options": [
+        {
+          "id": "append",
+          "name": "Immediate"
+        },
+        {
+          "id": "fade",
+          "name": "Chunk fade"
+        },
+        {
+          "id": "words",
+          "name": "Word reveal"
+        }
+      ],
+      "default": {
+        "left": "append",
+        "right": "words"
+      }
+    }
+  ]
+}

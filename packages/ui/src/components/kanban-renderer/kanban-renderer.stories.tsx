@@ -6,7 +6,12 @@ import { useEffect, useState } from "react";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
-import type { KanbanRendererCreateSubmission, KanbanRendererSavedView, ViewMode } from "./types";
+import type {
+  KanbanRendererCreateSubmission,
+  KanbanRendererSavedView,
+  KanbanRendererViewsSource,
+  ViewMode,
+} from "./types";
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
 const meta: Meta<typeof KanbanRenderer> = {
@@ -76,6 +81,30 @@ const Wrapper = (props: {
   withTicketMenu?: boolean;
   rows?: StoryRow[];
 }) => {
+  const [views, setViews] = useState(() =>
+    (props.defaultViews ?? []).map((view, index) => ({ ...view, builtIn: index === 0 })),
+  );
+  const [defaultViewId, setDefaultViewId] = useState(props.defaultActiveViewId ?? views[0]?.id ?? "default");
+  const viewsSource: KanbanRendererViewsSource | undefined = props.defaultViews
+    ? {
+        views,
+        defaultViewId,
+        onCreateView: async (input) => {
+          const created = { ...input, id: crypto.randomUUID(), builtIn: false };
+          setViews((current) => [...current, created]);
+          return created;
+        },
+        onUpdateView: async (id, input) => {
+          setViews((current) => current.map((view) => (view.id === id ? { ...view, ...input } : view)));
+        },
+        onDeleteView: async (id) => {
+          setViews((current) => current.filter((view) => view.id !== id));
+        },
+        onSetDefaultView: async (id) => {
+          setDefaultViewId(id ?? views[0].id);
+        },
+      }
+    : undefined;
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [rows, setRows] = useState<StoryRow[]>(props.rows ?? initialRows);
   const storageKey = props.storageKey ?? STORYBOOK_STORAGE_KEY;
@@ -83,12 +112,10 @@ const Wrapper = (props: {
     viewMode: props.viewMode ?? "board",
     columnGrouping: props.columnGrouping ?? "status",
     rowGrouping: props.rowGrouping ?? "none",
-    displayProperties: props.displayProperties,
+    displayProperties: props.displayProperties ?? [],
   };
   const initialState = {
     settings: defaultSettings,
-    views: props.defaultViews,
-    activeViewId: props.defaultActiveViewId,
   };
   const reset = useKanbanRendererStore(storageKey, (state) => state.reset, initialState);
 
@@ -110,6 +137,7 @@ const Wrapper = (props: {
   return (
     <Box p="sm" height="560px">
       <KanbanRenderer<StoryRow>
+        viewsSource={viewsSource}
         rows={props.showEmptyState ? [] : rows}
         storageKey={storageKey}
         attributes={attributes}
@@ -232,7 +260,6 @@ const SAVED_VIEWS: KanbanRendererSavedView[] = [
   {
     id: "all",
     title: "All",
-    isDefault: true,
     settings: viewSettings("board", ["priority"]),
     filters: {},
   },

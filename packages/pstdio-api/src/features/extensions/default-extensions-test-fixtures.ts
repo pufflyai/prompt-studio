@@ -62,7 +62,7 @@ export const writeExtension = (
   dir: string,
   namespace: string,
   scope?: "repo" | "user",
-  apiVersion = EXTENSION_API_VERSION,
+  apiVersion = `^${EXTENSION_API_VERSION}`,
 ) => {
   mkdirSync(dir, { recursive: true });
   writeFileSync(

@@ -134,16 +134,14 @@ export const createAnchoredWorkspace = async (
     CommandContext<{
       ticket?: string;
       rowId?: string;
-      base?: string;
     }>,
     "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
   >,
   commandParams: {
     ticket?: string;
     rowId?: string;
-    base?: string;
   },
-  base?: string,
+  base: string,
 ) => {
   const ticketRef = resolveTicket(ctx, commandParams);
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
@@ -153,7 +151,7 @@ export const createAnchoredWorkspace = async (
     shorthand_base: shorthand,
     anchors: [anchor],
     provider_id: "pstdio.worktree",
-    params: { base: base ?? commandParams.base ?? "HEAD" },
+    params: { base },
   });
   await requireReadyWorkspace(ctx, workspace);
 

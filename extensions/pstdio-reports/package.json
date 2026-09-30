@@ -1,12 +1,12 @@
 {
   "name": "pstdio-reports",
-  "version": "0.36.1",
+  "version": "0.38.0",
   "displayName": "Prompt Studio Reports",
   "description": "Built-in pstdio workspace reports for agent handoffs.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.12 || 1.0.0-alpha.13 || 1.0.0-alpha.14"
+    "pstdio": "^0.1.0"
   },
   "pstdio": {
     "scope": "user"

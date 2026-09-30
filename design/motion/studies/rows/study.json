@@ -1,0 +1,30 @@
+{
+  "title": "Row creation",
+  "description": "Create a folder among existing files, then cancel another. Space opens over 140 ms before the new row fades in over 80 ms. Empty names disable Create folder.",
+  "duration": 8,
+  "markers": [
+    {
+      "at": 1,
+      "label": "New folder"
+    },
+    {
+      "at": 2,
+      "label": "Name entered"
+    },
+    {
+      "at": 3,
+      "label": "Create"
+    },
+    {
+      "at": 4.5,
+      "label": "Create another"
+    },
+    {
+      "at": 5.5,
+      "label": "Cancel"
+    }
+  ],
+  "group": "Workbench",
+  "canvas": "workbench",
+  "params": []
+}

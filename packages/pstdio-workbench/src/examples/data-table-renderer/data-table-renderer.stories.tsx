@@ -42,3 +42,7 @@ export const MultipleSelection: Story = {
     },
   },
 };
+
+const emptyWorkbench = createWorkbench();
+emptyWorkbench.registerModule(createDataTableRendererStoryModule(true));
+export const EmptyWithAction: Story = { name: "Empty table with primary action", args: { workbench: emptyWorkbench } };

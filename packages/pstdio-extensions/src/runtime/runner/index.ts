@@ -12,4 +12,4 @@ export {
   type ScopeDisposer,
   type ScopedHostApis,
 } from "./runner";
-export { type ValidateParamsResult, validateCommandParams } from "./validate-params";
+export { resolveDeclaredParams, type ValidateParamsResult, validateCommandParams } from "./validate-params";

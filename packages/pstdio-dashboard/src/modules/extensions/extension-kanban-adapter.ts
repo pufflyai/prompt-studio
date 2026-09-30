@@ -15,6 +15,7 @@ import { resolveLocalizableString } from "@/shared/extensions/extension-localiza
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
+import { createSharedBoardViews } from "./extension-board-views";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { createBadgeListRenderer } from "./extension-workspace-badge-renderer";
 
@@ -176,6 +177,7 @@ export const createDashboardKanbanAdapter = (input: {
   const { ctx, executeCommand, metadata, projectId } = input;
   const menuRegistrations = buildDashboardExtensionMenuRegistrations(metadata).registrations;
   const adapter: WorkbenchExtensionKanbanRendererAdapter = {
+    createViewsProvider: (record) => createSharedBoardViews(projectId, record, metadata),
     decorateAttribute: (_record, attribute) => decorateAttribute(ctx, projectId, attribute),
     resolveRowResource: (_record, row) => toDashboardExtensionResource(row.resource, projectId),
     resolveRowActionResource: (record, row) => rowResource(record, row, projectId),

@@ -65,19 +65,27 @@ const holdProjectExtensionReads = async (page: import("@playwright/test").Page, 
   };
 };
 
+const createProject = async (request: import("@playwright/test").APIRequestContext) => {
+  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: `Marketplace extension ${Date.now()}` }, createRepo()),
+  });
+  expect(projectResponse.ok()).toBe(true);
+  return (await projectResponse.json()) as { id: string };
+};
+
+// Reports is in the catalog but not in the e2e defaults, so it starts as a Marketplace entry.
+const marketplaceExtension = "pstdio-reports";
+const marketplaceExtensionName = "Prompt Studio Reports";
+const installedManifestPath = () => join(process.env.E2E_HOME!, "extensions", marketplaceExtension, "package.json");
+
 test("deletes, installs, disables, and enables a Marketplace extension without stale lists", async ({
   page,
   request,
 }) => {
-  const repoPath = createRepo();
-  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: folderProjectInput({ name: `Marketplace extension ${Date.now()}` }, repoPath),
-  });
-  expect(projectResponse.ok()).toBe(true);
-  const project = (await projectResponse.json()) as { id: string };
+  const project = await createProject(request);
 
   const initialInstallResponse = await request.post(
-    `${apiBase}/v1/projects/${project.id}/extensions/marketplace/pstdio-planner-loops/install`,
+    `${apiBase}/v1/projects/${project.id}/extensions/marketplace/${marketplaceExtension}/install`,
   );
   expect(initialInstallResponse.status(), await initialInstallResponse.text()).toBe(200);
 
@@ -86,15 +94,13 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   const list = (await listResponse.json()) as {
     extensions: Array<{ enabled: boolean; id: string; installName: string }>;
   };
-  const installed = list.extensions.find((extension) => extension.installName === "pstdio-planner-loops");
+  const installed = list.extensions.find((extension) => extension.installName === marketplaceExtension);
   expect(installed).toMatchObject({ enabled: true });
-  expect(existsSync(join(repoPath, ".pstdio/extensions/pstdio-planner-loops/package.json"))).toBe(true);
+  expect(existsSync(installedManifestPath())).toBe(true);
 
   await openExtensions(page, project.id);
-  const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Planner Automation" });
-  const availableRow = page
-    .getByTestId("marketplace-extension-entry")
-    .filter({ hasText: "Prompt Studio Planner Automation" });
+  const installedRow = page.getByTestId("extension-entry").filter({ hasText: marketplaceExtensionName });
+  const availableRow = page.getByTestId("marketplace-extension-entry").filter({ hasText: marketplaceExtensionName });
 
   await expect(installedRow).toBeVisible();
   await expect(availableRow).toHaveCount(0);
@@ -116,7 +122,7 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   await expect(page.getByTestId("extensions-panel")).toBeVisible();
   await expect(installedRow).toHaveCount(0);
   await expect(availableRow).toBeVisible();
-  expect(existsSync(join(repoPath, ".pstdio/extensions/pstdio-planner-loops/package.json"))).toBe(false);
+  expect(existsSync(installedManifestPath())).toBe(false);
 
   await deleteReads.wait();
   await deleteReads.release();
@@ -124,14 +130,14 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   const installReads = await holdProjectExtensionReads(page, project.id);
   const installResponse = page.waitForResponse(
     (response) =>
-      response.url().includes("/extensions/marketplace/pstdio-planner-loops/install") &&
+      response.url().includes(`/extensions/marketplace/${marketplaceExtension}/install`) &&
       response.request().method() === "POST",
   );
   await availableRow.getByTestId("marketplace-extension-install").click();
   expect((await installResponse).status()).toBe(200);
   await expect(installedRow).toBeVisible();
   await expect(availableRow).toHaveCount(0);
-  expect(existsSync(join(repoPath, ".pstdio/extensions/pstdio-planner-loops/package.json"))).toBe(true);
+  expect(existsSync(installedManifestPath())).toBe(true);
   await installReads.wait();
   await installReads.release();
 
@@ -158,9 +164,15 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   await expect(checkbox).toBeChecked();
   await enableReads.wait();
   await enableReads.release();
+});
+
+test("disables and enables an extension automation", async ({ page, request }) => {
+  const project = await createProject(request);
+  await openExtensions(page, project.id);
+  const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Workbench fixture" });
 
   await installedRow.click();
-  const automationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Refine backlog tickets" });
+  const automationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Lab heartbeat" });
   await expect(automationRow).toBeVisible();
   const automationCheckbox = automationRow.locator("input[type='checkbox']");
   const automationSwitch = automationRow.locator("[data-scope='switch'][data-part='control']");
@@ -174,14 +186,12 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   expect((await disableAutomationResponse).status()).toBe(200);
   await expect(automationCheckbox).not.toBeChecked();
   await page.getByTestId("extension-detail-back").click();
-  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("3/4");
+  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("0/1");
   await disableAutomationReads.wait();
   await disableAutomationReads.release();
 
   await installedRow.click();
-  const enabledAutomationRow = page
-    .getByTestId("extension-automation-row")
-    .filter({ hasText: "Refine backlog tickets" });
+  const enabledAutomationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Lab heartbeat" });
   const enabledAutomationCheckbox = enabledAutomationRow.locator("input[type='checkbox']");
   const enabledAutomationSwitch = enabledAutomationRow.locator("[data-scope='switch'][data-part='control']");
   await expect(enabledAutomationCheckbox).not.toBeChecked();
@@ -194,12 +204,10 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   expect((await enableAutomationResponse).status()).toBe(200);
   await expect(enabledAutomationCheckbox).toBeChecked();
   await page.getByTestId("extension-detail-back").click();
-  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("4/4");
+  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("1/1");
   await enableAutomationReads.wait();
   await enableAutomationReads.release();
 
   await openExtensions(page, project.id);
-  const persistedRow = page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Planner Automation" });
-  await expect(persistedRow.locator("input[type='checkbox']")).toBeChecked();
-  await expect(persistedRow.getByTestId("extension-automation-status")).toContainText("4/4");
+  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("1/1");
 });

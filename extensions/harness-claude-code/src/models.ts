@@ -35,10 +35,15 @@ const asRecord = (value: unknown) =>
 export const parseClaudeModels = (input: unknown): AgentModel[] => {
   const models = asRecord(input)?.models;
   if (!Array.isArray(models)) return [];
+  const seenIds = new Set<string>();
 
   return models.flatMap((entry) => {
     const model = asRecord(entry);
     if (!model || typeof model.value !== "string") return [];
+    // The CLI lists its default model and Opus separately, but the default becomes Opus.
+    const identity = modelIdentity(model.value, model.displayName);
+    if (seenIds.has(identity.id)) return [];
+    seenIds.add(identity.id);
     const levels = Array.isArray(model.supportedEffortLevels)
       ? model.supportedEffortLevels.filter((level): level is string => typeof level === "string")
       : [];
@@ -46,7 +51,7 @@ export const parseClaudeModels = (input: unknown): AgentModel[] => {
 
     return [
       {
-        ...modelIdentity(model.value, model.displayName),
+        ...identity,
         ...(typeof model.description === "string" ? { description: model.description } : {}),
         paramOverrides: { thinking: supportsEffort ? thinkingParam(levels) : null },
       },

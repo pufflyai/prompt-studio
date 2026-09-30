@@ -21,6 +21,7 @@ import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPl
 import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { FloatingTextFormatToolbarPlugin } from "../shared/plugins/FloatingTextFormatToolbarPlugin";
+import { ListMarkerWidthPlugin } from "../shared/plugins/list-marker-width-plugin";
 import { AwarenessCursorsCSS } from "./awareness-cursors";
 
 export interface CollaborativeMarkdownEditorProps {
@@ -99,6 +100,7 @@ export function CollaborativeMarkdownEditor(props: CollaborativeMarkdownEditorPr
           />
           <LinkPlugin />
           <ListPlugin />
+          <ListMarkerWidthPlugin />
           <TabIndentationPlugin maxIndent={7} />
           <HorizontalRulePlugin />
           <CodeHighlightingPlugin />

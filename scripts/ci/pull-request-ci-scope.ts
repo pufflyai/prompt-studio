@@ -42,12 +42,15 @@ export function resolveCiScope({ event, changedFiles, packageDirs, affectedPacka
   const full =
     event !== "pull_request" ||
     changedFiles.some((file) => !isPackageFile(file, packageDirs) && !isDocumentation(file));
-  if (full) return { lernaFilter: "", windows: true, e2e: true, license: true };
+  if (full) return { lernaFilter: "", windows: true, e2e: true, license: true, publishedExtensions: true };
 
   return {
     lernaFilter: `--since ${PULL_REQUEST_BASE}`,
     windows: affectedPackages.some((name) => WINDOWS_SENSITIVE_PACKAGES.includes(name)),
     e2e: affectedPackages.includes("e2e"),
+    publishedExtensions: changedFiles.some((file) =>
+      ["extensions", "packages/sdk", "packages/ui", "packages/pstdio-api-contracts"].some((dir) => isInside(file, dir)),
+    ),
     license: changedFiles.some((file) => ["bun.lock", "package.json"].includes(basename(file))),
   };
 }

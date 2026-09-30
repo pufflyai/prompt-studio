@@ -71,7 +71,7 @@ describe("runtime authentication", () => {
 
   test("allows signed read-only webview assets from opaque origins without cookies", async () => {
     const basePath = handle.deps.extensionWebviewAccess
-      .runtimeUrl({ installName: "missing", webviewId: "missing" })
+      .runtimeUrl({ installedExtensionId: "missing", webviewId: "missing" })
       .replace(/\/runtime$/, "");
 
     for (const path of [`${basePath}/runtime`, `${basePath}/assets/module.js`]) {
@@ -135,7 +135,7 @@ describe("runtime authentication", () => {
     let staleRuntimeUrl: string;
     try {
       staleRuntimeUrl = previous.deps.extensionWebviewAccess.runtimeUrl({
-        installName: "missing",
+        installedExtensionId: "missing",
         webviewId: "missing",
       });
     } finally {

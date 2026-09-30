@@ -1,7 +1,9 @@
 import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import { handleDialogAcceptShortcut, ScrollArea } from "@pstdio/ui";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import type { Command, RegisteredMenuItem, WorkbenchCommandExecutionContext } from "../../core";
+import type { ExecuteOptionCommand } from "./command-option-resolver";
+import { CommandOptionStatus } from "./command-option-status";
 import {
   buildCommandParamInitialValues,
   type CommandParamEntry,
@@ -12,6 +14,7 @@ import {
   normalizeCommandParamValues,
 } from "./command-palette-params";
 import { CommandParamField, type CommandParamFieldRenderer } from "./command-param-field";
+import { useCommandOptions } from "./use-command-options";
 
 export interface CommandParamsRequest {
   record: { command: Pick<Command, "id" | "label" | "description" | "params"> };
@@ -28,6 +31,7 @@ export type { CommandParamFieldProps, CommandParamFieldRenderer } from "./comman
 interface CommandParamsDialogProps {
   request: CommandParamsRequest | null;
   renderParamField?: CommandParamFieldRenderer;
+  executeOptionCommand?: ExecuteOptionCommand;
   prepareArgs?: (input: {
     commandId: string;
     args: unknown;
@@ -51,17 +55,21 @@ const isFilled = (entry: CommandParamEntry, value: CommandParamValue) => {
 };
 
 export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
-  const { request, renderParamField, prepareArgs, onClose, onRun } = props;
-  const [values, setValues] = useState<Record<string, CommandParamValue>>({});
+  const [current, setCurrent] = useState({ request: props.request, revision: 0 });
+  if (current.request !== props.request) {
+    setCurrent({ request: props.request, revision: current.revision + 1 });
+  }
+  return props.request ? <CommandParamsForm key={current.revision} {...props} request={props.request} /> : null;
+};
+
+const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandParamsRequest }) => {
+  const { request, renderParamField, prepareArgs, executeOptionCommand, onClose, onRun } = props;
+  const [values, setValues] = useState<Record<string, CommandParamValue>>(() =>
+    buildCommandParamInitialValues(request.record.command.params, request.args, request.context),
+  );
   const [error, setError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const entries = listCommandParamEntries(request?.record.command.params);
-
-  useEffect(() => {
-    setValues(buildCommandParamInitialValues(request?.record.command.params, request?.args, request?.context));
-    setError(undefined);
-    setSubmitting(false);
-  }, [request]);
 
   const close = () => {
     if (submitting) return;
@@ -72,13 +80,19 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
     setValues((current) => ({ ...current, [key]: value }));
   };
 
+  const options = useCommandOptions(request.record.command.params ?? {}, values, executeOptionCommand, setValue);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   const run = async () => {
     if (!request || submitting) return;
+    const invalid = options.validate(values);
+    setFieldErrors(invalid);
+    if (Object.keys(invalid).length > 0) return;
     setSubmitting(true);
     setError(undefined);
     try {
       const params = normalizeCommandParamValues(request.record.command.params, values);
-      const args = mergeCommandParamArgs(request.args, params);
+      const args = mergeCommandParamArgs(request.args, params, request.record.command.params);
       const preparedArgs = prepareArgs
         ? await prepareArgs({
             commandId: request.record.command.id,
@@ -102,7 +116,9 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
     }
   };
 
-  const isValid = entries.every((entry) => !entry.required || isFilled(entry, values[entry.key]));
+  const isValid =
+    Object.keys(options.validate(values)).length === 0 &&
+    entries.every((entry) => !entry.required || isFilled(entry, values[entry.key]));
 
   return (
     <Dialog.Root
@@ -138,14 +154,26 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
                   flush stack of rows rather than rows spaced twice over. */}
               <Stack gap="0">
                 {entries.map((entry) => {
+                  const state = options.states[entry.key];
+                  const dynamic = entry.options && !Array.isArray(entry.options);
                   const fieldProps = {
-                    entry,
+                    entry: dynamic ? { ...entry, options: state?.options ?? [] } : entry,
                     value: values[entry.key],
-                    disabled: submitting,
+                    disabled: submitting || Boolean(dynamic && state?.status !== "ready"),
                     onChange: (value: CommandParamValue) => setValue(entry.key, value),
                   };
                   const custom = renderParamField?.({ ...fieldProps, context: request?.context });
-                  return <Fragment key={entry.key}>{custom ?? <CommandParamField {...fieldProps} />}</Fragment>;
+                  return (
+                    <Fragment key={entry.key}>
+                      {custom ?? <CommandParamField {...fieldProps} />}
+                      {dynamic ? <CommandOptionStatus state={state} onRetry={() => options.retry(entry.key)} /> : null}
+                      {fieldErrors[entry.key] ? (
+                        <Text role="alert" px="sm" textStyle="paragraph/XS/regular" color="fg.error">
+                          {fieldErrors[entry.key]}
+                        </Text>
+                      ) : null}
+                    </Fragment>
+                  );
                 })}
                 {error ? (
                   <Text textStyle="paragraph/S/regular" color="fg.error" px="sm" pt="xs">

@@ -9,12 +9,10 @@ import {
 interface DesktopWorkbenchState {
   selectedProjectId?: string;
   pageLocations: Record<string, string>;
-  kanbanViews: Record<string, string>;
 }
 
 export interface DesktopWorkbenchStorageBridge {
   getWorkbenchState: () => Promise<DesktopWorkbenchState>;
-  setKanbanView: (key: string, value: string | null) => Promise<void>;
   setPageLocation: (projectId: string, value: string | null) => Promise<void>;
   setSelectedProjectId: (projectId: string | null) => Promise<void>;
 }
@@ -50,7 +48,7 @@ export const createDesktopWorkbenchStorage = async (
 ) => {
   if (!bridge) return undefined;
   const state = await bridge.getWorkbenchState();
-  const durableValues = new Map<string, string>(Object.entries(state.kanbanViews));
+  const durableValues = new Map<string, string>();
   if (state.selectedProjectId) {
     durableValues.set(dashboardProjectSelectionStorageKey(dashboardWorkbenchStorageNamespace), state.selectedProjectId);
   }
@@ -70,7 +68,6 @@ export const createDesktopWorkbenchStorage = async (
       }
       durableValues.set(key, value);
       if (destination.kind === "selected-project") void bridge.setSelectedProjectId(value);
-      else if (destination.kind === "kanban-view") void bridge.setKanbanView(key, value);
       else void bridge.setPageLocation(destination.projectId, value);
     },
     removeItem: (key) => {
@@ -81,7 +78,6 @@ export const createDesktopWorkbenchStorage = async (
       }
       durableValues.delete(key);
       if (destination.kind === "selected-project") void bridge.setSelectedProjectId(null);
-      else if (destination.kind === "kanban-view") void bridge.setKanbanView(key, null);
       else void bridge.setPageLocation(destination.projectId, null);
     },
   } satisfies WorkbenchStorageLike;

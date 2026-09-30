@@ -36,7 +36,7 @@ const installed = {
     name: "pstdio-planner",
     displayName: "Prompt Studio Planner",
     version: "0.8.0",
-    enginesPstdio: "1.0.0-alpha.3",
+    enginesPstdio: "^0.1.0",
   },
   source: {
     kind: "named" as const,
@@ -158,7 +158,7 @@ describe("extension upgrade service", () => {
     expect(
       await service.canUpgrade({
         ...installedSource,
-        manifest_json: { name: "pstdio-planner", enginesPstdio: EXTENSION_API_VERSION },
+        manifest_json: { name: "pstdio-planner", enginesPstdio: `^${EXTENSION_API_VERSION}` },
         source_ref: null,
       }),
     ).toBe(false);

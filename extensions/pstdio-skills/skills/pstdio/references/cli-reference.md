@@ -22,7 +22,7 @@ pst projects view [--project-id <id>]
 pst projects delete <project-id>
 ```
 
-The alpha.12 host requires a Git repository and accepts `--repo <folder>`. The alpha.13 host accepts ordinary folders and uses `--path <folder>`. Run `pst projects create --help` to check your installed host.
+The host accepts ordinary folders and uses `--path <folder>`. Older hosts with extension API `1.0.0-alpha.12` require a Git repository and accept `--repo <folder>`. Run `pst projects create --help` to check your installed host.
 
 ## Agents
 
@@ -51,6 +51,7 @@ pst sessions resolve-session-id --agent <agent> --agent-session-id <id> [--cwd <
 
 ```sh
 pst workspaces create --provider <id> [--params <json>]
+pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'
 pst workspaces list [--json]
 pst workspaces merge --id <id> [--delete-workspace]
 pst workspaces delete --id <id>
@@ -100,7 +101,7 @@ pst tickets write --title <title> [--status <status>] [--tags <tag>...] [--user-
 pst tickets save --id <id> [--status <status>]
 pst tickets pull [--id <id>] [--force]
 pst tickets files --id <id>
-pst tickets implement --id <id> [--agent <agent>]
+pst tickets implement --id <id> [--agent '{"harnessId":"<harness>"}']
 pst tickets link --id <id> (--workspace <workspace> | --session <session-id>)
 pst tickets unlink --id <id> (--workspace <workspace> | --session <session-id>)
 pst tickets workspaces --id <id>
@@ -137,12 +138,36 @@ pst reports delete [--workspace <id>] [--name <name>]
 
 `reports write` returns absolute host paths in the default project folder for the report and its evidence files. Edit those paths, then use `reports save`. These paths do not refer to a remote workspace filesystem.
 
+Workspace params must match the provider declaration. Unknown keys, invalid values, and missing required values fail before creation. Omitted params use declared defaults. For Git worktrees, `base` defaults to the current branch; pass `base: main` explicitly to start from `main`. Errors list the accepted params and options.
+
 ## Troubleshooting
 
 | Problem | Command or check |
 | --- | --- |
-| Project is not linked | Run `pst projects create` from the selected folder (a Git repository on alpha.12). |
+| Project is not linked | Run `pst projects create` from the selected folder. |
 | Skills are missing | Run `pst agents install-skills <agent-id>`. |
 | Extensions fail validation | Run `pst extensions check`, then inspect the diagnostics. |
 | Runtime is unreachable | Run `pst serve`, then `pst logs`. |
 | Workspace cleanup failed | Run `pst workspaces list`, then remove the exact workspace when its work is safe. |
+
+## Shared board views
+
+Use `pst views boards` to discover board IDs, fields, and current options. Use
+`pst views list --board <boardId>` to inspect built-in and saved views. Create a
+shared view with `pst views create --board <boardId> --title "Urgent bugs"
+--filter priority=Urgent --filter type=Bug`. Filter values can be IDs or labels;
+use IDs when a label is ambiguous. Commands print JSON. Use `--project-id` outside
+a linked project folder.
+
+Use `pst views update --id <viewId> --title "New name"` to edit a saved view and
+`pst views delete --id <viewId>` to remove it. Duplicate a view with
+`pst views create --board <boardId> --title "Copy" --copy-from <viewId>`.
+Built-in views are read-only. Use `pst views set-default --board <boardId>
+--id <viewId>` only when asked to change the shared project default; pass `none`
+to clear it. Reorder saved views with `pst views reorder --board <boardId>
+--ids <firstId>,<secondId>`. List removed boards' saved views with
+`pst views list --orphaned` and delete them by ID.
+
+Saved views and defaults are project data. Active selection and unsaved edits
+stay local to each client. Old locally saved views are dropped. See the
+[board view reference](https://github.com/pufflyai/prompt-studio/blob/main/documentation/references/cli/0009-board-views.md).

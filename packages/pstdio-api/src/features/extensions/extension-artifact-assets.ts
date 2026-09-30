@@ -34,7 +34,7 @@ type ArtifactMountDeps = Pick<ExtensionsRouteDeps, "extensionRuntimeCatalog" | "
 
 type ResolveArtifactMountInput = { projectId: string; mountId: string } & (
   | { extensionInstanceId: string }
-  | { installName: string }
+  | { installedExtensionId: string }
 );
 
 /**
@@ -47,7 +47,7 @@ export const resolveExtensionArtifactMount = async (deps: ArtifactMountDeps, inp
   const enabled = snapshot.enabledSources.find(({ installedSource, instance }) =>
     "extensionInstanceId" in input
       ? instance.id === input.extensionInstanceId
-      : installedSource.install_name === input.installName,
+      : installedSource.id === input.installedExtensionId,
   );
   if (!enabled) return null;
 
@@ -63,7 +63,7 @@ export const resolveExtensionArtifactMount = async (deps: ArtifactMountDeps, inp
   if (!rootPath) return null;
 
   return {
-    installName: enabled.installedSource.install_name,
+    installedExtensionId: enabled.installedSource.id,
     mount: createArtifactMount({ repoRoot: rootPath, name: runtimeMount.name, mountPath: runtimeMount.relativePath }),
     runtimeMount,
   };

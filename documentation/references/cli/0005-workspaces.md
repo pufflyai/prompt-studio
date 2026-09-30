@@ -17,7 +17,7 @@ branch is selected initially; a detached checkout also offers **Current checkout
 (no branch)**. Use **Create workspace** in the footer to submit, or **Cancel** to close.
 
 ```sh
-pst workspaces create --provider pstdio.worktree --params '{"base":"HEAD"}'
+pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'
 ```
 
 The Git provider requires a usable commit. For a project in a repository subfolder, sessions run in the matching worktree subfolder. Files stay within that folder; Git diff and merge include all changed repository paths.
@@ -27,3 +27,5 @@ The Git provider requires a usable commit. For a project in a repository subfold
 Remote providers supply their own source and environment. They do not upload or synchronize the project folder. `delete` delegates resource cleanup to the provider and preserves user-selected folders.
 
 Run `pst workspaces <command> --help` for current options.
+
+Provider params are validated before creation. Errors list accepted params and choices. Unknown keys and missing required values fail; omitted values use declared defaults. Git `base` defaults to the current branch and also accepts valid commit revisions such as `HEAD` or a pinned commit SHA. Invalid revisions fail before a row or worktree is created.

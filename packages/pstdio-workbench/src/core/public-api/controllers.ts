@@ -28,6 +28,7 @@ export type {
   WorkbenchFocusState,
 } from "../controllers/focus/focus-controller";
 export { createWorkbenchFocusController, workbenchFocusRegions } from "../controllers/focus/focus-controller";
+export { createLevelNavigation } from "../controllers/page-location/navigation-level-composition";
 export type {
   CreateWorkbenchPageLocationControllerInput,
   WorkbenchPageBrowserEntry,

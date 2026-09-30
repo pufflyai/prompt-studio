@@ -3,7 +3,12 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useRendererRead } from "../use-renderer-read";
-import { expandDefaultTreeSections, loadExpandedTreeChildren, loadTreeData } from "./tree-view-load";
+import {
+  expandDefaultTreeSections,
+  type LoadedTreeData,
+  loadExpandedTreeChildren,
+  loadTreeData,
+} from "./tree-view-load";
 
 export const useTreeData = (
   workbench: WorkbenchCore,
@@ -14,6 +19,7 @@ export const useTreeData = (
   ownerKey = JSON.stringify(["tree", treeViewId, resourceKey(resource)]),
 ) => {
   const trees = getWorkbenchRenderers(workbench);
+  useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
   const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
   const project = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
@@ -27,8 +33,8 @@ export const useTreeData = (
     getPageOwner,
     getPageOwner,
   );
-  // Shell trees also query the current mode and resource. Aggregate pages in
-  // the same scope share navigation, so their global links stay mounted.
+  // Composed navigation owns its data scope. Other trees conservatively follow
+  // the page resource so pending reads cannot publish into a different resource.
   const queryKey = JSON.stringify([
     treeViewId,
     resourceKey(resource),
@@ -37,7 +43,7 @@ export const useTreeData = (
     project,
     mode,
     pageOwner,
-    resourceKey(location?.resource),
+    trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter }) ?? resourceKey(location?.resource),
   ]);
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
@@ -45,13 +51,13 @@ export const useTreeData = (
     queryKey,
     byNodeId: {},
   });
-  const read = useRendererRead({
+  const read = useRendererRead<LoadedTreeData & { children: Record<string, TreeNode[]> }>({
     workbench,
     ownerKey,
     queryKey,
-    load: async (signal) => {
+    load: async (signal, publish) => {
       const ctx = { resource, viewId, filter, signal };
-      const data = await loadTreeData(trees, treeViewId, ctx);
+      const data = await loadTreeData(trees, treeViewId, ctx, (available) => publish({ ...available, children: {} }));
       signal.throwIfAborted();
       const children =
         data && trees.getTreeRenderer(treeViewId)

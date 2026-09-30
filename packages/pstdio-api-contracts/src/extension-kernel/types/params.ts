@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { CommandRef } from "./commands";
 import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
 
@@ -14,6 +15,7 @@ export type ParamType =
   | "harness"
   | "template"
   | "resource"
+  | "workspace"
   | "json"
   | "list";
 
@@ -72,11 +74,21 @@ export type BooleanParam<TRequired extends boolean | undefined = boolean | undef
   type: "boolean";
 };
 
-type ParamOption = { label: string; value: string; icon?: string };
+export type ParamValueRef = { kind: "param-value"; key: string };
+
+export interface ParamOptionSource {
+  command: CommandRef;
+  valueField: string;
+  labelField: string;
+  params?: Record<string, unknown | ParamValueRef>;
+}
+
+export type ParamOption = { label: string; value: string; icon?: string };
 
 export type SelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
   type: "select";
-  options: ParamOption[];
+  options: ParamOption[] | ParamOptionSource;
+  allowCustomValues?: boolean;
 };
 
 export type MultiSelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
@@ -84,7 +96,8 @@ export type MultiSelectParam<TRequired extends boolean | undefined = boolean | u
   TRequired
 > & {
   type: "multi-select";
-  options: ParamOption[];
+  options: ParamOption[] | ParamOptionSource;
+  allowCustomValues?: boolean;
 };
 
 export type HarnessParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
@@ -108,6 +121,18 @@ export type ResourceParam<TRequired extends boolean | undefined = boolean | unde
 > & {
   type: "resource";
   resourceType: string;
+};
+
+// Where the command's work runs: a workspace provider and the params it declares,
+// e.g. `{ providerId: "pstdio.worktree", params: { base: "main" } }`. The host
+// renders the same provider form as its "Create workspace" dialog.
+export type WorkspaceParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
+  { providerId: string; params?: JsonObject },
+  TRequired
+> & {
+  type: "workspace";
+  /** Provider ids the user may choose from. Omit to offer every provider. */
+  providers?: string[];
 };
 
 export type JsonParam<T = unknown, TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
@@ -135,6 +160,7 @@ export type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefi
   | HarnessParam<TRequired>
   | TemplateParam<TRequired>
   | ResourceParam<TRequired>
+  | WorkspaceParam<TRequired>
   | JsonParam<TValue, TRequired>
   | ListParam<TRequired>;
 

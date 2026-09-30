@@ -9,6 +9,11 @@ import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { verifyPocketCoderLifecycle } from "./packaged-pocketcoder-lifecycle";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
+const bunTypes = dirname(Bun.resolveSync("@types/bun/package.json", import.meta.dir));
+const bunRuntimeTypes = dirname(Bun.resolveSync("bun-types/package.json", bunTypes));
+const nodeTypes = dirname(Bun.resolveSync("@types/node/package.json", bunRuntimeTypes));
+const undiciTypes = dirname(Bun.resolveSync("undici-types/package.json", nodeTypes));
+
 const repoRoot = join(import.meta.dirname, "../../../..");
 
 export const registerRemoteExecutionSmokeTests = () => {
@@ -26,6 +31,10 @@ export const registerRemoteExecutionSmokeTests = () => {
         configPath: npmConfigPath,
         outputRoot: tempRoot,
         packagePaths: [
+          bunTypes,
+          bunRuntimeTypes,
+          nodeTypes,
+          undiciTypes,
           join(repoRoot, "packages/sdk"),
           ...["mustache", "zod"].map((name) =>
             dirname(Bun.resolveSync(`${name}/package.json`, join(repoRoot, "packages/sdk"))),

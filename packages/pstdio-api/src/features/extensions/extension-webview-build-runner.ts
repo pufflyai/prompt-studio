@@ -4,6 +4,7 @@ import type { ExtensionWebviewBuilder } from "./extension-webview-builder";
 import { EXTENSION_INSTALLING_MARKER } from "./install-extension-source";
 
 export type InstalledSourceWithManifest = {
+  id: string;
   install_name: string;
   source_hash?: string | null;
   source_path: string;
@@ -35,7 +36,7 @@ export const runExtensionWebviewBuild = async (input: {
   isDisposed: () => boolean;
   key: string;
   reportFailure: (
-    installName: string,
+    installedExtensionId: string,
     webviewId: string,
     error: unknown,
     expectedSource: ExpectedWebviewBuildSource,
@@ -59,7 +60,7 @@ export const runExtensionWebviewBuild = async (input: {
     if (isSourceChanging(input.row.source_path)) return "source-changing";
     if (!input.isDisposed() && input.building.get(input.key) === input.signature) {
       await input.reportFailure(
-        input.row.install_name,
+        input.row.id,
         input.webviewId,
         webviewBuildFailure(input.row.install_name, input.webviewId, errorMessage(error)),
         expectedWebviewBuildSource(input.row),
@@ -74,7 +75,7 @@ export const runExtensionWebviewBuild = async (input: {
   if (isSourceChanging(input.row.source_path)) return "source-changing";
   if (!input.isDisposed() && input.building.get(input.key) === input.signature) {
     await input.reportFailure(
-      input.row.install_name,
+      input.row.id,
       input.webviewId,
       webviewBuildFailure(input.row.install_name, input.webviewId, result.details),
       expectedWebviewBuildSource(input.row),

@@ -1,4 +1,5 @@
-import { existsSync, renameSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { type LoadedExtension, loadExtensionSource } from "./extension-runtime";
 import { createWebviewBuildBackoff, processKey, signatureFor } from "./extension-webview-build-backoff";
 import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
@@ -27,13 +28,13 @@ export type CreateExtensionWebviewBuildManagerInput = {
   listInstalledSources: () => Promise<InstalledSourceWithManifest[]>;
   onError?: (error: unknown) => void;
   reportBuildFailure: (
-    installName: string,
+    installedExtensionId: string,
     webviewId: string,
     error: unknown,
     expectedSource: ExpectedWebviewBuildSource,
   ) => Promise<unknown>;
   reportBuildSuccess: (
-    installName: string,
+    installedExtensionId: string,
     webviewId: string,
     expectedSource: ExpectedWebviewBuildSource,
   ) => Promise<unknown>;
@@ -72,21 +73,25 @@ type WebviewBuildResult =
 
 const createBuildReporters = (input: CreateExtensionWebviewBuildManagerInput) => {
   const reportFailure = async (
-    installName: string,
+    installedExtensionId: string,
     webviewId: string,
     error: unknown,
     expectedSource: ExpectedWebviewBuildSource,
   ) => {
     try {
-      await input.reportBuildFailure(installName, webviewId, error, expectedSource);
+      await input.reportBuildFailure(installedExtensionId, webviewId, error, expectedSource);
     } catch (reportError) {
       input.onError?.(reportError);
     }
   };
 
-  const reportSuccess = async (installName: string, webviewId: string, expectedSource: ExpectedWebviewBuildSource) => {
+  const reportSuccess = async (
+    installedExtensionId: string,
+    webviewId: string,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) => {
     try {
-      await input.reportBuildSuccess(installName, webviewId, expectedSource);
+      await input.reportBuildSuccess(installedExtensionId, webviewId, expectedSource);
       return true;
     } catch (reportError) {
       input.onError?.(reportError);
@@ -122,7 +127,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     building.set(key, signature);
     backoff.recordBuildStart(key);
     const paths = resolveManagedWebviewPaths({
-      installName: row.install_name,
+      installedExtensionId: row.id,
       webviewCacheRoot,
       webviewId: webview.id,
     });
@@ -142,7 +147,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       if (!buildSource.success) {
         if (building.get(key) === signature) {
           await reportFailure(
-            row.install_name,
+            row.id,
             webview.id,
             webviewBuildFailure(row.install_name, webview.id, buildSource.details),
             expectedWebviewBuildSource(row),
@@ -198,10 +203,10 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     webview: ManagedWebview;
   }): Promise<WebviewBuildResult | null> => {
     const { packageName, row, webview } = input;
-    const key = processKey(row.install_name, webview.id);
+    const key = processKey(row.id, webview.id);
     const { buildInputs, signature, sourceEntryPath } = inspectWebviewBuild(row, packageName, webview);
     const paths = resolveManagedWebviewPaths({
-      installName: row.install_name,
+      installedExtensionId: row.id,
       webviewCacheRoot,
       webviewId: webview.id,
     });
@@ -220,7 +225,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     rmSync(result.distDir, { recursive: true, force: true });
     renameSync(result.stageDir, result.distDir);
     const expectedSource = { sourcePath: row.source_path };
-    if (await reportSuccess(row.install_name, result.webviewId, expectedSource)) {
+    if (await reportSuccess(row.id, result.webviewId, expectedSource)) {
       built.set(result.key, result.signature);
       backoff.recordBuildSuccess(result.key);
     }
@@ -233,7 +238,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     webview: ManagedWebview,
   ) => {
     const currentRows = await input.listInstalledSources();
-    const currentRow = currentRows.find((current) => current.install_name === row.install_name);
+    const currentRow = currentRows.find((current) => current.id === row.id);
     if (!currentRow || currentRow.source_path !== row.source_path) return null;
 
     const current = inspectWebviewBuild(currentRow, packageName, webview);
@@ -254,7 +259,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     );
     await Promise.all(
       managedWebviews.map(async (webview) => {
-        const key = processKey(row.install_name, webview.id);
+        const key = processKey(row.id, webview.id);
         active.add(key);
         const result = await buildManagedWebview({ packageName: loaded.metadata.name, row, webview });
         if (!result?.builtNow) return;
@@ -286,11 +291,21 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     );
   };
 
+  // Builds belong to one installed source. Folders of removed sources are never served again.
+  const removeUnownedBuilds = (rows: InstalledSourceWithManifest[]) => {
+    if (!existsSync(webviewCacheRoot)) return;
+    const owners = new Set(rows.map((row) => row.id));
+    for (const entry of readdirSync(webviewCacheRoot)) {
+      if (!owners.has(entry)) rmSync(join(webviewCacheRoot, entry), { recursive: true, force: true });
+    }
+  };
+
   const refreshNow = async () => {
     if (disposed) return;
 
     const active = new Set<string>();
     const rows = await input.listInstalledSources();
+    removeUnownedBuilds(rows);
 
     await Promise.all(
       rows.map(async (row) => {
@@ -307,9 +322,9 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       if (active.has(key)) continue;
 
       built.delete(key);
-      const [installName, webviewId] = key.split("\0");
-      if (installName && webviewId) {
-        const paths = resolveManagedWebviewPaths({ installName, webviewCacheRoot, webviewId });
+      const [installedExtensionId, webviewId] = key.split("\0");
+      if (installedExtensionId && webviewId) {
+        const paths = resolveManagedWebviewPaths({ installedExtensionId, webviewCacheRoot, webviewId });
         rmSync(paths.distDir, { recursive: true, force: true });
       }
     }

@@ -28,10 +28,14 @@ import {
   toCreateFields,
   toWorkbenchRow,
 } from "./kanban-renderer-contribution-helpers";
+import { mapViewToolbarActions } from "./view-toolbar-actions";
 
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
 
 export interface WorkbenchExtensionKanbanRendererAdapter {
+  createViewsProvider?: (
+    record: WorkbenchExtensionKanbanRendererRecord,
+  ) => import("../../core").KanbanRendererViewsProvider;
   /** Override label resolution. Defaults to workbench's `text(value, fallback)`. */
   resolveLabel?: Localizer;
   /** Post-process an attribute descriptor (after localization). Defaults to identity. */
@@ -259,10 +263,12 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         body: {
           kind: "kanban",
           resourceKind: record.resourceKind,
+          toolbarActions: mapViewToolbarActions(record),
           storageScope: context.projectId,
           attributes: attributes.source,
           defaultSettings: record.defaultSettings,
           defaultFilters: record.defaultFilters,
+          viewsProvider: adapter.createViewsProvider?.(record),
           defaultViews: record.defaultViews?.map((view) => ({
             ...view,
             title: localize(view.title, view.id),

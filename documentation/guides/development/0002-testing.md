@@ -21,7 +21,7 @@ bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
 
 Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks described in `AGENTS.md`. Documentation-reference-only edits do not.
 
-Do not run full repository or full end-to-end suites unless the user explicitly requests full validation. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, and extension API versions, then builds before translation checks, lint, and tests. `bun run test` runs package tests through Lerna followed by the E2E script, CLI, UI, and Vite terminal suites. Packaged and desktop tests run separately in CI.
+Do not run full repository or full end-to-end suites unless the user explicitly requests full validation. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs package tests through Lerna followed by the E2E script, CLI, UI, and Vite terminal suites. Packaged and desktop tests run separately in CI.
 
 Install browser dependencies before running browser tests:
 
@@ -45,6 +45,12 @@ Pull requests run only what their changes need. The `scope` job runs `scripts/ci
 - A change outside every workspace package runs every job, unless the file is Markdown, under `design/`, or `LICENSE`.
 
 On a pull request, `ci_passed` accepts skipped jobs. A Windows or e2e failure that a pull request skipped appears in the merge queue instead, and removes the pull request from the queue.
+
+## Published extension dependencies
+
+Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `tsc --noEmit`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.
+
+The CI job runs for extension, SDK, UI, and API contract changes, and for repository tooling changes that already run all jobs. It always runs in the merge queue. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 
 ## Isolation
 

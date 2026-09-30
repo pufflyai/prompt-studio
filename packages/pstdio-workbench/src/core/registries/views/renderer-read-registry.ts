@@ -1,6 +1,7 @@
 export interface RendererReadRequest<T> {
   queryKey: string;
-  load(signal: AbortSignal): Promise<T> | T;
+  load(signal: AbortSignal, publish: (value: T) => void): Promise<T> | T;
+  onProgress?(value: T): void;
   onValue(value: T): void;
   onError(error: unknown): void;
 }
@@ -32,7 +33,7 @@ export interface RendererReadRegistry {
   dispose(): Promise<void>;
 }
 
-export const createRendererReadRegistry = (options: { deadlineMs?: number } = {}): RendererReadRegistry => {
+export const createRendererReadRegistry = (): RendererReadRegistry => {
   const owners = new Map<string, ReadOwner>();
   let disposed = false;
   const release = (key: string, owner: ReadOwner) => {
@@ -56,20 +57,12 @@ export const createRendererReadRegistry = (options: { deadlineMs?: number } = {}
         return;
       }
       const controller = new AbortController();
-      const deadline = setTimeout(() => {
-        const error = new Error("The view took too long to load. Retry to load it again.");
-        controller.abort(error);
-        if (isCurrent(owner, job)) {
-          job.onError(error);
-        }
-      }, options.deadlineMs ?? 30_000);
       const settled = Promise.resolve()
         .then(() => job.run(controller.signal))
         .catch((error) => {
           if (!controller.signal.aborted && isCurrent(owner, job)) job.onError(error);
         })
         .finally(() => {
-          clearTimeout(deadline);
           owner.active = undefined;
           if (owner.pending) schedule(key, owner);
           release(key, owner);
@@ -89,7 +82,7 @@ export const createRendererReadRegistry = (options: { deadlineMs?: number } = {}
       owner.binding = token;
       owner.generation++;
       return {
-        request(request, reason = "refresh") {
+        request<T>(request: RendererReadRequest<T>, reason: "refresh" | "retry" = "refresh") {
           if (owner.binding !== token || disposed) return;
           if (owner.queryKey !== request.queryKey || reason === "retry") {
             owner.generation++;
@@ -104,7 +97,16 @@ export const createRendererReadRegistry = (options: { deadlineMs?: number } = {}
             onError: request.onError,
             async run(signal) {
               signal.throwIfAborted();
-              const value = await request.load(signal);
+              let reading = true;
+              const publish = (value: T) => {
+                if (reading && !signal.aborted && isCurrent(owner, job)) request.onProgress?.(value);
+              };
+              let value: T;
+              try {
+                value = await request.load(signal, publish);
+              } finally {
+                reading = false;
+              }
               if (!signal.aborted && isCurrent(owner, job)) request.onValue(value);
             },
           };

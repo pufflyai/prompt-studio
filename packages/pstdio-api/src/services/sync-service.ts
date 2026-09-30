@@ -1,46 +1,19 @@
-import { isNull } from "drizzle-orm";
-import {
-  type DbClient,
-  eq,
-  extension_instances,
-  files,
-  installed_extension_sources,
-  notifications,
-  projects,
-  sessions,
-  settings,
-  sql,
-  workspace_sessions,
-  workspaces,
-} from "pstdio-db";
+import { boardDefaultSyncRow } from "pstdio-api-contracts";
+import { board_default_views, board_views, type DbClient, eq, files, notifications, sql, workspaces } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
+import { getFullState, tableMap } from "../features/sync/get-full-state";
 
-const tableMap = {
-  settings,
-  projects,
-  installed_extension_sources,
-  notifications,
-  extension_instances,
-  sessions,
-  workspaces,
-  files,
-  workspace_sessions,
-} as const;
+export { SYNCED_TABLES } from "../features/sync/get-full-state";
 
-export const SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];
-
-type SupportedTable = keyof typeof tableMap;
-
-const hasDeletedAt = (table: unknown): table is Record<string, unknown> & { deleted_at: unknown } =>
-  typeof table === "object" && table !== null && "deleted_at" in table;
-
-export type SyncServiceDeps = {
-  db: DbClient;
-  eventBus: EventBus;
-};
+type SupportedTable = Exclude<keyof typeof tableMap, "board_default_views">;
+export type SyncServiceDeps = { db: DbClient; eventBus: EventBus };
 
 // Emit cascade deletes for all project dependents (children first, parent last)
 const emitProjectDependents = async (db: DbClient, projectId: string, bus: EventBus) => {
+  const views = await db.select().from(board_views).where(eq(board_views.project_id, projectId));
+  for (const row of views) bus.emit("board_views", "delete", { id: row.id });
+  const defaults = await db.select().from(board_default_views).where(eq(board_default_views.project_id, projectId));
+  for (const row of defaults) bus.emit("board_default_views", "delete", { id: boardDefaultSyncRow(row).id });
   const ws = await db.select().from(workspaces).where(eq(workspaces.project_id, projectId));
   for (const row of ws) bus.emit("workspaces", "delete", { id: row.id });
 
@@ -53,21 +26,6 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
 
 export const createSyncService = (deps: SyncServiceDeps) => {
   const { db, eventBus } = deps;
-
-  const getFullState = async () => {
-    const entries = await Promise.all(
-      SYNCED_TABLES.map(async (name) => {
-        const table = tableMap[name];
-        const query = db.select().from(table);
-        const rows = hasDeletedAt(table)
-          ? await query.where(isNull(table.deleted_at as Parameters<typeof isNull>[0]))
-          : await query;
-        return [name, rows] as const;
-      }),
-    );
-
-    return Object.fromEntries(entries) as Record<string, unknown[]>;
-  };
 
   const emitCascadeDeletes = async (table: SupportedTable, id: string) => {
     const tableRef = tableMap[table];
@@ -82,5 +40,5 @@ export const createSyncService = (deps: SyncServiceDeps) => {
     eventBus.emit(table, "delete", { id });
   };
 
-  return { getFullState, emitCascadeDeletes };
+  return { getFullState: () => getFullState(db), emitCascadeDeletes };
 };

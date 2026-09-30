@@ -24,12 +24,7 @@ export const SettingsOverlay = (props: SettingsOverlayProps) => {
   const resource = input.instance.resource;
   const nav = (
     <Box h="full" minH="0" minW="0" w="full" bg="bg.subtle">
-      <WorkbenchTreeView
-        workbench={input.workbench}
-        treeViewId={navTreeId}
-        resource={resource}
-        activeNodeId={resourceKey(resource)}
-      />
+      <WorkbenchTreeView workbench={input.workbench} treeViewId={navTreeId} activeNodeId={resourceKey(resource)} />
     </Box>
   );
   const content = (

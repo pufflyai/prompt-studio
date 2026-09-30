@@ -64,3 +64,112 @@ The source of this shipped skill is `extensions/pstdio-skills/skills/create-pstd
 Update `pstdio-skills` with the SDK release, then run `pst agents install-skills <agent-id>` from the project folder. The installer adds missing skills and replaces each existing same-name skill directory. Before running it, copy any local edits outside that directory or move them into the extension's source skill. The installer does not merge local edits. Restart the agent session to read the updated files. For source development, first load the skill extension through `pst extensions dev <path-to-pstdio-skills>`.
 
 Commands and row activation callbacks request navigation with `ctx.navigation.open(target)` and return data. After committing deletion, call `await ctx.resources.removed(resource)`. The host removes clean resource bindings across clients and inactive pages. Other active resources stay selected. Dirty editors retain their draft and stop saving until explicitly closed. Keep missing-resource loads for disconnected clients and use update-only writes for existing documents.
+
+## Sidenav levels
+
+A page-owned content navigation tree starts a sidenav level. Its sections replace the mode content while that page or any child location is open. The nearest owner in the page location parent chain wins, so levels can nest. Pages with only header or footer trees do not start a level.
+
+This extension adds a Recipes row to the project navigation. The row opens the Recipes page. That page owns the `recipe-list` tree, so the recipes replace the project navigation. Opening a recipe keeps the level, because the Recipe page declares Recipes as its parent.
+
+```ts
+import {
+  defineExtension,
+  defineNavigationItem,
+  defineNavigationTree,
+  definePage,
+  defineResourceKind,
+  defineView,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
+
+const recipe = defineResourceKind({ id: "recipe", label: "Recipe", icon: "chef-hat" });
+const recipes = [
+  { id: "pancakes", title: "Pancakes" },
+  { id: "ramen", title: "Ramen" },
+];
+
+const recipeView = defineView({
+  id: "recipe",
+  title: "Recipe",
+  body: { kind: "controls", query: async () => ({ values: {} }) },
+});
+
+// Opening this page starts the Recipes level.
+const recipesPage = definePage({
+  id: "recipes",
+  title: "Recipes",
+  path: "recipes",
+  mode: workbenchModes.project,
+  main: { kind: "panels", empty: recipeView.ref },
+  slots: [],
+});
+
+// A child page keeps the Recipes level open through its declared parent.
+const recipePage = definePage({
+  id: "recipe",
+  title: "Recipe",
+  path: "recipe",
+  mode: workbenchModes.project,
+  parent: recipesPage.ref,
+  resource: { kinds: [recipe.ref] },
+  main: { kind: "view", view: recipeView.ref, cardinality: "one" },
+  slots: [],
+});
+
+const recipeList = defineView({
+  id: "recipe-list",
+  title: "Recipes",
+  body: {
+    kind: "tree",
+    body: async () => [
+      {
+        id: "recipes",
+        label: "Recipes",
+        collapsible: false,
+        nodes: recipes.map(({ id, title }) => {
+          const resource = { type: recipe.id, id, label: title };
+          return {
+            id,
+            label: title,
+            icon: "chef-hat",
+            resource,
+            target: { kind: "page", page: recipePage.ref, resource },
+          };
+        }),
+      },
+    ],
+  },
+});
+
+export default defineExtension({
+  resourceKinds: [recipe],
+  views: [recipeView, recipeList],
+  pages: [recipesPage, recipePage],
+  navigationItems: [
+    // The main level shows one row that opens the level.
+    defineNavigationItem({
+      id: "recipes",
+      owner: workbenchModes.project,
+      slot: "content",
+      label: "Recipes",
+      icon: "chef-hat",
+      group: "",
+      action: { kind: "page", page: recipesPage.ref },
+    }),
+  ],
+  navigationTrees: [
+    // A page owner starts a level instead of adding rows to the project navigation.
+    defineNavigationTree({
+      id: "recipe-list",
+      owner: recipesPage.ref,
+      slot: "content",
+      view: recipeList.ref,
+      resourceScope: "project",
+    }),
+  ],
+});
+```
+
+The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels. Users leave a level through the breadcrumb or browser history; the Sidenav adds no Back row. Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
+
+For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.

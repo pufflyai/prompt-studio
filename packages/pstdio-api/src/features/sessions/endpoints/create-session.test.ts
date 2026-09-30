@@ -7,6 +7,7 @@ import type { HarnessExit, HarnessSession, SessionMessage } from "pstdio-api-con
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { openSessionStream } from "../../../test-utils/session-stream";
 import type { AppBindings } from "../../../types";
 import {
   createTestHarnessRecord,
@@ -349,7 +350,7 @@ describe("POST /v1/sessions - lifecycle", () => {
 
     await waitForSessionStatus(created.id, "completed");
 
-    const streamRes = await app.request(`/v1/sessions/${created.id}/stream`);
+    const streamRes = await openSessionStream(app, created.id);
     expect(streamRes.status).toBe(200);
     const body = await streamRes.text();
 
@@ -422,7 +423,7 @@ describe("POST /v1/sessions - lifecycle", () => {
 
     await waitForSessionStatus(created.id, "completed");
 
-    const streamRes = await app.request(`/v1/sessions/${created.id}/stream`);
+    const streamRes = await openSessionStream(app, created.id);
     expect(streamRes.status).toBe(200);
     const body = await streamRes.text();
 

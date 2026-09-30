@@ -89,9 +89,10 @@ export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState):
   ];
 };
 
+// A draft keeps the message it sent on screen until the created session's page or view replaces it.
 export const shouldShowPendingFollowUp = (pending: PendingFollowUpState | null, sessionId: string | null) => {
   if (!pending) return false;
-  return pending.sessionId === sessionId;
+  return sessionId === null || pending.sessionId === sessionId;
 };
 
 export const mergeMessagesWithPendingFollowUp = (

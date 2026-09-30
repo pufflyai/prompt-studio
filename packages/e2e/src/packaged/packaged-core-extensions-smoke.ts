@@ -20,6 +20,7 @@ const CORE_DEFAULT_EXTENSION_NAMES = [
   "harness-open-code",
   "pstdio-base-themes",
   "pstdio-planner",
+  "pstdio-notes",
   "pstdio-reports",
   "pstdio-skills",
 ];
@@ -47,6 +48,7 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
       files: expect.arrayContaining([
         expect.objectContaining({ path: "SKILL.md" }),
         expect.objectContaining({ path: "references/extension-api.md" }),
+        expect.objectContaining({ path: "references/native-actions.md" }),
         expect.objectContaining({ path: "references/examples.md" }),
         expect.objectContaining({ path: "references/examples/scribble.ts" }),
         expect.objectContaining({ path: "references/examples/zipline.ts" }),
@@ -171,6 +173,20 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
               owner: expect.objectContaining({ kind: "page", id: "ticket" }),
               slot: "content",
               view: expect.objectContaining({ kind: "view", id: "ticket-files" }),
+            }),
+          );
+          expect(metadata.navigationTrees).toContainEqual(
+            expect.objectContaining({
+              id: "pstdio.pstdio-notes.navigation-tree.note-list",
+              owner: expect.objectContaining({ kind: "page", id: "notes" }),
+              slot: "content",
+            }),
+          );
+          expect(metadata.navigationItems).toContainEqual(
+            expect.objectContaining({
+              id: "pstdio.pstdio-notes.navigation-item.notes",
+              owner: expect.objectContaining({ kind: "mode", id: "project" }),
+              action: expect.objectContaining({ kind: "page", page: expect.objectContaining({ id: "notes" }) }),
             }),
           );
           expect(metadata.settingsPanels).toContainEqual(

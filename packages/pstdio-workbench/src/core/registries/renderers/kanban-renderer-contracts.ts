@@ -100,7 +100,6 @@ export interface KanbanRendererSavedView {
   title: string;
   settings: KanbanRendererSettings;
   filters: KanbanRendererFilterState;
-  isDefault?: boolean;
 }
 
 export type KanbanRendererCreateFieldType =
@@ -177,4 +176,26 @@ export interface ResourceContextAction<TNode = unknown> {
   icon?: TNode;
   endContent?: TNode;
   separatorBefore?: boolean;
+}
+
+export interface KanbanRendererViewsSource {
+  views: (KanbanRendererSavedView & { builtIn: boolean })[];
+  defaultViewId: string;
+  onCreateView: (input: {
+    title: string;
+    settings: KanbanRendererSettings;
+    filters: KanbanRendererFilterState;
+    copyFrom?: string;
+  }) => Promise<KanbanRendererSavedView>;
+  onUpdateView: (
+    id: string,
+    input: { title?: string; settings?: KanbanRendererSettings; filters?: KanbanRendererFilterState },
+  ) => Promise<void>;
+  onDeleteView: (id: string) => Promise<void>;
+  onSetDefaultView: (id: string | null) => Promise<void>;
+}
+
+export interface KanbanRendererViewsProvider {
+  getSnapshot: () => KanbanRendererViewsSource | undefined;
+  subscribe: (listener: () => void) => () => void;
 }

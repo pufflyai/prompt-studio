@@ -23,11 +23,20 @@ interface SelectionInputProps {
   /** Inert, but still rendered as a control. */
   disabled?: boolean;
   searchable?: boolean;
+  allowCustomValues?: boolean;
   searchPlaceholder?: string;
   emptyText?: string;
   group?: SelectionGroup;
   size?: "xs" | "sm";
 }
+
+const withCustomChoices = (options: SelectionMenuOption[], selectedIds: string[], allowCustomValues: boolean) => {
+  if (!allowCustomValues) return options;
+  return [
+    ...options,
+    ...selectedIds.filter((id) => !options.some((option) => option.id === id)).map((id) => ({ id, name: id })),
+  ];
+};
 
 export const SelectionInput = (props: SelectionInputProps) => {
   const {
@@ -45,6 +54,7 @@ export const SelectionInput = (props: SelectionInputProps) => {
     clearable = false,
     disabled = false,
     searchable = false,
+    allowCustomValues = false,
     searchPlaceholder,
     emptyText,
     group,
@@ -69,9 +79,11 @@ export const SelectionInput = (props: SelectionInputProps) => {
       ? [value]
       : [];
 
+  const availableOptions = withCustomChoices(options, selectedIds, allowCustomValues);
+
   const getDisplayText = () => {
     const names = selectedIds
-      .map((selectedId) => options.find((option) => option.id === selectedId)?.name)
+      .map((selectedId) => availableOptions.find((option) => option.id === selectedId)?.name)
       .filter((optionName): optionName is string => Boolean(optionName));
 
     if (names.length === 0) return placeholder || "Select";
@@ -135,7 +147,8 @@ export const SelectionInput = (props: SelectionInputProps) => {
           {getDisplayText()}
         </>
       }
-      options={options}
+      options={availableOptions}
+      allowCustomValues={allowCustomValues}
       selectedIds={selectedIds}
       multiSelect={multiSelect}
       reselectable={clearable}

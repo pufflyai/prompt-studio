@@ -64,6 +64,7 @@ export const getMarketplaceExtensionContributionsHandler = (
         assembleAvailableExtensionMetadata(deps, runtime, {
           extensionId,
           installName,
+          installedExtensionId: useInstalled ? installed.id : undefined,
         }),
         200,
       );

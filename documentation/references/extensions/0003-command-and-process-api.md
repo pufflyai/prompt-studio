@@ -73,6 +73,13 @@ matching extension-owned template type and renders a dropdown. Use `params.resou
 for project resources. The dashboard lists registered resources of that type and passes the selected `{ type, id }`
 reference to the command.
 
+Use `params.workspace({ providers: ["pstdio.worktree"] })` when a command creates a workspace. The dashboard shows
+the same fields as **Create workspace**: a workspace type, then that provider's parameters, such as **Base branch** for
+a Git worktree. The command receives `{ providerId, params }` and passes it to `ctx.workspaces.create`. Leave out
+`providers` to offer every workspace type. On the CLI, pass the value as JSON:
+`--workspace '{"providerId":"pstdio.worktree","params":{"base":"main"}}'`. `harness` and `resource` params also accept
+JSON on the CLI.
+
 ## Named connections
 
 Extensions declare remote HTTP access by name. The host stores the base URL and credential. Extension code receives request and stream methods, never the secret value.
@@ -208,10 +215,51 @@ Navigation and resource removal use explicit context APIs. The host no longer in
 - After deleting data, call `await ctx.resources.removed(resource)`. This reports the committed removal to every connected client, independently of command success. Keep missing-resource handling and update-only writes so a stale save cannot recreate deleted data.
 - Remove imports of the workbench's `toWorkbenchNavigationTargetResult` and `isExtensionNavigationTarget` aliases. Use the SDK's `isNavigationTarget` for explicit target validation and `toWorkbenchNavigationTarget` when adapting a target to the workbench.
 
-Core extensions already use these APIs. Publish their alpha.14 compatibility declarations before releasing the alpha.14 host, in a separate extension PR. Their existing published SDK dependency provides both APIs; this cleanup does not require an unpublished SDK in extension manifests. Existing exact alpha.12 and alpha.13 declarations remain valid for those hosts.
+Core extensions already use these APIs, and their existing published SDK dependency provides them.
 
 ## Workspace files and context
 
 Command context resolves the selected project/workspace and exposes typed services. `ctx.projectFiles` addresses the project's default folder; `ctx.workspaceFiles` addresses the invocation workspace. Use `ctx.workspaces.getDefault()` when the operation explicitly needs the default workspace. Remote file access must follow the provider's declared capabilities instead of assuming a local path.
 
 The [context types](../../../packages/pstdio-api-contracts/src/extension-kernel/types/context.ts) define the complete project, workspace, session, file, command, event, notification, activity, storage, automation, connection, and process APIs. The [SDK package guide](../../../packages/sdk/README.md) shows file scopes and authoring boundaries.
+
+## Command-backed choices
+
+A `select` or `multi-select` parameter can use a fixed option array or a command
+that returns an array of records. Set `valueField` and `labelField` to the string
+fields in those records. The command must be registered in the extension.
+
+```ts
+const locales = defineCommand({
+  id: "locales",
+  title: "List locales",
+  params: { region: params.text() },
+  run: (_ctx, { region }) => region === "us"
+    ? [{ id: "en", name: "English" }]
+    : [{ id: "de", name: "German" }],
+});
+const input = {
+  region: params.text({ required: true }),
+  locale: params.select({
+    required: true,
+    options: {
+      command: locales.ref,
+      valueField: "id",
+      labelField: "name",
+      params: { region: params.valueOf("region") },
+    },
+  }),
+};
+```
+
+The command dialog loads choices when it opens and when a referenced sibling
+parameter changes. It shows loading, retry and empty states, ignores stale
+responses, and clears choices that are no longer available. Unknown sibling
+fields and dependency cycles produce extension diagnostics. Dependencies must
+refer to fields in the same input schema.
+
+The dialog accepts only current choices unless `allowCustomValues: true` is
+set. This validation belongs to the dialog. The command runtime does not call
+option commands again. Commands must enforce their own business rules. CLI and
+API callers pass explicit values as before; CLI help marks these parameters as
+`command-backed` and does not load choices or prompt interactively.

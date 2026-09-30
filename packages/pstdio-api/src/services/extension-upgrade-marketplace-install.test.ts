@@ -3,6 +3,25 @@ import { join, resolve } from "node:path";
 import { RepoScopedExtensionNeedsProjectFolderError } from "../features/extensions/install-extension-source";
 import { createExtensionUpgradeService, ExtensionUpgradeUnavailableError } from "./extension-upgrade-service";
 
+const repoToolsCatalog = {
+  version: 1 as const,
+  extensions: [
+    {
+      installName: "repo-tools",
+      displayName: "Repo Tools",
+      description: "Repository-owned tools.",
+      origin: {
+        kind: "git" as const,
+        url: "https://github.com/pufflyai/prompt-studio",
+        path: ".pstdio/extensions/repo-tools",
+        ref: "{hostRelease}",
+      },
+      publisher: "pufflyai",
+      default: false,
+    },
+  ],
+};
+
 describe("marketplace extension installation", () => {
   test("loads marketplace sources from the configured workspace release", async () => {
     const sourceRoot = resolve("/workspace/prompt-studio");
@@ -39,21 +58,21 @@ describe("marketplace extension installation", () => {
   test("installs a repo-scoped marketplace extension from the current source checkout", async () => {
     const repoPath = resolve("/repos/project");
     const sourceRoot = resolve("/checkout/prompt-studio");
-    const targetPath = join(repoPath, ".pstdio", "extensions", "pstdio-planner-loops");
+    const targetPath = join(repoPath, ".pstdio", "extensions", "repo-tools");
     const installed = {
       check: {} as never,
-      installName: "pstdio-planner-loops",
-      manifest: { name: "pstdio-planner-loops", pstdio: { scope: "repo" } },
+      installName: "repo-tools",
+      manifest: { name: "repo-tools", pstdio: { scope: "repo" } },
       metadata: {
-        id: "pstdio.pstdio-planner-loops",
-        name: "pstdio-planner-loops",
-        displayName: "Prompt Studio Planner Automation",
+        id: "pstdio.repo-tools",
+        name: "repo-tools",
+        displayName: "Repo Tools",
         version: "0.1.0",
-        enginesPstdio: "1.0.0-alpha.4",
+        enginesPstdio: "^0.1.0",
       },
       source: {
         kind: "local" as const,
-        path: join(sourceRoot, ".pstdio", "extensions", "pstdio-planner-loops"),
+        path: join(sourceRoot, ".pstdio", "extensions", "repo-tools"),
       },
       sourceHash: "source-hash",
       targetPath,
@@ -61,9 +80,9 @@ describe("marketplace extension installation", () => {
     const result = {
       installedSource: {
         id: "installed-1",
-        install_name: "pstdio-planner-loops",
-        extension_id: "pstdio.pstdio-planner-loops",
-        display_name: "Prompt Studio Planner Automation",
+        install_name: "repo-tools",
+        extension_id: "pstdio.repo-tools",
+        display_name: "Repo Tools",
         source_hash: "source-hash",
         source_kind: "local_path",
         source_path: targetPath,
@@ -79,6 +98,7 @@ describe("marketplace extension installation", () => {
     const installExtensionSource = mock(async () => installed as never);
     const enableInstalledSourceForProject = mock(async () => result as never);
     const service = createExtensionUpgradeService({
+      catalog: repoToolsCatalog,
       extensionService: {
         enableInstalledSourceForProject,
         getInstalledSource: async () => null as never,
@@ -102,22 +122,22 @@ describe("marketplace extension installation", () => {
       },
     });
 
-    expect(await service.installMarketplaceExtension("project-1", "pstdio-planner-loops")).toMatchObject({
-      installedSource: { install_name: "pstdio-planner-loops" },
+    expect(await service.installMarketplaceExtension("project-1", "repo-tools")).toMatchObject({
+      installedSource: { install_name: "repo-tools" },
       instance: { id: "instance-1" },
     });
     expect(installExtensionSource).toHaveBeenCalledWith(
       expect.objectContaining({
         force: true,
-        installName: "pstdio-planner-loops",
+        installName: "repo-tools",
         repoPath,
         skipInstall: true,
-        source: join(sourceRoot, ".pstdio", "extensions", "pstdio-planner-loops"),
+        source: join(sourceRoot, ".pstdio", "extensions", "repo-tools"),
       }),
     );
     expect(enableInstalledSourceForProject).toHaveBeenCalledWith(
       expect.objectContaining({
-        installName: "pstdio-planner-loops",
+        installName: "repo-tools",
         projectId: "project-1",
         sourcePath: targetPath,
       }),
@@ -126,6 +146,7 @@ describe("marketplace extension installation", () => {
 
   test("reports that a repo-scoped extension needs a project with a local folder", async () => {
     const service = createExtensionUpgradeService({
+      catalog: repoToolsCatalog,
       extensionService: {
         enableInstalledSourceForProject: async () => null as never,
         getInstalledSource: async () => null as never,
@@ -134,13 +155,13 @@ describe("marketplace extension installation", () => {
         registerInstalledSource: async () => null as never,
       },
       installExtensionSource: async () => {
-        throw new RepoScopedExtensionNeedsProjectFolderError("pstdio.pstdio-planner-loops");
+        throw new RepoScopedExtensionNeedsProjectFolderError("pstdio.repo-tools");
       },
       release: { source: "workspace", ref: "workspace-ref", root: resolve("/checkout/prompt-studio") },
       workspaceService: { getDefault: async () => ({ root_path: null }) },
     });
 
-    await expect(service.installMarketplaceExtension("project-1", "pstdio-planner-loops")).rejects.toBeInstanceOf(
+    await expect(service.installMarketplaceExtension("project-1", "repo-tools")).rejects.toBeInstanceOf(
       ExtensionUpgradeUnavailableError,
     );
   });

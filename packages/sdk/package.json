@@ -1,6 +1,6 @@
 {
   "name": "@pstdio/sdk",
-  "version": "0.36.1",
+  "version": "0.38.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
@@ -54,6 +54,7 @@
   "scripts": {
     "build": "rm -rf ./dist && bun run build:js && bun run build:types && bun ../../scripts/release/stage-package.ts .",
     "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/extensions/index.ts ./src/extensions/react/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts ./src/testing/index.ts ./src/data/index.ts --outdir ./dist --root ./src --target node --format esm --external mustache --external react --external @tanstack/react-query",
+    "build:api-report": "rm -rf ./.api-report && tsc -p tsconfig.build.json --outDir ./.api-report/declarations && rolldown -c rolldown.api-report.config.ts",
     "build:types": "rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist",
     "prepack": "bun run build",
     "typecheck": "tsc --noEmit",

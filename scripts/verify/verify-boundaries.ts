@@ -12,7 +12,6 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { parseExtensionApiVersions } from "pstdio-api-contracts/extension-kernel";
 import { sourceImports } from "./source-imports";
 
 const ROOT = path.resolve(import.meta.dir, "../..");
@@ -31,6 +30,8 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "@pstdio/sdk": ["pstdio-api-contracts"],
   "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths"],
   "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions"],
+  // pstdio-api also declares the core extensions its tests install from source,
+  // so changing one marks pstdio-api as affected.
   "pstdio-api": [
     "pstdio-api-contracts",
     "pstdio-api-runtime-host",
@@ -41,6 +42,9 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-scheduler",
     "pstdio-storage",
     "pstdio-wt",
+    "extension-lab",
+    "pstdio-planner",
+    "pstdio-skills",
   ],
   pstdio: [
     "@pstdio/sdk",
@@ -65,6 +69,7 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // e2e also declares the extensions it installs at runtime and the dashboard it serves,
   // so changing one marks e2e as affected.
   e2e: [
+    "@pstdio/sdk",
     "pstdio",
     "pstdio-api-contracts",
     "pstdio-db",
@@ -80,7 +85,6 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-dashboard",
     "pstdio-notes",
     "pstdio-planner",
-    "pstdio-planner-loops",
     "pstdio-reports",
     "pstdio-skills",
     "remote-workspaces",
@@ -89,8 +93,7 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
   "@pstdio/desktop": ["@pstdio/ui", "pstdio", "pstdio-logging", "pstdio-paths", "workbench-fixture"],
   "@pstdio/landing-page": ["@pstdio/ui"],
-  "@pstdio/motion-studies": ["@pstdio/ui"],
-  "motion-lab": ["@pstdio/sdk", "@pstdio/ui", "@pstdio/motion-studies"],
+  "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],
 };
 
 // Extensions may only consume the public authoring surface.
@@ -212,13 +215,15 @@ const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, e
   }
 };
 
+const numericIdentifier = "(?:0|[1-9]\\d*)";
+const prereleaseIdentifier = `(?:${numericIdentifier}|\\d*[A-Za-z-][0-9A-Za-z-]*)`;
+const exactVersion = new RegExp(
+  `^${numericIdentifier}\\.${numericIdentifier}\\.${numericIdentifier}(?:-${prereleaseIdentifier}(?:\\.${prereleaseIdentifier})*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$`,
+);
+
 export const checkExtensionUiVersion = (pkg: WorkspacePackage, errors: string[]) => {
   const declaredVersion = pkg.dependencies["@pstdio/ui"];
-  if (
-    pkg.isExtension &&
-    declaredVersion &&
-    (parseExtensionApiVersions(declaredVersion)?.length !== 1 || declaredVersion.trim() !== declaredVersion)
-  ) {
+  if (pkg.isExtension && declaredVersion && !exactVersion.test(declaredVersion)) {
     errors.push(`${pkg.dir}: must pin @pstdio/ui to an exact published version instead of "${declaredVersion}"`);
   }
 };

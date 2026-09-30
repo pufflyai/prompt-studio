@@ -1,0 +1,34 @@
+{
+  "title": "Floating panel",
+  "description": "The floating Side Panel grows out of its launcher over 180 ms and shrinks back over 140 ms. The launcher fades out as the panel opens and returns as it closes. The panel keeps its size, so contents never reflow. Reverse midway to check that the motion continues from its current state. Reduced motion keeps the fade and removes the growth.",
+  "duration": 9,
+  "markers": [
+    {
+      "at": 1,
+      "label": "Open"
+    },
+    {
+      "at": 3,
+      "label": "Minimize"
+    },
+    {
+      "at": 4,
+      "label": "Open"
+    },
+    {
+      "at": 4.09,
+      "label": "Reverse"
+    },
+    {
+      "at": 5,
+      "label": "Open again"
+    },
+    {
+      "at": 7,
+      "label": "Minimize"
+    }
+  ],
+  "group": "Workbench",
+  "canvas": "workbench",
+  "params": []
+}

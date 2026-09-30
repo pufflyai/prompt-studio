@@ -7,6 +7,7 @@ import type { HarnessEventSink, HarnessSession, SessionMessage } from "pstdio-ap
 import { createSessionService } from "../../services/session-service";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
+import { openSessionStream } from "../../test-utils/session-stream";
 import type { AppBindings } from "../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { checkpointFileService, createTrackedSessionStore } from "./session-store.test-utils";
@@ -121,18 +122,19 @@ describe("resolveOrphanedSessions (via createApp startup)", () => {
       body: JSON.stringify({ status: "in_progress" }),
     });
 
-    const streamRes = await app.request(`/v1/sessions/${session.id}/stream`);
+    const streamRes = await openSessionStream(app, session.id);
     const reader = streamRes.body!.getReader();
     const decoder = new TextDecoder();
     let body = "";
     try {
-      while (!body.includes("event: heartbeat")) {
+      while (!body.includes("event: ready")) {
         const chunk = await reader.read();
         if (chunk.done) break;
         body += decoder.decode(chunk.value, { stream: true });
       }
-      expect(body).toContain("event: heartbeat");
-      expect(body).not.toContain("event: end");
+      // The stream keeps waiting for an owner instead of ending the stale run.
+      const next = await Promise.race([reader.read(), Bun.sleep(1_200).then(() => null)]);
+      expect(next).toBeNull();
       const stored = await app.request(`/v1/sessions/${session.id}`);
       expect((await stored.json()).status).toBe("in_progress");
     } finally {

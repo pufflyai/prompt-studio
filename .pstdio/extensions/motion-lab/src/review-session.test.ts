@@ -1,6 +1,24 @@
 import { expect, test } from "bun:test";
 import { createReviewSession } from "./review-session";
-import { applyReviewChange, initialState, type ReviewState } from "./review-state";
+import { applyReviewChange, initialState as createInitialState, type ReviewState } from "./review-state";
+
+const initialState = (id: string) =>
+  createInitialState({
+    id,
+    params: [
+      {
+        id: "loader",
+        name: "Loader",
+        type: "selection",
+        options: [
+          { id: "spinner", name: "Spinner" },
+          { id: "aurora", name: "Aurora" },
+          { id: "contours", name: "Contours" },
+        ],
+        default: { left: "spinner", right: "aurora" },
+      },
+    ],
+  });
 
 const deferred = <T>() => {
   let resolve!: (value: T) => void;
@@ -16,9 +34,10 @@ test("reconciles another view's saved edit after a pending write finishes", asyn
   const response = deferred<ReviewState>();
   const started = deferred<ReviewState>();
   const session = createReviewSession(stored, {
+    duration: () => 7,
     read: async () => stored,
     write: async (change) => {
-      stored = applyReviewChange(stored, change, 1000);
+      stored = applyReviewChange(stored, change, 1000, 7);
       started.resolve(stored);
       return response.promise;
     },
@@ -32,12 +51,12 @@ test("reconciles another view's saved edit after a pending write finishes", asyn
   await session.refresh();
   const write = session.update({ loop: true });
   const earlierResponse = await started.promise;
-  stored = applyReviewChange(stored, { settings: { right: { loader: "contours" } } }, 1001);
+  stored = applyReviewChange(stored, { settings: { right: { values: { loader: "contours" } } } }, 1001, 7);
   await session.refresh();
   response.resolve(earlierResponse);
   await write;
   expect(visible.loop).toBe(true);
-  expect(visible.settings.right.loader).toBe("contours");
+  expect(visible.settings.right.values.loader).toBe("contours");
 });
 
 test("ignores an obsolete read and results from a disposed resource", async () => {
@@ -47,6 +66,7 @@ test("ignores an obsolete read and results from a disposed resource", async () =
   let reads = 0;
   let visible: ReviewState = initial;
   const session = createReviewSession(initial, {
+    duration: () => 7,
     read: () => (++reads === 1 ? first.promise : second.promise),
     write: async () => initial,
     onState: (state) => {
@@ -58,7 +78,7 @@ test("ignores an obsolete read and results from a disposed resource", async () =
   });
   const oldRead = session.refresh();
   const newRead = session.refresh();
-  const latest = applyReviewChange(initial, { loop: true }, 1000);
+  const latest = applyReviewChange(initial, { loop: true }, 1000, 7);
   second.resolve(latest);
   await newRead;
   first.resolve(initial);

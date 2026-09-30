@@ -13,7 +13,7 @@ workbench authoring API available to first-party and third-party extensions.
 | --- | --- |
 | Audience | Extension developers and agents that build extensions |
 | Package | `@pstdio/sdk/extensions` |
-| API version | `1.0.0-alpha.10` |
+| API version | `0.1.0` |
 | Code location | An extension package |
 | UI runtime | Native host renderer or isolated webview |
 | Host access | Validated contributions and declared capabilities |
@@ -112,6 +112,22 @@ Webviews declare `placement.close` to close themselves with `host.call("placemen
 | `icon` | No | Design-system icon name. |
 | `when` | No | Context expression that controls visibility. |
 | `action` | Yes | Page, panel, command, link, or compound navigation target. |
+
+## Navigation trees
+
+`defineNavigationTree(...)` adds a tree view to a mode or page navigation slot.
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `id` | Yes | Stable tree id inside the extension. |
+| `owner` | Yes | Mode or page that owns the tree. A page-owned `content` tree starts a Sidenav level. |
+| `slot` | `content` | Pinned `header`, scrolling `content`, or pinned `footer`. |
+| `view` | Yes | Ref of a view with a `tree` body. |
+| `resourceScope` | `selection` | `project` reads the tree once per project; `selection` reads it again for each selected resource. |
+
+A Sidenav level replaces the mode's body with the page's sections while that page or a child location is open. Header
+and footer rows stay visible from the mode through every open level. Users leave a level through the breadcrumb or
+browser history. See the **17. Sidenav levels** guide for a runnable example.
 
 ## UI contributions
 

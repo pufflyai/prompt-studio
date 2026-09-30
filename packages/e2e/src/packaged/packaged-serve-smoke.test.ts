@@ -9,6 +9,8 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
+import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+// Core extension checks include Notes page ownership and its main-level navigation item.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
@@ -16,6 +18,7 @@ import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-dia
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
+import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -136,6 +139,13 @@ test(
       });
       expect(providersRes.status).toBe(200);
       expect(await providersRes.json()).toEqual([]);
+      const invalidWorkspace = await fetch(`${started.baseUrl}/v1/workspaces`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, provider_id: "pstdio.root", params: { typo: true } }),
+      });
+      expect(invalidWorkspace.status).toBe(400);
+      expect((await invalidWorkspace.json()).error).toContain("typo");
       const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });
@@ -220,14 +230,16 @@ test(
     let child: ChildProcess | null = null;
 
     try {
-      const extensionSource = writeExtensionWithDependency(tempRoot, `1.0.0-alpha.13 || ${EXTENSION_API_VERSION}`);
+      const extensionSource = writeExtensionWithDependency(tempRoot, `^0.0.9 || ^${EXTENSION_API_VERSION}`);
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
       const navigationProbe = writeNavigationExtension(tempRoot);
+      const nativeActions = writeNativeActionsExtension(tempRoot);
       const started = await startPackagedServe(tempRoot, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
+          { source: nativeActions, installName: "native-actions" },
         ]),
         HTTPS_PROXY: "http://127.0.0.1:9",
         NPM_CONFIG_REGISTRY: "http://127.0.0.1:9",
@@ -258,6 +270,11 @@ test(
       expect(extension).toMatchObject({
         enabled: true,
         name: "dep-ext",
+      });
+      await expectPackagedNativeActions({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
       });
       await expectPackagedNavigation({
         baseUrl: started.baseUrl,
@@ -374,3 +391,5 @@ test("packaged CLI includes automation and machine authentication", () => {
 });
 
 registerExtensionAutomationSmokeTests();
+
+registerBoardViewsSmokeTests();

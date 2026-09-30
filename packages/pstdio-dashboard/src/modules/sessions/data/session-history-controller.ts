@@ -19,7 +19,7 @@ export interface SessionHistoryState {
 interface HistoryTransport {
   getConversation(id: string, signal?: AbortSignal): Promise<{ messages: SessionMessage[] }>;
   getQueuedMessages(id: string, options?: { signal?: AbortSignal }): Promise<{ messages: SessionMessage[] }>;
-  connectStream(id: string, handlers: SessionStreamHandlers, options?: { attempt?: number }): SessionStreamConnection;
+  connectStream(id: string, handlers: SessionStreamHandlers): SessionStreamConnection;
 }
 interface HistoryControllerInput {
   sessionId: string;
@@ -101,51 +101,47 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
     readHistory();
     refreshQueue();
     const active = () => !disposed && generation === current;
-    connection = transport.connectStream(
-      sessionId,
-      {
-        onReady: () => {
-          if (active()) publish({ streaming: true });
-        },
-        onPatch: (data) => {
-          if (!active()) return;
-          const patch = data as DashboardSessionMessagePatch;
-          const previous = confirmed;
-          confirmed = applyDashboardSessionMessagePatch(confirmed, patch);
-          if (confirmed === previous) return;
-          revision++;
-          if (!snapshotSeen && patch.path === "/messages") {
-            snapshotSeen = true;
-            historyBinding?.dispose();
-            historyBinding = undefined;
-          }
-          publish({ loading: false, streaming: true, error: undefined });
-        },
-        onQueuedMessages: (value) => {
-          if (!active()) return;
-          queueRevision++;
-          queueBinding?.dispose();
-          queueBinding = undefined;
-          if ("error" in value) publish({ queueError: { message: value.error, temporary: true } });
-          else {
-            queued = value.messages;
-            publish({ queueError: undefined });
-          }
-        },
-        onEnd: () => {
-          if (!active()) return;
-          publish({ loading: false, streaming: false });
-          connection?.close();
-          readHistory();
-          refreshQueue("retry");
-        },
-        onError: (error) => {
-          if (!active()) return;
-          publish({ loading: false, streaming: false, error: toSessionNotice(error) });
-        },
+    connection = transport.connectStream(sessionId, {
+      onReady: () => {
+        if (active()) publish({ streaming: true });
       },
-      { attempt: current },
-    );
+      onPatch: (data) => {
+        if (!active()) return;
+        const patch = data as DashboardSessionMessagePatch;
+        const previous = confirmed;
+        confirmed = applyDashboardSessionMessagePatch(confirmed, patch);
+        if (confirmed === previous) return;
+        revision++;
+        if (!snapshotSeen && patch.path === "/messages") {
+          snapshotSeen = true;
+          historyBinding?.dispose();
+          historyBinding = undefined;
+        }
+        publish({ loading: false, streaming: true, error: undefined });
+      },
+      onQueuedMessages: (value) => {
+        if (!active()) return;
+        queueRevision++;
+        queueBinding?.dispose();
+        queueBinding = undefined;
+        if ("error" in value) publish({ queueError: { message: value.error, temporary: true } });
+        else {
+          queued = value.messages;
+          publish({ queueError: undefined });
+        }
+      },
+      onEnd: () => {
+        if (!active()) return;
+        publish({ loading: false, streaming: false });
+        connection?.close();
+        readHistory();
+        refreshQueue("retry");
+      },
+      onError: (error) => {
+        if (!active()) return;
+        publish({ loading: false, streaming: false, error: toSessionNotice(error) });
+      },
+    });
   };
   return {
     connect,

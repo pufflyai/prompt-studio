@@ -116,6 +116,7 @@ describe("runAttemptCommand", () => {
   test("preserves explicit agent and Git base parameters", async () => {
     const workspaces: unknown[] = [];
     const sessions: unknown[] = [];
+    const commands: string[][] = [];
 
     await runAttemptCommand.run(
       ...makeCommandArgs({
@@ -123,9 +124,15 @@ describe("runAttemptCommand", () => {
         params: {
           ticket: "PS-304",
           agent: { harnessId: "codex", model: "gpt-5" },
-          base: "main",
+          workspace: { providerId: "pstdio.worktree", params: { base: "main" } },
         },
         overrides: {
+          process: {
+            run: async (input: { command: string[] }) => {
+              commands.push(input.command);
+              return { exitCode: 0, stdout: "main-sha\n", stderr: "" };
+            },
+          } as never,
           workspaces: {
             create: async (input: unknown) => {
               workspaces.push(input);
@@ -183,6 +190,7 @@ describe("runAttemptCommand", () => {
         workspaceId: "workspace-1",
       }),
     ]);
+    expect(commands).toContainEqual(expect.arrayContaining(["rev-parse", "main^{commit}"]));
   });
 });
 

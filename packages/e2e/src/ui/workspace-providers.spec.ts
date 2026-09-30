@@ -42,7 +42,7 @@ test("the global workspace action uses declared cloud parameters without a repos
       version: "1.0.0",
       main: "./extension.ts",
       type: "module",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   let projectId: string | undefined;

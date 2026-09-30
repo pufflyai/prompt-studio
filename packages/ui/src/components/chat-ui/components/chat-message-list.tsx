@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useRef, type WheelEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, type WheelEvent } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { ChatMessage } from "./ai-message";
 import { messageFadeInProps, useMessageAnimationKeys } from "./chat-message-animation";
@@ -94,6 +94,10 @@ const isTailLayoutStable = (current: TailLayoutSnapshot, previous: TailLayoutSna
   Math.abs(current.scrollTop - previous.scrollTop) <= TAIL_READY_PIXEL_EPSILON &&
   Math.abs(current.totalSize - previous.totalSize) <= TAIL_READY_PIXEL_EPSILON;
 
+// A tail that fits in the viewport has no scroll position to settle, so it can show at once.
+const tailFitsViewport = (scrollElement: HTMLElement | null, totalSize: number) =>
+  Boolean(scrollElement) && Math.max(scrollElement!.scrollHeight, totalSize) <= scrollElement!.clientHeight;
+
 const readTailLayoutSnapshot = (scrollElement: HTMLElement | null, totalSize: number): TailLayoutSnapshot => ({
   scrollTop: scrollElement?.scrollTop ?? 0,
   totalSize,
@@ -112,8 +116,13 @@ const useTailReady = (input: {
     onReadyRef.current = onReady;
   }, [onReady]);
 
-  useEffect(() => {
-    if (itemCount === 0 || typeof requestAnimationFrame === "undefined") {
+  // Runs before paint, so a conversation that fits is never hidden for the frames a long one waits.
+  useLayoutEffect(() => {
+    if (
+      itemCount === 0 ||
+      typeof requestAnimationFrame === "undefined" ||
+      tailFitsViewport(scrollRef.current, totalSize)
+    ) {
       onReadyRef.current?.();
       return;
     }

@@ -7,12 +7,13 @@ interface DataTableHeaderProps {
   attributes: AttributeDescriptor[];
   storageKey: string;
   columnControl: ReactNode;
+  actions?: ReactNode;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
 }
 
 export const DataTableHeader = (props: DataTableHeaderProps) => {
-  const { rows, attributes, storageKey, columnControl, defaultViews, defaultActiveViewId } = props;
+  const { rows, attributes, storageKey, columnControl, actions, defaultViews, defaultActiveViewId } = props;
 
   return (
     <KanbanRendererToolbar
@@ -23,6 +24,7 @@ export const DataTableHeader = (props: DataTableHeaderProps) => {
       defaultViews={defaultViews}
       defaultActiveViewId={defaultActiveViewId}
       displayControl={columnControl}
+      actions={actions}
     />
   );
 };

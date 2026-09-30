@@ -12,9 +12,11 @@ import type {
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
+  KanbanRendererViewsProvider,
   ResourceContextAction,
 } from "./kanban-renderer-contracts";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
+import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export interface KanbanRendererQueryState {
   settings: KanbanRendererSettings;
@@ -28,6 +30,7 @@ export interface KanbanRendererContribution<
 > {
   id: string;
   title: string;
+  toolbarActions?: ViewToolbarAction[];
   resourceKind?: string;
   /** Host-owned scope for persisted display settings. */
   storageScope?: string;
@@ -52,6 +55,7 @@ export interface KanbanRendererContribution<
   /** Initial settings/filters applied when the kanban renderer mounts. */
   defaultSettings?: Partial<KanbanRendererSettings>;
   defaultFilters?: KanbanRendererFilterState;
+  viewsProvider?: KanbanRendererViewsProvider;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
 

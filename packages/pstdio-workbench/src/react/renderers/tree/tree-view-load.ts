@@ -64,15 +64,32 @@ export const loadTreeData = async (
   trees: TreeRendererRegistry,
   treeId: string,
   ctx: TreeQueryContext = {},
+  onProgress?: (data: LoadedTreeData) => void,
 ): Promise<LoadedTreeData | null> => {
   if (!trees.getTreeRenderer(treeId)) return null;
+  let available: LoadedTreeData = { header: [], body: [], footer: [] };
+  const loadSlot = async (slot: keyof LoadedTreeData, signal: AbortSignal) => {
+    const context = {
+      ...ctx,
+      signal,
+      onProgress: (sections: TreeViewSection[]) => {
+        if (signal.aborted) return;
+        available = { ...available, [slot]: sections };
+        onProgress?.(available);
+      },
+    };
+    const loaders = { header: trees.getHeader, body: trees.getBody, footer: trees.getFooter };
+    const sections = await loaders[slot](treeId, context);
+    available = { ...available, [slot]: sections };
+    return sections;
+  };
 
   try {
     const [header, body, footer] = await settleReadBatch(
       [
-        (signal) => trees.getHeader(treeId, { ...ctx, signal }),
-        (signal) => trees.getBody(treeId, { ...ctx, signal }),
-        (signal) => trees.getFooter(treeId, { ...ctx, signal }),
+        (signal) => loadSlot("header", signal),
+        (signal) => loadSlot("body", signal),
+        (signal) => loadSlot("footer", signal),
       ],
       ctx.signal,
     );

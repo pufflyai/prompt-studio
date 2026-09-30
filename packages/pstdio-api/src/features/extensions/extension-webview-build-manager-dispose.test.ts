@@ -23,7 +23,7 @@ const writeExtension = (root: string, options: { loadStartedPath?: string } = {}
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src/main.tsx"), "console.log('webview');");
@@ -49,7 +49,7 @@ describe("createExtensionWebviewBuildManager dispose", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
@@ -88,7 +88,7 @@ describe("createExtensionWebviewBuildManager dispose", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
       reportBuildSuccess: async () => {},
