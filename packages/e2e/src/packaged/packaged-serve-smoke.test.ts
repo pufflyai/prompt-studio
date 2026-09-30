@@ -17,6 +17,7 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+// Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";

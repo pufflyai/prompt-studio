@@ -45,6 +45,7 @@ class FakeWatcher {
 }
 
 const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
+  ensure: async () => {},
   dispose: () => {},
   refresh: onRefresh ?? (async () => {}),
 });

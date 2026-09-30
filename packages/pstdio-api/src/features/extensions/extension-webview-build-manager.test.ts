@@ -87,7 +87,7 @@ describe("createExtensionWebviewBuildManager", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
       await manager.refresh();
 
       const distPath = join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist");
@@ -130,7 +130,7 @@ describe("createExtensionWebviewBuildManager", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
 
       expect(runCommands).toEqual([]);
     } finally {
@@ -171,7 +171,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
       await manager.refresh();
       expect(builtEntries).toHaveLength(2);
 
@@ -216,7 +216,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
 
       expect(failures).toHaveLength(1);
       expect(failures[0]?.installedExtensionId).toBe("installed-lab");
@@ -257,7 +257,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
       await manager.refresh();
       expect(runCount).toBe(1);
       expect(failures).toEqual(["pstdio.lab.view.labPage"]);
@@ -301,7 +301,7 @@ describe("createExtensionWebviewBuildManager invalidation", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
       await manager.refresh();
       expect(runCount).toBe(1);
 
@@ -345,7 +345,7 @@ describe("createExtensionWebviewBuildManager invalidation", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
       await manager.refresh();
 
       expect(runCount).toBe(0);
@@ -391,7 +391,7 @@ describe("createExtensionWebviewBuildManager invalidation", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
       await manager.refresh();
       expect(runCount).toBe(1);
 
@@ -449,7 +449,7 @@ describe("createExtensionWebviewBuildManager resilience", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
       writeExtension(sourcePath, { labPage: "src/main.tsx" });
       await manager.refresh();
 
@@ -497,7 +497,7 @@ describe("createExtensionWebviewBuildManager resilience", () => {
     });
 
     try {
-      await manager.refresh();
+      await manager.ensure("installed-lab");
 
       expect(managerErrors).toEqual([]);
       expect(failures).toHaveLength(1);
@@ -542,7 +542,7 @@ describe("createExtensionWebviewBuildManager resilience", () => {
     });
 
     try {
-      const refresh = manager.refresh();
+      const refresh = manager.ensure("installed-lab");
       manager.dispose();
       unblockBuild();
       await refresh;

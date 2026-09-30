@@ -206,6 +206,8 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
 - [0049 — Temporary scroll content width override for panel tabs](../adrs/0049-temporary-scroll-content-width-override.md)
 
+- [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
+
 ## Lessons learned
 
 - [0001 — Check runtime support before using browser APIs](../lessons-learned/0001-no-bun-eventsource.md)

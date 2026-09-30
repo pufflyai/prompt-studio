@@ -1,7 +1,12 @@
-import { existsSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type LoadedExtension, loadExtensionSource } from "./extension-runtime";
 import { createWebviewBuildBackoff, processKey, signatureFor } from "./extension-webview-build-backoff";
+import {
+  prepareWebviewBuildCache,
+  readWebviewBuildSignature,
+  removeUnownedWebviewBuilds,
+} from "./extension-webview-build-cache";
 import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
 import {
   expectedWebviewBuildSource,
@@ -39,18 +44,6 @@ export type CreateExtensionWebviewBuildManagerInput = {
     expectedSource: ExpectedWebviewBuildSource,
   ) => Promise<unknown>;
   webviewCacheRoot?: string;
-};
-
-const clearBuildState = (
-  activeBuilds: Set<AbortController>,
-  built: Map<string, string>,
-  building: Map<string, string>,
-  backoff: ReturnType<typeof createWebviewBuildBackoff>,
-) => {
-  activeBuilds.clear();
-  built.clear();
-  building.clear();
-  backoff.clear();
 };
 
 type ManagedWebview = ReturnType<typeof collectExtensionWebviews>[number];
@@ -102,13 +95,26 @@ const createBuildReporters = (input: CreateExtensionWebviewBuildManagerInput) =>
   return { reportFailure, reportSuccess };
 };
 
+const inspectWebviewBuild = (row: InstalledSourceWithManifest, packageName: string, webview: ManagedWebview) => {
+  const sourceEntryPath = resolvePackageAssetFile(webview.entry);
+  const buildInputs = inspectManagedWebviewBuildInputs({
+    entryPath: sourceEntryPath,
+    installName: row.install_name,
+    packageName,
+    packagePath: row.source_path,
+  });
+  const signature = signatureFor(row, webview.id, webview.entry.path, buildInputs.signature);
+  return { buildInputs, signature, sourceEntryPath };
+};
+
 export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
-  const built = new Map<string, string>(),
-    building = new Map<string, string>();
+  const building = new Map<string, string>();
+  const checked = new Set<string>();
+  const pending = new Map<string, Promise<void>>();
+  const activeStages = new Set<string>();
   const backoff = createWebviewBuildBackoff();
   const activeBuilds = new Set<AbortController>();
-  let disposed = false,
-    refreshQueue = Promise.resolve();
+  let disposed = false;
   const buildWebview = input.buildWebview ?? buildExtensionWebview;
   const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
   const { reportFailure, reportSuccess } = createBuildReporters(input);
@@ -123,7 +129,6 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     webview: ManagedWebview;
   }) => {
     const { buildInputs, key, packageName, row, signature, sourceEntryPath, webview } = input;
-    built.delete(key);
     building.set(key, signature);
     backoff.recordBuildStart(key);
     const paths = resolveManagedWebviewPaths({
@@ -132,7 +137,8 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       webviewId: webview.id,
     });
     const stageDir = `${paths.distDir}.staging-${crypto.randomUUID()}`;
-    rmSync(stageDir, { recursive: true, force: true });
+    prepareWebviewBuildCache(paths.distDir, activeStages);
+    activeStages.add(stageDir);
 
     let readyForPublish = false;
     try {
@@ -174,27 +180,19 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         if (!disposed && buildOutcome === "failure" && building.get(key) === signature) {
           backoff.recordBuildFailure(key, signature);
         }
-        rmSync(stageDir, { recursive: true, force: true });
         return null;
       }
 
+      writeFileSync(join(stageDir, "build-signature.txt"), signature);
       readyForPublish = true;
       return { builtNow: true, distDir: paths.distDir, key, signature, stageDir, webviewId: webview.id };
     } finally {
-      if (!readyForPublish && building.get(key) === signature) building.delete(key);
+      if (!readyForPublish) {
+        rmSync(stageDir, { recursive: true, force: true });
+        activeStages.delete(stageDir);
+        if (building.get(key) === signature) building.delete(key);
+      }
     }
-  };
-
-  const inspectWebviewBuild = (row: InstalledSourceWithManifest, packageName: string, webview: ManagedWebview) => {
-    const sourceEntryPath = resolvePackageAssetFile(webview.entry);
-    const buildInputs = inspectManagedWebviewBuildInputs({
-      entryPath: sourceEntryPath,
-      installName: row.install_name,
-      packageName,
-      packagePath: row.source_path,
-    });
-    const signature = signatureFor(row, webview.id, webview.entry.path, buildInputs.signature);
-    return { buildInputs, signature, sourceEntryPath };
   };
 
   const buildManagedWebview = async (input: {
@@ -210,7 +208,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       webviewCacheRoot,
       webviewId: webview.id,
     });
-    if (built.get(key) === signature && existsSync(paths.distDir)) {
+    if (readWebviewBuildSignature(paths.distDir) === signature) {
       return { builtNow: false, key, signature, webviewId: webview.id };
     }
     if (building.get(key) === signature) return { builtNow: false, key, signature, webviewId: webview.id };
@@ -226,7 +224,6 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     renameSync(result.stageDir, result.distDir);
     const expectedSource = { sourcePath: row.source_path };
     if (await reportSuccess(row.id, result.webviewId, expectedSource)) {
-      built.set(result.key, result.signature);
       backoff.recordBuildSuccess(result.key);
     }
   };
@@ -245,11 +242,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     return current.signature === result.signature ? currentRow : null;
   };
 
-  const refreshRow = async (
-    row: InstalledSourceWithManifest,
-    active: Set<string>,
-    validatedSource?: LoadedExtension,
-  ) => {
+  const refreshRow = async (row: InstalledSourceWithManifest, validatedSource?: LoadedExtension) => {
     if (disposed) return;
     const loaded = validatedSource ?? (await loadExtensionSource(row.source_path));
     if (disposed) return;
@@ -260,7 +253,6 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     await Promise.all(
       managedWebviews.map(async (webview) => {
         const key = processKey(row.id, webview.id);
-        active.add(key);
         const result = await buildManagedWebview({ packageName: loaded.metadata.name, row, webview });
         if (!result?.builtNow) return;
         try {
@@ -271,77 +263,70 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
           await publishCompletedBuild(currentRow, result);
         } finally {
           rmSync(result.stageDir, { recursive: true, force: true });
+          activeStages.delete(result.stageDir);
           if (building.get(key) === result.signature) building.delete(key);
         }
       }),
     );
   };
 
-  const refreshSource = async (sourcePath: string, validatedSource?: LoadedExtension) => {
+  const check = (installedExtensionId: string, validatedSource?: LoadedExtension) => {
+    const previous = pending.get(installedExtensionId);
+    const work = (async () => {
+      if (disposed) return;
+      const row = (await input.listInstalledSources()).find((row) => row.id === installedExtensionId);
+      if (row) await refreshRow(row, validatedSource);
+    })().catch((error) => input.onError?.(error));
+    // Asset requests wait for all builds, while watcher refreshes can finish independently.
+    const completion = Promise.all([previous, work]).then(() => {
+      if (pending.get(installedExtensionId) !== completion) return;
+      pending.delete(installedExtensionId);
+      if (!disposed) checked.add(installedExtensionId);
+    });
+    pending.set(installedExtensionId, completion);
+    return work;
+  };
+
+  const ensure = (installedExtensionId: string) => {
+    if (disposed) return Promise.resolve();
+    const running = pending.get(installedExtensionId);
+    if (running) return running;
+    if (checked.has(installedExtensionId)) return Promise.resolve();
+    check(installedExtensionId);
+    return pending.get(installedExtensionId)!;
+  };
+
+  const refresh = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
     if (disposed) return;
-    const rows = (await input.listInstalledSources()).filter((row) => row.source_path === sourcePath);
-    await Promise.all(
-      rows.map(async (row) => {
-        try {
-          await refreshRow(row, new Set(), validatedSource);
-        } catch (error) {
-          input.onError?.(error);
-        }
-      }),
-    );
-  };
-
-  // Builds belong to one installed source. Folders of removed sources are never served again.
-  const removeUnownedBuilds = (rows: InstalledSourceWithManifest[]) => {
-    if (!existsSync(webviewCacheRoot)) return;
-    const owners = new Set(rows.map((row) => row.id));
-    for (const entry of readdirSync(webviewCacheRoot)) {
-      if (!owners.has(entry)) rmSync(join(webviewCacheRoot, entry), { recursive: true, force: true });
+    try {
+      const rows = await input.listInstalledSources();
+      if (!sourcePath)
+        removeUnownedWebviewBuilds(
+          webviewCacheRoot,
+          rows.map((row) => row.id),
+        );
+      await Promise.all(
+        rows
+          .filter((row) => !sourcePath || row.source_path === sourcePath)
+          .map((row) => {
+            checked.delete(row.id);
+            return check(row.id, validatedSource);
+          }),
+      );
+    } catch (error) {
+      input.onError?.(error);
     }
-  };
-
-  const refreshNow = async () => {
-    if (disposed) return;
-
-    const active = new Set<string>();
-    const rows = await input.listInstalledSources();
-    removeUnownedBuilds(rows);
-
-    await Promise.all(
-      rows.map(async (row) => {
-        if (disposed) return;
-        try {
-          await refreshRow(row, active);
-        } catch (error) {
-          input.onError?.(error);
-        }
-      }),
-    );
-
-    for (const key of built.keys()) {
-      if (active.has(key)) continue;
-
-      built.delete(key);
-      const [installedExtensionId, webviewId] = key.split("\0");
-      if (installedExtensionId && webviewId) {
-        const paths = resolveManagedWebviewPaths({ installedExtensionId, webviewCacheRoot, webviewId });
-        rmSync(paths.distDir, { recursive: true, force: true });
-      }
-    }
-  };
-
-  const refresh = (sourcePath?: string, validatedSource?: LoadedExtension) => {
-    if (sourcePath) return refreshSource(sourcePath, validatedSource);
-    const nextRefresh = refreshQueue.then(refreshNow, refreshNow);
-    refreshQueue = nextRefresh.catch(() => {});
-    return nextRefresh;
   };
 
   const dispose = () => {
     disposed = true;
     for (const controller of activeBuilds) controller.abort();
-    clearBuildState(activeBuilds, built, building, backoff);
+    activeBuilds.clear();
+    building.clear();
+    checked.clear();
+    pending.clear();
+    backoff.clear();
   };
 
-  return { dispose, refresh };
+  return { dispose, ensure, refresh };
 };

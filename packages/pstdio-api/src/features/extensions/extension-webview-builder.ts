@@ -1,3 +1,11 @@
+export const extensionWebviewBuildOptions = {
+  target: "browser",
+  format: "esm",
+  define: { "process.env.NODE_ENV": '"production"' },
+  minify: true,
+  naming: { entry: "module.[ext]", asset: "[name]-[hash].[ext]" },
+} satisfies Partial<Bun.BuildConfig>;
+
 export type ExtensionWebviewBuildInput = {
   entryPath: string;
   outdir: string;
@@ -38,14 +46,7 @@ export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
     const result = await Bun.build({
       entrypoints: [input.entryPath],
       outdir: input.outdir,
-      target: "browser",
-      format: "esm",
-      define: { "process.env.NODE_ENV": '"production"' },
-      minify: true,
-      naming: {
-        entry: "module.[ext]",
-        asset: "[name]-[hash].[ext]",
-      },
+      ...extensionWebviewBuildOptions,
     });
 
     if (input.signal.aborted) return { success: false, details: "Build aborted." };
