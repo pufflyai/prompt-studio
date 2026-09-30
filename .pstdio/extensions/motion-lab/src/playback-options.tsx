@@ -1,7 +1,7 @@
 import { Button, HStack, IconButton, Text } from "@chakra-ui/react";
-import { FPS } from "@pstdio/motion-studies";
 import { SegmentedControl, Slider, Tooltip } from "@pstdio/ui";
 import { Repeat } from "lucide-react";
+import { FPS } from "./kit/model";
 import { usePlaybackPosition, useReview } from "./review-context";
 import { loopBounds } from "./review-state";
 
@@ -36,9 +36,9 @@ export const PlaybackOptions = () => {
 };
 
 export const LoopRange = () => {
-  const { state, preview, update } = useReview();
-  const { frame } = usePlaybackPosition(state);
-  const { start, end, max } = loopBounds(state);
+  const { state, study, preview, update } = useReview();
+  const { frame } = usePlaybackPosition(state, study.duration);
+  const { start, end, max } = loopBounds(state, study.duration);
   if (!state.loop) return null;
   return (
     <>

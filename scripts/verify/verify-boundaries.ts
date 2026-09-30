@@ -93,8 +93,7 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
   "@pstdio/desktop": ["@pstdio/ui", "pstdio", "pstdio-logging", "pstdio-paths", "workbench-fixture"],
   "@pstdio/landing-page": ["@pstdio/ui"],
-  "@pstdio/motion-studies": ["@pstdio/ui"],
-  "motion-lab": ["@pstdio/sdk", "@pstdio/ui", "@pstdio/motion-studies"],
+  "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],
 };
 
 // Extensions may only consume the public authoring surface.

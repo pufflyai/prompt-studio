@@ -1,0 +1,70 @@
+{
+  "title": "Tools and follow-ups",
+  "description": "Tool details reveal locally. Queued prompts make room above the stationary composer.",
+  "duration": 14,
+  "markers": [
+    {
+      "at": 1,
+      "label": "Tool starts"
+    },
+    {
+      "at": 2,
+      "label": "Expand"
+    },
+    {
+      "at": 4,
+      "label": "Queue first"
+    },
+    {
+      "at": 5.5,
+      "label": "Queue second"
+    },
+    {
+      "at": 7,
+      "label": "Remove first"
+    },
+    {
+      "at": 8,
+      "label": "Tool finishes"
+    },
+    {
+      "at": 10,
+      "label": "Next turn"
+    }
+  ],
+  "group": "Chat",
+  "canvas": "pane",
+  "params": [
+    {
+      "id": "loader",
+      "name": "Working treatment",
+      "type": "selection",
+      "options": [
+        {
+          "id": "spinner",
+          "name": "Spinner"
+        },
+        {
+          "id": "pulse",
+          "name": "Pulse"
+        },
+        {
+          "id": "scan",
+          "name": "Scanning line"
+        },
+        {
+          "id": "aurora",
+          "name": "Aurora background"
+        },
+        {
+          "id": "contours",
+          "name": "Contour field"
+        }
+      ],
+      "default": {
+        "left": "spinner",
+        "right": "aurora"
+      }
+    }
+  ]
+}

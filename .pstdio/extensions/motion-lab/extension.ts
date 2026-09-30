@@ -1,30 +1,20 @@
-import { studies } from "@pstdio/motion-studies";
 import {
-  defineCommandPaletteResource,
   defineExtension,
+  defineHook,
   defineNavigationItem,
   definePage,
-  defineResourceKind,
+  defineSkill,
   defineView,
   defineViewMenu,
   l10n,
-  type NavigationTarget,
   packageAsset,
-  type ResourceRef,
+  sessionEvents,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
-
-const animation = defineResourceKind({ id: "motion-lab.animation", label: "Animation", icon: "film" });
-
-const resource = (id: string, projectId?: string) =>
-  ({
-    type: animation.ref.id,
-    id,
-    label: studies.find((study) => study.id === id)?.title,
-    extensionId: "pstdio.motion-lab",
-    projectId,
-  }) satisfies ResourceRef;
+import { files, palette } from "./src/study-contributions";
+import { studiesChanged } from "./src/study-events";
+import { animation, target } from "./src/study-navigation";
 
 const preview = defineView({
   id: "preview",
@@ -64,70 +54,38 @@ const page = definePage({
   slots: [],
 });
 
-const target = (id: string, projectId?: string) =>
-  ({
-    kind: "page",
-    page: page.ref,
-    resource: resource(id, projectId),
-  }) satisfies NavigationTarget;
-
-const files = defineView({
-  id: "animations",
-  title: "Animations",
-  icon: "folder",
-  body: {
-    kind: "tree",
-    defaultExpandedNodeIds: ["chat", "workbench"],
-    body: (_ctx, input) => [
-      {
-        id: "animations",
-        collapsible: false,
-        nodes: [
-          { id: "chat", label: "Chat", ids: ["chat-turn", "loaders", "streaming", "tools-queue"] },
-          { id: "workbench", label: "Workbench", ids: ["panels", "surfaces", "rows", "tabs", "navigation-tree"] },
-        ].map((folder) => ({
-          id: folder.id,
-          label: folder.label,
-          icon: "folder",
-          collapsible: true,
-          children: studies
-            .filter((study) => folder.ids.includes(study.id))
-            .map((study) => ({
-              id: study.id,
-              label: study.title,
-              icon: "film",
-              resource: resource(study.id, input.renderer.projectId),
-              target: target(study.id, input.renderer.projectId),
-              selected: input.renderer.resource?.id === study.id,
-            })),
-        })),
-      },
-    ],
-  },
-});
-
-const palette = defineCommandPaletteResource({
-  id: "animations",
-  title: "Motion Lab animations",
-  resourceKind: animation.ref,
-  query: (_ctx, input) => ({
-    items: studies
-      .filter((study) =>
-        `${study.title} ${study.description} motion lab animation`.toLowerCase().includes(input.query.toLowerCase()),
-      )
-      .slice(0, input.limit)
-      .map((study) => ({
-        id: study.id,
-        label: study.title,
-        icon: "film",
-        keywords: ["motion", "animation", "study", study.id],
-        target: target(study.id, input.projectId),
-      })),
-  }),
-});
-
 export default defineExtension({
   commands: Object.values(commands),
+  hooks: [
+    defineHook({
+      id: "studies-after-turn",
+      event: sessionEvents.awaitingInput,
+      run: async (ctx) => {
+        await ctx.events.emit(studiesChanged, {});
+      },
+    }),
+    defineHook({
+      id: "studies-after-success",
+      event: sessionEvents.succeeded,
+      run: async (ctx) => {
+        await ctx.events.emit(studiesChanged, {});
+      },
+    }),
+    defineHook({
+      id: "studies-after-failure",
+      event: sessionEvents.failed,
+      run: async (ctx) => {
+        await ctx.events.emit(studiesChanged, {});
+      },
+    }),
+  ],
+  skills: [
+    defineSkill({
+      id: "motion-lab",
+      title: "Motion Lab studies",
+      source: packageAsset("./skills/motion-lab", import.meta.url),
+    }),
+  ],
   resourceKinds: [animation],
   views: [preview, files, parameters],
   pages: [home, page],
