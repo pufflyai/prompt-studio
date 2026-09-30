@@ -1,5 +1,5 @@
 import { posix } from "node:path";
-import { exportsFor } from "./shared-exports";
+import { linkSharedImports } from "./shared-imports";
 
 export const sharedSpecifiers = [
   "react",
@@ -20,10 +20,7 @@ export interface BuildError {
 
 export const buildScene = async (files: Record<string, string>) => {
   try {
-    const sharedExports = new Map(
-      await Promise.all(sharedSpecifiers.map(async (name) => [name, await exportsFor(name)] as const)),
-    );
-    const result = await Bun.build({
+    let result = await Bun.build({
       entrypoints: ["./scene.tsx"],
       throw: false,
       jsx: { development: false },
@@ -34,7 +31,7 @@ export const buildScene = async (files: Record<string, string>) => {
           name: "motion-study",
           setup(build) {
             build.onResolve({ filter: /.*/ }, (args) => {
-              if (sharedSpecifiers.includes(args.path)) return { path: args.path, namespace: "shared" };
+              if (sharedSpecifiers.includes(args.path)) return { path: args.path, external: true };
               if (!args.path.startsWith(".")) throw new Error(`"${args.path}" is not available to Motion Lab scenes`);
               const path = posix.normalize(posix.join(posix.dirname(args.importer || "scene.tsx"), args.path));
               if (path.startsWith("../")) throw new Error("Scene imports must stay inside the study folder");
@@ -48,19 +45,11 @@ export const buildScene = async (files: Record<string, string>) => {
               contents: files[args.path],
               loader: args.path.endsWith(".json") ? "json" : "tsx",
             }));
-            build.onLoad({ filter: /.*/, namespace: "shared" }, async (args) => {
-              const names = sharedExports
-                .get(args.path)!
-                .filter((name) => name !== "default" && /^[A-Za-z_$][\w$]*$/.test(name));
-              return {
-                contents: `const m=globalThis.__motionLabShared[${JSON.stringify(args.path)}]; export default m.default ?? m; ${names.map((name) => `export const ${name}=m[${JSON.stringify(name)}];`).join("\n")}`,
-                loader: "js",
-              };
-            });
           },
         },
       ],
     });
+    if (result.success) result = await linkSharedImports(await result.outputs[0].text());
     if (!result.success) {
       const log = result.logs.find((item) => item.level === "error")!;
       return {

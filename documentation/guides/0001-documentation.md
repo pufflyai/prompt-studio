@@ -204,6 +204,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0047 — Semantic versioning for the extension API](../adrs/0047-semantic-versioning-for-the-extension-api.md)
 
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
+- [0051 — Temporary Motion Lab scene link pass](../adrs/0051-temporary-motion-scene-link-pass.md)
 - [0049 — Temporary scroll content width override for panel tabs](../adrs/0049-temporary-scroll-content-width-override.md)
 
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
