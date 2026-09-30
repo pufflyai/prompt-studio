@@ -203,6 +203,8 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0046 — Let extension webviews write to the clipboard when they declare it](../adrs/0046-declared-webview-clipboard-writes.md)
 - [0047 — Semantic versioning for the extension API](../adrs/0047-semantic-versioning-for-the-extension-api.md)
 
+- [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
+
 ## Lessons learned
 
 - [0001 — Check runtime support before using browser APIs](../lessons-learned/0001-no-bun-eventsource.md)

@@ -20,14 +20,14 @@
   "dependencies": {
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/motion-studies": "workspace:*",
-    "@pstdio/sdk": "workspace:*",
+    "@pstdio/sdk": "0.38.0",
     "@pstdio/ui": "0.35.0",
     "@remotion/player": "4.0.529",
     "lucide-react": "^0.556.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "remotion": "4.0.529"
+    "remotion": "4.0.529",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",

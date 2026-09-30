@@ -60,7 +60,6 @@
     ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-dev",
     "scripts",
-    "design/motion",
     ".pstdio/extensions/motion-lab"
   ],
   "devDependencies": {

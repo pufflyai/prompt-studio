@@ -48,7 +48,6 @@
     "pstdio-storage",
     "pstdio-wt",
     "workbench-fixture",
-    "@pstdio/motion-studies",
     "motion-lab"
   ],
   "privatePackages": {

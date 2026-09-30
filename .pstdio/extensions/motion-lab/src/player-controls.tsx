@@ -1,16 +1,16 @@
 import { Box, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { FPS, getStudy } from "@pstdio/motion-studies";
 import { Header, Slider, Tooltip } from "@pstdio/ui";
 import { ChevronLeft, ChevronRight, Diamond, Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import { FPS } from "./kit/model";
 import { LoopRange, PlaybackOptions } from "./playback-options";
 import { usePlaybackPosition, useReview } from "./review-context";
 import { loopBounds } from "./review-state";
 
 export const PlayerControls = () => {
-  const { state, preview, update } = useReview();
-  const { frame, playing } = usePlaybackPosition(state);
-  const definition = getStudy(state.settings.study);
-  const { start, end, max } = loopBounds(state);
+  const { state, study, preview, update } = useReview();
+  const { frame, playing } = usePlaybackPosition(state, study.duration);
+  const definition = study;
+  const { start, end, max } = loopBounds(state, study.duration);
   const markers = definition.markers.map((marker) => Math.ceil(marker.at * FPS));
   const previous = markers.filter((marker) => marker < frame).at(-1);
   const next = markers.find((marker) => marker > frame);

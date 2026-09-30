@@ -1,0 +1,4 @@
+{
+  "extends": "../../../.pstdio/extensions/motion-lab/tsconfig.json",
+  "include": ["."]
+}

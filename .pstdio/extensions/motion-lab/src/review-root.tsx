@@ -1,7 +1,8 @@
-import { Box, Text } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import type { GuestHost, PropsStore } from "@pstdio/sdk/extensions";
 import type { ComponentType } from "react";
 import { ReviewContext, type ReviewProps, useReviewConnection } from "./review-context";
+import { StudyStatus } from "./study-status";
 
 interface RootProps {
   Component: ComponentType;
@@ -13,13 +14,9 @@ export const ReviewRoot = (props: RootProps) => {
   const connection = useReviewConnection(host, propsStore);
   return (
     <Box h="full" w="full" minH="0" minW="0" overflow="hidden" bg="bg" color="fg">
-      {connection.error && (
-        <Text role="alert" color="fg.error" p="sm">
-          {connection.error}
-        </Text>
-      )}
-      {connection.ready && (
-        <ReviewContext value={connection}>
+      {connection.error && <StudyStatus message={connection.error} />}
+      {connection.value && (
+        <ReviewContext value={{ ...connection.value, preview: connection.preview, update: connection.update }}>
           <Component />
         </ReviewContext>
       )}

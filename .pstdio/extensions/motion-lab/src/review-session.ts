@@ -2,6 +2,7 @@ import type { ReviewChange, ReviewState } from "./review-state";
 import { applyReviewChange } from "./review-state";
 
 interface ReviewSessionOptions {
+  duration: () => number;
   read: () => Promise<ReviewState>;
   write: (change: ReviewChange) => Promise<ReviewState>;
   onState: (state: ReviewState) => void;
@@ -33,7 +34,7 @@ export const createReviewSession = (initial: ReviewState, options: ReviewSession
   };
   const preview = (change: ReviewChange) => {
     readVersion += 1;
-    publish(applyReviewChange(state, change, Date.now()));
+    publish(applyReviewChange(state, change, Date.now(), options.duration()));
   };
   const update = (change: ReviewChange) => {
     pending += 1;

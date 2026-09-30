@@ -8,7 +8,10 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["bun"]
+    "types": ["bun"],
+    "paths": {
+      "motion-lab/kit": ["./src/kit"]
+    }
   },
-  "include": ["extension.ts", "src"]
+  "include": ["extension.ts", "src", "../../../design/motion/studies"]
 }
