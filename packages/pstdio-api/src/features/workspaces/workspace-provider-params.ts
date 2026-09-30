@@ -2,7 +2,7 @@ import type { JsonObject, ParamObjectSchema } from "pstdio-api-contracts/extensi
 import { resolveDeclaredParams } from "pstdio-extensions";
 import { git } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
-import { listWorkspaceProviders } from "./workspace-provider-catalog";
+import { findWorktreeProvider } from "./workspace-provider-catalog";
 import { rootProviderId, worktreeProviderId } from "./workspace-provider-identity";
 import { findWorkspaceProvider } from "./workspace-provider-runtime";
 
@@ -17,7 +17,7 @@ export const resolveWorkspaceParams = async (
   let schema: ParamObjectSchema;
   if (providerId === rootProviderId) schema = { path: { type: "text", label: "Project folder" } };
   else if (providerId === worktreeProviderId) {
-    const provider = (await listWorkspaceProviders(deps, projectId)).find((provider) => provider.id === providerId);
+    const provider = await findWorktreeProvider(deps, projectId);
     if (!provider) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
     schema = provider.params;
     const base = schema.base;
