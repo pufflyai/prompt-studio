@@ -14,7 +14,7 @@ A compiled Bun executable and Playwright in the isolated Docker dashboard verifi
 
 The extension owns the shared scene kit, review state, and build cache. Project files own metadata and scene content. Hashes include metadata and all files in a study folder. The tree, palette, and webviews use existing events and refresh subscriptions. Agent turn completion and session completion hooks emit a refresh event. No host API is added.
 
-Shared export discovery builds browser modules and scans their exports without running UI libraries on the server. A virtual entry in the extension's source directory lets Bun resolve installed dependencies in both source and compiled runtimes, regardless of the host's current directory.
+Shared export discovery builds browser modules and scans their exports without running UI libraries on the server. The scene compiler discovers exports only for shared imports retained in the bundled scene and its local helpers. Unused libraries add no work to a cold scene build. Export results remain cached across builds. A [temporary separate link pass](0051-temporary-motion-scene-link-pass.md) avoids nested Bun builds. A virtual entry in the extension's source directory lets Bun resolve installed dependencies in both source and compiled runtimes, regardless of the host's current directory.
 
 The host emits `session.awaitingInput` after a turn, and `session.succeeded` or `session.failed` when a session ends. The extension subscribes to those events. The declared `session.completed` event is not emitted by the current host.
 
