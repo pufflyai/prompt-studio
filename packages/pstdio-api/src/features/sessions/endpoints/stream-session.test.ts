@@ -7,6 +7,7 @@ import type { HarnessExit, HarnessSession, JsonPatch, SessionMessage } from "pst
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { openSessionStream } from "../../../test-utils/session-stream";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
 import {
@@ -149,15 +150,6 @@ const createSSEReader = (response: Response) => {
   return { readEvents, close };
 };
 
-const createSlowFakeRecord = (exitDelayMs: number) =>
-  createTestHarnessRecord("fake", {
-    provider: {
-      start: () => delayedExit(exitDelayMs),
-      resume: (_ctx, input) => ({ ...delayedExit(exitDelayMs), agentSessionId: input.agentSessionId }),
-      getMessages: () => [],
-    },
-  });
-
 const createHistoryReplayRecord = (input: {
   initialPatches: JsonPatch[];
   livePatch: JsonPatch;
@@ -255,7 +247,7 @@ const getPatchTextParts = (patch: JsonPatch) => {
   });
 };
 
-describe("GET /v1/sessions/:id/stream", () => {
+describe("session stream", () => {
   test("sends end event with the current DB status", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
@@ -279,7 +271,7 @@ describe("GET /v1/sessions/:id/stream", () => {
 
     await waitForSessionStatus(eventBus, session.id, "completed");
 
-    const streamRes = await app.request(`/v1/sessions/${session.id}/stream`);
+    const streamRes = await openSessionStream(app, session.id);
     expect(streamRes.status).toBe(200);
     const body = await streamRes.text();
 
@@ -314,60 +306,13 @@ describe("GET /v1/sessions/:id/stream", () => {
       body: JSON.stringify({ status: "failed" }),
     });
 
-    const streamRes = await app.request(`/v1/sessions/${session.id}/stream`);
+    const streamRes = await openSessionStream(app, session.id);
     const body = await streamRes.text();
     expect(body).toContain('"status":"failed"');
   });
-
-  test("emits heartbeat events while session is in progress", async () => {
-    const heartbeatRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-heartbeat-test-"));
-    const {
-      app: heartbeatApp,
-      close: closeHeartbeatApp,
-      eventBus: heartbeatEventBus,
-    } = await createTestApp({
-      databasePath: ":memory:",
-      storageRoot: join(heartbeatRoot, "storage"),
-      harnessRegistry: createTestHarnessRegistry([createSlowFakeRecord(1200)]),
-    });
-
-    const projectRes = await heartbeatApp.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Heartbeat Session Project" })),
-    });
-    const project = await projectRes.json();
-
-    const createRes = await heartbeatApp.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "Slow stream session",
-        prompt: "wait for heartbeat",
-        agent: FAKE_ID,
-      }),
-    });
-    const session = await createRes.json();
-
-    const streamRes = await heartbeatApp.request(`/v1/sessions/${session.id}/stream`);
-    expect(streamRes.status).toBe(200);
-
-    const sse = createSSEReader(streamRes);
-    const events = await sse.readEvents(3);
-    sse.close();
-
-    expect(events.map((event) => event.event)).toContain("ready");
-    expect(events.map((event) => event.event)).toContain("heartbeat");
-
-    await expect(waitForSessionStatus(heartbeatEventBus, session.id, "completed")).resolves.toBeDefined();
-
-    await closeHeartbeatApp();
-    rmSync(heartbeatRoot, { recursive: true, force: true });
-  });
 });
 
-describe("GET /v1/sessions/:id/stream active session replay", () => {
+describe("session stream active session replay", () => {
   test("replays active session history as a single snapshot before live patches", async () => {
     const replayRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-history-test-"));
     const initialPatches: JsonPatch[] = [
@@ -424,7 +369,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     const session = await createRes.json();
 
     await waitForMessages(replayApp, session.id, 2);
-    const streamRes = await replayApp.request(`/v1/sessions/${session.id}/stream`);
+    const streamRes = await openSessionStream(replayApp, session.id);
     expect(streamRes.status).toBe(200);
 
     const sse = createSSEReader(streamRes);
@@ -492,7 +437,7 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
     expect(followUpRes.status).toBe(200);
 
     await waitForMessages(overlapApp, session.id, 3);
-    const streamRes = await overlapApp.request(`/v1/sessions/${session.id}/stream`);
+    const streamRes = await openSessionStream(overlapApp, session.id);
     expect(streamRes.status).toBe(200);
 
     const sse = createSSEReader(streamRes);

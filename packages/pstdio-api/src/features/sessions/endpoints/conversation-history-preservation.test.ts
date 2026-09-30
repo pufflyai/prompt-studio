@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, SessionMessage } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { openSessionStream } from "../../../test-utils/session-stream";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -70,7 +71,7 @@ test("resuming a stale checkpoint preserves native middle turns in GET, SSE, and
     throw new Error(`Session did not reach ${status}`);
   };
   const streamSnapshot = async (id: string) => {
-    const response = await request(`/sessions/${id}/stream`);
+    const response = await openSessionStream(handle.app, id);
     const reader = response.body!.getReader();
     let text = "";
     const decoder = new TextDecoder();

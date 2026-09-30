@@ -128,7 +128,7 @@ The Planner browser regression holds a non-collapsed DOM selection, waits beyond
 
 The workbench owns read slots by stable placement, resource, and read lane. Each slot permits one active load and one latest pending refresh. Repeated events coalesce. Replacing a query, retrying, or unmounting aborts the active signal. The slot remains occupied until the actual load and its children settle, including across remounts and reopening the same placement.
 
-A 30-second runtime deadline aborts a stalled read and shows a recoverable error. It does not free an uncooperative request's slot or restart it automatically. Workbench disposal aborts all reads and drains them.
+Reads have no time limit. A slow read keeps its loading state until it settles or is aborted. Workbench disposal aborts all reads and drains them.
 
 Kanban, table, controls, tree, and file reads pass the signal through extension commands to host I/O. Workspace file and diff reads pass it to HTTP and response-body readers. Tree header, body, and footer reads drain together; expanded children use at most four concurrent loads. Composed navigation passes the same signal and stops starting contributions after cancellation.
 

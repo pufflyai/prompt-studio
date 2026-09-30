@@ -1,21 +1,17 @@
-import type { Context } from "hono";
-import type { SSEStreamingApi } from "hono/streaming";
-import { streamSSE } from "hono/streaming";
 import type { JsonPatch, SessionMessage } from "pstdio-api-contracts";
-import type { AppBindings } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { getSessionHistory, SessionNotFoundError } from "../session-history";
 import type { ActiveSession } from "../session-store";
+import type { SessionEventSink } from "../session-stream-connections";
 import { createStreamQueuePublisher } from "./stream-session-queue";
 
-const heartbeat = (stream: SSEStreamingApi) =>
-  stream.writeSSE({ data: JSON.stringify({ timestamp: Date.now() }), event: "heartbeat" });
-const snapshot = (messages: SessionMessage[], stream: SSEStreamingApi) =>
-  stream.writeSSE({ data: JSON.stringify({ op: "replace", path: "/messages", value: messages }), event: "patch" });
+const snapshot = (messages: SessionMessage[], sink: SessionEventSink) =>
+  sink.write("patch", { op: "replace", path: "/messages", value: messages });
 const isTerminal = (status?: string | null) =>
   ["completed", "failed", "cancelled", "disconnected"].includes(status ?? "");
 
-const withHeartbeat = async <T>(pending: Promise<T>) => {
+// Waits wake every second so an unsubscribed or replaced run stops promptly.
+const withinTick = async <T>(pending: Promise<T>) => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -31,12 +27,12 @@ const withHeartbeat = async <T>(pending: Promise<T>) => {
 
 const streamLivePatches = async (
   patches: AsyncIterable<JsonPatch>,
-  stream: SSEStreamingApi,
+  sink: SessionEventSink,
   queue: ReturnType<typeof createStreamQueuePublisher>,
 ) => {
   let aborted = false;
   const iterator = patches[Symbol.asyncIterator]();
-  stream.onAbort(() => {
+  sink.onAbort(() => {
     aborted = true;
     void iterator.return?.();
   });
@@ -44,21 +40,15 @@ const streamLivePatches = async (
   try {
     while (!aborted) {
       next ??= iterator.next();
-      const item = await withHeartbeat(next);
+      const item = await withinTick(next);
       if (aborted) break;
-      if (!item) {
-        await heartbeat(stream);
-        continue;
-      }
+      if (!item) continue;
       next = undefined;
       if (item.done) break;
       const patch = item.value;
       await queue.beforePatch(patch);
       const approval = patch.path === "/approval_request";
-      await stream.writeSSE({
-        data: JSON.stringify(approval ? patch.value : patch),
-        event: approval ? "approval_request" : "patch",
-      });
+      await sink.write(approval ? "approval_request" : "patch", approval ? patch.value : patch);
     }
     return aborted;
   } finally {
@@ -66,10 +56,10 @@ const streamLivePatches = async (
   }
 };
 
-const waitForEntry = async (id: string, deps: SessionsRouteDeps, stream: SSEStreamingApi, previous?: ActiveSession) => {
+const waitForEntry = async (id: string, deps: SessionsRouteDeps, sink: SessionEventSink, previous?: ActiveSession) => {
   // The run status is published before its owner. Native history from an earlier
   // run does not mean the new run is ready, and must not end this subscription.
-  while (!stream.aborted) {
+  while (!sink.aborted) {
     const entry = deps.sessionService.store.get(id);
     if (entry && entry !== previous) return entry;
     const current = await deps.sessionService.get(id);
@@ -77,30 +67,26 @@ const waitForEntry = async (id: string, deps: SessionsRouteDeps, stream: SSEStre
     if (isTerminal(current.status)) {
       if (!previous || !(await deps.sessionQueueEntriesService.listPendingBySession(id)).length) return null;
     }
-    await heartbeat(stream);
-    await stream.sleep(previous ? 200 : 500);
+    await sink.sleep(previous ? 200 : 500);
   }
   return null;
 };
 
-const streamEntry = async (id: string, entry: ActiveSession, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
-  while (!stream.aborted) {
-    const conversation = await withHeartbeat(entry.conversationReady).catch((error) => {
+const streamEntry = async (id: string, entry: ActiveSession, deps: SessionsRouteDeps, sink: SessionEventSink) => {
+  while (!sink.aborted) {
+    const conversation = await withinTick(entry.conversationReady).catch((error) => {
       if (deps.sessionService.store.get(id) !== entry) return null;
       throw error;
     });
     if (deps.sessionService.store.get(id) !== entry) return false;
-    if (!conversation) {
-      await heartbeat(stream);
-      continue;
-    }
+    if (!conversation) continue;
     const current = conversation.snapshotAndSubscribe();
-    const queue = createStreamQueuePublisher(id, deps, stream);
+    const queue = createStreamQueuePublisher(id, deps, sink);
     const iterator = current.stream[Symbol.asyncIterator]();
     try {
       await queue.snapshot(current.messages);
-      await snapshot(current.messages, stream);
-      return await streamLivePatches({ [Symbol.asyncIterator]: () => iterator }, stream, queue);
+      await snapshot(current.messages, sink);
+      return await streamLivePatches({ [Symbol.asyncIterator]: () => iterator }, sink, queue);
     } finally {
       await iterator.return?.();
     }
@@ -108,7 +94,7 @@ const streamEntry = async (id: string, entry: ActiveSession, deps: SessionsRoute
   return true;
 };
 
-const sendInactiveSnapshot = async (id: string, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
+const sendInactiveSnapshot = async (id: string, deps: SessionsRouteDeps, sink: SessionEventSink) => {
   const history = await getSessionHistory(id, deps).catch((error) => {
     if (error instanceof SessionNotFoundError) return null;
     throw error;
@@ -116,24 +102,21 @@ const sendInactiveSnapshot = async (id: string, deps: SessionsRouteDeps, stream:
   if (!history) return null;
   const entry = deps.sessionService.store.get(id);
   if (entry) return entry;
-  await createStreamQueuePublisher(id, deps, stream).snapshot(history);
+  await createStreamQueuePublisher(id, deps, sink).snapshot(history);
   const next = deps.sessionService.store.get(id);
   if (next) return next;
-  await snapshot(history, stream);
+  await snapshot(history, sink);
   return null;
 };
 
-export const streamSessionHandler = (deps: SessionsRouteDeps) => (c: Context<AppBindings>) => {
-  const id = c.req.param("id")!;
-  return streamSSE(c, async (stream) => {
-    await stream.writeSSE({ data: JSON.stringify({ sessionId: id }), event: "ready" });
-    let entry = deps.sessionService.store.get(id) ?? (await waitForEntry(id, deps, stream));
-    if (!entry) entry = await sendInactiveSnapshot(id, deps, stream);
-    while (entry) {
-      if (await streamEntry(id, entry, deps, stream)) return;
-      entry = await waitForEntry(id, deps, stream, entry);
-    }
-    const session = await deps.sessionService.get(id);
-    await stream.writeSSE({ data: JSON.stringify({ status: session?.status ?? "unknown" }), event: "end" });
-  });
+export const streamSession = async (id: string, deps: SessionsRouteDeps, sink: SessionEventSink) => {
+  await sink.write("ready", { sessionId: id });
+  let entry = deps.sessionService.store.get(id) ?? (await waitForEntry(id, deps, sink));
+  if (!entry) entry = await sendInactiveSnapshot(id, deps, sink);
+  while (entry) {
+    if (await streamEntry(id, entry, deps, sink)) return;
+    entry = await waitForEntry(id, deps, sink, entry);
+  }
+  const session = await deps.sessionService.get(id);
+  await sink.write("end", { status: session?.status ?? "unknown" });
 };

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { openSessionStream } from "../../../test-utils/session-stream";
 
 test("stream snapshots separate a confirmed prompt from an identical pending prompt", async () => {
   const handle = await createTestApp();
@@ -21,7 +22,7 @@ test("stream snapshots separate a confirmed prompt from an identical pending pro
       path: "/messages",
       value: [{ id: "confirmed", role: "user", parts: [{ type: "text", text: "repeat" }] }],
     });
-    const response = await handle.app.request(`/v1/sessions/${session.id}/stream`);
+    const response = await openSessionStream(handle.app, session.id);
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let text = "";
