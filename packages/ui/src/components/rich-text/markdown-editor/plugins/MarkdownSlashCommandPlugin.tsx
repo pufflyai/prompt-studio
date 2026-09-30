@@ -7,8 +7,9 @@ import {
   $addUpdateTag,
   $createParagraphNode,
   $getNodeByKey,
+  $getSelection,
   $isParagraphNode,
-  $isTextNode,
+  $isRangeSelection,
   HISTORY_MERGE_TAG,
   type LexicalNode,
   type TextNode,
@@ -36,6 +37,11 @@ const commandDefinitions: Array<Omit<SlashCommandOption, "key" | "setRefElement"
 ];
 
 const slashTrigger = (text: string): MenuTextMatch | null => {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection)) return null;
+  const anchorNode = selection.anchor.getNode();
+  if (!$isParagraphNode(anchorNode.getParent()) || anchorNode.getPreviousSibling()) return null;
+
   const match = /^\/([a-z ]*)$/i.exec(text);
   if (!match) return null;
 
@@ -128,7 +134,7 @@ const SlashCommandMenu = (props: SlashCommandMenuProps) => {
 export const MarkdownSlashCommandPlugin = () => {
   const [editor] = useLexicalComposerContext();
   const [query, setQuery] = useState<string | null>(null);
-  const [imageQueryNodeKey, setImageQueryNodeKey] = useState<string | null>(null);
+  const [imageParagraphKey, setImageParagraphKey] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState("");
   const [imageAlt, setImageAlt] = useState("Image");
   const options = commandDefinitions
@@ -136,45 +142,37 @@ export const MarkdownSlashCommandPlugin = () => {
     .map((option) => ({ ...option, key: option.id, setRefElement: () => {} }));
 
   const closeImageDialog = () => {
-    if (imageQueryNodeKey) {
+    if (imageParagraphKey) {
       editor.update(
         () => {
-          const queryNode = $getNodeByKey(imageQueryNodeKey);
-          if ($isTextNode(queryNode)) {
-            const parent = queryNode.getParent();
-            queryNode.remove();
-            parent?.selectEnd();
-          }
+          const paragraph = $getNodeByKey(imageParagraphKey);
+          if ($isParagraphNode(paragraph)) paragraph.selectStart();
         },
         { tag: HISTORY_MERGE_TAG },
       );
     }
 
-    setImageQueryNodeKey(null);
+    setImageParagraphKey(null);
     setTimeout(() => editor.focus(), 0);
   };
 
   const insertImage = (event: FormEvent) => {
     event.preventDefault();
-    if (!imageQueryNodeKey || !imageUrl.trim()) return;
+    if (!imageParagraphKey || !imageUrl.trim()) return;
 
     editor.update(
       () => {
-        const queryNode = $getNodeByKey(imageQueryNodeKey);
-        if ($isTextNode(queryNode)) {
-          const imageNode = $createMarkdownImageNode(imageUrl.trim(), imageAlt.trim() || "Image");
-          const parent = queryNode.getParent();
-          queryNode.replace(imageNode);
-          if ($isParagraphNode(parent)) {
-            const nextParagraph = $createParagraphNode();
-            parent.insertAfter(nextParagraph);
-            nextParagraph.select();
-          }
+        const paragraph = $getNodeByKey(imageParagraphKey);
+        if ($isParagraphNode(paragraph)) {
+          paragraph.splice(0, 0, [$createMarkdownImageNode(imageUrl.trim(), imageAlt.trim() || "Image")]);
+          const nextParagraph = $createParagraphNode();
+          paragraph.insertAfter(nextParagraph);
+          nextParagraph.select();
         }
       },
       { tag: HISTORY_MERGE_TAG },
     );
-    setImageQueryNodeKey(null);
+    setImageParagraphKey(null);
     setTimeout(() => editor.focus(), 0);
   };
 
@@ -186,9 +184,18 @@ export const MarkdownSlashCommandPlugin = () => {
         options={options}
         onSelectOption={(option, queryNode, closeMenu) => {
           if (option.id === "image") {
+            const paragraph = queryNode?.getParent();
+            const selection = $getSelection();
+            if (!$isParagraphNode(paragraph) || !$isRangeSelection(selection)) return;
+
+            // Typeahead text nodes can merge after this update. Keep the paragraph
+            // as the insertion position and consume the command before opening the dialog.
+            $addUpdateTag(HISTORY_MERGE_TAG);
+            selection.anchor.set(paragraph.getKey(), 0, "element");
+            selection.removeText();
             setImageUrl("");
             setImageAlt("Image");
-            setImageQueryNodeKey(queryNode?.getKey() ?? null);
+            setImageParagraphKey(paragraph.getKey());
             closeMenu();
             return;
           }
@@ -218,10 +225,10 @@ export const MarkdownSlashCommandPlugin = () => {
         }}
       />
       <Dialog.Root
-        open={Boolean(imageQueryNodeKey)}
+        open={Boolean(imageParagraphKey)}
         finalFocusEl={() => editor.getRootElement()}
         onOpenChange={(details) => {
-          if (!details.open && imageQueryNodeKey) closeImageDialog();
+          if (!details.open && imageParagraphKey) closeImageDialog();
         }}
       >
         <Dialog.Backdrop />
