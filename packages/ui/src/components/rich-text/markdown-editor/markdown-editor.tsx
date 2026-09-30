@@ -24,6 +24,7 @@ import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlig
 import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { FloatingTextFormatToolbarPlugin } from "../shared/plugins/FloatingTextFormatToolbarPlugin";
 import { LinkEditorPlugin, LinkPlugin } from "../shared/plugins/LinkEditorPlugin";
+import { ListMarkerWidthPlugin } from "../shared/plugins/list-marker-width-plugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
 import { splitFrontmatter } from "../utils/markdown";
@@ -117,6 +118,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           <MarkdownHistoryPlugin />
           <LinkPlugin />
           <ListPlugin />
+          <ListMarkerWidthPlugin />
           {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
           <CheckListPlugin />
           {isEditable ? <MarkdownShortcutPlugin transformers={editorTransformers} /> : null}
