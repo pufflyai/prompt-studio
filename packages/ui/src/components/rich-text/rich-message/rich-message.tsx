@@ -20,6 +20,7 @@ import { MarkdownUrlProvider } from "../shared/markdown-url-context";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
 import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
+import { ListMarkerWidthPlugin } from "../shared/plugins/list-marker-width-plugin";
 import StateUpdatePlugin from "../shared/plugins/StateUpdatePlugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
@@ -88,6 +89,7 @@ export function RichMessage(props: RichMessageProps) {
           <LinkPlugin />
           <ClickableLinkPlugin newTab />
           <ListPlugin />
+          <ListMarkerWidthPlugin />
           {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
           <HorizontalRulePlugin />
           <CodeHighlightingPlugin />
