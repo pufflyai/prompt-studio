@@ -80,6 +80,8 @@ export interface TreeNode {
   canHide?: boolean;
   /** When false, the node stays fixed within its Sidenav group. */
   canReorder?: boolean;
+  /** Show the row only where users pinned it in the header or footer, never in the body. */
+  pinnedOnly?: boolean;
   /** Allow this node to be moved to another tree location. */
   canDrag?: boolean;
   /** Allow movable nodes to be dropped on this node. */
@@ -97,6 +99,8 @@ export interface TreeViewSection {
   /** Host-owned customization boundary. Extension callbacks cannot set it. */
   moveScope?: string;
   label?: string;
+  /** Names a section without a visible header in the customize menu. */
+  menuLabel?: string;
   actions?: TreeAction[];
   collapsible?: boolean;
   emptyState?: TreeSectionEmptyState;

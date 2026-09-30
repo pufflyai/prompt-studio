@@ -6,7 +6,10 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { notificationsEnabled } from "@/shared/settings/synced-settings";
-import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
+import {
+  dashboardNavigationSections,
+  registerDashboardNavigationContribution,
+} from "@/shared/workbench/dashboard-navigation-contribution";
 import { NotificationCenterWidget } from "./components/notification-center-widget";
 import { countPendingNotifications } from "./data/dashboard-notifications";
 
@@ -33,7 +36,7 @@ const registerNotificationSidenav = (ctx: WorkbenchModuleContext) => {
     id: "dashboard.notifications.sidenav-nav",
     modes: ["project"],
     getSections: () =>
-      notificationsEnabled() ? [{ id: "navigation.root", nodes: [createNotificationNode(ctx)] }] : [],
+      notificationsEnabled() ? [{ ...dashboardNavigationSections.root, nodes: [createNotificationNode(ctx)] }] : [],
   });
 };
 

@@ -7,7 +7,7 @@ import {
   expectResourceMenuItems as expectMenuItems,
   prepareResourceActionsDashboard as prepareDashboard,
 } from "./helpers/resource-actions";
-import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
+import { openProjectHome, showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
@@ -40,6 +40,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
         exact: true,
       }),
     ).toBeVisible();
+    await openProjectHome(page, "Resource Actions");
     const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
     const ticketsNavigation = sidenav.getByRole("option", { name: "Tickets", exact: true }).first();
@@ -58,6 +59,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
         exact: true,
       }),
     ).toBeVisible();
+    await openProjectHome(page, "Resource Actions");
     await workspacesNavigation.click();
     await expect(ticketsNavigation).toBeVisible();
     await ticketsNavigation.click();
@@ -97,6 +99,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     await breadcrumbAction.click();
     await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
 
+    await openProjectHome(page, "Resource Actions");
     await workspacesNavigation.click();
     const workspaceRow = page.getByRole("row").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
@@ -141,6 +144,7 @@ test("keeps ticket creation and ticket status settings available", async ({ page
   expect((await createResponse).ok()).toBe(true);
   await expect(createDialog).toBeHidden();
   await expect(sidenav.getByRole("option").filter({ hasText: "Create flow remains available" })).toBeVisible();
+  await openProjectHome(page, "Resource Actions");
   await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
   await expect(page.getByTestId("renderer-card").filter({ hasText: "Create flow remains available" })).toBeVisible();
 

@@ -1,5 +1,5 @@
 import { Spinner } from "@chakra-ui/react";
-import { type PlacementIdentity, workbenchPanels } from "@pstdio/sdk/extensions";
+import { type PlacementIdentity, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchModuleContext,
@@ -121,7 +121,8 @@ const openNewSessionDraft = (
   const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
   selectSidenavSessionNode(ctx, undefined);
-  if (ctx.modes.getActiveModeId() === "sessions") {
+  const pageId = ctx.pages.store.getState().activePageId;
+  if (pageId === workbenchPages.sessions.id || pageId === workbenchPages.session.id) {
     return openSessionsPage(ctx, draftResource);
   }
   const identity = input.replacePanel;

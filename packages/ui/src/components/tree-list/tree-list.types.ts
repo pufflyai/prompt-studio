@@ -49,6 +49,8 @@ export interface TreeListSection {
   /** Opaque host scope passed to a configurable move policy. */
   moveScope?: string;
   label?: string;
+  /** Names a section without a visible header in the customize menu. */
+  menuLabel?: string;
   collapsible?: boolean;
   actions?: TreeListAction[];
   emptyState?: ReactNode;

@@ -231,6 +231,7 @@ export type {
 
 export {
   batchWorkbenchChanges,
+  createLevelNavigation,
   createRendererReadRegistry,
   createStatusBarRegistry,
   createStatusRegistry,

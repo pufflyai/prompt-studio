@@ -8,7 +8,10 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
+import {
+  dashboardNavigationSections,
+  registerDashboardNavigationContribution,
+} from "@/shared/workbench/dashboard-navigation-contribution";
 import { invalidateWorkspaceProviders, workspaceProvidersQueryOptions } from "@/shared/workspaces/workspace-providers";
 
 export const workspaceNavigationNode = (providers: readonly WorkspaceProviderDescriptor[]) =>
@@ -47,7 +50,12 @@ export const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContex
     modes: ["project"],
     getSections: () => {
       const result = providers.getCurrentResult();
-      return [{ id: "navigation.root", nodes: [workspaceNavigationNode(result.isError ? [] : (result.data ?? []))] }];
+      return [
+        {
+          ...dashboardNavigationSections.root,
+          nodes: [workspaceNavigationNode(result.isError ? [] : (result.data ?? []))],
+        },
+      ];
     },
   });
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => {

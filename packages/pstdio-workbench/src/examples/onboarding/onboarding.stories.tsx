@@ -17,6 +17,8 @@ import { createResourceWorkbench } from "./core/resource-panel";
 import { createTreeWorkbench } from "./core/tree-renderer";
 import { createViewsWorkbench } from "./core/views";
 import { createExtensionPreview } from "./extension-preview";
+import navigationLevelsExtension, { pantryPage } from "./extensions/navigation-levels-extension";
+import navigationLevelsSource from "./extensions/navigation-levels-extension.ts?raw";
 import pageExtension, { guidePage } from "./extensions/page-extension";
 import firstExtensionSource from "./extensions/page-extension.ts?raw";
 import { OnboardingFrame } from "./onboarding-frame";
@@ -172,4 +174,30 @@ export const HostTerminal: Story = {
   name: "16. Host terminal",
   parameters: storyDescription("Open as many scripted terminal tabs as needed from the launcher or Add panel."),
   render: () => <OnboardingFrame createWorkbench={createHostTerminalWorkbench} />,
+};
+
+export const SidenavLevels: Story = {
+  name: "17. Sidenav levels",
+  parameters: {
+    docs: {
+      description: { story: "A page-owned navigation tree replaces the Sidenav body while header rows stay." },
+      source: { code: navigationLevelsSource, language: "tsx", type: "code" },
+    },
+  },
+  render: () => (
+    <OnboardingFrame createWorkbench={() => createExtensionPreview(navigationLevelsExtension, pantryPage.id)} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("heading", { name: "Pantry" })).toBeVisible();
+    await userEvent.click(await canvas.findByRole("option", { name: "Recipes" }));
+    await expect(await canvas.findByRole("option", { name: "Pancakes" })).toBeVisible();
+    await expect(canvas.getByRole("option", { name: "Pantry" })).toBeVisible();
+    await expect(canvas.queryByRole("option", { name: "Recipes" })).toBeNull();
+    await userEvent.click(canvas.getByRole("option", { name: "Pancakes" }));
+    await expect(await canvas.findByRole("heading", { name: "Pancakes" })).toBeVisible();
+    await expect(canvas.getByRole("option", { name: "Ramen" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("option", { name: "Pantry" }));
+    await expect(await canvas.findByRole("option", { name: "Recipes" })).toBeVisible();
+  },
 };

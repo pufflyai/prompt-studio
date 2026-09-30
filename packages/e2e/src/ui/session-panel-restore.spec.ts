@@ -2,6 +2,7 @@ import { type APIRequestContext, expect, type Page, test } from "@playwright/tes
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
+import { openProjectHome } from "./helpers/sidenav-navigation";
 
 const deleteAllProjects = async (request: APIRequestContext) => {
   const response = await request.get(`${apiBase}/v1/projects`);
@@ -93,6 +94,7 @@ test("reuses a dashboard session tab selected again from a planner ticket", asyn
   await expect(sessionTabs).toHaveCount(2);
   await expect(sessionTab).toHaveAttribute("aria-selected", "true");
 
+  await openProjectHome(page, "PS-8 Session Tab Reuse");
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await openTicketCard(page, "Reuse session A across resource surfaces");
   await sessionRow.click();
@@ -189,7 +191,8 @@ test("keeps a closed Side Panel closed and does not reopen a session after refre
 
   await page.reload();
   await expect(async () => {
-    await expect(page.getByRole("option", { name: "Tickets", exact: true })).toBeVisible({ timeout: 5_000 });
+    // The ticket page reopens in its level, so the ticket's own row marks the loaded Sidenav.
+    await expect(page.getByRole("option", { name: /Closed panel stays closed/ })).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
   await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
   await expect(page.getByRole("dialog", { name: "Side Panel" })).toHaveCount(0);

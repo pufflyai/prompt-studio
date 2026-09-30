@@ -1,9 +1,8 @@
 import type { NavigationTreeSlot, ResourceRef, TreeViewSection, WorkbenchModuleContext } from "@pstdio/workbench";
 
 const declarations: Record<NavigationTreeSlot, readonly string[]> = {
-  header: [],
+  header: ["dashboard.sidenav.search"],
   content: [
-    "dashboard.sidenav.search",
     "dashboard.notifications.sidenav-nav",
     "dashboard.sessions.project-nav",
     "dashboard.workspaces.project-nav",
@@ -12,7 +11,14 @@ const declarations: Record<NavigationTreeSlot, readonly string[]> = {
   footer: ["dashboard.help.footer", "dashboard.settings.footer"],
 };
 
-const dashboardModes = ["project", "sessions"] as const;
+const dashboardModes = ["project"] as const;
+
+// Host sections render without headers, so the Sidenav customize menu names them here.
+export const dashboardNavigationSections = {
+  header: { id: "navigation.header", menuLabel: "Header" },
+  root: { id: "navigation.root", menuLabel: "Navigation" },
+  footer: { id: "navigation.footer", menuLabel: "Footer" },
+} as const;
 
 interface DashboardNavigationContribution {
   id: string;
