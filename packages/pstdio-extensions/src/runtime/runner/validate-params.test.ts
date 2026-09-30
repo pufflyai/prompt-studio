@@ -38,3 +38,21 @@ describe("validateCommandParams: workspace params", () => {
     ).toEqual({ ok: true });
   });
 });
+
+describe("declared provider params", () => {
+  test("fills defaults and rejects unknown keys and options", async () => {
+    const { resolveDeclaredParams } = await import("./validate-params");
+    const schema = {
+      image: {
+        type: "select" as const,
+        required: true,
+        defaultValue: "small",
+        options: [{ label: "Small", value: "small" }],
+      },
+    };
+    expect(resolveDeclaredParams(schema, {})).toEqual({ image: "small" });
+    expect(() => resolveDeclaredParams(schema, { image: "large" })).toThrow("small");
+    expect(() => resolveDeclaredParams({}, { typo: true })).toThrow("typo");
+    expect(() => resolveDeclaredParams({ name: { type: "text", required: true } }, {})).toThrow("Missing required");
+  });
+});

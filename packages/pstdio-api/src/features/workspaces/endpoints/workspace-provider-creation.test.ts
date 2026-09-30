@@ -172,3 +172,89 @@ test.each(["DOC-7", undefined])("creates an anchored cloud workspace with shorth
   expect(workspaceSchema.parse(workspace).anchors_json).toEqual(anchors);
   expect((await handle.deps.workspaceService.getDefault(project.id))?.id).toBe(home?.id);
 });
+
+const postWorkspace = (projectId: string, providerId: string, params = {}) =>
+  app.request("/v1/workspaces", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ project_id: projectId, provider_id: providerId, params }),
+  });
+
+const gitProject = async () => {
+  const folder = await mkdtemp(join(root, "params-"));
+  execFileSync("git", ["init", "--quiet", "--initial-branch=main"], { cwd: folder });
+  execFileSync(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "commit",
+      "--allow-empty",
+      "--quiet",
+      "-m",
+      "Initial",
+    ],
+    { cwd: folder },
+  );
+  return { folder, project: await createProject(folder) };
+};
+
+test.each([
+  { baseRef: "main" },
+  { base: "missing-branch" },
+  { base: 42 },
+])("rejects invalid Git params before creating a row or worktree: %j", async (params) => {
+  const { folder, project } = await gitProject();
+  const before = await handle.deps.workspaceService.list(project.id);
+  const worktrees = execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: folder }).toString();
+  const response = await postWorkspace(project.id, "pstdio.worktree", params);
+  expect(response.status).toBe(400);
+  expect((await response.json()).error).toMatch(/pstdio.worktree.*base.*main/);
+  expect(await handle.deps.workspaceService.list(project.id)).toEqual(before);
+  expect(execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: folder }).toString()).toBe(worktrees);
+});
+
+test("persists the declared current branch default when base is omitted", async () => {
+  const { project } = await gitProject();
+  const response = await postWorkspace(project.id, "pstdio.worktree");
+  expect(response.status).toBe(201);
+  const workspace = await response.json();
+  expect(workspace.provider_params_json).toEqual({ base: "main" });
+  expect(await handle.deps.workspaceService.get(workspace.id)).toMatchObject({
+    provider_params_json: { base: "main" },
+  });
+});
+
+test.each([
+  {},
+  { image: 12 },
+  { image: "documents", typo: true },
+])("rejects invalid extension params before calling the provider: %j", async (params) => {
+  cloudAvailable = true;
+  const project = await createProject();
+  const before = await handle.deps.workspaceService.list(project.id);
+  const calls = createdParams.length;
+  const response = await postWorkspace(project.id, "example.cloud", params);
+  expect(response.status).toBe(400);
+  expect((await response.json()).error).toContain("image");
+  expect(await handle.deps.workspaceService.list(project.id)).toEqual(before);
+  expect(createdParams.length).toBe(calls);
+});
+
+test("creates a Planner workspace from a pinned commit before the current branch tip", async () => {
+  const { folder, project } = await gitProject();
+  const pinned = execFileSync("git", ["rev-parse", "HEAD"], { cwd: folder }).toString().trim();
+  execFileSync(
+    "git",
+    ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "--allow-empty", "--quiet", "-m", "Later"],
+    { cwd: folder },
+  );
+  const response = await postWorkspace(project.id, "pstdio.worktree", { base: pinned });
+  expect(response.status).toBe(201);
+  const workspace = await response.json();
+  expect(workspace.provider_params_json).toEqual({ base: pinned });
+  expect(execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspace.root_path }).toString().trim()).toBe(pinned);
+  expect((await postWorkspace(project.id, "pstdio.worktree", { base: "HEAD" })).status).toBe(201);
+});

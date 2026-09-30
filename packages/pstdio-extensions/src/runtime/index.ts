@@ -55,6 +55,7 @@ export {
   DEFAULT_MAX_COMMAND_DEPTH,
   type HostCommandExecuteInput,
   type InvocationScope,
+  resolveDeclaredParams,
   type ScopeDisposer,
   type ScopedHostApis,
   validateCommandParams,

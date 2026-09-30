@@ -51,6 +51,7 @@ pst sessions resolve-session-id --agent <agent> --agent-session-id <id> [--cwd <
 
 ```sh
 pst workspaces create --provider <id> [--params <json>]
+pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'
 pst workspaces list [--json]
 pst workspaces merge --id <id> [--delete-workspace]
 pst workspaces delete --id <id>
@@ -135,6 +136,8 @@ pst reports delete [--workspace <id>] [--name <name>]
 ```
 
 `reports write` returns absolute host paths in the default project folder for the report and its evidence files. Edit those paths, then use `reports save`. These paths do not refer to a remote workspace filesystem.
+
+Workspace params must match the provider declaration. Unknown keys, invalid values, and missing required values fail before creation. Omitted params use declared defaults. For Git worktrees, `base` defaults to the current branch; pass `base: main` explicitly to start from `main`. Errors list the accepted params and options.
 
 ## Troubleshooting
 

@@ -64,3 +64,18 @@ describe("workspaces create", () => {
     await expect(handler({ _: [], $0: "" } as never)).rejects.toThrow("Not inside a pstdio project.");
   });
 });
+
+test("propagates the API provider validation error to the CLI error handler", async () => {
+  const error = new Error(
+    'Invalid params for workspace provider "pstdio.worktree": Unknown params: baseRef. Accepted params: base (main)',
+  );
+  const handler = createHandler({
+    ...baseDeps,
+    createStandaloneWorkspace: async () => {
+      throw error;
+    },
+  });
+  await expect(
+    handler({ provider: "pstdio.worktree", params: '{"baseRef":"main"}', _: [], $0: "" } as never),
+  ).rejects.toBe(error);
+});

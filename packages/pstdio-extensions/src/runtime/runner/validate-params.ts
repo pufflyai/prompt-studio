@@ -28,6 +28,7 @@ const checkDescriptor = (key: string, descriptor: ParamDescriptor, value: unknow
   switch (descriptor.type) {
     case "text":
     case "longtext":
+    case "markdown":
     case "select":
     case "template":
       if (typeof value !== "string") return `Param "${key}" must be a string (got ${describeValue(value)})`;
@@ -41,6 +42,7 @@ const checkDescriptor = (key: string, descriptor: ParamDescriptor, value: unknow
       return undefined;
     case "multi-select":
     case "list":
+    case "files":
       if (!isStringArray(value)) return `Param "${key}" must be a string array (got ${describeValue(value)})`;
       return undefined;
     case "harness":
@@ -79,4 +81,28 @@ export const validateCommandParams = (schema: ParamObjectSchema, params: unknown
   }
 
   return { ok: true };
+};
+
+export const resolveDeclaredParams = (schema: ParamObjectSchema, input: Record<string, unknown>) => {
+  const unknown = Object.keys(input).filter((key) => !Object.hasOwn(schema, key));
+  if (unknown.length) throw new Error(`Unknown params: ${unknown.join(", ")}`);
+  const params = { ...input };
+  for (const [key, descriptor] of Object.entries(schema)) {
+    if (params[key] === undefined && descriptor.defaultValue !== undefined) params[key] = descriptor.defaultValue;
+  }
+  const result = validateCommandParams(schema, params);
+  if (!result.ok) throw new Error(result.reason);
+  for (const [key, descriptor] of Object.entries(schema)) {
+    const value = params[key];
+    if (value === undefined) continue;
+    if (descriptor.type === "select" || descriptor.type === "multi-select") {
+      const values = Array.isArray(value) ? value : [value];
+      if (values.some((entry) => !descriptor.options.some((option) => option.value === entry))) {
+        throw new Error(
+          `Param "${key}" must use these options: ${descriptor.options.map((option) => option.value).join(", ")}`,
+        );
+      }
+    }
+  }
+  return params;
 };
