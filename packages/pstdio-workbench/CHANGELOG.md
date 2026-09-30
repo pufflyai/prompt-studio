@@ -1,5 +1,23 @@
 # @pstdio/workbench
 
+## 0.39.0
+
+_2026-09-30_
+
+### Minor Changes
+
+- c223ff9: Add native view toolbar actions and command-backed parameter choices.
+- c2992ff: Share saved board views and defaults across project clients and agents.
+- 5208194: Add Sidenav levels for pages, keep header rows and pinned rows visible inside levels, and give Notes and Sessions their own lists.
+
+### Patch Changes
+
+- e367ed1: Tree and card menus check only the clicked resource's metadata, so they no longer pick up values from the open page.
+- 365c0c4: Keep a session picked from a tab's menu in that tab, and reuse the tab already showing a resource after it switched in place.
+- 5208194: Show where a dragged Sidenav row lands, including after the last row of a group or header, tint a group the row drops into, let rows be dragged out behind a group, and keep an emptied header or footer as a drop target.
+- 2177594: Views keep loading until slow reads finish instead of failing with "The view took too long to load" after 30 seconds.
+- 2566264: Shrink crowded closable tabs before scrolling, keep other tabs at their content width, and keep panel tab dragging within its row.
+
 ## 0.38.0
 
 _2026-09-29_

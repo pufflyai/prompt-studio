@@ -1,5 +1,17 @@
 # @pstdio/sdk
 
+## 0.39.0
+
+_2026-09-30_
+
+### Minor Changes
+
+- 266e1fd: Version the extension API with semver starting at 0.1.0, so extensions declaring a caret range such as `^0.1.0` keep loading across additive host releases.
+- c223ff9: Add native view toolbar actions and command-backed parameter choices.
+- c2992ff: Share saved board views and defaults across project clients and agents.
+- 2177594: Open chats share one session stream connection, so they no longer use up the browser's connections and stall other views.
+- 1135bca: Resource kinds can name a `resolve` command, so an open page shows the resource's current title, icon, and menus after its data changes.
+
 ## 0.38.0
 
 _2026-09-29_

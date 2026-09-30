@@ -1,5 +1,14 @@
 # pstdio-notes
 
+## 0.39.0
+
+_2026-09-30_
+
+### Minor Changes
+
+- 266e1fd: Declare the extension API as the caret range `^0.1.0` instead of a list of alpha versions.
+- 5208194: Add Sidenav levels for pages, keep header rows and pinned rows visible inside levels, and give Notes and Sessions their own lists.
+
 ## 0.38.0
 
 _2026-09-29_

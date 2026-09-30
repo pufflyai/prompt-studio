@@ -1,6 +1,6 @@
 {
   "name": "harness-claude-code",
-  "version": "0.38.0",
+  "version": "0.39.0",
   "displayName": "Claude Code",
   "description": "Contributes the Claude Code agent harness.",
   "publisher": "pstdio",
