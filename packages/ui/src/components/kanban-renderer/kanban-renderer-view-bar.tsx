@@ -216,13 +216,16 @@ export const KanbanRendererViewBar = (props: KanbanRendererViewBarProps) => {
           <Tabs.List overflowX="auto" overflowY="hidden">
             {views.map((view) => (
               <ResourceContextMenu key={view.id} actions={actionsFor(view)} positioning={{ placement: "bottom-start" }}>
-                <Tabs.Trigger value={view.id}>
-                  {view.title}
+                <Tabs.Trigger value={view.id} title={view.title}>
+                  <Text as="span" data-tab-label>
+                    {view.title}
+                  </Text>
                   {dirty && view.id === activeViewId ? (
                     <Box
                       aria-label="Unsaved view changes"
                       width="0.375rem"
                       height="0.375rem"
+                      flexShrink={0}
                       borderRadius="full"
                       bg="fg.warning"
                     />

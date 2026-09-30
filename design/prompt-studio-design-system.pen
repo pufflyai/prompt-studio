@@ -29626,7 +29626,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -72196,7 +72196,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -72907,6 +72907,1084 @@
                       ]
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "syLJk",
+          "name": "F08 · Crowded panel and project tabs",
+          "theme": {
+            "mode": "dark"
+          },
+          "width": 1000,
+          "height": 440,
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "L5lN7",
+              "name": "Sizing rule",
+              "fill": "$ds-fg",
+              "content": "Tabs with a close button share available width, then scroll at their minimum",
+              "fontFamily": "$font-heading",
+              "fontSize": 18,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "TNrPo",
+              "name": "Panel · shared width",
+              "fill": "$ds-fg-muted",
+              "content": "Panel · shared width",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "H6gNFu",
+              "name": "Panel · shared width row",
+              "width": 900,
+              "height": 28,
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "QVBEc",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 1",
+                  "width": 96,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "active"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "GY70V",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 2",
+                  "width": 96,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "x5lYx",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 3",
+                  "width": 96,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "MrnXb",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 4",
+                  "width": 96,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "mGOPU",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 5",
+                  "width": 96,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "I6dZkH",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 6",
+                  "width": 96,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "gNuKt",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 7",
+                  "width": 96,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "f4vrk",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 8",
+                  "width": 96,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "type": "icon",
+                  "id": "fgdx7",
+                  "name": "Add panel",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "plus",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "j7tLIF",
+              "name": "Panel · minimum 48 px; scroll horizontally",
+              "fill": "$ds-fg-muted",
+              "content": "Panel · minimum 48 px; scroll horizontally",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "vINKW",
+              "name": "Panel · minimum 48 px; scroll horizontally row",
+              "width": 900,
+              "height": 28,
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "AUDHV",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 1",
+                  "width": 48,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "active"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "LLAry",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 2",
+                  "width": 48,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "A1417V",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 3",
+                  "width": 48,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "wyaR7",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 4",
+                  "width": 48,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "ntFRY",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 5",
+                  "width": 48,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "FmZ2R",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 6",
+                  "width": 48,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "xB01O",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 7",
+                  "width": 48,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "XFnlZ",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 8",
+                  "width": 48,
+                  "height": 20,
+                  "clip": true,
+                  "theme": {
+                    "size": "xs",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "file",
+                      "width": 12,
+                      "height": 12
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": false,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "type": "icon",
+                  "id": "vPOLt",
+                  "name": "Add panel",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "plus",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "w7Qpa3",
+              "name": "Project · shared width",
+              "fill": "$ds-fg-muted",
+              "content": "Project · shared width",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "WrKIH",
+              "name": "Project · shared width row",
+              "width": 900,
+              "height": 28,
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "jR0OQ",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 1",
+                  "width": 112,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "active"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "kotxl",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 2",
+                  "width": 112,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "n8OMe",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 3",
+                  "width": 112,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "gNeFE",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 4",
+                  "width": 112,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "K72cZF",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 5",
+                  "width": 112,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "gMlxZ",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 6",
+                  "width": 112,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "x0YJb",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 7",
+                  "width": 112,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "yPOyD",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 8",
+                  "width": 112,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "Notes…",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "type": "icon",
+                  "id": "xwx0o",
+                  "name": "Open project",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "plus",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Rc7NZ",
+              "name": "Project · minimum 64 px; scroll horizontally",
+              "fill": "$ds-fg-muted",
+              "content": "Project · minimum 64 px; scroll horizontally",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "lwq5R",
+              "name": "Project · minimum 64 px; scroll horizontally row",
+              "width": 900,
+              "height": 28,
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "UO43b",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 1",
+                  "width": 64,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "active"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "LkWZt",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 2",
+                  "width": 64,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "yhcAQ",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 3",
+                  "width": 64,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "AzzJt",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 4",
+                  "width": 64,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "weQgT",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 5",
+                  "width": 64,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "y9wVLr",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 6",
+                  "width": 64,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "jXFkz",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 7",
+                  "width": 64,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "lkUJa",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Tab 8",
+                  "width": 64,
+                  "height": 28,
+                  "clip": true,
+                  "theme": {
+                    "size": "md",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "folder",
+                      "width": 14,
+                      "height": 14
+                    },
+                    "k9XlqC": {
+                      "content": "",
+                      "width": "fill_container"
+                    },
+                    "g1LJJh": {
+                      "enabled": true,
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "type": "icon",
+                  "id": "C10Sm",
+                  "name": "Open project",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "plus",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
                 }
               ]
             }
@@ -90693,7 +91771,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -90765,7 +91843,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 994,
+              "y": 989,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -119734,7 +120812,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
