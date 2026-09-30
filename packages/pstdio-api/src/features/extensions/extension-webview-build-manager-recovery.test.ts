@@ -66,17 +66,17 @@ test("rebuilds nested CSS imports and referenced assets edited while closed", as
   const fixture = setup();
   try {
     const first = fixture.createManager();
-    await first.ensure("lab", "pstdio.lab.view.page");
+    await first.ensure("lab");
     first.dispose();
     const before = fixture.css();
     writeFileSync(join(fixture.source, "nested.css"), 'body { color: blue; background: url("./pixel.svg"); }');
     const second = fixture.createManager();
-    await second.ensure("lab", "pstdio.lab.view.page");
+    await second.ensure("lab");
     second.dispose();
     const afterCss = fixture.css();
     expect(afterCss).not.toBe(before);
     writeFileSync(join(fixture.source, "pixel.svg"), '<svg xmlns="http://www.w3.org/2000/svg"><text>two</text></svg>');
-    await fixture.createManager().ensure("lab", "pstdio.lab.view.page");
+    await fixture.createManager().ensure("lab");
     expect(fixture.css()).not.toBe(afterCss);
     expect(fixture.state.builds).toBe(3);
   } finally {
@@ -88,13 +88,13 @@ test("recovers a persisted build failure when valid source is restored while clo
   const fixture = setup();
   try {
     const first = fixture.createManager();
-    await first.ensure("lab", "pstdio.lab.view.page");
+    await first.ensure("lab");
     writeFileSync(join(fixture.source, "main.ts"), "invalid TypeScript !!!");
     await first.refresh(fixture.source);
     expect(fixture.state.error).not.toBeNull();
     first.dispose();
     writeFileSync(join(fixture.source, "main.ts"), fixture.main);
-    await fixture.createManager().ensure("lab", "pstdio.lab.view.page");
+    await fixture.createManager().ensure("lab");
     expect(fixture.state.error).toBeNull();
   } finally {
     fixture.dispose();

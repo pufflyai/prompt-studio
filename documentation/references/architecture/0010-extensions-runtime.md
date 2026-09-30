@@ -14,11 +14,11 @@ See [manifest and installation](../extensions/0002-manifest-and-installation.md)
 
 An ordinary file edit in an installed source does not adopt a new contribution contract. The project continues using its adopted snapshot until an explicit update, reload, install, or development-loop refresh validates and publishes a replacement.
 
-Runtime startup and project UI metadata do not build or check webviews. The first asset request for a webview checks that webview only. It waits for the check before serving the bundle or its build error.
+Runtime startup checks every installed source's webviews in the background and does not wait. Project UI metadata waits for the checks of the project's enabled sources, because it names each bundle's revision and style files. Asset requests wait for their source's check before serving the bundle or its build error.
 
 A SHA-256 digest in each bundle's `dist/build-signature.txt` records its source graph, declared dependencies, Bun version, and builder options. The host reuses matching bundles across restarts and publishes new signatures with successful build output. Starting a replacement build invalidates the old signature. If a build fails and the source is later restored, the next check rebuilds once and clears the recorded failure through the normal success path. Interrupted staging folders are cleaned before the next build, without removing active builds.
 
-The installed-source watcher rebuilds only webviews used during this runtime process. Other webviews are checked on first use. Explicit reloads build all webviews of the validated source immediately. Usage remains active until the process exits. Runtime refresh still removes cache roots no installed source owns. Bundles of removed webviews within an installed source remain for separate cleanup. See [the build decision](../../adrs/0050-build-extension-webviews-on-use.md).
+The installed-source watcher, installs, and explicit reloads check the changed source immediately. Runtime refresh still removes cache roots no installed source owns. Bundles of removed webviews within an installed source remain for separate cleanup. See [the build decision](../../adrs/0050-reuse-webview-bundles-across-restarts.md).
 
 A completed or failed webview build invalidates the relevant projected metadata with reason `webviews_built`; it does not re-read source contributions merely because a file changed.
 

@@ -34,6 +34,11 @@ export const getProjectExtensionUiHandler = (
   const handler = async (c: Context<AppBindings>) => {
     const { projectId } = c.req.param();
     try {
+      const enabled = await deps.extensionRuntimeCatalog.get(projectId);
+      // Metadata names built bundles and their styles, so it describes webviews only after their checks.
+      await Promise.all(
+        enabled.enabledSources.map(({ installedSource }) => deps.ensureExtensionWebviews(installedSource.id)),
+      );
       const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       return c.json(await assembleWorkbenchMetadata(deps, projectId, snapshot.runtime, snapshot.enabledSources), 200);
     } catch (error) {

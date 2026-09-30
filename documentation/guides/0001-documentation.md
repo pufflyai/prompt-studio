@@ -205,7 +205,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
 
-- [0050 — Build extension webviews on use](../adrs/0050-build-extension-webviews-on-use.md)
+- [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
 
 ## Lessons learned
 

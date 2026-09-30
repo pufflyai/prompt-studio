@@ -70,7 +70,7 @@ export interface RouteDeps {
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
   extensionUpgradeService: ReturnType<typeof createExtensionUpgradeService>;
-  ensureExtensionWebview: (installedExtensionId: string, webviewId: string) => Promise<void>;
+  ensureExtensionWebviews: (installedExtensionId: string) => Promise<void>;
   extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;

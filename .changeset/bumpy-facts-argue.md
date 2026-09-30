@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Build extension webviews on first use and reuse unchanged bundles across restarts.
+Start faster by reusing unchanged extension webview bundles across restarts and checking them in the background.

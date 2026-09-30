@@ -100,19 +100,12 @@ describe("extension webview setup", () => {
       expect(labView.body.webview.runtimeUrl).toMatch(
         new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/runtime$`),
       );
-      // Webviews build on first use, so the module URL gains its build revision only after that.
       expect(labView.body.webview.moduleUrl).toMatch(
-        new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/assets/module\\.js$`),
+        new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/assets/module\\.js\\?h=.+$`),
       );
 
       const module = await waitForOk(`${api.url}${labView.body.webview.moduleUrl}`);
       expect(module.headers.get("content-type")).toContain("application/javascript");
-
-      const builtView = (await fetchMetadata(projectId)).views.find((view) => view.localId === "lab-page");
-      if (builtView?.body.kind !== "webview") throw new Error("Extension Lab view is not a webview.");
-      expect(builtView.body.webview.moduleUrl).toMatch(
-        new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/assets/module\\.js\\?h=.+$`),
-      );
 
       const runtimeHtml = await waitForOk(`${api.url}${labView.body.webview.runtimeUrl}`);
       const runtimeContent = await runtimeHtml.text();

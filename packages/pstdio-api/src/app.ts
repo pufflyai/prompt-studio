@@ -272,7 +272,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     extensionStorageService,
     syncService,
     activityEventsService,
-    ensureExtensionWebview: extensionRuntime.ensureWebview,
+    ensureExtensionWebviews: extensionRuntime.ensureWebviews,
     terminal: terminalSupervisor.api,
   };
 

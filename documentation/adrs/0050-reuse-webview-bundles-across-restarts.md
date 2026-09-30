@@ -1,4 +1,4 @@
-# ADR: Build extension webviews on use, with a persisted signature
+# ADR: Reuse webview bundles across restarts with a persisted signature
 
 Proposed: 2026-09-30
 
@@ -11,24 +11,24 @@ Since PS-25 replaced watch processes with one-shot builds, the host has remember
 ## Decision
 
 1. A published webview bundle carries the digest of its build signature in `dist/build-signature.txt`. A bundle is current exactly when that digest matches the signature of its current inputs. The inputs are the source graph, the declared dependencies, the Bun version, and the builder options.
-2. Webviews build on use. A webview is used when its assets are requested. The first asset request for a webview in a process checks that webview only and waits for the check. Runtime startup and project UI metadata do not build or check webviews.
-3. The source watcher keeps watching every installed source. A change rebuilds at once only webviews used in this process. Other webviews are checked again on their next use. A validated source from an explicit reload builds all its webviews at once, so the reload reports build errors.
+2. Runtime startup checks every installed source's webviews in the background. Readiness does not wait. A check hashes the inputs and builds only bundles whose signature does not match.
+3. Project UI metadata waits for the checks of the project's enabled sources. Asset requests (GET and HEAD) wait for the checks of their source. The metadata names each built bundle's revision and style files, so it must describe finished builds.
+4. The source watcher, installs, and explicit reloads check the changed source at once, as before.
 
 Starting a replacement build invalidates the old signature. If a build fails and the source is later restored, the next check rebuilds once and clears the recorded failure through the normal success path.
 
 ## Consequences
 
 - Runtime readiness no longer depends on the number or size of installed webviews. The ticket prototype measured about 1 s instead of 5.7 to 7.3 s; timings depend on the installed sources and host.
-- Restarts reuse unchanged bundles. Edits made while the app was closed are detected on first use.
-- A host upgrade that changes Bun or builder options rebuilds each used webview once.
-- Build failures of unused webviews appear when a webview is first opened, not at startup.
-- The first open of a changed webview waits for its own build only. The asset route makes that request wait instead of returning 404.
-- Before its first build, a webview's metadata has no build revision and no style files. The finished build changes the revision, so the dashboard reloads the webview once with its styles.
+- Restarts reuse unchanged bundles. Edits made while the app was closed are found by the startup check.
+- A host upgrade that changes Bun or builder options rebuilds every webview once, in the background.
+- If a project opens while the startup check still builds, its metadata waits for that project's webviews.
+- Metadata never names a bundle that is still missing, so a first build does not reload open webviews or re-register contributions while the user works.
 - Bundles of removed webviews are no longer swept by a full refresh. A separate cleanup must own that.
 
 ## Alternatives considered
 
-- **Keep the boot build but run it in the background.** Readiness improves, but every start still rebuilds every installed webview, competes with the first project for CPU, and builds extensions nobody uses. Rejected.
 - **Persist the signature in the database.** Freshness is a property of the build output. Storing it in the database creates duplicate state that can disagree with the cache, for example after the cache is deleted. Rejected.
 - **Ship prebuilt webview bundles in extension packages.** This removes the host build for catalog extensions, but local and repo extensions would still need host builds, and it adds a publishing step for authors. Out of scope.
-- **Start builds from the project UI metadata request.** This overlaps builds with the dashboard's own loading. But it builds every webview of every enabled extension at once. `Bun.build` calls run one after another in the process, so the opened webview waited behind up to 30 builds nobody asked for (about 5 s in the e2e home). Rejected.
+- **Build webviews only when used.** Building when metadata or an asset is first requested skips unused extensions. But the metadata names build revisions and style files, so it is wrong until the build finishes. Each finished build changed the metadata and reloaded open webviews of the extension while the user worked. This broke settings panels, player views, and form input in the e2e suite. `Bun.build` calls also run one after another in the process, so an opened webview waited behind every other build started with it. Rejected.
+- **Keep the boot build and wait for it.** With persisted signatures an unchanged home only hashes inputs, but a first run or upgrade would again block readiness for seconds. Rejected.

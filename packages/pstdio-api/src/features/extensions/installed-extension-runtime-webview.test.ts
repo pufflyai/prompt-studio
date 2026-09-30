@@ -43,7 +43,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       });
       await wait();
 
-      expect(refreshedSourcePaths).toEqual(["/extensions/lab"]);
+      expect(refreshedSourcePaths).toEqual([undefined, "/extensions/lab"]);
       expect(targetedRefreshFinished).toBe(false);
 
       releaseTargetedBuild();
@@ -89,7 +89,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       await wait();
 
       expect(rootRefreshCount).toBe(1);
-      expect(webviewRefreshes).toEqual(["/extensions/lab"]);
+      expect(webviewRefreshes).toEqual([undefined, "/extensions/lab"]);
     } finally {
       releaseUnexpectedRootRefresh();
       await targetedRefresh;

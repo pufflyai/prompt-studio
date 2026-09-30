@@ -113,10 +113,10 @@ Installs and updates are explicit. Source that appears in the extensions root is
 The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to a local JSON file or
 an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is
 trusted configuration because every entry names code the host may run.
-- Webviews build when first opened and reuse unchanged bundles across restarts. Startup does not
-  wait for webview builds. Editing an installed folder rebuilds the webviews opened in this runtime
-  process, so an open webview updates while you work. Other webviews wait until they are opened.
-  Only its contributions wait for the update, because those are what the project agreed to run.
+- Webview bundles are reused across restarts while their inputs are unchanged. Startup checks them
+  in the background and does not wait. Editing an installed folder still rebuilds that extension's
+  webview assets, so an open webview updates while you work. Only its contributions wait for the
+  update, because those are what the project agreed to run.
 - `pst extensions dev <path>` still reinstalls on every edit. That is an explicit development loop,
   not automatic adoption.
 

@@ -92,29 +92,28 @@ export const createInstalledExtensionRuntime = async (input: {
   });
   const listExistingInstalledSources = async () =>
     selectExistingSources(await input.installedExtensionSourcesService.list());
-  const webviewBuildManager: RuntimeProcess & {
-    ensure: (installedExtensionId: string, webviewId: string) => Promise<void>;
-  } = input.webviewBuilds
-    ? createWebviewBuildManager({
-        listInstalledSources: listExistingInstalledSources,
-        reportBuildFailure: (installedExtensionId, webviewId, error, expectedSource) => {
-          // A snapshot serves each webview's built module URL, so a finished build — for
-          // better or worse — changes what the snapshot must say.
-          input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
-          return input.extensionService.reportWebviewBuildFailure(
-            installedExtensionId,
-            webviewId,
-            error,
-            expectedSource,
-          );
-        },
-        reportBuildSuccess: (installedExtensionId, webviewId, expectedSource) => {
-          input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
-          return input.extensionService.reportWebviewBuildSuccess(installedExtensionId, webviewId, expectedSource);
-        },
-        onError: reportError,
-      })
-    : { dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
+  const webviewBuildManager: RuntimeProcess & { ensure: (installedExtensionId: string) => Promise<void> } =
+    input.webviewBuilds
+      ? createWebviewBuildManager({
+          listInstalledSources: listExistingInstalledSources,
+          reportBuildFailure: (installedExtensionId, webviewId, error, expectedSource) => {
+            // A snapshot serves each webview's built module URL, so a finished build — for
+            // better or worse — changes what the snapshot must say.
+            input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
+            return input.extensionService.reportWebviewBuildFailure(
+              installedExtensionId,
+              webviewId,
+              error,
+              expectedSource,
+            );
+          },
+          reportBuildSuccess: (installedExtensionId, webviewId, expectedSource) => {
+            input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
+            return input.extensionService.reportWebviewBuildSuccess(installedExtensionId, webviewId, expectedSource);
+          },
+          onError: reportError,
+        })
+      : { dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
   const refreshWebviewsInBackground = (sourcePath?: string) => {
     webviewBuildManager
       .refresh(sourcePath)
@@ -155,6 +154,8 @@ export const createInstalledExtensionRuntime = async (input: {
   triggerRuntimeRefresh = refresh;
 
   await refreshWatchers();
+  // Readiness does not wait: unchanged bundles are reused, and requests wait for pending checks.
+  refreshWebviewsInBackground();
 
   return {
     dispose: () => {
@@ -162,7 +163,7 @@ export const createInstalledExtensionRuntime = async (input: {
       sourceWatcher.dispose();
       webviewBuildManager.dispose();
     },
-    ensureWebview: webviewBuildManager.ensure,
+    ensureWebviews: webviewBuildManager.ensure,
     refresh,
     refreshWatchers,
   };

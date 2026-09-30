@@ -104,10 +104,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     });
 
     try {
-      await Promise.all([
-        manager.ensure("installed-lab", "pstdio.lab.view.first"),
-        manager.ensure("installed-lab", "pstdio.lab.view.second"),
-      ]);
+      await manager.ensure("installed-lab");
       expect(maxConcurrent).toBe(2);
     } finally {
       manager.dispose();
@@ -161,10 +158,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     });
 
     try {
-      const refresh = Promise.all([
-        manager.ensure("installed-lab", "pstdio.lab.view.first"),
-        manager.ensure("installed-lab", "pstdio.lab.view.second"),
-      ]);
+      const refresh = manager.ensure("installed-lab");
       await Promise.all([firstBuildStarted, secondBuildStarted]);
 
       releaseFirst();
@@ -210,7 +204,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
     });
 
     try {
-      const firstRefresh = manager.ensure("installed-lab", "pstdio.lab.view.labPage");
+      const firstRefresh = manager.ensure("installed-lab");
       await waitFor(() => runCount === 1, "Timed out waiting for first refresh build.");
 
       const secondRefresh = manager.refresh();
@@ -260,7 +254,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
     });
 
     try {
-      const firstRefresh = manager.ensure("installed-lab", "pstdio.lab.view.labPage");
+      const firstRefresh = manager.ensure("installed-lab");
       await waitFor(() => runCount === 1, "Timed out waiting for first refresh build.");
 
       writeFileSync(join(sourcePath, "src/main.tsx"), "console.log('updated webview');");
@@ -312,7 +306,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
     });
 
     try {
-      const refresh = manager.ensure("installed-lab", "pstdio.lab.view.labPage");
+      const refresh = manager.ensure("installed-lab");
       await waitFor(() => runCount === 1, "Timed out waiting for build.");
 
       manager.dispose();

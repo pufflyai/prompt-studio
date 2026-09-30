@@ -59,7 +59,7 @@ describe("createExtensionWebviewBuildManager source identity", () => {
     });
 
     try {
-      await Promise.all(rows.map((row) => manager.ensure(row.id, "pstdio.font-editor.view.page")));
+      await Promise.all(rows.map((row) => manager.ensure(row.id)));
       await manager.refresh();
 
       expect(builtEntries).toHaveLength(2);
@@ -96,7 +96,7 @@ describe("createExtensionWebviewBuildManager source identity", () => {
     });
 
     try {
-      await manager.ensure("project-copy", "pstdio.font-editor.view.page");
+      await manager.ensure("project-copy");
       await manager.refresh();
 
       expect(existsSync(join(cacheRoot, "font-editor"))).toBe(false);
