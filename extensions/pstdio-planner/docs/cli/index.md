@@ -23,6 +23,7 @@ Every CLI-enabled Planner command is available under `pst pstdio-planner`. Globa
 | `pst pstdio-planner update-ticket` | `pst tickets update` |
 | `pst pstdio-planner link-review` | `pst tickets link-review` |
 | `pst pstdio-planner archive-ticket` | `pst tickets archive` |
+| `pst pstdio-planner unarchive-ticket` | `pst tickets unarchive` |
 | `pst pstdio-planner delete-ticket` | `pst tickets delete` |
 | `pst pstdio-planner write-ticket` | `pst tickets write` |
 | `pst pstdio-planner save-ticket` | `pst tickets save` |

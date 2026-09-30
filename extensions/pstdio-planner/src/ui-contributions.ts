@@ -27,6 +27,7 @@ import { breakIntoSubTicketsCommand, refineTicketCommand } from "./commands/tick
 import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
+import { unarchiveTicketCommand } from "./commands/unarchive-ticket";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
@@ -167,6 +168,12 @@ export const createPlannerUi = (baseUrl: string) => {
           label: l10n("kanbanRenderers.tickets.rowActions.archive", "Archive"),
           icon: "archive",
           command: archiveTicketCommand.ref,
+        },
+        {
+          id: "unarchive",
+          label: l10n("kanbanRenderers.tickets.rowActions.unarchive", "Unarchive"),
+          icon: "archive-restore",
+          command: unarchiveTicketCommand.ref,
         },
         {
           id: "delete",

@@ -125,6 +125,7 @@ so only that row is highlighted even though the ticket body and files share a ti
 | Break into sub-tickets | `pstdio.pstdio-planner.command.break-into-sub-tickets`      |
 | Refine ticket          | `pstdio.pstdio-planner.command.refine-ticket`               |
 | Archive                | `pstdio.pstdio-planner.command.archive-ticket`              |
+| Unarchive              | `pstdio.pstdio-planner.command.unarchive-ticket`            |
 | Delete                 | `pstdio.pstdio-planner.command.delete-ticket`               |
 
 ## Rules & Constraints

@@ -94,6 +94,7 @@ pst tickets panel --id <id>
 pst tickets update --id <id> [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--unlink-parent] [--blocked-reason <text>]
 pst tickets link-review --id <id> --url <url> [--title <title>]
 pst tickets archive --id <id>
+pst tickets unarchive --id <id>
 pst tickets delete --id <id>
 pst tickets write --title <title> [--status <status>] [--tags <tag>...] [--user-prompt <text>] [--parent <id>]
 pst tickets save --id <id> [--status <status>]

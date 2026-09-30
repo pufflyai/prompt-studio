@@ -105,3 +105,23 @@ describe("pstdio tickets archive", () => {
     TEST_TIMEOUT,
   );
 });
+
+describe("pstdio tickets unarchive", () => {
+  test(
+    "returns an archived ticket to the default list",
+    () => {
+      const repo = createInitializedRepo("tk-unarchive");
+
+      const { shorthand } = JSON.parse(run('tickets create --content "Restore me"', repo));
+      run(`tickets archive --id ${shorthand}`, repo);
+
+      const restored = JSON.parse(run(`tickets unarchive --id ${shorthand}`, repo));
+      expect(restored.shorthand).toBe(shorthand);
+      expect(restored.archived).toBe(false);
+
+      const byDefault = JSON.parse(run("tickets list", repo));
+      expect(byDefault.map((ticket: { shorthand: string }) => ticket.shorthand)).toEqual([shorthand]);
+    },
+    TEST_TIMEOUT,
+  );
+});
