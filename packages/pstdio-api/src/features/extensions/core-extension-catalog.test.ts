@@ -155,6 +155,7 @@ describe("core extension catalog", () => {
       "references/examples/zipline.ts",
       "references/extension-api.md",
       "references/host-storage-and-workspaces.md",
+      "references/native-actions.md",
       "references/pages.md",
       "references/scope.md",
       "references/validation.md",
