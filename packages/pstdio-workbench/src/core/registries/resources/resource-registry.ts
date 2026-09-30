@@ -48,6 +48,22 @@ export const createWorkbenchResourceContextValues = (resource: ResourceRef | und
   }
   return values;
 };
+const isWorkbenchResourceContextKey = (key: string) =>
+  key === workbenchResourceTypeContextKey ||
+  key === workbenchResourceIdContextKey ||
+  key.startsWith(workbenchResourceMetadataContextKey(""));
+// A menu for one resource must not see the open page's resource keys. Otherwise a key
+// the resource leaves out would silently take the page's value.
+export const scopeWorkbenchResourceContextValues = (
+  values: Record<string, ContextKeyValue>,
+  resource: ResourceRef | undefined,
+) => {
+  const scoped: Record<string, ContextKeyValue> = {};
+  for (const [key, value] of Object.entries(values)) {
+    if (!isWorkbenchResourceContextKey(key)) scoped[key] = value;
+  }
+  return { ...scoped, ...createWorkbenchResourceContextValues(resource) };
+};
 export const createWorkbenchSelectionResourceMetadata = (resource: ResourceRef) => ({
   [workbenchSelectionResourceKeyMetadataKey]: resourceKey(resource),
 });

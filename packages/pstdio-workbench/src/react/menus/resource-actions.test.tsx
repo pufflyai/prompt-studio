@@ -37,4 +37,20 @@ describe("createWorkbenchResourceActions", () => {
     await ticketActions[0]?.onClick();
     expect(openedResource).toEqual(ticket);
   });
+
+  test("reads visibility from the selected resource, not the open page", () => {
+    const workbench = createWorkbench();
+    workbench.commands.registerCommand({ id: "ticket.unarchive", label: "Unarchive" }, { execute: () => undefined });
+    workbench.layout.registerMenuItem(resourceContextMenuPath("ticket"), {
+      commandId: "ticket.unarchive",
+      when: 'workbench.resource.metadata.archived == "true"',
+    });
+    workbench.context.set("workbench.resource.type", "ticket");
+    workbench.context.set("workbench.resource.metadata.archived", true);
+
+    expect(createWorkbenchResourceActions(workbench, ticket)).toEqual([]);
+    expect(
+      createWorkbenchResourceActions(workbench, { ...ticket, metadata: { archived: true } }).map((a) => a.label),
+    ).toEqual(["Unarchive"]);
+  });
 });

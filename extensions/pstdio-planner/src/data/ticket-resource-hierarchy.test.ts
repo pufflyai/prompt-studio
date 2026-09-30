@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   linkedResourceParentMetadata,
   resolveTicketHierarchy,
-  ticketResourceHierarchyMetadata,
+  ticketResourceIdentity,
   ticketResourceReference,
 } from "./ticket-resource-hierarchy";
 import type { StoredTicket } from "./types";
@@ -73,7 +73,8 @@ describe("ticket resource hierarchy", () => {
       [child.id, child],
     ]);
 
-    expect(ticketResourceHierarchyMetadata(child, tickets)).toEqual({
+    expect(ticketResourceReference(child, tickets).metadata).toEqual({
+      archived: false,
       resourceParent: {
         type: "ticket",
         id: "parent",
@@ -108,6 +109,7 @@ describe("ticket resource hierarchy", () => {
       label: "PS-2 Ticket",
       shorthand: "PS-2",
       metadata: {
+        archived: false,
         resourceParent: {
           type: "ticket",
           id: "parent",
@@ -118,6 +120,29 @@ describe("ticket resource hierarchy", () => {
           },
         },
       },
+    });
+  });
+
+  test("marks the ticket's archived state on its reference but not on its parents", () => {
+    const parent = storedTicket({ id: "parent", shorthand: "PS-1", archived: true });
+    const child = storedTicket({ id: "child", shorthand: "PS-2", parentId: parent.id });
+    const tickets = new Map([
+      [parent.id, parent],
+      [child.id, child],
+    ]);
+
+    expect(ticketResourceReference(parent, tickets).metadata.archived).toBe(true);
+    expect(ticketResourceReference(child, tickets).metadata.archived).toBe(false);
+    expect(ticketResourceReference(child, tickets).metadata.resourceParent).toEqual(
+      ticketResourceIdentity(parent, tickets),
+    );
+  });
+
+  test("identifies a ticket without its archived state", () => {
+    const ticket = storedTicket({ id: "archived", shorthand: "PS-4", archived: true });
+
+    expect(ticketResourceIdentity(ticket).metadata).toEqual({
+      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
     });
   });
 

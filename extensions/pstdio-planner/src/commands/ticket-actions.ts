@@ -12,7 +12,7 @@ import {
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
-import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
+import { ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
 import type { StoredTicket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 import { ticketMenuSlots } from "../resource-kinds";
@@ -82,7 +82,7 @@ const ticketHierarchyMetadata = async (
   if (!ticket) return undefined;
   const tickets = await ticketsCollection(ctx.storage).list();
   const parentLookup = new Map(tickets.map((candidate) => [candidate.id, candidate]));
-  return ticketResourceHierarchyMetadata(ticket, parentLookup);
+  return ticketResourceIdentity(ticket, parentLookup).metadata;
 };
 
 export const resolveTicketAnchor = async (

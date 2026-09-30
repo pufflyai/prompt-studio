@@ -84,6 +84,7 @@ import {
   ticketWorktreesListCommand,
   ticketWorktreesRemoveAllCommand,
 } from "./ticket-workspaces";
+import { unarchiveTicketCommand } from "./unarchive-ticket";
 import { updateTicketCommand } from "./update-ticket";
 import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
@@ -142,6 +143,7 @@ export const plannerCommands = [
   ticketPropertiesUpdateCommand,
   reorderTicketCommand,
   archiveTicketCommand,
+  unarchiveTicketCommand,
   archiveTicketColumnActionCommand,
   deleteTicketCommand,
   writeTicketCommand,

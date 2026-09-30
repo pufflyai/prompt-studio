@@ -126,7 +126,10 @@ so only that row is highlighted even though the ticket body and files share a ti
 | Break into sub-tickets | `pstdio.pstdio-planner.command.break-into-sub-tickets`      |
 | Refine ticket          | `pstdio.pstdio-planner.command.refine-ticket`               |
 | Archive                | `pstdio.pstdio-planner.command.archive-ticket`              |
+| Unarchive              | `pstdio.pstdio-planner.command.unarchive-ticket`            |
 | Delete                 | `pstdio.pstdio-planner.command.delete-ticket`               |
+
+Archive shows on active tickets and Unarchive on archived ones. Every ticket resource carries `archived: true` or `archived: false` in its metadata, and each menu item matches it with `when.metadata`. Workspace and session links store only the ticket's identity and parents, not its archived state.
 
 ## Rules & Constraints
 

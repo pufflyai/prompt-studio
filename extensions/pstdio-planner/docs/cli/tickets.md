@@ -12,6 +12,7 @@ pst tickets panel --id <id>
 pst tickets update --id <id> [options]
 pst tickets link-review --id <id> --url <url> [--title <title>]
 pst tickets archive --id <id>
+pst tickets unarchive --id <id>
 pst tickets delete --id <id>
 pst tickets write --title <title> [--status <status>] [--tags <tag>...] [--user-prompt <text>] [--parent <id>]
 pst tickets save --id <id> [--status <status>]
@@ -84,3 +85,5 @@ Both commands require exactly one target. Workspaces accept a shorthand or ID; s
 Remove a link with `pst tickets unlink --id PS-1 --workspace WS-19` or `--session <session-id>`. Other ticket links remain. A managed attempt's own ticket cannot be unlinked from its workspace, implementation session, or review sessions.
 
 Archiving a ticket only archives a shared workspace after all tickets linked to it are archived. The default project folder and providers that do not support archiving stay available.
+
+`unarchive` makes an archived ticket active again. Its status, tags, order, and content stay the same. Workspaces that were archived with the ticket stay archived; create a new workspace from the ticket to continue the work.

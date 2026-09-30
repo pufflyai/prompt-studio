@@ -6,13 +6,7 @@ import type {
   ResourceRef,
   WorkbenchCore,
 } from "../../core";
-import {
-  createWorkbenchResourceContextValues,
-  matchesContextExpression,
-  workbenchResourceIdContextKey,
-  workbenchResourceMetadataContextKey,
-  workbenchResourceTypeContextKey,
-} from "../../core";
+import { matchesContextExpression, scopeWorkbenchResourceContextValues } from "../../core";
 import { byContributionPriority } from "../../core/shared/contributions/metadata";
 
 export interface WorkbenchMenuItem {
@@ -42,31 +36,8 @@ interface WorkbenchMenuItemContext {
   resource?: ResourceRef | undefined;
 }
 
-const workbenchResourceMetadataContextKeyPrefix = workbenchResourceMetadataContextKey("");
-
-const isWorkbenchResourceContextKey = (key: string) =>
-  key === workbenchResourceTypeContextKey ||
-  key === workbenchResourceIdContextKey ||
-  key.startsWith(workbenchResourceMetadataContextKeyPrefix);
-
-const omitWorkbenchResourceContextValues = (values: Record<string, ContextKeyValue>) => {
-  const result: Record<string, ContextKeyValue> = {};
-
-  for (const [key, value] of Object.entries(values)) {
-    if (!isWorkbenchResourceContextKey(key)) result[key] = value;
-  }
-
-  return result;
-};
-
-const resolveContextValues = (state: WorkbenchMenuItemState, context: WorkbenchMenuItemContext | undefined) => {
-  const baseContextValues = context ? omitWorkbenchResourceContextValues(state.contextValues) : state.contextValues;
-
-  return {
-    ...baseContextValues,
-    ...createWorkbenchResourceContextValues(context?.resource),
-  };
-};
+const resolveContextValues = (state: WorkbenchMenuItemState, context: WorkbenchMenuItemContext | undefined) =>
+  context ? scopeWorkbenchResourceContextValues(state.contextValues, context.resource) : state.contextValues;
 
 export const listWorkbenchMenuItemsFromState = (
   state: WorkbenchMenuItemState,

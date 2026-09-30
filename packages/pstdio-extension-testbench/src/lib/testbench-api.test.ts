@@ -67,6 +67,7 @@ describe("createExtensionTestbenchApi", () => {
           icon: "component",
           shorthand: "PS-16",
           metadata: {
+            archived: false,
             resourceParent: {
               type: "ticket",
               id: "PS-15",
