@@ -8,6 +8,8 @@ export const tabsSlotRecipe = defineSlotRecipe({
       "--tabs-trigger-radius": "radii.xs",
     },
     list: {
+      // The inline list would otherwise grow to its tabs' full labels, so they could never shrink.
+      maxW: "full",
       gap: "2xs",
       alignItems: "center",
       justifyContent: "flex-start",
@@ -23,6 +25,8 @@ export const tabsSlotRecipe = defineSlotRecipe({
       minW: "tab-min",
       maxW: "fit-content",
       overflow: "hidden",
+      // Crowded tabs shrink; keep bare-text labels on one line instead of wrapping.
+      whiteSpace: "nowrap",
       "& [data-tab-label]": {
         minW: "0",
         maxW: "tab-label-max",

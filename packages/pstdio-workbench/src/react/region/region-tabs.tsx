@@ -170,7 +170,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     >
       {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
             height so the active tab still meets the header's bottom edge.
-          The content minimum overrides Zag's inline style; see ADR 0047. */}
+          The content minimum overrides Zag's inline style; see ADR 0049. */}
       <ScrollArea
         viewportRef={setViewport}
         size="xs"
