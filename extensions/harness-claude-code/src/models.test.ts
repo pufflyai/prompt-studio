@@ -2,6 +2,21 @@ import { describe, expect, test } from "bun:test";
 import { parseClaudeModels } from "./models";
 
 describe("parseClaudeModels", () => {
+  test("lists Opus once when the CLI reports both the default model and Opus", () => {
+    const models = parseClaudeModels({
+      models: [
+        { value: "default", displayName: "Default (recommended)", description: "Opus 5.5 · Best for everyday tasks" },
+        { value: "opus", displayName: "Opus 5.5", description: "For complex work and everyday tasks" },
+        { value: "haiku", displayName: "Haiku 4.5" },
+      ],
+    });
+
+    expect(models.map(({ id, isDefault }) => ({ id, isDefault }))).toEqual([
+      { id: "opus", isDefault: true },
+      { id: "haiku", isDefault: undefined },
+    ]);
+  });
+
   test("removes thinking for unsupported models and preserves per-model effort levels", () => {
     expect(
       parseClaudeModels({
