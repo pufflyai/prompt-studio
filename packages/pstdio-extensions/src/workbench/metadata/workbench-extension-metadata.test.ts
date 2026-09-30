@@ -47,15 +47,6 @@ describe("createWorkbenchExtensionMetadata", () => {
       { id: "context", placement: "context-menu", access: "public" },
     ]);
   });
-  test("publishes the resource kind resolver as a qualified command id", () => {
-    const resolveNote = defineCommand({ id: "resolve-note", title: "Resolve note", async run() {} });
-    const note = defineResourceKind({ id: "note", resolve: resolveNote.ref });
-    const runtime = normalizeExtensionSources([
-      source(defineExtension({ commands: [resolveNote], resourceKinds: [note] })),
-    ]);
-    const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
-    expect(metadata.resourceKinds[0]?.resolveCommand).toBe("pstdio.lab.command.resolve-note");
-  });
   test("publishes named connection settings metadata without credentials", () => {
     const connection = defineConnection({
       id: "control-plane",

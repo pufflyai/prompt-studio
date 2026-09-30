@@ -142,8 +142,6 @@ export interface RuntimeResourceKindRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  /** Qualified id of the owner's command that resolves an open resource. */
-  resolveCommandId?: string;
   contribution: Omit<ResourceKindDefinition, "menuSlots"> & {
     menuSlots: Record<
       string,

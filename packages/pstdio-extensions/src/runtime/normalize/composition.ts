@@ -78,29 +78,10 @@ const validateResourceMenuOwnership = (runtime: Accumulator) => {
   }
 };
 
-// A resolver defines the current reference of a resource, so only the kind's owner may provide it.
-const validateResourceKindResolvers = (runtime: Accumulator) => {
-  const commands = new Map(runtime.commands.map((command) => [command.id, command]));
-  runtime.resourceKinds = runtime.resourceKinds.map((kind) => {
-    if (!kind.resolveCommandId) return kind;
-    if (commands.get(kind.resolveCommandId)?.extensionId === kind.extensionId) return kind;
-    addDiagnostic(
-      runtime,
-      kind,
-      "extension_resource_kind_resolver_invalid",
-      kind.resolveCommandId,
-      `Resource kind "${kind.id}" must resolve with a command of its own extension`,
-    );
-    const { resolveCommandId: _dropped, ...rest } = kind;
-    return rest;
-  });
-};
-
 export const validateCompositionRelationships = (runtime: Accumulator) => {
   validateResourceKindOwnership(runtime);
   resolveCompositionResourceKindReferences(runtime);
   validateResourceMenuOwnership(runtime);
-  validateResourceKindResolvers(runtime);
 
   for (const provider of runtime.resourceHierarchyProviders) {
     if (runtime.resourceKinds.some((kind) => kind.id === provider.resourceKindId)) continue;
