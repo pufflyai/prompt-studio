@@ -1,0 +1,62 @@
+{
+  "title": "Chat turn",
+  "description": "Follow a new message without moving the composer or replaying the history.",
+  "duration": 12,
+  "markers": [
+    {
+      "at": 1,
+      "label": "Send"
+    },
+    {
+      "at": 1.3,
+      "label": "Wait"
+    },
+    {
+      "at": 3,
+      "label": "First response"
+    },
+    {
+      "at": 5,
+      "label": "Stream"
+    },
+    {
+      "at": 9,
+      "label": "Complete"
+    }
+  ],
+  "group": "Chat",
+  "canvas": "pane",
+  "params": [
+    {
+      "id": "loader",
+      "name": "Working treatment",
+      "type": "selection",
+      "options": [
+        {
+          "id": "spinner",
+          "name": "Spinner"
+        },
+        {
+          "id": "pulse",
+          "name": "Pulse"
+        },
+        {
+          "id": "scan",
+          "name": "Scanning line"
+        },
+        {
+          "id": "aurora",
+          "name": "Aurora background"
+        },
+        {
+          "id": "contours",
+          "name": "Contour field"
+        }
+      ],
+      "default": {
+        "left": "spinner",
+        "right": "aurora"
+      }
+    }
+  ]
+}

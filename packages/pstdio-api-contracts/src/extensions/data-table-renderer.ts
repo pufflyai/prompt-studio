@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { localizableStringSchema } from "./common";
 import { extensionRendererRecordBaseSchema } from "./renderers";
+import { viewToolbarActionRecordSchema } from "./view-toolbar-action";
 
 const themeColorSchema = z.object({
   light: z.string(),
@@ -55,6 +56,7 @@ const selectionActionSchema = z.object({
 });
 
 export const extensionDataTableRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
+  toolbarActions: z.array(viewToolbarActionRecordSchema).optional(),
   columns: z.array(dataTableRendererColumnSchema).optional(),
   queryHandlerId: z.string(),
   selectionMode: z.enum(["none", "multiple"]).optional(),

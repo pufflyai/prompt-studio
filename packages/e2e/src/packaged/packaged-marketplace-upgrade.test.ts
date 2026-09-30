@@ -72,15 +72,15 @@ const createMarketplaceRepository = (root: string) => {
   runGit(repo, ["config", "user.email", "e2e@prompt.studio"]);
   runGit(repo, ["config", "user.name", "Prompt Studio E2E"]);
 
-  writePlanner(repo, "0.10.0", "1.0.0-alpha.1");
+  writePlanner(repo, "0.10.0", "^0.0.9");
   runGit(repo, ["add", "."]);
   runGit(repo, ["commit", "-m", "old planner"]);
   runGit(repo, ["tag", "pstdio@0.26.2"]);
 
-  writePlanner(repo, "0.11.0", EXTENSION_API_VERSION);
+  writePlanner(repo, "0.11.0", `^${EXTENSION_API_VERSION}`);
   writeExtension(join(repo, "extensions", "pstdio-skills"), {
     displayName: "Prompt Studio Skills",
-    enginesPstdio: EXTENSION_API_VERSION,
+    enginesPstdio: `^${EXTENSION_API_VERSION}`,
     name: "pstdio-skills",
     version: "0.4.0",
   });

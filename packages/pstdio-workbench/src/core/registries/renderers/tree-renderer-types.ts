@@ -9,6 +9,8 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 
 export interface TreeQueryContext {
   signal?: AbortSignal;
+  /** Publish available sections while the rest of the current read is still loading. */
+  onProgress?(sections: TreeViewSection[]): void;
   filter?: string;
   resource?: ResourceRef;
   /** Widget/view contribution id for trees rendered through a view-backed widget. */
@@ -78,6 +80,8 @@ export interface TreeNode {
   canHide?: boolean;
   /** When false, the node stays fixed within its Sidenav group. */
   canReorder?: boolean;
+  /** Show the row only where users pinned it in the header or footer, never in the body. */
+  pinnedOnly?: boolean;
   /** Allow this node to be moved to another tree location. */
   canDrag?: boolean;
   /** Allow movable nodes to be dropped on this node. */
@@ -95,6 +99,8 @@ export interface TreeViewSection {
   /** Host-owned customization boundary. Extension callbacks cannot set it. */
   moveScope?: string;
   label?: string;
+  /** Names a section without a visible header in the customize menu. */
+  menuLabel?: string;
   actions?: TreeAction[];
   collapsible?: boolean;
   emptyState?: TreeSectionEmptyState;
@@ -124,6 +130,8 @@ export interface TreeRendererContribution {
   when?: string;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
+  /** Identify the navigation data scope when it differs from the current page resource. */
+  getReadKey?(ctx: TreeQueryContext): string;
   getBody(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getHeader?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getFooter?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];

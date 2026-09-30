@@ -35,7 +35,7 @@ const createInstalledExtension = (input: { displayName: string; installName: str
         displayName: input.displayName,
         publisher: "e2e",
         main: "./extension.ts",
-        engines: { pstdio: EXTENSION_API_VERSION },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       },
       null,
       2,

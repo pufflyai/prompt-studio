@@ -100,8 +100,9 @@ so only that row is highlighted even though the ticket body and files share a ti
    `pstdio.pstdio-planner.command.create-workspace` with an explicit `provider_id`
    and nested `params`. Both paths create a ticket-linked workspace without
    starting a session; cloud providers do not require Git.
-2. `pstdio.pstdio-planner.command.run-attempt` checks dependency readiness, creates a managed
-   attempt at the chosen commit, and starts its implementation session.
+2. `pstdio.pstdio-planner.command.run-attempt` asks for the workspace type and its base branch,
+   using the host provider form limited to Git worktrees. It checks dependency readiness,
+   creates a managed attempt at the chosen commit, and starts its implementation session.
 3. All creation paths pass the planner ticket shorthand as `shorthand_base` so the
    host workspace shorthand is allocated from the ticket.
 4. Planner stores the attempt and rolls the ticket to `In Progress`; generic

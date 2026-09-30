@@ -4,7 +4,7 @@ Proposed: 2026-09-27 (local file creation date)
 
 ## Status
 
-temporary workaround.
+Removed on 2026-09-29 in PS-444. The Studio entry, CLI exports, and alias were removed when Motion Lab adopted runtime project studies. See [ADR 0048](0048-motion-lab-runtime-studies.md).
 
 ## Intended design
 

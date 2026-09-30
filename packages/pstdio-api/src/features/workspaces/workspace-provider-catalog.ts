@@ -32,10 +32,13 @@ const discoverGitProvider = async (path: string) => {
   }
 };
 
-export const listWorkspaceProviders = async (deps: WorkspacesRouteDeps, projectId: string) => {
+export const findWorktreeProvider = async (deps: Pick<WorkspacesRouteDeps, "workspaceService">, projectId: string) => {
   const home = await deps.workspaceService.getDefault(projectId);
-  const gitProvider =
-    home?.execution_kind === "local" && home.root_path ? await discoverGitProvider(home.root_path) : null;
+  return home?.execution_kind === "local" && home.root_path ? discoverGitProvider(home.root_path) : null;
+};
+
+export const listWorkspaceProviders = async (deps: WorkspacesRouteDeps, projectId: string) => {
+  const gitProvider = await findWorktreeProvider(deps, projectId);
   const providers: ExtensionWorkspaceProvider[] = gitProvider ? [gitProvider] : [];
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   for (const entry of snapshot.runtime.workspaceTypes) {

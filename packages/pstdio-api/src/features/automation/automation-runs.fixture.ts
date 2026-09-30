@@ -42,7 +42,7 @@ const writeAutomationExtension = (root: string) => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(

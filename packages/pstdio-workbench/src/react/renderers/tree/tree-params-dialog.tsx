@@ -16,6 +16,9 @@ export const TreeParamsDialog = (props: TreeParamsDialogProps) => {
     <CommandParamsDialog
       request={request?.request ?? null}
       renderParamField={renderParamField}
+      executeOptionCommand={(id, args, signal) =>
+        workbench.commands.executeCommand(id, args, { ...request?.request.context, signal })
+      }
       prepareArgs={(input) =>
         workbench.commands.getCommand(input.commandId)
           ? workbench.commands.prepareCommandArgs(input.commandId, input.args, input.context, input.onArgsChange)

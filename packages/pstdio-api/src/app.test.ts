@@ -53,7 +53,7 @@ describe("onError handler", () => {
 describe("unsecured extension assets", () => {
   test("allows signed opaque-origin extension assets without runtime transport security", async () => {
     const basePath = handle.deps.extensionWebviewAccess
-      .runtimeUrl({ installName: "missing", webviewId: "missing" })
+      .runtimeUrl({ installedExtensionId: "missing", webviewId: "missing" })
       .replace(/\/runtime$/, "");
     const res = await handle.app.request(`http://127.0.0.1:43123${basePath}/runtime`, {
       headers: { origin: "null" },

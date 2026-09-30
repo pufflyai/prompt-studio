@@ -1,17 +1,9 @@
 import { resourceKey, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import type { ResourceRef, TreeNode, TreeViewSection } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { createDashboardSessions, type DashboardSession } from "./data/dashboard-sessions";
+import type { DashboardSession } from "./data/dashboard-sessions";
 
 type SessionNodeTarget = "resource" | "side";
-interface BuildSessionsSidenavSectionsInput {
-  sessions: DashboardSession[];
-  workspace?: ResourceRef;
-  nodeTarget?: SessionNodeTarget;
-}
-interface CreateSessionsSidenavSectionsInput extends Omit<BuildSessionsSidenavSectionsInput, "sessions"> {
-  projectId?: string;
-}
 const sessionStatusIcon = (status: string) => {
   if (status === "completed") return "CircleCheck";
   if (status === "failed") return "CircleAlert";
@@ -73,25 +65,24 @@ const createSessionNode = (session: DashboardSession, target: SessionNodeTarget)
         } as const,
       }),
 });
-// Sessions render as the children of a single "Sessions" group node. Date labels are
-// inline, non-interactive rows inside the group rather than separate labeled sections, so
-// the customize menu shows exactly one "Sessions" toggle and no per-session/per-date entries.
-const buildSessionGroupChildren = (sessions: DashboardSession[], target: SessionNodeTarget): TreeNode[] => {
+// Date labels are inline, non-interactive rows rather than separate labeled sections, so
+// the customize menu shows exactly one "Sessions" toggle and no per-date entries.
+const buildSessionRows = (sessions: DashboardSession[], target: SessionNodeTarget): TreeNode[] => {
   if (sessions.length === 0) {
     return [{ id: "sessions-empty", label: "No sessions yet", disabled: true }];
   }
-  const children: TreeNode[] = [];
+  const rows: TreeNode[] = [];
   let currentDateKey: string | undefined;
   for (const session of sessions) {
     const lastActivityAt = new Date(session.lastActivityAt);
     const dateKey = getDateKey(lastActivityAt);
     if (dateKey !== currentDateKey) {
       currentDateKey = dateKey;
-      children.push({ id: `sessions-date-${dateKey}`, label: getSessionDateLabel(lastActivityAt), disabled: true });
+      rows.push({ id: `sessions-date-${dateKey}`, label: getSessionDateLabel(lastActivityAt), disabled: true });
     }
-    children.push(createSessionNode(session, target));
+    rows.push(createSessionNode(session, target));
   }
-  return children;
+  return rows;
 };
 const createSessionGroupAction = (workspace: ResourceRef | undefined) => ({
   id: "sessions.create",
@@ -100,12 +91,23 @@ const createSessionGroupAction = (workspace: ResourceRef | undefined) => ({
   commandId: dashboardCommandIds.createSession,
   ...(workspace ? { args: { workspace } } : {}),
 });
-export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSectionsInput): TreeViewSection[] => {
-  const nodeTarget = input.nodeTarget ?? "resource";
-  const workspaceId = getWorkspaceResourceId(input.workspace);
-  const sessions = workspaceId
-    ? input.sessions.filter((session) => session.workspaceId === workspaceId)
-    : input.sessions;
+// The Sessions level owns the whole sidenav body, so its rows sit directly in one fixed section.
+export const buildSessionsLevelSections = (sessions: DashboardSession[]): TreeViewSection[] => [
+  {
+    id: "session-list",
+    label: "Sessions",
+    collapsible: false,
+    actions: [createSessionGroupAction(undefined)],
+    nodes: buildSessionRows(sessions, "resource"),
+  },
+];
+// Inside project navigation, a workspace's sessions stay one collapsible group next to other sections.
+export const buildWorkspaceSessionsSections = (
+  sessions: DashboardSession[],
+  workspace?: ResourceRef,
+): TreeViewSection[] => {
+  const workspaceId = getWorkspaceResourceId(workspace);
+  const workspaceSessions = workspaceId ? sessions.filter((session) => session.workspaceId === workspaceId) : sessions;
   return [
     {
       id: "sessions-wrap",
@@ -113,17 +115,12 @@ export const buildSessionsSidenavSections = (input: BuildSessionsSidenavSections
         {
           id: "workspace-sessions",
           label: "Sessions",
-          ...(nodeTarget === "side" ? { canHide: true } : {}),
+          canHide: true,
           collapsible: true,
-          actions: [createSessionGroupAction(input.workspace)],
-          children: buildSessionGroupChildren(sessions, nodeTarget),
+          actions: [createSessionGroupAction(workspace)],
+          children: buildSessionRows(workspaceSessions, "side"),
         },
       ],
     },
   ];
 };
-export const createSessionsSidenavSections = (input: CreateSessionsSidenavSectionsInput): TreeViewSection[] =>
-  buildSessionsSidenavSections({
-    ...input,
-    sessions: createDashboardSessions(input.projectId),
-  });

@@ -57,6 +57,8 @@ export const sizes = {
   "window-tab-label-max": { value: "11.0625rem" },
   "mobile-titlebar": { value: "3.25rem" },
   "collection-row": { value: "2.125rem" },
+  "drop-indicator": { value: sp[25] },
+  "tree-empty-drop-zone": { value: "1.75rem" },
   "filter-pill": { value: sp[300] },
   "icon-2xs": { value: sp[150] },
   "icon-xs": { value: "0.875rem" },

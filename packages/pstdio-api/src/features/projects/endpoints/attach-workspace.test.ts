@@ -29,6 +29,7 @@ test("attaching a remote provider keeps the existing workspace ready for session
     id: "remote",
     ref: { kind: "workspace-type", id: "remote" },
     label: "Remote",
+    params: { image: { type: "text", label: "Image" } },
     create: () => result,
     resolve: () => result,
   };

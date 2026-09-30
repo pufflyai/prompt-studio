@@ -295,6 +295,7 @@ export const toTreeListSection = (
     id: section.id,
     moveScope: section.moveScope,
     label: section.label,
+    menuLabel: section.menuLabel,
     actions: createTreeActionItems({
       actions: section.actions,
       workbench: context.workbench,

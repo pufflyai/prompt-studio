@@ -220,7 +220,7 @@ export const IncompatibleApi: Story = {
       lastError: {
         code: "extension_manifest_unsupported_api_version",
         message:
-          'Extension "pstdio-planner" targets extension API 1.0.0-alpha.3 but this host provides 1.0.0-alpha.13. Upgrade the extension to its build for this host.',
+          'Extension "pstdio-planner" targets extension API ^0.0.9 but this host provides 0.1.0. Upgrade the extension to its build for this host.',
       },
     },
   },
@@ -240,7 +240,7 @@ export const IncompatibleLocalSource: Story = {
       lastError: {
         code: "extension_manifest_unsupported_api_version",
         message:
-          'Extension "font-editor" targets extension API 1.0.0-alpha.5 but this host provides 1.0.0-alpha.13. Fix the extension source: make it work with extension API 1.0.0-alpha.13, then add "1.0.0-alpha.13" to engines.pstdio in its package.json.',
+          'Extension "font-editor" targets extension API ^0.0.9 but this host provides 0.1.0. Fix the extension source: make it work with extension API 0.1.0, then add "^0.1.0" to engines.pstdio in its package.json.',
       },
     },
   },

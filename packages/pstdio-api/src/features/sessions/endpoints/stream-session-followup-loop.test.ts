@@ -7,6 +7,7 @@ import type { HarnessExit, JsonPatch } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { openSessionStream } from "../../../test-utils/session-stream";
 import type { AppBindings } from "../../../types";
 import {
   createTestHarnessRecord,
@@ -205,7 +206,7 @@ afterAll(async () => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
-describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
+describe("session stream follow-up resume continuity", () => {
   test("picks up the dispatched follow-up's events without requiring a reconnect", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
@@ -230,7 +231,7 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
     expect(followUpRes.status).toBe(200);
     expect((await followUpRes.json()).follow_up.status).toBe("queued");
 
-    const streamRes = await app.request(`/v1/sessions/${session.id}/stream`);
+    const streamRes = await openSessionStream(app, session.id);
     expect(streamRes.status).toBe(200);
     const sse = createSSEReader(streamRes);
 
@@ -290,7 +291,7 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
       });
       expect(followUpRes.status).toBe(200);
 
-      const streamRes = await delayedApp.app.request(`/v1/sessions/${session.id}/stream`);
+      const streamRes = await openSessionStream(delayedApp.app, session.id);
       const sse = createSSEReader(streamRes);
       const initial = await sse.readUntil(
         (event) => event.event === "patch" && getPatchTextParts(event.data as JsonPatch).includes("FIRST DONE"),

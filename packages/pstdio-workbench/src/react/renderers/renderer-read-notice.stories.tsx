@@ -11,7 +11,6 @@ export default meta;
 type Story = StoryObj<typeof RendererReadNotice>;
 
 export const InitialFailure: Story = {};
-export const Deadline: Story = { args: { error: "The view took too long to load. Try again." } };
 export const RetainedContent: Story = {
   render: (args) => (
     <Stack gap="md">

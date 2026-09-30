@@ -14,19 +14,6 @@ const cloneSettings = (settings: KanbanRendererSettings): KanbanRendererSettings
 const cloneFilters = (filters: KanbanRendererFilterState): KanbanRendererFilterState =>
   Object.fromEntries(Object.entries(filters).map(([id, values]) => [id, [...values]]));
 
-export const snapshotKanbanRendererView = (
-  id: string,
-  title: string,
-  state: KanbanRendererViewState,
-  isDefault = false,
-): KanbanRendererSavedView => ({
-  id,
-  title,
-  settings: cloneSettings(state.settings),
-  filters: cloneFilters(state.filters),
-  ...(isDefault ? { isDefault: true } : {}),
-});
-
 export const applyKanbanRendererView = (view: KanbanRendererSavedView) => ({
   settings: cloneSettings(view.settings),
   filters: cloneFilters(view.filters),

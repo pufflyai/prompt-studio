@@ -17,6 +17,7 @@ import { registerModes } from "./modes";
 import { validatePageNavigationTargets } from "./page-target-validation";
 import { validatePageDefinitions } from "./page-validation";
 import { registerPages } from "./pages";
+import { validateParamOptions } from "./param-options";
 import { registerProviders } from "./providers";
 import { validateResourcePrefixes } from "./resource-prefixes";
 import { registerSchedules } from "./schedules";
@@ -110,6 +111,7 @@ export const normalizeExtensionSources = (
     registerWebviewValidation(ext, source, runtime);
   }
 
+  validateParamOptions(runtime);
   validateCompositionRelationships(runtime);
   validateResourcePrefixes(runtime);
   validatePageDefinitions(runtime);

@@ -152,6 +152,14 @@ export const bg = {
     },
   },
 
+  // A drop target the dragged item joins, such as a group in the Sidenav.
+  "accent-subtle": {
+    value: {
+      _light: "#EEF0FB",
+      _dark: "#232538",
+    },
+  },
+
   "accent-primary": {
     default: {
       value: {

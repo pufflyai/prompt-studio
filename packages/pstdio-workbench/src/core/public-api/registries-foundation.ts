@@ -12,6 +12,7 @@ export type {
   CommandHandler,
   CommandParamDescriptor,
   CommandParamOption,
+  CommandParamOptionSource,
   CommandParamSchema,
   CommandRegistry,
   RegisteredCommand,
@@ -160,6 +161,7 @@ export type {
 export {
   createNavigationTreeRegistry,
   navigationRootSectionId,
+  navigationSlotRootSectionId,
 } from "../registries/navigation/navigation-tree-registry";
 export type {
   NotificationRegistry,

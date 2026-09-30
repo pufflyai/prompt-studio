@@ -128,7 +128,7 @@ The Planner browser regression holds a non-collapsed DOM selection, waits beyond
 
 The workbench owns read slots by stable placement, resource, and read lane. Each slot permits one active load and one latest pending refresh. Repeated events coalesce. Replacing a query, retrying, or unmounting aborts the active signal. The slot remains occupied until the actual load and its children settle, including across remounts and reopening the same placement.
 
-A 30-second runtime deadline aborts a stalled read and shows a recoverable error. It does not free an uncooperative request's slot or restart it automatically. Workbench disposal aborts all reads and drains them.
+Reads have no time limit. A slow read keeps its loading state until it settles or is aborted. Workbench disposal aborts all reads and drains them.
 
 Kanban, table, controls, tree, and file reads pass the signal through extension commands to host I/O. Workspace file and diff reads pass it to HTTP and response-body readers. Tree header, body, and footer reads drain together; expanded children use at most four concurrent loads. Composed navigation passes the same signal and stops starting contributions after cancellation.
 
@@ -136,7 +136,11 @@ Command scopes bind their host readers to the invocation signal. Reads check can
 
 Refresh failures retain the last successful value for the same query. A first failure shows an error and Retry. A different query has its own initial loading state. File reads never clear a dirty draft, and saves retain their original binding when the user switches resources.
 
-Tree queries include the current project, mode, page resource, and the page's navigation contribution owner when present. Shell navigation can change its actions across these boundaries even when its own placement has no resource. Actions from the previous scope disappear while the new query loads. Aggregate pages without owned navigation in the same mode share a query scope, which keeps global navigation links mounted during refresh.
+Tree queries include their bound resource, the current project and mode, and the page's navigation contribution owner when present. Trees also follow the current page resource unless their renderer supplies a data read key. Composed dashboard navigation derives this key from every active contribution and the resource passed to it. Contributions receive the selected resource by default; host contributions can resolve a narrower data resource. The shared session list has no data resource in Sessions mode and uses the workspace in project mode. Project links borrowed by Sessions mode receive no selected session resource. Resource-dependent contributions still cancel old reads and clear old actions when their resource changes. Settings navigation passes the selected panel as selection only, because its data belongs to the settings surface rather than an individual panel.
+
+Settings publishes its static navigation and collection parents before waiting for collection items. Visible collections load concurrently, including collapsed collections, and each publishes its items when ready. Native tree reads can publish partial sections through `TreeQueryContext.onProgress`. Progress belongs to the active read and is ignored after cancellation or completion. Background refreshes keep the last complete navigation until the replacement is ready.
+
+Static host navigation and extension links have no selected resource dependency. Links with resource-based visibility conditions retain it. Extension navigation trees can declare `resourceScope: "project"` when their data belongs to the project independently of the selected resource. The default `"selection"` scope preserves selected-resource reads and cancellation for other trees. Changing modes still replaces their navigation.
 
 ## Declared data dependencies
 

@@ -2,7 +2,7 @@ import { Button, Flex, Icon, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListRow } from "../../list-row/list-row";
-import { SearchableMenu, type SearchableMenuItem } from "../../overlays/searchable-menu";
+import { filterSearchableMenuItems, SearchableMenu, type SearchableMenuItem } from "../../overlays/searchable-menu";
 import { getIconComponent } from "../../primitives";
 import type { SelectionGroup } from "../param-editor.types";
 
@@ -25,6 +25,7 @@ export interface SelectionMenuProps {
   reselectable?: boolean;
   disabled?: boolean;
   searchable?: boolean;
+  allowCustomValues?: boolean;
   searchPlaceholder?: string;
   emptyText?: string;
   group?: SelectionGroup;
@@ -72,6 +73,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
     reselectable = false,
     disabled,
     searchable = false,
+    allowCustomValues = false,
     searchPlaceholder = "Search options…",
     emptyText = "No options found",
     group,
@@ -91,7 +93,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
   const canChangeValue = options.some(
     (option) => !option.disabled && (multiSelect || reselectable || !selectedIds.includes(option.id)),
   );
-  const isDisabled = disabled || (!canChangeValue && !canChangeGroup);
+  const isDisabled = disabled || (!allowCustomValues && !canChangeValue && !canChangeGroup);
   const trigger =
     triggerVariant === "icon" ? (
       <IconButton aria-label={triggerAriaLabel ?? "Open options"} size="2xs" variant="ghost" disabled={isDisabled}>
@@ -120,7 +122,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
       </Button>
     );
 
-  if (searchable || group) {
+  if (searchable || allowCustomValues || group) {
     const items: SearchableMenuItem[] = options.map((option) => ({
       id: option.id,
       label: option.name,
@@ -138,7 +140,13 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
         trigger={trigger}
         items={items}
         listId={group?.defaultValue}
-        showSearch={searchable}
+        showSearch={searchable || allowCustomValues}
+        filterItems={(items, query) => {
+          const filtered = filterSearchableMenuItems(items, query);
+          const value = query.trim();
+          if (!allowCustomValues || !value || options.some((option) => option.id === value)) return filtered;
+          return [...filtered, { id: value, label: `Use "${value}"`, onSelect: () => onToggle(value) }];
+        }}
         searchPlaceholder={searchPlaceholder}
         closeOnSelect={!multiSelect}
         emptyState={

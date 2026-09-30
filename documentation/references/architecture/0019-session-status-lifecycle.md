@@ -27,8 +27,8 @@ graph TD
     end
 
     subgraph "Message path (chat)"
-        STREAM_SSE["/v1/sessions/:id/stream\nSSE session stream"] --> HOOK["useSessionStream\nmessages, isStreaming"]
-        HOOK --> CHAT["SessionChatView"]
+        STREAM_SSE["/v1/session-stream\nSSE session stream"] --> HOOK["useDashboardSessionMessages\nmessages, streaming"]
+        HOOK --> CHAT["SessionChatPanel"]
     end
 
 ```
@@ -47,15 +47,15 @@ Components on this path: `TicketCard`, `SessionSelector`, `SessionsList`.
 
 ### Message path — session stream (chat)
 
-The session chat view reads messages from a per-session SSE stream:
+The session chat panel reads messages from the shared session stream:
 
-1. Client uses the SDK fetch-based SSE reader to `/v1/sessions/:id/stream`.
-2. Server sends `patch` events (JSON patches for messages) and `approval_request` events.
-3. `useSessionStream` hook maintains local state for messages and streaming indicator.
+1. The SDK subscribes the session on the client's one `/v1/session-stream` connection.
+2. Server sends `patch` events (JSON patches for messages) and `approval_request` events for that subscription.
+3. The `useDashboardSessionMessages` hook maintains local state for messages and the streaming indicator.
 
-Components on this path: `SessionChatView` (messages and streaming indicator only).
+Components on this path: `SessionChatPanel` (messages and streaming indicator only).
 
-`useSessionStream` does not expose session status. All visible status badges come from the DB sync path.
+`useDashboardSessionMessages` does not expose session status. All visible status badges come from the DB sync path.
 
 ## Status transitions
 

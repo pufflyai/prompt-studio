@@ -4,6 +4,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
 import { runWorkspaceProvisioning } from "../provision-coordinator";
+import { InvalidWorkspaceParamsError } from "../workspace-provider-params";
 import { createProviderBackedWorkspace, WorkspaceSourceNotFoundError } from "../workspace-provider-service";
 import { InvalidWorkspaceShorthandError } from "../workspace-shorthand";
 
@@ -20,7 +21,7 @@ export const createWorkspaceRoute = createRoute({
   },
   responses: {
     400: {
-      description: "Invalid workspace shorthand.",
+      description: "Invalid workspace shorthand or provider params.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
     201: {
@@ -54,7 +55,8 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
           runWorkspaceProvisioning(deps, { projectId: input.project_id, workspace, repoPath }),
       });
     } catch (error) {
-      if (error instanceof InvalidWorkspaceShorthandError) return c.json({ error: error.message }, 400);
+      if (error instanceof InvalidWorkspaceShorthandError || error instanceof InvalidWorkspaceParamsError)
+        return c.json({ error: error.message }, 400);
       if (error instanceof WorkspaceSourceNotFoundError) return c.json({ error: error.message }, 404);
       throw error;
     }

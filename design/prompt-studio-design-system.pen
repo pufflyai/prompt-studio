@@ -59355,7 +59355,7 @@
                               "fill": "$ds-error",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Extension \"pstdio-planner\" targets extension API 1.0.0-alpha.13 but this host provides 1.0.0-alpha.14. Fix the extension source: make it work with extension API 1.0.0-alpha.14, then add \"1.0.0-alpha.14\" to engines.pstdio in its package.json.",
+                              "content": "Extension \"pstdio-planner\" targets extension API ^0.0.9 but this host provides 0.1.0. Fix the extension source: make it work with extension API 0.1.0, then add \"^0.1.0\" to engines.pstdio in its package.json.",
                               "lineHeight": 1.4,
                               "fontFamily": "$font-mono",
                               "fontSize": 10.5,
@@ -59693,7 +59693,7 @@
                               "fill": "$ds-error",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "Extension \"pstdio-github\" targets extension API 1.0.0-alpha.13 but this host provides 1.0.0-alpha.14. Upgrade the extension to its build for this host.",
+                              "content": "Extension \"pstdio-github\" targets extension API ^0.0.9 but this host provides 0.1.0. Upgrade the extension to its build for this host.",
                               "lineHeight": 1.4,
                               "fontFamily": "$font-mono",
                               "fontSize": 10.5,
@@ -89673,12 +89673,441 @@
                     },
                     {
                       "type": "text",
+                      "id": "aToMl",
+                      "name": "Label into the group — the group tints, the line sits under its last row",
+                      "fill": "$ds-fg-subtle",
+                      "content": "into the group — the group tints, the line sits under its last row",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "IGsHR",
+                      "name": "Tree into the group — the group tints, the line sits under its last row",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "el0d9",
+                          "name": "Group Examples",
+                          "width": "fill_container",
+                          "fill": "$ds-accent-subtle",
+                          "cornerRadius": 6,
+                          "layout": "vertical",
+                          "gap": 1,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "ZBrsu",
+                              "name": "SecHead EXAMPLES",
+                              "width": "fill_container",
+                              "height": 28,
+                              "padding": [
+                                4,
+                                8
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "B4tdQK",
+                                  "name": "L",
+                                  "gap": 6,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "wkZkx",
+                                      "name": "T",
+                                      "fill": "$ds-fg-subtle",
+                                      "content": "EXAMPLES",
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 10,
+                                      "fontWeight": "600",
+                                      "letterSpacing": 1
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "iwP7J",
+                                      "name": "C",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "k4Hbdg",
+                                  "name": "R",
+                                  "gap": 4,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "gY1Y6",
+                                      "type": "ref",
+                                      "ref": "nvvgg",
+                                      "name": "Act plus",
+                                      "width": 24,
+                                      "height": 24,
+                                      "theme": {
+                                        "btn": "ghost",
+                                        "size": "2xs"
+                                      },
+                                      "descendants": {
+                                        "k7mgm": {
+                                          "icon": "plus",
+                                          "width": 12,
+                                          "height": 12
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "A0rBS",
+                                      "type": "ref",
+                                      "ref": "nvvgg",
+                                      "name": "Act ellipsis",
+                                      "width": 24,
+                                      "height": 24,
+                                      "theme": {
+                                        "btn": "ghost",
+                                        "size": "2xs"
+                                      },
+                                      "descendants": {
+                                        "k7mgm": {
+                                          "icon": "ellipsis",
+                                          "width": 12,
+                                          "height": 12
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "OCUMr",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Scribble",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "hover"
+                              },
+                              "opacity": 0.5,
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "feather"
+                                },
+                                "ROY2j": {
+                                  "content": "Scribble"
+                                }
+                              }
+                            },
+                            {
+                              "id": "J7JAG",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Kiln",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "box"
+                                },
+                                "ROY2j": {
+                                  "content": "Kiln"
+                                }
+                              }
+                            },
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "o2aNh",
+                              "name": "Drop line",
+                              "fill": "$ds-accent",
+                              "width": "fill_container",
+                              "height": 2
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "h0him1",
+                          "name": "Gap behind group",
+                          "width": "fill_container",
+                          "height": 16,
+                          "layout": "vertical",
+                          "justifyContent": "center"
+                        },
+                        {
+                          "id": "xifZM",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Lab",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "flask-conical"
+                            },
+                            "ROY2j": {
+                              "content": "Lab"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "N14kwU",
+                      "name": "Label behind the group — the line sits in the gap, the row leaves the group",
+                      "fill": "$ds-fg-subtle",
+                      "content": "behind the group — the line sits in the gap, the row leaves the group",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hf1R1",
+                      "name": "Tree behind the group — the line sits in the gap, the row leaves the group",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "CzUrY",
+                          "name": "Group Examples",
+                          "width": "fill_container",
+                          "cornerRadius": 6,
+                          "layout": "vertical",
+                          "gap": 1,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "r0d4DP",
+                              "name": "SecHead EXAMPLES",
+                              "width": "fill_container",
+                              "height": 28,
+                              "padding": [
+                                4,
+                                8
+                              ],
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "YvAeZ",
+                                  "name": "L",
+                                  "gap": 6,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "PFfFv",
+                                      "name": "T",
+                                      "fill": "$ds-fg-subtle",
+                                      "content": "EXAMPLES",
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 10,
+                                      "fontWeight": "600",
+                                      "letterSpacing": 1
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "OIb3X",
+                                      "name": "C",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "dwrEj",
+                                  "name": "R",
+                                  "gap": 4,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "VgN1r",
+                                      "type": "ref",
+                                      "ref": "nvvgg",
+                                      "name": "Act plus",
+                                      "width": 24,
+                                      "height": 24,
+                                      "theme": {
+                                        "btn": "ghost",
+                                        "size": "2xs"
+                                      },
+                                      "descendants": {
+                                        "k7mgm": {
+                                          "icon": "plus",
+                                          "width": 12,
+                                          "height": 12
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "Rn9yc",
+                                      "type": "ref",
+                                      "ref": "nvvgg",
+                                      "name": "Act ellipsis",
+                                      "width": 24,
+                                      "height": 24,
+                                      "theme": {
+                                        "btn": "ghost",
+                                        "size": "2xs"
+                                      },
+                                      "descendants": {
+                                        "k7mgm": {
+                                          "icon": "ellipsis",
+                                          "width": 12,
+                                          "height": 12
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "LxkJb",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Scribble",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "hover"
+                              },
+                              "opacity": 0.5,
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "feather"
+                                },
+                                "ROY2j": {
+                                  "content": "Scribble"
+                                }
+                              }
+                            },
+                            {
+                              "id": "Y2t9F",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Kiln",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "box"
+                                },
+                                "ROY2j": {
+                                  "content": "Kiln"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "g2etaN",
+                          "name": "Gap behind group",
+                          "width": "fill_container",
+                          "height": 16,
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 1,
+                              "id": "UU5l4",
+                              "name": "Drop line",
+                              "fill": "$ds-accent",
+                              "width": "fill_container",
+                              "height": 2
+                            }
+                          ]
+                        },
+                        {
+                          "id": "se8Nf",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Lab",
+                          "width": "fill_container",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "flask-conical"
+                            },
+                            "ROY2j": {
+                              "content": "Lab"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
                       "id": "mBnIo",
                       "name": "Spec",
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "The row is its own handle — no grip glyph. The pointer must travel 4px before a drag starts, so clicks stay clicks. Sections reorder among sections, top-level rows within their section; nested rows and cross-section moves never drag. The lifted row drops to 50% opacity, and the resulting order persists per tree id alongside visibility.",
+                      "content": "The row is its own handle — no grip glyph. The pointer must travel 4px before a drag starts, so clicks stay clicks, and drags follow the pointer vertically only. The pointer's half of the hovered row picks the slot: the upper half drops before it, the lower half after it. Dropping on a group's rows or header joins the group, which tints $ds-accent-subtle; the gap after a group drops behind it, so a row can leave its group as a bare row. Sections reorder among sections, and rows move between sections, including into the header and footer. Nested rows never drag. The lifted row stays in place at 50% opacity; the other rows never shift. The resulting order persists per tree id alongside visibility.",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-body",
                       "fontSize": 12,

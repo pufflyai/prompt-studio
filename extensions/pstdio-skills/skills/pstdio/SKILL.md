@@ -74,7 +74,7 @@ pst projects create [name]
 
 When `name` is absent, Prompt Studio uses the current folder name. The command also enables the installed default extensions and creates the documentation tree.
 
-On hosts with extension API alpha.12, the folder must be a Git repository. On alpha.13, Git is optional: the exact current folder becomes the project, an already registered folder reuses its project, and a child folder is a distinct project.
+Git is optional: the exact current folder becomes the project, an already registered folder reuses its project, and a child folder is a distinct project. Older hosts that report extension API `1.0.0-alpha.12` in `pst extensions check` require a Git repository.
 
 Configure an agent and install its project skills:
 

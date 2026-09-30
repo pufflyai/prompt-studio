@@ -14,6 +14,7 @@ import {
   handOffPendingFollowUp,
   type PendingFollowUpState,
   peekHandedOffPendingFollowUp,
+  shouldShowPendingFollowUp,
 } from "./session-chat-state";
 
 const draftResource: ResourceRef = {
@@ -109,11 +110,11 @@ describe("openCreatedSessionFromDraft", () => {
       title: "Session",
       body: { kind: "react", render: () => null },
     });
-    workbench.modes.registerMode({ id: "sessions", activate: () => undefined });
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
     workbench.pages.registerPage({
       id: "sessions",
       ref: workbenchPages.sessions,
-      modeId: "sessions",
+      modeId: "project",
       path: "sessions",
       main: {
         kind: "view",
@@ -129,7 +130,7 @@ describe("openCreatedSessionFromDraft", () => {
       id: "session",
       parentId: "sessions",
       ref: workbenchPages.session,
-      modeId: "sessions",
+      modeId: "project",
       path: "session",
       resource: {
         kinds: [
@@ -282,6 +283,8 @@ describe("first message handoff", () => {
       },
     });
     expect(created).toMatchObject({ prompt: "Start here", sessionId: "session-9" });
+    // The draft keeps its first message on screen until the created session's page replaces it.
+    expect(shouldShowPendingFollowUp(pendingFollowUp, null)).toBe(true);
     handOffPendingFollowUp(created!);
     expect(peekHandedOffPendingFollowUp("session-9")).toMatchObject({ prompt: "Start here" });
     forgetHandedOffPendingFollowUp("session-9");

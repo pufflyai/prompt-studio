@@ -1,6 +1,7 @@
 import { chakra, Menu, Portal, useMenu } from "@chakra-ui/react";
 import { type ComponentProps, Fragment, type ReactElement, type ReactNode } from "react";
 import { ListRow } from "@/components/list-row/list-row";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 
 type MenuRootProps = ComponentProps<typeof Menu.Root>;
 
@@ -46,23 +47,26 @@ const ResourceMenuContent = (props: {
   return (
     <Portal>
       <Menu.Positioner>
-        <Menu.Content minW={contentMinWidth} bg={contentBackground}>
-          {actions.map((action) => (
-            <Fragment key={action.key}>
-              {action.separatorBefore ? <Menu.Separator /> : null}
-              <Menu.Item value={action.key} disabled={action.isDisabled} asChild>
-                <ListRow
-                  asChild
-                  variant="full-width"
-                  label={action.label}
-                  icon={action.icon}
-                  endContent={action.endContent}
-                  disabled={action.isDisabled}
-                  onActivate={action.onClick}
-                />
-              </Menu.Item>
-            </Fragment>
-          ))}
+        {/* Long menus, such as Sidenav customization, scroll inside the space left in the viewport. */}
+        <Menu.Content minW={contentMinWidth} bg={contentBackground} maxH="var(--available-height)">
+          <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain" }}>
+            {actions.map((action) => (
+              <Fragment key={action.key}>
+                {action.separatorBefore ? <Menu.Separator /> : null}
+                <Menu.Item value={action.key} disabled={action.isDisabled} asChild>
+                  <ListRow
+                    asChild
+                    variant="full-width"
+                    label={action.label}
+                    icon={action.icon}
+                    endContent={action.endContent}
+                    disabled={action.isDisabled}
+                    onActivate={action.onClick}
+                  />
+                </Menu.Item>
+              </Fragment>
+            ))}
+          </ScrollArea>
         </Menu.Content>
       </Menu.Positioner>
     </Portal>

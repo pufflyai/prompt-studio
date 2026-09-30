@@ -1,9 +1,7 @@
 /**
- * Every extension manifest must explicitly include the host extension API version.
- *
- * While the API is in alpha, EXTENSION_API_VERSION moves on every breaking contract change.
- * An extension can certify several exact versions during a staged release. Ranges must not
- * turn an API bump into implicit compatibility. Use the same declaration parser as the host.
+ * Every tracked extension manifest must load on this host: its `engines.pstdio` caret ranges
+ * must include EXTENSION_API_VERSION. Uses the same declaration parser as the host, so a
+ * breaking bump lists every manifest the new host would refuse.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -51,7 +49,7 @@ export const checkExtensionApiVersions = (manifests: ExtensionManifest[], hostVe
     .filter((manifest) => !supportsExtensionApiVersion(manifest.enginesPstdio, hostVersion))
     .map(
       (manifest) =>
-        `${manifest.file}: engines.pstdio is "${manifest.enginesPstdio}" but must explicitly list "${hostVersion}" using exact versions separated by "||"`,
+        `${manifest.file}: engines.pstdio is "${manifest.enginesPstdio}" but must include "${hostVersion}" using caret ranges separated by "||", such as "^${hostVersion}"`,
     );
 
 const main = () => {
@@ -65,7 +63,7 @@ const main = () => {
     process.exit(1);
   }
 
-  console.log(`Extension API version OK: ${manifests.length} manifests declare ${EXTENSION_API_VERSION}.`);
+  console.log(`Extension API version OK: ${manifests.length} manifests accept ${EXTENSION_API_VERSION}.`);
 };
 
 if (import.meta.main) main();

@@ -207,7 +207,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       extensionId: "test.incompatible-extension",
       displayName: "Incompatible Extension",
       installName: "incompatible-extension-source",
-      enginesPstdio: "1.0.0-alpha.1",
+      enginesPstdio: "^0.0.9",
       sourceKind: "git",
     });
 
@@ -231,7 +231,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       extensionId: "pstdio.pstdio-planner",
       displayName: "Prompt Studio Planner",
       installName: "pstdio-planner",
-      enginesPstdio: EXTENSION_API_VERSION,
+      enginesPstdio: `^${EXTENSION_API_VERSION}`,
       sourceKind: "local_path",
       version: "0.10.0",
     });
@@ -257,7 +257,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       extensionId: "pstdio.pstdio-skills",
       displayName: "Prompt Studio Skills",
       installName: "pstdio-skills",
-      enginesPstdio: "1.0.0-alpha.1",
+      enginesPstdio: "^0.0.9",
       sourceKind: "local_path",
       version: "0.3.0",
     });
@@ -297,11 +297,6 @@ describe("GET /v1/projects/:projectId/extensions", () => {
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pufflyai",
-        }),
-        expect.objectContaining({
-          displayName: "Prompt Studio Planner Automation",
-          installName: "pstdio-planner-loops",
-          installed: false,
         }),
       ]),
     );

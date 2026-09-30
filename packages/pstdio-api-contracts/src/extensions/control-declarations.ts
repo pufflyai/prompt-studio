@@ -47,6 +47,7 @@ export const controlParamSchema = z.discriminatedUnion("type", [
     ...base,
     ...selection,
     type: z.literal("selection"),
+    allowCustomValues: z.boolean().optional(),
     defaultValue: selectionValue,
     options: z.array(selectionOption),
     multiSelect: z.boolean().optional(),

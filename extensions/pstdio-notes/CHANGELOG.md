@@ -1,5 +1,18 @@
 # pstdio-notes
 
+## 0.38.0
+
+_2026-09-29_
+
+## 0.37.0
+
+_2026-09-29_
+
+### Patch Changes
+
+- 3985985: The Notes navigation entry shows only its title.
+- 9ef96aa: Declare compatibility with explicit navigation and resource removal on extension API alpha.14.
+
 ## 0.36.1
 
 _2026-09-28_

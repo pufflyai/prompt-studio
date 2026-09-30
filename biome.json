@@ -12,6 +12,7 @@
       "!!**/build",
       "!!**/coverage",
       "!!**/dist",
+      "!!packages/sdk/api-report",
       "!!**/.nx",
       "bun.lock",
       "!!packages/pstdio-dashboard/chakra-config.json",

@@ -16,7 +16,6 @@ const ticketWorkspaceBackStoryId = "dashboard-sidenav--ticket-workspace-back-jou
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
 const allSectionRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
 const projectSectionRowNames = allSectionRowNames.filter((name) => name !== "Workspaces");
-const sessionSectionRowNames = projectSectionRowNames.filter((name) => name !== "Sessions");
 
 const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
@@ -131,12 +130,9 @@ test("removes and restores owner-scoped collections across project and session p
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
-  await expectSidenavSections(
-    sidenav,
-    allSectionRowNames.filter((name) => name !== "Sessions"),
-  );
   await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
-  await expect(sidenav.locator('[data-tree-list-node-id="workspace-sessions"]')).toBeVisible();
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
+  await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
@@ -167,6 +163,9 @@ test("customizes the Sidenav from any point and persists section visibility", as
   const workspacesToggle = page.getByRole("menuitem", { name: /Workspaces/ });
   await expect(searchToggle).toBeVisible();
   await expect(workspacesToggle).toBeVisible();
+  for (const name of ["Header", "Navigation", "Footer"]) {
+    await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
+  }
   await workspacesToggle.click();
   await expect(row(sidenav, "Workspaces")).toBeVisible();
   await searchToggle.click();
@@ -229,9 +228,56 @@ test("renders the ticket tree inside the Sidenav resource section", async ({ pag
   await card.getByText(ticket.title, { exact: true }).click();
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expectSidenavSections(sidenav);
+  await expect(row(sidenav, "Search")).toBeVisible();
   await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand}(?:\\s|$)`) })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
+});
+
+test("moves rows back into an emptied header or footer", async ({ page, request }) => {
+  const project = await createProject(request);
+  await waitForTicketsExtension(request, project.id);
+  await prepareDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}`);
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  const option = (name: string) => sidenav.getByRole("option", { name, exact: true });
+  const zone = sidenav.locator("[data-tree-list-empty-drop-zone]");
+  await expect(option("Tickets")).toBeVisible({ timeout: 30_000 });
+  const lowerHalfOf = (target: Locator) => async () => {
+    const box = (await target.boundingBox())!;
+    return box.y + box.height * 0.75;
+  };
+  const middleOf = (target: Locator) => async () => {
+    await expect(target).toHaveCount(1);
+    const box = (await target.boundingBox())!;
+    return box.y + box.height / 2;
+  };
+  const drag = async (source: Locator, targetY: () => Promise<number>) => {
+    const from = (await source.boundingBox())!;
+    await page.mouse.move(from.x + 40, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 40, from.y + from.height / 2 + 8, { steps: 4 });
+    await page.mouse.move(from.x + 40, await targetY(), { steps: 12 });
+    await expect(sidenav.locator("[data-tree-list-drop-indicator]")).toHaveCount(1);
+    await page.mouse.up();
+    // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click.
+    await page.waitForTimeout(100);
+  };
+  const top = async (target: Locator) => (await target.boundingBox())!.y;
+
+  await drag(option("Search"), lowerHalfOf(option("Tickets")));
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).not.toHaveAttribute(
+    "data-tree-list-node-id",
+    "search",
+  );
+  await expect(zone).toHaveCount(0);
+  await drag(option("Search"), middleOf(zone));
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
+
+  await drag(option("Settings"), lowerHalfOf(option("Tickets")));
+  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Tickets")));
+  expect(await top(option("Settings"))).toBeLessThan(await top(option("Scribble")));
+  await drag(option("Settings"), middleOf(zone));
+  expect(await top(option("Settings"))).toBeGreaterThan(await top(option("Scribble")));
 });
 
 test.describe("Dashboard Sidenav stories", () => {
@@ -263,7 +309,9 @@ test.describe("Dashboard Sidenav stories", () => {
       await expect(
         page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /Prompt Studio$/ }),
       ).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-      await expectSidenavSections(sidenav, storyId === sessionModeStoryId ? sessionSectionRowNames : undefined);
+      if ([ticketModeStoryId, ticketWorkspaceBackStoryId, sessionModeStoryId].includes(storyId)) {
+        await expect(row(sidenav, "Search")).toBeVisible();
+      } else await expectSidenavSections(sidenav);
       await expect(row(sidenav, "Workspaces")).toHaveCount(0);
       if (storyId === ticketModeStoryId) {
         await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();

@@ -21,7 +21,7 @@ const executeNoteCommand = async (
   return body.outcome.value as { id: string; title: string };
 };
 
-test("nests notes under their sidebar group and follows the active note through navigation and deletion", async ({
+test("opens notes in their Sidenav level and follows the active note through navigation and deletion", async ({
   page,
   request,
 }) => {
@@ -48,20 +48,15 @@ test("nests notes under their sidebar group and follows the active note through 
     }, project.id);
     await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
-    const group = sidebar.getByRole("option", { name: "Notes", exact: true });
     const firstRow = sidebar.getByRole("option", { name: first.title, exact: true });
     const secondRow = sidebar.getByRole("option", { name: second.title, exact: true });
-    await expect(group).toHaveAttribute("aria-level", "1");
-    await group.click();
-    await expect(firstRow).toHaveAttribute("aria-level", "2");
-    const ticketsUrl = page.url();
-    await group.click();
     await expect(firstRow).toHaveCount(0);
-    await expect(page).toHaveURL(ticketsUrl);
-    await group.click();
+    await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
+    // The Notes level replaces the project rows with the notes themselves.
+    await expect(firstRow).toHaveAttribute("aria-level", "1");
+    await expect(sidebar.getByRole("option", { name: "Tickets", exact: true })).toHaveCount(0);
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
-    await expect(group).toHaveAttribute("aria-selected", "false");
     await expect(page.getByRole("tab", { name: first.title, exact: true })).toHaveAttribute("aria-selected", "true");
     await secondRow.click();
     await expect(secondRow).toHaveAttribute("aria-selected", "true");
@@ -69,8 +64,6 @@ test("nests notes under their sidebar group and follows the active note through 
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await expect(secondRow).toHaveAttribute("aria-selected", "false");
 
-    await sidebar.getByRole("option", { name: "Tickets", exact: true }).click();
-    await expect(firstRow).toHaveAttribute("aria-selected", "false");
     await secondRow.click();
     await expect(secondRow).toHaveAttribute("aria-selected", "true");
     await executeNoteCommand(request, project.id, "delete", { noteId: second.id });
@@ -103,7 +96,6 @@ test("keeps note titles independent of the body and renames them through the con
     }, project.id);
     await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-notes/notes`);
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
-    await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     const row = sidebar.getByRole("option", { name: note.title, exact: true });
     await row.click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).first();

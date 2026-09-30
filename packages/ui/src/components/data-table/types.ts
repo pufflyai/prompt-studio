@@ -136,6 +136,8 @@ export interface DataTableProps {
   compactHeaders?: Partial<Record<string, string>>;
   getRowId?: (row: RowData, index: number) => string;
   toolbarStorageKey?: string;
+  toolbarActions?: ReactNode;
+  contentPlaceholder?: ReactNode;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
   enableRowActivation?: boolean;

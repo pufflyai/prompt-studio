@@ -51,6 +51,8 @@ export type {
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
+  KanbanRendererViewsProvider,
+  KanbanRendererViewsSource,
   ResourceContextAction,
   SortDirection,
   ViewMode,

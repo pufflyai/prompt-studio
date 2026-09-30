@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { openSessionStream } from "../../../test-utils/session-stream";
 
 test("a resumed stream waits for its owner after the run status is published", async () => {
   const handle = await createTestApp();
@@ -12,11 +13,11 @@ test("a resumed stream waits for its owner after the run status is published", a
       agent: "test",
     });
     await handle.deps.sessionService.update(session.id, { agent_session_id: "existing-thread" });
-    const response = await handle.app.request(`/v1/sessions/${session.id}/stream`);
+    const response = await openSessionStream(handle.app, session.id);
     reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let text = "";
-    while (!text.includes("event: heartbeat") && !text.includes("event: end")) {
+    while (!text.includes("event: ready")) {
       const chunk = await reader.read();
       if (chunk.done) break;
       text += decoder.decode(chunk.value, { stream: true });

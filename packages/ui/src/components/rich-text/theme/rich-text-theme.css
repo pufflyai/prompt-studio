@@ -410,6 +410,12 @@ ol.rich-text__ol5 :where(ul, ol) {
   padding-inline-start: var(--rich-text-list-indent);
 }
 
+/* Numbered lists widen their indent to fit their widest number. ListMarkerWidthPlugin
+   sets --rich-text-list-digits, so "100." is not cut off by the message edge. */
+ol.rich-text__ol {
+  padding-inline-start: max(var(--rich-text-list-indent), calc((var(--rich-text-list-digits, 1) + 1) * 1ch));
+}
+
 /* Lexical uses wrapper list items for nested lists; those should not render their own marker. */
 li.rich-text__nestedListItem {
   list-style-type: none;

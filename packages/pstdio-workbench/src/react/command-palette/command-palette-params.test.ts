@@ -4,6 +4,7 @@ import {
   createCommandFilesParamValue,
   hasCommandParameters,
   listCommandParamEntries,
+  mergeCommandParamArgs,
   normalizeCommandParamValues,
 } from "./command-palette-params";
 
@@ -95,6 +96,7 @@ describe("command palette params", () => {
           count: { type: "number" },
           enabled: { type: "boolean" },
           tags: { type: "json" },
+          workspace: { type: "workspace" },
           empty: { type: "text" },
         },
         {
@@ -102,10 +104,17 @@ describe("command palette params", () => {
           count: "3",
           enabled: true,
           tags: '["bug"]',
+          workspace: '{"providerId":"pstdio.worktree","params":{"base":"main"}}',
           empty: "",
         },
       ),
-    ).toEqual({ title: "New ticket", count: 3, enabled: true, tags: ["bug"] });
+    ).toEqual({
+      title: "New ticket",
+      count: 3,
+      enabled: true,
+      tags: ["bug"],
+      workspace: { providerId: "pstdio.worktree", params: { base: "main" } },
+    });
   });
   test("preserves pending file values for host preparation", () => {
     const file = new File(["first"], "first.csv", { type: "text/csv" });
@@ -122,5 +131,13 @@ describe("command palette params", () => {
         { files: createCommandFilesParamValue() },
       ),
     ).toThrow("Missing required parameter: Data files");
+  });
+});
+
+test("cleared optional input values replace static action defaults", () => {
+  const schema = { locale: { type: "select" }, tags: { type: "multi-select" } };
+  const normalized = normalizeCommandParamValues(schema, { locale: "", tags: [] });
+  expect(mergeCommandParamArgs({ source: "toolbar", locale: "de", tags: ["old"] }, normalized, schema)).toEqual({
+    source: "toolbar",
   });
 });

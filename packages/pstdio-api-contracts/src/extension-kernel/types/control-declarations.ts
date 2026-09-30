@@ -57,6 +57,7 @@ export interface SelectionGroup {
 }
 
 export interface SelectionControl extends BaseControl {
+  allowCustomValues?: boolean;
   type: "selection";
   defaultValue: string | string[];
   options: SelectionOption[];

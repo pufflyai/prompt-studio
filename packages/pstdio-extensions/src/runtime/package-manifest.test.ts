@@ -27,7 +27,7 @@ describe("readPackageManifest", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       pstdio: { scope: "repo" },
     });
 
@@ -43,7 +43,7 @@ describe("readPackageManifest", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       pstdio: { projectFiles: { tracked: true } },
     });
 
@@ -59,7 +59,7 @@ describe("readPackageManifest", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       pstdio: { projectFiles: { tracked: "sometimes" } },
     });
 
@@ -77,7 +77,7 @@ describe("readPackageManifest", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     });
 
     const result = readPackageManifest(dir);
@@ -92,7 +92,7 @@ describe("readPackageManifest", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       pstdio: { scope: "workspace" },
     });
 
@@ -110,7 +110,7 @@ describe("readPackageManifest", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       pstdio: "repo",
     });
 
@@ -135,90 +135,23 @@ describe("readPackageManifest validation", () => {
     ]);
   });
 
-  test("rejects an extension built for a different API version", () => {
-    const dir = createPackage({
-      name: "future",
-      version: "1.0.0",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: "1.0.0-alpha.1099" },
-    });
-
-    const result = readPackageManifest(dir);
-
-    expect(result.manifest).toBeNull();
-    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
-      "extension_manifest_unsupported_api_version",
-    ]);
-    expect(result.diagnostics[0]?.message).toContain("1.0.0-alpha.1099");
-    expect(result.diagnostics[0]?.message).toContain(EXTENSION_API_VERSION);
-    expect(result.diagnostics[0]?.message).toContain("Update Prompt Studio");
-  });
-
-  test("directs the owner of an older extension to fix its source", () => {
-    const dir = createPackage({
-      name: "old-extension",
-      version: "1.0.0",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: "1.0.0-alpha.1" },
-    });
-    const result = readPackageManifest(dir);
-    expect(result.manifest).toBeNull();
-    expect(result.diagnostics[0]?.message).toContain("engines.pstdio in its package.json");
-    expect(result.diagnostics[0]?.message).not.toContain("Update Prompt Studio");
-  });
-
   test("reads metadata for an extension built for a different API version without loading it", () => {
     const dir = createPackage({
       name: "old-extension",
       version: "0.10.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "1.0.0-alpha.1" },
+      engines: { pstdio: "^0.0.9" },
     });
 
     const result = readPackageManifestMetadata(dir);
 
     expect(result.manifest).toMatchObject({
-      enginesPstdio: "1.0.0-alpha.1",
+      enginesPstdio: "^0.0.9",
       name: "old-extension",
       version: "0.10.0",
     });
     expect(result.entryPath).toBe(join(dir, "extension.ts"));
-    expect(result.diagnostics).toEqual([]);
-  });
-
-  test("rejects a range while the API is in alpha", () => {
-    const dir = createPackage({
-      name: "ranged",
-      version: "1.0.0",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: "^1.0.0-alpha.1" },
-    });
-
-    const result = readPackageManifest(dir);
-
-    expect(result.manifest).toBeNull();
-    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
-      "extension_manifest_unsupported_api_version",
-    ]);
-    expect(result.diagnostics[0]?.message).toContain("exact");
-  });
-
-  test("accepts an extension declaring the host API version", () => {
-    const dir = createPackage({
-      name: "current",
-      version: "1.0.0",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
-    });
-
-    const result = readPackageManifest(dir);
-
-    expect(result.manifest?.enginesPstdio).toBe(EXTENSION_API_VERSION);
     expect(result.diagnostics).toEqual([]);
   });
 
@@ -228,7 +161,7 @@ describe("readPackageManifest validation", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./missing.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     });
 
     const result = readPackageManifest(dir);
@@ -243,7 +176,7 @@ describe("readPackageManifest validation", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./src",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     });
     mkdirSync(join(dir, "src"));
 
@@ -260,7 +193,7 @@ describe("readPackageManifest validation", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: absoluteMain,
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     });
 
     const result = readPackageManifest(dir);
@@ -277,7 +210,7 @@ describe("readPackageManifest validation", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "../outside.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     });
     writeFileSync(join(dir, "..", "outside.ts"), "export default {};\n");
 
@@ -296,7 +229,7 @@ describe("readPackageManifest validation", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main,
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     });
     const outsideRoot = mkdtempSync(join(tmpdir(), "pstdio-manifest-outside-"));
     tempDirs.push(outsideRoot);

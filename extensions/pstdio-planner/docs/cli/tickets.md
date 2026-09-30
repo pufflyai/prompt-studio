@@ -17,7 +17,7 @@ pst tickets write --title <title> [--status <status>] [--tags <tag>...] [--user-
 pst tickets save --id <id> [--status <status>]
 pst tickets pull [--id <id>] [--force]
 pst tickets files --id <id>
-pst tickets implement --id <id> [--agent <agent>]
+pst tickets implement --id <id> [--agent '{"harnessId":"<harness>"}']
 pst tickets link --id <id> (--workspace <workspace> | --session <session-id>)
 pst tickets unlink --id <id> (--workspace <workspace> | --session <session-id>)
 pst tickets workspaces --id <id>

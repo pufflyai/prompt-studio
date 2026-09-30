@@ -29,6 +29,11 @@ layer-map change.
    orchestration. They consume contracts and extension runtime packages, but they
    do not import public SDK authoring-only types.
 
+   `pstdio-api` declares the core extensions its tests install from source
+   (`extension-lab`, `pstdio-planner`, and `pstdio-skills`) as development
+   dependencies. It does not import them. The declarations let pull request CI
+   run the API tests when one of those extensions changes.
+
 5. **Primitive UI**
    `@pstdio/ui` owns reusable React primitives, visual components, theme tokens,
    editor widgets, and terminal-specific React UI through its `./terminal`
@@ -77,7 +82,7 @@ layer-map change.
 - Every workspace package import must be declared in the importer's
   `package.json`.
 - Extensions consume host APIs only through `@pstdio/sdk` and `@pstdio/ui`. Additional workspace dependencies must be listed explicitly in the layer map.
-- The private `motion-lab` extension also consumes `@pstdio/motion-studies`, the repo-local composition catalog in `design/motion`. The catalog depends only on shared UI among workspace packages. Production UI and host packages do not depend on the catalog or Remotion.
+- The private `motion-lab` extension reads studies from `design/motion/studies` as project content. Its shared scene kit and Remotion Player belong to the extension. Runtime scenes reuse the preview’s React, Chakra, Remotion and shared UI modules. Production UI and host packages do not depend on Motion Lab or Remotion.
 - Extensions pin `@pstdio/ui` to an exact published version. The pin does not have to match an unreleased workspace version; extension dependency updates ship after the public package release.
 - `@pstdio/ui` may not import or declare router or React Query dependencies.
 - E2E tests use package exports and declare every workspace dependency they

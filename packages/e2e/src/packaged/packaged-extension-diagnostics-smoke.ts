@@ -52,7 +52,7 @@ export const registerExtensionDiagnosticsSmokeTests = () => {
           publisher: "test",
           main: "./extension.ts",
           type: "module",
-          engines: { pstdio: EXTENSION_API_VERSION },
+          engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         }),
       );
       writeFileSync(join(extensionPath, "extension.ts"), 'export { default } from "missing-desktop-dependency";');

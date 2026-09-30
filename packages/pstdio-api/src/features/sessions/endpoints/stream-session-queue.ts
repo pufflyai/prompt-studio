@@ -1,11 +1,11 @@
-import type { SSEStreamingApi } from "hono/streaming";
 import type { JsonPatch, SessionMessage } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "../deps";
 import { getQueuedSessionMessages } from "../queued-session-messages";
+import type { SessionEventSink } from "../session-stream-connections";
 
 // Queue positions are authoritative. Matching prompt text would retire the wrong
 // occurrence when a user queues the same prompt more than once.
-export const createStreamQueuePublisher = (id: string, deps: SessionsRouteDeps, stream: SSEStreamingApi) => {
+export const createStreamQueuePublisher = (id: string, deps: SessionsRouteDeps, sink: SessionEventSink) => {
   let userIds = new Set<string>();
   const publish = async () => {
     let data: { messages: SessionMessage[] } | { error: string };
@@ -15,7 +15,7 @@ export const createStreamQueuePublisher = (id: string, deps: SessionsRouteDeps, 
     } catch {
       data = { error: "Could not refresh queued messages" };
     }
-    await stream.writeSSE({ event: "queued_messages", data: JSON.stringify(data) });
+    await sink.write("queued_messages", data);
   };
   return {
     async snapshot(messages: SessionMessage[]) {

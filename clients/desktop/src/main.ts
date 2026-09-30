@@ -302,7 +302,6 @@ const bootstrap = async () => {
     getWorkbenchState: () => workbenchState.getState(),
     getProjectTabs: () => projectTabs.getProjectTabs(),
     setProjectTabs: (value) => projectTabs.setProjectTabs(value),
-    setKanbanView: (key, value) => workbenchState.setKanbanView(key, value),
     setPageLocation: (projectId, value) => workbenchState.setPageLocation(projectId, value),
     setSelectedProjectId: (projectId) => workbenchState.setSelectedProjectId(projectId),
   });

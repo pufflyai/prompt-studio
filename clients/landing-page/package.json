@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "test": "bun test src",
     "astro": "astro",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build"
@@ -30,6 +31,7 @@
     "@storybook/addon-docs": "^10.6.0",
     "@storybook/react": "^10.6.0",
     "@storybook/react-vite": "^10.6.0",
+    "@types/bun": "1.4.2",
     "@types/matter-js": "^0.20.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

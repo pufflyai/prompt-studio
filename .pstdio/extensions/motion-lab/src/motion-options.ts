@@ -1,12 +1,13 @@
-import { getStudy, type StudyProps } from "@pstdio/motion-studies";
 import type { InputGroup, Param } from "@pstdio/ui/param-editor";
+import type { StudyProps } from "./kit/model";
+import type { StudyMetadata } from "./study-schema";
 
 const presets = [
   { id: "instant", name: "Instant" },
   { id: "subtle", name: "Subtle" },
   { id: "slower", name: "Slower" },
 ];
-const variantGroup = (side: "left" | "right", title: string, settings: StudyProps) => {
+const variantGroup = (side: "left" | "right", title: string, settings: StudyProps, study: StudyMetadata) => {
   const variant = settings[side];
   const params: Param[] = [
     {
@@ -18,39 +19,18 @@ const variantGroup = (side: "left" | "right", title: string, settings: StudyProp
       description: "Instant removes transitions. Slower uses 1.5× transition durations without changing event times.",
     },
   ];
-  if (settings.study === "loaders" || settings.study === "chat-turn" || settings.study === "tools-queue") {
+  for (const param of study.params)
     params.push({
-      id: `${side}.loader`,
-      name: "Working treatment",
-      type: "selection",
-      defaultValue: variant.loader,
-      options: [
-        { id: "spinner", name: "Spinner" },
-        { id: "pulse", name: "Pulse" },
-        { id: "scan", name: "Scanning line" },
-        { id: "aurora", name: "Aurora background" },
-        { id: "contours", name: "Contour field" },
-      ],
+      id: `${side}.${param.id}`,
+      name: param.name,
+      type: param.type,
+      description: param.description,
+      options: param.options,
+      defaultValue: variant.values[param.id] ?? param.default[side],
     });
-  }
-  if (settings.study === "streaming") {
-    params.push({
-      id: `${side}.streaming`,
-      name: "Text arrival",
-      description:
-        "Chunk fade: 240 ms. Word reveal: 600 ms per received chunk. Instant and reduced motion remove both effects.",
-      type: "selection",
-      defaultValue: variant.streaming,
-      options: [
-        { id: "append", name: "Immediate" },
-        { id: "fade", name: "Chunk fade" },
-        { id: "words", name: "Word reveal" },
-      ],
-    });
-  }
   return { id: side, title, params };
 };
-export const optionGroups = (settings: StudyProps) =>
+export const optionGroups = (settings: StudyProps, study: StudyMetadata) =>
   [
     {
       id: "view",
@@ -85,8 +65,8 @@ export const optionGroups = (settings: StudyProps) =>
         },
       ],
     },
-    ...(settings.comparison ? [variantGroup("left", "Left preview", settings)] : []),
-    variantGroup("right", settings.comparison ? "Right preview" : "Animation", settings),
+    ...(settings.comparison ? [variantGroup("left", "Left preview", settings, study)] : []),
+    variantGroup("right", settings.comparison ? "Right preview" : "Animation", settings, study),
     {
       id: "info",
       title: "Info",
@@ -94,11 +74,10 @@ export const optionGroups = (settings: StudyProps) =>
       params: [
         {
           id: "studyInfo",
-          name: getStudy(settings.study).title,
+          name: study.title,
           type: "readOnly",
-          value: getStudy(settings.study).description,
+          value: study.description,
         },
-        { id: "export", name: "Configuration", type: "actions", options: [{ id: "copy", name: "Copy configuration" }] },
       ],
     },
   ] satisfies InputGroup[];

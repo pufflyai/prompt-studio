@@ -41,7 +41,7 @@ test.each([
       publisher: "example",
       version: "1.0.0",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   await writeFile(join(source, "extension.ts"), 'import "./missing-dependency.ts"; export default {};');
@@ -59,6 +59,7 @@ test.each([
     id: "remote",
     ref: { kind: "workspace-type", id: "remote" },
     label: "Remote",
+    params: { image: { type: "text" } },
     create: (_ctx, input) => {
       creations.push(input.operationId);
       return ready;
@@ -134,6 +135,7 @@ test("project setup retry leaves other pending workspaces untouched", async () =
     id: "remote",
     ref: { kind: "workspace-type", id: "remote" },
     label: "Remote",
+    params: { image: { type: "text" } },
     create: () => {
       throw new Error("Existing workspaces must keep their provider references");
     },
@@ -194,6 +196,7 @@ test.each([
     id: "remote",
     ref: { kind: "workspace-type", id: "remote" },
     label: "Remote",
+    params: { image: { type: "text" } },
     create: (_ctx, input) => {
       creations.push(input.operationId);
       expect(input.workspaceId).toBe(workspace.id);

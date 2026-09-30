@@ -5,7 +5,7 @@ interface RendererReadOptions<T> {
   workbench: WorkbenchCore;
   ownerKey: string;
   queryKey: string;
-  load(signal: AbortSignal): Promise<T> | T;
+  load(signal: AbortSignal, publish: (value: T) => void): Promise<T> | T;
   subscribe(listener: () => void): Disposable | (() => void);
 }
 
@@ -27,10 +27,18 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   // Query identity controls ownership. Rendering a new callback must not start another read.
   useEffect(() => {
     const binding: RendererReadBinding = workbench.views.reads.bind(ownerKey);
+    let hasCompletedRead = false;
     const request = {
       queryKey,
-      load: (signal: AbortSignal) => callbacks.current.load(signal),
-      onValue: (value: T) => setState({ queryKey, value, loading: false }),
+      load: (signal: AbortSignal, publish: (value: T) => void) => callbacks.current.load(signal, publish),
+      onProgress: (value: T) => {
+        // Background refreshes keep the complete snapshot until its replacement is ready.
+        if (!hasCompletedRead) setState({ queryKey, value, loading: true });
+      },
+      onValue: (value: T) => {
+        hasCompletedRead = true;
+        setState({ queryKey, value, loading: false });
+      },
       onError: (error: unknown) =>
         setState((previous) => ({
           queryKey,

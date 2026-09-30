@@ -16,14 +16,17 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
+import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { useRendererRead } from "../use-renderer-read";
+import { ViewToolbarActions } from "../view-toolbar-actions";
 import { bindReactKanbanPresentation } from "./kanban-presentation";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 
 interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
+  renderParamField?: CommandParamFieldRenderer;
   contribution: RegisteredKanbanRendererContribution;
   placement: WorkbenchPanelInstance;
 }
@@ -96,11 +99,15 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useResolvedContributionAttributes(contribution.attributes);
   const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);
+  const provider = contribution.viewsProvider;
+  const viewsSource = useSyncExternalStore(
+    provider?.subscribe ?? noopSubscribe,
+    provider?.getSnapshot ?? (() => undefined),
+    provider?.getSnapshot ?? (() => undefined),
+  );
   const initialState = {
     settings: contribution.defaultSettings,
     filters: contribution.defaultFilters,
-    views: contribution.defaultViews,
-    activeViewId: contribution.defaultActiveViewId,
   };
 
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
@@ -141,10 +148,21 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <Skeleton minH="12rem" w="full" />
   );
 
+  const readNotice = read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null;
+  if (provider && !viewsSource) {
+    return (
+      <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
+        {readNotice}
+        <Skeleton minH="12rem" w="full" />
+      </WorkbenchKanbanViewFrame>
+    );
+  }
+
   return (
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
-      {read.error && read.value ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
+      {readNotice}
       <KanbanRenderer
+        viewsSource={viewsSource}
         rows={rows}
         contentPlaceholder={read.value ? undefined : contentPlaceholder}
         storageKey={storageKey}
@@ -164,6 +182,14 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         onCreateRow={contribution.onCreateRow}
         onColumnAction={contribution.onColumnAction}
         getRowContextMenuActions={getRowContextMenuActions}
+        toolbarActions={
+          <ViewToolbarActions
+            workbench={workbench}
+            actions={contribution.toolbarActions}
+            context={{ resource: placement.resource }}
+            renderParamField={props.renderParamField}
+          />
+        }
       />
     </WorkbenchKanbanViewFrame>
   );

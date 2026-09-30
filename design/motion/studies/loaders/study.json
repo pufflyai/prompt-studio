@@ -1,0 +1,62 @@
+{
+  "title": "Working styles",
+  "description": "Compare spinner, pulse, scanning line, aurora, and contour field in the same active-turn footer. Judge distraction, readable text, interruption, and completion. Shader-style fields use frame-driven SVG; elapsed time stays fixed above the composer.",
+  "duration": 14,
+  "markers": [
+    {
+      "at": 1,
+      "label": "Fast response"
+    },
+    {
+      "at": 2,
+      "label": "Sustained wait"
+    },
+    {
+      "at": 7,
+      "label": "Interrupt"
+    },
+    {
+      "at": 8.5,
+      "label": "New turn"
+    },
+    {
+      "at": 12,
+      "label": "Complete"
+    }
+  ],
+  "group": "Chat",
+  "canvas": "pane",
+  "params": [
+    {
+      "id": "loader",
+      "name": "Working treatment",
+      "type": "selection",
+      "options": [
+        {
+          "id": "spinner",
+          "name": "Spinner"
+        },
+        {
+          "id": "pulse",
+          "name": "Pulse"
+        },
+        {
+          "id": "scan",
+          "name": "Scanning line"
+        },
+        {
+          "id": "aurora",
+          "name": "Aurora background"
+        },
+        {
+          "id": "contours",
+          "name": "Contour field"
+        }
+      ],
+      "default": {
+        "left": "spinner",
+        "right": "aurora"
+      }
+    }
+  ]
+}

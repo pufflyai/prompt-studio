@@ -158,3 +158,14 @@ export const Basic: Story = {
     </ScrollArea>
   ),
 };
+
+const longNumberedList = [
+  Array.from({ length: 120 }, (_, index) => `${index + 1}. City number ${index + 1} has a river.`).join("\n"),
+  "A list that starts at a high number:",
+  "998. Almost there\n999. Nearly done\n1000. Four-digit marker",
+].join("\n\n");
+
+export const LongNumberedList: Story = {
+  args: { defaultState: longNumberedList, fullWidth: true },
+  render: Basic.render,
+};

@@ -69,6 +69,7 @@ export {
   type ReservedKeybindingReason,
   readPackageManifest,
   readPackageManifestMetadata,
+  resolveDeclaredParams,
   type ScopeDisposer,
   type ScopedHostApis,
   toCommandPaletteContributions,

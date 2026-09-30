@@ -1,5 +1,5 @@
 import { Spinner } from "@chakra-ui/react";
-import { type PlacementIdentity, workbenchPanels } from "@pstdio/sdk/extensions";
+import { type PlacementIdentity, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchModuleContext,
@@ -121,7 +121,8 @@ const openNewSessionDraft = (
   const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
   selectSidenavSessionNode(ctx, undefined);
-  if (ctx.modes.getActiveModeId() === "sessions") {
+  const pageId = ctx.pages.store.getState().activePageId;
+  if (pageId === workbenchPages.sessions.id || pageId === workbenchPages.session.id) {
     return openSessionsPage(ctx, draftResource);
   }
   const identity = input.replacePanel;
@@ -161,19 +162,19 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           preservePanelMode = false,
           selectWorkspaceSidenav = true,
           tabRetention,
-          replaceDraft,
+          replacePanel,
         } = (args ?? {}) as {
           resource?: ResourceRef;
           preservePanelMode?: boolean;
           selectWorkspaceSidenav?: boolean;
           tabRetention?: WorkbenchTabRetention;
-          replaceDraft?: PlacementIdentity;
+          replacePanel?: PlacementIdentity;
         };
         if (resource?.type !== "session" || !resource.id) return undefined;
         const bubble = openDashboardSessionPanel(ctx, {
           resource,
           tabRetention,
-          replaceDraft,
+          replacePanel,
           preservePanelMode,
         });
         if (

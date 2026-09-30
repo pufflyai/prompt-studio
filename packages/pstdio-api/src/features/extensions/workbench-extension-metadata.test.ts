@@ -47,7 +47,7 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.4",
+    enginesPstdio: "^0.1.0",
   },
   definition,
 });
@@ -118,6 +118,7 @@ describe("buildWorkbenchExtensionMetadata", () => {
   test("adds signed bridge URLs and preserves capabilities on managed webview bodies", () => {
     const metadata = buildWorkbenchExtensionMetadata({
       assetRevisionsByExtensionId: new Map([["pstdio.lab", "build-2"]]),
+      installedExtensionIdsByExtensionId: new Map([["pstdio.lab", "installed-lab"]]),
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
       runtime: webviewRuntime("./src/main.tsx", ["commands.execute", "preferences.set@1"]),
       webviewCacheRoot: "/cache",
@@ -128,11 +129,22 @@ describe("buildWorkbenchExtensionMetadata", () => {
     expect(view?.body.kind).toBe("webview");
     if (view?.body.kind !== "webview") throw new Error("Expected a webview body");
     const basePath = webviewUrlIssuer
-      .runtimeUrl({ installName: "extension-lab", webviewId: "pstdio.lab.view.page" })
+      .runtimeUrl({ installedExtensionId: "installed-lab", webviewId: "pstdio.lab.view.page" })
       .replace(/\/runtime$/, "");
     expect(view.body.webview.runtimeUrl).toBe(`${basePath}/runtime`);
     expect(view.body.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-2`);
     expect(view.body.webview.capabilities).toEqual(["commands.execute", "preferences.set@1"]);
+  });
+
+  test("lists webview views of an extension that is not installed without asset URLs", () => {
+    const metadata = buildWorkbenchExtensionMetadata({
+      installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
+      runtime: webviewRuntime("./src/main.tsx"),
+      webviewCacheRoot: "/cache",
+    });
+
+    expect(metadata.views[0]).toMatchObject({ id: "pstdio.lab.view.page" });
+    expect(metadata.views[0]?.body).toMatchObject({ kind: "webview", webview: { runtimeUrl: "", moduleUrl: "" } });
   });
 
   test("keeps native callback and typed command metadata on the view body", () => {
@@ -191,6 +203,7 @@ describe("buildWorkbenchExtensionMetadata", () => {
 
   test("does not emit unsupported html webviews", () => {
     const metadata = buildWorkbenchExtensionMetadata({
+      installedExtensionIdsByExtensionId: new Map([["pstdio.lab", "installed-lab"]]),
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
       runtime: webviewRuntime("./static.html"),
       webviewCacheRoot: "/cache",

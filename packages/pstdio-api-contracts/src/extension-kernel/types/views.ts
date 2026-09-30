@@ -55,6 +55,8 @@ export interface NavigationTreeContribution extends ContributionDefinition<"navi
   readonly owner: NavigationOwnerRef;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
+  /** Project-scoped trees read without a selected resource. Defaults to selection. */
+  readonly resourceScope?: "project" | "selection";
 }
 
 /**

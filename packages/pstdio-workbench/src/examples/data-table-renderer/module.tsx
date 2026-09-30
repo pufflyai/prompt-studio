@@ -17,7 +17,7 @@ const rows = Array.from({ length: 24 }, (_, index) => {
     },
   };
 });
-export const createDataTableRendererStoryModule = (): WorkbenchModuleContribution => ({
+export const createDataTableRendererStoryModule = (empty = false): WorkbenchModuleContribution => ({
   id: "data-table-renderer.story",
   activate(ctx) {
     ctx.views.registerView({
@@ -25,6 +25,19 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
       title: "Service health",
       body: {
         kind: "dataTable",
+        toolbarActions: [
+          {
+            id: "run",
+            label: "Run experiment",
+            icon: "Play",
+            presentation: "primary",
+            params: { name: { type: "text", required: true, label: "Name" } },
+            submitLabel: "Start",
+            run: async () => {
+              ctx.notifications.show({ title: "Experiment started", level: "info" });
+            },
+          },
+        ],
         initialPageSize: 10,
         pageSizeOptions: [5, 10, 20],
         selectionMode: "multiple",
@@ -60,7 +73,7 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
           { id: "latency", label: "Latency (ms)", stat: { type: "unique" } },
           { id: "details", label: "Details", renderer: { type: "json" } },
         ],
-        executeQuery: () => ({ rows }),
+        executeQuery: () => ({ rows: empty ? [] : rows }),
         onRowActivate: (row) => {
           ctx.notifications.show({ title: `Opened ${row.values.service}`, level: "info" });
         },

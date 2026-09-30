@@ -1,5 +1,28 @@
 # @pstdio/sdk
 
+## 0.38.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- 2c33616: Add a `workspace` command param that lets users pick a workspace type and its fields, such as the base branch, like in Create workspace.
+
+## 0.37.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- d0b80f6: Add declared clipboard writes and a shared CopyButton for extension drafts.
+- 4c5c343: Add Upgrade all and per-row Upgrade buttons to extension settings, add a drop zone that copies an extension folder into .pstdio/extensions, show Reload with source-fix advice for local extensions, offer Copy error and Upgrade on load errors, and make Reload act on the requesting project's source and report the real validation error.
+- 498fa1f: Require explicit navigation and resource removal on extension API alpha.14.
+- a6e7c99: Sessions no longer become read-only when saved and agent history disagree: history reconciles with the saved conversation winning, and the "Conversation cannot continue" banner, `SessionHistoryIssue`, and `onHistoryIssue` are removed.
+
+### Patch Changes
+
+- 4ec57a5: Keep shared navigation mounted during selection changes, support project-scoped extension navigation, and show settings entries as their data becomes available.
+
 ## 0.36.1
 
 _2026-09-28_

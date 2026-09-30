@@ -52,5 +52,5 @@ Read this file before working on UI or design. Use these patterns across the app
 
 ## Motion experiments
 
-- Explore animation proposals in [Motion Lab](motion/README.md), with source studies in `design/motion` and a review extension in the project sidenav.
+- Explore animation proposals in [Motion Lab](motion/README.md), with live project studies in `design/motion/studies` and a review extension in the project sidenav.
 - Lab timings remain proposals until visual review. Commit approved rules here, then implement them in shared UI and Storybook.

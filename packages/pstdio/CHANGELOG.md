@@ -1,5 +1,42 @@
 # pstdio
 
+## 0.38.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- 2c33616: Add a `workspace` command param that lets users pick a workspace type and its fields, such as the base branch, like in Create workspace.
+
+### Patch Changes
+
+- 5183e5f: Remove the Prompt Studio Planner Automation extension from the Marketplace.
+- 788c117: Open new terminals in the project root instead of the app's working folder when no workspace is selected.
+- 93785d5: Fix extension views that failed to load when another folder had an extension with the same name.
+
+## 0.37.0
+
+_2026-09-29_
+
+### Minor Changes
+
+- d0b80f6: Add declared clipboard writes and a shared CopyButton for extension drafts.
+- 4c5c343: Add Upgrade all and per-row Upgrade buttons to extension settings, add a drop zone that copies an extension folder into .pstdio/extensions, show Reload with source-fix advice for local extensions, offer Copy error and Upgrade on load errors, and make Reload act on the requesting project's source and report the real validation error.
+- 97a9d2e: Add signed Windows x64 desktop installers and automatic updates.
+- 498fa1f: Require explicit navigation and resource removal on extension API alpha.14.
+
+### Patch Changes
+
+- 99c3471: A short conversation shows at once instead of blanking for a few frames, so a new session's first message no longer flickers.
+- b9791ba: Chat problems appear in the conversation instead of banners, a message that cannot be sent stays in the conversation as "Not sent", and Retry is offered only for temporary failures. `@pstdio/ui` adds `AlertMessage` `onClose`, `ChatPanel` `conversationNotices`, and the `delivery: "unsent"` message state.
+- 2025b9a: Sessions start again in projects whose folder was shared by several workspaces: each folder now belongs to one workspace, and upgrading removes the extra workspaces and any older project that shared its home folder with a newer one.
+- c0dff06: Restore thinking-level menu selection for Codex, Claude Code, and OpenCode.
+- 3985985: The project workspace settings no longer show a note under the folder path.
+- 9ef96aa: Declare compatibility with explicit navigation and resource removal on extension API alpha.14.
+- a6e7c99: Sessions no longer become read-only when saved and agent history disagree: history reconciles with the saved conversation winning, and the "Conversation cannot continue" banner, `SessionHistoryIssue`, and `onHistoryIssue` are removed.
+- 4ec57a5: Keep shared navigation mounted during selection changes, support project-scoped extension navigation, and show settings entries as their data becomes available.
+- c0dff06: Match thinking-level icons to planner priority colors and use a flame for Max.
+
 ## 0.36.1
 
 _2026-09-28_

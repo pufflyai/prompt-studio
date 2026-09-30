@@ -12,7 +12,7 @@ import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtim
 const webviewAccess = createExtensionWebviewAccess({
   signingKey: Buffer.from("test-webview-signing-key"),
 });
-const webviewScope = { installName: "extension-lab", webviewId: "pstdio.lab.view.labPage" };
+const webviewScope = { installedExtensionId: "installed-lab", webviewId: "pstdio.lab.view.labPage" };
 const webviewBasePath = webviewAccess.runtimeUrl(webviewScope).replace(/\/runtime$/, "");
 
 const writeExtension = (root: string, entry: string) => {
@@ -26,7 +26,7 @@ const writeExtension = (root: string, entry: string) => {
       displayName: "Lab",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   writeFileSync(join(root, "src", "main.tsx"), "console.log('managed');");
@@ -45,10 +45,13 @@ const writeExtension = (root: string, entry: string) => {
   );
 };
 
+type SourceRow = { id: string; install_name: string; source_path: string; last_error_json?: unknown };
+
 const createApp = (input: {
   cacheRoot: string;
   sourcePath: string;
   lastErrorJson?: unknown;
+  sources?: SourceRow[];
   failure?: string;
   onLoad?: () => void;
   onCatalog?: (catalog: ReturnType<typeof createProjectExtensionRuntimeCatalog>) => void;
@@ -69,16 +72,18 @@ const createApp = (input: {
     createExtensionWebviewAssetRoutes({
       extensionRuntimeCatalog,
       extensionService: {
-        getInstalledSource: async (installName: string) => {
+        getInstalledSourceById: async (id: string) => {
           if (input.failure) throw new Error(input.failure);
-          return installName === "extension-lab"
-            ? {
-                install_name: "extension-lab",
-                source_kind: "local_path",
-                source_path: input.sourcePath,
-                last_error_json: input.lastErrorJson,
-              }
-            : null;
+          const sources = input.sources ?? [
+            {
+              id: "installed-lab",
+              install_name: "extension-lab",
+              source_path: input.sourcePath,
+              last_error_json: input.lastErrorJson,
+            },
+          ];
+          const source = sources.find((candidate) => candidate.id === id);
+          return source ? { ...source, source_kind: "local_path" } : null;
         },
       },
       extensionWebviewAccess: webviewAccess,
@@ -117,9 +122,9 @@ describe("extension webview asset routes", () => {
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, "./src/main.tsx");
-    mkdirSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist"), { recursive: true });
+    mkdirSync(join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist"), { recursive: true });
     writeFileSync(
-      join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"),
+      join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist", "module.js"),
       "console.log('managed');",
     );
 
@@ -153,6 +158,32 @@ describe("extension webview asset routes", () => {
         }),
       );
       expect(loads).toBe(2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("serves the bundle of the installed source named in the URL when sources share an install name", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-shared-install-name-"));
+    const cacheRoot = join(root, "cache");
+    const sources = ["workspace-copy", "project-copy"].map((id) => {
+      const sourcePath = join(root, id, "font-editor");
+      writeExtension(sourcePath, "./src/main.tsx");
+      mkdirSync(join(cacheRoot, id, "pstdio.lab.view.labPage", "dist"), { recursive: true });
+      writeFileSync(join(cacheRoot, id, "pstdio.lab.view.labPage", "dist", "module.js"), `console.log('${id}');`);
+      return { id, install_name: "font-editor", source_path: sourcePath };
+    });
+
+    try {
+      const app = createApp({ cacheRoot, sourcePath: sources[0]!.source_path, sources });
+      const moduleUrl = webviewAccess.assetUrl(
+        { installedExtensionId: "project-copy", webviewId: "pstdio.lab.view.labPage" },
+        "module.js",
+      );
+      const res = await app.request(moduleUrl);
+
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("console.log('project-copy');");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -207,9 +238,9 @@ describe("extension webview asset routes", () => {
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, "./src/main.tsx");
-    mkdirSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist"), { recursive: true });
+    mkdirSync(join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist"), { recursive: true });
     writeFileSync(
-      join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"),
+      join(cacheRoot, "installed-lab", "pstdio.lab.view.labPage", "dist", "module.js"),
       "console.log('managed');",
     );
     writeFileSync(join(root, "secret.txt"), "secret");

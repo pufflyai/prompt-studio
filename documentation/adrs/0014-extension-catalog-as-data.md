@@ -20,7 +20,7 @@ Each entry declares its install name, display metadata, Git origin, release ref,
 
 Upgrade eligibility belongs to the source. The host parses recorded Git provenance first, then uses the catalog entry for installs that predate provenance. A source with a pinned commit is upgradeable when the catalog release resolves to a different commit. A source without provenance gets a recovery upgrade only when its manifest is incompatible with the host. Healthy local copies stay under local control.
 
-Catalog membership and default installation are separate. The packaged defaults are the three harnesses, base themes, and Prompt Studio skills. Planner, planner automation, and reports remain available in the catalog.
+Catalog membership and default installation are separate. The packaged defaults are the three harnesses, base themes, and Prompt Studio skills. Planner and reports remain available in the catalog.
 
 The catalog document is the trust boundary. It names code the host may clone and run. Remote overrides therefore require HTTPS, and the extensions panel shows the publisher and Git origin before installation.
 

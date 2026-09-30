@@ -21,7 +21,6 @@ describe("extension kanban renderer contracts", () => {
             displayProperties: ["priority"],
           },
           filters: {},
-          isDefault: true,
         },
       ],
       defaultActiveViewId: "all",
@@ -39,7 +38,6 @@ describe("extension kanban renderer contracts", () => {
           displayProperties: ["priority"],
         },
         filters: {},
-        isDefault: true,
       },
     ]);
     expect(record.defaultActiveViewId).toBe("all");

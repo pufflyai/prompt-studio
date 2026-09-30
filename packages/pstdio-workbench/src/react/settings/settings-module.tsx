@@ -76,11 +76,13 @@ export const createWorkbenchSettingsModule = (
           kind: "tree",
           // Settings sections read as a single scannable list, so every section starts expanded.
           defaultExpandedSectionIds: [...ctx.settings.listSections().map((section) => section.id), FALLBACK_SECTION_ID],
-          getBody: () =>
+          getBody: ({ signal, onProgress }) =>
             buildSettingsTreeBody({
               settings: ctx.settings,
               hasProjectScope: hasProjectScope(),
               matchesWhen: (when) => ctx.context.matches(when),
+              signal,
+              onProgress,
             }),
           getChildren: () => [],
         },

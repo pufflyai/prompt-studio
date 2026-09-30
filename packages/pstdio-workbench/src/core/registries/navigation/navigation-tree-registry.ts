@@ -1,3 +1,4 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
@@ -25,6 +26,8 @@ export interface NavigationTreeContribution {
   slot?: NavigationTreeSlot;
   viewId?: string;
   defaultExpandedSectionIds?: string[];
+  /** Resolve the data resource independently of the selected navigation item. */
+  resolveResource?(resource: ResourceRef | undefined): ResourceRef | undefined;
   getSections?(context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getChildren?(node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
 }
@@ -38,19 +41,27 @@ export interface CreateNavigationTreeRegistryInput {
 
 export interface NavigationTreeRegistry {
   registerContribution(contribution: NavigationTreeContribution): Disposable;
-  resolveOwner(kind: NavigationTreeOwner["kind"], id: string): NavigationTreeOwner | undefined;
+  resolveOwner(
+    kind: NavigationTreeOwner["kind"],
+    id: string,
+    slot?: NavigationTreeSlot,
+  ): NavigationTreeOwner | undefined;
+  getReadKey(owner: NavigationTreeOwner, context?: NavigationTreeContext): string;
   getSections(
     owner: NavigationTreeOwner,
     slot?: NavigationTreeSlot,
     context?: NavigationTreeContext,
   ): Promise<TreeViewSection[]>;
   getChildren(node: TreeNode, context?: NavigationTreeContext): Promise<TreeNode[]>;
-  getDefaultExpandedSectionIds(owner: NavigationTreeOwner): string[];
+  getDefaultExpandedSectionIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
   onDidChange(listener: () => void): Disposable;
 }
 
 // The owner's top-level section. Extensions add ungrouped entries here and use a labeled section for a named group.
 export const navigationRootSectionId = "navigation.root";
+// Each slot keeps its own root, so pinned header and footer rows never share a section id with the body.
+export const navigationSlotRootSectionId = (slot: NavigationTreeSlot = "content") =>
+  slot === "content" ? navigationRootSectionId : `navigation.${slot}`;
 
 const ownerId = (owner: NavigationTreeOwner) => `${owner.kind}:${owner.extensionId}:${owner.id}`;
 
@@ -70,6 +81,11 @@ const contributionOrder =
 
 const scopedId = (scope: string | undefined, id: string) => (scope ? `${scope}:${id}` : id);
 
+const readContext = (contribution: NavigationTreeContribution, context: NavigationTreeContext) => ({
+  ...context,
+  resource: contribution.resolveResource ? contribution.resolveResource(context.resource) : context.resource,
+});
+
 const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => {
   const index = sections.findIndex((candidate) => candidate.id === section.id);
   if (index < 0) {
@@ -82,7 +98,10 @@ const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => 
 
 export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
-  const nodeSources = new WeakMap<TreeNode, { contribution: NavigationTreeContribution; node: TreeNode }>();
+  const nodeSources = new WeakMap<
+    TreeNode,
+    { contribution: NavigationTreeContribution; node: TreeNode; resource?: ResourceRef }
+  >();
   const listeners = new Set<() => void>();
   const emit = () => {
     for (const listener of listeners) listener();
@@ -93,16 +112,23 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       .filter((contribution) => ownersEqual(contribution.owner, owner) && (contribution.slot ?? "content") === slot)
       .sort(contributionOrder(owner));
 
-  const projectNode = (node: TreeNode, contribution: NavigationTreeContribution, moveScope: string): TreeNode => {
+  const projectNode = (
+    node: TreeNode,
+    contribution: NavigationTreeContribution,
+    moveScope: string,
+    resource?: ResourceRef,
+  ): TreeNode => {
     const projected: TreeNode = {
       ...node,
       id: scopedId(contribution.idScope, node.id),
       moveScope,
-      canHide: node.canHide ?? true,
-      canReorder: node.canReorder ?? true,
-      children: node.children?.map((child) => projectNode(child, contribution, moveScope)),
+      // Mode rows are navigation links users may hide and arrange; page-owned level rows are data such as notes
+      // or sessions, which keep the order their owner gives them unless a row opts in.
+      canHide: node.canHide ?? contribution.owner.kind === "mode",
+      canReorder: node.canReorder ?? contribution.owner.kind === "mode",
+      children: node.children?.map((child) => projectNode(child, contribution, moveScope, resource)),
     };
-    nodeSources.set(projected, { contribution, node });
+    nodeSources.set(projected, { contribution, node, resource });
     return projected;
   };
 
@@ -110,16 +136,17 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     section: TreeViewSection,
     contribution: NavigationTreeContribution,
     owner: NavigationTreeOwner,
+    resource?: ResourceRef,
   ): TreeViewSection => ({
     ...section,
     id:
       contribution.sourceExtensionId !== owner.extensionId && !section.label
-        ? navigationRootSectionId
+        ? navigationSlotRootSectionId(contribution.slot)
         : scopedId(contribution.idScope, section.id),
     moveScope: ownerId(owner),
     canHide: section.canHide ?? true,
     canReorder: section.canReorder ?? true,
-    nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner))),
+    nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), resource)),
   });
 
   return {
@@ -143,22 +170,37 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       });
     },
 
-    resolveOwner(kind, id) {
+    resolveOwner(kind, id, slot) {
       return [...contributions.values()].find(
-        (contribution) => contribution.owner.kind === kind && contribution.owner.id === id,
+        (contribution) =>
+          contribution.owner.kind === kind &&
+          contribution.owner.id === id &&
+          (!slot || (contribution.slot ?? "content") === slot),
       )?.owner;
+    },
+
+    getReadKey(owner, context = {}) {
+      return JSON.stringify(
+        (["header", "content", "footer"] as const).flatMap((slot) =>
+          matching(owner, slot).map((contribution) => [
+            contribution.id,
+            resourceKey(readContext(contribution, context).resource),
+          ]),
+        ),
+      );
     },
 
     async getSections(owner, slot = "content", context = {}) {
       const sections: TreeViewSection[] = [];
       for (const contribution of matching(owner, slot)) {
         context.signal?.throwIfAborted();
+        const query = readContext(contribution, context);
         const sourceSections = contribution.viewId
-          ? await input.getViewSections?.(contribution.viewId, context)
-          : await contribution.getSections?.(context);
+          ? await input.getViewSections?.(contribution.viewId, query)
+          : await contribution.getSections?.(query);
         context.signal?.throwIfAborted();
         for (const section of sourceSections ?? []) {
-          mergeSection(sections, projectSection(section, contribution, owner));
+          mergeSection(sections, projectSection(section, contribution, owner, query.resource));
         }
       }
       return sections;
@@ -169,15 +211,17 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       const source = nodeSources.get(node);
       if (!source) return node.children ?? [];
       const moveScope = node.moveScope ?? ownerId(source.contribution.owner);
+      const query = { ...context, resource: source.resource };
       const children = source.contribution.viewId
-        ? await input.getViewChildren?.(source.contribution.viewId, source.node, context)
-        : await source.contribution.getChildren?.(source.node, context);
+        ? await input.getViewChildren?.(source.contribution.viewId, source.node, query)
+        : await source.contribution.getChildren?.(source.node, query);
       if (!children) return node.children ?? [];
-      return children.map((child) => projectNode(child, source.contribution, moveScope));
+      return children.map((child) => projectNode(child, source.contribution, moveScope, source.resource));
     },
 
-    getDefaultExpandedSectionIds(owner) {
-      return (["header", "content", "footer"] as const).flatMap((slot) =>
+    getDefaultExpandedSectionIds(owner, selectedSlot) {
+      const slots: readonly NavigationTreeSlot[] = selectedSlot ? [selectedSlot] : ["header", "content", "footer"];
+      return slots.flatMap((slot) =>
         matching(owner, slot).flatMap((contribution) =>
           (
             contribution.defaultExpandedSectionIds ??

@@ -126,6 +126,7 @@ export default defineExtension({
       owner: workbenchModes.project,
       slot: "content",
       view: files.ref,
+      resourceScope: "project",
     }),
   ],
 });
@@ -134,6 +135,8 @@ export default defineExtension({
 `body` and optional `footer` return `TreeViewSection[]`. Optional `children` returns `TreeNode[]` for lazy child
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
+
+Navigation trees default to `resourceScope: "selection"`, so selecting a different resource starts a new read. Use `resourceScope: "project"` when the tree reads project data independently of the selected resource, such as a shared notes list. Its callbacks receive the project and no resource; selection changes keep its rows visible. Declared refresh events still update its data. The owner still controls where the tree appears.
 
 Set `selected: true` on the current node when several rows share a resource, such as
 documents within one ticket. The declaration stays on the node when trees are combined
@@ -156,8 +159,9 @@ Resource menus work in the Sidenav and standalone trees. A row menu takes preced
 Right-clicking the background or a plain navigation row still opens the customization menu. Workspace rows use
 current host capability data, including default-workspace restrictions, when resolving their actions.
 
-The owner can be a mode or page ref. Mode sections appear before page sections. The Sidenav renders one tree with
-pinned `header` and `footer` slots and one scrolling `content` slot.
+The owner can be a mode or page ref. A mode-owned tree adds sections to that mode's navigation. A page-owned
+`content` tree starts a [Sidenav level](#sidenav-levels) instead. The Sidenav renders one tree with pinned
+`header` and `footer` slots and one scrolling `content` slot.
 
 Inside a command declaration, use a typed menu slot and limit visibility with `when`. Import `workspaceSlots` and `workbenchResourceKinds` from `@pstdio/sdk/extensions`:
 
@@ -175,6 +179,45 @@ Workspace resources use the host project mode. Target workspace actions with
 `workbenchResourceKinds.workspace`; the SDK does not export a host workspace mode.
 
 See [Dashboard UI attachments](0013-workbench-attachments.md) and [Extension modes](0009-modes-and-layout.md) for the current product contract.
+
+## Native view toolbar actions
+
+Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
+visible when a query returns no rows. Use them for commands such as creating a
+record or starting an experiment.
+
+```ts
+const experiments = defineView({
+  id: "experiments",
+  title: "Experiments",
+  body: {
+    kind: "dataTable",
+    query: () => ({ rows: [] }),
+    toolbarActions: [{
+      id: "run",
+      label: "Run experiment",
+      icon: "play",
+      presentation: "primary",
+      command: runExperiment.ref,
+      params: { source: "experiments" },
+      input: { name: params.text({ required: true }) },
+      submitLabel: "Start experiment",
+    }],
+  },
+});
+```
+
+Actions use the shared command path and current resource context. `params`
+provides static arguments; values collected by `input` override matching static
+arguments. An input schema opens the command dialog. It supports
+[command-backed choices](0003-command-and-process-api.md#command-backed-choices).
+`when` uses the workbench context expression to control visibility, and
+`disabled` disables an action. Command visibility and enablement still apply.
+
+Use `presentation: "primary"` for the main action and `"secondary"` for other
+actions. Secondary is the default. More than one primary action produces a
+warning, and an unknown command produces an error diagnostic.
+
 
 ## Appearance Contributions
 
@@ -198,3 +241,120 @@ export default defineExtension({ themes: [monokai] });
 
 The runtime qualifies the ref with the extension owner. For publisher `acme` and
 package `planner`, the theme ID is `acme.planner.theme.monokai`.
+
+## Shared kanban views
+
+`defaultViews` defines extension-owned, read-only built-ins. `defaultActiveViewId` chooses the extension fallback. The deprecated `isDefault` flag remains a fallback when `defaultActiveViewId` is absent; use `defaultActiveViewId` in new extensions. The project's shared default takes precedence over both. Do not copy or save built-ins into extension storage.
+
+The host saves user-created views per project, extension instance and local board ID. Query-returned attributes and status options are used to validate settings and filters. Keep field IDs stable across releases. A successful query can clean removed options from saved views; a failed query never removes them.
+
+Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` supplies shared views and asynchronous mutations to the UI renderer. The workbench accepts a subscribable views provider from its host; standalone callers without one show their built-ins read-only.
+
+## Sidenav levels
+
+A page-owned content navigation tree starts a sidenav level. Its sections replace the mode content while that page or any child location is open. The nearest owner in the page location parent chain wins, so levels can nest. Pages with only header or footer trees do not start a level.
+
+This extension adds a Recipes row to the project navigation. The row opens the Recipes page. That page owns the `recipe-list` tree, so the recipes replace the project navigation. Opening a recipe keeps the level, because the Recipe page declares Recipes as its parent.
+
+```ts
+import {
+  defineExtension,
+  defineNavigationItem,
+  defineNavigationTree,
+  definePage,
+  defineResourceKind,
+  defineView,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
+
+const recipe = defineResourceKind({ id: "recipe", label: "Recipe", icon: "chef-hat" });
+const recipes = [
+  { id: "pancakes", title: "Pancakes" },
+  { id: "ramen", title: "Ramen" },
+];
+
+const recipeView = defineView({
+  id: "recipe",
+  title: "Recipe",
+  body: { kind: "controls", query: async () => ({ values: {} }) },
+});
+
+// Opening this page starts the Recipes level.
+const recipesPage = definePage({
+  id: "recipes",
+  title: "Recipes",
+  path: "recipes",
+  mode: workbenchModes.project,
+  main: { kind: "panels", empty: recipeView.ref },
+  slots: [],
+});
+
+// A child page keeps the Recipes level open through its declared parent.
+const recipePage = definePage({
+  id: "recipe",
+  title: "Recipe",
+  path: "recipe",
+  mode: workbenchModes.project,
+  parent: recipesPage.ref,
+  resource: { kinds: [recipe.ref] },
+  main: { kind: "view", view: recipeView.ref, cardinality: "one" },
+  slots: [],
+});
+
+const recipeList = defineView({
+  id: "recipe-list",
+  title: "Recipes",
+  body: {
+    kind: "tree",
+    body: async () => [
+      {
+        id: "recipes",
+        label: "Recipes",
+        collapsible: false,
+        nodes: recipes.map(({ id, title }) => {
+          const resource = { type: recipe.id, id, label: title };
+          return {
+            id,
+            label: title,
+            icon: "chef-hat",
+            resource,
+            target: { kind: "page", page: recipePage.ref, resource },
+          };
+        }),
+      },
+    ],
+  },
+});
+
+export default defineExtension({
+  resourceKinds: [recipe],
+  views: [recipeView, recipeList],
+  pages: [recipesPage, recipePage],
+  navigationItems: [
+    // The main level shows one row that opens the level.
+    defineNavigationItem({
+      id: "recipes",
+      owner: workbenchModes.project,
+      slot: "content",
+      label: "Recipes",
+      icon: "chef-hat",
+      group: "",
+      action: { kind: "page", page: recipesPage.ref },
+    }),
+  ],
+  navigationTrees: [
+    // A page owner starts a level instead of adding rows to the project navigation.
+    defineNavigationTree({
+      id: "recipe-list",
+      owner: recipesPage.ref,
+      slot: "content",
+      view: recipeList.ref,
+      resourceScope: "project",
+    }),
+  ],
+});
+```
+
+The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels. Users leave a level through the breadcrumb or browser history; the Sidenav adds no Back row. Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
+
+For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.

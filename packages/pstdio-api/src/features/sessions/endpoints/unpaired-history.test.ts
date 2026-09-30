@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { openSessionStream } from "../../../test-utils/session-stream";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -42,7 +43,7 @@ test("a history the harness cannot pair keeps the saved conversation and resumes
     await persistSessionMessages(session.id, saved, handle.deps);
     const get = (suffix: string) => handle.app.request(`/v1/sessions/${session.id}/${suffix}`);
     expect(await (await get("conversation")).json()).toEqual(expect.objectContaining({ messages: saved }));
-    expect(await (await get("stream")).text()).not.toContain("history_issue");
+    expect(await (await openSessionStream(handle.app, session.id)).text()).not.toContain("history_issue");
     const followUp = await handle.app.request(`/v1/sessions/${session.id}/follow-up`, {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -1,0 +1,42 @@
+{
+  "title": "Temporary surfaces",
+  "description": "A tooltip waits 300 ms. Switching content inside an open dialog does not replay its entrance.",
+  "duration": 13,
+  "markers": [
+    {
+      "at": 1,
+      "label": "Menu opens"
+    },
+    {
+      "at": 2.5,
+      "label": "Menu closes"
+    },
+    {
+      "at": 3,
+      "label": "Hover"
+    },
+    {
+      "at": 3.3,
+      "label": "Tooltip"
+    },
+    {
+      "at": 5,
+      "label": "Dialog opens"
+    },
+    {
+      "at": 7,
+      "label": "Change content"
+    },
+    {
+      "at": 9,
+      "label": "Dialog closes"
+    },
+    {
+      "at": 10,
+      "label": "Rapid reversal"
+    }
+  ],
+  "group": "Workbench",
+  "canvas": "pane",
+  "params": []
+}

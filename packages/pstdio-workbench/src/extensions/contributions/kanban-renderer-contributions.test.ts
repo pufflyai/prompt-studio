@@ -36,7 +36,6 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
           title: "All tickets",
           settings: queryState.settings,
           filters: {},
-          isDefault: true,
         },
       ],
       defaultActiveViewId: "all",
@@ -54,7 +53,6 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
         title: "All tickets",
         settings: queryState.settings,
         filters: {},
-        isDefault: true,
       },
     ]);
     expect(renderer?.defaultActiveViewId).toBe("all");

@@ -75,16 +75,13 @@ test.describe("workspace sessions", () => {
     await expect(sidenav.getByRole("option", { name: "PS-164_A1", exact: true })).toBeVisible();
   });
 
-  test("creates a new session from the expanded Sessions group in sessions view", async ({ page }) => {
+  test("creates a new session from the Sessions level", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(storyUrl(baseUrl, sessionModeStoryId));
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="workspace-sessions"]');
-    await expect(workspaceSessions).toHaveAttribute("aria-expanded", "true");
-
-    await workspaceSessions.hover();
+    await sidenav.getByText("Sessions", { exact: true }).hover();
     const createSession = sidenav.getByRole("button", { name: "New session" });
     await expect(createSession).toBeVisible();
     await createSession.click();

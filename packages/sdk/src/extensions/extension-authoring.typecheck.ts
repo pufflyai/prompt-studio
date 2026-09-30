@@ -55,6 +55,7 @@ const extension = defineExtension({
       params: {
         ticket: params.text({ required: true }),
         harness: params.harness({ required: false }),
+        workspace: params.workspace({ providers: ["pstdio.worktree"] }),
       },
       async run(ctx, commandParams) {
         const ticket: string = commandParams.ticket;
@@ -64,6 +65,7 @@ const extension = defineExtension({
               model?: string;
             }
           | undefined = commandParams.harness;
+        const workspaceProviderId: string | undefined = commandParams.workspace?.providerId;
         const enabled: unknown = await ctx.settings.get("counter.enabled");
         const tone: unknown = await ctx.settings.get("greeting.tone");
         const session = await ctx.sessions.create({ title: "Inspect ticket", prompt: ticket });
@@ -72,6 +74,7 @@ const extension = defineExtension({
         const sessionStatus: string = session.status;
         void ticket;
         void harness;
+        void workspaceProviderId;
         void enabled;
         void tone;
         void sessionType;

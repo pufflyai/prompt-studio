@@ -6,7 +6,7 @@ const createAccess = () =>
     signingKey: Buffer.from("test-webview-signing-key"),
   });
 
-const scope = { installName: "extension-lab", webviewId: "lab.page" };
+const scope = { installedExtensionId: "installed-lab", webviewId: "lab.page" };
 
 describe("extension webview access", () => {
   test("issues and authorizes read-only URLs for one webview scope", () => {
@@ -14,17 +14,17 @@ describe("extension webview access", () => {
     const runtimeUrl = access.runtimeUrl(scope);
     const assetUrl = access.assetUrl(scope, "chunks/view.js", "build-2");
 
-    expect(runtimeUrl).toMatch(/^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/lab\.page\/runtime$/);
+    expect(runtimeUrl).toMatch(/^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/installed-lab\/lab\.page\/runtime$/);
     expect(assetUrl).toBe(`${runtimeUrl.replace(/\/runtime$/, "")}/assets/chunks/view.js?h=build-2`);
 
     expect(access.authorize(new Request(`http://127.0.0.1:43123${runtimeUrl}`))).toEqual({
-      installName: "extension-lab",
+      installedExtensionId: "installed-lab",
       kind: "runtime",
       webviewId: "lab.page",
     });
     expect(access.authorize(new Request(`http://127.0.0.1:43123${assetUrl}`))).toEqual({
       assetPath: "chunks/view.js",
-      installName: "extension-lab",
+      installedExtensionId: "installed-lab",
       kind: "asset",
       webviewId: "lab.page",
     });
@@ -67,11 +67,11 @@ describe("extension webview access", () => {
     const artifactUrl = access.artifactUrl(scope, request);
 
     expect(artifactUrl).toMatch(
-      /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/lab\.page\/artifacts\/\d+\/project-1\/runs\/a\/chart\.png$/,
+      /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/installed-lab\/lab\.page\/artifacts\/\d+\/project-1\/runs\/a\/chart\.png$/,
     );
     expect(access.authorize(new Request(`http://127.0.0.1:43123${artifactUrl}`))).toEqual({
       artifactPath: "a/chart.png",
-      installName: "extension-lab",
+      installedExtensionId: "installed-lab",
       kind: "artifact",
       mountId: "runs",
       projectId: "project-1",
@@ -100,7 +100,7 @@ describe("extension webview access", () => {
   test("redacts a capability wherever its path appears", () => {
     const access = createAccess();
     const assetUrl = access.assetUrl(scope, "module.js");
-    const redactedPath = "/v1/extensions/webviews/[Redacted]/extension-lab/lab.page/assets/module.js";
+    const redactedPath = "/v1/extensions/webviews/[Redacted]/installed-lab/lab.page/assets/module.js";
 
     expect(access.redactPath(assetUrl)).toBe(redactedPath);
     expect(access.redactPath(`failed to load http://127.0.0.1:43123${assetUrl}`)).toBe(

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { SessionMessage } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { openSessionStream } from "../../../test-utils/session-stream";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -51,7 +52,7 @@ test("completed session replay does not use a host-wide harness disabled for the
     await handle.deps.sessionService.update(session.id, { agent_session_id: "agent-session-1" });
     await handle.deps.sessionService.transitionStatus(session.id, "completed");
 
-    const response = await handle.app.request(`/v1/sessions/${session.id}/stream`);
+    const response = await openSessionStream(handle.app, session.id);
     expect(response.status).toBe(200);
     const body = await response.text();
 

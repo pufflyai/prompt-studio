@@ -43,13 +43,11 @@
     "pstdio-logging",
     "pstdio-paths",
     "pstdio-dev",
-    "pstdio-planner-loops",
     "pstdio-scheduler",
     "pstdio-scripts",
     "pstdio-storage",
     "pstdio-wt",
     "workbench-fixture",
-    "@pstdio/motion-studies",
     "motion-lab"
   ],
   "privatePackages": {
