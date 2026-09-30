@@ -9,7 +9,7 @@ import type {
   WorkbenchCommandExecutionContext,
   WorkbenchCoreContributionContext,
 } from "../../../core";
-import { createWorkbenchResourceContextValues, matchesContextExpression } from "../../../core";
+import { matchesContextExpression, scopeWorkbenchResourceContextValues } from "../../../core";
 import { hasCommandParameters } from "../../command-palette/command-palette-params";
 import type { CommandParamsRequest } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
@@ -47,10 +47,10 @@ interface CreateTreeContextMenuItemsInput {
 const commandContextValues = (
   workbench: WorkbenchCoreContributionContext,
   context: WorkbenchCommandExecutionContext | undefined,
-): Record<string, ContextKeyValue> => ({
-  ...workbench.context.snapshot(),
-  ...createWorkbenchResourceContextValues(context?.resource),
-});
+): Record<string, ContextKeyValue> =>
+  context?.resource
+    ? scopeWorkbenchResourceContextValues(workbench.context.snapshot(), context.resource)
+    : workbench.context.snapshot();
 
 const isRegisteredCommandVisible = (
   record: RegisteredCommand,

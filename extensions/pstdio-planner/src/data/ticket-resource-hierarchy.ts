@@ -21,9 +21,8 @@ const ticketsBrowseRootReference = (): JsonObject => ({
 
 const createTicketResourceReference = (lineage: StoredTicket[], index: number): TicketResourceReference => {
   const ticket = lineage[index];
-  // Menus show Archive or Unarchive from `archived`. Set it on every reference, false
-  // included: tree menus inherit the open page's metadata for keys a node leaves out.
-  const metadata: JsonObject = { archived: Boolean(ticket.archived) };
+  // Menus show Unarchive only when `archived` is set.
+  const metadata: JsonObject = ticket.archived ? { archived: true } : {};
   metadata.resourceParent =
     index > 0 ? createTicketResourceReference(lineage, index - 1) : ticketsBrowseRootReference();
 

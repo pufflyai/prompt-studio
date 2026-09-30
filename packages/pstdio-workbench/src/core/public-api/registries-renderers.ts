@@ -120,6 +120,7 @@ export {
   getWorkbenchSelectionResourceKeys,
   isWorkbenchViewHierarchyNode,
   resourceHierarchyCycleCode,
+  scopeWorkbenchResourceContextValues,
   workbenchResourceIdContextKey,
   workbenchResourceMetadataContextKey,
   workbenchResourceTypeContextKey,

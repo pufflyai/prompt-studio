@@ -108,14 +108,12 @@ describe("createTicketCommand", () => {
       icon: "component",
       shorthand: created.shorthand,
       metadata: {
-        archived: false,
         resourceParent: {
           type: "ticket",
           id: parent.id,
           label: `${parent.shorthand} Parent`,
           shorthand: parent.shorthand,
           metadata: {
-            archived: false,
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },

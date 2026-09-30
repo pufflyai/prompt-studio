@@ -34,7 +34,6 @@ const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }):
       label: "T-1",
       shorthand: "T-1",
       metadata: {
-        archived: false,
         resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
       },
     },
@@ -177,7 +176,6 @@ describe("runTicketsQuery workspace badges", () => {
               label: "T-2",
               shorthand: "T-2",
               metadata: {
-                archived: false,
                 resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
               },
             },
@@ -210,7 +208,6 @@ describe("runTicketsQuery workspace badges", () => {
           label: "T-1 Has workspaces",
           shorthand: "T-1",
           metadata: {
-            archived: false,
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
@@ -231,7 +228,6 @@ describe("runTicketsQuery workspace badges", () => {
           label: "T-1 Has workspaces",
           shorthand: "T-1",
           metadata: {
-            archived: false,
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
@@ -277,14 +273,12 @@ describe("runTicketsQuery workspace badges", () => {
           label: "T-2 Child",
           shorthand: "T-2",
           metadata: {
-            archived: false,
             resourceParent: {
               type: "ticket",
               id: parent.id,
               label: "T-1 Parent",
               shorthand: "T-1",
               metadata: {
-                archived: false,
                 resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
               },
             },

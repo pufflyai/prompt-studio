@@ -129,7 +129,7 @@ so only that row is highlighted even though the ticket body and files share a ti
 | Unarchive              | `pstdio.pstdio-planner.command.unarchive-ticket`            |
 | Delete                 | `pstdio.pstdio-planner.command.delete-ticket`               |
 
-Unarchive only shows on archived tickets. Ticket resources carry `archived` in their metadata, and the menu item matches it with `when.metadata`.
+Unarchive only shows on archived tickets. An archived ticket's resource carries `archived: true` in its metadata, and the menu item matches it with `when.metadata`. Active tickets leave the key out.
 
 ## Rules & Constraints
 
