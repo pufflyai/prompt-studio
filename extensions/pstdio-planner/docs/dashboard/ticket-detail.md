@@ -128,6 +128,8 @@ so only that row is highlighted even though the ticket body and files share a ti
 | Unarchive              | `pstdio.pstdio-planner.command.unarchive-ticket`            |
 | Delete                 | `pstdio.pstdio-planner.command.delete-ticket`               |
 
+Unarchive only shows on archived tickets. Ticket resources carry `archived` in their metadata, and the menu item matches it with `when.metadata`.
+
 ## Rules & Constraints
 
 - Dashboard code must not upload ticket files through dashboard ticket APIs.

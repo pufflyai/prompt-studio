@@ -49,6 +49,7 @@ describe("ticketToRow", () => {
       icon: "component",
       shorthand: "T-1",
       metadata: {
+        archived: false,
         resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
       },
     });
@@ -80,12 +81,14 @@ describe("ticketToRow", () => {
     const row = ticketToRow(child, "proj-1", [], new Map(), createTicketParentLookup([ticket, child]));
 
     expect(row.resource.metadata).toEqual({
+      archived: false,
       resourceParent: {
         type: "ticket",
         id: "t1",
         label: "T-1 Fix the thing",
         shorthand: "T-1",
         metadata: {
+          archived: false,
           resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
         },
       },

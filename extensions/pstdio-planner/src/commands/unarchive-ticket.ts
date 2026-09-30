@@ -18,6 +18,7 @@ export const unarchiveTicketCommand = defineCommand({
       label: l10n("kanbanRenderers.tickets.rowActions.unarchive", "Unarchive"),
       icon: "archive-restore",
       placement: "last",
+      when: { metadata: { archived: true } },
     },
   ],
   async run(ctx, commandParams) {

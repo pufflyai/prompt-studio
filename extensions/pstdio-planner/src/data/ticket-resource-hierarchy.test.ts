@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { JsonObject } from "@pstdio/sdk/extensions";
 import {
   linkedResourceParentMetadata,
   resolveTicketHierarchy,
@@ -74,18 +75,21 @@ describe("ticket resource hierarchy", () => {
     ]);
 
     expect(ticketResourceHierarchyMetadata(child, tickets)).toEqual({
+      archived: false,
       resourceParent: {
         type: "ticket",
         id: "parent",
         label: "PS-2 Parent",
         shorthand: "PS-2",
         metadata: {
+          archived: false,
           resourceParent: {
             type: "ticket",
             id: "root",
             label: "PS-1 Root",
             shorthand: "PS-1",
             metadata: {
+              archived: false,
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -108,17 +112,33 @@ describe("ticket resource hierarchy", () => {
       label: "PS-2 Ticket",
       shorthand: "PS-2",
       metadata: {
+        archived: false,
         resourceParent: {
           type: "ticket",
           id: "parent",
           label: "PS-1 Ticket",
           shorthand: "PS-1",
           metadata: {
+            archived: false,
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
       },
     });
+  });
+
+  test("marks each ticket and parent reference as archived or active", () => {
+    const parent = storedTicket({ id: "parent", shorthand: "PS-1", archived: true });
+    const child = storedTicket({ id: "child", shorthand: "PS-2", parentId: parent.id });
+    const tickets = new Map([
+      [parent.id, parent],
+      [child.id, child],
+    ]);
+
+    const reference = ticketResourceReference(child, tickets);
+
+    expect(reference.metadata.archived).toBe(false);
+    expect((reference.metadata.resourceParent as { metadata: JsonObject }).metadata.archived).toBe(true);
   });
 
   test("links a workspace to the selected ticket resource", () => {
@@ -133,6 +153,7 @@ describe("ticket resource hierarchy", () => {
         label: "PS-2 Child",
         shorthand: "PS-2",
         metadata: {
+          archived: false,
           resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
         },
       },

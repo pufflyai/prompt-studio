@@ -37,6 +37,7 @@ const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: s
     label: ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand,
     shorthand: ticket.shorthand,
     metadata: {
+      archived: false,
       documentId,
       resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
     },

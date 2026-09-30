@@ -77,6 +77,7 @@ describe("runAttemptCommand", () => {
             role: "primary",
             shorthand: "T-1",
             metadata: {
+              archived: false,
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -99,6 +100,7 @@ describe("runAttemptCommand", () => {
             role: "primary",
             shorthand: "T-1",
             metadata: {
+              archived: false,
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -220,6 +222,7 @@ describe("runAttemptCommand guarded launches", () => {
             role: "primary",
             shorthand: "T-1",
             metadata: {
+              archived: false,
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -318,6 +321,7 @@ describe("createWorkspaceCommand", () => {
             role: "primary",
             shorthand: "T-1",
             metadata: {
+              archived: false,
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -361,12 +365,14 @@ describe("createWorkspaceCommand", () => {
             id: child.id,
             shorthand: child.shorthand,
             metadata: {
+              archived: false,
               resourceParent: {
                 type: "ticket",
                 id: parent.id,
                 label: `${parent.shorthand} Parent`,
                 shorthand: parent.shorthand,
                 metadata: {
+                  archived: false,
                   resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                 },
               },

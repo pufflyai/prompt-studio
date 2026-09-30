@@ -13,21 +13,17 @@ import {
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
-import { archiveTicketColumnAction, archiveTicketCommand } from "./commands/archive-ticket";
+import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
-import { deleteTicketCommand } from "./commands/delete-ticket";
 import { getTicketContent } from "./commands/get-ticket-content";
 import { queryTickets } from "./commands/query-tickets";
 import { reorderTicket } from "./commands/reorder-ticket";
-import { runAttemptCommand } from "./commands/run-attempt";
 import { saveTicketContent } from "./commands/save-ticket-content";
 import { setTicketAttribute } from "./commands/set-ticket-attribute";
-import { breakIntoSubTicketsCommand, refineTicketCommand } from "./commands/ticket-actions";
 import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
-import { unarchiveTicketCommand } from "./commands/unarchive-ticket";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
@@ -144,45 +140,6 @@ export const createPlannerUi = (baseUrl: string) => {
           removeFile: l10n("kanbanRenderers.tickets.createRow.removeFile", "Remove file"),
         },
       },
-      rowActions: [
-        {
-          id: "run-attempt",
-          label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),
-          icon: "play",
-          command: runAttemptCommand.ref,
-        },
-        {
-          id: "refine-ticket",
-          label: l10n("kanbanRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
-          icon: "sparkles",
-          command: refineTicketCommand.ref,
-        },
-        {
-          id: "break-into-sub-tickets",
-          label: l10n("kanbanRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
-          icon: "list-tree",
-          command: breakIntoSubTicketsCommand.ref,
-        },
-        {
-          id: "archive",
-          label: l10n("kanbanRenderers.tickets.rowActions.archive", "Archive"),
-          icon: "archive",
-          command: archiveTicketCommand.ref,
-        },
-        {
-          id: "unarchive",
-          label: l10n("kanbanRenderers.tickets.rowActions.unarchive", "Unarchive"),
-          icon: "archive-restore",
-          command: unarchiveTicketCommand.ref,
-        },
-        {
-          id: "delete",
-          label: l10n("kanbanRenderers.tickets.rowActions.delete", "Delete"),
-          icon: "trash",
-          destructive: true,
-          command: deleteTicketCommand.ref,
-        },
-      ],
       defaultSettings: {
         viewMode: "board",
         columnGrouping: "status",
