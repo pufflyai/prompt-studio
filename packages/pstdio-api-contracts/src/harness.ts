@@ -29,6 +29,9 @@ export type QuestionResponse = {
   callId?: string;
 };
 
+/** A stale or declined answer. Other harness failures remain server errors. */
+export type HarnessQuestionReplyError = Error & { readonly questionRejected: true };
+
 export type HarnessQuestionOption = {
   label: string;
   description?: string;
@@ -123,7 +126,7 @@ export type HarnessSession = {
   done: Promise<HarnessExit>;
   /** Called by the host on cancel or on its own activity timeout. */
   stop(): void | Promise<void>;
-  /** Replies to a pending question in this run without starting or replacing a run. */
+  /** Replies in place. Reject invalid answers with HarnessQuestionReplyError. */
   replyQuestion?(response: QuestionResponse): Promise<void>;
   timeoutStrategy?: TimeoutStrategy;
   /** Observability only. */

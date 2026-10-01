@@ -1,7 +1,7 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
-import { hasPendingProviderQuestion } from "./live-question-reply";
+import { hasPendingProviderQuestion, validateRecoveredQuestionReply } from "./live-question-reply";
 import { createSessionQueueDrain } from "./session-queue-drain";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
@@ -244,13 +244,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
 
     if (input.questionResponse) {
       input.signal?.throwIfAborted();
-      if (
-        live?.questionService.hasPending() ||
-        status === "queued" ||
-        ((status === "in_progress" || status === "awaiting_input") &&
-          !(await hasPendingProviderQuestion(live, input.questionResponse)))
-      )
-        throw new Error("Question request is no longer pending.");
+      await validateRecoveredQuestionReply(status, live, input.questionResponse);
       return prepareExistingDispatch(deps, context);
     }
 
@@ -268,6 +262,19 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   const startOrQueueExisting = async (input: StartExistingInput): Promise<StartOrQueueResult> => {
+    if (input.questionResponse) {
+      const owner = deps.sessionService.store.get(input.session.id);
+      if (
+        owner?.session &&
+        !owner.session.replyQuestion &&
+        !owner.questionService.hasPending() &&
+        (await hasPendingProviderQuestion(owner, input.questionResponse))
+      ) {
+        // The old owner must finish before recovery can replace it. Waiting outside the
+        // scheduling lock lets its terminal transition and queued work proceed.
+        await owner.session.done;
+      }
+    }
     const result = await withSchedulingLock(() => reserveExistingDispatch(input));
     if (typeof result !== "function") return result;
     await result();

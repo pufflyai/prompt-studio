@@ -30,7 +30,9 @@ for (const hasNative of [true, false]) {
               replyQuestion: hasNative
                 ? async (response: QuestionResponse) => {
                     if (response.callId !== "native-tool")
-                      throw new Error("Native question request is no longer pending.");
+                      throw Object.assign(new Error("Native question request is no longer pending."), {
+                        questionRejected: true,
+                      });
                     nativeAnswers.push(response);
                   }
                 : undefined,

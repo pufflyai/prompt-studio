@@ -33,6 +33,7 @@ export type {
   HarnessQuestion,
   HarnessQuestionChannel,
   HarnessQuestionOption,
+  HarnessQuestionReplyError,
   HarnessQuestionRequest,
   HarnessReattachInput,
   HarnessRecoveryInput,
