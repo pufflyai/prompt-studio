@@ -1,8 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { JsonPatch, SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
 import { resumeCodexSession, type SpawnDeps, startCodexSession } from "./spawn";
 
@@ -14,13 +15,15 @@ afterEach(() => {
 });
 const fixtureDeps: SpawnDeps = {
   spawnProcess: (_args, options) => {
-    const root = mkdtempSync(join(tmpdir(), "codex-question-"));
+    const root = mkdtempSync(join(tmpdir(), "codex question-"));
     transcriptRoots.push(root);
     transcriptPath = join(root, "rollout.jsonl");
     writeFileSync(transcriptPath, "");
+    const fixtureUrl = pathToFileURL(join(root, "app-server-fixture.ts"));
+    copyFileSync(new URL("./app-server-fixture.ts", import.meta.url), fixtureUrl);
     // Node can close stdout independently; Bun keeps its stdio descriptor until exit.
     const executable = options?.env?.PSTDIO_TEST_MODE === "close" ? "node" : process.execPath;
-    const child = spawn(executable, [new URL("./app-server-fixture.ts", import.meta.url).pathname], {
+    const child = spawn(executable, [fileURLToPath(fixtureUrl)], {
       stdio: "pipe",
       cwd: options?.cwd,
       env: { ...process.env, ...options?.env, PSTDIO_TEST_TRANSCRIPT: transcriptPath },
