@@ -47,7 +47,7 @@ The callback must stop pending startup and active work, settle active runs' `don
 
 | Extension | Provider integration |
 | --- | --- |
-| [Claude Code](../../../extensions/harness-claude-code) | Child-process streaming and approvals; resume uses the provider session identity and the complete saved baseline. |
+| [Claude Code](../../../extensions/harness-claude-code) | Child-process streaming and approvals; stdin stays open across turns so background tasks keep running, and the run ends when a turn finishes with no task left; resume uses the provider session identity and the complete saved baseline. |
 | [OpenCode](../../../extensions/harness-open-code) | Provider HTTP/session API and transcript snapshots; the adapter converts model strings to provider-specific payloads. |
 | [Codex](../../../extensions/harness-codex) | Provider events and native rollout reconciliation; provider-specific message formats stay in the harness. |
 

@@ -38,6 +38,23 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result).toEqual([{ id: "u1", role: "user", parts: [{ type: "text", text: "hello" }], index: 0 }]);
   });
 
+  test("shows Claude's background task wake-up as a system notice, not a person's message", () => {
+    const wakeUp = {
+      ...entry(
+        "u1",
+        "user",
+        "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n</task-notification>",
+      ),
+      origin: { kind: "task-notification", producer: "session-task" },
+    };
+
+    const result = normalizeClaudeCodeMessages([wakeUp]);
+
+    expect(result).toEqual([
+      { id: "u1", role: "system", parts: [{ type: "text", text: "Background task finished." }], index: 0 },
+    ]);
+  });
+
   test("skips empty string content", () => {
     const result = normalizeClaudeCodeMessages([entry("u1", "user", "   ")]);
 

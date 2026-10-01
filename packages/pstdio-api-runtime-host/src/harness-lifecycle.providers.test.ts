@@ -13,7 +13,8 @@ describe.skipIf(process.platform === "win32")("CLI harness process liveness", ()
       fixture,
       `const provider = process.argv[2];
 const emit = (event: unknown) => process.stdout.write(JSON.stringify(event) + "\\n");
-await new Response(Bun.stdin.stream()).text();
+// Read the prompt without waiting for EOF: the Claude harness keeps stdin open between turns.
+for await (const line of console) { if (line.trim()) break; }
 emit(provider === "codex"
   ? { type: "thread.started", thread_id: "quiet-thread" }
   : { type: "system", session_id: "quiet-thread" });
@@ -24,6 +25,8 @@ if (process.env.LIVENESS_STDERR) {
 emit(provider === "codex"
   ? { type: "item.completed", item: { id: "answer", type: "agent_message", text: "quiet work completed" } }
   : { type: "content_block_delta", delta: { type: "text_delta", text: "quiet work completed" } });
+// The Claude harness ends stdin when a turn finishes with no background task left.
+if (provider !== "codex") emit({ type: "result", usage: {} });
 process.exitCode = Number(process.env.LIVENESS_EXIT_CODE ?? 0);
 `,
     );
