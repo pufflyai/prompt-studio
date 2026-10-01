@@ -278,8 +278,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
 
     async dispose() {
-      // Layout writes are debounced; a reload disposes the workbench and must not drop the last change.
-      layoutCache.layout?.flush?.();
+      // Layout writes are debounced; disposing the adapter writes the last change and releases its listeners.
+      layoutCache.layout?.dispose?.();
       await Promise.all([views.reads.dispose(), core.terminal.dispose()]);
     },
 
