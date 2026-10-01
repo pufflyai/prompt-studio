@@ -1,4 +1,5 @@
 {
+  "commands.openTickets": "티켓 열기",
   "archiveState.active": "활성",
   "archiveState.archived": "보관됨",
   "boardView.archiveAll": "모두 보관",
