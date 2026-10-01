@@ -1,4 +1,5 @@
 {
+  "commands.openTickets": "チケットを開く",
   "archiveState.active": "アクティブ",
   "archiveState.archived": "アーカイブ済み",
   "boardView.archiveAll": "すべてアーカイブ",
