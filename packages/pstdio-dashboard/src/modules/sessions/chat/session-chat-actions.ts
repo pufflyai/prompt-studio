@@ -233,8 +233,8 @@ const submitFollowUpMessage = (input: {
       {
         onSuccess: ({ followUp }) => {
           input.onSubmitted?.();
-          // A queued follow-up is shown in the queued list, not in the conversation.
-          if (followUp?.status === "queued")
+          // Queued turns use their queue entry; accepted answers update the existing question.
+          if (followUp?.status === "queued" || input.questionResponse)
             input.setPendingFollowUp((current) => (current?.userMessageId === pending.userMessageId ? null : current));
           input.reconnect();
           resolve();

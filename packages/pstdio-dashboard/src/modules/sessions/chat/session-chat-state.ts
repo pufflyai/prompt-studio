@@ -105,6 +105,16 @@ export const mergeMessagesWithPendingFollowUp = (
   pending: PendingFollowUpState | null,
 ): SessionMessage[] => {
   if (!pending) return messages;
-  if (!pending.failure && messages.length > pending.messageCount) return messages;
+  if (!pending.failure && hasAcceptedPendingFollowUp(messages, pending)) return messages;
   return [...messages, ...createOptimisticFollowUpMessages(pending)];
 };
+
+export const hasAcceptedPendingFollowUp = (messages: SessionMessage[], pending: PendingFollowUpState) =>
+  messages.slice(pending.messageCount).some(
+    (message) =>
+      message.role === "user" &&
+      message.parts
+        .filter((part) => part.type === "text")
+        .map((part) => part.text)
+        .join("\n") === pending.prompt,
+  );

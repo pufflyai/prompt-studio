@@ -26,7 +26,7 @@ export interface ChatPanelProps {
   messages: SessionMessage[];
   loading?: boolean;
   streaming?: boolean;
-  /** Current run start in milliseconds. Supply it to show the elapsed working indicator. */
+  /** Current run start in milliseconds. Without an anchor, elapsed time starts when streaming mounts. */
   streamingStartedAt?: number;
   emptyStateTitle: string;
   emptyStateDescription: string;
@@ -177,8 +177,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
         {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
       </ChatPrimitives.Root>
       {approvalPrompt}
-      {streaming && streamingStartedAt !== undefined ? (
-        <WorkingIndicator startedAt={streamingStartedAt} hidden={!showThinkingIndicator} />
+      {streaming ? (
+        <WorkingIndicator key={messageListKey} startedAt={streamingStartedAt} hidden={!showThinkingIndicator} />
       ) : null}
       <ChatPanelComposer
         conversationKey={conversationKey ?? messages[0]?.id}

@@ -2,6 +2,7 @@ import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useEffect, useState } from "react";
 import {
   forgetHandedOffPendingFollowUp,
+  hasAcceptedPendingFollowUp,
   mergeMessagesWithPendingFollowUp,
   type PendingFollowUpState,
   peekHandedOffPendingFollowUp,
@@ -27,7 +28,7 @@ export const usePendingSessionFollowUp = (
     // An unsent message stays until the user resends or removes it.
     if (!pendingFollowUp || pendingFollowUp.failure || !shouldShowPendingFollowUp(pendingFollowUp, sessionId)) return;
     if (
-      messages.length > pendingFollowUp.messageCount &&
+      hasAcceptedPendingFollowUp(messages, pendingFollowUp) &&
       hasPendingSessionRunStarted(lastRequestStarted, pendingFollowUp.previousRunStarted)
     )
       setPendingFollowUp(null);

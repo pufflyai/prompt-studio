@@ -19,8 +19,9 @@ const formatElapsed = (totalSeconds: number) => {
  * and how you judge whether a run is stuck. Counts from the start of the active stream, including
  * time spent temporarily hidden while the workspace initializes.
  */
-export const WorkingIndicator = (props: { startedAt: number; hidden?: boolean }) => {
+export const WorkingIndicator = (props: { startedAt?: number; hidden?: boolean }) => {
   const { startedAt, hidden = false } = props;
+  const [mountedAt] = useState(Date.now);
   const [now, setNow] = useState(Date.now);
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export const WorkingIndicator = (props: { startedAt: number; hidden?: boolean })
     <HStack gap="2xs" px="sm" py="xs">
       <Spinner size="xs" color="fg.muted" />
       <Text fontFamily="mono" fontSize="xs" color="fg.muted" letterSpacing="-0.2px">
-        {formatElapsed((now - startedAt) / 1000)}
+        {formatElapsed((now - (startedAt ?? mountedAt)) / 1000)}
       </Text>
     </HStack>
   );
