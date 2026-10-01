@@ -24,6 +24,8 @@ export type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "Se
 
 export type QuestionResponse = {
   answers: string[][];
+  /** Shared question tool call being answered, when the caller has its identity. */
+  callId?: string;
 };
 
 export type ApprovalRequest = {
@@ -86,6 +88,8 @@ export type HarnessSession = {
   done: Promise<HarnessExit>;
   /** Called by the host on cancel or on its own activity timeout. */
   stop(): void | Promise<void>;
+  /** Replies to a pending question in this run without starting or replacing a run. */
+  replyQuestion?(response: QuestionResponse): Promise<void>;
   timeoutStrategy?: TimeoutStrategy;
   /** Observability only. */
   pid?: number;

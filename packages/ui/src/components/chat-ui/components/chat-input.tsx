@@ -222,6 +222,7 @@ export const ChatInput = (props: ChatInputProps) => {
     const questionResponse = questionPrompt
       ? {
           answers: buildQuestionAnswerValues(questionPrompt, selectedOptionsByQuestion, customAnswersByQuestion),
+          ...(questionPrompt.callId ? { callId: questionPrompt.callId } : {}),
         }
       : undefined;
 

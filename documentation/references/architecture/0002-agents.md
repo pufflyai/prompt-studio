@@ -53,6 +53,16 @@ The callback must stop pending startup and active work, settle active runs' `don
 
 Provider source and tests define supported flags and transcript formats. Core must not parse a provider's private session file or duplicate its model conversion logic.
 
+### Live question replies
+
+A running harness can provide `HarnessSession.replyQuestion(response)`. The follow-up endpoint passes structured answers to that live callback without replacing the conversation owner, stopping the process, or starting another turn. A rejected callback returns a conversation error. Harnesses without the callback keep receiving `questionResponse` through their existing resume path.
+
+`QuestionResponse.callId` identifies the question tool call when the client has that identity. The shared composer carries it through explicit submission. Each harness owns provider request IDs and maps ordered answers to its provider's question IDs.
+
+Codex uses the [app-server stdio protocol](https://learn.chatgpt.com/docs/app-server), with experimental API access and `default_mode_request_user_input` enabled. Its harness translates `item/tool/requestUserInput` into the shared question tool and sends answers to the original server request. The protocol uses `serverRequest/resolved` for both replies and cleanup. The harness confirms the matching call ID and answers in the native transcript before reporting delivery, as described in [ADR 0052](../../adrs/0052-temporary-codex-question-delivery-confirmation.md). Native turn completion owns the run result; the harness settles any reply confirmation and releases the process.
+
+Reloading the browser keeps the live question channel open. Native rollout recovery matches questions by their call IDs, preserves the displayed question data, and restores readable answers. Cancelling or losing the process closes pending requests; a later reply reports that the request is unavailable. A process restart cannot restore an old stdio request. Normal follow-ups resume the native thread in a new process.
+
 ## Conversation ownership
 
 The active `SessionConversation` owns the complete materialized message array. Harness patches update it before subscribers receive them. The bounded event log is only a delivery mechanism.

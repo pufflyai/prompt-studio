@@ -20,10 +20,12 @@ export interface ChatInputQuestion {
 
 export interface ChatInputQuestionPrompt {
   questions: ChatInputQuestion[];
+  callId?: string;
 }
 
 export interface ChatInputQuestionResponse {
   answers: string[][];
+  callId?: string;
 }
 
 export type ChatInputQuestionCustomAnswers = Record<string, string>;
@@ -65,8 +67,9 @@ export const toggleQuestionOptionSelection = (
 export const getQuestionPromptSignature = (questionPrompt: ChatInputQuestionPrompt | undefined) => {
   if (!questionPrompt) return "";
 
-  return JSON.stringify(
-    questionPrompt.questions.map((question, index) => ({
+  return JSON.stringify({
+    callId: questionPrompt.callId,
+    questions: questionPrompt.questions.map((question, index) => ({
       id: getQuestionSelectionKey(question, index),
       question: question.question,
       multiple: Boolean(question.multiple),
@@ -77,7 +80,7 @@ export const getQuestionPromptSignature = (questionPrompt: ChatInputQuestionProm
         description: option.description ?? "",
       })),
     })),
-  );
+  });
 };
 
 const getQuestionAnswerLines = (

@@ -113,7 +113,8 @@ export const resolveActiveQuestionPrompt = (messages: SessionMessage[]) => {
       const response = getQuestionResponseText(part.state?.output) ?? getQuestionResponseText(part.state?.metadata);
       if (response) return undefined;
 
-      return parseQuestionPrompt(part.state?.input) ?? undefined;
+      const prompt = parseQuestionPrompt(part.state?.input);
+      return prompt ? { ...prompt, ...(part.callId ? { callId: part.callId } : {}) } : undefined;
     }
   }
 

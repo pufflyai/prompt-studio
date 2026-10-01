@@ -52,6 +52,8 @@ export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionM
     return toolMessage(item, id, "shell", { command: item.command });
   }
 
+  if (item.type === "question") return toolMessage(item, id, "question", item.input);
+
   if (item.type === "file_change") {
     return toolMessage(item, id, "apply_patch", { changes: item.changes });
   }

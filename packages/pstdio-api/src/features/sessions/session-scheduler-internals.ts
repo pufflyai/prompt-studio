@@ -156,14 +156,14 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
   return async () => {
     const launch = async (starting: Promise<unknown>) => {
       const owner = deps.sessionService.store.get(session.id);
-      if (!input.signal) {
+      if (!input.signal && !input.questionResponse) {
         void starting.catch((error) => fail(error, owner));
         return;
       }
       try {
         await starting;
       } catch (error) {
-        if (input.signal.aborted) {
+        if (input.signal?.aborted) {
           if (submittedQueuePosition !== undefined) {
             await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
           }

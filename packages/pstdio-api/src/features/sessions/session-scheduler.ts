@@ -228,9 +228,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     const fresh = (await deps.sessionService.get(input.session.id)) ?? input.session;
     const context = resolveDispatchContext(input, fresh);
     const status = fresh.status;
-    const fastPathQuestion = status === "awaiting_input" && input.questionResponse != null;
-
-    if (fastPathQuestion) {
+    if (input.questionResponse) {
       input.signal?.throwIfAborted();
       return prepareExistingDispatch(deps, context);
     }
