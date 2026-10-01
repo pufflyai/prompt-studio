@@ -6,6 +6,8 @@ export interface WorkbenchBreadcrumbItem {
   title: unknown;
   icon?: string;
   indicator?: "session-status";
+  /** The crumb opens a Sidenav level, so its own rows replace the main navigation. */
+  startsLevel?: boolean;
   url?: string;
   onClick?: () => void;
   resource?: ResourceRef;

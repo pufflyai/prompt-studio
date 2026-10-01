@@ -1,5 +1,6 @@
-import type { NavigationTargetPage, PageLocation, PageRef, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, PageRef, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
+import { createNavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import {
   createWorkbenchPageRegistry,
   type WorkbenchPagePlacementInput,
@@ -7,6 +8,7 @@ import {
 } from "../../registries/pages/page-registry";
 import {
   createWorkbenchPageLocationController,
+  type PersistedWorkbenchPageLocation,
   type WorkbenchPageBrowserEntry,
   type WorkbenchPageLocationBrowser,
   type WorkbenchPageLocationPersistence,
@@ -16,6 +18,9 @@ export const startRef = pageRef("pstdio", "start");
 export const ticketsRef = pageRef("acme.planner", "tickets");
 export const ticketRef = pageRef("acme.planner", "ticket");
 export const workspaceRef = pageRef("pstdio", "workspaces");
+export const sessionsRef = pageRef("pstdio", "sessions");
+export const sessionRef = pageRef("pstdio", "session");
+export const notesRef = pageRef("acme.notes", "notes");
 const resources: WorkbenchPageResourceCodec = {
   normalize: (resource) => ({ ...resource, id: resource.id.replace(/^ticket:/, "").toUpperCase() }),
   toUri: (resource) => `pstdio://${resource.type}/${encodeURIComponent(resource.id)}`,
@@ -132,6 +137,63 @@ const createRegistry = () => {
     },
     slots: [],
   });
+  registry.registerPage({
+    id: "sessions",
+    ref: sessionsRef,
+    title: "Sessions",
+    path: "sessions",
+    modeId: "project",
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "sessions",
+      },
+      cardinality: "one",
+    },
+    slots: [],
+  });
+  registry.registerPage({
+    id: "session",
+    ref: sessionRef,
+    title: "Session",
+    path: "session",
+    modeId: "project",
+    parentId: "sessions",
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "session",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "session",
+      },
+      cardinality: "many",
+    },
+    slots: [],
+  });
+  registry.registerPage({
+    id: "notes",
+    ref: notesRef,
+    title: "Notes",
+    path: "notes",
+    modeId: "project",
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "notes",
+      },
+      cardinality: "one",
+    },
+    slots: [],
+  });
   return registry;
 };
 const createBrowser = (initialUrl: string) => {
@@ -168,26 +230,47 @@ const createBrowser = (initialUrl: string) => {
   };
 };
 const createPersistence = () => {
-  const values = new Map<string, PageLocation>();
+  const values = new Map<string, PersistedWorkbenchPageLocation>();
   const persistence: WorkbenchPageLocationPersistence = {
     load: (projectId) => values.get(projectId),
-    save: (projectId, location) => values.set(projectId, location),
+    save: (projectId, persisted) => values.set(projectId, persisted),
   };
   return { persistence, values };
 };
+// A page that owns a content navigation tree starts a Sidenav level.
+const openLevel = (navigationTrees: ReturnType<typeof createNavigationTreeRegistry>, pageId: string) =>
+  navigationTrees.registerContribution({
+    id: `${pageId}.content`,
+    owner: { kind: "page", id: pageId, extensionId: "pstdio" },
+    sourceExtensionId: "pstdio",
+    declarationIndex: 0,
+    slot: "content",
+    getSections: () => [],
+  });
+
 export const createPageLocationHarness = (url = "/projects/p1") => {
   const registry = createRegistry();
+  const navigationTrees = createNavigationTreeRegistry();
   const browser = createBrowser(url);
   const persistence = createPersistence();
   const diagnostics: string[] = [];
   const controller = createWorkbenchPageLocationController({
     registry,
     browser: browser.browser,
+    navigationTrees,
     persistence: persistence.persistence,
     startPage: startRef,
     reportDiagnostic: (diagnostic) => diagnostics.push(diagnostic.message),
   });
-  return { registry, browser, persistence, diagnostics, controller };
+  return {
+    registry,
+    navigationTrees,
+    browser,
+    persistence,
+    diagnostics,
+    controller,
+    openLevel: (pageId: string) => openLevel(navigationTrees, pageId),
+  };
 };
 export const ticketTarget = (id = "ticket:ps-326"): NavigationTargetPage => ({
   kind: "page",

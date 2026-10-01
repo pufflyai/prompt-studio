@@ -16,6 +16,7 @@ interface PageLocationControllerActionsInput<Value> {
   historyStore: WorkbenchStore<WorkbenchPageLocationHistoryState>;
   clearProject(projectId: string | undefined): void;
   resetHistory(): void;
+  rootLevelTarget(): ResolvedPageLocation;
   restore(projectId: string, source: "boot" | "project-switch", useCurrentUrl: boolean): WorkbenchPageNavigationResult;
   resolveUrl(projectId: string, entry: WorkbenchPageBrowserEntry): ResolvedPageLocation | undefined;
   normalizeTarget(target: NavigationTargetPage): ResolvedPageLocation;
@@ -100,6 +101,19 @@ export const createPageLocationControllerActions = <Value>(
           "replace",
           "navigateToParentPageLocation",
         );
+      } catch (error) {
+        return actions.fail("navigation", error);
+      }
+    },
+    navigateToRootLevel() {
+      const current = input.registry.store.getState();
+      if (!current.projectId) {
+        return actions.fail("navigation", new Error("Cannot navigate before a project is active"));
+      }
+      try {
+        const resolved = actions.rootLevelTarget();
+        const history = actions.locationsEqual(current.location, resolved.location) ? "none" : "push";
+        return actions.commit(current.projectId, resolved, history, "navigateToRootLevelPageLocation");
       } catch (error) {
         return actions.fail("navigation", error);
       }

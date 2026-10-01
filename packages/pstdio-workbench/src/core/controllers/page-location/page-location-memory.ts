@@ -1,5 +1,5 @@
-import type { PageLocation } from "@pstdio/sdk/extensions";
 import type {
+  PersistedWorkbenchPageLocation,
   WorkbenchPageBrowserEntry,
   WorkbenchPageLocationBrowser,
   WorkbenchPageLocationPersistence,
@@ -40,9 +40,9 @@ export const createMemoryWorkbenchPageLocationBrowser = (): WorkbenchPageLocatio
 };
 
 export const createMemoryWorkbenchPageLocationPersistence = (): WorkbenchPageLocationPersistence => {
-  const locations = new Map<string, PageLocation>();
+  const locations = new Map<string, PersistedWorkbenchPageLocation>();
   return {
     load: (projectId) => locations.get(projectId),
-    save: (projectId, location) => locations.set(projectId, location),
+    save: (projectId, persisted) => locations.set(projectId, persisted),
   };
 };

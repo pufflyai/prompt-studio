@@ -87,6 +87,7 @@ export type {
   NavigationTreeRegistry,
   NavigationTreeSlot,
   NotificationRegistry,
+  PersistedWorkbenchPageLocation,
   PreferencePersistenceAdapter,
   PreferencePropertySchema,
   PreferenceRegistry,

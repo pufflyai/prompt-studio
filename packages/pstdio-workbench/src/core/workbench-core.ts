@@ -81,6 +81,19 @@ const createPagePersistenceScopeHandler = (
   };
 };
 
+const createPageLocations = (
+  input: createWorkbenchInput,
+  registry: ReturnType<typeof createLiveWorkbenchPageRegistry>,
+  navigationTrees: ReturnType<typeof createNavigationTreeRegistry>,
+) =>
+  createWorkbenchPageLocationController({
+    registry,
+    browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
+    navigationTrees,
+    persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
+    startPage: input.startPage ?? workbenchPages.start,
+  });
+
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
@@ -211,12 +224,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     resources: pageResources,
   });
 
-  const pageLocations = createWorkbenchPageLocationController({
-    registry: pages,
-    browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
-    persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
-    startPage: input.startPage ?? workbenchPages.start,
-  });
+  const pageLocations = createPageLocations(input, pages, navigationTrees);
 
   const composition = createCoreCompositionController(() => core);
   const navigation = createCoreNavigationRegistry(() => core);
@@ -312,7 +320,13 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     const state = pages.store.getState();
     if (state.activeModeId) layoutCache.saveMode(state.projectId, state.activeModeId, layout.getLayout());
   });
-  connectWorkbenchPageBreadcrumbs({ breadcrumbs, locations: pageLocations, pages, resources: pageResources });
+  connectWorkbenchPageBreadcrumbs({
+    breadcrumbs,
+    locations: pageLocations,
+    pages,
+    navigationTrees,
+    resources: pageResources,
+  });
   connectWorkbenchCoreState(core, input);
 
   return core;

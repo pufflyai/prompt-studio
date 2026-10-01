@@ -35,6 +35,19 @@ The Sidenav has no Back row. Users leave a level through the breadcrumb or brows
 Users can drag rows into the header or footer. Those rows also stay visible inside levels. In the customize menu, users
 can hide a level's labeled sections but not its rows.
 
+## Leaving a level
+
+A level page with no declared parent, such as Recipes, starts the breadcrumb. Then no crumb leads out of the level, so
+the host must add one in front of the breadcrumb.
+
+- Every breadcrumb item that opens a level carries `startsLevel: true`. Hosts read `items[0].startsLevel` to decide
+  whether the breadcrumb needs a leading crumb.
+- `workbench.pageLocations.navigateToRootLevel()` opens the last location outside every level, or the start page when
+  there is none. The workbench records that location on every navigation and saves it with the current location, so it
+  survives a reload.
+- In Prompt Studio, the leading crumb is the project avatar and title. Clicking it, clicking the active project tab on
+  desktop, and clicking the project button in the browser navbar all call the same operation.
+
 ## Host API
 
 `createLevelNavigation(workbench)` composes one navigation tree from the active mode and every open level. Hosts use

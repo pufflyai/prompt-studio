@@ -91,6 +91,15 @@ test(
       );
       await expect(app.page).toHaveURL(secondPageUrl);
       expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
+
+      // Sessions is a Sidenav level. Clicking the tab of the project the user is already in leaves it
+      // for the last root-level page; clicking it again there changes nothing.
+      await app.page.getByRole("tab", { name: second.name, exact: true }).click();
+      await expect(app.page.getByTestId("start-page")).toBeVisible();
+      const secondRootUrl = app.page.url();
+      await app.page.getByRole("tab", { name: second.name, exact: true }).click();
+      await expect(app.page).toHaveURL(secondRootUrl);
+
       await openPackagedProject(app.page, first);
       await expect(app.page).toHaveURL(firstPageUrl);
       await expect(lab).toBeVisible();

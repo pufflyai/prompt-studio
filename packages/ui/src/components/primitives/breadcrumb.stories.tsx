@@ -1,9 +1,9 @@
-import { Box, Icon } from "@chakra-ui/react";
+import { Avatar, Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
 import type { Meta } from "@storybook/react";
-import { ChevronRight, FileText, Folder, Home } from "lucide-react";
+import { ChevronRight, FileText, Folder, Home, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Breadcrumb } from "@/components/primitives/breadcrumb";
+import { Breadcrumb, type BreadcrumbProps } from "@/components/primitives/breadcrumb";
 
 type StoryFn = () => ReactNode;
 
@@ -115,4 +115,56 @@ export const StaticAncestor = {
       },
     ],
   },
+};
+
+// A breadcrumb that starts inside a Sidenav level leads with the project crumb, so the user can
+// leave the level. The crumb sits next to the breadcrumb, like the project button in the navbar.
+export const ProjectCrumb = {
+  args: {
+    items: [
+      {
+        title: (
+          <>
+            <Icon as={MessageCircle} boxSize="14px" />
+            Sessions
+          </>
+        ),
+        url: "/sessions",
+      },
+      {
+        title: (
+          <>
+            <Icon as={MessageCircle} boxSize="14px" />
+            Level session
+          </>
+        ),
+      },
+    ],
+  },
+  render: (args: BreadcrumbProps) => (
+    <HStack gap="xs" minW="0">
+      <Button
+        px="xs"
+        variant="ghost"
+        size="xs"
+        minW="0"
+        justifyContent="flex-start"
+        _hover={{ bg: "bg.menu-item.hover" }}
+        _active={{ bg: "bg.menu-item.selected" }}
+      >
+        <HStack gap="xs" minW="0">
+          <Avatar.Root size="2xs">
+            <Avatar.Fallback name="Prompt Studio" background="bg.muted" color="fg.muted" />
+          </Avatar.Root>
+          <Text textStyle="label/S/medium" truncate>
+            Prompt Studio
+          </Text>
+        </HStack>
+      </Button>
+      <Text aria-hidden="true" color="fg.subtle" flexShrink={0}>
+        /
+      </Text>
+      <Breadcrumb {...args} />
+    </HStack>
+  ),
 };

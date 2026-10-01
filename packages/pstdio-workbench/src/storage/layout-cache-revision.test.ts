@@ -18,7 +18,7 @@ test("invalidates the changed layout cache while preserving locations and indepe
   };
   const trees = { statesByTreeId: { notes: { expandedNodeIds: ["one"], expandedSectionIds: [] } } };
   const menus = { openByMenuId: { inspector: true } };
-  persistence.pageLocationPersistence.save("one", location);
+  persistence.pageLocationPersistence.save("one", { location });
   persistence.treePersistence.setTreeStates(trees);
   persistence.panelMenuStatePersistence.setMenuStates(menus);
   persistence.sidePanelPersistence.setMode("floating");
@@ -31,7 +31,7 @@ test("invalidates the changed layout cache while preserving locations and indepe
   );
 
   expect(persistence.layoutPersistence.getLayout("project/one")).toBeUndefined();
-  expect(persistence.pageLocationPersistence.load("one")).toEqual(location);
+  expect(persistence.pageLocationPersistence.load("one")).toEqual({ location });
   expect(persistence.treePersistence.getTreeStates()).toEqual(trees);
   expect(persistence.panelMenuStatePersistence.getMenuStates()).toEqual(menus);
   expect(persistence.sidePanelPersistence.getMode()).toBe("floating");

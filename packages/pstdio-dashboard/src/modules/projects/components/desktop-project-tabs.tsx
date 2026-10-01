@@ -31,13 +31,18 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
     (state) => state.values[dashboardSelectedProjectIdContextKey],
   );
   const tabs = resolveProjectTabs(projectIds, dataVersion);
+  // Clicking the tab of the project the user is already in leaves the open Sidenav level instead.
+  const selectTab = (id: string) => {
+    if (id === selected) workbench.pageLocations.navigateToRootLevel();
+    else void controller.select(workbench, id);
+  };
   return (
     <WindowTitleBar platform={platform}>
       <WindowTabs
         tabs={tabs}
         selectedId={typeof selected === "string" ? selected : undefined}
         aria-label="Project tabs"
-        onSelect={(id) => void controller.select(workbench, id)}
+        onSelect={selectTab}
         onClose={(id) => void controller.close(workbench, id)}
         onReorder={(id, targetId) => controller.reorder(workbench, id, targetId)}
       />

@@ -20,13 +20,13 @@ describe("page location controller", () => {
       path: "outgoing",
     });
     harness.controller.boot("p1");
-    harness.persistence.values.set("p2", { page: ticketsRef, parent: { page: startRef } });
+    harness.persistence.values.set("p2", { location: { page: ticketsRef, parent: { page: startRef } } });
     batchWorkbenchChanges(() => {
       harness.controller.setProject("p2");
       outgoing.dispose();
     });
     expect(harness.registry.store.getState().location).toBeUndefined();
-    expect(harness.persistence.values.get("p2")?.page).toEqual(ticketsRef);
+    expect(harness.persistence.values.get("p2")?.location.page).toEqual(ticketsRef);
     expect(harness.controller.boot("p2").ok).toBe(true);
     expect(harness.registry.store.getState().location?.page).toEqual(ticketsRef);
   });
@@ -54,7 +54,7 @@ describe("page location controller", () => {
     expect(harness.browser.current().url).toBe(
       "/projects/p1/extensions/acme.planner/ticket?resource=pstdio%3A%2F%2Fticket%2FPS-326",
     );
-    expect(harness.persistence.values.get("p1")?.resource?.id).toBe("PS-326");
+    expect(harness.persistence.values.get("p1")?.location.resource?.id).toBe("PS-326");
   });
   test("does not add history when navigating to the active location again", () => {
     const harness = createHarness();
@@ -69,9 +69,7 @@ describe("page location controller", () => {
   test("lets a direct URL beat saved state and uses declared parents instead of stale context", () => {
     const harness = createHarness("/projects/p1/workspaces?resource=pstdio%3A%2F%2Fworkspace%2FWS-4");
     harness.persistence.values.set("p1", {
-      page: ticketRef,
-      resource: { type: "ticket", id: "PS-1" },
-      parent: { page: ticketsRef },
+      location: { page: ticketRef, resource: { type: "ticket", id: "PS-1" }, parent: { page: ticketsRef } },
     });
     harness.controller.boot("p1");
     expect(harness.registry.store.getState().location).toEqual({
@@ -99,7 +97,7 @@ describe("page location controller", () => {
   });
   test("restores saved state only without a URL target and otherwise opens fixed Start", () => {
     const saved = createHarness("/unrelated");
-    saved.persistence.values.set("p1", { page: ticketsRef, parent: { page: startRef } });
+    saved.persistence.values.set("p1", { location: { page: ticketsRef, parent: { page: startRef } } });
     saved.controller.boot("p1");
     expect(saved.registry.store.getState().activePageId).toBe("tickets");
     const fresh = createHarness("/unrelated");
@@ -108,7 +106,7 @@ describe("page location controller", () => {
   });
   test("does not attach saved state when a project URL is unresolved", () => {
     const harness = createHarness("/projects/p1/extensions/missing.extension/not-installed");
-    harness.persistence.values.set("p1", { page: ticketsRef, parent: { page: startRef } });
+    harness.persistence.values.set("p1", { location: { page: ticketsRef, parent: { page: startRef } } });
     harness.controller.boot("p1");
     expect(harness.registry.store.getState().location).toEqual({ page: startRef });
     expect(harness.diagnostics[0]).toMatch(/cannot resolve page url/i);
@@ -145,9 +143,11 @@ describe("page location project and owner lifecycle", () => {
     harness.controller.boot("p1");
     harness.controller.navigate({ ...ticketTarget("PS-1"), open: "pin" });
     harness.persistence.values.set("p2", {
-      page: ticketRef,
-      resource: { type: "ticket", id: "PS-2" },
-      parent: { page: ticketsRef, parent: { page: startRef } },
+      location: {
+        page: ticketRef,
+        resource: { type: "ticket", id: "PS-2" },
+        parent: { page: ticketsRef, parent: { page: startRef } },
+      },
     });
     const observed: Array<{
       projectId?: string;
