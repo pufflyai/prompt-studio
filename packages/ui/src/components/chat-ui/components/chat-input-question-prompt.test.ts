@@ -2,11 +2,58 @@ import { describe, expect, it } from "bun:test";
 import {
   buildQuestionAnswerValues,
   buildQuestionResponse,
+  buildQuestionSkipResponse,
   type ChatInputQuestionPrompt,
   getQuestionPromptSignature,
   hasMissingRequiredQuestionAnswer,
   toggleQuestionOptionSelection,
 } from "./chat-input-question-prompt";
+
+describe("question answer choices", () => {
+  it("skips every question with an explicit answer, including required questions", () => {
+    const prompt: ChatInputQuestionPrompt = {
+      questions: [
+        { question: "Which language?", options: [{ label: "TypeScript" }], required: true },
+        { question: "Which files?", options: [], multiple: true, required: true, allowCustomAnswer: true },
+        { question: "Anything else?", options: [] },
+      ],
+    };
+    expect(buildQuestionSkipResponse(prompt)).toEqual({
+      text: "Which language?: You decide\nWhich files?: You decide\nAnything else?: You decide",
+      answers: [["You decide"], ["You decide"], ["You decide"]],
+    });
+  });
+
+  it("sends one answer for a single choice when listed and typed answers coexist", () => {
+    const prompt: ChatInputQuestionPrompt = {
+      questions: [
+        { id: "language", question: "Which language?", options: [{ label: "TypeScript" }], allowCustomAnswer: true },
+      ],
+    };
+    expect(buildQuestionAnswerValues(prompt, { language: ["TypeScript"] }, { language: " Rust " })).toEqual([["Rust"]]);
+    expect(buildQuestionResponse(prompt, { language: ["TypeScript"] }, { language: " Rust " })).toBe(
+      "Which language?: Rust",
+    );
+    expect(buildQuestionAnswerValues(prompt, { language: ["TypeScript", "Python"] }, {})).toEqual([["TypeScript"]]);
+  });
+
+  it("keeps checked options alongside Other for multiple choice", () => {
+    const prompt: ChatInputQuestionPrompt = {
+      questions: [
+        {
+          id: "language",
+          question: "Which languages?",
+          options: [{ label: "TypeScript" }],
+          multiple: true,
+          allowCustomAnswer: true,
+        },
+      ],
+    };
+    expect(buildQuestionAnswerValues(prompt, { language: ["TypeScript"] }, { language: " Rust " })).toEqual([
+      ["TypeScript", "Rust"],
+    ]);
+  });
+});
 
 describe("chat input question helpers", () => {
   it("builds OpenCode answer values in question order", () => {

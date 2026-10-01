@@ -29626,7 +29626,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -72168,7 +72168,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -91743,7 +91743,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -91815,7 +91815,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 994,
+              "y": 989,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -120784,7 +120784,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -122316,6 +122316,540 @@
           }
         }
       }
+    },
+    {
+      "type": "frame",
+      "id": "i3v64m",
+      "x": 6400,
+      "y": 5860,
+      "name": "Chat Input · Question choices",
+      "context": "Question form replaces the composer editor. Single choice offers Other in the same radio group and reveals its textarea only when selected. Picking a listed option clears Other text. Multiple choice keeps Other as additional text. Skip submits You decide for every question, including required questions, through the normal submit path.",
+      "width": 1640,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "iFUIq",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Question form · Other and Skip",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "DPPPC",
+          "name": "Question states",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "g07vB3",
+              "name": "Single choice · Other selected",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "r018qx",
+                  "name": "State title",
+                  "fill": "$ds-fg",
+                  "content": "Single choice · Other selected",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "lfTGI",
+                  "name": "Question composer",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Jw1ha",
+                      "name": "Question fieldset",
+                      "width": "fill_container",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "oTutd",
+                          "name": "Question legend",
+                          "fill": "$ds-fg",
+                          "content": "Which language do you want to use?",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "id": "Y20xD",
+                          "type": "ref",
+                          "ref": "KPHF7",
+                          "name": "TypeScript",
+                          "theme": {
+                            "radio": "off"
+                          },
+                          "descendants": {
+                            "aAkIM": {
+                              "content": "TypeScript"
+                            }
+                          }
+                        },
+                        {
+                          "id": "hY97j",
+                          "type": "ref",
+                          "ref": "KPHF7",
+                          "name": "Python",
+                          "theme": {
+                            "radio": "off"
+                          },
+                          "descendants": {
+                            "aAkIM": {
+                              "content": "Python"
+                            }
+                          }
+                        },
+                        {
+                          "id": "T79AS",
+                          "type": "ref",
+                          "ref": "KPHF7",
+                          "name": "Other radio choice",
+                          "theme": {
+                            "radio": "on"
+                          },
+                          "descendants": {
+                            "aAkIM": {
+                              "content": "Other"
+                            }
+                          }
+                        },
+                        {
+                          "id": "l3G7I4",
+                          "type": "ref",
+                          "ref": "Uf6hP",
+                          "name": "Other text",
+                          "width": "fill_container",
+                          "height": 54,
+                          "theme": {
+                            "size": "sm",
+                            "field": "default"
+                          },
+                          "descendants": {
+                            "o89C2": {
+                              "content": "Rust",
+                              "fill": "$ds-fg"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s5agP",
+                      "name": "Toolbar",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "GB6Tv",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 28
+                        },
+                        {
+                          "id": "DPrjA",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Skip",
+                          "height": 28,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Skip"
+                            }
+                          }
+                        },
+                        {
+                          "id": "cYyaP",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Send",
+                          "width": 28,
+                          "height": 28,
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up",
+                              "height": 14,
+                              "width": 14
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "a9s3U",
+              "name": "Single choice · Listed option selected",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "pJ7r3",
+                  "name": "State title",
+                  "fill": "$ds-fg",
+                  "content": "Single choice · Listed option selected",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "lVNKR",
+                  "name": "Question composer",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wxq4B",
+                      "name": "Question fieldset",
+                      "width": "fill_container",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "HMUS2",
+                          "name": "Question legend",
+                          "fill": "$ds-fg",
+                          "content": "Which language do you want to use?",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "id": "oIaFt",
+                          "type": "ref",
+                          "ref": "KPHF7",
+                          "name": "TypeScript",
+                          "theme": {
+                            "radio": "on"
+                          },
+                          "descendants": {
+                            "aAkIM": {
+                              "content": "TypeScript"
+                            }
+                          }
+                        },
+                        {
+                          "id": "EKhAB",
+                          "type": "ref",
+                          "ref": "KPHF7",
+                          "name": "Python",
+                          "theme": {
+                            "radio": "off"
+                          },
+                          "descendants": {
+                            "aAkIM": {
+                              "content": "Python"
+                            }
+                          }
+                        },
+                        {
+                          "id": "QOdh0",
+                          "type": "ref",
+                          "ref": "KPHF7",
+                          "name": "Other radio choice",
+                          "theme": {
+                            "radio": "off"
+                          },
+                          "descendants": {
+                            "aAkIM": {
+                              "content": "Other"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O7xWU2",
+                      "name": "Toolbar",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "q7rFjc",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 28
+                        },
+                        {
+                          "id": "NKGha",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Skip",
+                          "height": 28,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Skip"
+                            }
+                          }
+                        },
+                        {
+                          "id": "kH6ZW",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Send",
+                          "width": 28,
+                          "height": 28,
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up",
+                              "height": 14,
+                              "width": 14
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "TI8v2",
+              "name": "Multiple choice · Other and checked option",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "xTATL",
+                  "name": "State title",
+                  "fill": "$ds-fg",
+                  "content": "Multiple choice · Other and checked option",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "T461mG",
+                  "name": "Question composer",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wD7zR",
+                      "name": "Question fieldset",
+                      "width": "fill_container",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "v7P0Y",
+                          "name": "Question legend",
+                          "fill": "$ds-fg",
+                          "content": "Which language do you want to use?",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "id": "TGuDd",
+                          "type": "ref",
+                          "ref": "IVFN2",
+                          "name": "TypeScript",
+                          "theme": {
+                            "check": "on"
+                          },
+                          "descendants": {
+                            "DFyJZ": {
+                              "content": "TypeScript"
+                            }
+                          }
+                        },
+                        {
+                          "id": "ZeyDe",
+                          "type": "ref",
+                          "ref": "IVFN2",
+                          "name": "Python",
+                          "theme": {
+                            "check": "off"
+                          },
+                          "descendants": {
+                            "DFyJZ": {
+                              "content": "Python"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "kREIG",
+                          "name": "Other label",
+                          "fill": "$ds-fg",
+                          "content": "Other",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "yDxoe",
+                          "type": "ref",
+                          "ref": "Uf6hP",
+                          "name": "Other text",
+                          "width": "fill_container",
+                          "height": 54,
+                          "theme": {
+                            "size": "sm",
+                            "field": "default"
+                          },
+                          "descendants": {
+                            "o89C2": {
+                              "content": "Rust",
+                              "fill": "$ds-fg"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "PO4kJ",
+                      "name": "Toolbar",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uIE2t",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 28
+                        },
+                        {
+                          "id": "QqDA2",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Skip",
+                          "height": 28,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Skip"
+                            }
+                          }
+                        },
+                        {
+                          "id": "f9IyFb",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Send",
+                          "width": 28,
+                          "height": 28,
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up",
+                              "height": 14,
+                              "width": 14
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

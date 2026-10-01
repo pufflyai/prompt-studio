@@ -1,4 +1,4 @@
-import { Box, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { getTextFromSerializedEditorState, PromptEditor, type ReferenceItem } from "../../rich-text";
@@ -11,20 +11,17 @@ import { createAttachmentEventHandlers, DEFAULT_TEXT_ATTACHMENT_PASTE_LINE_THRES
 import {
   buildQuestionAnswerValues,
   buildQuestionResponse,
-  type ChatInputQuestion,
-  type ChatInputQuestionCustomAnswers,
+  buildQuestionSkipResponse,
   type ChatInputQuestionPrompt,
   type ChatInputQuestionResponse,
-  getQuestionPromptSignature,
-  getQuestionSelectionKey,
   hasMissingRequiredQuestionAnswer,
   QuestionPromptControls,
-  toggleQuestionOptionSelection,
 } from "./chat-input-question-prompt";
 import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
 import { SendButton } from "./send-button";
 
 import { useChatInputHistory } from "./use-chat-input-history";
+import { useQuestionAnswers } from "./use-question-answers";
 
 export interface ChatInputProps {
   defaultState: string;
@@ -137,11 +134,10 @@ export const ChatInput = (props: ChatInputProps) => {
   const [editorState, setEditorState] = useState(defaultState);
   const [editorKey, setEditorKey] = useState(0);
   const [text, setText] = useState(() => getTextFromSerializedEditorState(defaultState));
-  const [selectedOptionsByQuestion, setSelectedOptionsByQuestion] = useState<Record<string, string[]>>({});
-  const [customAnswersByQuestion, setCustomAnswersByQuestion] = useState<ChatInputQuestionCustomAnswers>({});
+  const questionAnswers = useQuestionAnswers(questionPrompt, defaultState);
+  const { selectedOptionsByQuestion, customAnswersByQuestion, signature: questionPromptSignature } = questionAnswers;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const onChangeRef = useRef(onChange);
-  const previousQuestionPromptSignatureRef = useRef(getQuestionPromptSignature(questionPrompt));
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -152,19 +148,8 @@ export const ChatInput = (props: ChatInputProps) => {
     setEditorState(defaultState);
     setEditorKey((key) => key + 1);
     setText(resetText);
-    setSelectedOptionsByQuestion({});
-    setCustomAnswersByQuestion({});
     onChangeRef.current?.(resetText);
   }, [defaultState]);
-
-  const questionPromptSignature = getQuestionPromptSignature(questionPrompt);
-
-  useEffect(() => {
-    if (previousQuestionPromptSignatureRef.current === questionPromptSignature) return;
-    previousQuestionPromptSignatureRef.current = questionPromptSignature;
-    setSelectedOptionsByQuestion({});
-    setCustomAnswersByQuestion({});
-  }, [questionPromptSignature]);
 
   useComposerFocus(containerRef, autoFocus, focusSignal, setIsSelected);
 
@@ -186,8 +171,7 @@ export const ChatInput = (props: ChatInputProps) => {
 
   const resetEditor = (shouldFocus = false) => {
     setEditorKey((key) => key + 1);
-    setSelectedOptionsByQuestion({});
-    setCustomAnswersByQuestion({});
+    questionAnswers.reset();
     history.reset();
     history.change(getTextFromSerializedEditorState(defaultState));
 
@@ -216,19 +200,23 @@ export const ChatInput = (props: ChatInputProps) => {
   };
   const buttonAction = resolveChatInputButtonAction(actionState);
   const messageTitle = streaming && !questionPrompt ? "Queue message" : "Send message";
-  const submitMessage = async () => {
-    if (!responseText) return;
+  const submitMessage = async (skip = false) => {
+    const skipResponse = skip && questionPrompt ? buildQuestionSkipResponse(questionPrompt) : undefined;
+    const textToSend = skipResponse?.text ?? responseText;
+    if (!textToSend || isDisabled || submitDisabled || submitting) return;
 
     const questionResponse = questionPrompt
       ? {
-          answers: buildQuestionAnswerValues(questionPrompt, selectedOptionsByQuestion, customAnswersByQuestion),
+          answers:
+            skipResponse?.answers ??
+            buildQuestionAnswerValues(questionPrompt, selectedOptionsByQuestion, customAnswersByQuestion),
         }
       : undefined;
 
     history.reset();
     setSubmitting(true);
     try {
-      await onSubmit(responseText, attachedResources, questionResponse);
+      await onSubmit(textToSend, attachedResources, questionResponse);
       resetEditor(true);
       onClearAttachments?.();
     } catch {
@@ -248,20 +236,6 @@ export const ChatInput = (props: ChatInputProps) => {
     onAttachText,
     textAttachmentPasteLineThreshold,
   });
-
-  const toggleQuestionOption = (question: ChatInputQuestion, questionIndex: number, optionLabel: string) => {
-    setSelectedOptionsByQuestion((current) =>
-      toggleQuestionOptionSelection(current, question, questionIndex, optionLabel),
-    );
-  };
-
-  const updateQuestionCustomAnswer = (question: ChatInputQuestion, questionIndex: number, answer: string) => {
-    const key = getQuestionSelectionKey(question, questionIndex);
-    setCustomAnswersByQuestion((current) => ({
-      ...current,
-      [key]: answer,
-    }));
-  };
 
   return (
     <Box
@@ -300,8 +274,8 @@ export const ChatInput = (props: ChatInputProps) => {
             questionPrompt={questionPrompt}
             selectedOptionsByQuestion={selectedOptionsByQuestion}
             customAnswersByQuestion={customAnswersByQuestion}
-            onToggleOption={toggleQuestionOption}
-            onCustomAnswerChange={updateQuestionCustomAnswer}
+            onToggleOption={questionAnswers.toggleOption}
+            onCustomAnswerChange={questionAnswers.changeCustomAnswer}
           />
         ) : (
           // The editor is its own composer row: it centres a single line at the shared
@@ -328,6 +302,16 @@ export const ChatInput = (props: ChatInputProps) => {
         <HStack gap="1" minH={COMPOSER_CONTROL_HEIGHT} align="center">
           {actions}
           <Spacer />
+          {questionPrompt ? (
+            <Button
+              size="xs"
+              variant="ghost"
+              disabled={isDisabled || submitDisabled || submitting}
+              onClick={() => void submitMessage(true)}
+            >
+              Skip
+            </Button>
+          ) : null}
           <SendButton
             canInterrupt={buttonAction === "interrupt"}
             title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? messageTitle)}

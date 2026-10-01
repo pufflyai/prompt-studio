@@ -34,13 +34,15 @@ const QuestionOptionContent = (props: { option: QuestionFormBlockQuestion["optio
   );
 };
 
-const QuestionCheckboxOptionRow = (props: {
+interface QuestionCheckboxOptionRowProps {
   option: QuestionFormBlockQuestion["options"][number];
   name: string;
   checked: boolean;
   editable: boolean;
   onToggle: () => void;
-}) => {
+}
+
+const QuestionCheckboxOptionRow = (props: QuestionCheckboxOptionRowProps) => {
   const { option, name, checked, editable, onToggle } = props;
 
   return (
@@ -58,20 +60,65 @@ const QuestionCheckboxOptionRow = (props: {
   );
 };
 
-const QuestionRadioOptions = (props: {
+interface QuestionRadioOptionsProps {
   question: QuestionFormBlockQuestion;
   questionIndex: number;
   name: string;
   selectedOption?: string;
   editable: boolean;
   onToggleOption?: (question: QuestionFormBlockQuestion, questionIndex: number, optionLabel: string) => void;
-}) => {
-  const { question, questionIndex, name, selectedOption, editable, onToggleOption } = props;
+  customAnswer?: string;
+  onCustomAnswerChange?: QuestionFormBlockViewProps["onCustomAnswerChange"];
+}
+
+interface QuestionCustomAnswerProps {
+  question: QuestionFormBlockQuestion;
+  questionIndex: number;
+  name: string;
+  editable: boolean;
+  value?: string;
+  onChange?: QuestionFormBlockViewProps["onCustomAnswerChange"];
+}
+
+const QuestionCustomAnswer = (props: QuestionCustomAnswerProps) => {
+  const { question, questionIndex, name, editable, value, onChange } = props;
+  return (
+    <Textarea
+      id={`${name}-other`}
+      readOnly={!editable}
+      aria-readonly={editable ? undefined : "true"}
+      value={value ?? ""}
+      placeholder={editable ? "Other..." : "Other"}
+      aria-label={question.question}
+      rows={2}
+      size="sm"
+      resize={editable ? "vertical" : "none"}
+      onChange={(event) => onChange?.(question, questionIndex, event.currentTarget.value)}
+    />
+  );
+};
+
+const QuestionRadioOptions = (props: QuestionRadioOptionsProps) => {
+  const {
+    question,
+    questionIndex,
+    name,
+    selectedOption,
+    editable,
+    onToggleOption,
+    customAnswer,
+    onCustomAnswerChange,
+  } = props;
+  const isOtherSelected = question.allowCustomAnswer && customAnswer !== undefined;
+  let value: string | null = null;
+  if (isOtherSelected) value = "other";
+  else if (selectedOption !== undefined)
+    value = String(question.options.findIndex((option) => option.label === selectedOption));
 
   return (
     <RadioGroup
       name={name}
-      value={selectedOption ?? null}
+      value={value}
       readOnly={!editable}
       aria-readonly={editable ? undefined : "true"}
       display="flex"
@@ -80,21 +127,40 @@ const QuestionRadioOptions = (props: {
       onValueChange={
         editable
           ? (details) => {
-              if (details.value) onToggleOption?.(question, questionIndex, details.value);
+              if (details.value === "other") onCustomAnswerChange?.(question, questionIndex, "");
+              else if (details.value !== null) {
+                const option = question.options[Number(details.value)];
+                if (option) onToggleOption?.(question, questionIndex, option.label);
+              }
             }
           : undefined
       }
     >
-      {question.options.map((option) => (
+      {question.options.map((option, index) => (
         <Radio
           key={option.label}
-          value={option.label}
+          value={String(index)}
           inputProps={editable ? undefined : { tabIndex: -1 }}
           alignItems="flex-start"
         >
           <QuestionOptionContent option={option} />
         </Radio>
       ))}
+      {question.allowCustomAnswer ? (
+        <Radio value="other" inputProps={editable ? undefined : { tabIndex: -1 }}>
+          <QuestionOptionContent option={{ label: "Other" }} />
+        </Radio>
+      ) : null}
+      {question.allowCustomAnswer && (isOtherSelected || !editable) ? (
+        <QuestionCustomAnswer
+          question={question}
+          questionIndex={questionIndex}
+          name={name}
+          editable={editable}
+          value={customAnswer}
+          onChange={onCustomAnswerChange}
+        />
+      ) : null}
     </RadioGroup>
   );
 };
@@ -148,7 +214,7 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
             <Text as="legend" textStyle="label/S/medium" color="fg" paddingX="2xs">
               {question.question}
             </Text>
-            {inputType === "radio" ? (
+            {inputType === "radio" && question.options.length > 0 ? (
               <QuestionRadioOptions
                 question={question}
                 questionIndex={questionIndex}
@@ -156,6 +222,8 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
                 selectedOption={selectedOptions[0]}
                 editable={editable}
                 onToggleOption={onToggleOption}
+                customAnswer={customAnswersByQuestion[name]}
+                onCustomAnswerChange={onCustomAnswerChange}
               />
             ) : (
               question.options.map((option) => (
@@ -169,22 +237,20 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
                 />
               ))
             )}
-            {question.allowCustomAnswer ? (
-              <Textarea
-                readOnly={!editable}
-                aria-readonly={editable ? undefined : "true"}
-                value={customAnswersByQuestion[name] ?? ""}
-                placeholder={editable ? "Answer..." : "Custom answer"}
-                aria-label={question.question}
-                rows={2}
-                borderWidth="1px"
-                borderColor="border.subtle"
-                borderRadius="sm"
-                padding="xs"
-                resize={editable ? "vertical" : "none"}
-                color="fg"
-                onChange={(event) => onCustomAnswerChange?.(question, questionIndex, event.currentTarget.value)}
-              />
+            {question.allowCustomAnswer && (question.multiple || question.options.length === 0) ? (
+              <Stack gap="xs">
+                <Text asChild textStyle="label/S/regular">
+                  <label htmlFor={`${name}-other`}>Other</label>
+                </Text>
+                <QuestionCustomAnswer
+                  question={question}
+                  questionIndex={questionIndex}
+                  name={name}
+                  editable={editable}
+                  value={customAnswersByQuestion[name]}
+                  onChange={onCustomAnswerChange}
+                />
+              </Stack>
             ) : null}
           </Stack>
         );

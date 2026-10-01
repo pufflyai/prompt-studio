@@ -86,13 +86,11 @@ const getQuestionAnswerLines = (
   customAnswersByQuestion: ChatInputQuestionCustomAnswers,
 ) => {
   const lines: string[] = [];
+  const answerValues = buildQuestionAnswerValues(questionPrompt, selectedOptionsByQuestion, customAnswersByQuestion);
 
   for (let index = 0; index < questionPrompt.questions.length; index += 1) {
     const question = questionPrompt.questions[index];
-    const key = getQuestionSelectionKey(question, index);
-    const selectedLabels = selectedOptionsByQuestion[key] ?? [];
-    const customAnswer = customAnswersByQuestion[key]?.trim();
-    const answers = customAnswer ? [...selectedLabels, customAnswer] : selectedLabels;
+    const answers = answerValues[index];
     if (answers.length === 0) continue;
 
     lines.push(`${question.question}: ${answers.join(", ")}`);
@@ -154,8 +152,17 @@ export const buildQuestionAnswerValues = (
     const key = getQuestionSelectionKey(question, index);
     const selectedLabels = selectedOptionsByQuestion[key] ?? [];
     const customAnswer = customAnswersByQuestion[key]?.trim();
+    if (!question.multiple) return customAnswer ? [customAnswer] : selectedLabels.slice(0, 1);
     return customAnswer ? [...selectedLabels, customAnswer] : selectedLabels;
   });
+};
+
+export const buildQuestionSkipResponse = (questionPrompt: ChatInputQuestionPrompt) => {
+  const answer = "You decide";
+  return {
+    text: questionPrompt.questions.map((question) => `${question.question}: ${answer}`).join("\n"),
+    answers: questionPrompt.questions.map(() => [answer]),
+  };
 };
 
 export const hasMissingRequiredQuestionAnswer = (
