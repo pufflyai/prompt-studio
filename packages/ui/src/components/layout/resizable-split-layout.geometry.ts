@@ -53,9 +53,10 @@ export const resolveResizableBounds = (input: {
   minSize: number;
   maxSize?: number;
   contentMinSize: number;
+  separatorSize: number;
 }) => {
   const rootSize = input.rootSize > 0 ? input.rootSize : input.fallbackRootSize;
-  const maxFromContent = Math.max(0, rootSize - input.contentMinSize);
+  const maxFromContent = Math.max(0, rootSize - input.separatorSize - input.contentMinSize);
   const configuredMax = input.maxSize ?? maxFromContent;
   const maxSize = Math.max(0, Math.min(configuredMax, maxFromContent));
   const minSize = Math.min(input.minSize, maxSize);

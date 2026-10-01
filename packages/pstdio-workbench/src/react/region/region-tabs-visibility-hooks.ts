@@ -12,8 +12,7 @@ import {
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
-import { shouldCollapseWorkbenchPanelMenus } from "../panel-menu/panel-menu-sizing";
-import { useWorkbenchPanelMenu, useWorkbenchPanelWidth } from "../panel-menu/use-panel-menu";
+import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -113,10 +112,7 @@ export const useWorkbenchRegionTabsState = (
 
 export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
   const { showTabs, hasActions, hasTrailingActions } = useWorkbenchRegionTabsState(workbench, region);
-  const width = useWorkbenchPanelWidth(region);
-  const responsiveCollapsed = shouldCollapseWorkbenchPanelMenus(width);
-  const left = useWorkbenchPanelMenu(workbench, region, "left", responsiveCollapsed);
-  const right = useWorkbenchPanelMenu(workbench, region, "right", responsiveCollapsed);
+  const [left, right] = useWorkbenchPanelMenus(workbench, region);
   const hasPanelMenus = [left, right].some((menu) => menu.has && menu.collapsed);
 
   return shouldShowPanelHeader({

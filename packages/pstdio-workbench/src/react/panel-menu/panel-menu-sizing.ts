@@ -1,22 +1,29 @@
-interface CanAttachWorkbenchPanelMenuInput {
-  panelWidth: number;
-  targetMenuMinSize: number;
-  attachedMenuMinSizes: readonly number[];
+interface WorkbenchPanelMenuSize {
+  has: boolean;
+  open: boolean;
+  collapsible: boolean;
+  minSize: number;
 }
 
 export const PANEL_CONTENT_MIN_SIZE_PX = 120;
 export const PANEL_MENU_RESIZE_HANDLE_SIZE_PX = 1;
-export const PANEL_MENU_COLLAPSE_THRESHOLD_PX = 480;
 
-export const shouldCollapseWorkbenchPanelMenus = (panelWidth: number) =>
-  panelWidth > 0 && panelWidth <= PANEL_MENU_COLLAPSE_THRESHOLD_PX;
+export const getWorkbenchPanelMenuAttachment = (panelWidth: number, menus: readonly WorkbenchPanelMenuSize[]) => {
+  if (panelWidth === 0) return menus.map((menu) => menu.has && (menu.open || !menu.collapsible));
 
-export const canAttachWorkbenchPanelMenu = (input: CanAttachWorkbenchPanelMenuInput) => {
-  const menuMinSizes = [...input.attachedMenuMinSizes, input.targetMenuMinSize];
-  const requiredWidth =
-    PANEL_CONTENT_MIN_SIZE_PX +
-    menuMinSizes.reduce((total, size) => total + size, 0) +
-    menuMinSizes.length * PANEL_MENU_RESIZE_HANDLE_SIZE_PX;
+  const attached = new Set(menus.filter((menu) => menu.has && !menu.collapsible));
+  const fits = (menu: WorkbenchPanelMenuSize) => {
+    const sizes = [...attached, menu];
+    return (
+      panelWidth >=
+      PANEL_CONTENT_MIN_SIZE_PX +
+        sizes.reduce((total, candidate) => total + candidate.minSize + PANEL_MENU_RESIZE_HANDLE_SIZE_PX, 0)
+    );
+  };
 
-  return input.panelWidth >= requiredWidth;
+  // Keep content usable and reserve fixed menus before optional menus, in side order.
+  for (const menu of menus) {
+    if (menu.has && menu.open && !attached.has(menu) && fits(menu)) attached.add(menu);
+  }
+  return menus.map((menu) => menu.has && (attached.has(menu) || fits(menu)));
 };

@@ -16,6 +16,7 @@ import {
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolvePanelCollapsible } from "../workbench/workbench-panel-state";
+import { getWorkbenchPanelMenuAttachment } from "./panel-menu-sizing";
 
 const PANEL_MENU_SIZE = { defaultPx: 280, minPx: 144, maxPx: 320 };
 
@@ -42,18 +43,17 @@ export interface WorkbenchPanelMenuView {
   icon: string;
   has: boolean;
   collapsed: boolean;
-  responsiveCollapsed: boolean;
+
   collapsible: boolean;
   size: ReturnType<typeof resolveRegionSize>;
   onOpen: () => void;
   onCollapsedChange: (collapsed: boolean) => void;
 }
 
-export const useWorkbenchPanelMenu = (
+const useWorkbenchPanelMenu = (
   workbench: WorkbenchCore,
   panel: WorkbenchPanelRegion,
   side: WorkbenchPanelMenuSide,
-  responsiveCollapsed = false,
 ): WorkbenchPanelMenuView => {
   const region = workbenchPanelMenuRegions[panel][side];
   const locationResource = useWorkbenchLocationResource(workbench);
@@ -98,8 +98,7 @@ export const useWorkbenchPanelMenu = (
     title: widget?.title ?? getWorkbenchPanelMenuLabel(panel, side),
     icon: widget?.icon ?? (side === "left" ? "PanelLeft" : "PanelRight"),
     has: panelAvailable && (regionState.widgets.length > 0 || Boolean(workbench.layout.getPlaceholder(region))),
-    collapsed: (!open || responsiveCollapsed) && collapsible,
-    responsiveCollapsed,
+    collapsed: !open && collapsible,
     collapsible,
     size: resolveRegionSize(workbench.layout.getRegionSize(region)),
     onOpen: () => workbench.panelMenuState.setOpen(panelStateKey, true),
@@ -107,6 +106,25 @@ export const useWorkbenchPanelMenu = (
       if (!collapsed || collapsible) workbench.panelMenuState.setOpen(panelStateKey, !collapsed);
     },
   };
+};
+
+export const useWorkbenchPanelMenus = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {
+  const width = useWorkbenchPanelWidth(panel);
+  const views = [useWorkbenchPanelMenu(workbench, panel, "left"), useWorkbenchPanelMenu(workbench, panel, "right")];
+  const attachment = getWorkbenchPanelMenuAttachment(
+    width,
+    views.map((view) => ({
+      has: view.has,
+      open: !view.collapsed,
+      collapsible: view.collapsible,
+      minSize: view.size.minPx,
+    })),
+  );
+  return views.map((view, index) => ({
+    ...view,
+    canAttach: attachment[index],
+    collapsed: view.collapsed || !attachment[index],
+  }));
 };
 
 export const useWorkbenchPanelMenusPresent = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {

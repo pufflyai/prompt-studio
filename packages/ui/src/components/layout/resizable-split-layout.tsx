@@ -70,8 +70,9 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const resizablePanelRef = useRef<HTMLDivElement>(null);
   const contentPanelRef = useRef<HTMLDivElement>(null);
+  const separatorRef = useRef<HTMLDivElement>(null);
   const cleanupDragRef = useRef<() => void>(() => undefined);
-  const rootSize = useResizableSplitRootSize(rootRef, axis.dimension);
+  const { rootSize, separatorSize } = useResizableSplitRootSize(rootRef, separatorRef, axis.dimension);
   const lastSizeRef = useRef(defaultSizePx);
   const [panelSize, setPanelSize] = useState(defaultSizePx);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
@@ -83,6 +84,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     minSize: minSizePx,
     maxSize: maxSizePx,
     contentMinSize: contentMinSizePx,
+    separatorSize,
   });
   const resolvedPanelSize = collapsed ? 0 : clamp(panelSize, bounds.minSize, bounds.maxSize);
   const contentPanelId = `${id}-content`;
@@ -107,6 +109,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       minSize: minSizePx,
       maxSize: maxSizePx,
       contentMinSize: contentMinSizePx,
+      separatorSize: getElementSize(separatorRef.current, axis.dimension),
     });
     const nextSize = clamp(size, nextBounds.minSize, nextBounds.maxSize);
 
@@ -137,6 +140,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       minSize: minSizePx,
       maxSize: maxSizePx,
       contentMinSize: contentMinSizePx,
+      separatorSize: getElementSize(separatorRef.current, axis.dimension),
     });
     const startPointer = event[axis.pointerCoordinate];
     const startSize = collapsed ? 0 : getElementSize(resizablePanelRef.current, axis.dimension) || lastSizeRef.current;
@@ -260,6 +264,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
         resizeLabel={resizeLabel}
         resolvedPanelSize={resolvedPanelSize}
         separator={separator}
+        separatorRef={separatorRef}
         onCollapse={handleCollapse}
         onResizeKeyDown={handleResizeKeyDown}
         onResizeStart={handleResizeStart}

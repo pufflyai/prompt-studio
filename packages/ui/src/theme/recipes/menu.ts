@@ -88,4 +88,18 @@ export const menuSlotRecipe = defineSlotRecipe({
       textStyle: "label/M/regular",
     },
   },
+  variants: {
+    variant: {
+      panel: {
+        content: {
+          boxShadow: "none",
+          height: "var(--available-height)",
+          width: "64",
+          minWidth: "64",
+          maxWidth: "64",
+          overflow: "hidden",
+        },
+      },
+    },
+  },
 });

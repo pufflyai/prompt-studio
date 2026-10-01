@@ -1,46 +1,32 @@
 import { describe, expect, test } from "bun:test";
-import { canAttachWorkbenchPanelMenu, shouldCollapseWorkbenchPanelMenus } from "./panel-menu-sizing";
+import { getWorkbenchPanelMenuAttachment } from "./panel-menu-sizing";
 
-describe("shouldCollapseWorkbenchPanelMenus", () => {
-  test("collapses at 480 px and restores immediately above the boundary", () => {
-    expect(shouldCollapseWorkbenchPanelMenus(0)).toBe(false);
-    expect(shouldCollapseWorkbenchPanelMenus(480)).toBe(true);
-    expect(shouldCollapseWorkbenchPanelMenus(481)).toBe(false);
+const menu = (open = true, minSize = 144, collapsible = true) => ({ has: true, open, minSize, collapsible });
+
+describe("panel menu attachment", () => {
+  test("attaches below 480 px when menu and content fit", () => {
+    expect(getWorkbenchPanelMenuAttachment(265, [menu()])).toEqual([true]);
+    expect(getWorkbenchPanelMenuAttachment(264, [menu()])).toEqual([false]);
   });
-});
-
-describe("canAttachWorkbenchPanelMenu", () => {
-  test("requires room for the menu, resize handle, and Panel content", () => {
-    expect(
-      canAttachWorkbenchPanelMenu({
-        panelWidth: 264,
-        targetMenuMinSize: 144,
-        attachedMenuMinSizes: [],
-      }),
-    ).toBe(false);
-    expect(
-      canAttachWorkbenchPanelMenu({
-        panelWidth: 265,
-        targetMenuMinSize: 144,
-        attachedMenuMinSizes: [],
-      }),
-    ).toBe(true);
+  test("lets a closed menu reopen as attached when there is room", () => {
+    expect(getWorkbenchPanelMenuAttachment(265, [menu(false)])).toEqual([true]);
   });
-
-  test("reserves the minimum width of menus that are already attached", () => {
-    expect(
-      canAttachWorkbenchPanelMenu({
-        panelWidth: 409,
-        targetMenuMinSize: 144,
-        attachedMenuMinSizes: [144],
-      }),
-    ).toBe(false);
-    expect(
-      canAttachWorkbenchPanelMenu({
-        panelWidth: 410,
-        targetMenuMinSize: 144,
-        attachedMenuMinSizes: [144],
-      }),
-    ).toBe(true);
+  test("reserves space for each open menu and its resize handle", () => {
+    expect(getWorkbenchPanelMenuAttachment(410, [menu(), menu()])).toEqual([true, true]);
+    expect(getWorkbenchPanelMenuAttachment(409, [menu(), menu()])).toEqual([true, false]);
+  });
+  test("closed and absent menus do not reserve attached width", () => {
+    expect(getWorkbenchPanelMenuAttachment(265, [menu(false), menu()])).toEqual([false, true]);
+    expect(getWorkbenchPanelMenuAttachment(265, [{ ...menu(), has: false }, menu()])).toEqual([false, true]);
+  });
+  test("uses configured menu widths and restores attachment after resizing", () => {
+    expect(getWorkbenchPanelMenuAttachment(400, [menu(true, 280)])).toEqual([false]);
+    expect(getWorkbenchPanelMenuAttachment(401, [menu(true, 280)])).toEqual([true]);
+  });
+  test("reserves noncollapsible menus before optional menus", () => {
+    expect(getWorkbenchPanelMenuAttachment(409, [menu(), menu(true, 144, false)])).toEqual([false, true]);
+  });
+  test("keeps open menus attached until panel width is measured", () => {
+    expect(getWorkbenchPanelMenuAttachment(0, [menu(), menu(false)])).toEqual([true, false]);
   });
 });

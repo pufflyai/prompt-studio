@@ -19,3 +19,15 @@ and [Dashboard UI attachments](../extensions/0013-workbench-attachments.md).
 
 The live examples are in the `pstdio-workbench/API` section of the Workbench
 Storybook.
+
+## Panel menus
+
+Closing an attached panel menu hides it until its header opener is selected. The
+opener attaches the menu directly when its panel has room for the menu, other
+attached menus, resize handles, and at least 120 px of content. Menu minimum widths
+come from their contributions. There is no fixed panel-width threshold.
+
+When attachment cannot fit, the opener shows a floating menu below the button.
+The floating menu fills the available viewport height. Increasing panel width
+restores attachment for an open menu. Main, Secondary, and Side panel menus use
+the same rule.
