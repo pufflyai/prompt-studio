@@ -70,6 +70,30 @@ describe("createQuestionService", () => {
     expect(await pending).toEqual({ answers: [["Blue"], ["Blue"]] });
   });
 
+  test("a structured answer resolves only its matching ask and keeps other asks open", async () => {
+    let closed = 0;
+    const service = createQuestionService({
+      onAsk: () => {},
+      onAnswer: () => {
+        closed += 1;
+      },
+    });
+    const first = service.ask(request("first", "Which color?"));
+    const second = service.ask(request("second", "Which size?"));
+    const response = { callId: "toolu_first", answers: [["Blue"]] };
+
+    expect(service.answer(response)).toBe(true);
+    expect(await first).toEqual(response);
+    expect(service.hasPending()).toBe(true);
+    expect(closed).toBe(0);
+    expect(service.answer({ callId: "toolu_stale", answers: [["Blue"]] })).toBe(false);
+
+    expect(service.answer({ callId: "toolu_second", answers: [["Small"]] })).toBe(true);
+    expect(await second).toEqual({ callId: "toolu_second", answers: [["Small"]] });
+    expect(service.hasPending()).toBe(false);
+    expect(closed).toBe(1);
+  });
+
   test("the ask stays open until the session is back in progress", async () => {
     const release = Promise.withResolvers<void>();
     const service = createQuestionService({ onAsk: () => {}, onAnswer: () => release.promise });

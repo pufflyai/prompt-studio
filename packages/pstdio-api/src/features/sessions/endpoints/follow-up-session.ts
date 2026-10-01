@@ -6,8 +6,10 @@ import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
+import { questionReplyRejection, replyToLiveSessionQuestion } from "../live-question-reply";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionScheduler } from "../session-scheduler";
+import { updateExistingDispatchSelection } from "../session-scheduler-internals";
 
 export const followUpSessionRoute = createRoute({
   method: "post",
@@ -92,6 +94,11 @@ const resolveFollowUpParams = async (
   }
 };
 
+const followUpError = (error: unknown) => {
+  if (!(error instanceof SessionAttachmentError) && !questionReplyRejection(error)) throw error;
+  return { error: error instanceof Error ? error.message : String(error) };
+};
+
 export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof followUpSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -102,10 +109,24 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    const prompt = await buildFollowUpPrompt(input, deps);
-    const cwd = session.cwd ?? undefined;
     const resolvedParams = await resolveFollowUpParams(deps, session, input);
     if (resolvedParams.type === "error") return c.json({ error: resolvedParams.error }, 400);
+    const reply = await replyToLiveSessionQuestion(deps, id, input.question_response);
+    if (reply) {
+      if (!reply.ok) return c.json({ error: reply.error }, 400);
+      await updateExistingDispatchSelection(deps, {
+        session,
+        agentId: input.agent ?? session.agent!,
+        model: input.model?.trim() || undefined,
+        params: resolvedParams.params,
+        switchingAgent: Boolean(input.agent && input.agent !== session.agent),
+      });
+      const current = (await deps.sessionService.get(id)) ?? session;
+      return c.json({ ...current, follow_up: { status: "dispatched" as const } }, 200);
+    }
+
+    const prompt = await buildFollowUpPrompt(input, deps);
+    const cwd = session.cwd ?? undefined;
     const scheduler = createSessionScheduler(deps);
 
     try {
@@ -133,10 +154,7 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       }
       return c.json({ ...result, follow_up: decision }, 200);
     } catch (error) {
-      if (error instanceof SessionAttachmentError) {
-        return c.json({ error: error.message }, 400);
-      }
-      throw error;
+      return c.json(followUpError(error), 400);
     }
   };
 };

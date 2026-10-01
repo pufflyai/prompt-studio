@@ -40,20 +40,20 @@ export const createQuestionService = (hooks: QuestionServiceHooks): QuestionServ
         return;
       }
 
-      pending.set(request.id, { resolve, reject, questionCount: request.questions.length });
+      pending.set(request.toolUseId, { resolve, reject, questionCount: request.questions.length });
       notify(hooks.onAsk);
     });
 
   const answer = (response: QuestionResponse | string) => {
-    if (pending.size === 0) return false;
-
-    const answered = [...pending];
+    const callId = typeof response === "string" ? undefined : response.callId;
+    const answered = [...pending].filter(([id]) => callId === undefined || id === callId);
+    if (answered.length === 0) return false;
     // The ask stays open until the session is back to `in_progress`, so a second answer still
     // takes this path instead of starting a new run, and a harness that finishes the turn right
     // away still writes the last status of the run.
     notify(async () => {
       try {
-        await hooks.onAnswer();
+        if (answered.length === pending.size) await hooks.onAnswer();
       } finally {
         for (const [id, entry] of answered) {
           pending.delete(id);
@@ -64,7 +64,7 @@ export const createQuestionService = (hooks: QuestionServiceHooks): QuestionServ
     return true;
   };
 
-  const hasPending = () => pending.size > 0;
+  const hasPending = (callId?: string) => (callId === undefined ? pending.size > 0 : pending.has(callId));
 
   const dispose = () => {
     disposed = true;

@@ -1,6 +1,7 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
+import { hasPendingProviderQuestion, validateRecoveredQuestionReply } from "./live-question-reply";
 import { createSessionQueueDrain } from "./session-queue-drain";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
@@ -233,7 +234,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     // A live run waiting on its own question takes the answer in place: the harness is still
     // attached and finishes the turn with it. Queueing or resuming would start a second run.
     const live = deps.sessionService.store.get(input.session.id);
-    if (live?.questionService.hasPending()) {
+    if (live?.questionService.hasPending(input.questionResponse?.callId)) {
       input.signal?.throwIfAborted();
       // The answer cannot switch the running agent, but the selection still applies to the next run.
       await updateExistingDispatchSelection(deps, context);
@@ -241,10 +242,9 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       return { status: "dispatched" } satisfies StartOrQueueResult;
     }
 
-    const fastPathQuestion = status === "awaiting_input" && input.questionResponse != null;
-
-    if (fastPathQuestion) {
+    if (input.questionResponse) {
       input.signal?.throwIfAborted();
+      await validateRecoveredQuestionReply(status, live, input.questionResponse);
       return prepareExistingDispatch(deps, context);
     }
 
@@ -262,6 +262,19 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   const startOrQueueExisting = async (input: StartExistingInput): Promise<StartOrQueueResult> => {
+    if (input.questionResponse) {
+      const owner = deps.sessionService.store.get(input.session.id);
+      if (
+        owner?.session &&
+        !owner.session.replyQuestion &&
+        !owner.questionService.hasPending() &&
+        (await hasPendingProviderQuestion(owner, input.questionResponse))
+      ) {
+        // The old owner must finish before recovery can replace it. Waiting outside the
+        // scheduling lock lets its terminal transition and queued work proceed.
+        await owner.session.done;
+      }
+    }
     const result = await withSchedulingLock(() => reserveExistingDispatch(input));
     if (typeof result !== "function") return result;
     await result();

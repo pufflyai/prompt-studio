@@ -25,7 +25,12 @@ export type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "Se
 export type QuestionResponse = {
   /** One list of chosen labels per question, in the order the questions were asked. */
   answers: string[][];
+  /** Shared question tool call being answered, when the caller has its identity. */
+  callId?: string;
 };
+
+/** A stale or declined answer. Other harness failures remain server errors. */
+export type HarnessQuestionReplyError = Error & { readonly questionRejected: true };
 
 export type HarnessQuestionOption = {
   label: string;
@@ -54,10 +59,10 @@ export type HarnessQuestionChannel = {
   ask(request: HarnessQuestionRequest): Promise<QuestionResponse>;
 };
 
-/** Host side of the question channel. A plain string answers every open question with that text. */
+/** Host side of the question channel. Plain text answers all open asks; a call ID selects its tool use. */
 export type QuestionService = HarnessQuestionChannel & {
   answer(response: QuestionResponse | string): boolean;
-  hasPending(): boolean;
+  hasPending(callId?: string): boolean;
   dispose(): void;
 };
 
@@ -121,6 +126,8 @@ export type HarnessSession = {
   done: Promise<HarnessExit>;
   /** Called by the host on cancel or on its own activity timeout. */
   stop(): void | Promise<void>;
+  /** Replies in place. Reject invalid answers with HarnessQuestionReplyError. */
+  replyQuestion?(response: QuestionResponse): Promise<void>;
   timeoutStrategy?: TimeoutStrategy;
   /** Observability only. */
   pid?: number;
