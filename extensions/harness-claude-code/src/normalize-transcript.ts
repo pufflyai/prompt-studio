@@ -83,6 +83,19 @@ const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<str
   const content = entry.message.content;
   const createdAt = parseTimestamp(entry.timestamp);
 
+  // Claude writes its own wake-up note as a user entry when a background task ends.
+  // Showing the raw XML as a chat bubble would read as a message from the person.
+  if (entry.origin?.kind === "task-notification") {
+    return [
+      {
+        id: entry.uuid,
+        role: "system",
+        parts: [{ type: "text" as const, text: "Background task finished." }],
+        createdAt,
+      } satisfies SessionMessage,
+    ];
+  }
+
   if (typeof content === "string") {
     if (!content.trim()) return [];
     return [

@@ -1,5 +1,4 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
 import type {
   HarnessApprovalChannel,
@@ -9,6 +8,7 @@ import type {
   HarnessSession,
   SessionMessage,
 } from "@pstdio/sdk/extensions";
+import { createRawEventStream, extractSessionId, sendUserMessage } from "./cli-stream";
 import { createMessageAccumulator } from "./message-accumulator";
 import { normalizeClaudeCodeStream } from "./normalize-stream";
 import type { RawLogEvent } from "./types";
@@ -64,15 +64,6 @@ export const buildResumeArgs = (input: {
   return args;
 };
 
-const formatUserMessage = (content: string) =>
-  `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`;
-
-// Claude can stall until it sees EOF from stdin in our spawned process.
-const sendUserMessage = (stdin: Writable, content: string) => {
-  stdin.write(formatUserMessage(content));
-  stdin.end();
-};
-
 const promptWithAttachmentManifest = (prompt: string, attachments: HarnessAttachment[] = []) => {
   if (attachments.length === 0) return prompt;
 
@@ -90,79 +81,6 @@ const promptWithAttachmentManifest = (prompt: string, attachments: HarnessAttach
   ].join("\n");
 };
 
-const isControlRequest = (parsed: Record<string, unknown>) => parsed.type === "control_request";
-
-const buildControlResponse = (requestId: string, decision: "approve" | "deny" | "timeout", input: unknown) => {
-  if (decision === "approve") {
-    return {
-      type: "control_response",
-      response: {
-        subtype: "success",
-        request_id: requestId,
-        response: { behavior: "allow", updated_input: input, updated_permissions: null },
-      },
-    };
-  }
-
-  return {
-    type: "control_response",
-    response: {
-      subtype: "success",
-      request_id: requestId,
-      response: {
-        behavior: "deny",
-        message:
-          decision === "timeout"
-            ? "Approval timed out."
-            : "The user doesn't want to proceed with this tool use. The tool use was rejected.",
-        interrupt: decision === "timeout",
-      },
-    },
-  };
-};
-
-async function* createRawEventStream(
-  stdout: Readable,
-  stdin: Writable,
-  approvals?: HarnessApprovalChannel,
-): AsyncGenerator<RawLogEvent> {
-  const reader = createInterface({ input: stdout, crlfDelay: Number.POSITIVE_INFINITY });
-
-  for await (const line of reader) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    let parsed: Record<string, unknown> | null = null;
-
-    try {
-      parsed = JSON.parse(trimmed) as Record<string, unknown>;
-    } catch {
-      // not JSON
-    }
-
-    if (parsed && isControlRequest(parsed) && approvals) {
-      const requestId = parsed.request_id as string;
-      const request = parsed.request as Record<string, unknown>;
-      const toolName = (request.tool_name as string) ?? "";
-      const toolInput = request.input;
-      const toolUseId = (request.tool_use_id as string) ?? "";
-
-      const response = await approvals.requestApproval({ id: requestId, toolName, toolInput, toolUseId });
-      const controlResponse = buildControlResponse(requestId, response.decision, toolInput);
-
-      stdin.write(`${JSON.stringify(controlResponse)}\n`);
-      continue;
-    }
-
-    if (parsed && parsed.type === "system" && typeof parsed.session_id === "string") {
-      yield { type: "session_id", sessionId: parsed.session_id };
-      continue;
-    }
-
-    yield { type: "stdout", data: trimmed };
-  }
-}
-
 const runPipelineFromEvents = async (
   events: AsyncIterable<RawLogEvent>,
   sink: HarnessEventSink,
@@ -173,33 +91,6 @@ const runPipelineFromEvents = async (
   for await (const message of normalizeClaudeCodeStream(events)) {
     accumulator.push(message);
   }
-};
-
-const extractSessionId = async (events: AsyncGenerator<RawLogEvent>) => {
-  const buffered: RawLogEvent[] = [];
-
-  // Use manual .next() to avoid auto-closing the generator on early return
-  while (true) {
-    const { value, done } = await events.next();
-    if (done) break;
-
-    if (value.type === "session_id") {
-      const sessionId = value.sessionId;
-
-      async function* remainingEvents() {
-        for (const event of buffered) {
-          yield event;
-        }
-        yield* events;
-      }
-
-      return { sessionId, remainingEvents: remainingEvents() };
-    }
-
-    buffered.push(value);
-  }
-
-  throw new Error("Claude Code stream ended without providing session_id");
 };
 
 type SpawnedChild = {
