@@ -1,6 +1,7 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
+import { hasPendingProviderQuestion } from "./live-question-reply";
 import { createSessionQueueDrain } from "./session-queue-drain";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
@@ -233,7 +234,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     // A live run waiting on its own question takes the answer in place: the harness is still
     // attached and finishes the turn with it. Queueing or resuming would start a second run.
     const live = deps.sessionService.store.get(input.session.id);
-    if (live?.questionService.hasPending()) {
+    if (live?.questionService.hasPending(input.questionResponse?.callId)) {
       input.signal?.throwIfAborted();
       // The answer cannot switch the running agent, but the selection still applies to the next run.
       await updateExistingDispatchSelection(deps, context);
@@ -241,10 +242,15 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       return { status: "dispatched" } satisfies StartOrQueueResult;
     }
 
-    const fastPathQuestion = status === "awaiting_input" && input.questionResponse != null;
-
-    if (fastPathQuestion) {
+    if (input.questionResponse) {
       input.signal?.throwIfAborted();
+      if (
+        live?.questionService.hasPending() ||
+        status === "queued" ||
+        ((status === "in_progress" || status === "awaiting_input") &&
+          !(await hasPendingProviderQuestion(live, input.questionResponse)))
+      )
+        throw new Error("Question request is no longer pending.");
       return prepareExistingDispatch(deps, context);
     }
 

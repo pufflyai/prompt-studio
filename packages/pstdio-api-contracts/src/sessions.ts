@@ -66,6 +66,7 @@ export const createSessionInputSchema = z.object({
 
 export const questionResponseSchema = z.object({
   answers: z.array(z.array(z.string())),
+  callId: z.string().min(1).optional(),
 });
 
 export const followUpInputSchema = z.object({

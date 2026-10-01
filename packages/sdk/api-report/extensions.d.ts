@@ -1128,6 +1128,7 @@ type JsonPatch = {
 type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "SessionReattach";
 type QuestionResponse = {
   answers: string[][];
+  callId?: string;
 };
 type HarnessQuestionOption = {
   label: string;
@@ -1186,6 +1187,7 @@ type HarnessSession = {
   agentSessionId?: string;
   done: Promise<HarnessExit>;
   stop(): void | Promise<void>;
+  replyQuestion?(response: QuestionResponse): Promise<void>;
   timeoutStrategy?: TimeoutStrategy;
   pid?: number;
 };

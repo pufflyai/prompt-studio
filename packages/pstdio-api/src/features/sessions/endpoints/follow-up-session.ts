@@ -6,6 +6,7 @@ import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
+import { replyToLiveSessionQuestion } from "../live-question-reply";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionScheduler } from "../session-scheduler";
 
@@ -92,6 +93,11 @@ const resolveFollowUpParams = async (
   }
 };
 
+const followUpError = (error: unknown, hasQuestionResponse: boolean) => {
+  if (!(error instanceof SessionAttachmentError) && !hasQuestionResponse) throw error;
+  return { error: error instanceof Error ? error.message : String(error) };
+};
+
 export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof followUpSessionRoute> => {
   return async (c) => {
     const { id } = c.req.valid("param");
@@ -100,6 +106,13 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
     const session = await deps.sessionService.get(id);
     if (!session) {
       return c.json({ error: `Session not found: ${id}` }, 404);
+    }
+
+    const reply = await replyToLiveSessionQuestion(deps, id, input.question_response);
+    if (reply) {
+      if (!reply.ok) return c.json({ error: reply.error }, 400);
+      const current = (await deps.sessionService.get(id)) ?? session;
+      return c.json({ ...current, follow_up: { status: "dispatched" as const } }, 200);
     }
 
     const prompt = await buildFollowUpPrompt(input, deps);
@@ -133,10 +146,7 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       }
       return c.json({ ...result, follow_up: decision }, 200);
     } catch (error) {
-      if (error instanceof SessionAttachmentError) {
-        return c.json({ error: error.message }, 400);
-      }
-      throw error;
+      return c.json(followUpError(error, Boolean(input.question_response)), 400);
     }
   };
 };
