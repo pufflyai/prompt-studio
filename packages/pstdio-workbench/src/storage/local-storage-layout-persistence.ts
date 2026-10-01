@@ -139,6 +139,10 @@ export const createLocalStorageLayoutPersistence = (
   };
 
   const scheduleFlush = () => {
+    if (debounceMs === 0) {
+      flush();
+      return;
+    }
     if (timer) clearTimeout(timer);
     timer = setTimeout(flush, debounceMs);
   };

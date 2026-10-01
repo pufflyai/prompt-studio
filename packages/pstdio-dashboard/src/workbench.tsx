@@ -41,6 +41,7 @@ interface CreateDashboardWorkbenchInput {
   projectTabs?: DesktopProjectTabsController;
   pageLocationBrowser?: WorkbenchPageLocationBrowser;
   storage?: WorkbenchStorageLike;
+  layoutDebounceMs?: number;
 }
 
 type CreateDashboardModulesInput = {
@@ -95,6 +96,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const persistence = createLocalStorageWorkbenchPersistence({
     namespace: dashboardWorkbenchStorageNamespace,
     storage,
+    debounceMs: input.layoutDebounceMs,
   });
 
   const pageLocationBrowser =

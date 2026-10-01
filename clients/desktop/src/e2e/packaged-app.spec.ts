@@ -95,21 +95,15 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     await openPackagedProject(first.page, { id: projectId, name: "Relaunch persistence project" });
     await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
     await expect(first.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
-    await first.page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+    await expect(first.page.getByRole("button", { name: "Show Side Panel", exact: true })).toBeVisible();
     const selectedProjectKey = "dashboard-wb2:selected-project:global";
     const pageLocationKey = `dashboard-wb2:page-location:${projectId}`;
-    const layoutKeyPrefix = `dashboard-wb2:layout:project/${projectId}/`;
     await expect
-      .poll(async () => {
-        const { values } = await first!.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
-        return {
-          project: values[selectedProjectKey],
-          sidePanelSaved: Object.entries(values).some(
-            ([key, value]) => key.startsWith(layoutKeyPrefix) && value.includes('"presentation":"attached"'),
-          ),
-        };
-      })
-      .toEqual({ project: projectId, sidePanelSaved: true });
+      .poll(
+        async () =>
+          (await first!.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).values[selectedProjectKey],
+      )
+      .toBe(projectId);
     const { values: firstValues } = await first.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
     const pageLocation = firstValues[pageLocationKey];
     expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
@@ -126,8 +120,14 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(persistent.pid).toBe(originalPid);
 
     await test.step("Save the first window trace before Quit", () => first!.finishTrace());
-    await test.step("Quit the first desktop window after promotion", () =>
-      first!.page.evaluate(() => void window.promptStudioDesktop.quitApp()));
+    await test.step("Change the Side Panel and immediately Quit the first desktop window", () =>
+      first!.page.evaluate(() => {
+        const { sidePanel } = (
+          window as unknown as { __pstdioDashboardWorkbench: { sidePanel: { setMode(mode: "attached"): void } } }
+        ).__pstdioDashboardWorkbench;
+        sidePanel.setMode("attached");
+        void window.promptStudioDesktop.quitApp();
+      }));
     await test.step("Wait for the first desktop process to exit", () => waitForExit(first!.child));
     await test.step("Probe the persistent runtime after desktop exit", async () => {
       expect(

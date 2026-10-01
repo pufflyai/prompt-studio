@@ -18,6 +18,18 @@ afterEach(() => {
 });
 
 describe("DesktopWorkbenchStateStore", () => {
+  test("keeps the saved project and page when loading a desktop state from an earlier release", () => {
+    const path = createStatePath();
+    const location = JSON.stringify({ version: 1, location: { page: { id: "sessions", kind: "page" } } });
+    writeFileSync(path, JSON.stringify({ selectedProjectId: "project-a", pageLocations: { "project-a": location } }));
+    expect(new DesktopWorkbenchStateStore(path).getState()).toEqual({
+      values: {
+        "dashboard-wb2:selected-project:global": "project-a",
+        "dashboard-wb2:page-location:project-a": location,
+      },
+    });
+  });
+
   test("persists workbench values across store instances", () => {
     const path = createStatePath();
 

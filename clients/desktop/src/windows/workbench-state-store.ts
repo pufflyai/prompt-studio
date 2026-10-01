@@ -5,13 +5,30 @@ import type { DesktopWorkbenchState } from "../desktop-api";
 // The renderer sends a burst of keys for each layout save; one disk write covers the burst.
 const WRITE_DELAY_MS = 100;
 
+const stringValues = (value: unknown): Record<string, string> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter((entry) => typeof entry[1] === "string"));
+};
+
 const readValues = (path: string): Record<string, string> => {
   if (!existsSync(path)) return {};
   try {
-    const state = JSON.parse(readFileSync(path, "utf8")) as Partial<DesktopWorkbenchState> | null;
-    const values = state?.values;
-    if (!values || typeof values !== "object" || Array.isArray(values)) return {};
-    return Object.fromEntries(Object.entries(values).filter((entry) => typeof entry[1] === "string"));
+    const state = JSON.parse(readFileSync(path, "utf8")) as
+      | (Partial<DesktopWorkbenchState> & { selectedProjectId?: unknown; pageLocations?: unknown })
+      | null;
+    if (state?.values !== undefined) return stringValues(state.values);
+
+    // Earlier releases already kept project and page selection across restarts.
+    const values = Object.fromEntries(
+      Object.entries(stringValues(state?.pageLocations)).map(([projectId, location]) => [
+        `dashboard-wb2:page-location:${projectId}`,
+        location,
+      ]),
+    );
+    if (typeof state?.selectedProjectId === "string") {
+      values["dashboard-wb2:selected-project:global"] = state.selectedProjectId;
+    }
+    return values;
   } catch {
     // A missing or interrupted file starts with no saved workbench state.
     return {};
