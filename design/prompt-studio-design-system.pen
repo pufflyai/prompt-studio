@@ -29626,7 +29626,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 658
+                  "y": 665
                 },
                 {
                   "type": "frame",
@@ -69136,7 +69136,7 @@
               "id": "NDmPK",
               "name": "Section Note",
               "fill": "$ds-fg-muted",
-              "content": "Applies independently to Main, Secondary, and Side Panel. Attached menus have no internal header or X. Divider drag closes them; an icon-only dropdown action reattaches.",
+              "content": "Applies independently to Main, Secondary, and Side Panel. Dragging a divider closes an attached menu. Reopening attaches immediately when the panel is wider than 580px and the menu and minimum content widths fit; otherwise it floats.",
               "fontFamily": "$font-body",
               "fontSize": 12,
               "fontWeight": "normal"
@@ -69173,7 +69173,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": 1300,
-                  "content": "Tabs and the “+” sit on the left of the strip. Attached panel menus default to 280px and have no internal header or close action; they collapse by dragging the divider closed. Closed menus use directional panel-open icons instead of their content icons, and open as dropdowns where a single icon button reattaches them. The visible dropdown surface anchors directly below its own icon.",
+                  "content": "Tabs and the + sit on the left of the strip. Attached panel menus default to 280px and have no internal header or close action; they collapse by dragging the divider closed. Closed menus use directional panel-open icons. Opening attaches directly when the panel is wider than 580px and minimum menu widths, dividers, and content fit. Narrower panels and insufficient horizontal space produce a floating menu.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font-body",
                   "fontSize": 12,
@@ -70342,7 +70342,7 @@
           "type": "frame",
           "id": "ASFCn",
           "name": "F10 · Narrow Panel menu states",
-          "context": "Narrow panels collapse attached 280px menus into 2xs directional panel-open buttons in the panel header.",
+          "context": "Panel menus float only when their minimum width plus attached menus, dividers, and minimum content width cannot fit. No fixed panel-width threshold.",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 12,
@@ -70553,7 +70553,9 @@
                           "x": 412,
                           "y": 40,
                           "name": "Left Menu Dropdown",
+                          "context": "Floating menu fills all available height below its trigger; this stage illustrates the viewport bottom.",
                           "width": 190,
+                          "height": 212,
                           "fill": "$ds-bg",
                           "cornerRadius": "$overlay-radius",
                           "stroke": "$ds-accent",
@@ -70597,25 +70599,6 @@
                                   "name": "Dropdown Spacer",
                                   "width": "fill_container",
                                   "height": 2
-                                },
-                                {
-                                  "id": "eZfFc",
-                                  "type": "ref",
-                                  "ref": "nvvgg",
-                                  "name": "Reattach left menu",
-                                  "width": 24,
-                                  "height": 24,
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  },
-                                  "descendants": {
-                                    "k7mgm": {
-                                      "icon": "panel-left",
-                                      "width": 12,
-                                      "height": 12
-                                    }
-                                  }
                                 }
                               ]
                             },
@@ -70638,7 +70621,8 @@
                                   "content": "Primary"
                                 },
                                 "zFstx": {
-                                  "enabled": false
+                                  "enabled": false,
+                                  "width": 0
                                 },
                                 "OxQag": {
                                   "enabled": false
@@ -70664,7 +70648,8 @@
                                   "content": "Details"
                                 },
                                 "zFstx": {
-                                  "enabled": false
+                                  "enabled": false,
+                                  "width": 0
                                 },
                                 "OxQag": {
                                   "enabled": false
@@ -70690,7 +70675,8 @@
                                   "content": "Actions"
                                 },
                                 "zFstx": {
-                                  "enabled": false
+                                  "enabled": false,
+                                  "width": 0
                                 },
                                 "OxQag": {
                                   "enabled": false
@@ -71075,7 +71061,9 @@
                           "x": 446,
                           "y": 40,
                           "name": "Right Menu Dropdown",
+                          "context": "Floating menu fills all available height below its trigger; this stage illustrates the viewport bottom.",
                           "width": 190,
+                          "height": 212,
                           "fill": "$ds-bg",
                           "cornerRadius": "$overlay-radius",
                           "stroke": "$annotation",
@@ -71119,25 +71107,6 @@
                                   "name": "Dropdown Spacer",
                                   "width": "fill_container",
                                   "height": 2
-                                },
-                                {
-                                  "id": "t2YE4W",
-                                  "type": "ref",
-                                  "ref": "nvvgg",
-                                  "name": "Reattach right menu",
-                                  "width": 24,
-                                  "height": 24,
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  },
-                                  "descendants": {
-                                    "k7mgm": {
-                                      "icon": "panel-right",
-                                      "width": 12,
-                                      "height": 12
-                                    }
-                                  }
                                 }
                               ]
                             },
@@ -71160,7 +71129,8 @@
                                   "content": "Primary"
                                 },
                                 "zFstx": {
-                                  "enabled": false
+                                  "enabled": false,
+                                  "width": 0
                                 },
                                 "OxQag": {
                                   "enabled": false
@@ -71186,7 +71156,8 @@
                                   "content": "Details"
                                 },
                                 "zFstx": {
-                                  "enabled": false
+                                  "enabled": false,
+                                  "width": 0
                                 },
                                 "OxQag": {
                                   "enabled": false
@@ -71212,7 +71183,8 @@
                                   "content": "Actions"
                                 },
                                 "zFstx": {
-                                  "enabled": false
+                                  "enabled": false,
+                                  "width": 0
                                 },
                                 "OxQag": {
                                   "enabled": false
@@ -71232,7 +71204,7 @@
               "id": "P337L",
               "name": "Placement Rule",
               "fill": "$ds-fg-subtle",
-              "content": "Collapsed menus use directional panel-open icons. Their dropdown surface begins directly below its own visible 2xs button; no invisible wrapper, no shadow, no X close button.",
+              "content": "Floating menus begin directly below their visible directional opener and are as tall as their content. Taller content stops at the viewport's bottom edge and the body scrolls under the title. They have no shadow or X close button. More horizontal room restores attachment.",
               "fontFamily": "$font-body",
               "fontSize": 11,
               "fontWeight": "normal"
@@ -72196,7 +72168,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -91771,7 +91743,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -91843,7 +91815,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 989,
+              "y": 994,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -120812,7 +120784,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"

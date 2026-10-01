@@ -2,6 +2,7 @@ import { Box, Flex, type SystemStyleObject } from "@chakra-ui/react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
+  type RefObject,
   useEffect,
   useRef,
   useState,
@@ -93,6 +94,7 @@ interface ResizeHandleProps {
   resizeLabel: string;
   resolvedPanelSize: number;
   separator: ResizableSplitSeparator;
+  separatorRef: RefObject<HTMLDivElement | null>;
   onCollapse: () => void;
   onResizeKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -111,6 +113,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     resizeLabel,
     resolvedPanelSize,
     separator,
+    separatorRef,
     onCollapse,
     onResizeKeyDown,
     onResizeStart,
@@ -137,6 +140,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
   return (
     <Box
       css={css}
+      ref={separatorRef}
       data-collapsed={collapsed}
       role="separator"
       aria-label={resizeLabel}

@@ -1,7 +1,31 @@
 import { describe, expect, test } from "bun:test";
-import { getResizableSplitAxis, resolveDraggedPanelSize } from "./resizable-split-layout.geometry";
+import {
+  getResizableSplitAxis,
+  resolveDraggedPanelSize,
+  resolveResizableBounds,
+} from "./resizable-split-layout.geometry";
 
 describe("ResizableSplitLayout geometry", () => {
+  test("reserves the separator and minimum content width when sizing a panel", () => {
+    expect(
+      resolveResizableBounds({
+        rootSize: 410,
+        fallbackRootSize: 1200,
+        separatorSize: 1,
+        minSize: 144,
+        contentMinSize: 265,
+      }),
+    ).toEqual({ minSize: 144, maxSize: 144 });
+    expect(
+      resolveResizableBounds({
+        rootSize: 500,
+        fallbackRootSize: 1200,
+        separatorSize: 4,
+        minSize: 144,
+        contentMinSize: 120,
+      }),
+    ).toEqual({ minSize: 144, maxSize: 376 });
+  });
   test("maps bottom panels to a vertical split with a horizontal separator", () => {
     expect(getResizableSplitAxis("bottom")).toEqual({
       rootDirection: "column",
