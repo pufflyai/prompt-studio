@@ -23,14 +23,15 @@ Storybook.
 ## Panel menus
 
 Closing an attached panel menu hides it until its header opener is selected. The
-opener attaches the menu directly when its panel is wider than 480 px and has room
+opener attaches the menu directly when its panel is wider than 580 px and has room
 for the menu, other attached menus, resize handles, and at least 120 px of content.
-Menu minimum widths come from their contributions. Panels 480 px wide or narrower
+Menu minimum widths come from their contributions. Panels 580 px wide or narrower
 keep their full width for content, so their menus float even when a menu would fit.
 Menus that cannot be closed stay attached.
 
 When attachment is not allowed, the opener shows a floating menu below the button.
-The floating menu fills the available viewport height. It is a temporary view.
+The floating menu is as tall as its content. Taller content stops at the bottom
+of the viewport, and the menu body scrolls under its title. It is a temporary view.
 Opening or dismissing it does not change whether the menu is open.
 
 An open menu attaches again as soon as its panel is wide enough. When space is

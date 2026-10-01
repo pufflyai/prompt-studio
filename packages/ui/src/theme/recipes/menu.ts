@@ -92,7 +92,6 @@ export const menuSlotRecipe = defineSlotRecipe({
     variant: {
       panel: {
         content: {
-          height: "var(--available-height)",
           width: "64",
           minWidth: "64",
           maxWidth: "64",

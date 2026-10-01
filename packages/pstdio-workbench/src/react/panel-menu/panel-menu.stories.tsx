@@ -9,6 +9,7 @@ interface MenuWorkbenchOptions {
   closed?: readonly ("left" | "right")[];
   both?: boolean;
   menuMinPx?: number;
+  tall?: boolean;
 }
 
 const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
@@ -27,8 +28,10 @@ const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
       body: {
         kind: "react",
         render: () => (
-          <Box p="sm" overflow="auto" h="full">
-            <Text>Inspector details</Text>
+          <Box p="sm">
+            {(options.tall ? Array.from({ length: 80 }, (_, line) => line) : [0]).map((line) => (
+              <Text key={line}>Inspector details</Text>
+            ))}
           </Box>
         ),
       },
@@ -85,7 +88,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ReopenAttached: Story = {
-  args: { width: 600, menus: { closed: ["right"] } },
+  args: { width: 700, menus: { closed: ["right"] } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
@@ -98,7 +101,20 @@ export const ReopenAttached: Story = {
 };
 
 export const FloatingWhenNarrow: Story = {
-  args: { width: 400, menus: { closed: ["right"] } },
+  args: { width: 500, menus: { closed: ["right"] } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
+    const floating = await within(canvasElement.ownerDocument.body).findByRole("menu", {
+      name: "Main right menu controls",
+    });
+    // Short content keeps the floating menu short instead of stretching it to the viewport.
+    await waitFor(() => expect(floating.getBoundingClientRect().height).toBeLessThan(200));
+  },
+};
+
+export const FloatingTallContent: Story = {
+  args: { width: 500, menus: { closed: ["right"], tall: true } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
@@ -108,14 +124,19 @@ export const FloatingWhenNarrow: Story = {
     await waitFor(() => {
       const bounds = floating.getBoundingClientRect();
       const viewport = canvasElement.ownerDocument.defaultView!.innerHeight;
-      expect(bounds.height).toBeGreaterThan(viewport - bounds.top - 20);
       expect(bounds.bottom).toBeLessThanOrEqual(viewport);
+      expect(bounds.height).toBeGreaterThan(viewport - bounds.top - 20);
     });
+    const scroller = within(floating).getAllByText("Inspector details").at(-1)!;
+    scroller.scrollIntoView();
+    await waitFor(() =>
+      expect(scroller.getBoundingClientRect().bottom).toBeLessThanOrEqual(floating.getBoundingClientRect().bottom),
+    );
   },
 };
 
 export const BothMenusAttached: Story = {
-  args: { width: 600, menus: { both: true } },
+  args: { width: 700, menus: { both: true } },
   play: async ({ canvasElement }) => {
     for (const side of ["left", "right"]) {
       await waitFor(() =>
@@ -132,11 +153,11 @@ export const BothMenusAttached: Story = {
 };
 
 export const OneMenuFits: Story = {
-  args: { width: 510, menus: { both: true, menuMinPx: 200 } },
+  args: { width: 650, menus: { both: true, menuMinPx: 300 } },
 };
 
 export const FloatingPeekKeepsAttachedMenu: Story = {
-  args: { width: 510, menus: { both: true, closed: ["left"], menuMinPx: 200 } },
+  args: { width: 650, menus: { both: true, closed: ["left"], menuMinPx: 300 } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const rightMenu = () => canvasElement.querySelector('[data-workbench-panel-menu="main-right"]');
@@ -155,7 +176,7 @@ export const FloatingPeekKeepsOpenPreference: Story = {
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
     await within(canvasElement.ownerDocument.body).findByRole("menu", { name: "Main right menu controls" });
     await userEvent.keyboard("{Escape}");
-    canvas.getByTestId("panel-menu-story-frame").style.width = "600px";
+    canvas.getByTestId("panel-menu-story-frame").style.width = "700px";
     await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel-menu="main-right"]')).toBeVisible());
   },
 };
