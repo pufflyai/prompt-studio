@@ -27,7 +27,7 @@ const getDispatchStartedEntryForSession = async (deps: Deps, sessionId: string) 
   return entries.find((entry) => entry.session_id === sessionId);
 };
 
-type OrphanedSession = Awaited<ReturnType<Deps["sessionService"]["listByStatus"]>>[number];
+type OrphanedSession = Awaited<ReturnType<Deps["sessionService"]["listActive"]>>[number];
 
 class RetryableSessionReattachError extends Error {
   readonly retryable = true;
@@ -132,7 +132,9 @@ const resolveOrphanedSession = async (deps: Deps, session: OrphanedSession, sign
   }
 };
 
+// Every active session had a live process before the restart, including one that was waiting
+// on a question, so the sweep covers both.
 export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) => {
-  const staleSessions = await deps.sessionService.listByStatus("in_progress");
+  const staleSessions = await deps.sessionService.listActive();
   await Promise.all(staleSessions.map((session) => resolveOrphanedSession(deps, session, signal)));
 };

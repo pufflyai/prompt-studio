@@ -35,11 +35,21 @@ Local harnesses receive a working directory. Remote-capable harnesses consume th
 
 The harness's `done` and `stop` contracts own completion and cancellation. Do not infer completion from a rendered message part, a closed delivery buffer, or a frontend timeout.
 
+When a harness cannot continue without the person, it asks through the host question channel on `HarnessStartInput.questions`. The host sets the session to `awaiting_input` while an ask is open and resolves the ask with the answer, so the same run finishes the turn. Waiting for the agent's own background work is not a question: that session is still working and stays `in_progress`. Status stays host-owned; see [session status lifecycle](0019-session-status-lifecycle.md).
+
+### Persistent worker cleanup
+
+`HarnessProvider.dispose(ctx)` is an optional public cleanup callback for workers and connections that stay alive across turns. Finishing a turn does not call it. The host calls it once for each context scope that used the provider. `ctx.projectId` identifies a project scope; an absent project ID identifies host-scoped discovery. A provider must release only resources from that scope.
+
+Source reload and removal retire the affected provider handles. Disabling a provider in one project releases that project's resources even without another prompt. Rebuilding webview metadata keeps workers from unchanged provider modules. Replacement workers wait for earlier cleanup. Host shutdown awaits cleanup before closing storage. Retired handles reject new provider calls.
+
+The callback must stop pending startup and active work, settle active runs' `done` promises, and wait for owned resources to terminate. It must preserve native conversation history. Providers may be used again in a later host lifecycle and must allow fresh resources then. A cleanup failure is reported and blocks replacement in that scope; it does not skip other providers' cleanup.
+
 ## Provider protocols
 
 | Extension | Provider integration |
 | --- | --- |
-| [Claude Code](../../../extensions/harness-claude-code) | Child-process streaming and approvals; resume uses the provider session identity and the complete saved baseline. |
+| [Claude Code](../../../extensions/harness-claude-code) | Child-process streaming and approvals; stdin stays open across turns so background tasks keep running, and the run ends when a turn finishes with no task left; resume uses the provider session identity and the complete saved baseline. |
 | [OpenCode](../../../extensions/harness-open-code) | Provider HTTP/session API and transcript snapshots; the adapter converts model strings to provider-specific payloads. |
 | [Codex](../../../extensions/harness-codex) | Provider events and native rollout reconciliation; provider-specific message formats stay in the harness. |
 

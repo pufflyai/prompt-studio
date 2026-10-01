@@ -54,6 +54,7 @@ export type HarnessHandle = {
   reattach(input: HarnessReattachInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   getMessages(input: HarnessMessagesInput, options?: HarnessCallOptions): Promise<SessionMessage[]>;
   recoverMessages(input: HarnessRecoveryInput, options?: HarnessCallOptions): Promise<HarnessRecoveryResult>;
+  dispose(): Promise<void>;
 };
 
 export type HarnessRegistry = {
@@ -61,6 +62,7 @@ export type HarnessRegistry = {
   list(): HarnessHandle[];
   /** Namespaced ids that appeared more than once; last install won. */
   duplicates: string[];
+  dispose(): Promise<void>;
 };
 
 const FAILED_EXIT: HarnessExit = { status: "failed" };
@@ -140,7 +142,24 @@ const validateDeclaredHarnessParams = (schema: HarnessParamsSchema, params: Harn
 };
 
 const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFactory): HarnessHandle => {
-  const ctx = (options?: HarnessCallOptions) => Promise.resolve(buildContext(record, options));
+  const contexts = new Map<string | undefined, Promise<HarnessContext>>();
+  let closing: Promise<void> | undefined;
+  let disposed = false;
+  const ensureActive = () => {
+    if (disposed) throw new Error(`Harness has been disposed: ${record.id}`);
+  };
+  const ctx = async (options?: HarnessCallOptions) => {
+    ensureActive();
+    const key = options?.projectId;
+    let value = contexts.get(key);
+    if (!value) {
+      value = Promise.resolve().then(() => buildContext(record, options));
+      contexts.set(key, value);
+    }
+    const context = await value;
+    ensureActive();
+    return context;
+  };
   const provider = record.provider;
   if (provider.getMessages && !provider.recoverMessages) {
     throw new Error(`Harness with native history must provide recoverMessages: ${record.id}`);
@@ -189,6 +208,22 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
       provider.recoverMessages
         ? provider.recoverMessages(await ctx(options), input)
         : { kind: "recovered", messages: [...input.knownMessages] },
+    dispose: () => {
+      disposed = true;
+      closing ??= (async () => {
+        const results = await Promise.allSettled(
+          [...contexts.values()].map((context) =>
+            context.then(
+              (value) => provider.dispose?.(value),
+              () => undefined,
+            ),
+          ),
+        );
+        const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+        if (errors.length) throw new AggregateError(errors, `Harness cleanup failed: ${record.id}`);
+      })();
+      return closing;
+    },
   };
 };
 
@@ -208,5 +243,10 @@ export const createHarnessRegistry = (
     get: (id) => handles.get(id) ?? null,
     list: () => [...handles.values()],
     duplicates,
+    dispose: async () => {
+      const results = await Promise.allSettled([...handles.values()].map((handle) => handle.dispose()));
+      const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (errors.length) throw new AggregateError(errors, "Harness registry cleanup failed.");
+    },
   };
 };

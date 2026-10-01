@@ -76,7 +76,7 @@ create / follow-up ──► queued ──► in_progress
                            │   awaiting_input  completed     failed      cancelled
                            │          │                                  (via stop)
                            │          ▼
-                           └──── in_progress (on approval response)
+                           └──── in_progress (on answer)
 ```
 
 - Create session → `in_progress` or `queued`, depending on runtime capacity
@@ -84,7 +84,7 @@ create / follow-up ──► queued ──► in_progress
 - Queued session drain → `in_progress`
 - Harness completes successfully → `completed`
 - Harness fails → `failed`
-- Approval request → `awaiting_input`
+- Harness asks the person a question → `awaiting_input`; the answer returns it to `in_progress`
 - User stop → `cancelled`; the harness owns cancellation and process cleanup
 - Transport/fetch error during follow-up → `failed` + error in cached messages
 
@@ -129,6 +129,8 @@ Rules:
 4. Follow-up without a request `model` reuses `last_selected_model` only when the agent is unchanged.
 5. Switching agents clears the previous `agent_session_id`; the new session's `last_selected_model` is the provided request model or `null`.
 6. Provider adapters own provider-specific model payload translation. The session layer only passes model strings.
+
+The dashboard restores harness parameters from the session's `params_json` alongside its agent and model. Unrelated sync updates keep unsent parameter picks. For a new conversation, the project-local recent harness selection remembers explicit parameters with the agent and model. Parameters are checked against the selected model's schema once its catalog is loaded. Resetting a parameter sends its default value explicitly, so the server can replace the previous saved value.
 
 ### 2) Planner ticket attempt — `pstdio-planner.run-attempt`
 

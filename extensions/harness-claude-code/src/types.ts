@@ -13,6 +13,8 @@ export type ClaudeCodeTranscriptEntry = {
     content: string | ClaudeCodeContentBlock[];
   };
   toolUseResult?: unknown;
+  /** Claude tags entries it wrote itself, such as the note that wakes it when a background task ends. */
+  origin?: { kind?: string };
 };
 
 export type RawLogEvent =

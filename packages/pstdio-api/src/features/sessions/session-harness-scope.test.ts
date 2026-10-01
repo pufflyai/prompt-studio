@@ -57,7 +57,7 @@ describe("project-scoped session harness reads", () => {
         remove: async () => {},
       },
       sessionService: {
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         store: { get: () => null, remove: () => {} },
         transitionStatus,
       },
@@ -236,7 +236,7 @@ describe("project-scoped session harness reads", () => {
       harnessRegistry: registry,
       sessionQueueEntriesService: { listDispatchStarted: async () => [], remove: async () => {} },
       sessionService: {
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         store: {
           get: () => null,
           remove: () => {},

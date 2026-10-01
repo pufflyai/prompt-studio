@@ -5,7 +5,7 @@ import { type ExtensionConnectionsApi, isLocalizedString } from "pstdio-api-cont
 import type { HarnessContextFactory, HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { loadExtensionSources, normalizeExtensionSources, type RuntimeHarnessRecord } from "pstdio-extensions";
+import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { installDefaultExtensions } from "../extensions/default-extensions";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
@@ -13,6 +13,7 @@ import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
 import type { ProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import type { ProjectExtensionRuntimeSnapshot } from "../extensions/project-extension-runtime-snapshot";
+import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
 import { createHarnessStateApi } from "./harness-state";
 
 export type HarnessScopeOptions = {
@@ -25,6 +26,7 @@ export type HarnessRegistryService = {
   get(id: string, options?: HarnessScopeOptions): Promise<HarnessHandle | null>;
   /** Drop the host-wide registry so the next call rebuilds. Call when extension sources reload in place. */
   invalidate(): void;
+  dispose(): Promise<void>;
 };
 
 type SourceKind = "local_path" | "git" | "registry";
@@ -62,7 +64,7 @@ const harnessLogger = (extensionId: string) => ({
 // its own loading over the user extensions root plus registered sources.
 export const createHarnessRegistryService = (input: {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
-  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "get">;
+  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "get" | "subscribeInvalidation">;
   /** Override the expensive host-scope load+normalize+build. Tests inject a counting fake. */
   buildRegistry?: (input: BuildRegistryInput) => Promise<HarnessRegistry>;
   installDefaultExtensions?: typeof installDefaultExtensions;
@@ -116,21 +118,21 @@ export const createHarnessRegistryService = (input: {
   };
 
   const defaultBuildRegistry = async ({ paths }: BuildRegistryInput) => {
+    ensureActive();
+    const generation = resolutionGeneration;
     const loaded = await loadExtensionSources({
       extensionPackages: [...paths.entries()].map(([path, sourceKind]) => ({ path, sourceKind })),
     });
+    if (generation !== resolutionGeneration) return null;
     const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
-    return toRegistry(runtime.harnesses);
+    return lifecycle.get(runtime.harnesses);
   };
 
-  const toRegistry = (records: RuntimeHarnessRecord[]) => {
-    const registry = createHarnessRegistry(records, buildContext);
-
-    for (const id of registry.duplicates) {
-      apiLogger.warn({ event: "harness.duplicate_id", harness_id: id }, "Duplicate harness id; last install wins");
-    }
-
-    return registry;
+  const lifecycle = createHarnessRegistryLifecycle((records) => createHarnessRegistry(records, buildContext));
+  let closed = false;
+  let resolutionGeneration = 0;
+  const ensureActive = () => {
+    if (closed) throw new Error("Harness registry has been disposed.");
   };
 
   const buildRegistry = input.buildRegistry ?? defaultBuildRegistry;
@@ -169,7 +171,10 @@ export const createHarnessRegistryService = (input: {
 
   // Re-evaluate each handle's `detect()` at most once per TTL so polling endpoints
   // don't spawn `<cli> --version` on every request.
-  const withDetectCache = (registry: HarnessRegistry): HarnessRegistry => {
+  const createRegistryView = (registry: HarnessRegistry): HarnessRegistry => {
+    for (const id of registry.duplicates) {
+      apiLogger.warn({ event: "harness.duplicate_id", harness_id: id }, "Duplicate harness id; last install wins");
+    }
     const detectCache = new Map<string, { at: number; result: ReturnType<HarnessHandle["detect"]> }>();
     const wrap = (handle: HarnessHandle): HarnessHandle => ({
       ...handle,
@@ -188,6 +193,7 @@ export const createHarnessRegistryService = (input: {
       duplicates: registry.duplicates,
       list: () => [...handles.values()],
       get: (id) => handles.get(id) ?? null,
+      dispose: () => registry.dispose(),
     };
   };
 
@@ -196,14 +202,29 @@ export const createHarnessRegistryService = (input: {
   // object, which rebuilds the handles while keeping the detect() memo per build.
   const projectRegistries = new Map<string, { snapshot: ProjectExtensionRuntimeSnapshot; registry: HarnessRegistry }>();
 
-  const resolveProjectRegistry = async (projectId: string) => {
-    const snapshot = await input.extensionRuntimeCatalog.get(projectId);
-    const cached = projectRegistries.get(projectId);
-    if (cached && cached.snapshot === snapshot) return cached.registry;
-
-    const registry = withDetectCache(toRegistry(snapshot.runtime.harnesses));
-    projectRegistries.set(projectId, { snapshot, registry });
-    return registry;
+  const projectLoads = new Map<string, Promise<HarnessRegistry>>();
+  const loadProjectRegistry = async (projectId: string) => {
+    for (;;) {
+      ensureActive();
+      const generation = resolutionGeneration;
+      const snapshot = await input.extensionRuntimeCatalog.get(projectId);
+      const cached = projectRegistries.get(projectId);
+      if (cached && cached.snapshot === snapshot) return cached.registry;
+      const loaded = await lifecycle.get(snapshot.runtime.harnesses, projectId);
+      ensureActive();
+      if (generation !== resolutionGeneration) continue;
+      const registry = createRegistryView(loaded);
+      projectRegistries.set(projectId, { snapshot, registry });
+      return registry;
+    }
+  };
+  const resolveProjectRegistry = (projectId: string) => {
+    let loading = projectLoads.get(projectId);
+    if (!loading) {
+      loading = loadProjectRegistry(projectId).finally(() => projectLoads.delete(projectId));
+      projectLoads.set(projectId, loading);
+    }
+    return loading;
   };
 
   // The host path set fully determines the registry, so reuse the build until that
@@ -218,16 +239,28 @@ export const createHarnessRegistryService = (input: {
       .map(([path, kind]) => `${path}:${kind}`)
       .join("|")}#${hostGeneration}`;
 
-  const resolveHostRegistry = async () => {
-    await ensureDefaultExtensionsInstalled();
-
-    const paths = await listHostPaths();
-    const signature = hostSignatureOf(paths);
-    if (hostCache && hostCache.signature === signature) return hostCache.registry;
-
-    const registry = withDetectCache(await buildRegistry({ paths }));
-    hostCache = { signature, registry };
-    return registry;
+  let hostLoad: Promise<HarnessRegistry> | undefined;
+  const loadHostRegistry = async () => {
+    for (;;) {
+      ensureActive();
+      const generation = resolutionGeneration;
+      await ensureDefaultExtensionsInstalled();
+      const paths = await listHostPaths();
+      const signature = hostSignatureOf(paths);
+      if (hostCache && hostCache.signature === signature) return hostCache.registry;
+      const loaded = await buildRegistry({ paths });
+      ensureActive();
+      if (!loaded || generation !== resolutionGeneration) continue;
+      const registry = createRegistryView(loaded);
+      hostCache = { signature, registry };
+      return registry;
+    }
+  };
+  const resolveHostRegistry = () => {
+    hostLoad ??= loadHostRegistry().finally(() => {
+      hostLoad = undefined;
+    });
+    return hostLoad;
   };
 
   const resolveRegistry = (options?: HarnessScopeOptions) => {
@@ -235,11 +268,40 @@ export const createHarnessRegistryService = (input: {
     return resolveHostRegistry();
   };
 
+  const unsubscribe = input.extensionRuntimeCatalog.subscribeInvalidation((change) => {
+    resolutionGeneration += 1;
+    if (change.reason === "source_changed") lifecycle.invalidate({ sourcePath: change.sourcePath });
+    if (change.reason === "project_workspace_changed") lifecycle.invalidate({ projectId: change.projectId });
+    if (change.reason === "webviews_built") return;
+    hostGeneration += 1;
+    const projects = [...projectRegistries.keys()].filter((id) => !change.projectId || id === change.projectId);
+    for (const id of projects) projectRegistries.delete(id);
+    // Disablement must release workers even if the user never sends another turn.
+    for (const projectId of projects) {
+      resolveProjectRegistry(projectId).catch((err) => {
+        if (!closed)
+          apiLogger.error({ err, event: "harness.cleanup.error", project_id: projectId }, "Harness refresh failed");
+      });
+    }
+    if (hostCache)
+      resolveHostRegistry().catch((err) => {
+        if (!closed) apiLogger.error({ err, event: "harness.cleanup.error" }, "Host harness refresh failed");
+      });
+  });
+
   return {
     list: async (options) => (await resolveRegistry(options)).list(),
     get: async (id, options) => (await resolveRegistry(options)).get(id),
     invalidate: () => {
       hostGeneration += 1;
+      resolutionGeneration += 1;
+    },
+    dispose: async () => {
+      closed = true;
+      unsubscribe();
+      const results = await Promise.allSettled([lifecycle.dispose(), hostCache?.registry.dispose()]);
+      const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (errors.length) throw new AggregateError(errors, "Harness registry cleanup failed.");
     },
   };
 };

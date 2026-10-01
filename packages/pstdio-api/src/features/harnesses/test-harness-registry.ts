@@ -74,5 +74,6 @@ export const createTestHarnessRegistry = (
     list: async (scope) => registry.list().filter((handle) => !isDisabled(handle.id, scope?.projectId)),
     get: async (id, scope) => (isDisabled(id, scope?.projectId) ? null : registry.get(id)),
     invalidate: () => {},
+    dispose: () => registry.dispose(),
   };
 };

@@ -2,6 +2,8 @@
 
 The Planner extension provides tickets, managed attempts, reviews, and ticket workflow settings.
 
+Use **Open tickets** in the dashboard command palette to open the current project's Tickets board.
+
 ## Implementation options
 
 Open Settings → Planner → Implementation to configure the `implement-ticket` workflow:

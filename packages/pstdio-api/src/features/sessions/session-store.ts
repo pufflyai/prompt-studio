@@ -3,14 +3,23 @@ import type {
   ApprovalService,
   EventStore,
   HarnessSession,
+  QuestionService,
   SessionMessage,
 } from "pstdio-api-contracts";
-import { createApprovalService, createEventStore } from "pstdio-api-runtime-host";
+import { createApprovalService, createEventStore, createQuestionService } from "pstdio-api-runtime-host";
 import { createSessionConversation, type SessionConversation } from "./session-conversation";
+
+/** What the host does when a per-session channel signals. The store has no session service of its own. */
+export type SessionChannelHooks = {
+  onApprovalRequest: (request: ApprovalRequest) => void;
+  onQuestionAsked: () => unknown;
+  onQuestionAnswered: () => unknown;
+};
 
 export type ActiveSession = {
   eventStore: EventStore & { close(): void };
   approvalService: ApprovalService;
+  questionService: QuestionService;
   session: HarnessSession | null;
   cancellationRequested: boolean;
   submittedAttachmentFileIds: Set<string>;
@@ -18,28 +27,31 @@ export type ActiveSession = {
   checkpointPromise?: Promise<SessionMessage[] | null>;
 };
 
-// In-memory registry of active sessions (EventStore + ApprovalService + harness session per session)
+// In-memory registry of active sessions (EventStore + channels + harness session per session)
 export const createSessionStore = () => {
   const sessions = new Map<string, ActiveSession>();
 
   const create = (
     sessionId: string,
-    onApprovalRequest: (request: ApprovalRequest) => void,
+    hooks: SessionChannelHooks,
     initialize?: (previous: ActiveSession | undefined) => Promise<SessionMessage[]>,
   ) => {
     const existing = sessions.get(sessionId);
     if (existing && !initialize) {
       existing.eventStore.close();
       existing.approvalService.dispose();
+      existing.questionService.dispose();
     }
 
     const eventStore = createEventStore();
-    const approvalService = createApprovalService(onApprovalRequest);
+    const approvalService = createApprovalService(hooks.onApprovalRequest);
+    const questionService = createQuestionService({ onAsk: hooks.onQuestionAsked, onAnswer: hooks.onQuestionAnswered });
     const ready = Promise.withResolvers<SessionConversation>();
 
     const entry: ActiveSession = {
       eventStore,
       approvalService,
+      questionService,
       session: null,
       cancellationRequested: false,
       submittedAttachmentFileIds: new Set(),
@@ -61,6 +73,7 @@ export const createSessionStore = () => {
           }
           eventStore.close();
           approvalService.dispose();
+          questionService.dispose();
           ready.reject(error);
         });
     } else ready.resolve(createSessionConversation(eventStore));
@@ -89,6 +102,7 @@ export const createSessionStore = () => {
     entry.eventStore.close();
     void entry.conversationReady.then((conversation) => conversation.close()).catch(() => undefined);
     entry.approvalService.dispose();
+    entry.questionService.dispose();
     sessions.delete(sessionId);
   };
 
