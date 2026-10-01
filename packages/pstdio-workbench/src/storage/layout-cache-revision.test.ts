@@ -21,11 +21,10 @@ test("invalidates the changed layout cache while preserving locations and indepe
   persistence.pageLocationPersistence.save("one", { location });
   persistence.treePersistence.setTreeStates(trees);
   persistence.panelMenuStatePersistence.setMenuStates(menus);
-  persistence.sidePanelPersistence.setMode("floating");
   storage.setItem(
     workbenchStoragePersistenceKey("revision", "layout", "project/one"),
     JSON.stringify({
-      version: 3,
+      version: 4,
       layout: createDefaultWorkbenchLayout(),
     }),
   );
@@ -34,6 +33,5 @@ test("invalidates the changed layout cache while preserving locations and indepe
   expect(persistence.pageLocationPersistence.load("one")).toEqual({ location });
   expect(persistence.treePersistence.getTreeStates()).toEqual(trees);
   expect(persistence.panelMenuStatePersistence.getMenuStates()).toEqual(menus);
-  expect(persistence.sidePanelPersistence.getMode()).toBe("floating");
   persistence.snapshotPersistence.dispose?.();
 });

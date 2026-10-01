@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { createLocalStorageWorkbenchPersistence } from "../storage";
 import { createWorkbench, type WorkbenchModuleContribution } from "./workbench-core";
 
 describe("workbench modules", () => {
@@ -19,6 +20,23 @@ describe("workbench modules", () => {
       regions: { ...layout.regions, sidenav: { ...layout.regions.sidenav, visible: false } },
     });
     expect(workbench.shell.getRegionState("sidenav").open).toBe(false);
+  });
+
+  it("saves pending layout changes and releases persistence listeners when disposed", async () => {
+    const values = new Map<string, string>();
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: values.set.bind(values) };
+    const listeners = new Set<() => void>();
+    const eventTarget = {
+      addEventListener: (_type: "pagehide", listener: () => void) => void listeners.add(listener),
+      removeEventListener: (_type: "pagehide", listener: () => void) => void listeners.delete(listener),
+    };
+    const persist = () => createLocalStorageWorkbenchPersistence({ namespace: "dispose", storage, eventTarget });
+    const first = createWorkbench({ ...persist(), initialSidePanelMode: "closed" });
+    first.sidePanel.setMode("attached");
+    await first.dispose();
+
+    expect(listeners.size).toBe(0);
+    expect(createWorkbench({ ...persist(), initialSidePanelMode: "closed" }).sidePanel.getMode()).toBe("attached");
   });
 
   it("does not retain focus in a closed region", () => {

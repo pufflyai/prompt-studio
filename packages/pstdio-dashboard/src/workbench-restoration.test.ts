@@ -29,6 +29,7 @@ const sessionResource = {
 const seedSyncedRows = () => {
   getWriter("projects")?.truncateAndWrite([
     { id: "project-1", name: "Project one", created_at: "2026-01-01T00:00:00.000Z" },
+    { id: "project-2", name: "Project two", created_at: "2026-01-01T00:00:00.000Z" },
   ]);
   getWriter("sessions")?.truncateAndWrite([
     {
@@ -55,9 +56,9 @@ const sidePanelSessionUris = (workbench: ReturnType<typeof createDashboardWorkbe
     .listPanelInstances("side")
     .filter((panel) => panel.resource?.type === "session")
     .map((panel) => resourceKey(panel.resource));
-const selectProject = (workbench: ReturnType<typeof createDashboardWorkbench>) =>
+const selectProject = (workbench: ReturnType<typeof createDashboardWorkbench>, projectId = "project-1") =>
   workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
-    project: { id: "project-1", name: "Project one" },
+    project: { id: projectId, name: projectId },
   });
 // Synced rows are process-wide; leave the tables empty so other suites start clean.
 afterEach(() => {
@@ -67,6 +68,52 @@ afterEach(() => {
   getWriter("workspace_sessions")?.truncateAndWrite([]);
 });
 describe("createDashboardWorkbench restoration", () => {
+  test("keeps each project's Side Panel presentation when switching projects", async () => {
+    const storage = createStorage();
+    seedSyncedRows();
+    const workbench = createDashboardWorkbench({ storage });
+    await selectProject(workbench, "project-2");
+    workbench.sidePanel.setMode("attached");
+    await selectProject(workbench);
+    expect(workbench.sidePanel.getMode()).toBe("closed");
+    workbench.sidePanel.setMode("floating");
+    workbench.sidePanel.setMode("closed");
+    await selectProject(workbench, "project-2");
+    expect(workbench.sidePanel.getMode()).toBe("attached");
+  });
+
+  test("restores each project's Side Panel presentation after reload", async () => {
+    const storage = createStorage();
+    seedSyncedRows();
+    const first = createDashboardWorkbench({ storage });
+    await selectProject(first, "project-2");
+    first.sidePanel.setMode("attached");
+    await selectProject(first);
+    first.sidePanel.setMode("attached");
+    first.sidePanel.setMode("closed");
+    await first.dispose();
+    const second = createDashboardWorkbench({ storage });
+    await flushMicrotasks();
+    expect(second.sidePanel.getMode()).toBe("closed");
+    await selectProject(second, "project-2");
+    expect(second.sidePanel.getMode()).toBe("attached");
+    await selectProject(second);
+    expect(second.sidePanel.getMode()).toBe("closed");
+  });
+
+  test("restores project chrome changed on a page after reload", async () => {
+    const storage = createStorage();
+    seedSyncedRows();
+    const first = createDashboardWorkbench({ storage });
+    await selectProject(first);
+    await flushMicrotasks();
+    first.layout.setRegionSize("sidenav", 333);
+    await first.dispose();
+    const second = createDashboardWorkbench({ storage });
+    await flushMicrotasks();
+    expect(second.layout.getLayout().regions.sidenav.size).toBe(333);
+  });
+
   test("restores the Side Panel presentation, its session, and the unsent chat draft", async () => {
     const storage = createStorage();
     seedSyncedRows();
@@ -81,6 +128,7 @@ describe("createDashboardWorkbench restoration", () => {
       projectSelection: { getSelectedProjectId: () => "project-1" },
     });
     drafts.setDraft("session-1", "unsent reply");
+    await first.dispose();
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
     expect(second.sidePanel.getMode()).toBe("attached");

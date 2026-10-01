@@ -50,13 +50,13 @@ Tab labels resolve from explicit tab presentation, then resource label, then vie
 
 Use `shell.setRegionOpen("side" | "secondary" | "sidenav", open)` to hide or show a region. Hiding retains its instances. Mode `regionSettings` owns size, collapsibility, headers, and tab visibility. `mountStrategy: "keep-mounted"` keeps an inactive tab's content mounted; removing its owner disposes it.
 
-The side-panel controller owns attached, floating, or closed presentation. `floatingPanels: "hidden"` prevents floating and reattaches an already floating panel. Per-view menu preferences belong to `panelMenuState`; they do not duplicate region visibility.
+The layout's `side` region stores the Side Panel presentation: `visible` says whether it is open, and `presentation` says attached or floating. The side-panel controller reads and changes it under the active mode's floating policy. `floatingPanels: "hidden"` prevents floating and shows a floating choice attached until floating is allowed again. Per-view menu preferences belong to `panelMenuState`; they do not duplicate region visibility.
 
 ## Persistence
 
 The browser owns Back/Forward history. Page locations remain version 1. Existing resource locations and stored product data stay valid.
 
-Layout cache version 4 records resource identity keys and the new Main collection model. Old layout entries are ignored. This revision does not invalidate tree state, menu preferences, side-panel presentation, or page locations. Collection page state uses the existing location key to separate workspaces.
+Layout cache version 5 makes the `side` region's visibility the Side Panel's open state; older entries saved a side visibility that never meant open. Old layout entries are ignored, so the Side Panel presentation resets with them. This revision does not invalidate tree state, menu preferences, or page locations. Collection page state uses the existing location key to separate workspaces.
 
 Shared mode placements have one cache entry per project and mode. Page cache entries exclude them. Closing a shared panel therefore remains closed when another page is restored; switching projects does not restore another project's mode panels.
 

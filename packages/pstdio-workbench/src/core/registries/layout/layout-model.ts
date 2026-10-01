@@ -15,6 +15,7 @@ import {
   setLocationSubPanelSelection,
 } from "./layout-operations";
 import { createLayoutPlacementMethods } from "./layout-placement-methods";
+import { createLayoutRegionMethods } from "./layout-region-methods";
 import { resolveScopedLayout } from "./layout-scope";
 import { createLayoutScopeMethods } from "./layout-scope-methods";
 import {
@@ -69,6 +70,7 @@ export type {
   WorkbenchRegionSettings,
   WorkbenchRegionSize,
   WorkbenchRegionState,
+  WorkbenchSidePanelMode,
   WorkbenchTabAction,
   WorkbenchTabMenuGroup,
   WorkbenchTabMenuRow,
@@ -185,14 +187,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     store.setState({ ...snapshot, layout }, false, "setLayout");
   };
 
-  const updateRegion = (regionId: WorkbenchRegion, update: (region: WorkbenchRegionState) => WorkbenchRegionState) => {
-    const layout = getLayout();
-    const region = layout.regions[regionId];
-    const nextRegion = update(region);
-    if (nextRegion === region) return;
-    setLayout({ ...layout, regions: { ...layout.regions, [regionId]: nextRegion } });
-    persistLayout();
-  };
+  const regionMethods = createLayoutRegionMethods({ getLayout, setLayout, persistLayout });
 
   const applyAndActivate = (
     layout: WorkbenchLayout,
@@ -275,13 +270,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     getRegionCollapsible: regionQueries.getRegionCollapsible,
     getRegionHeaderBorderBottom: regionQueries.getRegionHeaderBorderBottom,
 
-    setRegionVisible(regionId, visible) {
-      updateRegion(regionId, (region) => (region.visible === visible ? region : { ...region, visible }));
-    },
-
-    setRegionSize(regionId, size) {
-      updateRegion(regionId, (region) => (region.size === size ? region : { ...region, size }));
-    },
+    ...regionMethods,
 
     listPlaceholders: contributionLists.listPlaceholders,
     listWidgets: contributionLists.listWidgets,

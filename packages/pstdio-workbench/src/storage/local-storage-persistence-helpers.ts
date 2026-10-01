@@ -14,7 +14,6 @@ export type WorkbenchStoragePersistenceKind =
   | "layout-scope-index"
   | "panel-menus"
   | "page-location"
-  | "side-panel"
   | "tree";
 
 export interface CreateWorkbenchStoragePersistenceInput {

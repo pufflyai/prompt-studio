@@ -15,6 +15,7 @@ import type {
   WorkbenchRegion,
   WorkbenchRegionSettings,
   WorkbenchRegionSize,
+  WorkbenchSidePanelMode,
   WorkbenchTabPosition,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
@@ -59,6 +60,7 @@ export interface LayoutModel {
   getRegionHeaderBorderBottom(regionId: WorkbenchRegion): boolean;
   setRegionVisible(regionId: WorkbenchRegion, visible: boolean): void;
   setRegionSize(regionId: WorkbenchRegion, size: number): void;
+  setSidePanelMode(mode: WorkbenchSidePanelMode): void;
   listPlaceholders(): RegisteredPlaceholderContribution[];
   listWidgets(): RegisteredWidgetContribution[];
   listPanels(): WorkbenchPanelContribution[];

@@ -42,25 +42,23 @@ describe("dashboard persistence scope", () => {
     });
   });
   test("restores the incoming mode's inspector instead of carrying another mode's side panel", () => {
-    for (const currentScope of ["project/project-1", "project/project-1/mode/project/page/start"]) {
-      const result = resolveDashboardPersistenceScope({
-        currentScope,
-        modeId: "kiln",
-        pageId: "kiln",
-        projectId: "project-1",
-      });
-      expect(result.carryRegions).toContain("sidenav");
-      expect(result.carryRegions).not.toContain("side");
-      expect(result.carryRegions).not.toContain("side-header");
-    }
+    const result = resolveDashboardPersistenceScope({
+      currentScope: "project/project-1/mode/project/page/start",
+      modeId: "kiln",
+      pageId: "kiln",
+      projectId: "project-1",
+    });
+    expect(result.carryRegions).toContain("sidenav");
+    expect(result.carryRegions).not.toContain("side");
+    expect(result.carryRegions).not.toContain("side-header");
   });
-  test("retains project session panels when restoring a project page from its root scope", () => {
+  test("restores a page's own saved chrome when entering from the project root scope", () => {
     const result = resolveDashboardPersistenceScope({
       currentScope: "project/project-1",
       modeId: "project",
       pageId: "tickets",
       projectId: "project-1",
     });
-    expect(result.carryRegions).toContain("side");
+    expect(result.carryRegions).toEqual([]);
   });
 });

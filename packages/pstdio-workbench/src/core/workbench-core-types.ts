@@ -16,7 +16,6 @@ import type { WorkbenchShellController } from "./controllers/shell/shell-control
 import type {
   WorkbenchSidePanelController,
   WorkbenchSidePanelMode,
-  WorkbenchSidePanelPersistenceAdapter,
 } from "./controllers/side-panel/side-panel-controller";
 import type { WorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
 import type { CommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
@@ -180,7 +179,6 @@ export interface createWorkbenchInput {
   defaultPanelOpenByRegionId?: Partial<Record<WorkbenchRegion, boolean>>;
   /** Host-level region layout policy. The active mode's regionSettings win over it. */
   regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
-  sidePanelPersistence?: WorkbenchSidePanelPersistenceAdapter;
   /** Default floating policy. The active mode may override it. */
   floatingPanels?: "visible" | "hidden";
   initialSidePanelMode?: WorkbenchSidePanelMode;

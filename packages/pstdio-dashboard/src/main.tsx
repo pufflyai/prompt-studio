@@ -20,7 +20,12 @@ import "./i18n";
 const renderDashboard = async () => {
   const storage = await createDesktopWorkbenchStorage(window.promptStudioDesktop);
   const projectTabs = await createDesktopProjectTabs(window.promptStudioDesktop);
-  const dashboardWorkbench = createDashboardWorkbench({ storage, projectTabs: projectTabs?.controller });
+  const dashboardWorkbench = createDashboardWorkbench({
+    storage,
+    projectTabs: projectTabs?.controller,
+    // Send native layout writes before a following Quit request can close the renderer.
+    layoutDebounceMs: storage ? 0 : undefined,
+  });
   const stopDesktopCommands = connectDesktopCommands(window.promptStudioDesktop, dashboardWorkbench);
   if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });
   (window as unknown as Record<string, unknown>).__pstdioDashboardWorkbench = dashboardWorkbench;

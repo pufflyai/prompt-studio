@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
-import { createDesktopWorkbenchStorage } from "./desktop-workbench-storage";
+import { createDesktopWorkbenchStorage, type DesktopWorkbenchStorageBridge } from "./desktop-workbench-storage";
 
 const createStorage = () => {
   const values = new Map<string, string>();
@@ -16,27 +16,33 @@ const createStorage = () => {
   return storage;
 };
 
+const createBridge = (values: Record<string, string> = {}) => {
+  const changes: Array<[string, string | null]> = [];
+  const bridge: DesktopWorkbenchStorageBridge = {
+    getWorkbenchState: async () => ({ values }),
+    setWorkbenchItem: async (key, value) => {
+      changes.push([key, value]);
+    },
+  };
+  return { bridge, changes };
+};
+
 describe("createDesktopWorkbenchStorage", () => {
-  test("hydrates a synchronous storage adapter and forwards later changes", async () => {
-    const changes: Array<[string, string | null]> = [];
-    const storage = await createDesktopWorkbenchStorage({
-      getWorkbenchState: async () => ({ pageLocations: {}, selectedProjectId: "project-one" }),
-      setPageLocation: async (projectId, value) => {
-        changes.push([`page-location:${projectId}`, value]);
-      },
-      setSelectedProjectId: async (value) => {
-        changes.push(["selected-project", value]);
-      },
-    });
+  test("hydrates saved workbench values and forwards every later change", async () => {
+    const { bridge, changes } = createBridge({ "dashboard-wb2:selected-project:global": "project-one" });
+    const storage = await createDesktopWorkbenchStorage(bridge, createStorage());
 
     expect(storage?.getItem("dashboard-wb2:selected-project:global")).toBe("project-one");
-    storage?.setItem("dashboard-wb2:page-location:project-one", "workspace-one");
+    storage?.setItem("dashboard-wb2:layout:project/project-one", '{"version":5}');
+    storage?.setItem("pstdio/ui/kanban-renderer/tickets", '{"state":{}}');
     storage?.removeItem?.("dashboard-wb2:selected-project:global");
 
+    expect(storage?.getItem("dashboard-wb2:layout:project/project-one")).toBe('{"version":5}');
     expect(storage?.getItem("dashboard-wb2:selected-project:global")).toBeNull();
     expect(changes).toEqual([
-      ["page-location:project-one", "workspace-one"],
-      ["selected-project", null],
+      ["dashboard-wb2:layout:project/project-one", '{"version":5}'],
+      ["pstdio/ui/kanban-renderer/tickets", '{"state":{}}'],
+      ["dashboard-wb2:selected-project:global", null],
     ]);
   });
 
@@ -45,20 +51,9 @@ describe("createDesktopWorkbenchStorage", () => {
   });
 
   test("keeps session drafts in browser storage instead of sending them to Electron", async () => {
-    const changes: Array<[string, string | null]> = [];
+    const { bridge, changes } = createBridge();
     const browserStorage = createStorage();
-    const storage = await createDesktopWorkbenchStorage(
-      {
-        getWorkbenchState: async () => ({ pageLocations: {} }),
-        setPageLocation: async (projectId, value) => {
-          changes.push([`page-location:${projectId}`, value]);
-        },
-        setSelectedProjectId: async (value) => {
-          changes.push(["selected-project", value]);
-        },
-      },
-      browserStorage,
-    );
+    const storage = await createDesktopWorkbenchStorage(bridge, browserStorage);
 
     storage?.setItem("dashboard-wb2:session-drafts:project-one", '{"session-one":"private draft"}');
 
