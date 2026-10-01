@@ -8,6 +8,7 @@ import { Workbench, WorkbenchThemeProvider } from "../index";
 interface MenuWorkbenchOptions {
   closed?: readonly ("left" | "right")[];
   both?: boolean;
+  menuMinPx?: number;
 }
 
 const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
@@ -32,7 +33,13 @@ const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
         ),
       },
     });
-    workbench.viewMenus.registerViewMenu({ id: side, ownerViewId: "document", viewId: side, side });
+    workbench.viewMenus.registerViewMenu({
+      id: side,
+      ownerViewId: "document",
+      viewId: side,
+      side,
+      regionSize: options.menuMinPx ? { minPx: options.menuMinPx, maxPx: 320 } : undefined,
+    });
   }
   workbench.pages.registerPage({
     id: "menus",
@@ -78,7 +85,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ReopenAttached: Story = {
-  args: { width: 450, menus: { closed: ["right"] } },
+  args: { width: 600, menus: { closed: ["right"] } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
@@ -91,7 +98,7 @@ export const ReopenAttached: Story = {
 };
 
 export const FloatingWhenNarrow: Story = {
-  args: { width: 240, menus: { closed: ["right"] } },
+  args: { width: 400, menus: { closed: ["right"] } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
@@ -108,7 +115,7 @@ export const FloatingWhenNarrow: Story = {
 };
 
 export const BothMenusAttached: Story = {
-  args: { width: 450, menus: { both: true } },
+  args: { width: 600, menus: { both: true } },
   play: async ({ canvasElement }) => {
     for (const side of ["left", "right"]) {
       await waitFor(() =>
@@ -125,11 +132,11 @@ export const BothMenusAttached: Story = {
 };
 
 export const OneMenuFits: Story = {
-  args: { width: 350, menus: { both: true } },
+  args: { width: 510, menus: { both: true, menuMinPx: 200 } },
 };
 
 export const FloatingPeekKeepsAttachedMenu: Story = {
-  args: { width: 350, menus: { both: true, closed: ["left"] } },
+  args: { width: 510, menus: { both: true, closed: ["left"], menuMinPx: 200 } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const rightMenu = () => canvasElement.querySelector('[data-workbench-panel-menu="main-right"]');
@@ -148,7 +155,7 @@ export const FloatingPeekKeepsOpenPreference: Story = {
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
     await within(canvasElement.ownerDocument.body).findByRole("menu", { name: "Main right menu controls" });
     await userEvent.keyboard("{Escape}");
-    canvas.getByTestId("panel-menu-story-frame").style.width = "450px";
+    canvas.getByTestId("panel-menu-story-frame").style.width = "600px";
     await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel-menu="main-right"]')).toBeVisible());
   },
 };

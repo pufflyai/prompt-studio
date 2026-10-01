@@ -69136,7 +69136,7 @@
               "id": "NDmPK",
               "name": "Section Note",
               "fill": "$ds-fg-muted",
-              "content": "Applies independently to Main, Secondary, and Side Panel. Dragging a divider closes an attached menu. Reopening attaches immediately when the menu and minimum content widths fit; otherwise it floats.",
+              "content": "Applies independently to Main, Secondary, and Side Panel. Dragging a divider closes an attached menu. Reopening attaches immediately when the panel is wider than 480px and the menu and minimum content widths fit; otherwise it floats.",
               "fontFamily": "$font-body",
               "fontSize": 12,
               "fontWeight": "normal"
@@ -69173,7 +69173,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": 1300,
-                  "content": "Tabs and the + sit on the left of the strip. Attached panel menus default to 280px and have no internal header or close action; they collapse by dragging the divider closed. Closed menus use directional panel-open icons. Opening attaches directly when minimum menu widths, dividers, and content fit. Only insufficient horizontal space produces a floating menu.",
+                  "content": "Tabs and the + sit on the left of the strip. Attached panel menus default to 280px and have no internal header or close action; they collapse by dragging the divider closed. Closed menus use directional panel-open icons. Opening attaches directly when the panel is wider than 480px and minimum menu widths, dividers, and content fit. Narrower panels and insufficient horizontal space produce a floating menu.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font-body",
                   "fontSize": 12,
