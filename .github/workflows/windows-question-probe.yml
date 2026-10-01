@@ -1,0 +1,20 @@
+name: Windows question probe
+
+on:
+  push:
+    branches: [test/ps-456-windows-question-probe]
+
+jobs:
+  question_boundaries:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Check unchanged transcript and real pipe closure
+        run: bun test extensions/harness-codex/src/question-confirmation.test.ts extensions/harness-codex/src/app-server-rpc.test.ts
