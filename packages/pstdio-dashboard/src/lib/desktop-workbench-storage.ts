@@ -1,20 +1,14 @@
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
-import {
-  dashboardPageLocationStorageKey,
-  dashboardProjectSelectionStorageKey,
-  dashboardWorkbenchStorageNamespace,
-  resolveDesktopWorkbenchStorageKey,
-} from "../shared/app/dashboard-workbench-storage-keys";
+import { dashboardWorkbenchStorageNamespace } from "../shared/app/dashboard-workbench-storage-keys";
+import { dashboardSessionDraftStorageKey } from "../shared/app/session-draft-persistence";
 
 interface DesktopWorkbenchState {
-  selectedProjectId?: string;
-  pageLocations: Record<string, string>;
+  values: Record<string, string>;
 }
 
 export interface DesktopWorkbenchStorageBridge {
   getWorkbenchState: () => Promise<DesktopWorkbenchState>;
-  setPageLocation: (projectId: string, value: string | null) => Promise<void>;
-  setSelectedProjectId: (projectId: string | null) => Promise<void>;
+  setWorkbenchItem: (key: string, value: string | null) => Promise<void>;
 }
 
 declare global {
@@ -22,6 +16,11 @@ declare global {
     promptStudioDesktop?: DesktopWorkbenchStorageBridge;
   }
 }
+
+// Desktop discards browser storage on quit. Everything the dashboard saves survives a
+// restart through Electron, except unsent chat drafts, which stay in the browser session.
+const sessionDraftKeyPrefix = dashboardSessionDraftStorageKey(dashboardWorkbenchStorageNamespace, "");
+const isDurableKey = (key: string) => !key.startsWith(sessionDraftKeyPrefix);
 
 const createMemoryStorage = (): WorkbenchStorageLike => {
   const values = new Map<string, string>();
@@ -47,38 +46,26 @@ export const createDesktopWorkbenchStorage = async (
   browserStorage?: WorkbenchStorageLike,
 ) => {
   if (!bridge) return undefined;
-  const state = await bridge.getWorkbenchState();
-  const durableValues = new Map<string, string>();
-  if (state.selectedProjectId) {
-    durableValues.set(dashboardProjectSelectionStorageKey(dashboardWorkbenchStorageNamespace), state.selectedProjectId);
-  }
-  for (const [projectId, location] of Object.entries(state.pageLocations)) {
-    durableValues.set(dashboardPageLocationStorageKey(dashboardWorkbenchStorageNamespace, projectId), location);
-  }
+  const durableValues = new Map(Object.entries((await bridge.getWorkbenchState()).values));
   const sessionStorage = resolveBrowserStorage(browserStorage);
 
   return {
-    getItem: (key) =>
-      resolveDesktopWorkbenchStorageKey(key) ? (durableValues.get(key) ?? null) : sessionStorage.getItem(key),
+    getItem: (key) => (isDurableKey(key) ? (durableValues.get(key) ?? null) : sessionStorage.getItem(key)),
     setItem: (key, value) => {
-      const destination = resolveDesktopWorkbenchStorageKey(key);
-      if (!destination) {
+      if (!isDurableKey(key)) {
         sessionStorage.setItem(key, value);
         return;
       }
       durableValues.set(key, value);
-      if (destination.kind === "selected-project") void bridge.setSelectedProjectId(value);
-      else void bridge.setPageLocation(destination.projectId, value);
+      void bridge.setWorkbenchItem(key, value);
     },
     removeItem: (key) => {
-      const destination = resolveDesktopWorkbenchStorageKey(key);
-      if (!destination) {
+      if (!isDurableKey(key)) {
         sessionStorage.removeItem?.(key);
         return;
       }
       durableValues.delete(key);
-      if (destination.kind === "selected-project") void bridge.setSelectedProjectId(null);
-      else void bridge.setPageLocation(destination.projectId, null);
+      void bridge.setWorkbenchItem(key, null);
     },
   } satisfies WorkbenchStorageLike;
 };

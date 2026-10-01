@@ -1,6 +1,7 @@
 ---
 "@pstdio/workbench": patch
+"@pstdio/desktop": patch
 "pstdio": patch
 ---
 
-Store the Side Panel presentation in the layout so each project and page restores its own choice, and keep project chrome changes after a reload.
+Keep each project's layout, including the Side Panel, across project switches, reloads, and desktop restarts.

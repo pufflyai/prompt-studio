@@ -29,6 +29,7 @@ const logger = createLogger({ component: "desktop", level: "info", service: "pst
 const descriptorPath = resolvePstdioRuntimeDescriptorPath();
 const externalRuntime = process.env.PSTDIO_DESKTOP_EXTERNAL_RUNTIME === "1";
 const projectTabs = new DesktopProjectTabsStore(join(app.getPath("userData"), "project-tabs.json"));
+const workbenchState = new DesktopWorkbenchStateStore(join(app.getPath("userData"), "workbench-state.json"));
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -133,6 +134,7 @@ const runtimeManager = new DesktopRuntimeManager({
 
 const finishQuit = async () => {
   await projectTabs.flush();
+  workbenchState.flush();
   allowQuit = true;
   app.quit();
 };
@@ -233,7 +235,6 @@ const bootstrap = async () => {
   const cliSetup = createMacOSCliSetup((error) => {
     logger.error({ event: "desktop.cli.install.failed", message: error.message }, "CLI setup failed");
   });
-  const workbenchState = new DesktopWorkbenchStateStore(join(app.getPath("userData"), "workbench-state.json"));
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       createApplicationMenuTemplate(
@@ -302,8 +303,7 @@ const bootstrap = async () => {
     getWorkbenchState: () => workbenchState.getState(),
     getProjectTabs: () => projectTabs.getProjectTabs(),
     setProjectTabs: (value) => projectTabs.setProjectTabs(value),
-    setPageLocation: (projectId, value) => workbenchState.setPageLocation(projectId, value),
-    setSelectedProjectId: (projectId) => workbenchState.setSelectedProjectId(projectId),
+    setWorkbenchItem: (key, value) => workbenchState.setItem(key, value),
   });
   await startRuntime();
   void cliSetup?.onFirstLaunch();
@@ -323,6 +323,8 @@ if (installerEvent) {
 } else {
   if (process.platform === "win32") app.setAppUserModelId("com.squirrel.PromptStudio.PromptStudio");
   app.on("second-instance", () => focusPrimaryWindow(windowController?.window ?? null));
+  // Closing the window flushes the renderer's last layout writes after finishQuit.
+  app.on("will-quit", () => workbenchState.flush());
   app.on("before-quit", (event) => {
     if (allowQuit) return;
     event.preventDefault();

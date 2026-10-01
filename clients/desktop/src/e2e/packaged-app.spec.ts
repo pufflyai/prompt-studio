@@ -95,11 +95,23 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     await openPackagedProject(first.page, { id: projectId, name: "Relaunch persistence project" });
     await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
     await expect(first.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+    await first.page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+    const selectedProjectKey = "dashboard-wb2:selected-project:global";
+    const pageLocationKey = `dashboard-wb2:page-location:${projectId}`;
+    const layoutKeyPrefix = `dashboard-wb2:layout:project/${projectId}/`;
     await expect
-      .poll(() => first?.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
-      .toMatchObject({ selectedProjectId: projectId });
-    const firstState = await first.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
-    const pageLocation = firstState.pageLocations[projectId];
+      .poll(async () => {
+        const { values } = await first!.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
+        return {
+          project: values[selectedProjectKey],
+          sidePanelSaved: Object.entries(values).some(
+            ([key, value]) => key.startsWith(layoutKeyPrefix) && value.includes('"presentation":"attached"'),
+          ),
+        };
+      })
+      .toEqual({ project: projectId, sidePanelSaved: true });
+    const { values: firstValues } = await first.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
+    const pageLocation = firstValues[pageLocationKey];
     expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
       version: 1,
       location: { page: { id: "sessions", kind: "page" } },
@@ -138,13 +150,13 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");
     expect(await second.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).toMatchObject({
-      pageLocations: { [projectId]: pageLocation },
-      selectedProjectId: projectId,
+      values: { [pageLocationKey]: pageLocation, [selectedProjectKey]: projectId },
     });
     expect(
       await second.page.evaluate(async () => (await (await fetch("/v1/projects")).json()) as Array<{ name: string }>),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
     await expect(second.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+    await expect(second.page.getByTestId("workbench-side-panel-attached")).toBeVisible();
 
     await second.finishTrace();
     const close = runPackagedCli(home, ["close"]);

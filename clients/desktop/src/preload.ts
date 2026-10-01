@@ -61,10 +61,8 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   getWorkbenchState: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getWorkbenchState),
   getProjectTabs: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getProjectTabs),
   setProjectTabs: (state: DesktopProjectTabsState) => ipcRenderer.invoke(DESKTOP_CHANNELS.setProjectTabs, state),
-  setPageLocation: (projectId: string, value: string | null) =>
-    ipcRenderer.invoke(DESKTOP_CHANNELS.setPageLocation, projectId, value),
-  setSelectedProjectId: (projectId: string | null) =>
-    ipcRenderer.invoke(DESKTOP_CHANNELS.setSelectedProjectId, projectId),
+  setWorkbenchItem: (key: string, value: string | null) =>
+    ipcRenderer.invoke(DESKTOP_CHANNELS.setWorkbenchItem, key, value),
 });
 
 contextBridge.exposeInMainWorld("promptStudioDesktop", desktopApi);

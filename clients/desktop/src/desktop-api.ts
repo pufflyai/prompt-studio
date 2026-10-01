@@ -5,9 +5,9 @@ export interface DesktopAppInfo {
   version: string;
 }
 
+/** Every saved dashboard workbench value, keyed by its browser storage key. */
 export interface DesktopWorkbenchState {
-  selectedProjectId?: string;
-  pageLocations: Record<string, string>;
+  values: Record<string, string>;
 }
 
 export interface DesktopProjectTabsState {
@@ -30,8 +30,7 @@ export interface PromptStudioDesktopApi {
   getWorkbenchState: () => Promise<DesktopWorkbenchState>;
   getProjectTabs: () => Promise<DesktopProjectTabsState>;
   setProjectTabs: (state: DesktopProjectTabsState) => Promise<void>;
-  setPageLocation: (projectId: string, value: string | null) => Promise<void>;
-  setSelectedProjectId: (projectId: string | null) => Promise<void>;
+  setWorkbenchItem: (key: string, value: string | null) => Promise<void>;
 }
 
 export const DESKTOP_CHANNELS = {
@@ -53,6 +52,5 @@ export const DESKTOP_CHANNELS = {
   getWorkbenchState: "pstdio:desktop:get-workbench-state",
   getProjectTabs: "pstdio:desktop:get-project-tabs",
   setProjectTabs: "pstdio:desktop:set-project-tabs",
-  setPageLocation: "pstdio:desktop:set-page-location",
-  setSelectedProjectId: "pstdio:desktop:set-selected-project-id",
+  setWorkbenchItem: "pstdio:desktop:set-workbench-item",
 } as const;
