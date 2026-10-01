@@ -83,6 +83,10 @@ export const trackHarnessSession = (
       ),
   })
     .then(async (exit) => {
+      // The run is over, so nobody can answer an open question any more. Closing the channel here
+      // rather than in `store.remove` keeps a failed checkpoint from leaving an answerable ask.
+      entry?.questionService.dispose();
+
       if (deps.sessionService.store.get(sessionId) !== entry) return;
       const persisted = await saveCompletedConversation(sessionId, entry, deps, submitted);
 

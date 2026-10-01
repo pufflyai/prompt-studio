@@ -1,4 +1,4 @@
-import type { ApprovalRequest, SessionMessage } from "pstdio-api-contracts";
+import type { SessionMessage } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { checkpointConversation } from "./session-checkpoint";
 import { loadSessionHistory } from "./session-history";
@@ -14,8 +14,15 @@ export const initializeConversation = (
 ) => {
   const entry = deps.sessionService.store.create(
     sessionId,
-    (request: ApprovalRequest) => {
-      entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
+    {
+      onApprovalRequest: (request) => {
+        entry.eventStore.push({ op: "add", path: "/approval_request", value: request });
+      },
+      // Status is host-owned: the harness only reports that it is waiting for the person.
+      onQuestionAsked: () =>
+        deps.sessionService.transitionStatus(sessionId, "awaiting_input", { expectedOwner: entry }),
+      // A run that ended while the answer was in flight must stay in its terminal status.
+      onQuestionAnswered: () => deps.sessionService.resume(sessionId, { expectedStatus: "awaiting_input" }),
     },
     async (previous) => {
       let retained: SessionMessage[] | undefined;
@@ -27,6 +34,7 @@ export const initializeConversation = (
         retained = old.getMessages();
         await checkpointConversation(sessionId, previous, deps);
         previous.approvalService.dispose();
+        previous.questionService.dispose();
       }
       await prepare();
       signal?.throwIfAborted();

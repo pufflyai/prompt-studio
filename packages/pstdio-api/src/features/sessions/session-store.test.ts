@@ -1,11 +1,12 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { HarnessSession } from "pstdio-api-contracts";
 import { createSessionStore } from "./session-store";
+import { inertSessionChannelHooks } from "./session-store.test-utils";
 
 describe("session-store", () => {
   test("creates and retrieves an active session", () => {
     const store = createSessionStore();
-    const entry = store.create("s1", mock());
+    const entry = store.create("s1", inertSessionChannelHooks);
     expect(entry.eventStore).toBeDefined();
     expect(entry.approvalService).toBeDefined();
     expect(entry.session).toBeNull();
@@ -19,7 +20,7 @@ describe("session-store", () => {
 
   test("setSession attaches the harness session to the entry", () => {
     const store = createSessionStore();
-    store.create("s1", mock());
+    store.create("s1", inertSessionChannelHooks);
     const harnessSession: HarnessSession = {
       agentSessionId: "agent_1",
       done: Promise.resolve({ status: "completed" }),
@@ -31,7 +32,7 @@ describe("session-store", () => {
 
   test("setSession refuses publication when cancellation won the install race", () => {
     const store = createSessionStore();
-    store.create("s1", mock());
+    store.create("s1", inertSessionChannelHooks);
     store.markCancellationRequested("s1");
     const harnessSession: HarnessSession = {
       agentSessionId: "agent_1",
@@ -45,15 +46,15 @@ describe("session-store", () => {
 
   test("remove cleans up session", () => {
     const store = createSessionStore();
-    store.create("s1", mock());
+    store.create("s1", inertSessionChannelHooks);
     store.remove("s1");
     expect(store.get("s1")).toBeNull();
   });
 
   test("creating same session ID replaces the previous one", () => {
     const store = createSessionStore();
-    const first = store.create("s1", mock());
-    const second = store.create("s1", mock());
+    const first = store.create("s1", inertSessionChannelHooks);
+    const second = store.create("s1", inertSessionChannelHooks);
     expect(store.get("s1")).toBe(second);
     expect(store.get("s1")).not.toBe(first);
   });

@@ -35,6 +35,8 @@ Local harnesses receive a working directory. Remote-capable harnesses consume th
 
 The harness's `done` and `stop` contracts own completion and cancellation. Do not infer completion from a rendered message part, a closed delivery buffer, or a frontend timeout.
 
+When a harness cannot continue without the person, it asks through the host question channel on `HarnessStartInput.questions`. The host sets the session to `awaiting_input` while an ask is open and resolves the ask with the answer, so the same run finishes the turn. Waiting for the agent's own background work is not a question: that session is still working and stays `in_progress`. Status stays host-owned; see [session status lifecycle](0019-session-status-lifecycle.md).
+
 ### Persistent worker cleanup
 
 `HarnessProvider.dispose(ctx)` is an optional public cleanup callback for workers and connections that stay alive across turns. Finishing a turn does not call it. The host calls it once for each context scope that used the provider. `ctx.projectId` identifies a project scope; an absent project ID identifies host-scoped discovery. A provider must release only resources from that scope.

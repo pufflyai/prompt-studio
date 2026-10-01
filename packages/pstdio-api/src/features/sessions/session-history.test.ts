@@ -5,18 +5,15 @@ import { join } from "node:path";
 import type { SessionMessage } from "pstdio-api-contracts";
 import { getSessionHistory, loadSessionHistory } from "./session-history";
 import { createSessionStore } from "./session-store";
+import { inertSessionChannelHooks } from "./session-store.test-utils";
 
 test("a reader waiting on an obsolete initializer follows the new conversation owner", async () => {
   const store = createSessionStore();
   const first = Promise.withResolvers<SessionMessage[]>();
-  store.create(
-    "s",
-    () => {},
-    () => first.promise,
-  );
+  store.create("s", inertSessionChannelHooks, () => first.promise);
   const deps = { sessionService: { store } } as Parameters<typeof getSessionHistory>[1];
   const reading = getSessionHistory("s", deps);
-  const next = store.create("s", () => {});
+  const next = store.create("s", inertSessionChannelHooks);
   const messages: SessionMessage[] = [{ id: "new", role: "user", parts: [{ type: "text", text: "next" }] }];
   (await next.conversationReady).push({ op: "replace", path: "/messages", value: messages });
   first.resolve([]);

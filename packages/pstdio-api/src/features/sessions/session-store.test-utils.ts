@@ -1,5 +1,12 @@
 import { mock } from "bun:test";
-import { createSessionStore } from "./session-store";
+import { createSessionStore, type SessionChannelHooks } from "./session-store";
+
+/** Channel hooks for tests that only need an entry to exist. */
+export const inertSessionChannelHooks: SessionChannelHooks = {
+  onApprovalRequest: () => {},
+  onQuestionAsked: () => {},
+  onQuestionAnswered: () => {},
+};
 
 export const createTrackedSessionStore = () => {
   const store = createSessionStore();

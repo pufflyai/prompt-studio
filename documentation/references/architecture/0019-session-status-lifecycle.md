@@ -67,8 +67,12 @@ create / follow-up ──► queued ──► in_progress
                            │   awaiting_input  completed     failed      cancelled   disconnected
                            │          │                                                    │
                            │          ▼                                                    ▼
-                           └──── in_progress (on approval)                         in_progress (on follow-up)
+                           └──── in_progress (on answer)                          in_progress (on follow-up)
 ```
+
+`awaiting_input` means the agent cannot continue without the person. The harness asks through the
+host question channel, and the host writes the status. An agent waiting for its own background work
+is still working, so it stays `in_progress`.
 
 `disconnected` means the server lost the live process handle and could not reattach, or the provider reported a lost connection. A follow-up sent by the user starts a fresh resume and transitions the session back to `in_progress`.
 
@@ -86,6 +90,8 @@ Harnesses that opt into the host activity watchdog, or omit a timeout strategy, 
 | Session created with capacity | `in_progress`    | `createSessionScheduler`                  |
 | Follow-up sent with capacity | `in_progress`     | `createSessionScheduler`                  |
 | Follow-up accepted at capacity | `queued`        | `createSessionScheduler`                  |
+| Harness asks the person a question | `awaiting_input` | question channel (`initializeConversation`) |
+| Question answered      | `in_progress`          | question channel (`initializeConversation`) |
 | Approval granted       | `in_progress`          | `approveSessionHandler`                   |
 | Process exit code 0    | `completed`            | `trackHarnessSession`                        |
 | Process exit code != 0 | `failed`               | `trackHarnessSession`                        |
@@ -114,6 +120,7 @@ Current paths that must follow this contract:
 - Session create spawn failure fallback (`createSessionHandler` catch path)
 - Session scheduler transitions for create, follow-up, queue claim, and drain
 - Approval transition `awaiting_input -> in_progress` (`approveSessionHandler`)
+- Question channel transitions `in_progress -> awaiting_input` on an ask and back on an answer (`initializeConversation`)
 
 ## Queue Recovery
 
@@ -122,7 +129,7 @@ The queue uses persisted `session_queue_entries` rows. On startup, queue recover
 1. Pending entries whose sessions are still `queued` are loaded for draining.
 2. Entries with `dispatch_started_at` but no in-memory runtime are reset to `queued`.
 3. The scheduler drains while active capacity is available.
-4. Only after queue recovery does orphan recovery inspect unrelated `in_progress` sessions.
+4. Only after queue recovery does orphan recovery inspect unrelated active sessions.
 
 This ordering prevents accepted queued work from being converted to `disconnected` after a crash between queue claim and runtime dispatch.
 
@@ -134,8 +141,8 @@ Event stores and process handles are **ephemeral** — they live in the `Session
 
 1. All `SessionStore` entries are lost.
 2. `trackHarnessSession` callbacks never fire for sessions that were running.
-3. The DB retains `in_progress` for sessions whose agents already finished.
-4. Badges on tickets stay stuck at `in_progress` permanently.
+3. The DB retains `in_progress` or `awaiting_input` for sessions whose agents already finished.
+4. Badges on tickets stay stuck at that status permanently.
 
 ### The fix — startup sweep
 
@@ -145,7 +152,7 @@ On server boot, `resolveOrphanedSessions` runs as a startup task:
 Server starts
      │
      ▼
-Query all sessions with status "in_progress"
+Query all active sessions ("in_progress" or "awaiting_input")
      │
      ▼
 For each session:

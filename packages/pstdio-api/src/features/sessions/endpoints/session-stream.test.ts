@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { openSessionStreamConnection } from "../../../test-utils/session-stream";
+import { inertSessionChannelHooks } from "../session-store.test-utils";
 
 type Envelope = { subscription_id: string; data: { path?: string; value?: Array<{ id: string }> } };
 
@@ -10,7 +11,7 @@ const startSession = async (
   messageId: string,
 ) => {
   const session = await handle.deps.sessionService.create({ project_id: projectId, title: messageId, agent: "test" });
-  const entry = handle.deps.sessionService.store.create(session.id, () => {});
+  const entry = handle.deps.sessionService.store.create(session.id, inertSessionChannelHooks);
   const conversation = await entry.conversationReady;
   conversation.push({
     op: "replace",

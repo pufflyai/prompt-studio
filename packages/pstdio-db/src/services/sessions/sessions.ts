@@ -2,7 +2,7 @@ import { and, count, eq, inArray, ne } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { type ResourceRef, session_queue_entries, sessions } from "../../db/schemas.pg";
 import { mergeResourceAnchors, removeResourceAnchors } from "../resource-anchors";
-import { updateSessionStatus } from "./session-status";
+import { type SessionStatusGuards, updateSessionStatus } from "./session-status";
 import {
   archiveQueued,
   cancelQueued,
@@ -21,6 +21,8 @@ type SessionStatus =
   | "failed"
   | "cancelled"
   | "disconnected";
+
+const ACTIVE_SESSION_STATUSES = ["in_progress", "awaiting_input"] as const satisfies SessionStatus[];
 
 type CreateInput = {
   project_id: string;
@@ -225,11 +227,8 @@ export const createSessionsDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  const updateStatus = async (
-    id: string,
-    status: SessionStatus,
-    options?: { expectedLastRequestStarted: string | null },
-  ) => updateSessionStatus(db, id, status, options);
+  const updateStatus = async (id: string, status: SessionStatus, options?: SessionStatusGuards) =>
+    updateSessionStatus(db, id, status, options);
 
   const archive = async (id: string) => {
     const [updated] = await db
@@ -242,6 +241,13 @@ export const createSessionsDBService = (db: DbClient) => {
 
   const listByStatus = async (status: SessionStatus) => {
     const rows = await db.select().from(sessions).where(eq(sessions.status, status));
+    return rows;
+  };
+
+  // "Active" means the host believed a harness process was alive, whether it was working or
+  // waiting for the person. Capacity accounting and the orphan sweep read the same set.
+  const listActive = async () => {
+    const rows = await db.select().from(sessions).where(inArray(sessions.status, ACTIVE_SESSION_STATUSES));
     return rows;
   };
 
@@ -260,7 +266,7 @@ export const createSessionsDBService = (db: DbClient) => {
     const [row] = await db
       .select({ value: count() })
       .from(sessions)
-      .where(inArray(sessions.status, ["in_progress", "awaiting_input"]));
+      .where(inArray(sessions.status, ACTIVE_SESSION_STATUSES));
     return row?.value ?? 0;
   };
 
@@ -296,6 +302,7 @@ export const createSessionsDBService = (db: DbClient) => {
     },
     get,
     list,
+    listActive,
     listByStatus,
     listByAgentSession,
     update,

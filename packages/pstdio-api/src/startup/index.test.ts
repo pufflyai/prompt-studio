@@ -141,7 +141,7 @@ describe("startup default extensions", () => {
     let backgroundTask: Promise<void> | undefined;
     const deps = {
       projectService: { list: async () => [] },
-      sessionService: { listByStatus: async () => [] },
+      sessionService: { listActive: async () => [] },
     } as unknown as Parameters<typeof runStartupTasks>[0];
 
     try {
@@ -183,7 +183,7 @@ describe("startup default extensions", () => {
     let backgroundTask: Promise<void> | undefined;
     const deps = {
       projectService: { list: async () => [] },
-      sessionService: { listByStatus: async () => [] },
+      sessionService: { listActive: async () => [] },
     } as unknown as Parameters<typeof runStartupTasks>[0];
 
     try {

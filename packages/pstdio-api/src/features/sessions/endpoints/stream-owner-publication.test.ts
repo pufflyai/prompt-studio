@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { openSessionStream } from "../../../test-utils/session-stream";
+import { inertSessionChannelHooks } from "../session-store.test-utils";
 
 test("a resumed stream waits for its owner after the run status is published", async () => {
   const handle = await createTestApp();
@@ -23,7 +24,7 @@ test("a resumed stream waits for its owner after the run status is published", a
       text += decoder.decode(chunk.value, { stream: true });
     }
     expect(text).not.toContain("event: end");
-    const entry = handle.deps.sessionService.store.create(session.id, () => {});
+    const entry = handle.deps.sessionService.store.create(session.id, inertSessionChannelHooks);
     const conversation = await entry.conversationReady;
     conversation.push({
       op: "replace",
