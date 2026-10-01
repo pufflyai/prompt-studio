@@ -82,13 +82,14 @@ interface QuestionCustomAnswerProps {
 
 const QuestionCustomAnswer = (props: QuestionCustomAnswerProps) => {
   const { question, questionIndex, name, editable, value, onChange } = props;
+  const label = question.options.length > 0 ? "Other" : "Answer";
   return (
     <Textarea
       id={`${name}-other`}
       readOnly={!editable}
       aria-readonly={editable ? undefined : "true"}
       value={value ?? ""}
-      placeholder={editable ? "Other..." : "Other"}
+      placeholder={editable ? `${label}...` : label}
       aria-label={question.question}
       rows={2}
       size="sm"
@@ -240,7 +241,7 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
             {question.allowCustomAnswer && (question.multiple || question.options.length === 0) ? (
               <Stack gap="xs">
                 <Text asChild textStyle="label/S/regular">
-                  <label htmlFor={`${name}-other`}>Other</label>
+                  <label htmlFor={`${name}-other`}>{question.options.length > 0 ? "Other" : "Answer"}</label>
                 </Text>
                 <QuestionCustomAnswer
                   question={question}

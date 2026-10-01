@@ -80,6 +80,16 @@ const requiredQuestions: ChatInputQuestionPrompt = {
   ],
 };
 
+export const FreeformAnswer: Story = {
+  args: { questionPrompt: { questions: [requiredQuestions.questions[1]] } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Answer", { exact: true })).toBeInTheDocument();
+    await userEvent.type(canvas.getByPlaceholderText("Answer..."), "Use plain language");
+    await expect(canvas.getByTestId("send-message-button")).toBeEnabled();
+  },
+};
+
 export const SkipControl: Story = {
   args: { questionPrompt: requiredQuestions },
   play: async ({ canvasElement }) => {

@@ -122846,6 +122846,148 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "o68CQ",
+              "name": "Freeform answer",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "b19ITX",
+                  "name": "State title",
+                  "fill": "$ds-fg",
+                  "content": "Freeform answer",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "E3ZkO",
+                  "name": "Question composer",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "AVUJs",
+                      "name": "Question fieldset",
+                      "width": "fill_container",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "yVXb5",
+                          "name": "Question legend",
+                          "fill": "$ds-fg",
+                          "content": "What should the agent know?",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "aw8LK",
+                          "name": "Answer label",
+                          "fill": "$ds-fg",
+                          "content": "Answer",
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "iDPyb",
+                          "type": "ref",
+                          "ref": "Uf6hP",
+                          "name": "Answer text",
+                          "width": "fill_container",
+                          "height": 54,
+                          "theme": {
+                            "size": "sm",
+                            "field": "default"
+                          },
+                          "descendants": {
+                            "o89C2": {
+                              "content": "Answer...",
+                              "fill": "$ds-fg"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uWUiQ",
+                      "name": "Toolbar",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dGEnI",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 28
+                        },
+                        {
+                          "id": "AJ6Hy",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Skip",
+                          "height": 28,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Skip"
+                            }
+                          }
+                        },
+                        {
+                          "id": "P2xiba",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Send",
+                          "width": 28,
+                          "height": 28,
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up",
+                              "height": 14,
+                              "width": 14
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }
