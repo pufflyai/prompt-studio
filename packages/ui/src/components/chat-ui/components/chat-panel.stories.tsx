@@ -6,6 +6,7 @@ import { expect, within } from "storybook/test";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
 import { PromptHistoryPanel, PromptHistoryResetPanel, resetHistoryWalk, walkThreePrompts } from "./chat-history-story";
 import { ChatPanel } from "./chat-panel";
+import { WorkingIndicatorVisibilityRenderer } from "./chat-panel-work-timer-fixtures";
 import type { QueuedFollowUp, SessionMessage } from "./message-types";
 import { moveQueuedFollowUp, type QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
 import { ChatWorkspaceHub } from "./workspace-hub";
@@ -341,6 +342,7 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
 
   const [messages, setMessages] = useState<SessionMessage[]>(initialMessages);
   const [streaming, setStreaming] = useState(false);
+  const [streamingStartedAt, setStreamingStartedAt] = useState(Date.now);
   const [nextMessageNumber, setNextMessageNumber] = useState(initialMessages.length + 1);
   const streamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -376,7 +378,10 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
     streamAssistantText({
       timerRef: streamTimerRef,
       sourceText: assistantReply,
-      onStart: () => setStreaming(true),
+      onStart: () => {
+        setStreamingStartedAt(Date.now());
+        setStreaming(true);
+      },
       onChunk: (nextText) => {
         setMessages((current) => updateAssistantTextPart(current, assistantMessageId, 0, nextText));
       },
@@ -388,6 +393,7 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
     <ChatPanel
       messages={messages}
       streaming={streaming}
+      streamingStartedAt={streamingStartedAt}
       emptyStateTitle={emptyStateTitle}
       emptyStateDescription={emptyStateDescription}
       chatInputPlaceholder={chatInputPlaceholder}
@@ -485,6 +491,7 @@ function StreamingConversationRenderer(props: ChatPanelProps) {
 
   const [visibleMessages, setVisibleMessages] = useState<SessionMessage[]>([]);
   const [streaming, setStreaming] = useState(true);
+  const [streamingStartedAt, setStreamingStartedAt] = useState(Date.now);
 
   useEffect(() => {
     let cancelled = false;
@@ -495,6 +502,7 @@ function StreamingConversationRenderer(props: ChatPanelProps) {
         isCancelled: () => cancelled,
         onStart: () => {
           setVisibleMessages([]);
+          setStreamingStartedAt(Date.now());
           setStreaming(true);
         },
         onMessage: (message) => {
@@ -520,6 +528,7 @@ function StreamingConversationRenderer(props: ChatPanelProps) {
     <ChatPanel
       messages={visibleMessages}
       streaming={streaming}
+      streamingStartedAt={streamingStartedAt}
       emptyStateTitle={emptyStateTitle}
       emptyStateDescription={emptyStateDescription}
       chatInputPlaceholder={chatInputPlaceholder}
@@ -540,30 +549,6 @@ export const Streaming: Story = {
   },
 };
 
-function WorkingIndicatorVisibilityRenderer(props: ChatPanelProps) {
-  const { messages, emptyStateTitle, emptyStateDescription, chatInputPlaceholder, actions } = props;
-  const [workspaceInitializing, setWorkspaceInitializing] = useState(false);
-
-  return (
-    <>
-      <Button size="sm" variant="outline" onClick={() => setWorkspaceInitializing((current) => !current)}>
-        {workspaceInitializing ? "Show working indicator" : "Hide working indicator"}
-      </Button>
-      <Box flex="1" minH="0">
-        <ChatPanel
-          messages={messages}
-          streaming
-          workspaceInitializing={workspaceInitializing}
-          emptyStateTitle={emptyStateTitle}
-          emptyStateDescription={emptyStateDescription}
-          chatInputPlaceholder={chatInputPlaceholder}
-          actions={actions}
-        />
-      </Box>
-    </>
-  );
-}
-
 export const WorkingIndicatorVisibility: Story = {
   render: (args) => (
     <Box {...panelContainerStyles} display="flex" flexDirection="column" gap="sm">
@@ -573,6 +558,14 @@ export const WorkingIndicatorVisibility: Story = {
   args: {
     ...Conversation.args,
     messages: longPromptMessages,
+  },
+};
+
+export const WorkingIndicatorLongRun: Story = {
+  ...WorkingIndicatorVisibility,
+  args: {
+    ...WorkingIndicatorVisibility.args,
+    streamingStartedAt: Date.now() - 5 * 60_000,
   },
 };
 

@@ -23,6 +23,7 @@ export interface DashboardSession {
 }
 export interface DashboardSessionView {
   status?: string;
+  lastRequestStarted: string | null;
   id: string;
   draftKey: string;
   sessionId: string | undefined;
@@ -118,6 +119,7 @@ const draftSessionView: DashboardSessionView = {
   agent: null,
   lastSelectedModel: null,
   params: {},
+  lastRequestStarted: null,
   additions: 0,
   deletions: 0,
   messages: [],
@@ -151,6 +153,7 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
     draftKey: session.id,
     sessionId: session.id,
     status: session.status,
+    lastRequestStarted: (getCollection("sessions").get(session.id)?.last_request_started as string | null) ?? null,
     workspaceTitle: (workspace?.name as string | null) ?? (workspace?.workspace_shorthand as string | undefined) ?? "",
     workspaceId: workspace?.id ?? null,
     workspaceBranch: (workspace?.branch as string | null) ?? session.workspaceBranch ?? null,

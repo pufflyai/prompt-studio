@@ -33,6 +33,7 @@ const sessionView = {
   workspaceShorthand: "PS-307_A1",
   agent: null,
   lastSelectedModel: null,
+  lastRequestStarted: null,
   additions: 12,
   deletions: 3,
   messages: [],

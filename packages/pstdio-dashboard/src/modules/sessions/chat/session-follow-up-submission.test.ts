@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
 import { type FollowUpMutation, submitSessionMessage } from "./session-chat-actions";
-import { mergeMessagesWithPendingFollowUp, type PendingFollowUpState } from "./session-chat-state";
+import {
+  mergeMessagesWithPendingFollowUp,
+  type PendingFollowUpState,
+  shouldShowPendingFollowUp,
+} from "./session-chat-state";
 
 let pending: PendingFollowUpState | null = null;
 // The submission assigns this through a callback, which TypeScript cannot see after a reset.
@@ -50,7 +54,10 @@ test("waits for server acceptance before completing a follow-up submission", asy
 
 test("a follow-up shows in the conversation while it is being sent", () => {
   pending = null;
+  const beforeSubmission = Date.now();
   void submission({ mutate: () => undefined }, () => undefined);
+  expect(current()?.submittedAt).toBeGreaterThanOrEqual(beforeSubmission);
+  expect(current()?.submittedAt).toBeLessThanOrEqual(Date.now());
   expect(mergeMessagesWithPendingFollowUp([], current()).map((message) => message.parts[0])).toEqual([
     { type: "text", text: "Next turn" },
     { type: "loading" },
@@ -92,4 +99,19 @@ test("a queued follow-up leaves the conversation to the queued list", async () =
   );
   await result;
   expect(current()).toBeNull();
+});
+
+test("shows an accepted follow-up once while its run timestamp is still syncing", () => {
+  pending = null;
+  void submission({ mutate: () => undefined }, () => undefined);
+  const accepted = [{ id: "accepted", role: "user" as const, parts: [{ type: "text" as const, text: "Next turn" }] }];
+  expect(mergeMessagesWithPendingFollowUp(accepted, current())).toEqual(accepted);
+});
+
+test("a session follow-up does not become work in a new draft", () => {
+  pending = null;
+  void submission({ mutate: () => undefined }, () => undefined);
+  expect(shouldShowPendingFollowUp(current(), null)).toBe(false);
+  expect(shouldShowPendingFollowUp(current(), "session-1")).toBe(true);
+  expect(shouldShowPendingFollowUp(current(), "session-2")).toBe(false);
 });

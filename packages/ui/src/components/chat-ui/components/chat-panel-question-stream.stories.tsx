@@ -189,6 +189,7 @@ const streamText = (options: {
 function QuestionInterruptedStreamRenderer() {
   const [messages, setMessages] = useState<SessionMessage[]>(initialMessages);
   const [streaming, setStreaming] = useState(true);
+  const [streamingStartedAt, setStreamingStartedAt] = useState(Date.now);
   const [activeQuestionPrompt, setActiveQuestionPrompt] = useState<ChatInputQuestionPrompt>();
   const streamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -230,7 +231,10 @@ function QuestionInterruptedStreamRenderer() {
     streamText({
       timerRef: streamTimerRef,
       sourceText: buildResumedText(text),
-      onStart: () => setStreaming(true),
+      onStart: () => {
+        setStreamingStartedAt(Date.now());
+        setStreaming(true);
+      },
       onChunk: (nextText) => setMessages((current) => updateAssistantTextPart(current, RESUMED_MESSAGE_ID, nextText)),
       onComplete: () => setStreaming(false),
     });
@@ -240,6 +244,7 @@ function QuestionInterruptedStreamRenderer() {
     <ChatPanel
       messages={messages}
       streaming={streaming}
+      streamingStartedAt={streamingStartedAt}
       emptyStateTitle="No messages yet"
       emptyStateDescription="The stream will start automatically."
       chatInputPlaceholder="Answer the question..."

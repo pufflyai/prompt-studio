@@ -125,6 +125,7 @@ export const WorkspaceInitializing: Story = {
     ...baseArgs,
     messages: workspaceSetupMessages,
     streaming: true,
+    streamingStartedAt: Date.now(),
     workspaceInitializing: true,
     workspaceHub: (
       <ChatWorkspaceHub
