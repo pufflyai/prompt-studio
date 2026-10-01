@@ -13,6 +13,12 @@ export type RuntimeInvalidationReason =
   | "project_workspace_changed"
   | "runtime_refresh";
 
+export type RuntimeInvalidationInput = {
+  projectId?: string;
+  sourcePath?: string;
+  reason: RuntimeInvalidationReason;
+};
+
 // Set on a retained last-healthy snapshot when a replacement load failed as a whole.
 type SnapshotStaleMarker = {
   code: "extension_runtime_load_failed";

@@ -61,7 +61,10 @@ const makeService = (opts: {
 }) =>
   createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => opts.installedSources?.() ?? [] } as never,
-    extensionRuntimeCatalog: { get: async () => opts.snapshot?.() ?? fakeSnapshot(1, []) } as never,
+    extensionRuntimeCatalog: {
+      get: async () => opts.snapshot?.() ?? fakeSnapshot(1, []),
+      subscribeInvalidation: () => () => {},
+    } as never,
     buildRegistry: opts.build as never,
     installDefaultExtensions: (async () => {}) as never,
     now: opts.now,

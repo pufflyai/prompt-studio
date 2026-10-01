@@ -10,6 +10,7 @@ import {
   ExtensionRuntimeProjectMissingError,
   freezeSnapshot,
   type ProjectExtensionRuntimeSnapshot,
+  type RuntimeInvalidationInput,
   type RuntimeInvalidationReason,
 } from "./project-extension-runtime-snapshot";
 import {
@@ -54,6 +55,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   const sources = createExtensionSourceCache({ loadSources: deps.loadSources });
 
   const states = new Map<string, ProjectState>();
+  const invalidationListeners = new Set<(input: RuntimeInvalidationInput) => void>();
   let generation = 0;
 
   const stateFor = (projectId: string) => {
@@ -256,7 +258,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
   // Marks affected projects dirty; the replacement snapshot builds lazily on the
   // next read, so several invalidations coalesce into one load.
-  const invalidate = (input: { projectId?: string; sourcePath?: string; reason: RuntimeInvalidationReason }) => {
+  const invalidate = (input: RuntimeInvalidationInput) => {
     let affected = 0;
 
     if (input.sourcePath) {
@@ -291,7 +293,19 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       },
       "Invalidated project extension runtime snapshots",
     );
+    for (const listener of invalidationListeners) listener(input);
   };
 
-  return { get, getInstalledSourceRuntime, invalidate, validateResourcePrefixes };
+  return {
+    get,
+    getInstalledSourceRuntime,
+    invalidate,
+    validateResourcePrefixes,
+    subscribeInvalidation: (listener: (input: RuntimeInvalidationInput) => void) => {
+      invalidationListeners.add(listener);
+      return () => {
+        invalidationListeners.delete(listener);
+      };
+    },
+  };
 };

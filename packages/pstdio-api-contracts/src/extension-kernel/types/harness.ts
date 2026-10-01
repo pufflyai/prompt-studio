@@ -124,4 +124,14 @@ export interface HarnessProvider extends ContributionDefinition<"harness"> {
   reattach?(ctx: HarnessContext, input: HarnessReattachInput): MaybePromise<HarnessSession>;
   getMessages?(ctx: HarnessContext, input: HarnessMessagesInput): MaybePromise<SessionMessage[]>;
   recoverMessages?(ctx: HarnessContext, input: HarnessRecoveryInput): MaybePromise<HarnessRecoveryResult>;
+  /**
+   * Release workers and connections owned by this provider in ctx.projectId's scope
+   * (or the host scope when projectId is absent). The host starts cleanup on source
+   * reload, removal, and project disablement, and awaits it before replacement
+   * workers or host shutdown. Turn completion does not
+   * call this method. Stop pending startup and active runs, settle their done
+   * promises, and await resource termination without deleting native history.
+   * A later host lifecycle may use the provider again, so allow fresh resources.
+   */
+  dispose?(ctx: HarnessContext): MaybePromise<void>;
 }

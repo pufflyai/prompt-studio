@@ -16,6 +16,7 @@ const registryOf = (handles: unknown[]): HarnessRegistryService => ({
   list: async () => handles as never,
   get: async () => null,
   invalidate: () => {},
+  dispose: async () => {},
 });
 
 describe("listSkillAgents", () => {
@@ -48,6 +49,7 @@ describe("listSkillAgents", () => {
       },
       get: async () => null,
       invalidate: () => {},
+      dispose: async () => {},
     };
 
     await listSkillAgents(registry, { projectId: "p1" });
