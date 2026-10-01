@@ -119,6 +119,8 @@ for (const mode of ["cleared", "mismatch"]) {
 }
 
 test("resumes the native thread with model, effort, attachments, environment, and message offset", async () => {
+  const cwd = tmpdir();
+  const localPath = join(cwd, "notes.txt");
   const patches: JsonPatch[] = [];
   const events = {
     getMessages: () => [],
@@ -132,7 +134,7 @@ test("resumes the native thread with model, effort, attachments, environment, an
       prompt: "Read the attachment",
       model: "gpt-5.5",
       params: { model_reasoning_effort: "high" },
-      cwd: "/tmp",
+      cwd,
       env: { PSTDIO_TEST_MODE: "complete" },
       messageOffset: 5,
       events,
@@ -140,7 +142,7 @@ test("resumes the native thread with model, effort, attachments, environment, an
         {
           fileId: "file-1",
           fileName: "notes.txt",
-          localPath: "/tmp/notes.txt",
+          localPath,
           mimeType: "text/plain",
           sizeBytes: 4,
           url: "/files/file-1",
@@ -168,9 +170,9 @@ test("resumes the native thread with model, effort, attachments, environment, an
   const config = JSON.parse(texts[1]);
   expect(config).toMatchObject({
     method: "thread/resume",
-    params: { threadId: "thread-fixture", model: "gpt-5.5", cwd: "/tmp", config: { model_reasoning_effort: "high" } },
+    params: { threadId: "thread-fixture", model: "gpt-5.5", cwd, config: { model_reasoning_effort: "high" } },
   });
-  expect(JSON.parse(texts[2]).input[0].text).toContain('path="/tmp/notes.txt"');
+  expect(JSON.parse(texts[2]).input[0].text).toContain(`path="${localPath}"`);
 });
 
 test("cancels a pending native question and rejects later replies", async () => {

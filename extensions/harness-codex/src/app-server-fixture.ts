@@ -1,9 +1,9 @@
-import { appendFileSync, closeSync } from "node:fs";
+import { appendFileSync, closeSync, writeSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { setTimeout } from "node:timers/promises";
 
 // A real stdio peer using the captured Codex 0.139 request and reply protocol.
-const emit = (value: unknown) => process.stdout.write(`${JSON.stringify(value)}\n`);
+const emit = (value: unknown) => writeSync(1, `${JSON.stringify(value)}\n`);
 const complete = () => {
   emit({ method: "item/completed", params: { item: { id: "answer", type: "agentMessage", text: "Hi, colleague" } } });
   emit({ method: "turn/completed", params: { turn: { id: "turn-1", status: "completed", error: null } } });
@@ -37,7 +37,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       continue;
     }
     if (process.env.PSTDIO_TEST_MODE === "close") {
-      process.stdout.write("", () => closeSync(1));
+      closeSync(1);
       continue;
     }
     if (process.env.PSTDIO_TEST_MODE === "complete") {
