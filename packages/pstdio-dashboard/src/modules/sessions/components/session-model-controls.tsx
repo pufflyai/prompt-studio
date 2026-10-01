@@ -4,14 +4,19 @@ import type { Dispatch, SetStateAction } from "react";
 import { useEffect } from "react";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
-import { saveRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
+import { readRecentHarnessSelection, saveRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProject } from "@/shared/projects/use-project";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useHarnessParamDefaults } from "../hooks/use-harness-param-defaults";
 import { resolveRuntimeAgentSelection, resolveRuntimeModelSelection } from "../runtime/session-runtime-selection";
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
-import { filterHarnessParamValues, type HarnessParamValues, harnessParamValuesEqual } from "./harness-param-values";
+import {
+  filterHarnessParamValues,
+  type HarnessParamValues,
+  harnessParamValuesEqual,
+  resolveHarnessParamDefaults,
+} from "./harness-param-values";
 
 interface SessionModelControlsProps {
   view: DashboardSessionView;
@@ -48,7 +53,11 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
   // A stored selection can point at a harness whose extension is disabled; treat it as
   // unselected so the menu shows its empty state instead of fetching 404ing models.
   const isResolvedAgent = agents.some((agent) => agent.id === selectedAgent);
-  const harnessParamDefaults = useHarnessParamDefaults(projectId, isResolvedAgent ? selectedAgent : undefined);
+  const harnessParamDefaults = useHarnessParamDefaults(
+    projectId,
+    isResolvedAgent ? selectedAgent : undefined,
+    selectedModel,
+  );
   const { data: models = [], isLoading: isModelsLoading } = useAgentModels(selectedAgent, {
     enabled: Boolean(selectedAgent) && isResolvedAgent,
     projectId,
@@ -65,7 +74,10 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
   const baseParamSchema = harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params;
   const selectedModelInfo = findAgentModel(models, selectedModel);
   const effectiveParamSchema = resolveAgentModelParams(baseParamSchema, selectedModelInfo);
-  const effectiveParamDefaults = filterHarnessParamValues(effectiveParamSchema, harnessParamDefaults.data?.defaults);
+  const effectiveParamDefaults = resolveHarnessParamDefaults(effectiveParamSchema, harnessParamDefaults.data?.defaults);
+  const displayedOverrides = Object.fromEntries(
+    Object.entries(harnessParamOverrides).filter(([key, value]) => !Object.is(effectiveParamDefaults[key], value)),
+  );
 
   useEffect(() => {
     const nextAgent = resolveRuntimeAgentSelection({
@@ -85,25 +97,40 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
   }, [isModelsLoading, models, preferredModel, selectedModel, setSelectedModel]);
 
   useEffect(() => {
+    if (!baseParamSchema || isModelsLoading || (selectedModel && !selectedModelInfo)) return;
     setHarnessParamOverrides((current) => {
       const schema = resolveAgentModelParams(baseParamSchema, selectedModelInfo);
       const next = filterHarnessParamValues(schema, current);
       return harnessParamValuesEqual(current, next) ? current : next;
     });
-  }, [baseParamSchema, selectedModelInfo, setHarnessParamOverrides]);
+  }, [baseParamSchema, isModelsLoading, selectedModel, selectedModelInfo, setHarnessParamOverrides]);
 
   // Explicit picks become the project's remembered selection, so the next
   // draft starts from them instead of the project defaults.
   const handleSelectAgent = (agent: string) => {
     setSelectedAgent(agent);
     setSelectedModel("");
-    setHarnessParamOverrides({});
-    saveRecentHarnessSelection(projectId, { harnessId: agent });
+    const recent = readRecentHarnessSelection(projectId);
+    const params = recent?.harnessId === agent ? (recent.params ?? {}) : {};
+    setHarnessParamOverrides(params);
+    saveRecentHarnessSelection(projectId, { harnessId: agent, params });
   };
 
   const handleSelectModel = (model: string) => {
     setSelectedModel(model);
-    if (selectedAgent) saveRecentHarnessSelection(projectId, { harnessId: selectedAgent, ...(model ? { model } : {}) });
+    if (selectedAgent)
+      saveRecentHarnessSelection(projectId, {
+        harnessId: selectedAgent,
+        ...(model ? { model } : {}),
+        params: harnessParamOverrides,
+      });
+  };
+
+  const handleParamChange = (overrides: HarnessParamValues) => {
+    // Send explicit defaults too, so resetting a saved session value reaches the server.
+    const params = { ...effectiveParamDefaults, ...overrides };
+    setHarnessParamOverrides(params);
+    saveRecentHarnessSelection(projectId, { harnessId: selectedAgent, model: selectedModel, params });
   };
 
   return (
@@ -123,8 +150,8 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
       <HarnessParamInlineControls
         schema={effectiveParamSchema ?? undefined}
         defaults={effectiveParamDefaults}
-        overrides={harnessParamOverrides}
-        onOverridesChange={setHarnessParamOverrides}
+        overrides={displayedOverrides}
+        onOverridesChange={handleParamChange}
         disabled={!isResolvedAgent}
         size="xs"
       />

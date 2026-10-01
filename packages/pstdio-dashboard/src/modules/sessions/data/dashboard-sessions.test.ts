@@ -99,3 +99,10 @@ test("session views expose the latest synchronized running status", () => {
   expect(resolveDashboardSessionView("running-view").status).toBe("completed");
   writer.remove("running-view");
 });
+
+test("session views expose the saved harness parameters", () => {
+  const writer = getWriter("sessions")!;
+  writer.upsert({ id: "effort-view", project_id: "project-1", params_json: { model_reasoning_effort: "high" } });
+  expect(resolveDashboardSessionView("effort-view").params).toEqual({ model_reasoning_effort: "high" });
+  writer.remove("effort-view");
+});

@@ -6,6 +6,7 @@ interface RecentHarnessStorage {
 export interface RecentHarnessSelection {
   harnessId: string;
   model?: string;
+  params?: Record<string, string | boolean>;
 }
 
 interface CurrentHarnessSelection {
@@ -56,9 +57,17 @@ export const readRecentHarnessSelection = (projectId: string | undefined, storag
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (typeof parsed.harnessId !== "string" || parsed.harnessId.length === 0) return undefined;
+    const params = parsed.params;
     return {
       harnessId: parsed.harnessId,
       ...(typeof parsed.model === "string" && parsed.model.length > 0 ? { model: parsed.model } : {}),
+      ...(params && typeof params === "object" && !Array.isArray(params)
+        ? {
+            params: Object.fromEntries(
+              Object.entries(params).filter(([, value]) => typeof value === "string" || typeof value === "boolean"),
+            ),
+          }
+        : {}),
     };
   } catch {
     return undefined;
@@ -73,7 +82,9 @@ export const saveRecentHarnessSelection = (
   const resolvedStorage = resolveStorage(storage);
   if (!projectId || !resolvedStorage || !selection.harnessId) return;
 
-  resolvedStorage.setItem(storageKey(projectId), JSON.stringify(selection));
+  const recent = readRecentHarnessSelection(projectId, resolvedStorage);
+  const params = selection.params ?? (recent?.harnessId === selection.harnessId ? recent.params : undefined);
+  resolvedStorage.setItem(storageKey(projectId), JSON.stringify({ ...selection, ...(params ? { params } : {}) }));
 };
 
 // A harness selector always commits a value: the explicit current selection, then

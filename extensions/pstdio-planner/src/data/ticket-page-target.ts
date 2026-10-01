@@ -1,6 +1,7 @@
 import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 
 const plannerPage = (id: string) => ({ kind: "page" as const, id, extensionId: "pstdio.pstdio-planner" });
+export const ticketsPageTarget = { kind: "page", page: plannerPage("tickets") } satisfies NavigationTargetPage;
 
 // Planner owns this resource hierarchy and chooses its pages. The host must not
 // infer a destination from whichever page happens to accept a resource kind.
@@ -28,6 +29,6 @@ export const ticketPageTarget = (resource: ResourceRef): NavigationTargetPage =>
     kind: "page",
     page: plannerPage("ticket"),
     resource,
-    parent: ticketParent ? ticketPageTarget(ticketParent) : { kind: "page", page: plannerPage("tickets") },
+    parent: ticketParent ? ticketPageTarget(ticketParent) : ticketsPageTarget,
   };
 };

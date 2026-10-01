@@ -1,4 +1,5 @@
 {
+  "commands.openTickets": "打开工单",
   "archiveState.active": "活跃",
   "archiveState.archived": "已归档",
   "boardView.archiveAll": "全部归档",

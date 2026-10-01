@@ -1,5 +1,6 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ResourceRef, WorkbenchPanelInstance } from "@pstdio/workbench";
+import type { HarnessParams } from "pstdio-api-contracts";
 import { getCollection, getIndexedRows, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
 import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
@@ -11,6 +12,7 @@ export interface DashboardSession {
   status: string;
   agent: string | null;
   lastSelectedModel: string | null;
+  params?: HarnessParams;
   updatedAt: string;
   lastActivityAt: string;
   workspaceId: string | null;
@@ -30,6 +32,7 @@ export interface DashboardSessionView {
   workspaceShorthand: string;
   agent: string | null;
   lastSelectedModel: string | null;
+  params?: HarnessParams;
   additions: number;
   deletions: number;
   messages: SessionMessage[];
@@ -50,6 +53,7 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     status: (session.status as string) ?? "unknown",
     agent: (session.agent as string | null) ?? null,
     lastSelectedModel: (session.last_selected_model as string | null) ?? null,
+    params: (session.params_json as HarnessParams | null) ?? {},
     updatedAt,
     lastActivityAt: latestTimestamp(session.last_request_ended, session.last_request_started, updatedAt),
     workspaceId: (workspace?.id as string | undefined) ?? null,
@@ -113,6 +117,7 @@ const draftSessionView: DashboardSessionView = {
   workspaceShorthand: "",
   agent: null,
   lastSelectedModel: null,
+  params: {},
   additions: 0,
   deletions: 0,
   messages: [],
@@ -152,6 +157,7 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
     workspaceShorthand: session.workspaceShorthand,
     agent: session.agent,
     lastSelectedModel: session.lastSelectedModel,
+    params: session.params,
     additions: summary?.additions ?? 0,
     deletions: summary?.deletions ?? 0,
     messages: [],

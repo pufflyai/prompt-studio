@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { expectPlannerCommands } from "./packaged-planner-commands-smoke";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
 import { expectPlannerProperties } from "./packaged-planner-properties-smoke";
 import { expectPlannerWorkflow } from "./packaged-planner-workflow-smoke";
@@ -192,13 +193,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
           expect(metadata.settingsPanels).toContainEqual(
             expect.objectContaining({ id: "pstdio.pstdio-planner.settings-panel.ticket-tags" }),
           );
-          const refineTicket = metadata.commands.find((command) => command.id.endsWith(".command.refine-ticket"));
-          expect(refineTicket?.params?.template).toEqual({
-            type: "template",
-            label: "Ticket template",
-            required: false,
-            templateType: "pstdio.pstdio-planner.template-type.ticket",
-          });
+          await expectPlannerCommands(started.baseUrl, project.id, runtimeAuthorization(started.descriptor), metadata);
           const tagsRes = await fetch(
             `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.ticket-tag.read/execute`,
             {
