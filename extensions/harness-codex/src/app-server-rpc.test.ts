@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createAppServerRpc } from "./app-server-rpc";
 
-test("closes the RPC connection when a live peer closes its stdout pipe", async () => {
+test("closes the RPC connection when a peer exits without completing a turn", async () => {
   const child = spawn("node", [fileURLToPath(new URL("./app-server-fixture.ts", import.meta.url))], {
     stdio: "pipe",
     env: { ...process.env, PSTDIO_TEST_MODE: "close" },
@@ -21,7 +21,7 @@ test("closes the RPC connection when a live peer closes its stdout pipe", async 
     await rpc.request("turn/start", {});
 
     expect(await Promise.race([rpc.finished.then(() => true), Bun.sleep(500).then(() => false)])).toBe(true);
-    expect(child.exitCode).toBeNull();
+    expect(await onExit).toMatchObject({ code: 0 });
   } finally {
     child.kill();
     await onExit;

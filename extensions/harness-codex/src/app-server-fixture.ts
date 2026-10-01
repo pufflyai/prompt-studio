@@ -1,4 +1,4 @@
-import { appendFileSync, closeSync, writeSync } from "node:fs";
+import { appendFileSync, writeSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { setTimeout } from "node:timers/promises";
 
@@ -37,8 +37,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       continue;
     }
     if (process.env.PSTDIO_TEST_MODE === "close") {
-      closeSync(1);
-      continue;
+      process.exit(0);
     }
     if (process.env.PSTDIO_TEST_MODE === "complete") {
       complete();

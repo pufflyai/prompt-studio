@@ -21,9 +21,7 @@ const fixtureDeps: SpawnDeps = {
     writeFileSync(transcriptPath, "");
     const fixtureUrl = pathToFileURL(join(root, "app-server-fixture.ts"));
     copyFileSync(new URL("./app-server-fixture.ts", import.meta.url), fixtureUrl);
-    // Node can close stdout independently; Bun keeps its stdio descriptor until exit.
-    const executable = options?.env?.PSTDIO_TEST_MODE === "close" ? "node" : process.execPath;
-    const child = spawn(executable, [fileURLToPath(fixtureUrl)], {
+    const child = spawn(process.execPath, [fileURLToPath(fixtureUrl)], {
       stdio: "pipe",
       cwd: options?.cwd,
       env: { ...process.env, ...options?.env, PSTDIO_TEST_TRANSCRIPT: transcriptPath },
@@ -172,7 +170,7 @@ test("resumes the native thread with model, effort, attachments, environment, an
     method: "thread/resume",
     params: { threadId: "thread-fixture", model: "gpt-5.5", cwd, config: { model_reasoning_effort: "high" } },
   });
-  expect(JSON.parse(texts[2]).input[0].text).toContain(`path="${localPath}"`);
+  expect(JSON.parse(texts[2]).input[0].text).toContain(`path=${JSON.stringify(localPath)}`);
 });
 
 test("cancels a pending native question and rejects later replies", async () => {
@@ -206,7 +204,7 @@ test("reports a provider failure and rejects a question reply after its process 
   ).rejects.toThrow("no longer pending");
 });
 
-test("fails and releases a provider that closes its protocol before finishing the turn", async () => {
+test("fails and releases a provider that exits successfully without completing its turn", async () => {
   const session = await startCodexSession(
     { prompt: "Close", env: { PSTDIO_TEST_MODE: "close" }, events: { getMessages: () => [], push: () => {} } },
     fixtureDeps,
