@@ -10,7 +10,7 @@ import { createAppServerRpc } from "./app-server-rpc";
 import { defaultSpawnProcess, type SpawnDeps } from "./codex-process";
 import { createCodexStreamPipeline } from "./normalize-stream";
 import { confirmQuestionReply } from "./question-confirmation";
-import { createQuestionChannel } from "./questions";
+import { createQuestionChannel, questionReplyError } from "./questions";
 import { promptWithAttachmentManifest, userMessageFor } from "./session-input";
 import type { CodexThreadEvent } from "./types";
 
@@ -31,7 +31,7 @@ export interface ResumeSpawnInput extends StartSpawnInput {
 }
 
 const runCodexSession = async (input: StartSpawnInput & Partial<ResumeSpawnInput>, deps: SpawnDeps) => {
-  if (input.questionResponse) throw new Error("Codex question request is no longer pending.");
+  if (input.questionResponse) throw questionReplyError("Codex question request is no longer pending.");
   const child = deps.spawnProcess(
     ["app-server", "--listen", "stdio://", "--enable", "default_mode_request_user_input"],
     { cwd: input.cwd, env: input.env },

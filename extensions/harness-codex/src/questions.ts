@@ -32,6 +32,9 @@ interface PendingQuestion {
   submitted?: Promise<void>;
 }
 
+export const questionReplyError = (message: string) =>
+  Object.assign(new Error(message), { questionRejected: true as const });
+
 export const createQuestionChannel = (
   write: (message: RpcMessage) => void,
   publish: (item: CodexThreadItem) => void,
@@ -59,12 +62,12 @@ export const createQuestionChannel = (
   const replyQuestion = async (response: QuestionResponse) => {
     const entry = response.callId ? pending.get(response.callId) : [...pending.values()].at(-1);
     if (!entry || entry.submitted || closing.signal.aborted)
-      throw new Error("Codex question request is no longer pending.");
+      throw questionReplyError("Codex question request is no longer pending.");
     if (
       response.answers.length !== entry.questions.length ||
       response.answers.some((answers) => answers.length === 0)
     ) {
-      throw new Error("Answer every Codex question before submitting.");
+      throw questionReplyError("Answer every Codex question before submitting.");
     }
     const answers = Object.fromEntries(
       entry.questions.map((question, index) => [question.id, { answers: response.answers[index] }]),
@@ -73,7 +76,7 @@ export const createQuestionChannel = (
     entry.submitted = (async () => {
       try {
         if (!(await confirm(entry.item.id, answers, closing.signal)))
-          throw new Error("Codex question answer was not accepted.");
+          throw questionReplyError("Codex question answer was not accepted.");
         pending.delete(entry.item.id);
         publish({
           ...entry.item,
