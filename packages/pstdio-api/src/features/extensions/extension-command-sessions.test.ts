@@ -227,6 +227,7 @@ describe("createCommandEnvironment sessions attachments", () => {
             inserted.push(input);
             return { queue_position: 1 };
           },
+          store: { get: () => null },
         },
       } as never,
       makeEnabledSources() as never,

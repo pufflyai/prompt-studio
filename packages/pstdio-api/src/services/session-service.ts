@@ -33,6 +33,8 @@ type CreateSessionOptions = {
 
 type ResumeSessionOptions = {
   emitResumedHook?: boolean;
+  /** Refuse the resume unless the session still holds this status. */
+  expectedStatus?: SessionStatus;
 };
 
 export const createSessionService = (deps: SessionServiceDeps) => {
@@ -53,6 +55,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   const get = raw.get;
   const list = raw.list;
   const listByStatus = raw.listByStatus;
+  const listActive = raw.listActive;
   const listByAgentSession = raw.listByAgentSession;
   const countActive = raw.countActive;
 
@@ -243,7 +246,8 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   };
 
   const resume = async (id: string, options: ResumeSessionOptions = {}) => {
-    const updated = await raw.updateStatus(id, "in_progress");
+    const guards = options.expectedStatus ? { expectedStatus: options.expectedStatus } : undefined;
+    const updated = await raw.updateStatus(id, "in_progress", guards);
     if (!updated) {
       logNoOpSet("resume", id);
       return null;
@@ -259,6 +263,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   return {
     get,
     list,
+    listActive,
     listByStatus,
     listByAgentSession,
     countActive,

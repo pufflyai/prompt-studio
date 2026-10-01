@@ -3,15 +3,27 @@ import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { nextSessionRunStart } from "./session-run-start";
 
+export type SessionStatusGuards = {
+  expectedLastRequestStarted?: string | null;
+  /** Refuse the write unless the row still holds this status. */
+  expectedStatus?: typeof sessions.$inferSelect.status;
+};
+
 export const updateSessionStatus = async (
   db: DbClient,
   id: string,
   status: typeof sessions.$inferSelect.status,
-  options?: { expectedLastRequestStarted: string | null },
+  options?: SessionStatusGuards,
 ) =>
   db.transaction(async (tx) => {
     const [current] = await tx.select().from(sessions).where(eq(sessions.id, id)).for("update");
-    if (!current || (options && current.last_request_started !== options.expectedLastRequestStarted)) return null;
+    if (!current) return null;
+    if (
+      options?.expectedLastRequestStarted !== undefined &&
+      current.last_request_started !== options.expectedLastRequestStarted
+    )
+      return null;
+    if (options?.expectedStatus !== undefined && current.status !== options.expectedStatus) return null;
 
     const timestamp = new Date().toISOString();
     const terminal = status === "completed" || status === "failed" || status === "cancelled";

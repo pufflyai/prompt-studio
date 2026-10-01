@@ -11,6 +11,7 @@ export const registerLiveQuestionSmokeTests = () => {
   test("packaged host delivers a correlated question reply to the live installed harness", async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-live-question-"));
     const evidence = join(root, "reply.json");
+    const hostEvidence = join(root, "host-reply.json");
     let child: ChildProcess | undefined;
     try {
       const sourcePath = join(root, "question-extension");
@@ -37,12 +38,15 @@ export const registerLiveQuestionSmokeTests = () => {
             const done = new Promise(resolve => { finish = resolve; });
             const part = { type: "tool", tool: "question", callId: "request-1", status: "pending", state: { input: { questions: [{ id: "greeting", question: "Which greeting?", options: [{ label: "Hi" }] }] } } };
             input.events.push({ op: "add", path: "/messages/0", value: { id: "question", role: "assistant", parts: [part] } });
+            void input.questions.ask({ id: "host-question", toolUseId: "request-2", questions: [{ question: "Which color?", options: [{ label: "Blue" }] }] }).then(response => {
+              writeFileSync(${JSON.stringify(hostEvidence)}, JSON.stringify(response));
+              finish({ status: "completed" });
+            });
             return { agentSessionId: "native-thread", done, stop() { throw new Error("Reply stopped the run"); },
               async replyQuestion(response) {
                 if (response.callId !== "request-1") throw new Error("Stale request");
                 writeFileSync(${JSON.stringify(evidence)}, JSON.stringify(response));
                 input.events.push({ op: "replace", path: "/messages/0", value: { id: "question", role: "assistant", parts: [{ ...part, status: "completed", state: { ...part.state, output: response.answers[0].join(", ") } }] } });
-                finish({ status: "completed" });
               }
             };
           },
@@ -85,7 +89,11 @@ export const registerLiveQuestionSmokeTests = () => {
       });
       for (let attempt = 0; attempt < 50; attempt++) {
         const conversation = await request(`/sessions/${session.id}/conversation`);
-        if (conversation.messages.some((message: { id: string }) => message.id === "question")) break;
+        if (
+          conversation.messages.some((message: { id: string }) => message.id === "question") &&
+          (await request(`/sessions/${session.id}`)).status === "awaiting_input"
+        )
+          break;
         await Bun.sleep(20);
       }
       const response = await request(`/sessions/${session.id}/follow-up`, "POST", {
@@ -94,12 +102,25 @@ export const registerLiveQuestionSmokeTests = () => {
       });
       expect(response.follow_up.status).toBe("dispatched");
       expect(JSON.parse(readFileSync(evidence, "utf8"))).toEqual({ callId: "request-1", answers: [["Hi"]] });
+      expect((await request(`/sessions/${session.id}`)).status).toBe("awaiting_input");
+      await expect(
+        request(`/sessions/${session.id}/follow-up`, "POST", {
+          prompt: "Blue",
+          question_response: { callId: "expired-request", answers: [["Blue"]] },
+        }),
+      ).rejects.toThrow("400");
+      const hostReply = await request(`/sessions/${session.id}/follow-up`, "POST", {
+        prompt: "Blue",
+        question_response: { callId: "request-2", answers: [["Blue"]] },
+      });
+      expect(hostReply.follow_up.status).toBe("dispatched");
       for (
         let attempt = 0;
         attempt < 50 && (await request(`/sessions/${session.id}`)).status !== "completed";
         attempt++
       )
         await Bun.sleep(20);
+      expect(JSON.parse(readFileSync(hostEvidence, "utf8"))).toEqual({ callId: "request-2", answers: [["Blue"]] });
       expect((await request(`/sessions/${session.id}`)).agent_session_id).toBe("native-thread");
       expect((await request(`/sessions/${session.id}/conversation`)).messages[0].parts[0]).toMatchObject({
         status: "completed",

@@ -6,8 +6,9 @@ export const replyToLiveSessionQuestion = async (
   sessionId: string,
   response: QuestionResponse | undefined,
 ) => {
-  const session = deps.sessionService.store.get(sessionId)?.session;
-  if (!response || !session?.replyQuestion) return undefined;
+  const entry = deps.sessionService.store.get(sessionId);
+  const session = entry?.session;
+  if (!response || !session?.replyQuestion || entry?.questionService.hasPending(response.callId)) return undefined;
   try {
     await session.replyQuestion(response);
     return { ok: true as const };

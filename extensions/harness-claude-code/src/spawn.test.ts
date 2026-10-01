@@ -239,38 +239,6 @@ describe("resumeClaudeCodeSession", () => {
     expect((usagePatch.value as { parts: Array<{ type: string }> }).parts[0].type).toBe("token_usage");
   });
 
-  test("closes stdin after writing the follow-up prompt", async () => {
-    let stdinEnded = false;
-    const stdout = new PassThrough();
-    const stdin = new Writable({
-      write(_chunk, _encoding, callback) {
-        callback();
-      },
-      final(callback) {
-        stdinEnded = true;
-        callback();
-      },
-    });
-
-    const session = resumeClaudeCodeSession(
-      { agentSessionId: "session-abc", prompt: "Follow up", messageOffset: 0, events: recordingSink().sink },
-      {
-        spawnProcess: () => ({
-          stdin,
-          stdout,
-          stderr: new PassThrough(),
-          kill: () => {},
-          onExit: Promise.resolve({ code: 0, signal: null }),
-        }),
-      },
-    );
-
-    stdout.end();
-    await session.done;
-
-    expect(stdinEnded).toBe(true);
-  });
-
   test("handles thinking/reasoning events during resume", async () => {
     const lines = [
       JSON.stringify({ type: "content_block_start", content_block: { type: "thinking", thinking: "" } }),

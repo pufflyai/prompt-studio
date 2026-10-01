@@ -4,6 +4,7 @@ import { createTestApp } from "../../test-utils/create-test-app";
 import { initializeConversation } from "./initialize-conversation";
 import { checkpointConversation } from "./session-checkpoint";
 import { getSessionHistory } from "./session-history";
+import { inertSessionChannelHooks } from "./session-store.test-utils";
 
 const turn = (id: string): SessionMessage => ({ id, role: "user", parts: [{ type: "text", text: id }] });
 
@@ -12,7 +13,7 @@ test("resume drains an older checkpoint before saving the replacement conversati
   try {
     const project = await handle.deps.projectService.create({ name: "Checkpoint handoff" });
     const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Resume", agent: "test" });
-    const oldEntry = handle.deps.sessionService.store.create(session.id, () => {});
+    const oldEntry = handle.deps.sessionService.store.create(session.id, inertSessionChannelHooks);
     const old = await oldEntry.conversationReady;
     old.push({ op: "replace", path: "/messages", value: [turn("first")] });
     const entered = Promise.withResolvers<void>();
@@ -59,7 +60,7 @@ test("a failed handoff restores readable closed history and retries its checkpoi
   try {
     const project = await handle.deps.projectService.create({ name: "Checkpoint retry" });
     const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Retry", agent: "test" });
-    const oldEntry = handle.deps.sessionService.store.create(session.id, () => {});
+    const oldEntry = handle.deps.sessionService.store.create(session.id, inertSessionChannelHooks);
     const old = await oldEntry.conversationReady;
     old.push({ op: "replace", path: "/messages", value: [turn("retained")] });
     let fail = true;

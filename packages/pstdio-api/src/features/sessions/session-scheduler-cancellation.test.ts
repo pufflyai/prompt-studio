@@ -52,6 +52,7 @@ describe("session scheduler cancellation", () => {
       sessionService: {
         get: async () => session,
         insertEntryForActive: async () => inserted.promise,
+        store: { get: () => null },
       },
       sessionQueueEntriesService: { remove },
     } as never);

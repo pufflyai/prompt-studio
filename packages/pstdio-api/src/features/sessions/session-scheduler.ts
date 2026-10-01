@@ -11,6 +11,7 @@ import {
   insertFollowUpEntry,
   prepareExistingDispatch,
   type StartExistingInput,
+  updateExistingDispatchSelection,
   withSchedulingLock,
 } from "./session-scheduler-internals";
 import { logStartupFailure } from "./session-startup-failure";
@@ -228,8 +229,21 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     const fresh = (await deps.sessionService.get(input.session.id)) ?? input.session;
     const context = resolveDispatchContext(input, fresh);
     const status = fresh.status;
+
+    // A live run waiting on its own question takes the answer in place: the harness is still
+    // attached and finishes the turn with it. Queueing or resuming would start a second run.
+    const live = deps.sessionService.store.get(input.session.id);
+    if (live?.questionService.hasPending(input.questionResponse?.callId)) {
+      input.signal?.throwIfAborted();
+      // The answer cannot switch the running agent, but the selection still applies to the next run.
+      await updateExistingDispatchSelection(deps, context);
+      live.questionService.answer(input.questionResponse ?? input.prompt);
+      return { status: "dispatched" } satisfies StartOrQueueResult;
+    }
+
     if (input.questionResponse) {
       input.signal?.throwIfAborted();
+      if (live?.questionService.hasPending()) throw new Error("Question request is no longer pending.");
       return prepareExistingDispatch(deps, context);
     }
 

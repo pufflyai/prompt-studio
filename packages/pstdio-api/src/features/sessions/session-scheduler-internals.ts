@@ -1,4 +1,4 @@
-import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
+import type { HarnessAttachment, HarnessParams, QuestionResponse, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { logStartupFailure } from "./session-startup-failure";
 import type { ActiveSession } from "./session-store";
@@ -16,7 +16,7 @@ export type StartExistingInput = {
   agentId?: string;
   model?: string;
   respectCapacity?: boolean;
-  questionResponse?: { answers: string[][] };
+  questionResponse?: QuestionResponse;
   attachments?: HarnessAttachment[];
   attachmentRefs?: SessionAttachmentRef[];
   params?: HarnessParams;
@@ -115,7 +115,7 @@ export const createSubmittedDispatchEntry = async (
     sessionId: string;
     prompt: string;
     requestKind: "start" | "follow_up";
-    questionResponse?: { answers: string[][] };
+    questionResponse?: QuestionResponse;
     attachmentRefs?: SessionAttachmentRef[];
     params?: HarnessParams;
   },

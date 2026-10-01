@@ -35,6 +35,8 @@ Local harnesses receive a working directory. Remote-capable harnesses consume th
 
 The harness's `done` and `stop` contracts own completion and cancellation. Do not infer completion from a rendered message part, a closed delivery buffer, or a frontend timeout.
 
+When a harness cannot continue without the person, it asks through the host question channel on `HarnessStartInput.questions`. The host sets the session to `awaiting_input` while an ask is open and resolves the ask with the answer, so the same run finishes the turn. Waiting for the agent's own background work is not a question: that session is still working and stays `in_progress`. Status stays host-owned; see [session status lifecycle](0019-session-status-lifecycle.md).
+
 ### Persistent worker cleanup
 
 `HarnessProvider.dispose(ctx)` is an optional public cleanup callback for workers and connections that stay alive across turns. Finishing a turn does not call it. The host calls it once for each context scope that used the provider. `ctx.projectId` identifies a project scope; an absent project ID identifies host-scoped discovery. A provider must release only resources from that scope.
@@ -47,7 +49,7 @@ The callback must stop pending startup and active work, settle active runs' `don
 
 | Extension | Provider integration |
 | --- | --- |
-| [Claude Code](../../../extensions/harness-claude-code) | Child-process streaming and approvals; resume uses the provider session identity and the complete saved baseline. |
+| [Claude Code](../../../extensions/harness-claude-code) | Child-process streaming and approvals; stdin stays open across turns so background tasks keep running, and the run ends when a turn finishes with no task left; resume uses the provider session identity and the complete saved baseline. |
 | [OpenCode](../../../extensions/harness-open-code) | Provider HTTP/session API and transcript snapshots; the adapter converts model strings to provider-specific payloads. |
 | [Codex](../../../extensions/harness-codex) | Provider events and native rollout reconciliation; provider-specific message formats stay in the harness. |
 
@@ -57,7 +59,7 @@ Provider source and tests define supported flags and transcript formats. Core mu
 
 A running harness can provide `HarnessSession.replyQuestion(response)`. The follow-up endpoint passes structured answers to that live callback without replacing the conversation owner, stopping the process, or starting another turn. A rejected callback returns a conversation error. Harnesses without the callback keep receiving `questionResponse` through their existing resume path.
 
-`QuestionResponse.callId` identifies the question tool call when the client has that identity. The shared composer carries it through explicit submission. Each harness owns provider request IDs and maps ordered answers to its provider's question IDs.
+`QuestionResponse.callId` identifies the question tool call when the client has that identity. The shared composer carries it through explicit submission. A matching host ask owns the reply before the native callback. Other call IDs remain eligible for the native callback. A stale reply cannot answer another host ask or replace its waiting run. Host asks stay open until their own answers arrive; plain text or answers without a call ID retain the all-open behavior. Each harness owns provider request IDs and maps ordered answers to its provider's question IDs.
 
 Codex uses the [app-server stdio protocol](https://learn.chatgpt.com/docs/app-server), with experimental API access and `default_mode_request_user_input` enabled. Its harness translates `item/tool/requestUserInput` into the shared question tool and sends answers to the original server request. The protocol uses `serverRequest/resolved` for both replies and cleanup. The harness confirms the matching call ID and answers in the native transcript before reporting delivery, as described in [ADR 0052](../../adrs/0052-temporary-codex-question-delivery-confirmation.md). Native turn completion owns the run result; the harness settles any reply confirmation and releases the process.
 

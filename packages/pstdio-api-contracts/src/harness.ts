@@ -23,9 +23,44 @@ export type EventStore = {
 export type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "SessionReattach";
 
 export type QuestionResponse = {
+  /** One list of chosen labels per question, in the order the questions were asked. */
   answers: string[][];
   /** Shared question tool call being answered, when the caller has its identity. */
   callId?: string;
+};
+
+export type HarnessQuestionOption = {
+  label: string;
+  description?: string;
+};
+
+export type HarnessQuestion = {
+  question: string;
+  options?: HarnessQuestionOption[];
+  /** The person may pick more than one option. */
+  multiple?: boolean;
+};
+
+export type HarnessQuestionRequest = {
+  id: string;
+  toolUseId: string;
+  questions: HarnessQuestion[];
+};
+
+/**
+ * Host channel a harness uses to ask the person something. The host sets the session to
+ * `awaiting_input` while an ask is open, and resolves the ask with the answer. An ask has no
+ * timeout; it rejects when the session ends.
+ */
+export type HarnessQuestionChannel = {
+  ask(request: HarnessQuestionRequest): Promise<QuestionResponse>;
+};
+
+/** Host side of the question channel. Plain text answers all open asks; a call ID selects its tool use. */
+export type QuestionService = HarnessQuestionChannel & {
+  answer(response: QuestionResponse | string): boolean;
+  hasPending(callId?: string): boolean;
+  dispose(): void;
 };
 
 export type ApprovalRequest = {
@@ -105,6 +140,8 @@ export type HarnessStartInput = {
   params?: HarnessParams;
   attachments?: HarnessAttachment[];
   events: HarnessEventSink;
+  /** Channel for asking the person something. Present on start and on resume. */
+  questions?: HarnessQuestionChannel;
   /** Aborted when the host cancels the request that started or resumed this session. */
   signal?: AbortSignal;
 };
