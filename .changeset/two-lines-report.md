@@ -1,6 +1,5 @@
 ---
 "harness-codex": patch
-"@pstdio/sdk": patch
 "@pstdio/ui": patch
 "pstdio": patch
 ---

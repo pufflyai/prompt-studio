@@ -8,28 +8,7 @@ describe.skipIf(process.platform === "win32")("CLI harness process liveness", ()
   const directory = mkdtempSync(join(tmpdir(), "pstdio-harness-liveness-"));
 
   beforeAll(async () => {
-    const fixture = join(directory, "cli.ts");
-    writeFileSync(
-      fixture,
-      `const provider = process.argv[2];
-const emit = (event: unknown) => process.stdout.write(JSON.stringify(event) + "\\n");
-// Read the prompt without waiting for EOF: the Claude harness keeps stdin open between turns.
-for await (const line of console) { if (line.trim()) break; }
-emit(provider === "codex"
-  ? { type: "thread.started", thread_id: "quiet-thread" }
-  : { type: "system", session_id: "quiet-thread" });
-await Bun.sleep(150);
-if (process.env.LIVENESS_STDERR) {
-  await new Promise<void>((resolve, reject) => process.stderr.write("x".repeat(2 * 1024 * 1024), (error) => error ? reject(error) : resolve()));
-}
-emit(provider === "codex"
-  ? { type: "item.completed", item: { id: "answer", type: "agent_message", text: "quiet work completed" } }
-  : { type: "content_block_delta", delta: { type: "text_delta", text: "quiet work completed" } });
-// The Claude harness ends stdin when a turn finishes with no background task left.
-if (provider !== "codex") emit({ type: "result", usage: {} });
-process.exitCode = Number(process.env.LIVENESS_EXIT_CODE ?? 0);
-`,
-    );
+    const fixture = resolve(import.meta.dir, "harness-lifecycle.cli.fixture.ts");
     for (const command of ["claude", "codex"]) {
       const binary = join(directory, command);
       writeFileSync(binary, `#!/bin/sh\nexec '${process.execPath}' '${fixture}' '${command}'\n`);

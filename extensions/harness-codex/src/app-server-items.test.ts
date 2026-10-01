@@ -6,6 +6,27 @@ import { itemToMessage } from "./items";
 import { normalizeRollout } from "./rollout";
 import type { CodexThreadItem } from "./types";
 
+for (const result of [false, 0, "", null]) {
+  test(`preserves MCP result ${JSON.stringify(result)}`, () => {
+    const items: CodexThreadItem[] = [];
+    const adapter = createAppServerItems((item) => items.push(item));
+    adapter.receive({
+      method: "item/completed",
+      params: {
+        item: {
+          id: "mcp-result",
+          type: "mcpToolCall",
+          server: "test",
+          tool: "read",
+          result,
+          aggregatedOutput: "fallback",
+        },
+      },
+    });
+    expect(items[0].aggregated_output).toBe(JSON.stringify(result));
+  });
+}
+
 test("shows native plan progress and updates it within the same turn", () => {
   const items: CodexThreadItem[] = [];
   const adapter = createAppServerItems((item) => items.push(item));

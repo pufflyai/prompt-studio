@@ -30,30 +30,8 @@ const createCodexBinary = () => {
   dirs.push(binDir);
 
   const codexPath = join(binDir, "codex");
-  writeFileSync(
-    codexPath,
-    [
-      "#!/bin/sh",
-      'if [ "$1" = "--version" ]; then',
-      '  echo "codex-cli 0.0.0"',
-      "  exit 0",
-      "fi",
-      'if [ "$1" = "exec" ]; then',
-      "  prompt=$(cat)",
-      "  {",
-      '    echo "---PROMPT---"',
-      '    printf "%s\\n" "$prompt"',
-      '  } >> "$CODEX_E2E_PROMPTS"',
-      '  echo \'{"type":"thread.started","thread_id":"codex-e2e-thread"}\'',
-      '  echo \'{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"done"}}\'',
-      '  echo \'{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":1}}\'',
-      "  exit 0",
-      "fi",
-      'echo "unexpected codex command: $*" >&2',
-      "exit 1",
-      "",
-    ].join("\n"),
-  );
+  const fixturePath = join(import.meta.dir, "sessions-create-codex.fixture.ts");
+  writeFileSync(codexPath, `#!/bin/sh\nexec '${process.execPath}' '${fixturePath}' "$@"\n`);
   chmodSync(codexPath, 0o755);
 
   return binDir;

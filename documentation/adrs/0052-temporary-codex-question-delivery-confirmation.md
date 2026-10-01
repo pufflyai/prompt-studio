@@ -20,7 +20,7 @@ A clean protocol-only confirmation is currently impossible. Treating request cle
 
 The Codex extension reads the native transcript at the path returned by `thread/start` or `thread/resume`. While a submitted reply is awaiting confirmation, it checks for a `response_item` / `function_call_output` with the same call ID and matching answers by question ID. Only that provider output confirms delivery. A different output fails the reply.
 
-Checks run only while an answer is awaiting confirmation. At cancellation, protocol closure, or turn completion, stop checking and read once more before rejecting any unconfirmed reply and releasing the process. This permits normal persistence after the resolved event without leaving an ended run waiting forever.
+Checks run only while an answer is awaiting confirmation. Scan the existing file once, then read only appended bytes. Retain the byte offset, incomplete trailing record, and UTF-8 decoder for this reply. At cancellation, protocol closure, or turn completion, stop checking and read once more before rejecting any unconfirmed reply and releasing the process. This permits normal persistence after the resolved event without leaving an ended run waiting forever.
 
 This adds file reads and depends on Codex's native transcript format. It is isolated to the Codex question confirmation helper. The host sees only the existing live reply contract. It adds no database fields, stored state, or parsing of assistant text.
 

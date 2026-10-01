@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 
 export type CodexAnswers = Record<string, { answers: string[] }>;
@@ -26,9 +25,18 @@ export const confirmQuestionReply = async (
   signal: AbortSignal,
 ) => {
   if (!path) return false;
+  let offset = 0;
+  let trailing = "";
+  const decoder = new TextDecoder();
   while (true) {
     const finalRead = signal.aborted;
-    const actual = recordedAnswers(await readFile(path, "utf8"), callId);
+    // Rollouts only append. Read their history once and keep an incomplete final JSONL record.
+    const bytes = await Bun.file(path).slice(offset).arrayBuffer();
+    offset += bytes.byteLength;
+    const text = trailing + decoder.decode(bytes, { stream: true });
+    const boundary = text.lastIndexOf("\n") + 1;
+    trailing = text.slice(boundary);
+    const actual = recordedAnswers(finalRead ? text : text.slice(0, boundary), callId);
     if (actual) {
       return (
         Object.keys(actual).length === Object.keys(answers).length &&

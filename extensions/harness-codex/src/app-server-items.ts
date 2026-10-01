@@ -33,7 +33,9 @@ const toThreadItem = (native: NativeItem) => {
     text: native.type === "reasoning" ? native.summary?.join("\n") : native.text,
     command: native.command,
     aggregated_output:
-      native.type === "mcpToolCall" && native.result ? JSON.stringify(native.result) : native.aggregatedOutput,
+      native.type === "mcpToolCall" && native.result !== undefined
+        ? JSON.stringify(native.result)
+        : native.aggregatedOutput,
     exit_code: native.exitCode,
     status: native.status,
     changes: native.changes?.map((change) => ({ path: change.path, kind: change.kind.type })),
