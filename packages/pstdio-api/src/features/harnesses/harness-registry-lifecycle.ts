@@ -58,7 +58,14 @@ export const createHarnessRegistryLifecycle = (build: (records: RuntimeHarnessRe
     get: async (records: RuntimeHarnessRecord[], projectId?: string) => {
       ensureActive();
       const scope = scopeFor(projectId);
-      const selected = new Map(records.map((record) => [record.id, record]));
+      // Namespaced ids are unique: the last install of a colliding id wins, and the
+      // collision is reported so the host can surface it.
+      const selected = new Map<string, RuntimeHarnessRecord>();
+      const duplicates: string[] = [];
+      for (const record of records) {
+        if (selected.has(record.id)) duplicates.push(record.id);
+        selected.set(record.id, record);
+      }
       retire(
         scope,
         [...scope.entries.values()].filter(({ record }) => {
@@ -72,20 +79,20 @@ export const createHarnessRegistryLifecycle = (build: (records: RuntimeHarnessRe
         if (cleanup === scope.cleanup) break;
       }
       ensureActive();
-      const missing = records.filter((record) => !scope.entries.has(record.id));
+      const missing = [...selected.values()].filter((record) => !scope.entries.has(record.id));
       const added = build(missing);
       for (const record of missing) {
         const handle = added.get(record.id);
         if (handle) scope.entries.set(record.id, { record, handle });
       }
-      const handles = records.flatMap((record) => {
-        const entry = scope.entries.get(record.id);
+      const handles = [...selected.keys()].flatMap((id) => {
+        const entry = scope.entries.get(id);
         return entry ? [entry.handle] : [];
       });
       return {
         get: (id: string) => handles.find((handle) => handle.id === id) ?? null,
         list: () => handles,
-        duplicates: added.duplicates,
+        duplicates,
         dispose: async () => {
           retire(scope, [...scope.entries.values()]);
           await scope.cleanup;

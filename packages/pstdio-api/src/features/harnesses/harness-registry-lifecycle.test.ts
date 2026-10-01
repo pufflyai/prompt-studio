@@ -63,3 +63,20 @@ test("catalog refresh keeps unchanged providers and disposes removed providers w
   expect(released).toEqual(["removed", "kept"]);
   await expect(lifecycle.get([kept], "p1")).rejects.toThrow("disposed");
 });
+
+test("keeps the last record and reports duplicates on namespaced id collisions", async () => {
+  const first = createTestHarnessRecord("dup");
+  const last = createTestHarnessRecord("dup", { provider: { cwdRequirement: "optional" } });
+  const lifecycle = createHarnessRegistryLifecycle((records) => createHarnessRegistry(records, buildContext));
+
+  const registry = await lifecycle.get([first, last], "p1");
+  expect(registry.list()).toHaveLength(1);
+  expect(registry.duplicates).toEqual([first.id]);
+  expect(registry.get(first.id)!.cwdRequirement).toBe("optional");
+
+  const reused = await lifecycle.get([first, last], "p1");
+  expect(reused.list()).toHaveLength(1);
+  expect(reused.duplicates).toEqual([first.id]);
+
+  await lifecycle.dispose();
+});
