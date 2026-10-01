@@ -99,12 +99,17 @@ const createAppCloser = (input: {
   closeDb: () => Promise<void>;
   stopQueueReadiness: () => Promise<void>;
   sessionQueueLifecycle: RouteDeps["sessionQueueLifecycle"];
+  harnessRegistry: RouteDeps["harnessRegistry"];
 }) => {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
       input.startupAbort.abort();
       const queueStopped = input.sessionQueueLifecycle.close();
+      // A queued startup can need worker disposal to settle. Stop admission first,
+      // then begin cleanup before waiting for those dispatches to finish.
+      const harnessesStopped = input.harnessRegistry.dispose();
+      harnessesStopped.catch(() => {});
       await input.stopQueueReadiness();
       await queueStopped;
       await input.startupDone;
@@ -115,7 +120,11 @@ const createAppCloser = (input: {
       await input.extensionScheduler.dispose();
       await input.automationService.close();
       await input.terminalSupervisor.dispose();
-      await input.closeDb();
+      try {
+        await harnessesStopped;
+      } finally {
+        await input.closeDb();
+      }
     })();
     await closePromise;
   };
@@ -154,6 +163,7 @@ export const startAppLifecycle = async (input: {
     startupAbort,
     stopQueueReadiness,
     sessionQueueLifecycle: input.deps.sessionQueueLifecycle,
+    harnessRegistry: input.deps.harnessRegistry,
     startupDone,
     getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
   });

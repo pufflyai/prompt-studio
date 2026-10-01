@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionConnectionRequest, ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
@@ -61,7 +61,10 @@ const makeService = (opts: {
 }) =>
   createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => opts.installedSources?.() ?? [] } as never,
-    extensionRuntimeCatalog: { get: async () => opts.snapshot?.() ?? fakeSnapshot(1, []) } as never,
+    extensionRuntimeCatalog: {
+      get: async () => opts.snapshot?.() ?? fakeSnapshot(1, []),
+      subscribeInvalidation: () => () => {},
+    } as never,
     buildRegistry: opts.build as never,
     installDefaultExtensions: (async () => {}) as never,
     now: opts.now,
@@ -143,6 +146,39 @@ describe("harness registry host-scope caching", () => {
 });
 
 describe("harness registry project scope", () => {
+  test("logs duplicate harness ids once per catalog generation", async () => {
+    const logPath = join(tempHome, "diagnostics.jsonl");
+    const logOptions = { PSTDIO_LOG_LEVEL: "warn", PSTDIO_LOG_PATH: logPath, PSTDIO_LOG_TARGETS: "file" };
+    const previousOptions = Object.fromEntries(Object.keys(logOptions).map((key) => [key, process.env[key]]));
+    Object.assign(process.env, logOptions);
+    const records = [createTestHarnessRecord("fake"), createTestHarnessRecord("fake")];
+    let snapshot = fakeSnapshot(1, records);
+    const service = makeService({ snapshot: () => snapshot });
+    const warnings = () =>
+      existsSync(logPath)
+        ? readFileSync(logPath, "utf8")
+            .trim()
+            .split("\n")
+            .map((line) => JSON.parse(line))
+            .filter((entry) => entry.event === "harness.duplicate_id")
+        : [];
+    try {
+      await service.list(SCOPE);
+      await service.get(FAKE_ID, SCOPE);
+      expect(warnings().map((entry) => entry.harness_id)).toEqual([FAKE_ID]);
+
+      snapshot = fakeSnapshot(2, records);
+      await service.list(SCOPE);
+      expect(warnings().map((entry) => entry.harness_id)).toEqual([FAKE_ID, FAKE_ID]);
+    } finally {
+      await service.dispose();
+      for (const [key, value] of Object.entries(previousOptions)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   test("gives a project harness only its host-managed connection client", async () => {
     const request = mock(async (_connectionId: string, _input: ExtensionConnectionRequest) => ({
       status: 200,

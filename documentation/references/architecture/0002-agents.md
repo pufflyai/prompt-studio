@@ -35,6 +35,14 @@ Local harnesses receive a working directory. Remote-capable harnesses consume th
 
 The harness's `done` and `stop` contracts own completion and cancellation. Do not infer completion from a rendered message part, a closed delivery buffer, or a frontend timeout.
 
+### Persistent worker cleanup
+
+`HarnessProvider.dispose(ctx)` is an optional public cleanup callback for workers and connections that stay alive across turns. Finishing a turn does not call it. The host calls it once for each context scope that used the provider. `ctx.projectId` identifies a project scope; an absent project ID identifies host-scoped discovery. A provider must release only resources from that scope.
+
+Source reload and removal retire the affected provider handles. Disabling a provider in one project releases that project's resources even without another prompt. Rebuilding webview metadata keeps workers from unchanged provider modules. Replacement workers wait for earlier cleanup. Host shutdown awaits cleanup before closing storage. Retired handles reject new provider calls.
+
+The callback must stop pending startup and active work, settle active runs' `done` promises, and wait for owned resources to terminate. It must preserve native conversation history. Providers may be used again in a later host lifecycle and must allow fresh resources then. A cleanup failure is reported and blocks replacement in that scope; it does not skip other providers' cleanup.
+
 ## Provider protocols
 
 | Extension | Provider integration |

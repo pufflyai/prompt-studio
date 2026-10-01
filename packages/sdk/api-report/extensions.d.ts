@@ -1259,6 +1259,7 @@ interface HarnessProvider extends ContributionDefinition<"harness"> {
   reattach?(ctx: HarnessContext, input: HarnessReattachInput): MaybePromise<HarnessSession>;
   getMessages?(ctx: HarnessContext, input: HarnessMessagesInput): MaybePromise<SessionMessage[]>;
   recoverMessages?(ctx: HarnessContext, input: HarnessRecoveryInput): MaybePromise<HarnessRecoveryResult>;
+  dispose?(ctx: HarnessContext): MaybePromise<void>;
 }
 interface ResourceConstraint {
   readonly kinds: readonly ResourceKindRef[];
@@ -1812,7 +1813,7 @@ interface StatusBarItemContribution extends ContributionDefinition<"status-bar-i
   readonly order?: number;
   readonly when?: WhenExpression;
 }
-export declare const EXTENSION_API_VERSION = "0.1.0";
+export declare const EXTENSION_API_VERSION = "0.1.1";
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema ? ParamsOf<TSchema> : Record<string, never>;
 interface WorkspaceProviderRef {
   version: number;
