@@ -8,20 +8,24 @@ export type HarnessParamDefaultsResponse = {
   defaults: HarnessParamValues;
 };
 
-const queryKey = (projectId: string | undefined, agentId: string | undefined) => [
+const queryKey = (projectId: string | undefined, agentId: string | undefined, model?: string) => [
   "harness-param-defaults",
   projectId ?? "",
   agentId ?? "",
+  model ?? "",
 ];
 
 const defaultsPath = (projectId: string, agentId: string) =>
   `/v1/projects/${projectId}/harnesses/${encodeURIComponent(agentId)}/params`;
 
-export const useHarnessParamDefaults = (projectId: string | undefined, agentId: string | undefined) =>
+export const useHarnessParamDefaults = (projectId: string | undefined, agentId: string | undefined, model?: string) =>
   useQuery({
-    queryKey: queryKey(projectId, agentId),
+    queryKey: queryKey(projectId, agentId, model),
     enabled: Boolean(projectId && agentId),
-    queryFn: () => apiRequest<HarnessParamDefaultsResponse>(defaultsPath(projectId!, agentId!)),
+    queryFn: () =>
+      apiRequest<HarnessParamDefaultsResponse>(
+        `${defaultsPath(projectId!, agentId!)}${model ? `?model=${encodeURIComponent(model)}` : ""}`,
+      ),
   });
 
 export const useUpdateHarnessParamDefaults = (projectId: string | undefined, agentId: string | undefined) => {
@@ -35,6 +39,7 @@ export const useUpdateHarnessParamDefaults = (projectId: string | undefined, age
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKey(projectId, agentId), data);
+      void queryClient.invalidateQueries({ queryKey: ["harness-param-defaults", projectId ?? "", agentId ?? ""] });
     },
   });
 };
