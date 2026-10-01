@@ -37,7 +37,9 @@ The harness's `done` and `stop` contracts own completion and cancellation. Do no
 
 When a harness cannot continue without the person, it asks through the host question channel on `HarnessStartInput.questions`. The host sets the session to `awaiting_input` while an ask is open and resolves the ask with the answer, so the same run finishes the turn. Waiting for the agent's own background work is not a question: that session is still working and stays `in_progress`. Status stays host-owned; see [session status lifecycle](0019-session-status-lifecycle.md).
 
-Structured answers may include `QuestionResponse.callId`, which selects the question's tool-use ID. The host leaves other asks open. Providers with their own live question protocol can implement `HarnessSession.replyQuestion`; the host waits for that callback to accept the answer without starting a new run. A rejected reply leaves the current owner intact. Providers without that callback can resume a visible pending question or validate a recovered question in their resume method. Ordinary active and queued sessions reject stale structured answers.
+Structured answers may include `QuestionResponse.callId`, which selects the question's tool-use ID. The host leaves other asks open. Providers with their own live question protocol can implement `HarnessSession.replyQuestion`; the host waits for that callback to accept the answer without starting a new run. A rejected reply leaves the current owner intact. Providers without that callback finish their current run before the host resumes a visible pending question. Their resume method validates recovered questions. Ordinary active and queued sessions reject stale structured answers.
+
+Providers reject stale or declined answers with `HarnessQuestionReplyError`, an Error with `questionRejected: true`. Those replies return HTTP 400. Other failures follow the host's normal server error handling.
 
 ### Persistent worker cleanup
 

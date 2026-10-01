@@ -90,7 +90,11 @@ test("answers a live provider question without replacing or stopping its run", a
     const response = await handle.app.request(`/v1/sessions/${session.id}/follow-up`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt: "Hi", question_response: { callId: "request-1", answers: [["Hi"]] } }),
+      body: JSON.stringify({
+        prompt: "Hi",
+        model: "next-model",
+        question_response: { callId: "request-1", answers: [["Hi"]] },
+      }),
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ follow_up: { status: "dispatched" } });
@@ -98,6 +102,7 @@ test("answers a live provider question without replacing or stopping its run", a
     expect(stopped).toBe(false);
     expect(handle.deps.sessionService.store.get(session.id)).toBe(owner);
     expect((await handle.deps.sessionService.get(session.id))?.last_request_started).toBe(before?.last_request_started);
+    expect((await handle.deps.sessionService.get(session.id))?.last_selected_model).toBe("next-model");
   } finally {
     finished.resolve({ status: "completed" });
     for (let attempt = 0; sessionId && handle.deps.sessionService.store.get(sessionId) && attempt < 50; attempt++)
@@ -118,7 +123,7 @@ test("reports a rejected live question reply without claiming it was dispatched"
           done: finished.promise,
           stop: () => {},
           replyQuestion: async () => {
-            throw new Error("Codex question request is no longer pending.");
+            throw Object.assign(new Error("Codex question request is no longer pending."), { questionRejected: true });
           },
         }),
         resume: () => {
@@ -174,7 +179,7 @@ test("reports a rejected live question reply without claiming it was dispatched"
   }
 });
 
-for (const mode of ["gone", "full", "resume"]) {
+for (const mode of ["gone", "full", "resume", "failure"]) {
   test(`waits for structured reply acceptance through the ${mode} provider path`, async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-question-owner-"));
     const accepted = Promise.withResolvers<void>();
@@ -188,7 +193,9 @@ for (const mode of ["gone", "full", "resume"]) {
             stop: () => {},
           }),
           resume: async (_ctx, input) => {
-            if (mode !== "resume") throw new Error("Question request is no longer pending.");
+            if (mode === "failure") throw new Error("Harness startup failed");
+            if (mode !== "resume")
+              throw Object.assign(new Error("Question request is no longer pending."), { questionRejected: true });
             await accepted.promise;
             replies.push(input.questionResponse!);
             return {
@@ -264,8 +271,9 @@ for (const mode of ["gone", "full", "resume"]) {
         expect(replies).toEqual([{ callId: "request-1", answers: [["Hi"]] }]);
       } else {
         const result = await response;
-        expect(result.status).toBe(400);
-        expect(await result.json()).toEqual({ error: "Question request is no longer pending." });
+        expect(result.status).toBe(mode === "failure" ? 500 : 400);
+        if (mode !== "failure")
+          expect(await result.json()).toEqual({ error: "Question request is no longer pending." });
       }
     } finally {
       accepted.resolve();

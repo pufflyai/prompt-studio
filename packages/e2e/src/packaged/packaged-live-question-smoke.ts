@@ -44,7 +44,8 @@ export const registerLiveQuestionSmokeTests = () => {
             });
             return { agentSessionId: "native-thread", done, stop() { throw new Error("Reply stopped the run"); },
               async replyQuestion(response) {
-                if (response.callId !== "request-1") throw new Error("Stale request");
+                if (response.callId === "broken-provider") throw new Error("Provider failed");
+                if (response.callId !== "request-1") throw Object.assign(new Error("Stale request"), { questionRejected: true });
                 writeFileSync(${JSON.stringify(evidence)}, JSON.stringify(response));
                 input.events.push({ op: "replace", path: "/messages/0", value: { id: "question", role: "assistant", parts: [{ ...part, status: "completed", state: { ...part.state, output: response.answers[0].join(", ") } }] } });
               }
@@ -98,11 +99,19 @@ export const registerLiveQuestionSmokeTests = () => {
       }
       const response = await request(`/sessions/${session.id}/follow-up`, "POST", {
         prompt: "Hi",
+        model: "next-model",
         question_response: { callId: "request-1", answers: [["Hi"]] },
       });
       expect(response.follow_up.status).toBe("dispatched");
       expect(JSON.parse(readFileSync(evidence, "utf8"))).toEqual({ callId: "request-1", answers: [["Hi"]] });
       expect((await request(`/sessions/${session.id}`)).status).toBe("awaiting_input");
+      expect((await request(`/sessions/${session.id}`)).last_selected_model).toBe("next-model");
+      await expect(
+        request(`/sessions/${session.id}/follow-up`, "POST", {
+          prompt: "Hi",
+          question_response: { callId: "broken-provider", answers: [["Hi"]] },
+        }),
+      ).rejects.toThrow("500");
       await expect(
         request(`/sessions/${session.id}/follow-up`, "POST", {
           prompt: "Blue",
