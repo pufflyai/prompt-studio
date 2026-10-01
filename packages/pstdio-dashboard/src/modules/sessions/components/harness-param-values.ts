@@ -43,3 +43,15 @@ export const harnessParamValuesEqual = (left: HarnessParamValues, right: Harness
   const leftEntries = Object.entries(left);
   return leftEntries.length === Object.keys(right).length && leftEntries.every(([key, value]) => right[key] === value);
 };
+
+export const resolveHarnessParamDefaults = (
+  schema: HarnessParamsInfo | null | undefined,
+  defaults: HarnessParamValues | undefined,
+) => {
+  const descriptorDefaults = Object.fromEntries(
+    Object.entries(schema ?? {}).flatMap(([key, descriptor]) =>
+      descriptor.defaultValue === undefined ? [] : [[key, descriptor.defaultValue]],
+    ),
+  );
+  return { ...descriptorDefaults, ...filterHarnessParamValues(schema, defaults) } as HarnessParamValues;
+};

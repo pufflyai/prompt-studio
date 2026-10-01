@@ -9,7 +9,6 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
-import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import {
   createDashboardWorkspaceOptionResource,
@@ -25,13 +24,13 @@ import {
   peekHandedOffPendingFollowUp,
   shouldShowPendingFollowUp,
 } from "../chat/session-chat-state";
-import { type DashboardSessionView, draftSessionViewId } from "../data/dashboard-sessions";
+import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { useStopSession } from "../hooks/use-stop-session";
-import { canSubmitSessionMessage, resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
+import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
 import type { HarnessParamValues } from "./harness-param-values";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
@@ -40,6 +39,7 @@ import { SessionModelControls } from "./session-model-controls";
 import { SessionWorkspaceControl } from "./session-workspace-control";
 import { useSessionChatDraft } from "./use-session-chat-draft";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
+import { useSessionModelSelection } from "./use-session-model-selection";
 
 interface DashboardSessionChatPanelProps {
   input: WorkbenchPanelRenderInput;
@@ -101,12 +101,16 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();
 
-  // Drafts start from the project's last explicit selection instead of the defaults.
-  const [recent] = useState(() => (view.sessionId ? undefined : readRecentHarnessSelection(projectId)));
-  const [selectedAgent, setSelectedAgent] = useState(view.agent ?? recent?.harnessId ?? "");
-  const [selectedModel, setSelectedModel] = useState(view.lastSelectedModel ?? recent?.model ?? "");
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(view.workspaceId ?? "");
-  const [harnessParamOverrides, setHarnessParamOverrides] = useState<HarnessParamValues>({});
+  const {
+    selectedAgent,
+    setSelectedAgent,
+    selectedModel,
+    setSelectedModel,
+    selectedWorkspaceId,
+    setSelectedWorkspaceId,
+    harnessParamOverrides,
+    setHarnessParamOverrides,
+  } = useSessionModelSelection(view, projectId);
   const draftAttachments = useSessionDraftAttachments(projectId);
   const { data: agents = [] } = useAgents(projectId);
   const canSubmit = canSubmitSessionMessage({
@@ -119,24 +123,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     peekHandedOffPendingFollowUp(sessionId),
   );
   const pendingIdRef = useRef(0);
-  const previousSelectedAgentRef = useRef(selectedAgent);
-  const previousViewRef = useRef(view);
   const openWorkspaceOnSelection = input.panel.region !== "side";
-
-  useEffect(() => {
-    const previous = previousViewRef.current;
-    previousViewRef.current = view;
-
-    const updates = resolveSessionSelectionSync({
-      isViewSwitch: previous.id !== view.id,
-      isPreviousViewDraft: previous.id === draftSessionViewId,
-      previous,
-      view,
-    });
-    if (updates.agent !== undefined) setSelectedAgent(updates.agent);
-    if (updates.model !== undefined) setSelectedModel(updates.model);
-    if (updates.workspaceId !== undefined) setSelectedWorkspaceId(updates.workspaceId);
-  }, [view]);
 
   useEffect(() => {
     forgetHandedOffPendingFollowUp(sessionId);
@@ -147,12 +134,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     if (!pendingFollowUp || pendingFollowUp.failure) return;
     if (messages.length > pendingFollowUp.messageCount) setPendingFollowUp(null);
   }, [messages, pendingFollowUp]);
-
-  useEffect(() => {
-    if (previousSelectedAgentRef.current === selectedAgent) return;
-    previousSelectedAgentRef.current = selectedAgent;
-    setHarnessParamOverrides({});
-  }, [selectedAgent]);
 
   const displayedMessages = mergeMessagesWithPendingFollowUp(
     messages,

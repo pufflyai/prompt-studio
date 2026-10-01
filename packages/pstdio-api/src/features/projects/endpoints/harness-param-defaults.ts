@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { harnessParamsInputSchema } from "pstdio-api-contracts";
+import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import { defaultHarnessParams } from "pstdio-api-runtime-host";
 import type { AppRouteHandler } from "../../../types";
 import {
@@ -25,7 +26,7 @@ export const getHarnessParamDefaultsRoute = createRoute({
   description: "Read project defaults for a harness's declared run params.",
   tags: ["Projects"],
   request: {
-    query: z.object({}).strict(),
+    query: z.object({ model: z.string().optional() }).strict(),
     params: z.object({ projectId: z.string(), agentId: z.string() }).strict(),
   },
   responses: {
@@ -85,13 +86,12 @@ export const getHarnessParamDefaultsHandler = (
     const { projectId, agentId } = c.req.valid("param");
     const resolved = await getProjectAndHarness(deps, projectId, agentId);
     if (resolved.type === "error") return c.json({ error: resolved.error }, 404);
-
-    const stored = filterDeclaredHarnessParams(
-      resolved.harness.params,
-      await readHarnessProjectDefaults(deps, { projectId, agentId }),
-    );
-    const defaults = { ...defaultHarnessParams(resolved.harness.params), ...stored };
-    return c.json({ schema: resolved.harness.params, defaults }, 200);
+    const { model: modelId } = c.req.valid("query");
+    const model = modelId ? findAgentModel(await resolved.harness.listModels({ projectId }), modelId) : undefined;
+    const schema = resolveAgentModelParams(resolved.harness.params, model);
+    const stored = filterDeclaredHarnessParams(schema, await readHarnessProjectDefaults(deps, { projectId, agentId }));
+    const defaults = { ...defaultHarnessParams(schema), ...stored };
+    return c.json({ schema: schema ?? null, defaults }, 200);
   };
 };
 

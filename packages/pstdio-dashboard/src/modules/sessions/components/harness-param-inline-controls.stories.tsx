@@ -37,6 +37,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const EffortLevels: Story = {};
+export const RememberedEffort: Story = {
+  args: { overrides: { effort: "high" } },
+};
 export const LevelColors: Story = {
   render: (props) => (
     <Flex gap="4" wrap="wrap">

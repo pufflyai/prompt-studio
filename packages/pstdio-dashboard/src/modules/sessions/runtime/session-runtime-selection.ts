@@ -1,3 +1,5 @@
+import { type HarnessParamValues, harnessParamValuesEqual } from "../components/harness-param-values";
+
 interface RuntimeAgentOption {
   value: string;
   disabled?: boolean;
@@ -55,6 +57,7 @@ interface SessionViewSelectionSnapshot {
   agent: string | null;
   lastSelectedModel: string | null;
   workspaceId: string | null;
+  params?: HarnessParamValues;
 }
 
 /**
@@ -74,10 +77,14 @@ export const resolveSessionSelectionSync = (input: {
       agent: input.view.agent ?? "",
       model: input.view.lastSelectedModel ?? "",
       workspaceId: input.view.workspaceId ?? "",
+      ...(input.view.params ? { params: input.view.params } : {}),
     };
   }
 
-  const updates: { agent?: string; model?: string; workspaceId?: string } = {};
+  const updates: { agent?: string; model?: string; workspaceId?: string; params?: HarnessParamValues } = {};
+  if (input.view.params && !harnessParamValuesEqual(input.previous.params ?? {}, input.view.params)) {
+    updates.params = input.view.params;
+  }
   if (input.view.agent && input.view.agent !== input.previous.agent) updates.agent = input.view.agent;
   if (input.view.lastSelectedModel && input.view.lastSelectedModel !== input.previous.lastSelectedModel) {
     updates.model = input.view.lastSelectedModel;

@@ -99,6 +99,12 @@ test(
       const dashboardRes = await fetch(started.baseUrl);
       expect(dashboardRes.status).toBe(200);
       expect(dashboardRes.headers.get("content-type")).toContain("text/html");
+      const dashboardHtml = await dashboardRes.text();
+      const moduleScript = dashboardHtml.match(/<script[^>]+type="module"[^>]+src="([^"]+)"/);
+      expect(moduleScript).not.toBeNull();
+      const dashboardScript = await fetch(new URL(moduleScript![1]!, started.baseUrl));
+      expect(dashboardScript.status).toBe(200);
+      expect(dashboardScript.headers.get("content-type")).toMatch(/javascript/);
 
       const projectsRes = await fetch(`${started.baseUrl}/v1/projects`, {
         headers: runtimeAuthorization(started.descriptor),
