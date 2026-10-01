@@ -151,9 +151,9 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
   await expect(rightMenu).toBeHidden();
   await expect(mainPanelHeader).toBeVisible();
   await mainPanelHeader.getByRole("button", { name: "Open Main right menu" }).click();
-  await page.getByRole("button", { name: "Attach Main right menu" }).click();
 
   await expect(rightMenu).toBeVisible();
+  await expect(page.getByRole("menu", { name: "Main right menu controls" })).toHaveCount(0);
   await expect(mainPanelHeader).toBeHidden();
   await expect(ticketLink).toBeVisible();
 });

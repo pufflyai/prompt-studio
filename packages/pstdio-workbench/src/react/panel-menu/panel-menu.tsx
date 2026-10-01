@@ -96,6 +96,8 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
 
   if (canAttach) return <Tooltip content={view.title}>{trigger}</Tooltip>;
 
+  // A floating menu is a temporary view. It keeps the stored open preference so that dismissing it
+  // does not close the menu for wider panels, and opening it does not move another menu out.
   return (
     <Menu.Root
       variant="panel"
@@ -105,9 +107,6 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
         flip: false,
         fitViewport: true,
         getAnchorElement: () => triggerRef.current,
-      }}
-      onOpenChange={({ open }) => {
-        view.onCollapsedChange(!open);
       }}
       onExitComplete={() => triggerRef.current?.focus()}
     >

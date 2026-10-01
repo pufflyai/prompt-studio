@@ -92,12 +92,10 @@ export const menuSlotRecipe = defineSlotRecipe({
     variant: {
       panel: {
         content: {
-          boxShadow: "none",
           height: "var(--available-height)",
           width: "64",
           minWidth: "64",
           maxWidth: "64",
-          overflow: "hidden",
         },
       },
     },

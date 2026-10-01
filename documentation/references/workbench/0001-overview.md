@@ -28,6 +28,9 @@ attached menus, resize handles, and at least 120 px of content. Menu minimum wid
 come from their contributions. There is no fixed panel-width threshold.
 
 When attachment cannot fit, the opener shows a floating menu below the button.
-The floating menu fills the available viewport height. Increasing panel width
-restores attachment for an open menu. Main, Secondary, and Side panel menus use
-the same rule.
+The floating menu fills the available viewport height. It is a temporary view.
+Opening or dismissing it does not change whether the menu is open.
+
+An open menu attaches again as soon as its panel is wide enough. When space is
+short, menus that cannot be closed attach first, then open menus from left to
+right. Main, Secondary, and Side panel menus use the same rule.

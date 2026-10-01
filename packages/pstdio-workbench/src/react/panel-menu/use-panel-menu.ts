@@ -43,7 +43,6 @@ export interface WorkbenchPanelMenuView {
   icon: string;
   has: boolean;
   collapsed: boolean;
-
   collapsible: boolean;
   size: ReturnType<typeof resolveRegionSize>;
   onOpen: () => void;
@@ -133,7 +132,7 @@ export const useWorkbenchPanelMenusPresent = (workbench: WorkbenchCore, panel: W
   return left.has || right.has;
 };
 
-export const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
+const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
