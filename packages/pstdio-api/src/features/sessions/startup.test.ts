@@ -218,7 +218,7 @@ describe("resolveOrphanedSessions abort", () => {
       },
       sessionService: {
         store: { get: () => undefined },
-        listByStatus: async () => {
+        listActive: async () => {
           const results = [];
           for (const id of sessionIds) {
             const res = await app.request(`/v1/sessions/${id}`);
@@ -271,7 +271,7 @@ describe("resolveOrphanedSessions resolution", () => {
       },
       sessionService: {
         store: { get: () => undefined },
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         transitionStatus,
       },
       db: {},
@@ -307,7 +307,7 @@ describe("resolveOrphanedSessions resolution", () => {
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
         store: { get: () => undefined },
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         transitionStatus,
       },
       db: {},
@@ -358,7 +358,7 @@ describe("resolveOrphanedSessions resolution", () => {
         store,
         get: async () => staleSession,
         update: async () => staleSession,
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         transitionStatus,
       },
       db: {},
@@ -422,7 +422,7 @@ describe("resolveOrphanedSessions reattach failures", () => {
         store,
         get: async () => staleSession,
         update: async () => staleSession,
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         transitionStatus,
       },
       db: {},
@@ -479,7 +479,7 @@ describe("resolveOrphanedSessions reattach failures", () => {
         store: createTrackedSessionStore(),
         get: async () => staleSession,
         update: async () => staleSession,
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         transitionStatus,
       },
     } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
@@ -489,6 +489,27 @@ describe("resolveOrphanedSessions reattach failures", () => {
     expect(reattach).toHaveBeenCalledTimes(1);
     expect(removeQueueEntry).toHaveBeenCalledWith(3);
     expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected", expect.anything());
+  });
+});
+
+describe("resolveOrphanedSessions waiting sessions", () => {
+  test("sweeps a session left waiting on a question", async () => {
+    const handle = await createTestApp({ harnessRegistry: createTestHarnessRegistry([]) });
+    try {
+      const project = await handle.deps.projectService.create({ name: "Waiting orphan" });
+      const session = await handle.deps.sessionService.create({
+        project_id: project.id,
+        title: "Waiting",
+        agent: FAKE_ID,
+      });
+      await handle.deps.sessionService.transitionStatus(session.id, "awaiting_input");
+
+      await resolveOrphanedSessions(handle.deps);
+
+      expect((await handle.deps.sessionService.get(session.id))?.status).toBe("disconnected");
+    } finally {
+      await handle.close();
+    }
   });
 });
 
@@ -518,7 +539,7 @@ describe("resolveOrphanedSessions message lookup", () => {
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },
       sessionService: {
         store: { get: () => undefined },
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         transitionStatus,
       },
       db: {},
@@ -548,7 +569,7 @@ describe("resolveOrphanedSessions hooks", () => {
     const sessionsDb = {
       get: mock(async () => null),
       list: mock(async () => []),
-      listByStatus: mock(async () => [staleSession]),
+      listActive: mock(async () => [staleSession]),
       updateStatus,
       create: mock(async () => null),
       update: mock(async () => null),
@@ -627,7 +648,7 @@ describe("resolveOrphanedSessions readiness gate", () => {
         store,
         get: async () => staleSession,
         update: async () => staleSession,
-        listByStatus: async () => [staleSession],
+        listActive: async () => [staleSession],
         transitionStatus,
       },
       db: {},

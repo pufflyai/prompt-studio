@@ -1,4 +1,5 @@
 import { describe, expect, mock, spyOn, test } from "bun:test";
+import { inertSessionChannelHooks } from "../features/sessions/session-store.test-utils";
 import { apiLogger } from "../lib/logger";
 import { createSessionService } from "./session-service";
 
@@ -146,7 +147,7 @@ describe("SessionService", () => {
     test("keeps a session active and tracked when remote cleanup is unconfirmed", async () => {
       const { deps, mocks } = buildDeps();
       const service = createSessionService(deps);
-      service.store.create("s1", () => {});
+      service.store.create("s1", inertSessionChannelHooks);
       service.store.setSession("s1", {
         agentSessionId: "agent_1",
         done: new Promise(() => {}),
@@ -168,7 +169,7 @@ describe("SessionService", () => {
       const service = createSessionService(deps);
       const stop = mock(() => {});
 
-      service.store.create("s1", () => {});
+      service.store.create("s1", inertSessionChannelHooks);
       service.store.setSession("s1", {
         agentSessionId: "agent_1",
         done: new Promise(() => {}),
@@ -253,13 +254,22 @@ describe("SessionService", () => {
       const result = await service.resume("s1");
 
       expect(result).toMatchObject({ id: "s1", status: "in_progress" });
-      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "in_progress");
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "in_progress", undefined);
       expect(emitted).toContainEqual(["sessions", "set", { id: "s1", project_id: "project_1", status: "in_progress" }]);
       expect(mocks.onSessionResumed).toHaveBeenCalledWith({
         id: "s1",
         project_id: "project_1",
         status: "in_progress",
       });
+    });
+
+    test("passes the expected status so a finished run keeps its terminal status", async () => {
+      const { deps, mocks } = buildDeps();
+      const service = createSessionService(deps);
+
+      await service.resume("s1", { expectedStatus: "awaiting_input" });
+
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "in_progress", { expectedStatus: "awaiting_input" });
     });
   });
 });

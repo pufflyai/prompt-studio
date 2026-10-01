@@ -76,7 +76,7 @@ create / follow-up ──► queued ──► in_progress
                            │   awaiting_input  completed     failed      cancelled
                            │          │                                  (via stop)
                            │          ▼
-                           └──── in_progress (on approval response)
+                           └──── in_progress (on answer)
 ```
 
 - Create session → `in_progress` or `queued`, depending on runtime capacity
@@ -84,7 +84,7 @@ create / follow-up ──► queued ──► in_progress
 - Queued session drain → `in_progress`
 - Harness completes successfully → `completed`
 - Harness fails → `failed`
-- Approval request → `awaiting_input`
+- Harness asks the person a question → `awaiting_input`; the answer returns it to `in_progress`
 - User stop → `cancelled`; the harness owns cancellation and process cleanup
 - Transport/fetch error during follow-up → `failed` + error in cached messages
 

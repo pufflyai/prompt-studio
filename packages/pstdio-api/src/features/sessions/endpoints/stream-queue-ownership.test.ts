@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { openSessionStream } from "../../../test-utils/session-stream";
+import { inertSessionChannelHooks } from "../session-store.test-utils";
 
 test("stream snapshots separate a confirmed prompt from an identical pending prompt", async () => {
   const handle = await createTestApp();
@@ -15,7 +16,7 @@ test("stream snapshots separate a confirmed prompt from an identical pending pro
     const first = await queue.create({ session_id: session.id, request_kind: "follow_up", prompt: "repeat" });
     const second = await queue.create({ session_id: session.id, request_kind: "follow_up", prompt: "repeat" });
     await queue.markDispatchStarted(first.queue_position);
-    const entry = handle.deps.sessionService.store.create(session.id, () => {});
+    const entry = handle.deps.sessionService.store.create(session.id, inertSessionChannelHooks);
     const conversation = await entry.conversationReady;
     conversation.push({
       op: "replace",

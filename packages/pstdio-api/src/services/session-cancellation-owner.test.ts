@@ -5,6 +5,7 @@ import {
   createSessionQueueEntriesDBService,
   createSessionsDBService,
 } from "pstdio-db";
+import { inertSessionChannelHooks } from "../features/sessions/session-store.test-utils";
 import { EventBus } from "../features/sync/event-bus";
 import { createTestApp } from "../test-utils/create-test-app";
 import { createSessionService } from "./session-service";
@@ -17,7 +18,7 @@ test("delayed cancellation cannot cancel a replacement conversation owner", asyn
     const service = handle.deps.sessionService;
     const project = await handle.deps.projectService.create({ name: "Cancellation owner" });
     const session = await service.create({ project_id: project.id, title: "Run", agent: "test" });
-    const previous = service.store.create(session.id, () => {});
+    const previous = service.store.create(session.id, inertSessionChannelHooks);
     service.store.setSession(session.id, {
       agentSessionId: "old",
       done: new Promise(() => {}),
@@ -28,7 +29,7 @@ test("delayed cancellation cannot cancel a replacement conversation owner", asyn
     });
     const cancelling = service.cancel(session.id);
     await stopping.promise;
-    const next = service.store.create(session.id, () => {});
+    const next = service.store.create(session.id, inertSessionChannelHooks);
     await service.resume(session.id);
     const before = await service.get(session.id);
     stopped.resolve();
@@ -75,7 +76,7 @@ test("queued cancellation cannot stop the run that won the dispatch claim", asyn
     const [pending] = await queue.listPendingBySession(session.id);
     const claimed = await raw.claimQueuedForDispatch(session.id, pending.queue_position);
     let stopped = false;
-    const owner = service.store.create(session.id, () => {});
+    const owner = service.store.create(session.id, inertSessionChannelHooks);
     service.store.setSession(session.id, {
       done: new Promise(() => {}),
       stop: () => {

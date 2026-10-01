@@ -10,3 +10,4 @@ export {
   type HarnessRegistry,
   validateHarnessParams,
 } from "./harness-registry";
+export { createQuestionService, type QuestionServiceHooks } from "./question-service";
