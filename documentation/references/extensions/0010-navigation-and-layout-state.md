@@ -14,7 +14,7 @@ A page target changes location and selects its mode. A panel target preserves lo
 
 An explicit target parent supplies contextual breadcrumbs. Without one, navigation uses the page's declared parent. Closing the last routed resource view follows that declared parent. Closing an auxiliary panel preserves the route. `openOn: "page-resource"` opens a matching binding during page navigation; closing it keeps it closed until another navigation.
 
-The browser owns history. Page location persistence stays at version 1. Layout cache version 4 stores resource identity keys and Main collections. Incompatible layout cache entries are discarded, while valid locations, resource data, tree state, menu preferences, and side-panel presentation remain intact. Collection state uses the existing location key to separate workspaces.
+The browser owns history. Page location persistence stays at version 1. Layout cache version 5 stores resource identity keys, Main collections, and the Side Panel presentation in the `side` region. Incompatible layout cache entries are discarded, including their Side Panel presentation, while valid locations, resource data, tree state, and menu preferences remain intact. Collection state uses the existing location key to separate workspaces.
 
 Opening or selecting a tab in Side or Secondary keeps the current history entry and preserves Forward navigation. Back and Forward restore tab order, selection, and saved panel visibility. Mode-owned tabs restore their shared order and selection from the project/mode layout cache; page-owned and shell-owned tabs use the location cache. The destination mode becomes active before its layout is restored, so the previous mode cannot change those saved choices.
 

@@ -42,6 +42,12 @@ const workbench = createWorkbench({
 declares `floatingPanels: "hidden"` on its mode. The controller enforces this setting on transitions, saved state,
 and requests. The Float button and bubble launcher use `workbench.sidePanel.canFloat()`.
 
+The presentation is layout state. The `side` region's `visible` flag says whether the panel is open, and its
+`presentation` says whether it is attached or floating. Layout persistence saves it with each persistence scope, so
+a host that scopes layouts by project or page restores each scope's own choice. A scope without a saved layout uses
+`initialSidePanelMode`. When a mode hides floating panels, a floating choice shows attached and comes back when the
+mode allows floating again.
+
 Use `workbench.shell.setRegionOpen("side", open)` to hide or reopen the panel. Use
 `workbench.shell.setSidePanelPresentation("floating")` to float it when allowed. A forbidden floating request
 resolves to `"attached"`. `collapsible: false` prevents dragging closed and still permits explicit hide/show.

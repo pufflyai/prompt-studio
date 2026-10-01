@@ -155,7 +155,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const sidePanelHostRef = useRef<HTMLDivElement | null>(null);
   if (!sidePanelHostRef.current) sidePanelHostRef.current = createSidePanelHost();
 
-  const sidePanelMode = useWorkbenchStore(workbench.sidePanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const sidenavOpen = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
@@ -166,6 +165,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const hasSecondaryPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
   const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
   const floatingPanelsAllowed = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
+  // The mode lives in the layout; the floating policy above re-renders when the active mode changes.
+  const sidePanelMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
 
   const {
     hasActivityBarWidgets,

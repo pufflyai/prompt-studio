@@ -11,11 +11,9 @@ const projectOwnedRegions = [
   "side-right-menu",
   "status",
 ] as const;
-const projectIdFromScope = (scope: string | undefined) => scope?.match(/^project\/([^/]+)(?:\/|$)/)?.[1];
-const modeIdFromScope = (scope: string | undefined) => {
-  if (!projectIdFromScope(scope)) return undefined;
-  return scope?.match(/\/mode\/([^/]+)/)?.[1] ?? "project";
-};
+// The bare project scope is only a loading step before a page applies. Its saved
+// region state is older than the page's, so it never carries into a page.
+const pageScopeMatch = (scope: string | undefined) => scope?.match(/^project\/([^/]+)\/mode\/([^/]+)\//);
 export const resolveDashboardPersistenceScope = (input: WorkbenchPagePersistenceScopeInput) => {
   const { currentScope, modeId, pageId, projectId, resource } = input;
   if (!projectId) return { scope: undefined };
@@ -23,10 +21,9 @@ export const resolveDashboardPersistenceScope = (input: WorkbenchPagePersistence
     modeId && pageId
       ? `project/${projectId}/mode/${modeId}/${resource ? `resource/${defaultPageResourceCodec.toUri(resource)}` : `page/${pageId}`}`
       : `project/${projectId}`;
-  const sameMode = modeIdFromScope(currentScope) === modeId;
+  const current = pageScopeMatch(currentScope);
+  const sameMode = current?.[2] === modeId;
   const carryRegions =
-    projectIdFromScope(currentScope) === projectId
-      ? projectOwnedRegions.filter((region) => sameMode || !/^side(?:-|$)/.test(region))
-      : [];
+    current?.[1] === projectId ? projectOwnedRegions.filter((region) => sameMode || !/^side(?:-|$)/.test(region)) : [];
   return { scope, carryRegions };
 };

@@ -1,64 +1,54 @@
+import type { LayoutModel } from "../../registries/layout/layout-model";
+import type { WorkbenchSidePanelMode } from "../../registries/layout/layout-types";
 import { createDisposable, type Disposable } from "../../shared/disposable";
-import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
-export type WorkbenchSidePanelMode = "floating" | "closed" | "attached";
+export type { WorkbenchSidePanelMode };
 
 export type WorkbenchSidePanelChangeListener = (mode: WorkbenchSidePanelMode) => void;
 
-export interface WorkbenchSidePanelState {
-  mode: WorkbenchSidePanelMode;
-}
-
 export interface WorkbenchSidePanelController {
   canFloat(): boolean;
-  store: WorkbenchStore<WorkbenchSidePanelState>;
   getMode(): WorkbenchSidePanelMode;
   setMode(mode: WorkbenchSidePanelMode): void;
   onDidChange(listener: WorkbenchSidePanelChangeListener): Disposable;
 }
 
-export interface WorkbenchSidePanelPersistenceAdapter {
-  getMode(): WorkbenchSidePanelMode | undefined;
-  setMode(mode: WorkbenchSidePanelMode): void;
-}
-
 export interface CreateWorkbenchSidePanelControllerInput {
+  layout: Pick<LayoutModel, "getLayout" | "setSidePanelMode" | "store">;
   getFloatingPanels?(): "visible" | "hidden";
   onDidChangePolicy?(listener: () => void): Disposable;
   initialMode?: WorkbenchSidePanelMode;
-  persistence?: WorkbenchSidePanelPersistenceAdapter;
 }
 
-export const createWorkbenchSidePanelController = (input: CreateWorkbenchSidePanelControllerInput = {}) => {
+// The layout's side region owns the mode, so it follows layout persistence scopes
+// like every other region. The controller only applies the floating policy.
+export const createWorkbenchSidePanelController = (input: CreateWorkbenchSidePanelControllerInput) => {
   const canFloat = () => input.getFloatingPanels?.() !== "hidden";
   const resolveMode = (mode: WorkbenchSidePanelMode) => (!canFloat() && mode === "floating" ? "attached" : mode);
-  const internal = createWorkbenchStore<WorkbenchSidePanelState>({
-    name: "workbench.sidePanel",
-    // What the user last chose outranks the app's opening default.
-    initialState: { mode: resolveMode(input.persistence?.getMode() ?? input.initialMode ?? "floating") },
-  });
-
-  const setMode = (mode: WorkbenchSidePanelMode) => {
-    const next = resolveMode(mode);
-    if (internal.getState().mode === next) return;
-    internal.setState({ mode: next }, false, "setMode");
-    input.persistence?.setMode(next);
+  const defaultPresentation = input.initialMode === "attached" ? "attached" : "floating";
+  const getMode = () => {
+    const side = input.layout.getLayout().regions.side;
+    return side.visible ? resolveMode(side.presentation ?? defaultPresentation) : "closed";
   };
-  input.onDidChangePolicy?.(() => setMode(internal.getState().mode));
 
   return {
     canFloat,
-    store: internal,
-    getMode() {
-      return internal.getState().mode;
-    },
-    setMode,
+    getMode,
+    setMode: (mode: WorkbenchSidePanelMode) => input.layout.setSidePanelMode(resolveMode(mode)),
     onDidChange(listener: WorkbenchSidePanelChangeListener) {
-      const unsubscribe = internal.subscribeSelector(
-        (state) => state.mode,
-        (mode) => listener(mode),
-      );
-      return createDisposable(unsubscribe);
+      let current = getMode();
+      const notify = () => {
+        const next = getMode();
+        if (next === current) return;
+        current = next;
+        listener(next);
+      };
+      const unsubscribe = input.layout.store.subscribe(notify);
+      const policy = input.onDidChangePolicy?.(notify);
+      return createDisposable(() => {
+        unsubscribe();
+        policy?.dispose();
+      });
     },
   };
 };

@@ -25,8 +25,7 @@ type DesktopIpcOptions = {
   quitApp: () => Promise<void>;
   retryRuntime: () => Promise<void>;
   runtimeOrigin: () => string | null;
-  setPageLocation: (projectId: string, value: string | null) => void;
-  setSelectedProjectId: (projectId: string | null) => void;
+  setWorkbenchItem: (key: string, value: string | null) => void;
   webContents: () => WebContents[];
 };
 
@@ -77,17 +76,11 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   handle(DESKTOP_CHANNELS.getWorkbenchState, options.getWorkbenchState);
   handle(DESKTOP_CHANNELS.getProjectTabs, options.getProjectTabs);
   handle(DESKTOP_CHANNELS.setProjectTabs, options.setProjectTabs);
-  handle(DESKTOP_CHANNELS.setPageLocation, (projectId, value) => {
-    if (typeof projectId !== "string" || !projectId || (typeof value !== "string" && value !== null)) {
-      throw new Error("Invalid desktop page location update");
+  handle(DESKTOP_CHANNELS.setWorkbenchItem, (key, value) => {
+    if (typeof key !== "string" || !key || (typeof value !== "string" && value !== null)) {
+      throw new Error("Invalid desktop workbench update");
     }
-    options.setPageLocation(projectId, value);
-  });
-  handle(DESKTOP_CHANNELS.setSelectedProjectId, (projectId) => {
-    if (typeof projectId !== "string" && projectId !== null) {
-      throw new Error("Invalid desktop project selection update");
-    }
-    options.setSelectedProjectId(projectId);
+    options.setWorkbenchItem(key, value);
   });
 
   return () => {

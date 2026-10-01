@@ -27,7 +27,7 @@ export const createWorkbenchShellController = (input: {
 }): WorkbenchShellController => ({
   getRegionState(region) {
     const state = input.layout.getLayout().regions[region];
-    return { open: region === "side" ? input.sidePanel.getMode() !== "closed" : state.visible, size: state.size };
+    return { open: state.visible, size: state.size };
   },
 
   setRegionOpen(region, open) {
@@ -47,8 +47,20 @@ export const createWorkbenchShellController = (input: {
   setSidePanelPresentation: input.sidePanel.setMode,
 
   onDidChange(listener) {
-    const unsubscribeLayout = input.layout.store.subscribeSelector((state) => state.layout, listener);
-    const sidePanelSubscription = input.sidePanel.onDidChange(listener);
+    // The Side Panel mode lives in the layout, so one change can reach both sources.
+    // A mode policy change moves the panel without a layout change.
+    let layout = input.layout.getLayout();
+    let sidePanelMode = input.sidePanel.getMode();
+    const notify = () => {
+      const nextLayout = input.layout.getLayout();
+      const nextSidePanelMode = input.sidePanel.getMode();
+      if (nextLayout === layout && nextSidePanelMode === sidePanelMode) return;
+      layout = nextLayout;
+      sidePanelMode = nextSidePanelMode;
+      listener();
+    };
+    const unsubscribeLayout = input.layout.store.subscribeSelector((state) => state.layout, notify);
+    const sidePanelSubscription = input.sidePanel.onDidChange(notify);
     return createDisposable(() => {
       unsubscribeLayout();
       sidePanelSubscription.dispose();

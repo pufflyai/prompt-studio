@@ -66,8 +66,6 @@ export type {
   WorkbenchSidePanelChangeListener,
   WorkbenchSidePanelController,
   WorkbenchSidePanelMode,
-  WorkbenchSidePanelPersistenceAdapter,
-  WorkbenchSidePanelState,
 } from "../controllers/side-panel/side-panel-controller";
 export { createWorkbenchSidePanelController } from "../controllers/side-panel/side-panel-controller";
 export type {
