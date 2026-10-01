@@ -167,10 +167,14 @@ export const ChatInput = (props: ChatInputProps) => {
   };
 
   const resetEditor = (shouldFocus = false) => {
-    setEditorKey((key) => key + 1);
     question.reset();
     history.reset();
-    history.change(getTextFromSerializedEditorState(defaultState));
+    // Answering a question leaves the message draft ready for the person to keep editing.
+    if (!questionPrompt) {
+      setEditorKey((key) => key + 1);
+      setEditorState(defaultState);
+      history.change(getTextFromSerializedEditorState(defaultState));
+    }
 
     if (shouldFocus) {
       requestAnimationFrame(() => {
@@ -288,7 +292,10 @@ export const ChatInput = (props: ChatInputProps) => {
                 defaultState={editorState}
                 isEditable={!isDisabled && !submitting}
                 placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
-                onChange={history.change}
+                onChange={(nextText, state) => {
+                  setEditorState(JSON.stringify(state));
+                  history.change(nextText);
+                }}
                 onSubmit={() => runAction(resolveChatInputKeyboardAction(actionState))}
                 references={references}
                 onAddReference={onAddReference}

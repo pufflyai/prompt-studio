@@ -8,10 +8,22 @@ import {
   getQuestionSelectionKey,
   hasMissingRequiredQuestionAnswer,
   isQuestionOtherSelected,
+  toggleQuestionOptionSelection,
   toggleQuestionOtherAnswer,
 } from "./chat-input-question-prompt";
 
 describe("question Other choice and skip", () => {
+  it.each(["constructor", "__proto__", "toString"])("answers a question whose id is %s", (id) => {
+    const prompt: ChatInputQuestionPrompt = {
+      questions: [{ id, question: "Choose", options: [{ label: "Yes" }], required: true, allowCustomAnswer: true }],
+    };
+    expect(buildQuestionAnswerValues(prompt, {}, {})).toEqual([[]]);
+    expect(hasMissingRequiredQuestionAnswer(prompt, {}, {})).toBe(true);
+    const selected = toggleQuestionOptionSelection({}, prompt.questions[0], 0, "Yes");
+    expect(buildQuestionAnswerValues(prompt, selected, {})).toEqual([["Yes"]]);
+    expect(buildQuestionAnswerValues(prompt, {}, "Typed answer")).toEqual([["Typed answer"]]);
+    expect(buildQuestionResponse(prompt, selected, {})).toBe("Choose: Yes");
+  });
   it("sends one answer for a single-choice question when the person typed their own", () => {
     const prompt: ChatInputQuestionPrompt = {
       questions: [

@@ -73,6 +73,8 @@ export const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) =>
   };
 
   const submit = (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => {
+    // Question replies belong to the waiting agent, even while a queued message is being edited.
+    if (questionResponse) return onSubmit?.(text, attachments, questionResponse);
     if (editingItemId) {
       onUpdate?.(editingItemId, text);
       setEditingItemId(null);
@@ -157,7 +159,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           questionPrompt={chatInputQuestionPrompt}
           autoFocus={chatInputAutoFocus}
           focusSignal={queuedComposer.focusSignal}
-          submitTitle={queuedComposer.isEditing ? "Save queued follow-up" : undefined}
+          submitTitle={queuedComposer.isEditing && !chatInputQuestionPrompt ? "Save queued follow-up" : undefined}
           references={chatInputReferences}
           onAddReference={onChatInputAddReference}
         />

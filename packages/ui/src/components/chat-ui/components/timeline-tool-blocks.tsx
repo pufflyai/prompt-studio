@@ -2,7 +2,12 @@ import { Box, Stack, Text, Textarea } from "@chakra-ui/react";
 import type { FormEvent, ReactNode } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Radio, RadioGroup } from "@/components/primitives/radio";
-import { OTHER_CHOICE_LABEL, OTHER_CHOICE_VALUE, questionOffersOtherChoice } from "./question-choices";
+import {
+  getOwnQuestionValue,
+  OTHER_CHOICE_LABEL,
+  OTHER_CHOICE_VALUE,
+  questionOffersOtherChoice,
+} from "./question-choices";
 import type { QuestionFormBlockQuestion, TodoListBlockItem } from "./timeline";
 
 const preventSubmit = (event: FormEvent) => {
@@ -75,11 +80,13 @@ const QuestionRadioOptions = (props: {
     props;
   const { otherField } = props;
   const hasOtherChoice = questionOffersOtherChoice(question);
+  const selectedIndex = question.options.findIndex((option) => option.label === selectedOption);
+  const selectedValue = selectedIndex === -1 ? null : String(selectedIndex);
 
   return (
     <RadioGroup
       name={name}
-      value={otherSelected ? OTHER_CHOICE_VALUE : (selectedOption ?? null)}
+      value={otherSelected ? OTHER_CHOICE_VALUE : selectedValue}
       readOnly={!editable}
       aria-readonly={editable ? undefined : "true"}
       display="flex"
@@ -90,15 +97,15 @@ const QuestionRadioOptions = (props: {
           ? (details) => {
               if (!details.value) return;
               if (details.value === OTHER_CHOICE_VALUE) onToggleOther?.(question, questionIndex);
-              else onToggleOption?.(question, questionIndex, details.value);
+              else onToggleOption?.(question, questionIndex, question.options[Number(details.value)].label);
             }
           : undefined
       }
     >
-      {question.options.map((option) => (
+      {question.options.map((option, optionIndex) => (
         <Radio
           key={option.label}
-          value={option.label}
+          value={String(optionIndex)}
           inputProps={editable ? undefined : { tabIndex: -1 }}
           alignItems="flex-start"
         >
@@ -264,8 +271,8 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
             question={question}
             questionIndex={questionIndex}
             editable={editable}
-            selectedOptions={selectedOptionsByQuestion[name] ?? []}
-            customAnswer={customAnswersByQuestion[name]}
+            selectedOptions={getOwnQuestionValue(selectedOptionsByQuestion, name) ?? []}
+            customAnswer={getOwnQuestionValue(customAnswersByQuestion, name)}
             onToggleOption={onToggleOption}
             onToggleOther={onToggleOther}
             onCustomAnswerChange={onCustomAnswerChange}
