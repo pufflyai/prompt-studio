@@ -4,13 +4,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { confirmQuestionReply } from "./question-confirmation";
 
-test.each(["", '{"type":"unrelated"}\n'])("rejects an unconfirmed reply when a %j transcript stops growing", async (history) => {
+test.each([
+  "",
+  '{"type":"unrelated"}\n',
+])("rejects an unconfirmed reply when a %j transcript stops growing", async (history) => {
   const root = mkdtempSync(join(tmpdir(), "codex-empty-answer-"));
   try {
     const path = join(root, "rollout.jsonl");
     writeFileSync(path, history);
     const closing = new AbortController();
-    const confirmed = confirmQuestionReply(path, "call-unconfirmed", { audience: { answers: ["Team"] } }, closing.signal);
+    const confirmed = confirmQuestionReply(
+      path,
+      "call-unconfirmed",
+      { audience: { answers: ["Team"] } },
+      closing.signal,
+    );
     await Bun.sleep(75);
     closing.abort();
 

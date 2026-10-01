@@ -17,4 +17,4 @@ jobs:
         with:
           bun-version-file: package.json
       - name: Check unchanged transcript and real pipe closure
-        run: bun test extensions/harness-codex/src/question-confirmation.test.ts extensions/harness-codex/src/app-server-rpc.test.ts
+        run: bun test extensions/harness-codex/src/question-confirmation.test.ts extensions/harness-codex/src/app-server-rpc.test.ts extensions/harness-codex/src/app-server-session.test.ts
