@@ -21,6 +21,10 @@ const openLevel = (pageId: string) =>
     slot: "content",
     getSections: () => [],
   });
+// The Lab mode hides the project Sidenav.
+const modes = {
+  getMode: (id: string) => (id === "lab" ? { chrome: { sidenav: false as const } } : undefined),
+};
 const page = (id: string, title: string): WorkbenchPageContribution => ({
   id,
   ref: { extensionId: "planner", kind: "page", id },
@@ -50,6 +54,7 @@ describe("page breadcrumbs", () => {
       location,
       pages: [tickets, ticket],
       navigationTrees,
+      modes,
       resources,
       navigate: (target) => targets.push(target),
     });
@@ -70,6 +75,7 @@ describe("page breadcrumbs", () => {
       },
       pages: [workspaces, workspace],
       navigationTrees,
+      modes,
       resources,
       navigate: () => undefined,
     });
@@ -95,6 +101,7 @@ describe("page breadcrumbs", () => {
       location,
       pages: [tickets, ticket],
       navigationTrees,
+      modes,
       resources,
       navigate: (target) => targets.push(target),
     });
@@ -121,6 +128,7 @@ describe("page breadcrumbs", () => {
         location,
         pages,
         navigationTrees,
+        modes,
         resources,
         navigate: () => undefined,
       });
@@ -139,5 +147,7 @@ describe("page breadcrumbs", () => {
     expect(build({ page: tickets.ref }, [tickets]).map((item) => item.startsLevel)).toEqual([undefined]);
     level.dispose();
     expect(build({ page: sessions.ref }, [sessions]).map((item) => item.startsLevel)).toEqual([undefined]);
+    const lab = { ...page("lab", "Lab"), modeId: "lab" };
+    expect(build({ page: lab.ref }, [lab]).map((item) => item.startsLevel)).toEqual([true]);
   });
 });

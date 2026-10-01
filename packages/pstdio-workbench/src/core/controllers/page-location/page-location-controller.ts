@@ -79,7 +79,7 @@ export const createWorkbenchPageLocationController = <Value>(
   const historyEntry = createPageHistoryEntry({ pages, resources: internals.resources });
 
   const rootLevel = createRootLevelLocationTracker({
-    navigationTrees: input.navigationTrees,
+    levels: input,
     pages,
     normalize: (location) => normalizeStored(location),
     resourceKey: (resource) => internals.resources.toUri(internals.resources.normalize(resource)),

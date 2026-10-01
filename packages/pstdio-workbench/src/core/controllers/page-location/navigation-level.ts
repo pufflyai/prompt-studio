@@ -1,4 +1,5 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
+import type { WorkbenchModeContribution } from "../../registries/modes/mode-registry";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
 
@@ -8,11 +9,36 @@ interface NavigationLevelsInput {
   navigationTrees: NavigationTreeRegistry;
 }
 
-const levelOwner = (location: PageLocation, input: NavigationLevelsInput) => {
-  const page = input.pages.find(
+// The part of the mode registry that tells whether a mode replaces the project Sidenav.
+export interface NavigationLevelModes {
+  getMode(id: string): Pick<WorkbenchModeContribution, "chrome"> | undefined;
+}
+
+// The registries that decide whether a page leaves the project navigation.
+export interface ProjectNavigationSources {
+  navigationTrees: NavigationTreeRegistry;
+  modes: NavigationLevelModes;
+}
+
+type ProjectNavigationInput = NavigationLevelsInput & ProjectNavigationSources;
+
+const findPage = (location: PageLocation, pages: readonly WorkbenchPageContribution[]) =>
+  pages.find(
     (candidate) => candidate.ref.id === location.page.id && candidate.ref.extensionId === location.page.extensionId,
   );
+
+const levelOwner = (location: PageLocation, input: NavigationLevelsInput) => {
+  const page = findPage(location, input.pages);
   return page ? input.navigationTrees.resolveOwner("page", page.id, "content") : undefined;
+};
+
+// A page leaves the project navigation when it starts a Sidenav level, or when its mode replaces the
+// whole Sidenav, such as a mode with its own activity rail. Either way the project rows are gone.
+export const leavesProjectNavigation = (location: PageLocation, input: ProjectNavigationInput) => {
+  const page = findPage(location, input.pages);
+  if (!page) return false;
+  if (input.navigationTrees.resolveOwner("page", page.id, "content")) return true;
+  return input.modes.getMode(page.modeId)?.chrome?.sidenav !== undefined;
 };
 
 // A page with a content navigation tree starts a Sidenav level. Levels nest along the location's
@@ -28,13 +54,13 @@ export const resolveNavigationLevels = (input: NavigationLevelsInput) => {
   return levels;
 };
 
-// The part of a location's parent chain that sits before the outermost Sidenav level. A location that
-// starts inside a level has none, so its breadcrumb cannot lead the user back to the main navigation.
+// The part of a location's parent chain that sits before the first page that leaves the project
+// navigation. A location that starts outside it has none, so its breadcrumb cannot lead the user back.
 // Every level counts here, including a page opened inside itself, which the level list folds into one.
-export const resolveRootLevelLocation = (input: NavigationLevelsInput) => {
+export const resolveRootLevelLocation = (input: ProjectNavigationInput) => {
   let rootLevel = input.location;
   for (let current = input.location; current; current = current.parent) {
-    if (levelOwner(current, input)) rootLevel = current.parent;
+    if (leavesProjectNavigation(current, input)) rootLevel = current.parent;
   }
   return rootLevel;
 };

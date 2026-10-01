@@ -8,7 +8,7 @@ import type {
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { createDisposable } from "../../shared/disposable";
 import type { WorkbenchBreadcrumbController, WorkbenchBreadcrumbItem } from "../breadcrumbs/breadcrumb-registry";
-import { resolveNavigationLevels } from "./navigation-level";
+import { leavesProjectNavigation, type NavigationLevelModes } from "./navigation-level";
 import type { WorkbenchPageLocationController } from "./page-location-controller";
 
 const pageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:${ref.id}`;
@@ -30,18 +30,18 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
   location: PageLocation;
   pages: readonly WorkbenchPageContribution[];
   navigationTrees: NavigationTreeRegistry;
+  modes: NavigationLevelModes;
   resources: WorkbenchPageResourceCodec;
   navigate(target: NavigationTargetPage): void;
 }): WorkbenchBreadcrumbItem[] => {
   const pagesByRef = new Map(input.pages.map((page) => [pageRefKey(page.ref), page]));
   const locations = locationsFromRoot(input.location);
-  const levelPages = new Set(resolveNavigationLevels(input).map((level) => pageRefKey(level.location.page)));
   return locations.map((location, index) => {
     const page = pagesByRef.get(pageRefKey(location.page));
     const item: WorkbenchBreadcrumbItem = {
       title: location.resource?.label ?? (page ? pageTitle(page) : location.page.id),
       icon: location.resource?.icon ?? page?.icon,
-      ...(levelPages.has(pageRefKey(location.page)) ? { startsLevel: true } : {}),
+      ...(leavesProjectNavigation(location, input) ? { startsLevel: true } : {}),
       ...(location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };
     if (index < locations.length - 1) {
@@ -55,6 +55,7 @@ export const setWorkbenchPageBreadcrumbs = (input: {
   location: PageLocation;
   pages: readonly WorkbenchPageContribution[];
   navigationTrees: NavigationTreeRegistry;
+  modes: NavigationLevelModes;
   resources: WorkbenchPageResourceCodec;
   navigate(target: NavigationTargetPage): void;
 }) => input.breadcrumbs.setItems(createWorkbenchPageBreadcrumbItems(input));
@@ -63,6 +64,7 @@ export const connectWorkbenchPageBreadcrumbs = (input: {
   locations: WorkbenchPageLocationController;
   pages: WorkbenchPageRegistry<unknown>;
   navigationTrees: NavigationTreeRegistry;
+  modes: NavigationLevelModes;
   resources: WorkbenchPageResourceCodec;
 }) => {
   let ownedBreadcrumbs:
@@ -83,6 +85,7 @@ export const connectWorkbenchPageBreadcrumbs = (input: {
       location: state.location,
       pages: Object.values(state.pages),
       navigationTrees: input.navigationTrees,
+      modes: input.modes,
       resources: input.resources,
       navigate: (target) => {
         input.locations.navigate(target);

@@ -58,6 +58,7 @@ A page can own a navigation tree. Opening that page starts a Sidenav level: its 
 - The project crumb shows the project avatar and title, like the project button in the browser navbar. Breadcrumbs that already start outside a level stay unchanged.
 - The project crumb, a click on the already active project tab on desktop, and the project button in the browser navbar all open the last root-level page the user visited in this project.
 - A root-level page is the part of the page location's parent chain before the first level page. For a ticket page inside the tickets board, that is the tickets board.
+- A page whose mode replaces the Sidenav, such as a mode with its own activity rail, counts as a level page too. Its breadcrumb gets the project crumb, and the project button leaves the mode.
 - Moving from one level to another, such as Sessions to Notes, keeps the saved page. It also survives a reload.
 - The Start page is only the fallback, used when no root-level page has been visited yet.
 - A click on the active project tab on a root-level page does nothing.

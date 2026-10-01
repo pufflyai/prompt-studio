@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import {
   createPageLocationHarness,
+  labRef,
   notesRef,
   sessionsRef,
   startRef,
@@ -66,6 +67,13 @@ describe("last root-level location", () => {
     const location = harness.registry.store.getState().location!;
     expect(page(location.page)).toBe(page(ticketsRef));
     expect(location.resource).toBeUndefined();
+  });
+
+  test("treats a page whose mode replaces the Sidenav as a level", () => {
+    harness.controller.navigate({ kind: "page", page: ticketsRef });
+    harness.controller.navigate({ kind: "page", page: labRef });
+    harness.controller.navigateToRootLevel();
+    expect(page(harness.registry.store.getState().location!.page)).toBe(page(ticketsRef));
   });
 
   test("keeps the saved page when the user moves between levels", () => {

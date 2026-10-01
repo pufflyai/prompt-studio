@@ -1,11 +1,10 @@
 import type { PageLocation, ResourceRef } from "@pstdio/sdk/extensions";
-import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
-import { resolveRootLevelLocation } from "./navigation-level";
+import { type ProjectNavigationSources, resolveRootLevelLocation } from "./navigation-level";
 import type { ResolvedPageLocation } from "./page-location-types";
 
 interface RootLevelLocationTrackerInput {
-  navigationTrees: NavigationTreeRegistry;
+  levels: ProjectNavigationSources;
   pages(): readonly WorkbenchPageContribution[];
   normalize(location: PageLocation): ResolvedPageLocation;
   resourceKey(resource: ResourceRef): string;
@@ -17,7 +16,7 @@ const usesResource = (location: PageLocation | undefined, matches: (resource: Re
   return Boolean(location.resource && matches(location.resource)) || usesResource(location.parent, matches);
 };
 
-// Holds the last location outside every Sidenav level for the active project. Navigation inside a
+// Holds the last location inside the project navigation for the active project. Navigation inside a
 // level keeps it, so a breadcrumb that starts with a level page still has somewhere to lead back to.
 export const createRootLevelLocationTracker = (input: RootLevelLocationTrackerInput) => {
   let saved: PageLocation | undefined;
@@ -28,11 +27,7 @@ export const createRootLevelLocationTracker = (input: RootLevelLocationTrackerIn
     },
 
     remember(location: PageLocation) {
-      const resolved = resolveRootLevelLocation({
-        location,
-        pages: input.pages(),
-        navigationTrees: input.navigationTrees,
-      });
+      const resolved = resolveRootLevelLocation({ ...input.levels, location, pages: input.pages() });
       if (resolved) saved = resolved;
       return saved;
     },

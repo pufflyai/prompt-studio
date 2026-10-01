@@ -8,6 +8,7 @@ import type {
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
+import type { NavigationLevelModes } from "./navigation-level";
 
 export interface WorkbenchPageBrowserEntry {
   url: string;
@@ -56,6 +57,7 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   registry: WorkbenchPageRegistry<Value>;
   browser: WorkbenchPageLocationBrowser;
   navigationTrees: NavigationTreeRegistry;
+  modes: NavigationLevelModes;
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;

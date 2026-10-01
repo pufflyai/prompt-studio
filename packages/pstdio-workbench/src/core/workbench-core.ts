@@ -85,11 +85,13 @@ const createPageLocations = (
   input: createWorkbenchInput,
   registry: ReturnType<typeof createLiveWorkbenchPageRegistry>,
   navigationTrees: ReturnType<typeof createNavigationTreeRegistry>,
+  modes: ReturnType<typeof createWorkbenchModeRegistry>,
 ) =>
   createWorkbenchPageLocationController({
     registry,
     browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
     navigationTrees,
+    modes,
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
     startPage: input.startPage ?? workbenchPages.start,
   });
@@ -224,7 +226,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     resources: pageResources,
   });
 
-  const pageLocations = createPageLocations(input, pages, navigationTrees);
+  const pageLocations = createPageLocations(input, pages, navigationTrees, modes);
 
   const composition = createCoreCompositionController(() => core);
   const navigation = createCoreNavigationRegistry(() => core);
@@ -325,6 +327,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     locations: pageLocations,
     pages,
     navigationTrees,
+    modes,
     resources: pageResources,
   });
   connectWorkbenchCoreState(core, input);

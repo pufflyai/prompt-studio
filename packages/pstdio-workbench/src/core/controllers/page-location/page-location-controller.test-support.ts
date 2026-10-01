@@ -21,6 +21,7 @@ export const workspaceRef = pageRef("pstdio", "workspaces");
 export const sessionsRef = pageRef("pstdio", "sessions");
 export const sessionRef = pageRef("pstdio", "session");
 export const notesRef = pageRef("acme.notes", "notes");
+export const labRef = pageRef("acme.lab", "lab");
 const resources: WorkbenchPageResourceCodec = {
   normalize: (resource) => ({ ...resource, id: resource.id.replace(/^ticket:/, "").toUpperCase() }),
   toUri: (resource) => `pstdio://${resource.type}/${encodeURIComponent(resource.id)}`,
@@ -194,7 +195,20 @@ const createRegistry = () => {
     },
     slots: [],
   });
+  // The Lab mode hides the project Sidenav, so its page leaves the project navigation.
+  registry.registerPage({
+    id: "lab",
+    ref: labRef,
+    title: "Lab",
+    path: "lab",
+    modeId: "lab",
+    main: { kind: "view", view: { kind: "view", id: "lab" }, cardinality: "one" },
+    slots: [],
+  });
   return registry;
+};
+const modes = {
+  getMode: (id: string) => (id === "lab" ? { chrome: { sidenav: false as const } } : undefined),
 };
 const createBrowser = (initialUrl: string) => {
   let current: WorkbenchPageBrowserEntry = { url: initialUrl };
@@ -258,6 +272,7 @@ export const createPageLocationHarness = (url = "/projects/p1") => {
     registry,
     browser: browser.browser,
     navigationTrees,
+    modes,
     persistence: persistence.persistence,
     startPage: startRef,
     reportDiagnostic: (diagnostic) => diagnostics.push(diagnostic.message),
