@@ -5,7 +5,7 @@ import { type ExtensionConnectionsApi, isLocalizedString } from "pstdio-api-cont
 import type { HarnessContextFactory, HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { loadExtensionSources, normalizeExtensionSources, type RuntimeHarnessRecord } from "pstdio-extensions";
+import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { installDefaultExtensions } from "../extensions/default-extensions";
 import { createProcessApi, findFreePort } from "../extensions/extension-process-api";
@@ -128,16 +128,7 @@ export const createHarnessRegistryService = (input: {
     return lifecycle.get(runtime.harnesses);
   };
 
-  const toRegistry = (records: RuntimeHarnessRecord[]) => {
-    const registry = createHarnessRegistry(records, buildContext);
-
-    for (const id of registry.duplicates) {
-      apiLogger.warn({ event: "harness.duplicate_id", harness_id: id }, "Duplicate harness id; last install wins");
-    }
-
-    return registry;
-  };
-  const lifecycle = createHarnessRegistryLifecycle(toRegistry);
+  const lifecycle = createHarnessRegistryLifecycle((records) => createHarnessRegistry(records, buildContext));
   let closed = false;
   let resolutionGeneration = 0;
   const ensureActive = () => {
@@ -180,7 +171,10 @@ export const createHarnessRegistryService = (input: {
 
   // Re-evaluate each handle's `detect()` at most once per TTL so polling endpoints
   // don't spawn `<cli> --version` on every request.
-  const withDetectCache = (registry: HarnessRegistry): HarnessRegistry => {
+  const createRegistryView = (registry: HarnessRegistry): HarnessRegistry => {
+    for (const id of registry.duplicates) {
+      apiLogger.warn({ event: "harness.duplicate_id", harness_id: id }, "Duplicate harness id; last install wins");
+    }
     const detectCache = new Map<string, { at: number; result: ReturnType<HarnessHandle["detect"]> }>();
     const wrap = (handle: HarnessHandle): HarnessHandle => ({
       ...handle,
@@ -216,9 +210,10 @@ export const createHarnessRegistryService = (input: {
       const snapshot = await input.extensionRuntimeCatalog.get(projectId);
       const cached = projectRegistries.get(projectId);
       if (cached && cached.snapshot === snapshot) return cached.registry;
-      const registry = withDetectCache(await lifecycle.get(snapshot.runtime.harnesses, projectId));
+      const loaded = await lifecycle.get(snapshot.runtime.harnesses, projectId);
       ensureActive();
       if (generation !== resolutionGeneration) continue;
+      const registry = createRegistryView(loaded);
       projectRegistries.set(projectId, { snapshot, registry });
       return registry;
     }
@@ -256,7 +251,7 @@ export const createHarnessRegistryService = (input: {
       const loaded = await buildRegistry({ paths });
       ensureActive();
       if (!loaded || generation !== resolutionGeneration) continue;
-      const registry = withDetectCache(loaded);
+      const registry = createRegistryView(loaded);
       hostCache = { signature, registry };
       return registry;
     }
