@@ -1,6 +1,7 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
+import { hasPendingProviderQuestion } from "./live-question-reply";
 import { createSessionQueueDrain } from "./session-queue-drain";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
@@ -243,7 +244,13 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
 
     if (input.questionResponse) {
       input.signal?.throwIfAborted();
-      if (live?.questionService.hasPending()) throw new Error("Question request is no longer pending.");
+      if (
+        live?.questionService.hasPending() ||
+        status === "queued" ||
+        ((status === "in_progress" || status === "awaiting_input") &&
+          !(await hasPendingProviderQuestion(live, input.questionResponse)))
+      )
+        throw new Error("Question request is no longer pending.");
       return prepareExistingDispatch(deps, context);
     }
 
