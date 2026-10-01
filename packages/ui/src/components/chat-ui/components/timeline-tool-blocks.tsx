@@ -1,7 +1,8 @@
 import { Box, Stack, Text, Textarea } from "@chakra-ui/react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Radio, RadioGroup } from "@/components/primitives/radio";
+import { OTHER_CHOICE_LABEL, OTHER_CHOICE_VALUE, questionOffersOtherChoice } from "./question-choices";
 import type { QuestionFormBlockQuestion, TodoListBlockItem } from "./timeline";
 
 const preventSubmit = (event: FormEvent) => {
@@ -14,6 +15,7 @@ interface QuestionFormBlockViewProps {
   selectedOptionsByQuestion?: Record<string, string[]>;
   customAnswersByQuestion?: Record<string, string>;
   onToggleOption?: (question: QuestionFormBlockQuestion, questionIndex: number, optionLabel: string) => void;
+  onToggleOther?: (question: QuestionFormBlockQuestion, questionIndex: number) => void;
   onCustomAnswerChange?: (question: QuestionFormBlockQuestion, questionIndex: number, answer: string) => void;
 }
 
@@ -63,15 +65,21 @@ const QuestionRadioOptions = (props: {
   questionIndex: number;
   name: string;
   selectedOption?: string;
+  otherSelected: boolean;
   editable: boolean;
   onToggleOption?: (question: QuestionFormBlockQuestion, questionIndex: number, optionLabel: string) => void;
+  onToggleOther?: (question: QuestionFormBlockQuestion, questionIndex: number) => void;
+  otherField?: ReactNode;
 }) => {
-  const { question, questionIndex, name, selectedOption, editable, onToggleOption } = props;
+  const { question, questionIndex, name, selectedOption, otherSelected, editable, onToggleOption, onToggleOther } =
+    props;
+  const { otherField } = props;
+  const hasOtherChoice = questionOffersOtherChoice(question);
 
   return (
     <RadioGroup
       name={name}
-      value={selectedOption ?? null}
+      value={otherSelected ? OTHER_CHOICE_VALUE : (selectedOption ?? null)}
       readOnly={!editable}
       aria-readonly={editable ? undefined : "true"}
       display="flex"
@@ -80,7 +88,9 @@ const QuestionRadioOptions = (props: {
       onValueChange={
         editable
           ? (details) => {
-              if (details.value) onToggleOption?.(question, questionIndex, details.value);
+              if (!details.value) return;
+              if (details.value === OTHER_CHOICE_VALUE) onToggleOther?.(question, questionIndex);
+              else onToggleOption?.(question, questionIndex, details.value);
             }
           : undefined
       }
@@ -95,6 +105,12 @@ const QuestionRadioOptions = (props: {
           <QuestionOptionContent option={option} />
         </Radio>
       ))}
+      {hasOtherChoice ? (
+        <Radio value={OTHER_CHOICE_VALUE} inputProps={editable ? undefined : { tabIndex: -1 }} alignItems="flex-start">
+          <QuestionOptionContent option={{ label: OTHER_CHOICE_LABEL }} />
+        </Radio>
+      ) : null}
+      {otherSelected ? otherField : null}
     </RadioGroup>
   );
 };
@@ -117,6 +133,115 @@ export const TodoListBlockView = (props: { items: TodoListBlockItem[] }) => {
   );
 };
 
+interface QuestionFieldsetProps {
+  question: QuestionFormBlockQuestion;
+  questionIndex: number;
+  editable: boolean;
+  selectedOptions: string[];
+  customAnswer: string | undefined;
+  onToggleOption?: (question: QuestionFormBlockQuestion, questionIndex: number, optionLabel: string) => void;
+  onToggleOther?: (question: QuestionFormBlockQuestion, questionIndex: number) => void;
+  onCustomAnswerChange?: (question: QuestionFormBlockQuestion, questionIndex: number, answer: string) => void;
+}
+
+const QuestionOtherField = (props: QuestionFieldsetProps & { hasOtherChoice: boolean }) => {
+  const { question, questionIndex, editable, customAnswer, onCustomAnswerChange, hasOtherChoice } = props;
+
+  return (
+    <Textarea
+      readOnly={!editable}
+      aria-readonly={editable ? undefined : "true"}
+      value={customAnswer ?? ""}
+      placeholder={editable ? (hasOtherChoice ? "Type your answer..." : "Answer...") : "Answer"}
+      aria-label={hasOtherChoice ? `${question.question} (${OTHER_CHOICE_LABEL})` : question.question}
+      rows={2}
+      borderWidth="1px"
+      borderColor="border.subtle"
+      borderRadius="sm"
+      padding="xs"
+      resize={editable ? "vertical" : "none"}
+      color="fg"
+      onChange={(event) => onCustomAnswerChange?.(question, questionIndex, event.currentTarget.value)}
+    />
+  );
+};
+
+const QuestionCheckboxOptions = (props: QuestionFieldsetProps & { name: string; otherField: ReactNode }) => {
+  const { question, questionIndex, editable, selectedOptions, customAnswer, onToggleOption, onToggleOther } = props;
+  const { name, otherField } = props;
+  const hasOtherChoice = questionOffersOtherChoice(question);
+  const otherSelected = customAnswer !== undefined;
+
+  return (
+    <>
+      {question.options.map((option) => (
+        <QuestionCheckboxOptionRow
+          key={option.label}
+          option={option}
+          name={name}
+          checked={selectedOptions.includes(option.label)}
+          editable={editable}
+          onToggle={() => onToggleOption?.(question, questionIndex, option.label)}
+        />
+      ))}
+      {hasOtherChoice ? (
+        <QuestionCheckboxOptionRow
+          option={{ label: OTHER_CHOICE_LABEL }}
+          name={name}
+          checked={otherSelected}
+          editable={editable}
+          onToggle={() => onToggleOther?.(question, questionIndex)}
+        />
+      ) : null}
+      {otherSelected ? otherField : null}
+    </>
+  );
+};
+
+const QuestionFieldset = (props: QuestionFieldsetProps) => {
+  const { question, questionIndex, editable, selectedOptions, customAnswer, onToggleOption, onToggleOther } = props;
+  const name = question.id ?? `question-${questionIndex}`;
+  const hasOtherChoice = questionOffersOtherChoice(question);
+  const otherField = question.allowCustomAnswer ? (
+    <QuestionOtherField {...props} hasOtherChoice={hasOtherChoice} />
+  ) : null;
+  const hasChoices = question.options.length > 0 || hasOtherChoice;
+
+  return (
+    <Stack
+      as="fieldset"
+      gap="xs"
+      borderWidth="1px"
+      borderColor="border.subtle"
+      borderRadius="sm"
+      padding="sm"
+      minWidth="0"
+    >
+      <Text as="legend" textStyle="label/S/medium" color="fg" paddingX="2xs">
+        {question.question}
+      </Text>
+      {hasChoices && question.multiple ? (
+        <QuestionCheckboxOptions {...props} name={name} otherField={otherField} />
+      ) : null}
+      {hasChoices && !question.multiple ? (
+        <QuestionRadioOptions
+          question={question}
+          questionIndex={questionIndex}
+          name={name}
+          selectedOption={selectedOptions[0]}
+          otherSelected={customAnswer !== undefined}
+          editable={editable}
+          onToggleOption={onToggleOption}
+          onToggleOther={onToggleOther}
+          otherField={otherField}
+        />
+      ) : null}
+      {/* Free text with nothing to choose between is not part of a choice group. */}
+      {hasChoices ? null : otherField}
+    </Stack>
+  );
+};
+
 export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
   const {
     questions,
@@ -124,6 +249,7 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
     selectedOptionsByQuestion = {},
     customAnswersByQuestion = {},
     onToggleOption,
+    onToggleOther,
     onCustomAnswerChange,
   } = props;
 
@@ -131,62 +257,19 @@ export const QuestionFormBlockView = (props: QuestionFormBlockViewProps) => {
     <Stack as="form" gap="sm" onSubmit={preventSubmit} aria-label="Question form">
       {questions.map((question, questionIndex) => {
         const name = question.id ?? `question-${questionIndex}`;
-        const inputType = question.multiple ? "checkbox" : "radio";
-        const selectedOptions = selectedOptionsByQuestion[name] ?? [];
 
         return (
-          <Stack
-            as="fieldset"
+          <QuestionFieldset
             key={name}
-            gap="xs"
-            borderWidth="1px"
-            borderColor="border.subtle"
-            borderRadius="sm"
-            padding="sm"
-            minWidth="0"
-          >
-            <Text as="legend" textStyle="label/S/medium" color="fg" paddingX="2xs">
-              {question.question}
-            </Text>
-            {inputType === "radio" ? (
-              <QuestionRadioOptions
-                question={question}
-                questionIndex={questionIndex}
-                name={name}
-                selectedOption={selectedOptions[0]}
-                editable={editable}
-                onToggleOption={onToggleOption}
-              />
-            ) : (
-              question.options.map((option) => (
-                <QuestionCheckboxOptionRow
-                  key={option.label}
-                  option={option}
-                  name={name}
-                  checked={selectedOptions.includes(option.label)}
-                  editable={editable}
-                  onToggle={() => onToggleOption?.(question, questionIndex, option.label)}
-                />
-              ))
-            )}
-            {question.allowCustomAnswer ? (
-              <Textarea
-                readOnly={!editable}
-                aria-readonly={editable ? undefined : "true"}
-                value={customAnswersByQuestion[name] ?? ""}
-                placeholder={editable ? "Answer..." : "Custom answer"}
-                aria-label={question.question}
-                rows={2}
-                borderWidth="1px"
-                borderColor="border.subtle"
-                borderRadius="sm"
-                padding="xs"
-                resize={editable ? "vertical" : "none"}
-                color="fg"
-                onChange={(event) => onCustomAnswerChange?.(question, questionIndex, event.currentTarget.value)}
-              />
-            ) : null}
-          </Stack>
+            question={question}
+            questionIndex={questionIndex}
+            editable={editable}
+            selectedOptions={selectedOptionsByQuestion[name] ?? []}
+            customAnswer={customAnswersByQuestion[name]}
+            onToggleOption={onToggleOption}
+            onToggleOther={onToggleOther}
+            onCustomAnswerChange={onCustomAnswerChange}
+          />
         );
       })}
     </Stack>

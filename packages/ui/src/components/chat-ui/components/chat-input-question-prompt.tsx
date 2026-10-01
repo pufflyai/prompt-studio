@@ -33,6 +33,7 @@ interface QuestionPromptControlsProps {
   selectedOptionsByQuestion: Record<string, string[]>;
   customAnswersByQuestion: ChatInputQuestionCustomAnswers;
   onToggleOption: (question: ChatInputQuestion, questionIndex: number, optionLabel: string) => void;
+  onToggleOther: (question: ChatInputQuestion, questionIndex: number) => void;
   onCustomAnswerChange: (question: ChatInputQuestion, questionIndex: number, answer: string) => void;
 }
 
@@ -42,6 +43,41 @@ interface QuestionPromptStepperProps extends QuestionPromptControlsProps {
 
 export const getQuestionSelectionKey = (question: ChatInputQuestion, index: number) =>
   question.id ?? `question-${index}`;
+
+// "Other" is chosen exactly when the question holds a custom answer, empty or not. That keeps
+// the choice and its text in one place instead of a second map that can disagree with it.
+export const isQuestionOtherSelected = (
+  customAnswersByQuestion: ChatInputQuestionCustomAnswers,
+  question: ChatInputQuestion,
+  questionIndex: number,
+  // Question ids come from the agent, so `in` would match inherited keys such as "constructor".
+) => Object.hasOwn(customAnswersByQuestion, getQuestionSelectionKey(question, questionIndex));
+
+export const clearQuestionOtherAnswer = (
+  customAnswersByQuestion: ChatInputQuestionCustomAnswers,
+  question: ChatInputQuestion,
+  questionIndex: number,
+) => {
+  const { [getQuestionSelectionKey(question, questionIndex)]: _removed, ...rest } = customAnswersByQuestion;
+  return rest;
+};
+
+export const toggleQuestionOtherAnswer = (
+  customAnswersByQuestion: ChatInputQuestionCustomAnswers,
+  question: ChatInputQuestion,
+  questionIndex: number,
+) => {
+  if (isQuestionOtherSelected(customAnswersByQuestion, question, questionIndex)) {
+    return clearQuestionOtherAnswer(customAnswersByQuestion, question, questionIndex);
+  }
+  return { ...customAnswersByQuestion, [getQuestionSelectionKey(question, questionIndex)]: "" };
+};
+
+/** Shown in the chat so the transcript records that the person chose not to answer. */
+export const SKIPPED_QUESTION_TEXT = "Skipped the question.";
+
+/** A skipped question carries no entry at all, which no answered form ever produces. */
+export const buildSkippedQuestionResponse = (): ChatInputQuestionResponse => ({ answers: [] });
 
 // Single-choice questions swap the answer; multiple-choice questions toggle one option.
 export const toggleQuestionOptionSelection = (
@@ -80,6 +116,18 @@ export const getQuestionPromptSignature = (questionPrompt: ChatInputQuestionProm
   );
 };
 
+// A single-choice question answers with one value: the typed text replaces the listed option it
+// was chosen instead of. A multiple-choice question keeps the typed text beside its checked boxes.
+export const answersForQuestion = (
+  question: ChatInputQuestion,
+  selectedLabels: string[],
+  customAnswer: string | undefined,
+) => {
+  const typed = customAnswer?.trim();
+  if (!typed) return selectedLabels;
+  return question.multiple ? [...selectedLabels, typed] : [typed];
+};
+
 const getQuestionAnswerLines = (
   questionPrompt: ChatInputQuestionPrompt,
   selectedOptionsByQuestion: Record<string, string[]>,
@@ -90,9 +138,7 @@ const getQuestionAnswerLines = (
   for (let index = 0; index < questionPrompt.questions.length; index += 1) {
     const question = questionPrompt.questions[index];
     const key = getQuestionSelectionKey(question, index);
-    const selectedLabels = selectedOptionsByQuestion[key] ?? [];
-    const customAnswer = customAnswersByQuestion[key]?.trim();
-    const answers = customAnswer ? [...selectedLabels, customAnswer] : selectedLabels;
+    const answers = answersForQuestion(question, selectedOptionsByQuestion[key] ?? [], customAnswersByQuestion[key]);
     if (answers.length === 0) continue;
 
     lines.push(`${question.question}: ${answers.join(", ")}`);
@@ -152,9 +198,7 @@ export const buildQuestionAnswerValues = (
 
   return questionPrompt.questions.map((question, index) => {
     const key = getQuestionSelectionKey(question, index);
-    const selectedLabels = selectedOptionsByQuestion[key] ?? [];
-    const customAnswer = customAnswersByQuestion[key]?.trim();
-    return customAnswer ? [...selectedLabels, customAnswer] : selectedLabels;
+    return answersForQuestion(question, selectedOptionsByQuestion[key] ?? [], customAnswersByQuestion[key]);
   });
 };
 
@@ -172,9 +216,9 @@ export const hasMissingRequiredQuestionAnswer = (
     if (!question.required) continue;
 
     const key = getQuestionSelectionKey(question, index);
-    const hasSelectedOption = (selectedOptionsByQuestion[key] ?? []).length > 0;
-    if (hasSelectedOption) continue;
-    if (question.allowCustomAnswer && customAnswersByQuestion[key]?.trim()) continue;
+    // One rule decides what a question answers with, so the send guard cannot drift from it.
+    if (answersForQuestion(question, selectedOptionsByQuestion[key] ?? [], customAnswersByQuestion[key]).length > 0)
+      continue;
 
     return true;
   }
@@ -211,7 +255,8 @@ const hasQuestionAnswer = (
   customAnswersByQuestion: ChatInputQuestionCustomAnswers,
 ) => {
   const key = getQuestionSelectionKey(question, questionIndex);
-  return (selectedOptionsByQuestion[key] ?? []).length > 0 || Boolean(customAnswersByQuestion[key]?.trim());
+  // The same rule the send guard uses, so a ticked step always matches what the form would send.
+  return answersForQuestion(question, selectedOptionsByQuestion[key] ?? [], customAnswersByQuestion[key]).length > 0;
 };
 
 const QuestionStepTab = (props: QuestionStepTabProps) => {
@@ -255,6 +300,7 @@ const QuestionStepTab = (props: QuestionStepTabProps) => {
 const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
   const { questionPrompt, selectedOptionsByQuestion, customAnswersByQuestion, onToggleOption, onCustomAnswerChange } =
     props;
+  const { onToggleOther } = props;
   const { questions } = props;
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const renderQuestionIndex = Math.min(activeQuestionIndex, questions.length - 1);
@@ -292,6 +338,9 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
           customAnswersByQuestion={customAnswersByQuestion}
           onToggleOption={(_question, _questionIndex, optionLabel) => {
             onToggleOption(questionPrompt.questions[renderQuestionIndex], renderQuestionIndex, optionLabel);
+          }}
+          onToggleOther={() => {
+            onToggleOther(questionPrompt.questions[renderQuestionIndex], renderQuestionIndex);
           }}
           onCustomAnswerChange={(_question, _questionIndex, answer) => {
             onCustomAnswerChange(questionPrompt.questions[renderQuestionIndex], renderQuestionIndex, answer);

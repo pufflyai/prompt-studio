@@ -1,6 +1,6 @@
 import type { ToolPart } from "../components/message-types";
 import type { Block, Item, TitleSegment } from "../components/timeline";
-import { getQuestionResponseText, parseQuestionPrompt } from "./question-prompt";
+import { hasQuestionResponse, parseQuestionPrompt } from "./question-prompt";
 import type { ToolRenderer } from "./types";
 
 type QuestionRendererDependencies = {
@@ -13,14 +13,13 @@ export const createQuestionRenderer = (deps: QuestionRendererDependencies): Tool
   const { buildBaseTitle, buildIndicator, prependErrorBlock } = deps;
 
   return (invocation) => {
-    const responseText =
-      getQuestionResponseText(invocation.state?.output) ?? getQuestionResponseText(invocation.state?.metadata);
+    const responded = hasQuestionResponse(invocation.state?.output) || hasQuestionResponse(invocation.state?.metadata);
     const prompt = parseQuestionPrompt(invocation.state?.input);
     const block = prompt ? ({ type: "question-form", questions: prompt.questions } satisfies Block) : null;
-    if (!responseText && !block) return null;
+    if (!responded && !block) return null;
 
     const fieldLabel = block ? `${block.questions.length} field${block.questions.length === 1 ? "" : "s"}` : undefined;
-    const blocks = responseText ? [] : [block!];
+    const blocks = responded ? [] : [block!];
 
     return {
       indicator: buildIndicator(invocation),

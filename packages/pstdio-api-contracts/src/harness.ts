@@ -23,7 +23,14 @@ export type EventStore = {
 export type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "SessionReattach";
 
 export type QuestionResponse = {
-  /** One list of chosen labels per question, in the order the questions were asked. */
+  /**
+   * One list of chosen labels per question, in the order the questions were asked. A label the
+   * agent did not offer is the person's own typed answer, so a harness that validates answers
+   * against its offered options has to add it to them before replying.
+   *
+   * An empty list means the person skipped the question rather than answering it. An answered
+   * form always carries one entry per question, so the two can never be confused.
+   */
   answers: string[][];
   /** Shared question tool call being answered, when the caller has its identity. */
   callId?: string;

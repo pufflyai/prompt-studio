@@ -173,6 +173,23 @@ const customQuestionPrompt: ChatInputQuestionPrompt = {
   ],
 };
 
+// Mirrors the shape Claude Code's own client shows: listed options plus an "Other" choice that
+// opens a text box, and a way out of the question entirely.
+const greetingQuestionPrompt: ChatInputQuestionPrompt = {
+  questions: [
+    {
+      id: "greeting",
+      question: "Which greeting should I use?",
+      options: [
+        { label: "Hello", description: 'Use "Hello" as the greeting.' },
+        { label: "Hi", description: 'Use "Hi" as the greeting.' },
+      ],
+      required: true,
+      allowCustomAnswer: true,
+    },
+  ],
+};
+
 const freeformQuestionPrompt: ChatInputQuestionPrompt = {
   questions: [
     {
@@ -242,6 +259,19 @@ export const QuestionWithCustomAnswer: Story = {
     onSubmit: (text: string) => {
       console.log("Submitted response:", text);
       alert(`Submitted response: ${text}`);
+    },
+  },
+};
+
+export const QuestionSingleChoiceWithOther: Story = {
+  args: {
+    defaultState: initialState,
+    questionPrompt: greetingQuestionPrompt,
+    onSubmit: (text: string, _resources: unknown, questionResponse: unknown) => {
+      // A single choice answers with one value, whether it was listed or typed under "Other".
+      // Skip sends no entries at all.
+      console.log("Submitted response:", text, questionResponse);
+      alert(`${text}\n\n${JSON.stringify(questionResponse)}`);
     },
   },
 };
