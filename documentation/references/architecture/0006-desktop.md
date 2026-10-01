@@ -151,6 +151,18 @@ revalidates every checksum and component version, uploads the artifacts to the
 existing draft release, and only then publishes it. Native jobs receive read-only
 repository access; only the final publisher receives `contents: write`.
 
+If macOS notarization returns HTTP 403 with "A required agreement is missing or
+has expired", the Apple Developer Account Holder must review pending agreements
+in the [developer account](https://developer.apple.com/account). Apple requires
+the Account Holder to accept updated developer agreements on behalf of the
+organization; see [Apple account roles](https://developer.apple.com/help/account/access/roles).
+After the required agreement is in effect, rerun the desktop release workflow.
+Keep notarization and the complete four-target publish check enabled.
+
+The workflow checks out `inputs.tag`. If a source or test fix is also needed,
+release a version whose tag contains that fix. Rerunning an older tag uses its
+original files, even after the fix is merged into `main`.
+
 The native updater is configured in packaged macOS and Windows apps. It resolves
 the newest complete `pstdio@<version>` release and points Electron at that
 release's update metadata. This avoids depending on services that require plain

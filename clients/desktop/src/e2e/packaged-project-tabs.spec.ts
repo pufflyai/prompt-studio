@@ -55,6 +55,8 @@ test(
       const terminal = (await readRuntimeActivity(app.runtime)).terminals[0];
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
       await expect(app.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+      await app.page.getByRole("button", { name: "Navigate back", exact: true }).click();
+      await expect(app.page.getByTestId("start-page")).toBeVisible();
       await app.page.getByRole("option", { name: "Lab", exact: true }).click();
       await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
       const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
