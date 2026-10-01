@@ -226,12 +226,16 @@ export interface WorkbenchPanelInstance {
   tab?: WorkbenchPanelTab;
 }
 
+export type WorkbenchSidePanelMode = "floating" | "closed" | "attached";
+
 export interface WorkbenchRegionState {
   id: WorkbenchRegion;
   visible: boolean;
   size?: number;
   widgets: WorkbenchWidgetPlacement[];
   activeWidgetId?: string;
+  /** Side region only: how the open Side Panel is shown. `visible` says whether it is open. */
+  presentation?: Exclude<WorkbenchSidePanelMode, "closed">;
 }
 
 export interface WorkbenchLayout {

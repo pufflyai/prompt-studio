@@ -1,53 +1,81 @@
 import { describe, expect, test } from "bun:test";
+import type { LayoutPersistenceAdapter, WorkbenchLayout } from "../../registries/layout/layout-model";
+import { createLayoutModel } from "../../registries/layout/layout-model";
+import { createDisposable } from "../../shared/disposable";
 import { createWorkbenchSidePanelController } from "./side-panel-controller";
 
-describe("createWorkbenchSidePanelController", () => {
-  test("starts attached when detachment is disabled", () => {
-    const controller = createWorkbenchSidePanelController({ getFloatingPanels: () => "hidden" });
+const createMemoryLayoutPersistence = (): LayoutPersistenceAdapter => {
+  const layouts = new Map<string | undefined, WorkbenchLayout>();
+  return {
+    getLayout: (scope) => layouts.get(scope),
+    setLayout: (layout, scope) => void layouts.set(scope, layout),
+  };
+};
 
+const createFloatingPolicy = () => {
+  let floatingPanels: "visible" | "hidden" = "visible";
+  const listeners = new Set<() => void>();
+  return {
+    getFloatingPanels: () => floatingPanels,
+    onDidChangePolicy: (listener: () => void) => {
+      listeners.add(listener);
+      return createDisposable(() => listeners.delete(listener));
+    },
+    set(value: "visible" | "hidden") {
+      floatingPanels = value;
+      for (const listener of listeners) listener();
+    },
+  };
+};
+
+describe("createWorkbenchSidePanelController", () => {
+  test("starts floating by default and attached when floating is disabled", () => {
+    expect(createWorkbenchSidePanelController({ layout: createLayoutModel() }).getMode()).toBe("floating");
+
+    const controller = createWorkbenchSidePanelController({
+      layout: createLayoutModel(),
+      getFloatingPanels: () => "hidden",
+    });
     expect(controller.canFloat()).toBe(false);
     expect(controller.getMode()).toBe("attached");
   });
 
-  test("restores a floating panel as attached when detachment is disabled", () => {
-    const controller = createWorkbenchSidePanelController({
-      getFloatingPanels: () => "hidden",
-      initialMode: "closed",
-      persistence: { getMode: () => "floating", setMode: () => undefined },
-    });
+  test("reads closed from a hidden side region and opens with the initial presentation", () => {
+    const layout = createLayoutModel({ defaultRegionVisibility: { side: false } });
+    const controller = createWorkbenchSidePanelController({ layout, initialMode: "attached" });
 
+    expect(controller.getMode()).toBe("closed");
+    layout.setRegionVisible("side", true);
     expect(controller.getMode()).toBe("attached");
   });
 
-  test("keeps a non-detachable panel closed until it is opened attached", () => {
-    const written: string[] = [];
+  test("shows a floating choice attached while floating is disabled and keeps the choice", () => {
+    const policy = createFloatingPolicy();
+    const controller = createWorkbenchSidePanelController({ layout: createLayoutModel(), ...policy });
     const events: string[] = [];
-    const controller = createWorkbenchSidePanelController({
-      getFloatingPanels: () => "hidden",
-      persistence: { getMode: () => "closed", setMode: (mode) => void written.push(mode) },
-    });
     controller.onDidChange((mode) => events.push(mode));
 
-    expect(controller.getMode()).toBe("closed");
-    controller.setMode("floating");
+    policy.set("hidden");
     expect(controller.getMode()).toBe("attached");
-    controller.setMode("floating");
-    controller.setMode("closed");
-
-    expect(controller.getMode()).toBe("closed");
-    expect(events).toEqual(["attached", "closed"]);
-    expect(written).toEqual(events);
-  });
-
-  test("starts floating by default and exposes generic Side Panel state", () => {
-    const controller = createWorkbenchSidePanelController();
-
+    policy.set("visible");
     expect(controller.getMode()).toBe("floating");
-    expect(controller.store.getState()).toEqual({ mode: "floating" });
+    expect(events).toEqual(["attached", "floating"]);
   });
 
-  test("updates placement once per real transition and notifies listeners", () => {
-    const controller = createWorkbenchSidePanelController();
+  test("saves a floating request as attached while floating is disabled", () => {
+    const policy = createFloatingPolicy();
+    const controller = createWorkbenchSidePanelController({ layout: createLayoutModel(), ...policy });
+    policy.set("hidden");
+
+    controller.setMode("closed");
+    controller.setMode("floating");
+    policy.set("visible");
+
+    expect(controller.getMode()).toBe("attached");
+  });
+
+  test("notifies once per real transition until disposed", () => {
+    const controller = createWorkbenchSidePanelController({ layout: createLayoutModel() });
     const events: string[] = [];
     const disposable = controller.onDidChange((mode) => events.push(mode));
 
@@ -55,47 +83,28 @@ describe("createWorkbenchSidePanelController", () => {
     controller.setMode("attached");
     controller.setMode("attached");
     controller.setMode("closed");
-
-    expect(controller.getMode()).toBe("closed");
-    expect(events).toEqual(["attached", "closed"]);
-
     disposable.dispose();
     controller.setMode("floating");
+
     expect(events).toEqual(["attached", "closed"]);
   });
 
-  test("respects an attached initial mode", () => {
-    const controller = createWorkbenchSidePanelController({ initialMode: "attached" });
+  test("follows the layout persistence scope", () => {
+    const persistence = createMemoryLayoutPersistence();
+    const layout = createLayoutModel({ defaultRegionVisibility: { side: false }, persistence });
+    const controller = createWorkbenchSidePanelController({ layout });
 
-    expect(controller.getMode()).toBe("attached");
-  });
-
-  test("prefers a persisted mode over the initial mode", () => {
-    const persistence = { getMode: () => "attached" as const, setMode: () => undefined };
-
-    const controller = createWorkbenchSidePanelController({ initialMode: "closed", persistence });
-
-    expect(controller.getMode()).toBe("attached");
-  });
-
-  test("falls back to the initial mode when nothing is persisted", () => {
-    const persistence = { getMode: () => undefined, setMode: () => undefined };
-
-    const controller = createWorkbenchSidePanelController({ initialMode: "closed", persistence });
-
+    layout.setPersistenceScope("project/one");
+    controller.setMode("attached");
+    layout.setPersistenceScope("project/two");
     expect(controller.getMode()).toBe("closed");
-  });
-
-  test("writes only real mode transitions", () => {
-    const written: string[] = [];
-    const persistence = { getMode: () => undefined, setMode: (mode: string) => void written.push(mode) };
-    const controller = createWorkbenchSidePanelController({ initialMode: "closed", persistence });
-
-    controller.setMode("closed");
-    controller.setMode("attached");
-    controller.setMode("attached");
     controller.setMode("floating");
+    layout.setPersistenceScope("project/one");
+    expect(controller.getMode()).toBe("attached");
 
-    expect(written).toEqual(["attached", "floating"]);
+    const restoredLayout = createLayoutModel({ defaultRegionVisibility: { side: false }, persistence });
+    const restored = createWorkbenchSidePanelController({ layout: restoredLayout });
+    restoredLayout.setPersistenceScope("project/two");
+    expect(restored.getMode()).toBe("floating");
   });
 });

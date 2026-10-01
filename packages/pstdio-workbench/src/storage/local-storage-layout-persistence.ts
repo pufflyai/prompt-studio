@@ -6,16 +6,17 @@ import {
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence-helpers";
 
-interface PersistedWorkbenchLayoutV4 {
-  version: 4;
+interface PersistedWorkbenchLayoutV5 {
+  version: 5;
   layout: WorkbenchLayout;
 }
 
-type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV4;
+type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV5;
 
-// Version 4 stores ResourceRef identity keys and page Main collections. Only the
-// layout cache changes; routed locations and independent preferences stay valid.
-const WORKBENCH_LAYOUT_VERSION = 4 as const;
+// Version 5 makes the side region's visibility the Side Panel's open state. Older
+// layouts saved a side visibility that never meant open, so they are discarded.
+// Only the layout cache changes; routed locations and independent preferences stay valid.
+const WORKBENCH_LAYOUT_VERSION = 5 as const;
 const WORKBENCH_LAYOUT_INDEX_VERSION = 1 as const;
 const WORKBENCH_LAYOUT_RESOURCE_LIMIT = 50;
 
@@ -156,7 +157,7 @@ export const createLocalStorageLayoutPersistence = (
       return undefined;
     },
     setLayout: (layout, scope) => {
-      const persisted: PersistedWorkbenchLayoutV4 = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      const persisted: PersistedWorkbenchLayoutV5 = { version: WORKBENCH_LAYOUT_VERSION, layout };
       const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
       pending.delete(key);
       pending.set(key, {
@@ -190,7 +191,7 @@ export const createLocalStorageLayoutPersistence = (
         }
         storage.setItem(
           key,
-          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV4),
+          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV5),
         );
       }
     },

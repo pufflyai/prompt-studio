@@ -190,7 +190,6 @@ export type {
   WorkbenchShellPlacementRegistry,
   WorkbenchShellRegionState,
   WorkbenchSidePanelMode,
-  WorkbenchSidePanelPersistenceAdapter,
   WorkbenchSidePanelPresentation,
   WorkbenchSnapshot,
   WorkbenchStatusBarItem,

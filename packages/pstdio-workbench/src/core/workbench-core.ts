@@ -89,7 +89,10 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const layoutCache = createWorkbenchLayoutCache(input);
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
   const locationAwareLayout = createLayoutModel({
-    defaultRegionVisibility: input.defaultPanelOpenByRegionId,
+    defaultRegionVisibility: {
+      ...input.defaultPanelOpenByRegionId,
+      side: (input.initialSidePanelMode ?? "floating") !== "closed",
+    },
     // The active mode owns region policy; the host input is the fallback. Resolved
     // lazily because the mode registry is created after the layout model.
     getRegionSettings: (regionId) => {
@@ -192,7 +195,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
     onDidChangePolicy: modes.onDidChangeActive,
     initialMode: input.initialSidePanelMode,
-    persistence: input.sidePanelPersistence,
+    layout,
   });
   const shell = createWorkbenchShellController({ layout, sidePanel });
 
@@ -275,6 +278,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
 
     async dispose() {
+      // Layout writes are debounced; a reload disposes the workbench and must not drop the last change.
+      layoutCache.layout?.flush?.();
       await Promise.all([views.reads.dispose(), core.terminal.dispose()]);
     },
 
