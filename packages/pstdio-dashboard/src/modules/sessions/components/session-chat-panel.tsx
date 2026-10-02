@@ -5,7 +5,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useRef } from "react";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
@@ -17,13 +17,7 @@ import {
 } from "@/shared/workspaces/workspace-options";
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
 import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
-import {
-  forgetHandedOffPendingFollowUp,
-  mergeMessagesWithPendingFollowUp,
-  type PendingFollowUpState,
-  peekHandedOffPendingFollowUp,
-  shouldShowPendingFollowUp,
-} from "../chat/session-chat-state";
+import { shouldShowPendingFollowUp } from "../chat/session-chat-state";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
@@ -37,6 +31,7 @@ import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionModelControls } from "./session-model-controls";
 import { SessionWorkspaceControl } from "./session-workspace-control";
+import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
 import { useSessionChatDraft } from "./use-session-chat-draft";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
 import { useSessionModelSelection } from "./use-session-model-selection";
@@ -119,29 +114,13 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     selectedModel,
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
-  const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(() =>
-    peekHandedOffPendingFollowUp(sessionId),
-  );
+  const { pendingFollowUp, setPendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } =
+    usePendingSessionFollowUp(sessionId, messages, view.lastRequestStarted, view.status === "in_progress");
   const pendingIdRef = useRef(0);
   const openWorkspaceOnSelection = input.panel.region !== "side";
 
-  useEffect(() => {
-    forgetHandedOffPendingFollowUp(sessionId);
-  }, [sessionId]);
-
-  useEffect(() => {
-    // An unsent message stays until the user resends or removes it.
-    if (!pendingFollowUp || pendingFollowUp.failure) return;
-    if (messages.length > pendingFollowUp.messageCount) setPendingFollowUp(null);
-  }, [messages, pendingFollowUp]);
-
-  const displayedMessages = mergeMessagesWithPendingFollowUp(
-    messages,
-    shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null,
-  );
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId);
-  const effectiveStreaming =
-    streaming || view.status === "in_progress" || Boolean(pendingFollowUp && !pendingFollowUp.failure);
+  const effectiveStreaming = streaming || view.status === "in_progress" || pendingWork;
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
 
   const send = (
@@ -152,6 +131,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   ) =>
     submitSessionMessage({
       sessionId,
+      lastRequestStarted: view.lastRequestStarted,
       projectId,
       agent: selectedAgent || null,
       model: selectedModel || undefined,
@@ -220,6 +200,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             onQueuedFollowUpMove={sessionId ? handleQueuedFollowUpMove : undefined}
             loading={loading}
             streaming={effectiveStreaming}
+            streamingStartedAt={streamingStartedAt}
             emptyStateTitle={emptyStateTitle}
             emptyStateDescription={emptyStateDescription}
             loaderComponent={<ChatSkeleton />}

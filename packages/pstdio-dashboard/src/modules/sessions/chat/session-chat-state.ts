@@ -5,6 +5,8 @@ import type { SessionNotice } from "../data/session-notice";
 export type PendingFollowUpState = {
   prompt: string;
   messageCount: number;
+  submittedAt: number;
+  previousRunStarted: string | null;
   userMessageId: string;
   assistantMessageId: string;
   sessionId: string | null;
@@ -18,6 +20,7 @@ export const createPendingFollowUpState = (input: {
   prompt: string;
   messageCount: number;
   pendingId: string;
+  previousRunStarted?: string | null;
   sessionId?: string | null;
   attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;
@@ -25,6 +28,8 @@ export const createPendingFollowUpState = (input: {
   return {
     prompt: input.prompt,
     messageCount: input.messageCount,
+    submittedAt: Date.now(),
+    previousRunStarted: input.previousRunStarted ?? null,
     userMessageId: `${input.pendingId}-user`,
     assistantMessageId: `${input.pendingId}-assistant`,
     sessionId: input.sessionId ?? null,
@@ -89,10 +94,10 @@ export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState):
   ];
 };
 
-// A draft keeps the message it sent on screen until the created session's page or view replaces it.
+// A pending submission belongs to its draft or to the created session it was handed to.
 export const shouldShowPendingFollowUp = (pending: PendingFollowUpState | null, sessionId: string | null) => {
   if (!pending) return false;
-  return sessionId === null || pending.sessionId === sessionId;
+  return pending.sessionId === sessionId;
 };
 
 export const mergeMessagesWithPendingFollowUp = (
@@ -100,5 +105,16 @@ export const mergeMessagesWithPendingFollowUp = (
   pending: PendingFollowUpState | null,
 ): SessionMessage[] => {
   if (!pending) return messages;
+  if (!pending.failure && hasAcceptedPendingFollowUp(messages, pending)) return messages;
   return [...messages, ...createOptimisticFollowUpMessages(pending)];
 };
+
+export const hasAcceptedPendingFollowUp = (messages: SessionMessage[], pending: PendingFollowUpState) =>
+  messages.slice(pending.messageCount).some(
+    (message) =>
+      message.role === "user" &&
+      message.parts
+        .filter((part) => part.type === "text")
+        .map((part) => part.text)
+        .join("\n") === pending.prompt,
+  );

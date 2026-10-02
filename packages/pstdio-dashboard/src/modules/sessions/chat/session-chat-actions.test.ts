@@ -283,8 +283,9 @@ describe("first message handoff", () => {
       },
     });
     expect(created).toMatchObject({ prompt: "Start here", sessionId: "session-9" });
-    // The draft keeps its first message on screen until the created session's page replaces it.
-    expect(shouldShowPendingFollowUp(pendingFollowUp, null)).toBe(true);
+    // Once creation succeeds, the first message belongs to the created session.
+    expect(shouldShowPendingFollowUp(pendingFollowUp, null)).toBe(false);
+    expect(shouldShowPendingFollowUp(pendingFollowUp, "session-9")).toBe(true);
     handOffPendingFollowUp(created!);
     expect(peekHandedOffPendingFollowUp("session-9")).toMatchObject({ prompt: "Start here" });
     forgetHandedOffPendingFollowUp("session-9");

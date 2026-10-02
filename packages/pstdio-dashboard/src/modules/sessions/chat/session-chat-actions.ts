@@ -193,6 +193,7 @@ const submitNewSessionMessage = (input: {
 
 const submitFollowUpMessage = (input: {
   sessionId: string;
+  lastRequestStarted?: string | null;
   messages: SessionMessage[];
   pendingId: string;
   setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
@@ -212,6 +213,7 @@ const submitFollowUpMessage = (input: {
     messageCount: input.messages.length,
     pendingId: input.pendingId,
     sessionId: input.sessionId,
+    previousRunStarted: input.lastRequestStarted,
     attachments: input.attachments,
     questionResponse: input.questionResponse,
   });
@@ -231,8 +233,8 @@ const submitFollowUpMessage = (input: {
       {
         onSuccess: ({ followUp }) => {
           input.onSubmitted?.();
-          // A queued follow-up is shown in the queued list, not in the conversation.
-          if (followUp?.status === "queued")
+          // Queued turns use their queue entry; accepted answers update the existing question.
+          if (followUp?.status === "queued" || input.questionResponse)
             input.setPendingFollowUp((current) => (current?.userMessageId === pending.userMessageId ? null : current));
           input.reconnect();
           resolve();
@@ -252,6 +254,7 @@ const submitFollowUpMessage = (input: {
 
 export const submitSessionMessage = (input: {
   sessionId: string | null;
+  lastRequestStarted?: string | null;
   projectId: string | undefined;
   agent: string | null;
   model: string | undefined;
@@ -293,6 +296,7 @@ export const submitSessionMessage = (input: {
 
   return submitFollowUpMessage({
     sessionId: input.sessionId,
+    lastRequestStarted: input.lastRequestStarted,
     messages: input.messages,
     pendingId,
     setPendingFollowUp: input.setPendingFollowUp,

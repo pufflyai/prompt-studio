@@ -93,8 +93,15 @@ describe("resolveDashboardSessionView", () => {
 
 test("session views expose the latest synchronized running status", () => {
   const writer = getWriter("sessions")!;
-  writer.upsert({ id: "running-view", project_id: "project-1", status: "in_progress" });
+  const startedAt = "2026-10-01T12:00:00.000Z";
+  writer.upsert({
+    id: "running-view",
+    project_id: "project-1",
+    status: "in_progress",
+    last_request_started: startedAt,
+  });
   expect(resolveDashboardSessionView("running-view").status).toBe("in_progress");
+  expect(resolveDashboardSessionView("running-view").lastRequestStarted).toBe(startedAt);
   writer.upsert({ id: "running-view", project_id: "project-1", status: "completed" });
   expect(resolveDashboardSessionView("running-view").status).toBe("completed");
   writer.remove("running-view");

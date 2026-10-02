@@ -1,5 +1,5 @@
 import { HStack, Spinner, Text } from "@chakra-ui/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 // Compact, unit-dropping elapsed format: "4s", "48s", "10m 20s", "1h 04m".
 const formatElapsed = (totalSeconds: number) => {
@@ -19,15 +19,15 @@ const formatElapsed = (totalSeconds: number) => {
  * and how you judge whether a run is stuck. Counts from the start of the active stream, including
  * time spent temporarily hidden while the workspace initializes.
  */
-export const WorkingIndicator = (props: { hidden?: boolean }) => {
-  const { hidden = false } = props;
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const startedAtRef = useRef(Date.now());
+export const WorkingIndicator = (props: { startedAt?: number; hidden?: boolean }) => {
+  const { startedAt, hidden = false } = props;
+  const [mountedAt] = useState(Date.now);
+  const [now, setNow] = useState(Date.now);
 
   useEffect(() => {
     if (hidden) return;
 
-    const updateElapsed = () => setElapsedSeconds((Date.now() - startedAtRef.current) / 1000);
+    const updateElapsed = () => setNow(Date.now());
     updateElapsed();
     const timer = setInterval(updateElapsed, 1000);
     return () => clearInterval(timer);
@@ -39,7 +39,7 @@ export const WorkingIndicator = (props: { hidden?: boolean }) => {
     <HStack gap="2xs" px="sm" py="xs">
       <Spinner size="xs" color="fg.muted" />
       <Text fontFamily="mono" fontSize="xs" color="fg.muted" letterSpacing="-0.2px">
-        {formatElapsed(elapsedSeconds)}
+        {formatElapsed((now - (startedAt ?? mountedAt)) / 1000)}
       </Text>
     </HStack>
   );
