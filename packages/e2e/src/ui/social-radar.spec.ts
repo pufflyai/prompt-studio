@@ -106,7 +106,9 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await shot(page, "03-thread");
     await thread.getByRole("button", { name: "Copy reply" }).click();
     await page.bringToFront();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Different jobs.\n\nBuild the review tool here.");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      "Different jobs.\n\nBuild the review tool here.",
+    );
     await thread.getByRole("button", { name: "Mark used" }).click();
     await expect(thread.getByText("Used", { exact: true })).toBeVisible();
 
@@ -118,7 +120,9 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await thread.getByLabel("Post link").fill("https://x.com/prompt_studio/status/1");
     await thread.getByRole("button", { name: "Mark posted" }).click();
     await expect
-      .poll(async () => (await execute(request, projectId!, "list-answered")).threads.map((item: { id: string }) => item.id))
+      .poll(async () =>
+        (await execute(request, projectId!, "list-answered")).threads.map((item: { id: string }) => item.id),
+      )
       .toContain("post-1");
 
     // 05: the run's digest is a read-only document built from the run.
