@@ -41,6 +41,8 @@ Structured answers may include `QuestionResponse.callId`, which selects the ques
 
 Providers reject stale or declined answers with `HarnessQuestionReplyError`, an Error with `questionRejected: true`. Those replies return HTTP 400. Other failures follow the host's normal server error handling.
 
+An answer delivered in place cannot include files, because it reaches the agent as a tool result. The host refuses such a follow-up with HTTP 400 and leaves the question open, so the files are not lost. The person answers first and sends the files in a new message.
+
 ### Persistent worker cleanup
 
 `HarnessProvider.dispose(ctx)` is an optional public cleanup callback for workers and connections that stay alive across turns. Finishing a turn does not call it. The host calls it once for each context scope that used the provider. `ctx.projectId` identifies a project scope; an absent project ID identifies host-scoped discovery. A provider must release only resources from that scope.
@@ -53,7 +55,7 @@ The callback must stop pending startup and active work, settle active runs' `don
 
 | Extension | Provider integration |
 | --- | --- |
-| [Claude Code](../../../extensions/harness-claude-code) | Child-process streaming and approvals; stdin stays open across turns so background tasks keep running, and the run ends when a turn finishes with no task left; resume uses the provider session identity and the complete saved baseline. |
+| [Claude Code](../../../extensions/harness-claude-code) | Child-process streaming; `AskUserQuestion` asks through the host question channel, and other tool requests use the approval channel when the host provides one; stdin stays open across turns so background tasks keep running, and the run ends when a turn finishes with no task left; resume uses the provider session identity and the complete saved baseline. |
 | [OpenCode](../../../extensions/harness-open-code) | Provider HTTP/session API and transcript snapshots; the adapter converts model strings to provider-specific payloads. |
 | [Codex](../../../extensions/harness-codex) | Provider events and native rollout reconciliation; provider-specific message formats stay in the harness. |
 
@@ -69,6 +71,8 @@ Codex uses the [app-server stdio protocol](https://learn.chatgpt.com/docs/app-se
 
 Reloading the browser keeps the live question channel open. Native rollout recovery matches questions by their call IDs, preserves the displayed question data, and restores readable answers. Cancelling or losing the process closes pending requests; a later reply reports that the request is unavailable. A process restart cannot restore an old stdio request. Normal follow-ups resume the native thread in a new process.
 
+Claude Code has no live reply callback. Its harness sends each `AskUserQuestion` permission request to the host question channel and keeps reading Claude's output while the ask is open. It replies `allow` with the answers in `updatedInput.answers`, keyed by question text, with several choices joined by `, `. Claude accepts a typed answer that is none of its options, so the shared question part offers **Other**. A skip is a `deny` without interrupt: Claude gets the skip note as the tool result and continues the same turn. A deny with interrupt would make Claude replace the note and exit 1. The chat shows Claude's own result text for an answered or skipped question, both live and after reload. A question that Claude can no longer take an answer for is closed as "no longer available": when the session is stopped or Claude exits with the ask still open, and when a resumed run finds one left by the previous process. Stop closes it before the host closes the conversation. A resume starts a new Claude process, so an answer to such a question reaches Claude as the follow-up prompt.
+
 ## Conversation ownership
 
 The active `SessionConversation` owns the complete materialized message array. Harness patches update it before subscribers receive them. The bounded event log is only a delivery mechanism.
@@ -82,6 +86,8 @@ See [sessions](0020-sessions.md) and [history ordering](../../lessons-learned/00
 OpenCode owns provider messages and deletions. Each poll reads the current saved conversation and preserves host attachments and generated errors when their turn is identifiable. If repeated prompts lack stable IDs, the adapter retains uncertain saved turns separately and still publishes fresh provider output. It never assigns an attachment to a guessed owner. Retained IDs are disambiguated when they collide with positional provider IDs. Repeating the same snapshot does not add more copies.
 
 This recovery logs one warning per running turn. It does not raise a reconciliation banner or abort OpenCode. Native provider messages still decide whether a turn completed or failed, so a retained error from an earlier turn cannot fail the current one. The same rule applies to start, resume, reattach, and question replies.
+
+Host-channel answers with a pending question tool part return success only after that part receives its result. The host waits outside the scheduling lock and rejects repeated structured answers after the live ask has been consumed. This keeps the question form closed during provider delivery and prevents a duplicate answer from starting another turn. Harnesses using the public question channel without tool parts keep the existing handoff behavior.
 
 ## Planner workflows
 

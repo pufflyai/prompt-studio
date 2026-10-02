@@ -77,14 +77,22 @@ for (const hasNative of [true, false]) {
       expect((await handle.deps.sessionService.get(session.id))?.status).toBe("awaiting_input");
       const owner = handle.deps.sessionService.store.get(session.id);
       const started = (await handle.deps.sessionService.get(session.id))?.last_request_started;
-      const answer = (callId: string) =>
+      const answer = (callId: string, attachments?: Array<{ file_id: string }>) =>
         handle.app.request(`/v1/sessions/${session.id}/follow-up`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ prompt: "Blue", question_response: { callId, answers: [["Blue"]] } }),
+          body: JSON.stringify({ prompt: "Blue", question_response: { callId, answers: [["Blue"]] }, attachments }),
         });
 
       if (hasNative) {
+        const upload = await handle.app.request(`/v1/projects/${project.id}/session-attachments`, {
+          method: "POST",
+          headers: { "content-type": "text/plain", "x-file-name": "notes.txt" },
+          body: "notes",
+        });
+        // A native reply has no place for a file either, so it is refused rather than sent without it.
+        expect((await answer("native-tool", [{ file_id: (await upload.json()).file_id }])).status).toBe(400);
+        expect(nativeAnswers).toEqual([]);
         expect((await answer("native-tool")).status).toBe(200);
         expect(nativeAnswers).toEqual([{ callId: "native-tool", answers: [["Blue"]] }]);
       }

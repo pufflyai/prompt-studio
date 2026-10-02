@@ -1,7 +1,13 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
-import { hasPendingProviderQuestion, validateRecoveredQuestionReply } from "./live-question-reply";
+import {
+  ANSWER_WITH_FILES_ERROR,
+  hasPendingProviderQuestion,
+  QuestionReplyRejectedError,
+  validateRecoveredQuestionReply,
+} from "./live-question-reply";
+import { prepareHostQuestionDelivery } from "./session-question-delivery";
 import { createSessionQueueDrain } from "./session-queue-drain";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
@@ -236,15 +242,17 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     const live = deps.sessionService.store.get(input.session.id);
     if (live?.questionService.hasPending(input.questionResponse?.callId)) {
       input.signal?.throwIfAborted();
+      if (input.attachments?.length) throw new QuestionReplyRejectedError(ANSWER_WITH_FILES_ERROR);
       // The answer cannot switch the running agent, but the selection still applies to the next run.
       await updateExistingDispatchSelection(deps, context);
+      const confirm = await prepareHostQuestionDelivery(live, input.questionResponse);
       live.questionService.answer(input.questionResponse ?? input.prompt);
-      return { status: "dispatched" } satisfies StartOrQueueResult;
+      return confirm;
     }
 
     if (input.questionResponse) {
       input.signal?.throwIfAborted();
-      await validateRecoveredQuestionReply(status, live, input.questionResponse);
+      await validateRecoveredQuestionReply(deps, input.session.id, status, live, input.questionResponse);
       return prepareExistingDispatch(deps, context);
     }
 
@@ -270,9 +278,11 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
         !owner.questionService.hasPending() &&
         (await hasPendingProviderQuestion(owner, input.questionResponse))
       ) {
-        // The old owner must finish before recovery can replace it. Waiting outside the
-        // scheduling lock lets its terminal transition and queued work proceed.
+        // A provider without live replies may recover an unanswered question after its run ends.
+        // Recheck that conversation: an answer already consumed must never become a new turn.
         await owner.session.done;
+        if (!(await hasPendingProviderQuestion(owner, input.questionResponse)))
+          throw new QuestionReplyRejectedError("Question request is no longer pending.");
       }
     }
     const result = await withSchedulingLock(() => reserveExistingDispatch(input));

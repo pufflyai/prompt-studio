@@ -5,12 +5,14 @@ import type {
   HarnessAttachment,
   HarnessEventSink,
   HarnessExit,
+  HarnessQuestionChannel,
   HarnessSession,
   SessionMessage,
 } from "@pstdio/sdk/extensions";
 import { createRawEventStream, extractSessionId, sendUserMessage } from "./cli-stream";
 import { createMessageAccumulator } from "./message-accumulator";
 import { normalizeClaudeCodeStream } from "./normalize-stream";
+import { closeOpenQuestions } from "./questions";
 import type { RawLogEvent } from "./types";
 
 // Strip the nested-session marker so spawned agents do not detect a parent Claude session.
@@ -27,8 +29,6 @@ const BASE_ARGS = [
   "--verbose",
   "--permission-prompt-tool",
   "stdio",
-  "--disallowedTools",
-  "AskUserQuestion",
 ];
 
 type ClaudeCodeParams = Partial<Record<"thinking", string | boolean>> & Record<string, string | boolean | undefined>;
@@ -91,6 +91,9 @@ const runPipelineFromEvents = async (
   for await (const message of normalizeClaudeCodeStream(events)) {
     accumulator.push(message);
   }
+
+  // Claude's output ends when it exits, so a question it was still waiting on can never be answered.
+  closeOpenQuestions(sink);
 };
 
 type SpawnedChild = {
@@ -142,6 +145,12 @@ const toHarnessExit = (exit: { code: number | null; signal: string | null }): Ha
   return exit.code === 0 ? { status: "completed" } : { status: "failed" };
 };
 
+// The host closes the conversation once `stop` returns, so the questions are closed before that.
+const stopClaude = (child: SpawnedChild, events: HarnessEventSink) => () => {
+  closeOpenQuestions(events);
+  child.kill();
+};
+
 const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessage => {
   const createdAt = Date.now();
   return {
@@ -170,6 +179,7 @@ export type StartSpawnInput = {
   cwd?: string;
   env?: Record<string, string>;
   events: HarnessEventSink;
+  questions?: HarnessQuestionChannel;
 };
 
 export const startClaudeCodeSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
@@ -180,7 +190,7 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
 
   sendUserMessage(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
-  const events = createRawEventStream(child.stdout, child.stdin);
+  const events = createRawEventStream(child.stdout, child.stdin, { questions: input.questions });
   const { sessionId, remainingEvents } = await extractSessionId(events);
 
   const pipelineDone = runPipelineFromEvents(remainingEvents, input.events, {
@@ -193,7 +203,7 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
   return {
     agentSessionId: sessionId,
     done,
-    stop: child.kill,
+    stop: stopClaude(child, input.events),
     timeoutStrategy: "provider", // Process exit, not chat activity, owns completion.
     pid: child.pid,
   } satisfies HarnessSession;
@@ -206,13 +216,18 @@ export type ResumeSpawnInput = StartSpawnInput & {
 };
 
 export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps = defaultDeps) => {
+  // A resume starts a new Claude process, which cannot answer what the previous process asked.
+  closeOpenQuestions(input.events);
   const args = buildResumeArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
   child.stderr.resume();
 
   sendUserMessage(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
-  const events = createRawEventStream(child.stdout, child.stdin, input.approvals);
+  const events = createRawEventStream(child.stdout, child.stdin, {
+    questions: input.questions,
+    approvals: input.approvals,
+  });
 
   const pipelineDone = runPipelineFromEvents(events, input.events, {
     initialMessages: [userMessageFor(input.prompt, input.attachments)],
@@ -225,7 +240,7 @@ export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps
   return {
     agentSessionId: input.agentSessionId,
     done,
-    stop: child.kill,
+    stop: stopClaude(child, input.events),
     timeoutStrategy: "provider",
     pid: child.pid,
   } satisfies HarnessSession;

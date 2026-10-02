@@ -1,5 +1,5 @@
 import type { SessionMessage, SessionMessageRole } from "@pstdio/sdk/extensions";
-import { classifyToolAction, mergeToolResultMessage } from "./message-parts";
+import { mergeToolResultMessage, toolResultPart, toolUsePart } from "./message-parts";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./types";
 import { parseTimestamp } from "./utils";
 
@@ -32,47 +32,14 @@ const transcriptBlockToMessage = (
   }
 
   if (block.type === "tool_use") {
-    toolMap.set(block.id, block.name);
-    return {
-      id,
-      role: "assistant",
-      createdAt,
-      parts: [
-        {
-          type: "tool",
-          tool: block.name,
-          callId: block.id,
-          actionType: classifyToolAction(block.name),
-          status: "pending",
-          state: { input: block.input },
-        },
-      ],
-    };
+    const part = toolUsePart(block);
+    toolMap.set(block.id, part.tool);
+    return { id, role: "assistant", createdAt, parts: [part] };
   }
 
   if (block.type === "tool_result") {
     const tool = toolMap.get(block.tool_use_id) ?? "unknown";
-    const isError = block.is_error === true;
-    const output =
-      toolUseResult && typeof toolUseResult === "object" && !Array.isArray(toolUseResult)
-        ? { ...toolUseResult, returnDisplay: block.content }
-        : block.content;
-
-    return {
-      id,
-      role: "assistant",
-      createdAt,
-      parts: [
-        {
-          type: "tool",
-          tool,
-          callId: block.tool_use_id,
-          actionType: classifyToolAction(tool),
-          status: isError ? "failed" : "completed",
-          state: { output, errorText: isError ? "Tool execution failed" : undefined },
-        },
-      ],
-    };
+    return { id, role: "assistant", createdAt, parts: [toolResultPart(tool, block, toolUseResult)] };
   }
 
   return null;

@@ -111,7 +111,7 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
 
     const resolvedParams = await resolveFollowUpParams(deps, session, input);
     if (resolvedParams.type === "error") return c.json({ error: resolvedParams.error }, 400);
-    const reply = await replyToLiveSessionQuestion(deps, id, input.question_response);
+    const reply = await replyToLiveSessionQuestion(deps, id, input.question_response, input.attachments);
     if (reply) {
       if (!reply.ok) return c.json({ error: reply.error }, 400);
       await updateExistingDispatchSelection(deps, {

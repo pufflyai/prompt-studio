@@ -1,7 +1,9 @@
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
-import type { HarnessApprovalChannel } from "@pstdio/sdk/extensions";
-import { parseStdoutLine, type RawLogEvent } from "./types";
+import type { ApprovalResponse, HarnessApprovalChannel, HarnessQuestionChannel } from "@pstdio/sdk/extensions";
+import { ASK_USER_QUESTION } from "./message-parts";
+import { askPerson } from "./questions";
+import { type AskUserQuestionInput, parseStdoutLine, type RawLogEvent } from "./types";
 
 const formatUserMessage = (content: string) =>
   `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`;
@@ -13,58 +15,48 @@ export const sendUserMessage = (stdin: Writable, content: string) => {
   stdin.write(formatUserMessage(content));
 };
 
+/** Host channels that answer Claude's control requests. */
+export type ControlChannels = {
+  questions?: HarnessQuestionChannel;
+  approvals?: HarnessApprovalChannel;
+};
+
 const isControlRequest = (parsed: Record<string, unknown>) => parsed.type === "control_request";
 
-const DENY_MESSAGES = {
-  approve: "",
+type ControlDecision = ApprovalResponse["decision"] | "unavailable";
+
+const DENY_MESSAGES: Record<Exclude<ControlDecision, "approve">, string> = {
   timeout: "Approval timed out.",
   deny: "The user doesn't want to proceed with this tool use. The tool use was rejected.",
   // No channel means nobody could be asked. Saying the person refused would be a lie Claude acts on.
   unavailable: "This session cannot ask for approval, so the tool was not run.",
-} as const;
-
-type ControlDecision = keyof typeof DENY_MESSAGES;
-
-const buildControlResponse = (requestId: string, decision: ControlDecision, input: unknown) => {
-  if (decision === "approve") {
-    return {
-      type: "control_response",
-      response: {
-        subtype: "success",
-        request_id: requestId,
-        response: { behavior: "allow", updated_input: input, updated_permissions: null },
-      },
-    };
-  }
-
-  return {
-    type: "control_response",
-    response: {
-      subtype: "success",
-      request_id: requestId,
-      response: {
-        behavior: "deny",
-        message: DENY_MESSAGES[decision],
-        interrupt: decision === "timeout",
-      },
-    },
-  };
 };
 
-// Every control request gets a reply. stdin stays open now, so one left unanswered
-// would block Claude for the rest of the run instead of failing fast.
-const answerControlRequest = async (parsed: Record<string, unknown>, approvals?: HarnessApprovalChannel) => {
-  const requestId = parsed.request_id as string;
+const approvalReply = (decision: ControlDecision, input: unknown) =>
+  decision === "approve"
+    ? { behavior: "allow", updatedInput: input }
+    : { behavior: "deny", message: DENY_MESSAGES[decision], interrupt: decision === "timeout" };
+
+const controlResponse = (requestId: string, response: object) => ({
+  type: "control_response",
+  response: { subtype: "success", request_id: requestId, response },
+});
+
+const answerControlRequest = async (parsed: Record<string, unknown>, channels: ControlChannels) => {
+  const id = parsed.request_id as string;
   const request = (parsed.request ?? {}) as Record<string, unknown>;
   const toolName = (request.tool_name as string) ?? "";
   const toolInput = request.input;
   const toolUseId = (request.tool_use_id as string) ?? "";
 
-  const decision: ControlDecision = approvals
-    ? (await approvals.requestApproval({ id: requestId, toolName, toolInput, toolUseId })).decision
-    : "unavailable";
+  if (toolName === ASK_USER_QUESTION && channels.questions) {
+    return askPerson(channels.questions, { id, toolUseId, input: toolInput as AskUserQuestionInput });
+  }
 
-  return buildControlResponse(requestId, decision, toolInput);
+  const decision: ControlDecision = channels.approvals
+    ? (await channels.approvals.requestApproval({ id, toolName, toolInput, toolUseId })).decision
+    : "unavailable";
+  return approvalReply(decision, toolInput);
 };
 
 // A `result` ends one turn, not the run. The run ends when a turn finishes with no background
@@ -90,7 +82,7 @@ const createRunLifetime = (stdin: Writable) => {
 export async function* createRawEventStream(
   stdout: Readable,
   stdin: Writable,
-  approvals?: HarnessApprovalChannel,
+  channels: ControlChannels = {},
 ): AsyncGenerator<RawLogEvent> {
   const reader = createInterface({ input: stdout, crlfDelay: Number.POSITIVE_INFINITY });
   const lifetime = createRunLifetime(stdin);
@@ -102,9 +94,16 @@ export async function* createRawEventStream(
     const parsed = parseStdoutLine(trimmed);
 
     if (parsed && isControlRequest(parsed)) {
-      const reply = await answerControlRequest(parsed, approvals);
-      // A reply that lands after the pipe closed would crash the host on an unhandled stream error.
-      if (lifetime.acceptsInput()) stdin.write(`${JSON.stringify(reply)}\n`);
+      // Keep reading while the person decides. The host closes an open question only after the run
+      // ends, so waiting for the answer here would keep the run from ever ending if Claude exits.
+      void answerControlRequest(parsed, channels)
+        // Every control request gets a reply, because stdin stays open and Claude would wait forever.
+        .catch((error: unknown) => ({ behavior: "deny", message: String(error), interrupt: false }))
+        .then((response) => {
+          // A reply that lands after the pipe closed would crash the host on an unhandled stream error.
+          if (!lifetime.acceptsInput()) return;
+          stdin.write(`${JSON.stringify(controlResponse(parsed.request_id as string, response))}\n`);
+        });
       continue;
     }
 

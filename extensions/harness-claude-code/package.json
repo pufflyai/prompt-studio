@@ -6,7 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.0"
+    "pstdio": "^0.1.1"
   },
   "pstdio": {
     "scope": "user"
@@ -20,7 +20,7 @@
     "format": "biome check --write ."
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.35.0"
+    "@pstdio/sdk": "^0.40.0"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",
