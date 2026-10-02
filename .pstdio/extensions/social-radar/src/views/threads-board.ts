@@ -8,10 +8,12 @@ import { commands } from "../commands";
 import { type Idea, isNewPost, sites, type Thread } from "../schemas";
 import { siteLabels } from "../sites";
 import { ideasOf, pageRef, radarChanged, threadRef, threadsOf } from "../store";
+import { plural } from "../text";
 
+// One level: threads to join are New, posts to publish are Ideas.
 const statusOptions = [
   { value: "new", label: "New", icon: "status-todo", color: "purple" },
-  { value: "saved", label: "Saved", icon: "status-review", color: "yellow" },
+  { value: "idea", label: "Ideas", icon: "lightbulb", color: "yellow" },
   { value: "answered", label: "Answered", icon: "status-done", color: "green" },
   { value: "skipped", label: "Skipped", icon: "status-canceled", color: "gray" },
 ];
@@ -24,20 +26,6 @@ const attributes: KanbanRendererAttributeDescriptor[] = [
     filterable: true,
     groupable: true,
   },
-  {
-    id: "type",
-    label: "Type",
-    type: {
-      kind: "enum",
-      options: [
-        { value: "thread", label: "Threads" },
-        { value: "post", label: "Post ideas" },
-      ],
-    },
-    filterable: true,
-    groupable: true,
-    displayable: false,
-  },
   // The badge icon list has no at-sign, so the label carries it.
   {
     id: "mention",
@@ -45,7 +33,7 @@ const attributes: KanbanRendererAttributeDescriptor[] = [
     type: { kind: "enum", options: [{ value: "mention", label: "@ Mention" }] },
     filterable: true,
   },
-  { id: "ideas", label: "Ideas", type: { kind: "string" } },
+  { id: "ideas", label: "Reply ideas", type: { kind: "string" } },
   {
     id: "kind",
     label: "Kind",
@@ -71,8 +59,8 @@ const attributes: KanbanRendererAttributeDescriptor[] = [
 ];
 const settings: KanbanRendererSettings = {
   viewMode: "list",
-  columnGrouping: "type",
-  rowGrouping: "status",
+  columnGrouping: "status",
+  rowGrouping: "none",
   ordering: { attributeId: "relevance", direction: "desc" },
   displayProperties: ["mention", "ideas", "kind", "site", "found"],
 };
@@ -85,7 +73,7 @@ const view = (id: string, title: string, filters: Record<string, string[]>): Kan
 const ideaCount = (thread: Thread, ideas: Idea[]) => {
   const count = ideas.filter((idea) => idea.threadId === thread.id && idea.status !== "dismissed").length;
   if (!count) return undefined;
-  return `${count} idea${count === 1 ? "" : "s"}`;
+  return plural(count, "reply idea");
 };
 
 export const threadsBoard = defineView({
@@ -97,7 +85,7 @@ export const threadsBoard = defineView({
     attributes,
     defaultSettings: settings,
     defaultViews: [
-      view("active", "Active", { status: ["new", "saved", "answered"] }),
+      view("active", "Active", { status: ["new", "idea"] }),
       view("mentions", "Mentions", { mention: ["mention"] }),
       view("answered", "Answered", { status: ["answered"] }),
       view("all", "All", {}),
@@ -115,7 +103,6 @@ export const threadsBoard = defineView({
           resource: threadRef(thread),
           attributes: {
             status: thread.status,
-            type: isNewPost(thread) ? "post" : "thread",
             mention: !isNewPost(thread) && thread.mention ? "mention" : undefined,
             ideas: isNewPost(thread) ? undefined : ideaCount(thread, ideas),
             kind: isNewPost(thread) ? thread.kind : undefined,

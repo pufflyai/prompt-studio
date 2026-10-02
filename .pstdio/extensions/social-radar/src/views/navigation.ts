@@ -65,6 +65,12 @@ export const radarTree = defineView({
           collapsible: false,
           nodes: [
             { id: "threads", label: "Threads", icon: "List", target: { kind: "page", page: pageRef("threads") } },
+            {
+              id: "settings",
+              label: "Settings",
+              icon: "Settings",
+              target: { kind: "page", page: pageRef("settings") },
+            },
           ],
         },
         {

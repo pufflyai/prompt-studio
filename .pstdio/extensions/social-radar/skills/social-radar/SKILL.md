@@ -70,7 +70,7 @@ pst social-radar update-idea --id <id> --input '{"body":"<better reply>"}'
 
 ## New posts
 
-Suggest 3–5 new posts across `demo`, `topic`, and `showcase`. A new post is a thread with a `kind`, one target site, a ready-to-paste `draft`, a `reason`, `tags`, and `basedOn`. Keep the draft within the site's length limit. Read `git log --since=<since> --oneline` and new `.changeset/*.md` files in the linked repo. When changes shipped, make at least one `demo` or `showcase` post name an actual change, with the commit SHA or changeset name in `basedOn`. Put thread ids in `basedOn` when a post answers saved threads. If nothing shipped, say so; never invent a change.
+Suggest 3–5 new posts across `demo`, `topic`, and `showcase`. A new post is a thread with a `kind`; it starts as an idea, while a found thread starts as new. It has one target site, a ready-to-paste `draft`, a `reason`, `tags`, and `basedOn`. Keep the draft within the site's length limit. Read `git log --since=<since> --oneline` and new `.changeset/*.md` files in the linked repo. When changes shipped, make at least one `demo` or `showcase` post name an actual change, with the commit SHA or changeset name in `basedOn`. Put thread ids in `basedOn` when a post answers saved threads. If nothing shipped, say so; never invent a change.
 
 ```sh
 pst social-radar save-thread --input '{"runId":"<runId>","kind":"demo","site":"x","title":"<named change>","draft":"<ready-to-paste post>","reason":"<why now>","tags":["#BuildInPublic"],"basedOn":["<commit SHA>"]}'

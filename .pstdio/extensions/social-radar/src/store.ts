@@ -28,6 +28,6 @@ export const runLabel = (run: Run, now = new Date()) => {
 export const runRef = (run: Run) => ({ type: runResource.id, id: run.id, label: `${runDate(run)} · ${runTime(run)}` });
 export const threadRef = (thread: Thread) => ({ type: threadResource.id, id: thread.id, label: thread.title });
 // Pages reference each other by local id; views and pages would otherwise import each other.
-export const pageRef = (id: "radar" | "threads" | "thread" | "run") => ({ kind: "page" as const, id });
+export const pageRef = (id: "radar" | "threads" | "thread" | "run" | "settings") => ({ kind: "page" as const, id });
 // Notifications leave the extension, so their targets name the page by its qualified id.
 export const qualifiedPageRef = (id: "run") => ({ kind: "page" as const, id: `pstdio.social-radar.page.${id}` });

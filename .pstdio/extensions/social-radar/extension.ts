@@ -7,7 +7,7 @@ import {
   sessionEvents,
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
-import { navigationItems, navigationTrees, pages, viewMenus, views } from "./src/pages";
+import { navigationItems, navigationTrees, pages, views } from "./src/pages";
 import { sessionEnded } from "./src/run-lifecycle";
 import { settingProperties } from "./src/settings";
 import { postMedia, runResource, threadResource } from "./src/store";
@@ -17,7 +17,6 @@ export default defineExtension({
   settings: { properties: settingProperties },
   views,
   pages,
-  viewMenus,
   navigationItems,
   navigationTrees,
   resourceKinds: [threadResource, runResource],

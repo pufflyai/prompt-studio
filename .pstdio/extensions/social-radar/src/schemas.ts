@@ -7,7 +7,8 @@ export const sentiments = ["negative", "neutral", "positive"] as const;
 export type Sentiment = (typeof sentiments)[number];
 const text = z.string().trim().min(1);
 const timestamp = z.iso.datetime();
-export const threadStatus = z.enum(["new", "saved", "answered", "skipped"]);
+// Found threads start as new and new posts as ideas; both end as answered or skipped.
+export const threadStatus = z.enum(["new", "idea", "answered", "skipped"]);
 export const ideaStatus = z.enum(["new", "saved", "used", "dismissed"]);
 export const postKind = z.enum(["demo", "topic", "showcase"]);
 const httpUrl = z.url({ protocol: /^https?$/ });

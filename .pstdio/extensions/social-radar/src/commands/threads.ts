@@ -19,7 +19,7 @@ export const saveThreadCommand = defineCommand({
     const foundAt = new Date().toISOString();
     if ("kind" in data) {
       const id = crypto.randomUUID();
-      await threadsOf(ctx).put(id, { ...data, id, status: "new", foundAt });
+      await threadsOf(ctx).put(id, { ...data, id, status: "idea", foundAt });
       await changed(ctx, id);
       return { id, created: true };
     }
@@ -78,6 +78,8 @@ export const setThreadStatus = defineCommand({
       if (value === "answered") return { id };
       throw new Error("Answered threads cannot move back.");
     }
+    if (value === "idea" && !isNewPost(thread)) throw new Error("Only a new post is an idea.");
+    if (value === "new" && isNewPost(thread)) throw new Error("A new post is an idea, not a found thread.");
     if (value !== "answered") {
       await threadsOf(ctx).update(id, { ...thread, status: value });
       await changed(ctx, id);

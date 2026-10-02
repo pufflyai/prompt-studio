@@ -4,6 +4,7 @@ import { barX, barY, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
+import type { ReactNode } from "react";
 import type { Sentiment } from "../schemas";
 
 // Charts paint with theme tokens, so they follow the light and dark themes.
@@ -15,6 +16,28 @@ export const sentimentTokens: Record<Sentiment, string> = {
   positive: "blue.solid",
 };
 const sentimentLabels: Record<Sentiment, string> = { negative: "Negative", neutral: "Neutral", positive: "Positive" };
+// The chart's own sizing API: without a height prop, style.height lets the chart follow the box it sits in,
+// so the dashboard scales with the page. A CSS rule cannot do this, because the chart sets its height inline.
+const fillHeight = { height: "100%" };
+
+interface ChartBoxProps {
+  height?: number;
+  children: ReactNode;
+}
+const ChartBox = (props: ChartBoxProps) => {
+  const { height, children } = props;
+  if (height)
+    return (
+      <Box color="fg.muted" textStyle="label/XS">
+        {children}
+      </Box>
+    );
+  return (
+    <Box color="fg.muted" textStyle="label/XS" flex="1" minH="0" overflow="hidden">
+      {children}
+    </Box>
+  );
+};
 
 interface DailyBarsProps {
   days: { day: string; count: number }[];
@@ -33,18 +56,21 @@ export const DailyBars = (props: DailyBarsProps) => {
     },
   });
   return (
-    <Box color="fg.muted" textStyle="label/XS">
-      <Chart definition={definition} height={200} ariaLabel={label} />
-    </Box>
+    <ChartBox>
+      <Chart definition={definition} ariaLabel={label} style={fillHeight} />
+    </ChartBox>
   );
 };
 
 interface RankedBarsProps {
   rows: { label: string; count: number }[];
   label: string;
+  // Fixed rows suit a scrolling column; omit to fill the parent's height.
+  fixedHeight?: boolean;
 }
 export const RankedBars = (props: RankedBarsProps) => {
-  const { rows, label } = props;
+  const { rows, label, fixedHeight = false } = props;
+  const height = fixedHeight ? Math.max(rows.length * 24, 48) : undefined;
   const definition = defineChart({
     marks: [barX(rows, { x: "count", y: "label", fill: countColor, maxThickness: 10, radius: 2 })],
     scales: {
@@ -58,9 +84,9 @@ export const RankedBars = (props: RankedBarsProps) => {
     },
   });
   return (
-    <Box color="fg.muted" textStyle="label/XS">
-      <Chart definition={definition} height={Math.max(rows.length * 24, 48)} ariaLabel={label} />
-    </Box>
+    <ChartBox height={height}>
+      <Chart definition={definition} height={height} ariaLabel={label} style={height ? undefined : fillHeight} />
+    </ChartBox>
   );
 };
 
