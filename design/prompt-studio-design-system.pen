@@ -15571,6 +15571,223 @@
                           }
                         }
                       ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "TNohF",
+                      "name": "Caption",
+                      "fill": "$annotation",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Desktop · breadcrumb starts with a level page, so a project crumb leads it",
+                      "fontFamily": "$font-body",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "KQhKW",
+                      "type": "ref",
+                      "ref": "Uke3B",
+                      "name": "Nav Chrome · Level · Sessions",
+                      "descendants": {
+                        "WG70V": {
+                          "enabled": false
+                        },
+                        "rKPgR": {
+                          "theme": {
+                            "crumb": "default",
+                            "size": "sm"
+                          }
+                        },
+                        "rKPgR/xP712": {
+                          "enabled": false
+                        },
+                        "rKPgR/QAdbs": {
+                          "type": "frame",
+                          "id": "pT41m",
+                          "name": "Project Avatar",
+                          "width": 16,
+                          "height": 16,
+                          "fill": "$ds-surface",
+                          "cornerRadius": 999,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ArrXO",
+                              "name": "Initial",
+                              "fill": "$ds-fg-muted",
+                              "content": "P",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 8,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        "rKPgR/g7l5u": {
+                          "content": "Prompt Studio"
+                        },
+                        "U8yd35": {
+                          "theme": {
+                            "crumb": "current",
+                            "size": "sm"
+                          }
+                        },
+                        "U8yd35/QAdbs": {
+                          "icon": "message-circle"
+                        },
+                        "U8yd35/g7l5u": {
+                          "content": "Sessions"
+                        },
+                        "R8Q6C": {
+                          "enabled": false
+                        },
+                        "AZ9VV": {
+                          "enabled": false
+                        },
+                        "saN8L": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "gGRho",
+                      "name": "Caption",
+                      "fill": "$annotation",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Desktop · deeper inside the same level",
+                      "fontFamily": "$font-body",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "zixA6",
+                      "type": "ref",
+                      "ref": "Uke3B",
+                      "name": "Nav Chrome · Level · Session",
+                      "descendants": {
+                        "WG70V": {
+                          "enabled": false
+                        },
+                        "rKPgR": {
+                          "theme": {
+                            "crumb": "default",
+                            "size": "sm"
+                          }
+                        },
+                        "rKPgR/xP712": {
+                          "enabled": false
+                        },
+                        "rKPgR/QAdbs": {
+                          "type": "frame",
+                          "id": "LMzre",
+                          "name": "Project Avatar",
+                          "width": 16,
+                          "height": 16,
+                          "fill": "$ds-surface",
+                          "cornerRadius": 999,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "eZznT",
+                              "name": "Initial",
+                              "fill": "$ds-fg-muted",
+                              "content": "P",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 8,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        "rKPgR/g7l5u": {
+                          "content": "Prompt Studio"
+                        },
+                        "U8yd35": {
+                          "theme": {
+                            "crumb": "default",
+                            "size": "sm"
+                          }
+                        },
+                        "U8yd35/QAdbs": {
+                          "icon": "message-circle"
+                        },
+                        "U8yd35/g7l5u": {
+                          "content": "Sessions"
+                        },
+                        "R8Q6C": {
+                          "theme": {
+                            "crumb": "current",
+                            "size": "sm"
+                          }
+                        },
+                        "R8Q6C/QAdbs": {
+                          "icon": "message-circle"
+                        },
+                        "R8Q6C/g7l5u": {
+                          "content": "Level session"
+                        },
+                        "AZ9VV": {
+                          "enabled": false
+                        },
+                        "saN8L": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "Eibi6",
+                      "name": "Caption",
+                      "fill": "$annotation",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Desktop · root-level page · the breadcrumb has no project crumb",
+                      "fontFamily": "$font-body",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "QvVIM",
+                      "type": "ref",
+                      "ref": "Uke3B",
+                      "name": "Nav Chrome · Root level · Tickets",
+                      "descendants": {
+                        "WG70V": {
+                          "enabled": false
+                        },
+                        "rKPgR": {
+                          "theme": {
+                            "crumb": "current",
+                            "size": "sm"
+                          }
+                        },
+                        "rKPgR/xP712": {
+                          "enabled": false
+                        },
+                        "rKPgR/QAdbs": {
+                          "icon": "ticket"
+                        },
+                        "rKPgR/g7l5u": {
+                          "content": "Tickets"
+                        },
+                        "U8yd35": {
+                          "enabled": false
+                        },
+                        "R8Q6C": {
+                          "enabled": false
+                        },
+                        "AZ9VV": {
+                          "enabled": false
+                        },
+                        "saN8L": {
+                          "enabled": false
+                        }
+                      }
                     }
                   ]
                 }
@@ -18464,6 +18681,270 @@
                           "content": "Hover"
                         }
                       }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GqdHI",
+                      "name": "Project crumb states",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "KsPtY",
+                          "name": "Project crumb · Rest",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DBv0X",
+                              "name": "State Label",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 92,
+                              "content": "Rest",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "HxPOj",
+                              "type": "ref",
+                              "ref": "N3VfvY",
+                              "name": "Project crumb",
+                              "theme": {
+                                "crumb": "default",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "xP712": {
+                                  "enabled": false
+                                },
+                                "QAdbs": {
+                                  "type": "frame",
+                                  "id": "ncHgR",
+                                  "name": "Project Avatar",
+                                  "width": 16,
+                                  "height": 16,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "q9TEmE",
+                                      "name": "Initial",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "P",
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 8,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                "g7l5u": {
+                                  "content": "Prompt Studio"
+                                }
+                              }
+                            },
+                            {
+                              "id": "uHCxr",
+                              "type": "ref",
+                              "ref": "N3VfvY",
+                              "name": "Sessions",
+                              "theme": {
+                                "crumb": "current",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "xP712": {
+                                  "enabled": true
+                                },
+                                "QAdbs": {
+                                  "icon": "message-circle"
+                                },
+                                "g7l5u": {
+                                  "content": "Sessions"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gIf1E",
+                          "name": "Project crumb · Hover",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "l0hCt",
+                              "name": "State Label",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 92,
+                              "content": "Hover",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "Tj1G6",
+                              "type": "ref",
+                              "ref": "N3VfvY",
+                              "name": "Project crumb",
+                              "theme": {
+                                "crumb": "hover",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "xP712": {
+                                  "enabled": false
+                                },
+                                "QAdbs": {
+                                  "type": "frame",
+                                  "id": "JTfSj",
+                                  "name": "Project Avatar",
+                                  "width": 16,
+                                  "height": 16,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "hC66a",
+                                      "name": "Initial",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "P",
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 8,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                "g7l5u": {
+                                  "content": "Prompt Studio"
+                                }
+                              }
+                            },
+                            {
+                              "id": "l8EWX",
+                              "type": "ref",
+                              "ref": "N3VfvY",
+                              "name": "Sessions",
+                              "theme": {
+                                "crumb": "current",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "xP712": {
+                                  "enabled": true
+                                },
+                                "QAdbs": {
+                                  "icon": "message-circle"
+                                },
+                                "g7l5u": {
+                                  "content": "Sessions"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RqB5Z",
+                          "name": "Project crumb · Keyboard focus",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "N1IfNM",
+                              "name": "State Label",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": 92,
+                              "content": "Keyboard focus",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "NSzyh",
+                              "type": "ref",
+                              "ref": "N3VfvY",
+                              "name": "Project crumb",
+                              "theme": {
+                                "crumb": "default",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "xP712": {
+                                  "enabled": false
+                                },
+                                "v8pXgm": {
+                                  "cornerRadius": 4,
+                                  "stroke": "$ds-focus",
+                                  "strokeWidth": 2,
+                                  "strokeAlignment": "outer"
+                                },
+                                "QAdbs": {
+                                  "type": "frame",
+                                  "id": "zS5XQ",
+                                  "name": "Project Avatar",
+                                  "width": 16,
+                                  "height": 16,
+                                  "fill": "$ds-surface",
+                                  "cornerRadius": 999,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "IJ2O7",
+                                      "name": "Initial",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "P",
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 8,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                "g7l5u": {
+                                  "content": "Prompt Studio"
+                                }
+                              }
+                            },
+                            {
+                              "id": "x75QB",
+                              "type": "ref",
+                              "ref": "N3VfvY",
+                              "name": "Sessions",
+                              "theme": {
+                                "crumb": "current",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "xP712": {
+                                  "enabled": true
+                                },
+                                "QAdbs": {
+                                  "icon": "message-circle"
+                                },
+                                "g7l5u": {
+                                  "content": "Sessions"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },
@@ -19479,6 +19960,33 @@
                               "width": 14,
                               "height": 14,
                               "fill": "$ds-fg"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WxJME",
+                      "name": "Project button · level tooltip",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "zl5wX",
+                          "type": "ref",
+                          "ref": "mO4LW",
+                          "name": "Project Button"
+                        },
+                        {
+                          "id": "M5Tni",
+                          "type": "ref",
+                          "ref": "l0W35",
+                          "name": "Tooltip",
+                          "descendants": {
+                            "XLtPR": {
+                              "content": "Go to project navigation"
                             }
                           }
                         }
@@ -72892,7 +73400,7 @@
             "mode": "dark"
           },
           "width": 1000,
-          "height": 440,
+          "height": 450,
           "fill": "$ds-bg",
           "layout": "vertical",
           "gap": 20,
@@ -73959,6 +74467,19 @@
                   "fill": "$ds-fg-muted"
                 }
               ]
+            },
+            {
+              "type": "text",
+              "id": "gZwW6",
+              "name": "Active tab rule",
+              "fill": "$annotation",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Inside a Sidenav level, a click on the already active project tab returns to the last root-level page. On a root-level page it does nothing.",
+              "lineHeight": 1.4,
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
             }
           ]
         }
@@ -73975,7 +74496,7 @@
       },
       "clip": true,
       "width": 2200,
-      "height": 2290,
+      "height": 2681,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 30,
@@ -76795,7 +77316,7 @@
         {
           "type": "frame",
           "id": "p1bZXm",
-          "name": "F21–F22 · Navigation journeys",
+          "name": "F21–F23 · Navigation journeys",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 12,
@@ -76805,7 +77326,7 @@
               "id": "AD6OX",
               "name": "Section Label",
               "fill": "$ds-success",
-              "content": "F21–F22 · COMPLETE NAVIGATION JOURNEYS WITH STABLE PROJECT CHROME",
+              "content": "F21–F23 · COMPLETE NAVIGATION JOURNEYS WITH STABLE PROJECT CHROME",
               "fontFamily": "$font-heading",
               "fontSize": 12,
               "fontWeight": "600",
@@ -79382,6 +79903,1108 @@
                           ]
                         }
                       ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "p0r0ab",
+              "name": "F23 · Leaving a Sidenav level",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wVa5a",
+                  "name": "Journey Label",
+                  "fill": "$annotation",
+                  "content": "F23 · LEAVING A SIDENAV LEVEL",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "x3SkEl",
+                  "name": "Journey Steps",
+                  "width": "fill_container",
+                  "height": 190,
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "x6bzBR",
+                      "name": "Step 1 · Tickets board",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 6,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "padding": 10,
+                      "children": [
+                        {
+                          "id": "JHVgc",
+                          "type": "ref",
+                          "ref": "Uke3B",
+                          "name": "Nav Chrome",
+                          "width": "fill_container",
+                          "height": 28,
+                          "padding": [
+                            0,
+                            6
+                          ],
+                          "gap": 3,
+                          "descendants": {
+                            "LLPuw": {
+                              "height": 20,
+                              "width": 20,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
+                            "LLPuw/k7mgm": {
+                              "height": 10,
+                              "width": 10
+                            },
+                            "t5jSf": {
+                              "enabled": false
+                            },
+                            "WG70V": {
+                              "enabled": false
+                            },
+                            "rKPgR": {
+                              "enabled": true,
+                              "theme": {
+                                "crumb": "current",
+                                "size": "xs"
+                              }
+                            },
+                            "rKPgR/xP712": {
+                              "enabled": false,
+                              "fontSize": 8
+                            },
+                            "rKPgR/v8pXgm": {
+                              "height": 20,
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "gap": 3
+                            },
+                            "rKPgR/QAdbs": {
+                              "icon": "ticket",
+                              "height": 9,
+                              "width": 9
+                            },
+                            "rKPgR/g7l5u": {
+                              "content": "Tickets",
+                              "fontSize": 8
+                            },
+                            "U8yd35": {
+                              "enabled": false
+                            },
+                            "R8Q6C": {
+                              "enabled": false
+                            },
+                            "AZ9VV": {
+                              "enabled": false
+                            },
+                            "saN8L": {
+                              "enabled": false
+                            },
+                            "kUCSG": {
+                              "enabled": false
+                            },
+                            "q7B3uG": {
+                              "enabled": false
+                            },
+                            "ups0z": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Eufzd",
+                          "name": "Step Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "QPJYb",
+                              "name": "Sidenav",
+                              "clip": true,
+                              "width": 90,
+                              "height": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "padding": 7,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WOD3z",
+                                  "name": "Sidenav Body",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "project rows\nTickets · Sessions · Notes",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 7,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "E9elaV",
+                                  "name": "Selected Row",
+                                  "fill": "$annotation",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Tickets",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 8,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "AyMmW",
+                              "name": "Main Panel",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-surface",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 4,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "fxIUr",
+                                  "name": "Main Content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Tickets board",
+                                  "textAlign": "center",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "CwEI8",
+                                  "name": "State Note",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "root-level page · no project crumb",
+                                  "textAlign": "center",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 8,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tYyK7",
+                      "name": "Next Arrow",
+                      "width": 20,
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "U8Dns1",
+                          "name": "Arrow",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ds-fg-subtle"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Q9iQ0",
+                      "name": "Step 2 · Sessions level",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 6,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "padding": 10,
+                      "children": [
+                        {
+                          "id": "WtIhw",
+                          "type": "ref",
+                          "ref": "Uke3B",
+                          "name": "Nav Chrome",
+                          "width": "fill_container",
+                          "height": 28,
+                          "padding": [
+                            0,
+                            6
+                          ],
+                          "gap": 3,
+                          "descendants": {
+                            "LLPuw": {
+                              "height": 20,
+                              "width": 20,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
+                            "LLPuw/k7mgm": {
+                              "height": 10,
+                              "width": 10
+                            },
+                            "t5jSf": {
+                              "enabled": false
+                            },
+                            "WG70V": {
+                              "enabled": false
+                            },
+                            "rKPgR": {
+                              "enabled": true,
+                              "theme": {
+                                "crumb": "default",
+                                "size": "xs"
+                              }
+                            },
+                            "rKPgR/xP712": {
+                              "enabled": false,
+                              "fontSize": 8
+                            },
+                            "rKPgR/v8pXgm": {
+                              "height": 20,
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "gap": 3
+                            },
+                            "rKPgR/QAdbs": {
+                              "type": "frame",
+                              "id": "z2cQqZ",
+                              "name": "Project Avatar",
+                              "width": 10,
+                              "height": 10,
+                              "fill": "$ds-surface",
+                              "cornerRadius": 999,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "d9iiX1",
+                                  "name": "Initial",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "P",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 6,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            "rKPgR/g7l5u": {
+                              "content": "Prompt Studio",
+                              "fontSize": 8
+                            },
+                            "U8yd35": {
+                              "enabled": true,
+                              "theme": {
+                                "crumb": "current",
+                                "size": "xs"
+                              }
+                            },
+                            "U8yd35/xP712": {
+                              "enabled": true,
+                              "fontSize": 8
+                            },
+                            "U8yd35/v8pXgm": {
+                              "height": 20,
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "gap": 3
+                            },
+                            "U8yd35/QAdbs": {
+                              "icon": "message-circle",
+                              "height": 9,
+                              "width": 9
+                            },
+                            "U8yd35/g7l5u": {
+                              "content": "Sessions",
+                              "fontSize": 8
+                            },
+                            "R8Q6C": {
+                              "enabled": false
+                            },
+                            "AZ9VV": {
+                              "enabled": false
+                            },
+                            "saN8L": {
+                              "enabled": false
+                            },
+                            "kUCSG": {
+                              "enabled": false
+                            },
+                            "q7B3uG": {
+                              "enabled": false
+                            },
+                            "ups0z": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "PHNgh",
+                          "name": "Step Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "mPInj",
+                              "name": "Sidenav",
+                              "clip": true,
+                              "width": 90,
+                              "height": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "padding": 7,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "iCgw7",
+                                  "name": "Sidenav Body",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "level rows\nToday · Earlier",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 7,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "VhFwv",
+                                  "name": "Selected Row",
+                                  "fill": "$annotation",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Sessions",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 8,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "vlscR",
+                              "name": "Main Panel",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-surface",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 4,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Z265VW",
+                                  "name": "Main Content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Sessions",
+                                  "textAlign": "center",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "R0zWn",
+                                  "name": "State Note",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "the level replaces the project rows",
+                                  "textAlign": "center",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 8,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "L9KzK",
+                      "name": "Next Arrow",
+                      "width": 20,
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "tSIvK",
+                          "name": "Arrow",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ds-fg-subtle"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pss37",
+                      "name": "Step 3 · Level session",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 6,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "padding": 10,
+                      "children": [
+                        {
+                          "id": "l5Ibl",
+                          "type": "ref",
+                          "ref": "Uke3B",
+                          "name": "Nav Chrome",
+                          "width": "fill_container",
+                          "height": 28,
+                          "padding": [
+                            0,
+                            6
+                          ],
+                          "gap": 3,
+                          "descendants": {
+                            "LLPuw": {
+                              "height": 20,
+                              "width": 20,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
+                            "LLPuw/k7mgm": {
+                              "height": 10,
+                              "width": 10
+                            },
+                            "t5jSf": {
+                              "enabled": false
+                            },
+                            "WG70V": {
+                              "enabled": false
+                            },
+                            "rKPgR": {
+                              "enabled": true,
+                              "theme": {
+                                "crumb": "default",
+                                "size": "xs"
+                              }
+                            },
+                            "rKPgR/xP712": {
+                              "enabled": false,
+                              "fontSize": 8
+                            },
+                            "rKPgR/v8pXgm": {
+                              "height": 20,
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "gap": 3
+                            },
+                            "rKPgR/QAdbs": {
+                              "type": "frame",
+                              "id": "SvBcM",
+                              "name": "Project Avatar",
+                              "width": 10,
+                              "height": 10,
+                              "fill": "$ds-surface",
+                              "cornerRadius": 999,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tx17T",
+                                  "name": "Initial",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "P",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 6,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            "rKPgR/g7l5u": {
+                              "content": "Prompt Studio",
+                              "fontSize": 8
+                            },
+                            "U8yd35": {
+                              "enabled": true,
+                              "theme": {
+                                "crumb": "default",
+                                "size": "xs"
+                              }
+                            },
+                            "U8yd35/xP712": {
+                              "enabled": true,
+                              "fontSize": 8
+                            },
+                            "U8yd35/v8pXgm": {
+                              "height": 20,
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "gap": 3
+                            },
+                            "U8yd35/QAdbs": {
+                              "icon": "message-circle",
+                              "height": 9,
+                              "width": 9
+                            },
+                            "U8yd35/g7l5u": {
+                              "content": "Sessions",
+                              "fontSize": 8
+                            },
+                            "R8Q6C": {
+                              "enabled": true,
+                              "theme": {
+                                "crumb": "current",
+                                "size": "xs"
+                              }
+                            },
+                            "R8Q6C/xP712": {
+                              "enabled": true,
+                              "fontSize": 8
+                            },
+                            "R8Q6C/v8pXgm": {
+                              "height": 20,
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "gap": 3
+                            },
+                            "R8Q6C/QAdbs": {
+                              "icon": "message-circle",
+                              "height": 9,
+                              "width": 9
+                            },
+                            "R8Q6C/g7l5u": {
+                              "content": "Level session",
+                              "fontSize": 8
+                            },
+                            "AZ9VV": {
+                              "enabled": false
+                            },
+                            "saN8L": {
+                              "enabled": false
+                            },
+                            "kUCSG": {
+                              "enabled": false
+                            },
+                            "q7B3uG": {
+                              "enabled": false
+                            },
+                            "ups0z": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "z7m05",
+                          "name": "Step Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "I1mBl",
+                              "name": "Sidenav",
+                              "clip": true,
+                              "width": 90,
+                              "height": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "padding": 7,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "k7Pm6",
+                                  "name": "Sidenav Body",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "level rows\nToday · Earlier",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 7,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "v3O4r",
+                                  "name": "Selected Row",
+                                  "fill": "$annotation",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Level session",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 8,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "kRRmi",
+                              "name": "Main Panel",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-surface",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 4,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wBd0U",
+                                  "name": "Main Content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Level session",
+                                  "textAlign": "center",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Abdcj",
+                                  "name": "State Note",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "still inside the level",
+                                  "textAlign": "center",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 8,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "L3e0e6",
+                      "name": "Next Arrow",
+                      "width": 20,
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "rauR7",
+                          "name": "Arrow",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ds-fg-subtle"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "T5GXPn",
+                      "name": "Step 4 · Project crumb returns",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 6,
+                      "stroke": "$annotation",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "padding": 10,
+                      "children": [
+                        {
+                          "id": "lBclI",
+                          "type": "ref",
+                          "ref": "Uke3B",
+                          "name": "Nav Chrome",
+                          "width": "fill_container",
+                          "height": 28,
+                          "padding": [
+                            0,
+                            6
+                          ],
+                          "gap": 3,
+                          "descendants": {
+                            "LLPuw": {
+                              "height": 20,
+                              "width": 20,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            },
+                            "LLPuw/k7mgm": {
+                              "height": 10,
+                              "width": 10
+                            },
+                            "t5jSf": {
+                              "enabled": false
+                            },
+                            "WG70V": {
+                              "enabled": false
+                            },
+                            "rKPgR": {
+                              "enabled": true,
+                              "theme": {
+                                "crumb": "current",
+                                "size": "xs"
+                              }
+                            },
+                            "rKPgR/xP712": {
+                              "enabled": false,
+                              "fontSize": 8
+                            },
+                            "rKPgR/v8pXgm": {
+                              "height": 20,
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "gap": 3
+                            },
+                            "rKPgR/QAdbs": {
+                              "icon": "ticket",
+                              "height": 9,
+                              "width": 9
+                            },
+                            "rKPgR/g7l5u": {
+                              "content": "Tickets",
+                              "fontSize": 8
+                            },
+                            "U8yd35": {
+                              "enabled": false
+                            },
+                            "R8Q6C": {
+                              "enabled": false
+                            },
+                            "AZ9VV": {
+                              "enabled": false
+                            },
+                            "saN8L": {
+                              "enabled": false
+                            },
+                            "kUCSG": {
+                              "enabled": false
+                            },
+                            "q7B3uG": {
+                              "enabled": false
+                            },
+                            "ups0z": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y7WlMs",
+                          "name": "Step Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "GvT3l",
+                              "name": "Sidenav",
+                              "clip": true,
+                              "width": 90,
+                              "height": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "strokeLinejoin": "round",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "padding": 7,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "x234b",
+                                  "name": "Sidenav Body",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "project rows\nTickets · Sessions · Notes",
+                                  "lineHeight": 1.3,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 7,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Uhg9n",
+                                  "name": "Selected Row",
+                                  "fill": "$annotation",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Tickets",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 8,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "EeTV1",
+                              "name": "Main Panel",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-surface",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "layout": "vertical",
+                              "gap": 4,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "n4lOAB",
+                                  "name": "Main Content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Tickets board",
+                                  "textAlign": "center",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 9,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Qzeeh",
+                                  "name": "State Note",
+                                  "fill": "$ds-fg-subtle",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "click the project crumb · last root-level page",
+                                  "textAlign": "center",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 8,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Rxmw3",
+                  "name": "Rules",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fpk7b",
+                      "name": "Rule",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "· Every breadcrumb that starts with a level page gets a project crumb. Other breadcrumbs stay unchanged.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-body",
+                      "fontSize": 9,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "RmU0x",
+                      "name": "Rule",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "· The project crumb, a click on the active desktop project tab, and the browser project button all go to the last root-level page used in this project.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-body",
+                      "fontSize": 9,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "i9ovd",
+                      "name": "Rule",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "· That page is the part of the location parent chain before the first level page, such as the tickets board for a ticket page.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-body",
+                      "fontSize": 9,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "x7pMfs",
+                      "name": "Rule",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "· Moving between levels, such as Sessions to Notes, keeps the saved page. It also survives a reload.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-body",
+                      "fontSize": 9,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "scvzz",
+                      "name": "Rule",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "· Start is only the fallback, when no root-level page has been used yet.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-body",
+                      "fontSize": 9,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DzAMR",
+                      "name": "Rule",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "· A click on the active project tab on a root-level page does nothing.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-body",
+                      "fontSize": 9,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DU8zM",
+                      "name": "Rule",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "· There is no Back row in the Sidenav.",
+                      "lineHeight": 1.4,
+                      "fontFamily": "$font-body",
+                      "fontSize": 9,
+                      "fontWeight": "normal"
                     }
                   ]
                 }

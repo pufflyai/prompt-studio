@@ -13,6 +13,7 @@ import {
 } from "./page-location-normalization";
 import { setPageLocationPreparation } from "./page-location-preparation";
 import { createPageLocationPublisher } from "./page-location-publish";
+import { createRootLevelLocationTracker } from "./page-location-root-level";
 import type {
   CreateWorkbenchPageLocationControllerInput,
   ResolvedPageLocation,
@@ -22,11 +23,13 @@ import type {
   WorkbenchPageLocationHistoryState,
   WorkbenchPageNavigationResult,
 } from "./page-location-types";
+import { connectPageOwnerRemoval } from "./page-owner-removal";
 import { createPagePlacementCloser } from "./page-placement-closer";
 import { createPageResourceRemover } from "./page-resource-remover";
 
 export type {
   CreateWorkbenchPageLocationControllerInput,
+  PersistedWorkbenchPageLocation,
   WorkbenchPageBrowserEntry,
   WorkbenchPageHistoryState,
   WorkbenchPageLocationBrowser,
@@ -75,6 +78,14 @@ export const createWorkbenchPageLocationController = <Value>(
   const fail = createPageLocationFailureHandler(input.reportDiagnostic);
   const historyEntry = createPageHistoryEntry({ pages, resources: internals.resources });
 
+  const rootLevel = createRootLevelLocationTracker({
+    levels: input,
+    pages,
+    normalize: (location) => normalizeStored(location),
+    resourceKey: (resource) => internals.resources.toUri(internals.resources.normalize(resource)),
+    start: () => start(),
+  });
+
   const publish = createPageLocationPublisher(input, internals, {
     getIndex: () => historyIndex,
     commitIndex: (index, push) => {
@@ -83,6 +94,7 @@ export const createWorkbenchPageLocationController = <Value>(
     },
     entry: historyEntry,
     publish: publishHistory,
+    rememberRootLevel: rootLevel.remember,
   });
   const commit = (
     projectId: string,
@@ -154,7 +166,10 @@ export const createWorkbenchPageLocationController = <Value>(
       const hasProjectUrl = useCurrentUrl && isWorkbenchProjectUrl(browserEntry.url, projectId);
       const fromUrl = hasProjectUrl ? resolveUrl(projectId, browserEntry) : undefined;
       if (hasProjectUrl && !fromUrl) throw new Error(`Cannot resolve page URL: ${browserEntry.url}`);
-      const saved = hasProjectUrl ? undefined : input.persistence.load(projectId);
+      // A URL wins over the saved location, but the saved root level still names the way out of a level.
+      const persisted = input.persistence.load(projectId);
+      rootLevel.restore(persisted?.rootLevel);
+      const saved = hasProjectUrl ? undefined : persisted?.location;
       const resolved = fromUrl ?? (saved ? normalizeStored(saved) : start());
       return commit(projectId, resolved, "replace", source === "boot" ? "bootPageLocation" : "switchPageProject");
     } catch (error) {
@@ -184,33 +199,14 @@ export const createWorkbenchPageLocationController = <Value>(
     }
   };
   const popStateSubscription = input.browser.onPopState(onPopState);
-  const pageRemovalSubscription = input.registry.store.subscribe((state, previous) => {
-    const removedPage = Object.keys(previous.pages).some((pageId) => !state.pages[pageId]);
-    if (!removedPage || !state.projectId || state.projectId !== previous.projectId || !previous.location) return;
-    try {
-      if (state.location) {
-        normalizeStored(state.location);
-        return;
-      }
-    } catch (error) {
-      fail("navigation", error);
-    }
-    try {
-      const active = state.activePageId ? state.pages[state.activePageId] : undefined;
-      const resolved =
-        active && state.location
-          ? normalizeDirectWorkbenchPageLocation({
-              pageId: active.id,
-              pages: pages(),
-              resources: internals.resources,
-              ...(state.location.resource ? { resource: state.location.resource } : {}),
-              ...(state.location.section ? { section: state.location.section } : {}),
-            })
-          : start();
-      commit(state.projectId, resolved, "replace", "removePageLocationOwner");
-    } catch (error) {
-      fail("navigation", error);
-    }
+  const pageRemovalSubscription = connectPageOwnerRemoval({
+    registry: input.registry,
+    pages,
+    resources: internals.resources,
+    normalizeStored,
+    start,
+    commit,
+    fail,
   });
 
   const closeActivePlacement = createPagePlacementCloser({
@@ -231,8 +227,13 @@ export const createWorkbenchPageLocationController = <Value>(
   const controller = createPageLocationControllerActions({
     input,
     historyStore,
-    clearProject: internals.clearProject,
+    clearProject(projectId) {
+      // The remembered root level belongs to the project the user is leaving.
+      rootLevel.restore(undefined);
+      internals.clearProject(projectId);
+    },
     resetHistory,
+    rootLevelTarget: rootLevel.target,
     restore,
     resolveUrl,
     normalizeTarget: (target) =>
@@ -250,6 +251,7 @@ export const createWorkbenchPageLocationController = <Value>(
     removeResource: createPageResourceRemover({
       getState: input.registry.store.getState,
       resources: internals.resources,
+      forgetRootLevel: rootLevel.forget,
       commit,
     }),
     canGoBack: () => historyIndex > 0,

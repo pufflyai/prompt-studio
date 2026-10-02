@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
-import type { PageLocation } from "@pstdio/sdk/extensions";
-import type { WorkbenchPageBrowserEntry } from "./controllers/page-location/page-location-controller";
+import type {
+  PersistedWorkbenchPageLocation,
+  WorkbenchPageBrowserEntry,
+} from "./controllers/page-location/page-location-controller";
 import { createWorkbench } from "./workbench-core";
 
 const page = (id: string) => ({ kind: "page" as const, extensionId: "test", id });
@@ -16,7 +18,7 @@ function harness(
   failure: "browser" | "location-cache" | "layout-cache" | "menu-read" | "menu-write" | "mode-hook" | "subscriber",
 ) {
   let armed = false;
-  let saved: PageLocation | undefined;
+  let saved: PersistedWorkbenchPageLocation | undefined;
   const entries: WorkbenchPageBrowserEntry[] = [{ url: "/projects/project" }];
   const workbench = createWorkbench({
     startPage: page("home"),
@@ -47,9 +49,9 @@ function harness(
     },
     pageLocationPersistence: {
       load: () => saved,
-      save(_id, location) {
+      save(_id, value) {
         if (armed && failure === "location-cache") throw new Error("Location cache is full");
-        saved = location;
+        saved = value;
       },
     },
     layoutPersistence: {

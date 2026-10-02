@@ -93,7 +93,8 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   await expect(page.getByRole("tab", { name: "Tickets", exact: true })).toHaveCount(0);
 
-  await page.getByRole("button", { name: new RegExp(project.name) }).click();
+  // The project button stays on a root-level page such as Tickets, so history leads back to Start.
+  await page.goBack();
 
   await expect(page).toHaveURL(`/projects/${project.id}`);
   await expect(page.getByTestId("start-page")).toBeVisible();

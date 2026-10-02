@@ -32,7 +32,7 @@ test("a resource refresh updates the new history entry and preserves the previou
     },
   ]);
   expect(harness.browser.current()).toEqual(harness.browser.replacements.at(-1)!);
-  expect(harness.persistence.values.get("p1")?.resource?.label).toBe("My workspace");
+  expect(harness.persistence.values.get("p1")?.location.resource?.label).toBe("My workspace");
 
   harness.browser.pop(ticketEntry);
   expect(harness.registry.store.getState().location?.resource?.id).toBe("PS-326");

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import type { NavigationTargetPage, NavigationTargetPanel, PageLocation } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, NavigationTargetPanel } from "@pstdio/sdk/extensions";
 import type {
+  PersistedWorkbenchPageLocation,
   WorkbenchPageBrowserEntry,
   WorkbenchPageLocationBrowser,
 } from "./controllers/page-location/page-location-controller";
@@ -39,15 +40,15 @@ const createHarness = () => {
       return { dispose: () => listeners.delete(listener) };
     },
   };
-  const persisted = new Map<string, PageLocation>();
+  const persisted = new Map<string, PersistedWorkbenchPageLocation>();
   const workbench = createWorkbench({
     startPage: pageRef("home"),
     initialSidePanelMode: "closed",
     pageLocationBrowser: browser,
     pageLocationPersistence: {
       load: (id) => persisted.get(id),
-      save: (id, location) => {
-        persisted.set(id, location);
+      save: (id, value) => {
+        persisted.set(id, value);
       },
     },
   });

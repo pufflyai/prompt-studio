@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { PageLocation, PageRef } from "@pstdio/sdk/extensions";
+import type { PageRef } from "@pstdio/sdk/extensions";
 import type {
+  PersistedWorkbenchPageLocation,
   WorkbenchPageBrowserEntry,
   WorkbenchPageLocationBrowser,
   WorkbenchPageLocationPersistence,
@@ -34,10 +35,10 @@ const createBrowser = () => {
   return { browser, pushes, replacements };
 };
 const createPersistence = () => {
-  const values = new Map<string, PageLocation>();
+  const values = new Map<string, PersistedWorkbenchPageLocation>();
   const persistence: WorkbenchPageLocationPersistence = {
     load: (projectId) => values.get(projectId),
-    save: (projectId, location) => values.set(projectId, location),
+    save: (projectId, persisted) => values.set(projectId, persisted),
   };
   return { persistence, values };
 };
@@ -105,6 +106,6 @@ describe("workbench core page navigation", () => {
       expect.objectContaining({ contributionId: "workbench.page-placement.tickets.%24main" }),
     ]);
     expect(harness.browser.pushes.at(-1)?.url).toBe("/projects/p1/extensions/acme.planner/tickets");
-    expect(harness.persistence.values.get("p1")?.page).toEqual(ticketsRef);
+    expect(harness.persistence.values.get("p1")?.location.page).toEqual(ticketsRef);
   });
 });

@@ -5,8 +5,10 @@ import type {
   PlacementIdentity,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
+import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
+import type { NavigationLevelModes } from "./navigation-level";
 
 export interface WorkbenchPageBrowserEntry {
   url: string;
@@ -22,9 +24,15 @@ export interface WorkbenchPageLocationBrowser {
   onPopState(listener: (entry: WorkbenchPageBrowserEntry) => void): { dispose(): void };
 }
 
+export interface PersistedWorkbenchPageLocation {
+  location: PageLocation;
+  // The last location outside every Sidenav level. Users return here when a level hides the project rows.
+  rootLevel?: PageLocation;
+}
+
 export interface WorkbenchPageLocationPersistence {
-  load(projectId: string): PageLocation | undefined;
-  save(projectId: string, location: PageLocation): void;
+  load(projectId: string): PersistedWorkbenchPageLocation | undefined;
+  save(projectId: string, persisted: PersistedWorkbenchPageLocation): void;
 }
 
 export interface WorkbenchPageLocationDiagnostic {
@@ -48,6 +56,8 @@ export type WorkbenchPageNavigationResult =
 export interface CreateWorkbenchPageLocationControllerInput<Value> {
   registry: WorkbenchPageRegistry<Value>;
   browser: WorkbenchPageLocationBrowser;
+  navigationTrees: NavigationTreeRegistry;
+  modes: NavigationLevelModes;
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
@@ -64,6 +74,8 @@ export interface WorkbenchPageLocationController {
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
   replay(location: PageLocation): WorkbenchPageNavigationResult;
   navigateToParent(): WorkbenchPageNavigationResult;
+  /** Opens the last location outside every Sidenav level, or the start page when there is none. */
+  navigateToRootLevel(): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
   removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   goBack(): void;

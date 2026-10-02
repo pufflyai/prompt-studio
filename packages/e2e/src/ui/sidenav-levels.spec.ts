@@ -70,12 +70,12 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // The breadcrumb leaves a level: the project returns to its start page and main navigation.
+  // The breadcrumb leaves a level: the project crumb returns to the last root-level page.
   await page
     .locator('[data-workbench-region="nav"]')
     .getByRole("button", { name: new RegExp(`${project.name}$`) })
     .click();
-  await expect(page.getByTestId("start-page")).toBeVisible();
+  await expect(page).toHaveURL(/\/tickets$/);
   await expect(row("Sessions")).toBeVisible();
 
   await row("Tickets").click();

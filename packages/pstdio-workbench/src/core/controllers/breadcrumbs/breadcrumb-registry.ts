@@ -6,6 +6,8 @@ export interface WorkbenchBreadcrumbItem {
   title: unknown;
   icon?: string;
   indicator?: "session-status";
+  /** The crumb leaves the project navigation: it opens a Sidenav level or a mode that replaces the Sidenav. */
+  startsLevel?: boolean;
   url?: string;
   onClick?: () => void;
   resource?: ResourceRef;

@@ -31,6 +31,7 @@ export { createWorkbenchFocusController, workbenchFocusRegions } from "../contro
 export { createLevelNavigation } from "../controllers/page-location/navigation-level-composition";
 export type {
   CreateWorkbenchPageLocationControllerInput,
+  PersistedWorkbenchPageLocation,
   WorkbenchPageBrowserEntry,
   WorkbenchPageHistoryState,
   WorkbenchPageLocationBrowser,

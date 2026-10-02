@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { NavigationTargetPage, PageLocation } from "@pstdio/sdk/extensions";
+import { createNavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
 import { createWorkbenchBreadcrumbController } from "../breadcrumbs/breadcrumb-registry";
 import { createWorkbenchPageBreadcrumbItems, setWorkbenchPageBreadcrumbs } from "./page-breadcrumbs";
@@ -8,6 +9,21 @@ const resources = {
   normalize: (resource: { type: string; id: string; label?: string }) => ({ ...resource }),
   toUri: (resource: { type: string; id: string }) => `pstdio://${resource.type}/${resource.id}`,
   fromUri: () => undefined,
+};
+const navigationTrees = createNavigationTreeRegistry();
+// A page that owns a content navigation tree starts a Sidenav level.
+const openLevel = (pageId: string) =>
+  navigationTrees.registerContribution({
+    id: `${pageId}.content`,
+    owner: { kind: "page", id: pageId, extensionId: "planner" },
+    sourceExtensionId: "planner",
+    declarationIndex: 0,
+    slot: "content",
+    getSections: () => [],
+  });
+// The Lab mode hides the project Sidenav.
+const modes = {
+  getMode: (id: string) => (id === "lab" ? { chrome: { sidenav: false as const } } : undefined),
 };
 const page = (id: string, title: string): WorkbenchPageContribution => ({
   id,
@@ -37,6 +53,8 @@ describe("page breadcrumbs", () => {
     const items = createWorkbenchPageBreadcrumbItems({
       location,
       pages: [tickets, ticket],
+      navigationTrees,
+      modes,
       resources,
       navigate: (target) => targets.push(target),
     });
@@ -56,6 +74,8 @@ describe("page breadcrumbs", () => {
         parent: { page: workspaces.ref },
       },
       pages: [workspaces, workspace],
+      navigationTrees,
+      modes,
       resources,
       navigate: () => undefined,
     });
@@ -80,6 +100,8 @@ describe("page breadcrumbs", () => {
       breadcrumbs,
       location,
       pages: [tickets, ticket],
+      navigationTrees,
+      modes,
       resources,
       navigate: (target) => targets.push(target),
     });
@@ -95,5 +117,37 @@ describe("page breadcrumbs", () => {
       parent: { kind: "page", page: tickets.ref },
     });
     expect(items?.at(-1)?.onClick).toBeUndefined();
+  });
+  test("marks only the crumbs that open a Sidenav level", () => {
+    const tickets = page("tickets", "Tickets");
+    const sessions = page("sessions", "Sessions");
+    const session = { ...page("session", "Session"), parentId: sessions.id };
+    const level = openLevel(sessions.id);
+    const build = (location: PageLocation, pages: WorkbenchPageContribution[]) =>
+      createWorkbenchPageBreadcrumbItems({
+        location,
+        pages,
+        navigationTrees,
+        modes,
+        resources,
+        navigate: () => undefined,
+      });
+    const insideLevel = build(
+      {
+        page: session.ref,
+        resource: { type: "session", id: "s-1", label: "Level session" },
+        parent: { page: sessions.ref },
+      },
+      [sessions, session],
+    );
+    expect(insideLevel.map((item) => [item.title, item.startsLevel])).toEqual([
+      ["Sessions", true],
+      ["Level session", undefined],
+    ]);
+    expect(build({ page: tickets.ref }, [tickets]).map((item) => item.startsLevel)).toEqual([undefined]);
+    level.dispose();
+    expect(build({ page: sessions.ref }, [sessions]).map((item) => item.startsLevel)).toEqual([undefined]);
+    const lab = { ...page("lab", "Lab"), modeId: "lab" };
+    expect(build({ page: lab.ref }, [lab]).map((item) => item.startsLevel)).toEqual([true]);
   });
 });

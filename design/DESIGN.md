@@ -51,6 +51,19 @@ Read this file before working on UI or design. Use these patterns across the app
 - Closing a problem hides that message; a new failure shows its own problem.
 - Error parts from the agent and failed tool calls are part of the conversation and have no close or retry action.
 
+## Sidenav levels
+
+A page can own a navigation tree. Opening that page starts a Sidenav level: its rows replace the project rows. The breadcrumb is the only way out, so every breadcrumb that starts with a level page gets a leading project crumb.
+
+- The project crumb shows the project avatar and title, like the project button in the browser navbar. Breadcrumbs that already start outside a level stay unchanged.
+- The project crumb, a click on the already active project tab on desktop, and the project button in the browser navbar all open the last root-level page the user visited in this project.
+- A root-level page is the part of the page location's parent chain before the first level page. For a ticket page inside the tickets board, that is the tickets board.
+- A page whose mode replaces the Sidenav, such as a mode with its own activity rail, counts as a level page too. Its breadcrumb gets the project crumb, and the project button leaves the mode.
+- Moving from one level to another, such as Sessions to Notes, keeps the saved page. It also survives a reload.
+- The Start page is only the fallback, used when no root-level page has been visited yet.
+- A click on the active project tab on a root-level page does nothing.
+- The Sidenav has no Back row. The browser back and forward buttons already sit in the nav chrome.
+
 ## Motion experiments
 
 - Explore animation proposals in [Motion Lab](motion/README.md), with live project studies in `design/motion/studies` and a review extension in the project sidenav.

@@ -82,6 +82,21 @@ const createPagePersistenceScopeHandler = (
   };
 };
 
+const createPageLocations = (
+  input: createWorkbenchInput,
+  registry: ReturnType<typeof createLiveWorkbenchPageRegistry>,
+  navigationTrees: ReturnType<typeof createNavigationTreeRegistry>,
+  modes: ReturnType<typeof createWorkbenchModeRegistry>,
+) =>
+  createWorkbenchPageLocationController({
+    registry,
+    browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
+    navigationTrees,
+    modes,
+    persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
+    startPage: input.startPage ?? workbenchPages.start,
+  });
+
 const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefined) => {
   // Save pending writes before the adapter releases its resources.
   persistence?.flush?.();
@@ -221,12 +236,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     resources: pageResources,
   });
 
-  const pageLocations = createWorkbenchPageLocationController({
-    registry: pages,
-    browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
-    persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
-    startPage: input.startPage ?? workbenchPages.start,
-  });
+  const pageLocations = createPageLocations(input, pages, navigationTrees, modes);
 
   const composition = createCoreCompositionController(() => core);
   const navigation = createCoreNavigationRegistry(() => core);
@@ -323,7 +333,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     const state = pages.store.getState();
     if (state.activeModeId) layoutCache.saveMode(state.projectId, state.activeModeId, layout.getLayout());
   });
-  connectWorkbenchPageBreadcrumbs({ breadcrumbs, locations: pageLocations, pages, resources: pageResources });
+  const breadcrumbSources = { breadcrumbs, locations: pageLocations, pages, navigationTrees, modes };
+  connectWorkbenchPageBreadcrumbs({ ...breadcrumbSources, resources: pageResources });
   connectWorkbenchCoreState(core, input);
 
   return core;
