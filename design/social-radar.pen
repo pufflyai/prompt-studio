@@ -7939,7 +7939,7 @@
               "id": "nL8tO",
               "name": "Threads: one row, fixed ",
               "fill": "$ds-fg",
-              "content": "Threads: one list, flowing badges",
+              "content": "Threads: one list, four statuses",
               "fontFamily": "$font-display",
               "fontSize": 40,
               "fontWeight": "600"
@@ -7951,7 +7951,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 1180,
-              "content": "The kanban renderer in list display, grouped by type and then by status, exactly as it renders today. Each status group and its rows share one ring. Badges follow the title in display-property order: mention, ideas or kind, site, then the date. An empty value shows no badge. Threads that name Prompt Studio or pstdio get the Mention badge and their own saved view.",
+              "content": "The kanban renderer in list display, on one level grouped by status: New holds threads to join, Ideas holds posts to publish, then Answered and Skipped. Badges follow the title in display-property order: mention, reply ideas or kind, site, then the date. An empty value shows no badge. Threads that name Prompt Studio or pstdio get the Mention badge and their own saved view.",
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 15,
@@ -8083,6 +8083,38 @@
                                 "uFz3m": {
                                   "type": "frame",
                                   "id": "i9Dyf",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "gzcKH",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Settings",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "settings",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "ROY2j": {
+                                  "content": "Settings"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "G3IVJ",
                                   "name": "End",
                                   "width": 0,
                                   "height": "fill_container",
@@ -8744,25 +8776,6 @@
                                           "height": 12
                                         }
                                       }
-                                    },
-                                    {
-                                      "id": "T6iRtl",
-                                      "type": "ref",
-                                      "ref": "nvvgg",
-                                      "name": "Open settings menu",
-                                      "width": 24,
-                                      "height": 24,
-                                      "theme": {
-                                        "btn": "ghost",
-                                        "size": "2xs"
-                                      },
-                                      "descendants": {
-                                        "k7mgm": {
-                                          "icon": "panel-right-open",
-                                          "width": 12,
-                                          "height": 12
-                                        }
-                                      }
                                     }
                                   ]
                                 },
@@ -8792,7 +8805,7 @@
                                           "content": "is any of"
                                         },
                                         "N5wsTd": {
-                                          "content": "New, Saved, Answered"
+                                          "content": "New, Ideas"
                                         }
                                       }
                                     }
@@ -8811,95 +8824,6 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "XbT6J",
-                                  "name": "Group · Threads",
-                                  "width": "fill_container",
-                                  "height": 32,
-                                  "fill": "$ds-bg-subtle",
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": {
-                                    "bottom": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "gap": 8,
-                                  "padding": [
-                                    0,
-                                    12,
-                                    0,
-                                    10
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "DgGGq",
-                                      "name": "chevron-down",
-                                      "width": 12,
-                                      "height": 12,
-                                      "icon": "chevron-down",
-                                      "library": "lucide",
-                                      "fill": "$ds-fg-muted"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "W8LNI",
-                                      "name": "Threads",
-                                      "fill": "$ds-fg",
-                                      "content": "Threads",
-                                      "fontFamily": "$font-heading",
-                                      "fontSize": 12,
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "id": "c2nztD",
-                                      "type": "ref",
-                                      "ref": "dbK8Z",
-                                      "name": "Badge · 8",
-                                      "height": 16,
-                                      "theme": {
-                                        "badge": "number",
-                                        "palette": "gray",
-                                        "size": "xs"
-                                      },
-                                      "descendants": {
-                                        "ohhQY": {
-                                          "enabled": false
-                                        },
-                                        "FaaBK": {
-                                          "content": "8"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "RCxiF",
-                                      "name": "Spacer",
-                                      "width": "fill_container",
-                                      "height": 1
-                                    },
-                                    {
-                                      "id": "en1L5",
-                                      "type": "ref",
-                                      "ref": "nvvgg",
-                                      "name": "Add",
-                                      "width": 24,
-                                      "height": 24,
-                                      "theme": {
-                                        "btn": "ghost",
-                                        "size": "2xs"
-                                      },
-                                      "descendants": {
-                                        "k7mgm": {
-                                          "icon": "plus",
-                                          "width": 12,
-                                          "height": 12
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
                                   "id": "fXrU4",
                                   "name": "Group · New",
                                   "width": "fill_container",
@@ -8915,7 +8839,7 @@
                                     0,
                                     12,
                                     0,
-                                    22
+                                    10
                                   ],
                                   "alignItems": "center",
                                   "children": [
@@ -8964,7 +8888,7 @@
                                           "enabled": false
                                         },
                                         "FaaBK": {
-                                          "content": "4"
+                                          "content": "5"
                                         }
                                       }
                                     },
@@ -9006,7 +8930,7 @@
                                     0,
                                     12,
                                     0,
-                                    28
+                                    16
                                   ],
                                   "theme": {
                                     "ring": "todo",
@@ -9038,7 +8962,7 @@
                                           "name": "Badge · 1 idea",
                                           "descendants": {
                                             "L109Bg": {
-                                              "content": "1 idea"
+                                              "content": "1 reply idea"
                                             }
                                           }
                                         },
@@ -9073,7 +8997,7 @@
                                     0,
                                     12,
                                     0,
-                                    28
+                                    16
                                   ],
                                   "theme": {
                                     "ring": "todo",
@@ -9140,7 +9064,7 @@
                                     0,
                                     12,
                                     0,
-                                    28
+                                    16
                                   ],
                                   "theme": {
                                     "ring": "todo",
@@ -9196,7 +9120,7 @@
                                     0,
                                     12,
                                     0,
-                                    28
+                                    16
                                   ],
                                   "theme": {
                                     "ring": "todo",
@@ -9243,104 +9167,6 @@
                                   }
                                 },
                                 {
-                                  "type": "frame",
-                                  "id": "czy19",
-                                  "name": "Group · Saved",
-                                  "width": "fill_container",
-                                  "height": 32,
-                                  "fill": "$ds-bg-subtle",
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": {
-                                    "bottom": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "gap": 8,
-                                  "padding": [
-                                    0,
-                                    12,
-                                    0,
-                                    22
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "lqBdM",
-                                      "name": "chevron-down",
-                                      "width": 12,
-                                      "height": 12,
-                                      "icon": "chevron-down",
-                                      "library": "lucide",
-                                      "fill": "$ds-fg-muted"
-                                    },
-                                    {
-                                      "id": "MxE6f",
-                                      "type": "ref",
-                                      "ref": "rLiMP",
-                                      "name": "State",
-                                      "theme": {
-                                        "ring": "review"
-                                      }
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "SazLl",
-                                      "name": "Saved",
-                                      "fill": "$ds-fg",
-                                      "content": "Saved",
-                                      "fontFamily": "$font-heading",
-                                      "fontSize": 12,
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "id": "vM0R4",
-                                      "type": "ref",
-                                      "ref": "dbK8Z",
-                                      "name": "Badge · 1",
-                                      "height": 16,
-                                      "theme": {
-                                        "badge": "number",
-                                        "palette": "gray",
-                                        "size": "xs"
-                                      },
-                                      "descendants": {
-                                        "ohhQY": {
-                                          "enabled": false
-                                        },
-                                        "FaaBK": {
-                                          "content": "1"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "z59y9",
-                                      "name": "Spacer",
-                                      "width": "fill_container",
-                                      "height": 1
-                                    },
-                                    {
-                                      "id": "nSLLh",
-                                      "type": "ref",
-                                      "ref": "nvvgg",
-                                      "name": "Add",
-                                      "width": 24,
-                                      "height": 24,
-                                      "theme": {
-                                        "btn": "ghost",
-                                        "size": "2xs"
-                                      },
-                                      "descendants": {
-                                        "k7mgm": {
-                                          "icon": "plus",
-                                          "width": 12,
-                                          "height": 12
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                {
                                   "id": "OARqJ",
                                   "type": "ref",
                                   "ref": "Hcvy6",
@@ -9350,16 +9176,16 @@
                                     0,
                                     12,
                                     0,
-                                    28
+                                    16
                                   ],
                                   "theme": {
-                                    "ring": "review",
+                                    "ring": "todo",
                                     "row": "default"
                                   },
                                   "descendants": {
                                     "fiGWa": {
                                       "theme": {
-                                        "ring": "review"
+                                        "ring": "todo"
                                       }
                                     },
                                     "u6HtS": {
@@ -9382,7 +9208,7 @@
                                           "name": "Badge · 1 idea",
                                           "descendants": {
                                             "L109Bg": {
-                                              "content": "1 idea"
+                                              "content": "1 reply idea"
                                             }
                                           }
                                         },
@@ -9409,329 +9235,8 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "oVj61",
-                                  "name": "Group · Answered",
-                                  "width": "fill_container",
-                                  "height": 32,
-                                  "fill": "$ds-bg-subtle",
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": {
-                                    "bottom": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "gap": 8,
-                                  "padding": [
-                                    0,
-                                    12,
-                                    0,
-                                    22
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
-                                      "id": "n8DSlJ",
-                                      "name": "chevron-down",
-                                      "width": 12,
-                                      "height": 12,
-                                      "icon": "chevron-down",
-                                      "library": "lucide",
-                                      "fill": "$ds-fg-muted"
-                                    },
-                                    {
-                                      "id": "hRAS0",
-                                      "type": "ref",
-                                      "ref": "rLiMP",
-                                      "name": "State",
-                                      "theme": {
-                                        "ring": "done"
-                                      }
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "X0JnCJ",
-                                      "name": "Answered",
-                                      "fill": "$ds-fg",
-                                      "content": "Answered",
-                                      "fontFamily": "$font-heading",
-                                      "fontSize": 12,
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "id": "zuqBs",
-                                      "type": "ref",
-                                      "ref": "dbK8Z",
-                                      "name": "Badge · 3",
-                                      "height": 16,
-                                      "theme": {
-                                        "badge": "number",
-                                        "palette": "gray",
-                                        "size": "xs"
-                                      },
-                                      "descendants": {
-                                        "ohhQY": {
-                                          "enabled": false
-                                        },
-                                        "FaaBK": {
-                                          "content": "3"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "R0uDse",
-                                      "name": "Spacer",
-                                      "width": "fill_container",
-                                      "height": 1
-                                    },
-                                    {
-                                      "id": "UHPS0",
-                                      "type": "ref",
-                                      "ref": "nvvgg",
-                                      "name": "Add",
-                                      "width": 24,
-                                      "height": 24,
-                                      "theme": {
-                                        "btn": "ghost",
-                                        "size": "2xs"
-                                      },
-                                      "descendants": {
-                                        "k7mgm": {
-                                          "icon": "plus",
-                                          "width": 12,
-                                          "height": 12
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                {
-                                  "id": "ffXOP",
-                                  "type": "ref",
-                                  "ref": "Hcvy6",
-                                  "name": "Row · Prompt Studio vs rolling your own agent dashboard",
-                                  "width": "fill_container",
-                                  "padding": [
-                                    0,
-                                    12,
-                                    0,
-                                    28
-                                  ],
-                                  "theme": {
-                                    "ring": "done",
-                                    "row": "default"
-                                  },
-                                  "descendants": {
-                                    "fiGWa": {
-                                      "theme": {
-                                        "ring": "done"
-                                      }
-                                    },
-                                    "u6HtS": {
-                                      "enabled": false
-                                    },
-                                    "sLqxs": {
-                                      "content": "Prompt Studio vs rolling your own agent dashboard"
-                                    },
-                                    "NUXTb": {
-                                      "type": "frame",
-                                      "id": "XvZsZ",
-                                      "name": "Badges",
-                                      "gap": 4,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "id": "J0tsR",
-                                          "type": "ref",
-                                          "ref": "Tboo4",
-                                          "name": "Badge · @ Mention",
-                                          "descendants": {
-                                            "L109Bg": {
-                                              "content": "@ Mention"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "dXmpN",
-                                          "type": "ref",
-                                          "ref": "Tboo4",
-                                          "name": "Badge · 2 ideas",
-                                          "descendants": {
-                                            "L109Bg": {
-                                              "content": "2 ideas"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "iI80u",
-                                          "type": "ref",
-                                          "ref": "Tboo4",
-                                          "name": "Badge · Hacker News",
-                                          "descendants": {
-                                            "L109Bg": {
-                                              "content": "Hacker News"
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    "symd8": {
-                                      "enabled": false
-                                    },
-                                    "P8sWBE": {
-                                      "content": "Sep 28"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "yDQvH",
-                                  "type": "ref",
-                                  "ref": "Hcvy6",
-                                  "name": "Row · Tried Prompt Studio for my review flow, some notes",
-                                  "width": "fill_container",
-                                  "padding": [
-                                    0,
-                                    12,
-                                    0,
-                                    28
-                                  ],
-                                  "theme": {
-                                    "ring": "done",
-                                    "row": "default"
-                                  },
-                                  "descendants": {
-                                    "fiGWa": {
-                                      "theme": {
-                                        "ring": "done"
-                                      }
-                                    },
-                                    "u6HtS": {
-                                      "enabled": false
-                                    },
-                                    "sLqxs": {
-                                      "content": "Tried Prompt Studio for my review flow, some notes"
-                                    },
-                                    "NUXTb": {
-                                      "type": "frame",
-                                      "id": "e7iwjS",
-                                      "name": "Badges",
-                                      "gap": 4,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "id": "uZGhw",
-                                          "type": "ref",
-                                          "ref": "Tboo4",
-                                          "name": "Badge · @ Mention",
-                                          "descendants": {
-                                            "L109Bg": {
-                                              "content": "@ Mention"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "ojzjj",
-                                          "type": "ref",
-                                          "ref": "Tboo4",
-                                          "name": "Badge · 1 idea",
-                                          "descendants": {
-                                            "L109Bg": {
-                                              "content": "1 idea"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "IgS3t",
-                                          "type": "ref",
-                                          "ref": "Tboo4",
-                                          "name": "Badge · Reddit",
-                                          "descendants": {
-                                            "L109Bg": {
-                                              "content": "Reddit"
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    "symd8": {
-                                      "enabled": false
-                                    },
-                                    "P8sWBE": {
-                                      "content": "Sep 27"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "f4gp8",
-                                  "type": "ref",
-                                  "ref": "Hcvy6",
-                                  "name": "Row · Building a personal ops dashboard with Claude",
-                                  "width": "fill_container",
-                                  "padding": [
-                                    0,
-                                    12,
-                                    0,
-                                    28
-                                  ],
-                                  "theme": {
-                                    "ring": "done",
-                                    "row": "default"
-                                  },
-                                  "descendants": {
-                                    "fiGWa": {
-                                      "theme": {
-                                        "ring": "done"
-                                      }
-                                    },
-                                    "u6HtS": {
-                                      "enabled": false
-                                    },
-                                    "sLqxs": {
-                                      "content": "Building a personal ops dashboard with Claude"
-                                    },
-                                    "NUXTb": {
-                                      "type": "frame",
-                                      "id": "YTVb4",
-                                      "name": "Badges",
-                                      "gap": 4,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "id": "ReLsH",
-                                          "type": "ref",
-                                          "ref": "Tboo4",
-                                          "name": "Badge · 1 idea",
-                                          "descendants": {
-                                            "L109Bg": {
-                                              "content": "1 idea"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "NECfG",
-                                          "type": "ref",
-                                          "ref": "Tboo4",
-                                          "name": "Badge · YouTube",
-                                          "descendants": {
-                                            "L109Bg": {
-                                              "content": "YouTube"
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    "symd8": {
-                                      "enabled": false
-                                    },
-                                    "P8sWBE": {
-                                      "content": "Sep 25"
-                                    }
-                                  }
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "NucEs",
-                                  "name": "Group · Post ideas",
+                                  "id": "p1K7Tq",
+                                  "name": "Group · Ideas",
                                   "width": "fill_container",
                                   "height": 32,
                                   "fill": "$ds-bg-subtle",
@@ -9751,95 +9256,6 @@
                                   "children": [
                                     {
                                       "type": "icon",
-                                      "id": "SCzyU",
-                                      "name": "chevron-down",
-                                      "width": 12,
-                                      "height": 12,
-                                      "icon": "chevron-down",
-                                      "library": "lucide",
-                                      "fill": "$ds-fg-muted"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "QO9vB",
-                                      "name": "Post ideas",
-                                      "fill": "$ds-fg",
-                                      "content": "Post ideas",
-                                      "fontFamily": "$font-heading",
-                                      "fontSize": 12,
-                                      "fontWeight": "600"
-                                    },
-                                    {
-                                      "id": "lVaS1",
-                                      "type": "ref",
-                                      "ref": "dbK8Z",
-                                      "name": "Badge · 3",
-                                      "height": 16,
-                                      "theme": {
-                                        "badge": "number",
-                                        "palette": "gray",
-                                        "size": "xs"
-                                      },
-                                      "descendants": {
-                                        "ohhQY": {
-                                          "enabled": false
-                                        },
-                                        "FaaBK": {
-                                          "content": "3"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "oHxbF",
-                                      "name": "Spacer",
-                                      "width": "fill_container",
-                                      "height": 1
-                                    },
-                                    {
-                                      "id": "k8DDD",
-                                      "type": "ref",
-                                      "ref": "nvvgg",
-                                      "name": "Add",
-                                      "width": 24,
-                                      "height": 24,
-                                      "theme": {
-                                        "btn": "ghost",
-                                        "size": "2xs"
-                                      },
-                                      "descendants": {
-                                        "k7mgm": {
-                                          "icon": "plus",
-                                          "width": 12,
-                                          "height": 12
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "p1K7Tq",
-                                  "name": "Group · New",
-                                  "width": "fill_container",
-                                  "height": 32,
-                                  "fill": "$ds-bg-subtle",
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": {
-                                    "bottom": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "gap": 8,
-                                  "padding": [
-                                    0,
-                                    12,
-                                    0,
-                                    22
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "icon",
                                       "id": "xMtHa",
                                       "name": "chevron-down",
                                       "width": 12,
@@ -9849,20 +9265,21 @@
                                       "fill": "$ds-fg-muted"
                                     },
                                     {
-                                      "id": "W4EX7b",
-                                      "type": "ref",
-                                      "ref": "rLiMP",
-                                      "name": "State",
-                                      "theme": {
-                                        "ring": "todo"
-                                      }
+                                      "type": "icon",
+                                      "id": "DakIM",
+                                      "name": "Ideas icon",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "lightbulb",
+                                      "library": "lucide",
+                                      "fill": "$ds-warning"
                                     },
                                     {
                                       "type": "text",
                                       "id": "WcwHs",
                                       "name": "New",
                                       "fill": "$ds-fg",
-                                      "content": "New",
+                                      "content": "Ideas",
                                       "fontFamily": "$font-heading",
                                       "fontSize": 12,
                                       "fontWeight": "600"
@@ -9925,7 +9342,7 @@
                                     0,
                                     12,
                                     0,
-                                    28
+                                    16
                                   ],
                                   "theme": {
                                     "ring": "todo",
@@ -9933,9 +9350,14 @@
                                   },
                                   "descendants": {
                                     "fiGWa": {
-                                      "theme": {
-                                        "ring": "todo"
-                                      }
+                                      "type": "icon",
+                                      "id": "ZrhRA",
+                                      "name": "Ring",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "lightbulb",
+                                      "library": "lucide",
+                                      "fill": "$ds-warning"
                                     },
                                     "u6HtS": {
                                       "enabled": false
@@ -9992,7 +9414,7 @@
                                     0,
                                     12,
                                     0,
-                                    28
+                                    16
                                   ],
                                   "theme": {
                                     "ring": "todo",
@@ -10000,9 +9422,14 @@
                                   },
                                   "descendants": {
                                     "fiGWa": {
-                                      "theme": {
-                                        "ring": "todo"
-                                      }
+                                      "type": "icon",
+                                      "id": "hvkwX",
+                                      "name": "Ring",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "lightbulb",
+                                      "library": "lucide",
+                                      "fill": "$ds-warning"
                                     },
                                     "u6HtS": {
                                       "enabled": false
@@ -10059,7 +9486,7 @@
                                     0,
                                     12,
                                     0,
-                                    28
+                                    16
                                   ],
                                   "theme": {
                                     "ring": "todo",
@@ -10067,9 +9494,14 @@
                                   },
                                   "descendants": {
                                     "fiGWa": {
-                                      "theme": {
-                                        "ring": "todo"
-                                      }
+                                      "type": "icon",
+                                      "id": "W9LvL4",
+                                      "name": "Ring",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "lightbulb",
+                                      "library": "lucide",
+                                      "fill": "$ds-warning"
                                     },
                                     "u6HtS": {
                                       "enabled": false
@@ -10308,7 +9740,7 @@
                       "id": "vqQgd",
                       "name": "Status tag",
                       "fill": "$ds-fg",
-                      "content": "Grouped by type, then status",
+                      "content": "Grouped by status",
                       "fontFamily": "$font-heading",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -10322,7 +9754,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Type is read from the thread: one with a kind is a post idea, so no new field is stored. Status groups come from the status set, so rows need no status tag. Rows sort by relevance, then date.",
+                  "content": "One level, four statuses. A found thread starts as New and a new post as an Idea; both end as Answered or Skipped. Rows sort by relevance, then date.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -10644,6 +10076,38 @@
                                 "uFz3m": {
                                   "type": "frame",
                                   "id": "Ekv9X",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "CJ5Np",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Settings",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "settings",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "ROY2j": {
+                                  "content": "Settings"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "rZqk0",
                                   "name": "End",
                                   "width": 0,
                                   "height": "fill_container",
@@ -11108,25 +10572,6 @@
                                       "fontFamily": "$font-body",
                                       "fontSize": 11,
                                       "fontWeight": "normal"
-                                    },
-                                    {
-                                      "id": "AL2LD",
-                                      "type": "ref",
-                                      "ref": "nvvgg",
-                                      "name": "Open settings menu",
-                                      "width": 24,
-                                      "height": 24,
-                                      "theme": {
-                                        "btn": "ghost",
-                                        "size": "2xs"
-                                      },
-                                      "descendants": {
-                                        "k7mgm": {
-                                          "icon": "panel-right-open",
-                                          "width": 12,
-                                          "height": 12
-                                        }
-                                      }
                                     }
                                   ]
                                 },
@@ -14266,7 +13711,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Two rows of two cards with a fixed right column. Counts use one blue; sentiment uses red, gray and blue with a legend.",
+                  "content": "Two rows of two cards fill the page height and grow with it. Counts use one blue; sentiment uses red, gray and blue with a legend.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -14466,6 +13911,38 @@
                                 "uFz3m": {
                                   "type": "frame",
                                   "id": "HETfx",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "uTTAR",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Settings",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "settings",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "ROY2j": {
+                                  "content": "Settings"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "OnubR",
                                   "name": "End",
                                   "width": 0,
                                   "height": "fill_container",
@@ -17339,6 +16816,38 @@
                                   "alignItems": "center"
                                 }
                               }
+                            },
+                            {
+                              "id": "yY4bO",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Settings",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "settings",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "ROY2j": {
+                                  "content": "Settings"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "z1ObA6",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
                             }
                           ]
                         },
@@ -19265,7 +18774,7 @@
               "id": "S4YQIO",
               "name": "Settings: the main panel",
               "fill": "$ds-fg",
-              "content": "Settings: the main panel's menu",
+              "content": "Settings: a page of their own",
               "fontFamily": "$font-display",
               "fontSize": 40,
               "fontWeight": "600"
@@ -19277,7 +18786,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 1180,
-              "content": "The host's open-menu button at the right end of the main panel header opens settings as a right menu inside the main panel. It is a view-menu contribution, so settings sit next to the list they change and need no page of their own.",
+              "content": "Settings is a row in the Social Radar level, next to Threads. It opens the settings controls view as the page's main view, with the same groups as before.",
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 15,
@@ -19288,7 +18797,7 @@
         {
           "type": "frame",
           "id": "FDluW",
-          "name": "Settings menu · Window",
+          "name": "Settings page · Window",
           "clip": true,
           "width": "fill_container",
           "height": 880,
@@ -19393,7 +18902,7 @@
                               "width": "fill_container",
                               "theme": {
                                 "depth": "0",
-                                "tree": "active"
+                                "tree": "default"
                               },
                               "descendants": {
                                 "w2TSr": {
@@ -19409,6 +18918,38 @@
                                 "uFz3m": {
                                   "type": "frame",
                                   "id": "BE6XJ",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "J5tdO",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Settings",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "settings",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "ROY2j": {
+                                  "content": "Settings"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "a5weDE",
                                   "name": "End",
                                   "width": 0,
                                   "height": "fill_container",
@@ -19743,10 +19284,10 @@
                           }
                         },
                         "U8yd35/QAdbs": {
-                          "icon": "list"
+                          "icon": "settings"
                         },
                         "U8yd35/g7l5u": {
-                          "content": "Threads"
+                          "content": "Settings"
                         },
                         "R8Q6C": {
                           "enabled": false
@@ -19782,1583 +19323,10 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "QSFsg",
-                              "name": "List view",
+                              "id": "wPpLn",
+                              "name": "Settings page",
                               "clip": true,
                               "width": "fill_container",
-                              "height": "fill_container",
-                              "fill": "$ds-bg",
-                              "layout": "vertical",
-                              "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "YMtaH",
-                                  "name": "View Bar",
-                                  "width": "fill_container",
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": {
-                                    "bottom": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "layout": "vertical",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "d9oKB",
-                                      "name": "Bar",
-                                      "width": "fill_container",
-                                      "height": 40,
-                                      "gap": 4,
-                                      "padding": [
-                                        0,
-                                        10
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "id": "l8KWu9",
-                                          "type": "ref",
-                                          "ref": "TwCXd",
-                                          "name": "Tab · Active",
-                                          "height": 24,
-                                          "theme": {
-                                            "size": "sm",
-                                            "tab": "active",
-                                            "tab-status": "none"
-                                          },
-                                          "descendants": {
-                                            "w7NkD3": {
-                                              "icon": "inbox",
-                                              "width": 14,
-                                              "height": 14
-                                            },
-                                            "k9XlqC": {
-                                              "content": "Active"
-                                            },
-                                            "CrGIR": {
-                                              "enabled": false,
-                                              "width": "fit_content",
-                                              "children": [
-                                                {
-                                                  "id": "SWrbe",
-                                                  "type": "ref",
-                                                  "ref": "dbK8Z",
-                                                  "name": "Count",
-                                                  "padding": [
-                                                    1,
-                                                    6
-                                                  ],
-                                                  "descendants": {
-                                                    "ohhQY": {
-                                                      "enabled": false
-                                                    },
-                                                    "FaaBK": {
-                                                      "content": "11",
-                                                      "fontSize": 10
-                                                    }
-                                                  }
-                                                }
-                                              ]
-                                            },
-                                            "g1LJJh": {
-                                              "enabled": false
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "r5XoI",
-                                          "type": "ref",
-                                          "ref": "TwCXd",
-                                          "name": "Tab · Mentions",
-                                          "height": 24,
-                                          "theme": {
-                                            "size": "sm",
-                                            "tab": "default",
-                                            "tab-status": "none"
-                                          },
-                                          "descendants": {
-                                            "w7NkD3": {
-                                              "icon": "at-sign",
-                                              "width": 14,
-                                              "height": 14
-                                            },
-                                            "k9XlqC": {
-                                              "content": "Mentions"
-                                            },
-                                            "CrGIR": {
-                                              "enabled": false,
-                                              "width": "fit_content",
-                                              "children": [
-                                                {
-                                                  "id": "lnYhg",
-                                                  "type": "ref",
-                                                  "ref": "dbK8Z",
-                                                  "name": "Count",
-                                                  "padding": [
-                                                    1,
-                                                    6
-                                                  ],
-                                                  "descendants": {
-                                                    "ohhQY": {
-                                                      "enabled": false
-                                                    },
-                                                    "FaaBK": {
-                                                      "content": "14",
-                                                      "fontSize": 10
-                                                    }
-                                                  }
-                                                }
-                                              ]
-                                            },
-                                            "g1LJJh": {
-                                              "enabled": false
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "JXus2",
-                                          "type": "ref",
-                                          "ref": "TwCXd",
-                                          "name": "Tab · Answered",
-                                          "height": 24,
-                                          "theme": {
-                                            "size": "sm",
-                                            "tab": "default",
-                                            "tab-status": "none"
-                                          },
-                                          "descendants": {
-                                            "w7NkD3": {
-                                              "icon": "circle-check",
-                                              "width": 14,
-                                              "height": 14
-                                            },
-                                            "k9XlqC": {
-                                              "content": "Answered"
-                                            },
-                                            "CrGIR": {
-                                              "enabled": false,
-                                              "width": "fit_content",
-                                              "children": [
-                                                {
-                                                  "id": "z7qMo",
-                                                  "type": "ref",
-                                                  "ref": "dbK8Z",
-                                                  "name": "Count",
-                                                  "padding": [
-                                                    1,
-                                                    6
-                                                  ],
-                                                  "descendants": {
-                                                    "ohhQY": {
-                                                      "enabled": false
-                                                    },
-                                                    "FaaBK": {
-                                                      "content": "11",
-                                                      "fontSize": 10
-                                                    }
-                                                  }
-                                                }
-                                              ]
-                                            },
-                                            "g1LJJh": {
-                                              "enabled": false
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "NsSOU",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "New view",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "ghost",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "plus",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "EmaXN",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "id": "yjWpL",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "Filter",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "subtle",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "list-filter",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "mCwqU",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "Display",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "ghost",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "sliders-horizontal",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "u97GDX",
-                                  "name": "List",
-                                  "clip": true,
-                                  "width": "fill_container",
-                                  "height": "fill_container",
-                                  "layout": "vertical",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "w6Zry",
-                                      "name": "Group · Threads",
-                                      "width": "fill_container",
-                                      "height": 32,
-                                      "fill": "$ds-bg-subtle",
-                                      "stroke": "$ds-border-subtle",
-                                      "strokeWidth": {
-                                        "bottom": 1
-                                      },
-                                      "strokeAlignment": "inner",
-                                      "gap": 8,
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        10
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "zugpi",
-                                          "name": "chevron-down",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-down",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "lVVJH",
-                                          "name": "Threads",
-                                          "fill": "$ds-fg",
-                                          "content": "Threads",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "id": "t3FL8",
-                                          "type": "ref",
-                                          "ref": "dbK8Z",
-                                          "name": "Badge · 8",
-                                          "height": 16,
-                                          "theme": {
-                                            "badge": "number",
-                                            "palette": "gray",
-                                            "size": "xs"
-                                          },
-                                          "descendants": {
-                                            "ohhQY": {
-                                              "enabled": false
-                                            },
-                                            "FaaBK": {
-                                              "content": "8"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "k8ms0w",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "id": "Xe4zT",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "Add",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "ghost",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "plus",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "H6XDDJ",
-                                      "name": "Group · New",
-                                      "width": "fill_container",
-                                      "height": 32,
-                                      "fill": "$ds-bg-subtle",
-                                      "stroke": "$ds-border-subtle",
-                                      "strokeWidth": {
-                                        "bottom": 1
-                                      },
-                                      "strokeAlignment": "inner",
-                                      "gap": 8,
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        22
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "c0J6Tn",
-                                          "name": "chevron-down",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-down",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "id": "GyDXX",
-                                          "type": "ref",
-                                          "ref": "rLiMP",
-                                          "name": "State",
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "fD1zG",
-                                          "name": "New",
-                                          "fill": "$ds-fg",
-                                          "content": "New",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "id": "kvTLA",
-                                          "type": "ref",
-                                          "ref": "dbK8Z",
-                                          "name": "Badge · 4",
-                                          "height": 16,
-                                          "theme": {
-                                            "badge": "number",
-                                            "palette": "gray",
-                                            "size": "xs"
-                                          },
-                                          "descendants": {
-                                            "ohhQY": {
-                                              "enabled": false
-                                            },
-                                            "FaaBK": {
-                                              "content": "4"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "lHAK3",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "id": "SUKHL",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "Add",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "ghost",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "plus",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "id": "wBNx7",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Anyone built internal tools on top of Claude Code?",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "todo",
-                                        "row": "active"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Anyone built internal tools on top of Claude Code?"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "QugKC",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "h2QpFP",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · 1 idea",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "1 idea"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "qL8MV",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · Reddit",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "Reddit"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 28"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "W9gfm6",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · pstdio on Windows keeps failing to start",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "todo",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "pstdio on Windows keeps failing to start"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "wB4PV",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "hoAlo",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · @ Mention",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "@ Mention"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "yGJB5",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · X",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "X"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 28"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "s9qCAH",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Feature request: plugin API for review views",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "todo",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Feature request: plugin API for review views"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "W3PA3v",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "N1v6kD",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · GitHub",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "GitHub"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 27"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "I6BlmW",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Our team's agent setup, six months in",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "todo",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Our team's agent setup, six months in"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "oazGd",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "MFw3b",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · LinkedIn",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "LinkedIn"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 26"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "zbztj",
-                                      "name": "Group · Saved",
-                                      "width": "fill_container",
-                                      "height": 32,
-                                      "fill": "$ds-bg-subtle",
-                                      "stroke": "$ds-border-subtle",
-                                      "strokeWidth": {
-                                        "bottom": 1
-                                      },
-                                      "strokeAlignment": "inner",
-                                      "gap": 8,
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        22
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "X4mDSQ",
-                                          "name": "chevron-down",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-down",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "id": "LS5Dx",
-                                          "type": "ref",
-                                          "ref": "rLiMP",
-                                          "name": "State",
-                                          "theme": {
-                                            "ring": "review"
-                                          }
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "zBvki",
-                                          "name": "Saved",
-                                          "fill": "$ds-fg",
-                                          "content": "Saved",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "id": "QQa6q",
-                                          "type": "ref",
-                                          "ref": "dbK8Z",
-                                          "name": "Badge · 1",
-                                          "height": 16,
-                                          "theme": {
-                                            "badge": "number",
-                                            "palette": "gray",
-                                            "size": "xs"
-                                          },
-                                          "descendants": {
-                                            "ohhQY": {
-                                              "enabled": false
-                                            },
-                                            "FaaBK": {
-                                              "content": "1"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "Mgd7y",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "id": "dpDWK",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "Add",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "ghost",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "plus",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "id": "UH9N1",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Comparing agent workbenches",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "review",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "review"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Comparing agent workbenches"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "GhDQ7",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "X3VjM",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · 1 idea",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "1 idea"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "aWeMQ",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · Bluesky",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "Bluesky"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 27"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "sae5F",
-                                      "name": "Group · Answered",
-                                      "width": "fill_container",
-                                      "height": 32,
-                                      "fill": "$ds-bg-subtle",
-                                      "stroke": "$ds-border-subtle",
-                                      "strokeWidth": {
-                                        "bottom": 1
-                                      },
-                                      "strokeAlignment": "inner",
-                                      "gap": 8,
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        22
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "kXW5y",
-                                          "name": "chevron-down",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-down",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "id": "k6jjJp",
-                                          "type": "ref",
-                                          "ref": "rLiMP",
-                                          "name": "State",
-                                          "theme": {
-                                            "ring": "done"
-                                          }
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "ZCfoV",
-                                          "name": "Answered",
-                                          "fill": "$ds-fg",
-                                          "content": "Answered",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "id": "n6SBP",
-                                          "type": "ref",
-                                          "ref": "dbK8Z",
-                                          "name": "Badge · 3",
-                                          "height": 16,
-                                          "theme": {
-                                            "badge": "number",
-                                            "palette": "gray",
-                                            "size": "xs"
-                                          },
-                                          "descendants": {
-                                            "ohhQY": {
-                                              "enabled": false
-                                            },
-                                            "FaaBK": {
-                                              "content": "3"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "CKgeA",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "id": "YBFrE",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "Add",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "ghost",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "plus",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "id": "qu2kg",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Prompt Studio vs rolling your own agent dashboard",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "done",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "done"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Prompt Studio vs rolling your own agent dashboard"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "KZxJB",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "F4Ckd",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · @ Mention",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "@ Mention"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "bzhaR",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · 2 ideas",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "2 ideas"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "A6KPP",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · Hacker News",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "Hacker News"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 28"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "qQDag",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Tried Prompt Studio for my review flow",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "done",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "done"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Tried Prompt Studio for my review flow"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "mm5Cs",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "z32cS",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · @ Mention",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "@ Mention"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "pJ6Wq",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · 1 idea",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "1 idea"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "PVT1t",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · Reddit",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "Reddit"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 27"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "aQUzc",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Building a personal ops dashboard with Claude",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "done",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "done"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Building a personal ops dashboard with Claude"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "hLcAk",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "N1Vpz",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · 1 idea",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "1 idea"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "ZopdY",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · YouTube",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "YouTube"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 25"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "i42Fs3",
-                                      "name": "Group · Post ideas",
-                                      "width": "fill_container",
-                                      "height": 32,
-                                      "fill": "$ds-bg-subtle",
-                                      "stroke": "$ds-border-subtle",
-                                      "strokeWidth": {
-                                        "bottom": 1
-                                      },
-                                      "strokeAlignment": "inner",
-                                      "gap": 8,
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        10
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "sCger",
-                                          "name": "chevron-down",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-down",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "wwB7F",
-                                          "name": "Post ideas",
-                                          "fill": "$ds-fg",
-                                          "content": "Post ideas",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "id": "kwGMD",
-                                          "type": "ref",
-                                          "ref": "dbK8Z",
-                                          "name": "Badge · 3",
-                                          "height": 16,
-                                          "theme": {
-                                            "badge": "number",
-                                            "palette": "gray",
-                                            "size": "xs"
-                                          },
-                                          "descendants": {
-                                            "ohhQY": {
-                                              "enabled": false
-                                            },
-                                            "FaaBK": {
-                                              "content": "3"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "nfkKA",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "id": "TDyOK",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "Add",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "ghost",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "plus",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "N8u3i",
-                                      "name": "Group · New",
-                                      "width": "fill_container",
-                                      "height": 32,
-                                      "fill": "$ds-bg-subtle",
-                                      "stroke": "$ds-border-subtle",
-                                      "strokeWidth": {
-                                        "bottom": 1
-                                      },
-                                      "strokeAlignment": "inner",
-                                      "gap": 8,
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        22
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "icon",
-                                          "id": "RcQ8G",
-                                          "name": "chevron-down",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-down",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        },
-                                        {
-                                          "id": "TYAC3",
-                                          "type": "ref",
-                                          "ref": "rLiMP",
-                                          "name": "State",
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "yq0oI",
-                                          "name": "New",
-                                          "fill": "$ds-fg",
-                                          "content": "New",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 12,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "id": "sJ20Q",
-                                          "type": "ref",
-                                          "ref": "dbK8Z",
-                                          "name": "Badge · 3",
-                                          "height": 16,
-                                          "theme": {
-                                            "badge": "number",
-                                            "palette": "gray",
-                                            "size": "xs"
-                                          },
-                                          "descendants": {
-                                            "ohhQY": {
-                                              "enabled": false
-                                            },
-                                            "FaaBK": {
-                                              "content": "3"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "s8AwSj",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "id": "N7IJI",
-                                          "type": "ref",
-                                          "ref": "nvvgg",
-                                          "name": "Add",
-                                          "width": 24,
-                                          "height": 24,
-                                          "theme": {
-                                            "btn": "ghost",
-                                            "size": "2xs"
-                                          },
-                                          "descendants": {
-                                            "k7mgm": {
-                                              "icon": "plus",
-                                              "width": 12,
-                                              "height": 12
-                                            }
-                                          }
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "id": "dESev",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Review page for agent diffs, built in ten minutes",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "todo",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Review page for agent diffs, built in ten minutes"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "jDlZO",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "pfY5t",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · Demo",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "Demo"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "P4LATd",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · X",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "X"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 28"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "xkHze",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Why review pages beat terminals for agent diffs",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "todo",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Why review pages beat terminals for agent diffs"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "L00gtB",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "s9fmZ",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · Topic",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "Topic"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "PIjqk",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · Bluesky",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "Bluesky"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 28"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "qth6Y",
-                                      "type": "ref",
-                                      "ref": "Hcvy6",
-                                      "name": "Row · Extension pages can now copy text for you",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        12,
-                                        0,
-                                        28
-                                      ],
-                                      "theme": {
-                                        "ring": "todo",
-                                        "row": "default"
-                                      },
-                                      "descendants": {
-                                        "fiGWa": {
-                                          "theme": {
-                                            "ring": "todo"
-                                          }
-                                        },
-                                        "u6HtS": {
-                                          "enabled": false
-                                        },
-                                        "sLqxs": {
-                                          "content": "Extension pages can now copy text for you"
-                                        },
-                                        "NUXTb": {
-                                          "type": "frame",
-                                          "id": "RDASu",
-                                          "name": "Badges",
-                                          "gap": 4,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "mxoL8",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · Showcase",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "Showcase"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "id": "RhbUV",
-                                              "type": "ref",
-                                              "ref": "Tboo4",
-                                              "name": "Badge · LinkedIn",
-                                              "descendants": {
-                                                "L109Bg": {
-                                                  "content": "LinkedIn"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                        },
-                                        "symd8": {
-                                          "enabled": false
-                                        },
-                                        "P8sWBE": {
-                                          "content": "Sep 28"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "wPpLn",
-                              "name": "Right menu · Settings",
-                              "clip": true,
-                              "width": 400,
                               "height": "fill_container",
                               "fill": "$ds-bg-subtle",
                               "stroke": "$ds-border",
@@ -22257,7 +20225,7 @@
                       "id": "Z7Zei",
                       "name": "Primitive: view menu",
                       "fill": "$ds-fg",
-                      "content": "Primitive: view menu",
+                      "content": "Primitive: settings page",
                       "fontFamily": "$font-heading",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -22271,7 +20239,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The settings controls view is a right view-menu of the radar views. The host's open-menu button opens it, and the host remembers whether it is open.",
+                  "content": "A page with the controls view as its main view. Its parent is the radar page, so the Social Radar level stays open.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -22318,7 +20286,7 @@
                       "id": "TLFHH",
                       "name": "No extra header",
                       "fill": "$ds-fg",
-                      "content": "No extra header",
+                      "content": "Groups only",
                       "fontFamily": "$font-heading",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -22332,7 +20300,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The menu has no title bar: its label is the tooltip of the button that opened it. Groups start at the top.",
+                  "content": "The breadcrumb names the page. The groups start at the top: Research, Writing voice, then one group per site.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -22561,7 +20529,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 1180,
-              "content": "Social Radar is one row in the project navigation. Opening it starts a Sidenav level: Threads and Runs replace the project rows, while Search and the footer stay. Each run holds its session and its digest. The breadcrumb leaves the level. Settings live in the main panel's menu.",
+              "content": "Social Radar is one row in the project navigation. Opening it starts a Sidenav level: Threads and Runs replace the project rows, while Search and the footer stay. Each run holds its session and its digest. The breadcrumb leaves the level. Settings have a page of their own in the level.",
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 13,
@@ -22959,6 +20927,38 @@
                               "alignItems": "center"
                             }
                           }
+                        },
+                        {
+                          "id": "fTUe5",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Settings",
+                          "theme": {
+                            "depth": "0",
+                            "tree": "default"
+                          },
+                          "width": "fill_container",
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "icon": "settings",
+                              "fill": "$ds-fg-muted"
+                            },
+                            "ROY2j": {
+                              "content": "Settings"
+                            },
+                            "uFz3m": {
+                              "type": "frame",
+                              "id": "gRrmU",
+                              "name": "End",
+                              "width": 0,
+                              "height": "fill_container",
+                              "gap": 4,
+                              "alignItems": "center"
+                            }
+                          }
                         }
                       ]
                     },
@@ -23249,7 +21249,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Social Radar (project row): opens the analysis page (01, custom) and starts the Social Radar level.\nThreads: the thread list (02). A thread opens its mockup page (03, custom); its reply ideas are drafts in that mockup.\nA new post is a thread too, tagged with its kind; it opens as a draft post on the same page (04).\nRuns: a section with a play action for run-daily. Each run holds its Session and its Digest, a read-only document (05).\nThe main panel's open-menu button opens settings (06).",
+                  "content": "Social Radar (project row): opens the analysis page (01, custom) and starts the Social Radar level.\nThreads: the thread list (02). A thread opens its mockup page (03, custom); its reply ideas are drafts in that mockup.\nA new post is a thread too, tagged with its kind; it opens as a draft post on the same page (04).\nSettings: the settings page (06), a controls view.\nRuns: a section with a play action for run-daily. Each run holds its Session and its Digest, a read-only document (05).",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -23902,7 +21902,7 @@
                       "id": "L0H3V",
                       "name": "Controls view as a right",
                       "fill": "$ds-fg-muted",
-                      "content": "Controls view as a right view-menu",
+                      "content": "Controls view on its own page",
                       "fontFamily": "$font-body",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -24949,6 +22949,38 @@
                                 "uFz3m": {
                                   "type": "frame",
                                   "id": "qxWlw",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "gk3Ij",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Settings",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "settings",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "ROY2j": {
+                                  "content": "Settings"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "QCbQH",
                                   "name": "End",
                                   "width": 0,
                                   "height": "fill_container",
