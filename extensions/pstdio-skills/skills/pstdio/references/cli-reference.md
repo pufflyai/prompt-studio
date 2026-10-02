@@ -152,12 +152,20 @@ Workspace params must match the provider declaration. Unknown keys, invalid valu
 
 ## Shared board views
 
-Use `pst views boards` to discover board IDs, fields, and current options. Use
+Use `pst views boards` to discover board and data table IDs, each field's kind,
+the conditions it accepts, whether it sorts, and its current options. Use
 `pst views list --board <boardId>` to inspect built-in and saved views. Create a
-shared view with `pst views create --board <boardId> --title "Urgent bugs"
---filter priority=Urgent --filter type=Bug`. Filter values can be IDs or labels;
-use IDs when a label is ambiguous. Commands print JSON. Use `--project-id` outside
-a linked project folder.
+shared view with `pst views create --board <boardId> --title "Open urgent"
+--filter "status is-none-of done" --filter "priority is-any-of urgent,high"
+--sort priority:asc --sort updated:desc`. A filter is `<field> <condition> [value]`;
+repeated filters join with "and", and the flag order of `--sort` is the sort
+priority. Option values can be IDs or labels, comma-separated; use IDs when a
+label is ambiguous. Dates take a day or `today-7`. For "or" groups, pass a full
+filter with `--filter-json`. Clear rules with `--filter none` or `--sort none`.
+Data table views also take `--group`, `--row-numbers show|hide`, `--wrap-rows on|off`,
+`--stats on|off`, and `--show <column ids>`. If a field refuses a condition, the
+error lists the conditions it accepts. Commands print JSON. Use `--project-id`
+outside a linked project folder.
 
 Use `pst views update --id <viewId> --title "New name"` to edit a saved view and
 `pst views delete --id <viewId>` to remove it. Duplicate a view with

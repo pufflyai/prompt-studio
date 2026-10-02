@@ -79,6 +79,12 @@ describe("deprecated kanban view fields", () => {
         rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }],
       }),
     ).toEqual({});
+    expect(
+      legacyFiltersFromViewFilter(
+        { conjunction: "and", rules: [{ attributeId: "archived", condition: "is-none-of", value: ["active"] }] },
+        (id) => (id === "archived" ? ["active", "archived"] : undefined),
+      ),
+    ).toEqual({ archived: ["archived"] });
     expect(legacyOrderingFromSorts([])).toEqual({ attributeId: "manual", direction: "asc" });
     expect(legacyOrderingFromSorts([{ attributeId: "score", direction: "desc" }])).toEqual({
       attributeId: "score",

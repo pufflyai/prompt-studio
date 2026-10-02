@@ -252,8 +252,12 @@ const viewSettings = (viewMode: ViewMode, displayProperties: string[] = []) => (
   viewMode,
   columnGrouping: "status",
   rowGrouping: "none",
-  ordering: { attributeId: "manual", direction: "asc" } as const,
   displayProperties,
+});
+
+const anyOf = (attributeId: string, values: string[]) => ({
+  conjunction: "and" as const,
+  rules: [{ attributeId, condition: "is-any-of" as const, value: values }],
 });
 
 const SAVED_VIEWS: KanbanRendererSavedView[] = [
@@ -261,25 +265,29 @@ const SAVED_VIEWS: KanbanRendererSavedView[] = [
     id: "all",
     title: "All",
     settings: viewSettings("board", ["priority"]),
-    filters: {},
+    filter: { conjunction: "and", rules: [] },
+    sorts: [],
   },
   {
     id: "my-work",
     title: "My work",
     settings: viewSettings("list", ["assignee", "priority"]),
-    filters: { assignee: ["Alex"] },
+    filter: anyOf("assignee", ["Alex"]),
+    sorts: [{ attributeId: "priority", direction: "asc" }],
   },
   {
     id: "design",
     title: "Design board",
     settings: viewSettings("board", ["component", "priority"]),
-    filters: { component: ["frontend"] },
+    filter: anyOf("component", ["frontend"]),
+    sorts: [],
   },
   {
     id: "high-priority",
     title: "High priority",
     settings: viewSettings("board", ["assignee", "priority"]),
-    filters: { priority: ["high"] },
+    filter: anyOf("priority", ["high"]),
+    sorts: [{ attributeId: "updated", direction: "desc" }],
   },
 ];
 
@@ -352,7 +360,6 @@ const CreateFormWrapper = () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "manual", direction: "asc" },
           displayProperties: ["priority", "labels"],
         }}
         createRow={{

@@ -7,13 +7,15 @@ export interface ViewBarPopoverProps {
   /** The button the menu opens from. Several buttons can open the same menu. */
   anchorRef: RefObject<HTMLElement | null>;
   width: string;
+  /** The quick picker draws its own panes edge to edge. */
+  padding?: "0" | "2xs";
   testId?: string;
   children: ReactNode;
 }
 
 /** The menu shell for Search, Filter, and Sort. Menus inside it render in place, so using them never closes it. */
 export const ViewBarPopover = (props: ViewBarPopoverProps) => {
-  const { open, onOpenChange, anchorRef, width, testId, children } = props;
+  const { open, onOpenChange, anchorRef, width, padding = "2xs", testId, children } = props;
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,8 +50,9 @@ export const ViewBarPopover = (props: ViewBarPopoverProps) => {
             data-testid={testId}
             width={width}
             maxWidth="calc(100vw - 32px)"
-            padding="2xs"
+            padding={padding}
             gap="0"
+            overflow="hidden"
           >
             {children}
           </Popover.Content>

@@ -299,7 +299,12 @@ export const registerWorkbenchExtensionKanbanRenderers = (
                 settings: { ...state.settings, ordering: legacyOrderingFromSorts(state.sorts) },
                 filter: state.filter,
                 sorts: state.sorts,
-                filters: legacyFiltersFromViewFilter(state.filter),
+                filters: legacyFiltersFromViewFilter(state.filter, (attributeId) => {
+                  const attribute = wireAttributes?.find((entry) => entry.id === attributeId);
+                  return attribute?.type.kind === "enum"
+                    ? attribute.type.options.map((option) => option.value)
+                    : undefined;
+                }),
               },
               undefined,
               signal,
