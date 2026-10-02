@@ -249,6 +249,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
         onOpenChange={(isOpen) => setOpenMenu(isOpen ? "picker" : null)}
         anchorRef={anchor}
         width="min(440px, calc(100vw - 32px))"
+        padding="0"
         testId="filter-menu-popover"
       >
         <FilterMenu

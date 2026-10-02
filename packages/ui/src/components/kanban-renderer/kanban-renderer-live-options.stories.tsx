@@ -142,12 +142,12 @@ const LiveWrapper = () => {
   const [rows, setRows] = useState<StoryRow[]>(LIVE_INITIAL_ROWS);
   const nextRowId = useRef(LIVE_INITIAL_ROWS.length + 1);
   const reset = useKanbanRendererStore(LIVE_STORAGE_KEY, (state) => state.reset);
-  const setColumnGrouping = useKanbanRendererStore(LIVE_STORAGE_KEY, (state) => state.setColumnGrouping);
+  const setSettings = useKanbanRendererStore(LIVE_STORAGE_KEY, (state) => state.setSettings);
 
   useEffect(() => {
     reset();
-    setColumnGrouping("status");
-  }, [reset, setColumnGrouping]);
+    setSettings({ columnGrouping: "status" });
+  }, [reset, setSettings]);
 
   useEffect(() => store.source.subscribe(() => setStatuses([...store.getOptions()])), [store]);
 

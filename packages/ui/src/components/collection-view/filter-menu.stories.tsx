@@ -1,108 +1,71 @@
 import { Box, Text } from "@chakra-ui/react";
+import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { storyFields, storyOptions } from "./collection-view-story-fixtures";
+import { EMPTY_VIEW_FILTER } from "./collection-view-types";
 import { FilterMenu } from "./filter-menu";
-import type { FilterCategoryView } from "./kanban-renderer-helpers";
-import { omitFilterCategory } from "./kanban-renderer-helpers";
-import type { KanbanRendererFilterState } from "./types";
 
-const categories: FilterCategoryView[] = [
-  {
-    id: "status",
-    label: "Status",
-    selectionMode: "multiple",
-    options: [
-      { value: "todo", label: "Todo" },
-      { value: "in_progress", label: "In Progress" },
-      { value: "done", label: "Done" },
-    ],
-  },
-  {
-    id: "priority",
-    label: "Priority",
-    selectionMode: "multiple",
-    options: [
-      { value: "high", label: "High" },
-      { value: "medium", label: "Medium" },
-      { value: "low", label: "Low" },
-    ],
-  },
-];
-
-const countsByCategory = {
-  status: { todo: 4, in_progress: 2, done: 1 },
-  priority: { high: 3, medium: 2, low: 1 },
-};
-
-const meta: Meta = {
-  title: "Patterns/Kanban Renderer/Filter Menu",
+const meta: Meta<typeof FilterMenu> = {
+  title: "Patterns/Collection View/Filter Menu",
+  component: FilterMenu,
 };
 
 export default meta;
 
 type Story = StoryObj;
 
-const Wrapper = (props: { initialFilters?: KanbanRendererFilterState; categories?: FilterCategoryView[] } = {}) => {
-  const [filters, setFilters] = useState<KanbanRendererFilterState>(props.initialFilters ?? {});
-  const categoriesToRender = props.categories ?? categories;
-
+const Picker = (props: { filter?: ViewFilterGroup }) => {
+  const [filter, setFilter] = useState(props.filter ?? EMPTY_VIEW_FILTER);
+  const [picked, setPicked] = useState<string>();
   return (
-    <Box p="lg">
+    <Box width="440px" borderWidth="1px" borderColor="border" borderRadius="md" bg="bg" padding="2xs">
       <FilterMenu
-        categories={categoriesToRender}
-        filters={filters}
-        countsByCategory={countsByCategory}
-        onToggleFilterValue={(category, value) => {
-          setFilters((current) => {
-            const values = current[category] ?? [];
-            const nextValues = values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
-            return nextValues.length === 0
-              ? omitFilterCategory(current, category)
-              : { ...current, [category]: nextValues };
-          });
-        }}
-        onClearFilter={(category) => setFilters((current) => omitFilterCategory(current, category))}
-        onClearAll={() => setFilters({})}
+        fields={storyFields}
+        filter={filter}
+        optionsFor={storyOptions}
+        onChange={setFilter}
+        onPickField={(field) => setPicked(field.id)}
+        onOpenAdvanced={() => setPicked("advanced")}
       />
-      <Text mt="sm" data-testid="filters-value">
-        {JSON.stringify(filters)}
+      <Text data-testid="filter-value" textStyle="label/XS" padding="xs">
+        {JSON.stringify(filter.rules)}
+      </Text>
+      <Text data-testid="picked-field" textStyle="label/XS" padding="xs">
+        {picked}
       </Text>
     </Box>
   );
 };
 
-export const NoFilters: Story = { render: () => <Wrapper /> };
-
-export const SelectedFilters: Story = {
-  render: () => <Wrapper initialFilters={{ status: ["todo"], priority: ["high", "medium"] }} />,
+/** Option fields add an "is any of" rule from the value list. */
+export const OptionValues: Story = {
+  render: () => <Picker />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Filter rows"));
+    await userEvent.click(canvas.getByRole("checkbox", { name: "In progress" }));
+    await expect(canvas.getByTestId("filter-value")).toHaveTextContent('"condition":"is-any-of"');
   },
 };
 
-export const SelectFilter: Story = {
-  render: () => <Wrapper />,
+/** Fields without options open the rule editor for a new rule. */
+export const TextField: Story = {
+  render: () => <Picker />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Filter rows"));
-    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
-    await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo"]');
+    await userEvent.click(canvas.getByRole("button", { name: /Title/ }));
+    await expect(canvas.getByTestId("picked-field")).toHaveTextContent("title");
   },
 };
 
-export const SelectMultipleFilters: Story = {
-  render: () => <Wrapper />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Filter rows"));
-
-    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Todo" }));
-    await userEvent.click(within(document.body).getByRole("checkbox", { name: "Done" }));
-
-    await expect(within(document.body).getByRole("checkbox", { name: "Todo" })).toHaveAttribute("aria-checked", "true");
-    await expect(within(document.body).getByRole("checkbox", { name: "Done" })).toHaveAttribute("aria-checked", "true");
-    await expect(canvas.getByTestId("filters-value")).toHaveTextContent('"status":["todo","done"]');
-  },
+export const WithSelectedValues: Story = {
+  render: () => (
+    <Picker
+      filter={{
+        conjunction: "and",
+        rules: [{ attributeId: "status", condition: "is-any-of", value: ["todo", "done"] }],
+      }}
+    />
+  ),
 };

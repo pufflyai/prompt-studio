@@ -34,15 +34,22 @@ export const viewSortsFromLegacyOrdering = (ordering: Ordering | undefined): Vie
 
 /**
  * Root "any of" rules joined by "and" are each necessary, so narrowing a query by one of them never
- * drops a row the view shows. Every other rule is left to the renderer.
+ * drops a row the view shows. A "none of" rule on a field with known options means "any of the rest".
+ * Every other rule is left to the renderer.
  */
-export const legacyFiltersFromViewFilter = (filter: ViewFilterGroup) => {
+export const legacyFiltersFromViewFilter = (
+  filter: ViewFilterGroup,
+  optionValues: (attributeId: string) => string[] | undefined = () => undefined,
+) => {
   const filters: KanbanRendererFilterState = {};
   if (filter.conjunction !== "and") return filters;
   for (const rule of filter.rules) {
     if (isViewFilterGroup(rule) || filters[rule.attributeId]) continue;
-    if (rule.condition !== "is-any-of" && rule.condition !== "has-any-of") continue;
-    if (Array.isArray(rule.value) && rule.value.length > 0) filters[rule.attributeId] = [...rule.value];
+    if (!Array.isArray(rule.value) || rule.value.length === 0) continue;
+    const values = rule.value;
+    if (rule.condition === "is-any-of" || rule.condition === "has-any-of") filters[rule.attributeId] = [...values];
+    const options = rule.condition === "is-none-of" ? optionValues(rule.attributeId) : undefined;
+    if (options) filters[rule.attributeId] = options.filter((option) => !values.includes(option));
   }
   return filters;
 };

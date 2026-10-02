@@ -20,7 +20,8 @@ export type ViewFilterCondition =
   | "is-empty"
   | "is-not-empty";
 
-export interface ViewFilterRule {
+// Views travel through command params, so these are type aliases: they stay assignable to JSON values.
+export type ViewFilterRule = {
   attributeId: string;
   condition: ViewFilterCondition;
   /**
@@ -28,20 +29,20 @@ export interface ViewFilterRule {
    * or option values. Absent for is-empty and is-not-empty.
    */
   value?: string | number | string[];
-}
+};
 
-export interface ViewFilterGroup {
+export type ViewFilterGroup = {
   conjunction: "and" | "or";
   /** The root group may hold rules and groups. A nested group may hold rules only. */
   rules: Array<ViewFilterRule | ViewFilterGroup>;
-}
+};
 
 export type ViewSortDirection = "asc" | "desc";
 
-export interface ViewSort {
+export type ViewSort = {
   attributeId: string;
   direction: ViewSortDirection;
-}
+};
 
 export type ViewFieldKind = "string" | "number" | "date" | "enum" | "status" | "enum-multi" | "user";
 
