@@ -3,72 +3,108 @@ import { z } from "zod";
 export const sites = ["hn", "reddit", "bluesky", "devto", "github", "youtube", "x", "linkedin"] as const;
 export const siteSchema = z.enum(sites);
 export type Site = z.infer<typeof siteSchema>;
+export const sentiments = ["negative", "neutral", "positive"] as const;
+export type Sentiment = (typeof sentiments)[number];
 const text = z.string().trim().min(1);
 const timestamp = z.iso.datetime();
-export const threadStatus = z.enum(["new", "saved", "posted", "skipped"]);
+export const threadStatus = z.enum(["new", "saved", "answered", "skipped"]);
 export const ideaStatus = z.enum(["new", "saved", "used", "dismissed"]);
-export const saveThread = z.object({
+export const postKind = z.enum(["demo", "topic", "showcase"]);
+const httpUrl = z.url({ protocol: /^https?$/ });
+
+const snapshotComment = z.object({
+  id: text,
+  parentId: text.optional(),
+  author: text,
+  publishedAt: timestamp.optional(),
+  body: text,
+  votes: z.number().int().optional(),
+  mine: z.boolean().optional(),
+});
+export const snapshotSchema = z.object({
+  takenAt: timestamp,
+  post: z.object({
+    author: text.optional(),
+    publishedAt: timestamp.optional(),
+    body: text,
+    score: z.number().int().optional(),
+    commentCount: z.number().int().nonnegative().optional(),
+  }),
+  comments: z.array(snapshotComment).max(30),
+});
+const count = z.number().int().nonnegative();
+export const analysisSchema = z.object({
+  summary: text,
+  sentiment: z.enum(sentiments),
+  replySentiment: z.object({ negative: count, neutral: count, positive: count }),
+  topics: z.array(z.object({ label: text, count })),
+  questions: z.array(text),
+});
+export const foundThreadInput = z.object({
   runId: text,
   site: siteSchema,
-  url: z.url({ protocol: /^https?$/ }),
+  url: httpUrl,
   title: text,
   author: text.optional(),
   community: text.optional(),
   excerpt: text.max(500),
   publishedAt: timestamp.optional(),
   topic: text,
+  mention: z.boolean(),
   intent: z.enum(["asking-for-tool", "problem", "comparison", "launch", "mention", "discussion"]),
   relevance: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   reason: text,
-  draftReply: text.optional(),
+  snapshot: snapshotSchema.optional(),
+  analysis: analysisSchema.optional(),
 });
-export const saveIdea = z.object({
+export const newPostInput = z.object({
   runId: text,
-  kind: z.enum(["topic", "demo", "showcase", "reply"]),
+  kind: postKind,
+  site: siteSchema,
   title: text,
-  body: text,
-  sites: z.array(siteSchema).min(1),
+  draft: text,
+  reason: text,
   tags: z.array(text),
   basedOn: z.array(text).optional(),
 });
-export const updateThread = saveThread
-  .pick({
-    title: true,
-    excerpt: true,
-    topic: true,
-    intent: true,
-    relevance: true,
-    reason: true,
-    community: true,
-    draftReply: true,
+export const saveThread = z.union([newPostInput.strict(), foundThreadInput.strict()]);
+// Run, site, URL and kind are the thread's identity; status changes go through set-thread-status.
+export const updateThread = z
+  .object({
+    ...foundThreadInput.omit({ runId: true, site: true, url: true }).shape,
+    ...newPostInput.omit({ runId: true, site: true, kind: true }).shape,
+    outcome: text,
   })
   .partial()
-  .extend({
-    community: z.string().trim().min(1).nullable().optional(),
-    draftReply: z.string().trim().min(1).nullable().optional(),
-    outcome: z.string().trim().min(1).nullable().optional(),
-  })
+  .strict()
   .refine((input) => Object.keys(input).length > 0, "Provide at least one thread change.");
-export const updateIdea = saveIdea
-  .omit({ runId: true })
-  .partial()
-  .refine((input) => Object.keys(input).length > 0, "Provide at least one idea change.");
+export const saveIdea = z.object({ runId: text, threadId: text, replyTo: text.optional(), body: text });
+export const updateIdea = z.object({ body: text }).strict();
 export const finishRun = z.object({
   runId: text,
   summary: text,
   searches: z.partialRecord(siteSchema, z.number().int().nonnegative()),
   skippedSites: z.array(z.object({ site: siteSchema, reason: text })),
 });
-export type SaveThreadInput = z.infer<typeof saveThread>;
-export type SaveIdeaInput = z.infer<typeof saveIdea>;
-export interface Thread extends SaveThreadInput {
+export type Snapshot = z.infer<typeof snapshotSchema>;
+export type SnapshotComment = Snapshot["comments"][number];
+export type Analysis = z.infer<typeof analysisSchema>;
+export type FoundThreadInput = z.infer<typeof foundThreadInput>;
+export type NewPostInput = z.infer<typeof newPostInput>;
+interface ThreadState {
   id: string;
   status: z.infer<typeof threadStatus>;
   foundAt: string;
-  postedAt?: string;
+  answeredAt?: string;
   outcome?: string;
   outcomeCheckedAt?: string;
 }
+export type FoundThread = FoundThreadInput & ThreadState;
+// After you publish a new post, follow-up runs snapshot and analyse it like a found thread.
+export type NewPost = NewPostInput & ThreadState & { url?: string; snapshot?: Snapshot; analysis?: Analysis };
+export type Thread = FoundThread | NewPost;
+export const isNewPost = (thread: Thread): thread is NewPost => "kind" in thread;
+export type SaveIdeaInput = z.infer<typeof saveIdea>;
 export interface Idea extends SaveIdeaInput {
   id: string;
   status: z.infer<typeof ideaStatus>;

@@ -71,6 +71,18 @@ export const InputText: Story = {
 };
 export const InputMarkdown = inputStory(paramEditorInputFixtures.markdown);
 export const InputSelection = inputStory(paramEditorInputFixtures.selection);
+// A long value truncates inside its button, so the field keeps its label and stays inside the panel.
+export const InputSelectionLongValues: Story = {
+  ...inputStory(paramEditorInputFixtures.longSelection),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [label] = canvas.getAllByText("Topics");
+    // The first field is the vertical editor, which is 360px wide.
+    const [trigger] = canvas.getAllByRole("button", { name: /manage several coding agents/ });
+    await expect(label.getBoundingClientRect().width).toBeGreaterThan(30);
+    await expect(trigger.getBoundingClientRect().width).toBeLessThan(360);
+  },
+};
 export const InputDate = inputStory(paramEditorInputFixtures.date);
 export const InputColor = inputStory(paramEditorInputFixtures.color);
 export const InputProperty = inputStory(paramEditorInputFixtures.property);

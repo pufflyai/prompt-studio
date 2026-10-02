@@ -1,7 +1,8 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import type { z } from "zod";
-import { finishRun, type Idea, type Run, type Thread } from "./schemas";
+import { finishRun, isNewPost, type Run } from "./schemas";
 import { readSettings } from "./settings";
+import { changed, qualifiedPageRef, runRef, runsOf, threadsOf } from "./store";
 
 const activeStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
 const pending = new Map<string, Promise<unknown>>();
@@ -17,7 +18,7 @@ export const serializeRun = async <T>(ctx: ExtensionContextBase, operation: () =
   }
 };
 export const requireRun = async (ctx: ExtensionContextBase, id: string) => {
-  const run = await ctx.storage.collection<Run>("runs").get(id);
+  const run = await runsOf(ctx).get(id);
   if (!run) throw new Error("Run not found.");
   return run;
 };
@@ -38,18 +39,19 @@ const notify = (ctx: ExtensionContextBase, run: Run, title: string) =>
         label: "Open digest",
         kind: "navigate",
         primary: true,
-        target: { kind: "page", page: { kind: "page", id: "pstdio.social-radar.page.digest" } },
+        target: { kind: "page", page: qualifiedPageRef("run"), resource: runRef(run) },
       },
     ],
   });
 const failRun = async (ctx: ExtensionContextBase, run: Run, reason: string) => {
   const failed = { ...run, status: "failed" as const, failureReason: reason, finishedAt: new Date().toISOString() };
-  await ctx.storage.collection<Run>("runs").update(run.id, failed);
+  await runsOf(ctx).update(run.id, failed);
+  await changed(ctx, run.id);
   await notify(ctx, failed, "Social radar run failed");
 };
 export const startRun = (ctx: ExtensionContextBase) =>
   serializeRun(ctx, async () => {
-    const runs = ctx.storage.collection<Run>("runs");
+    const runs = runsOf(ctx);
     for (const run of await runs.list()) {
       if (run.status !== "running") continue;
       const session = run.sessionId ? await ctx.sessions.get(run.sessionId) : null;
@@ -68,12 +70,14 @@ export const startRun = (ctx: ExtensionContextBase) =>
         harness: { harnessId: "pstdio.harness-codex.harness.codex", model: "gpt-6-astra" },
       });
       await runs.update(run.id, { ...run, sessionId: session.id });
+      await changed(ctx, run.id);
       return { runId: run.id, sessionId: session.id };
     } catch (error) {
       await failRun(ctx, run, error instanceof Error ? error.message : String(error));
       throw error;
     }
   });
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 export const completeRun = (ctx: ExtensionContextBase, input: unknown) =>
   serializeRun(ctx, async () => {
     const data: z.infer<typeof finishRun> = finishRun.parse(input);
@@ -86,15 +90,17 @@ export const completeRun = (ctx: ExtensionContextBase, input: unknown) =>
         throw new Error(`Search budget exceeded for ${site}.`);
     }
     const done: Run = { ...run, ...data, status: "done", finishedAt: new Date().toISOString() };
-    const threads = (await ctx.storage.collection<Thread>("threads").list()).filter((item) => item.runId === run.id);
-    const ideas = (await ctx.storage.collection<Idea>("ideas").list()).filter((item) => item.runId === run.id);
-    await notify(ctx, done, `Social radar: ${threads.length} threads, ${ideas.length} ideas`);
-    await ctx.storage.collection<Run>("runs").update(run.id, done);
+    const found = (await threadsOf(ctx).list()).filter((item) => item.runId === run.id && !isNewPost(item));
+    const mentions = found.filter((item) => !isNewPost(item) && item.mention).length;
+    // Notify before marking the run done, so a failed notification can be retried by finishing again.
+    await notify(ctx, done, `Social radar: ${plural(mentions, "mention")}, ${plural(found.length, "thread")}`);
+    await runsOf(ctx).update(run.id, done);
+    await changed(ctx, run.id);
     return { runId: run.id };
   });
 export const sessionFailed = (ctx: ExtensionContextBase, sessionId: string) =>
   serializeRun(ctx, async () => {
-    for (const run of await ctx.storage.collection<Run>("runs").list()) {
+    for (const run of await runsOf(ctx).list()) {
       if (run.status === "running" && run.sessionId === sessionId) await failRun(ctx, run, "Research session failed.");
     }
   });
