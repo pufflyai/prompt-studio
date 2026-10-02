@@ -41,6 +41,7 @@ const execution = new Set(["shell", "command_execution", "exec_command"]);
 const toolName = (name: string) => name.replace(/^mcp__/, "").replace(/__/g, ".");
 const projection = (part: ToolPart, cwd?: string) => {
   const input = part.state?.input;
+  if (part.tool === "question") return [part.tool, part.callId];
   if (!execution.has(part.tool)) return [toolName(part.tool), input];
   if (!input || typeof input !== "object") return ["execution", input];
   const values = input as Record<string, unknown>;

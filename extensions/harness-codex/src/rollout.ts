@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
 import { classifyCodexTool } from "./items";
+import { type CodexQuestion, questionAnswerText, questionInput } from "./questions";
 import { type RolloutItem, rolloutItemMessage } from "./rollout-items";
 import { parseTimestamp } from "./utils";
 
@@ -107,14 +108,15 @@ const appendReasoning = (payload: RolloutPayload, createdAt: number | undefined,
 const appendFunctionCall = (payload: RolloutPayload, createdAt: number | undefined, state: RolloutState) => {
   if (!payload.call_id) return;
 
-  const tool = payload.name ?? "unknown";
+  const tool = payload.name === "request_user_input" ? "question" : (payload.name ?? "unknown");
+  const input = parseArguments(payload.arguments);
   const part: ToolPart = {
     type: "tool",
     tool,
     callId: payload.call_id,
     actionType: classifyCodexTool(tool),
     status: "pending",
-    state: { input: parseArguments(payload.arguments) },
+    state: { input: tool === "question" ? questionInput((input as { questions: CodexQuestion[] }).questions) : input },
   };
 
   state.toolIndex.set(payload.call_id, state.messages.length);
@@ -129,9 +131,15 @@ const completeFunctionCall = (payload: RolloutPayload, state: RolloutState) => {
 
   const existingMessage = state.messages[index];
   const existingPart = existingMessage.parts[0] as ToolPart;
+  let output: unknown = payload.output;
+  if (existingPart.tool === "question") {
+    const result = parseArguments(payload.output) as { answers?: Record<string, { answers: string[] }> };
+    const input = existingPart.state?.input as { questions: CodexQuestion[] };
+    if (result?.answers) output = questionAnswerText(input.questions, result.answers);
+  }
   state.messages[index] = {
     ...existingMessage,
-    parts: [{ ...existingPart, status: "completed", state: { ...existingPart.state, output: payload.output } }],
+    parts: [{ ...existingPart, status: "completed", state: { ...existingPart.state, output } }],
   };
 };
 
@@ -183,5 +191,12 @@ export const normalizeRollout = (content: string): SessionMessage[] => {
     }
   }
 
-  return turns.flatMap((turn) => turn.items ?? turn.state.messages);
+  return turns.flatMap((turn) => {
+    if (!turn.items) return turn.state.messages;
+    // Questions are server requests and have no completed ThreadItem record.
+    const questions = turn.state.messages.filter((message) =>
+      message.parts.some((part) => part.type === "tool" && part.tool === "question"),
+    );
+    return [...questions, ...turn.items].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+  });
 };

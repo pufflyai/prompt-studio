@@ -35,6 +35,7 @@ const QUESTION_CALL_ID = "question-call-1";
 const RESUMED_MESSAGE_ID = "assistant-resumed";
 
 const questionPrompt: ChatInputQuestionPrompt = {
+  callId: QUESTION_CALL_ID,
   questions: [
     {
       id: "implementation",

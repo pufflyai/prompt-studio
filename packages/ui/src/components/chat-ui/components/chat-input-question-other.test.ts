@@ -10,6 +10,7 @@ import {
   isQuestionOtherSelected,
   toggleQuestionOptionSelection,
   toggleQuestionOtherAnswer,
+  toQuestionResponse,
 } from "./chat-input-question-prompt";
 
 describe("question Other choice and skip", () => {
@@ -113,6 +114,15 @@ describe("question Other choice and skip", () => {
   });
 
   it("skips with no entries at all, which an answered form never produces", () => {
-    expect(buildSkippedQuestionResponse()).toEqual({ answers: [] });
+    expect(buildSkippedQuestionResponse({ questions: [] })).toEqual({ answers: [] });
+  });
+
+  it("answers and skips the live request the prompt came from", () => {
+    const prompt: ChatInputQuestionPrompt = {
+      callId: "request-2",
+      questions: [{ id: "audience", question: "Who is it for?", options: [], allowCustomAnswer: true }],
+    };
+    expect(toQuestionResponse(prompt, [["Developers"]])).toEqual({ answers: [["Developers"]], callId: "request-2" });
+    expect(buildSkippedQuestionResponse(prompt)).toEqual({ answers: [], callId: "request-2" });
   });
 });

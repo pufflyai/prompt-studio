@@ -72,7 +72,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
       }),
     },
 
-    // codex exec is non-interactive: no approval channel, so no Approvals capability.
+    // Host-managed worktrees run without provider approvals.
     capabilities: () => ["ContextUsage"],
     detect: (ctx) => deps.detect(ctx),
     listModels,
@@ -99,6 +99,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
         env: sessionEnv(ctx, input.sessionId),
         events: input.events,
         messageOffset: input.messageOffset,
+        questionResponse: input.questionResponse,
       }),
 
     getMessages: async (_ctx, input) => normalizeRollout(await deps.readTranscript(input.agentSessionId)),

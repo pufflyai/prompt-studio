@@ -16,10 +16,12 @@ export interface ChatInputQuestion {
 
 export interface ChatInputQuestionPrompt {
   questions: ChatInputQuestion[];
+  callId?: string;
 }
 
 export interface ChatInputQuestionResponse {
   answers: string[][];
+  callId?: string;
 }
 
 export type ChatInputQuestionCustomAnswers = Record<string, string>;
@@ -59,8 +61,16 @@ export const toggleQuestionOtherAnswer = (
 /** Shown in the chat so the transcript records that the person chose not to answer. */
 export const SKIPPED_QUESTION_TEXT = "Skipped the question.";
 
+// The call id names the live request the prompt came from, so a reply can never reach a newer
+// request that asks the same question.
+export const toQuestionResponse = (
+  questionPrompt: ChatInputQuestionPrompt,
+  answers: string[][],
+): ChatInputQuestionResponse => (questionPrompt.callId ? { answers, callId: questionPrompt.callId } : { answers });
+
 /** A skipped question carries no entry at all, which no answered form ever produces. */
-export const buildSkippedQuestionResponse = (): ChatInputQuestionResponse => ({ answers: [] });
+export const buildSkippedQuestionResponse = (questionPrompt: ChatInputQuestionPrompt) =>
+  toQuestionResponse(questionPrompt, []);
 
 // Single-choice questions swap the answer; multiple-choice questions toggle one option.
 export const toggleQuestionOptionSelection = (
@@ -84,8 +94,9 @@ export const toggleQuestionOptionSelection = (
 export const getQuestionPromptSignature = (questionPrompt: ChatInputQuestionPrompt | undefined) => {
   if (!questionPrompt) return "";
 
-  return JSON.stringify(
-    questionPrompt.questions.map((question, index) => ({
+  return JSON.stringify({
+    callId: questionPrompt.callId,
+    questions: questionPrompt.questions.map((question, index) => ({
       id: getQuestionSelectionKey(question, index),
       question: question.question,
       multiple: Boolean(question.multiple),
@@ -96,7 +107,7 @@ export const getQuestionPromptSignature = (questionPrompt: ChatInputQuestionProm
         description: option.description ?? "",
       })),
     })),
-  );
+  });
 };
 
 // A single-choice question answers with one value: the typed text replaces the listed option it
