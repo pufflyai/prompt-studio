@@ -46,6 +46,7 @@ export {
   qualifyNavigationTarget,
   sessionEvents,
   sessionSlots,
+  VIEW_FILTER_CONDITIONS,
   viewDataEvents,
   WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,

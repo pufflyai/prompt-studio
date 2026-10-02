@@ -52,6 +52,7 @@ export { packageAsset } from "./package-asset";
 export { commandRef, eventRef } from "./refs";
 export { defineSlot } from "./slots";
 export type * from "./types";
+export { VIEW_FILTER_CONDITIONS } from "./types/collection-view";
 export { dockedWorkbenchRegions, extensionPanelRegions } from "./types/composition";
 export { EXTENSION_API_VERSION } from "./types/extension";
 export {
