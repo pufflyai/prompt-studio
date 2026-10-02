@@ -171,7 +171,7 @@
       "name": "harness-codex",
       "version": "0.40.0",
       "dependencies": {
-        "@pstdio/sdk": "^0.36.0",
+        "@pstdio/sdk": "^0.40.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -5058,8 +5058,6 @@
     "globby/slash": ["slash@5.1.0", "", {}, "sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg=="],
 
     "harness-claude-code/@pstdio/sdk": ["@pstdio/sdk@0.35.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-txkUZ6NloEJwRfJF3kovdXO5yqz6LmbzXw2Jlfb/15GFKqRB0gblDDDlBwWc/VB0ju6u02rd/QhgR3kjPEzegg=="],
-
-    "harness-codex/@pstdio/sdk": ["@pstdio/sdk@0.36.1", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-RPbA9LI6Ue4jjAMewx6RsMoRP3Sart8j6gg8KwqhmVdJfKdm5sigP+KCrZTcliQ97dIMIlkeOMd25kfhPCrQeg=="],
 
     "harness-open-code/@pstdio/sdk": ["@pstdio/sdk@0.36.1", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-RPbA9LI6Ue4jjAMewx6RsMoRP3Sart8j6gg8KwqhmVdJfKdm5sigP+KCrZTcliQ97dIMIlkeOMd25kfhPCrQeg=="],
 

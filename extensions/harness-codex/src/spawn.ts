@@ -1,322 +1,122 @@
-import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { win32 } from "node:path";
-import { createInterface } from "node:readline";
-import type { Readable, Writable } from "node:stream";
 import type {
   HarnessAttachment,
   HarnessEventSink,
   HarnessExit,
   HarnessSession,
-  SessionMessage,
+  QuestionResponse,
 } from "@pstdio/sdk/extensions";
+import { createAppServerItems } from "./app-server-items";
+import { createAppServerRpc } from "./app-server-rpc";
+import { defaultSpawnProcess, type SpawnDeps } from "./codex-process";
 import { createCodexStreamPipeline } from "./normalize-stream";
-import { parseThreadEvent } from "./types";
+import { confirmQuestionReply } from "./question-confirmation";
+import { createQuestionChannel, questionReplyError } from "./questions";
+import { promptWithAttachmentManifest, userMessageFor } from "./session-input";
+import type { CodexThreadEvent } from "./types";
 
-// Sessions run unattended in host-managed worktrees, so approvals and the codex
-// sandbox are bypassed — the same posture as the Claude Code harness.
-const BASE_ARGS = ["exec", "--json", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox"];
-
-const DEFAULT_CODEX_PARAMS = {
-  model_reasoning_effort: "medium",
-};
-
-const CONFIG_PARAM_KEYS = ["model_reasoning_effort"] as const;
-
-type CodexParamKey = (typeof CONFIG_PARAM_KEYS)[number];
-type CodexParams = Partial<Record<CodexParamKey, string | boolean>>;
-
-const modelArgs = (model?: string | null) => (model ? ["--model", model] : []);
-
-const configArgs = (params?: CodexParams) => {
-  const values = { ...DEFAULT_CODEX_PARAMS, ...params };
-  return CONFIG_PARAM_KEYS.flatMap((key) => ["-c", `${key}=${values[key]}`]);
-};
-
-// Trailing "-" makes codex read the prompt from stdin, which avoids argv limits.
-export const buildStartArgs = (input: { model?: string | null; params?: CodexParams }) => [
-  ...BASE_ARGS,
-  ...configArgs(input.params),
-  ...modelArgs(input.model),
-  "-",
-];
-
-export const buildResumeArgs = (input: { agentSessionId: string; model?: string | null; params?: CodexParams }) => [
-  ...BASE_ARGS,
-  ...configArgs(input.params),
-  ...modelArgs(input.model),
-  "resume",
-  input.agentSessionId,
-  "-",
-];
-
-const sendPrompt = (stdin: Writable, prompt: string) => {
-  stdin.write(prompt);
-  stdin.end();
-};
-
-const promptWithAttachmentManifest = (prompt: string, attachments: HarnessAttachment[] = []) => {
-  if (attachments.length === 0) return prompt;
-
-  const lines = [
-    prompt,
-    "",
-    "<session-attachments>",
-    ...attachments.map(
-      (attachment) =>
-        `- name=${JSON.stringify(attachment.fileName)} path=${JSON.stringify(attachment.localPath)} mime=${JSON.stringify(
-          attachment.mimeType,
-        )} size=${attachment.sizeBytes}`,
-    ),
-    "</session-attachments>",
-  ];
-
-  return lines.join("\n");
-};
-
-type SpawnedChild = {
-  stdin: Writable;
-  stdout: Readable;
-  stderr: Readable;
-  pid?: number;
-  kill(): void;
-  onExit: Promise<{ code: number | null; signal: string | null }>;
-};
-
-export type SpawnDeps = {
-  spawnProcess: (args: string[], options?: { cwd?: string; env?: Record<string, string> }) => SpawnedChild;
-};
-
-// On Windows, `npm i -g @openai/codex` only puts a `codex.cmd` shim on PATH.
-// This harness pipes stdio for a long-lived JSON protocol, so we want the real
-// executable rather than an extra `cmd.exe` layer between us and the process.
-// The vendored layout below is best-effort and tracks @openai/codex's current
-// packaging; if it moves, we fall back to running the shim through a shell.
-const resolveNativeCodex = (command: string, exists: (command: string) => boolean) => {
-  if (win32.basename(command).toLowerCase() !== "codex.cmd") return null;
-
-  const npmBinDir = win32.dirname(command);
-  const candidates = [
-    win32.join(
-      npmBinDir,
-      "node_modules",
-      "@openai",
-      "codex",
-      "node_modules",
-      "@openai",
-      "codex-win32-x64",
-      "vendor",
-      "x86_64-pc-windows-msvc",
-      "bin",
-      "codex.exe",
-    ),
-    win32.join(npmBinDir, "node_modules", "@openai", "codex", "vendor", "x86_64-pc-windows-msvc", "bin", "codex.exe"),
-  ];
-
-  return candidates.find(exists) ?? null;
-};
-
-const isWindowsShim = (command: string) => {
-  const lower = command.toLowerCase();
-  return lower.endsWith(".cmd") || lower.endsWith(".bat");
-};
-
-// `Bun.which` can land on `codex.ps1` when PATHEXT lists `.PS1` before `.CMD`,
-// and neither `spawn` nor `cmd.exe` can run a `.ps1`. npm always writes the
-// sibling `.cmd`/`.exe` next to it, so switch to that.
-const preferSpawnableSibling = (command: string, exists: (command: string) => boolean) => {
-  if (!command.toLowerCase().endsWith(".ps1")) return command;
-
-  const base = command.slice(0, -".ps1".length);
-  for (const extension of [".cmd", ".bat", ".exe"]) {
-    if (exists(base + extension)) return base + extension;
-  }
-  return command;
-};
-
-export const resolveCodexCommand = (
-  input: {
-    exists?: (command: string) => boolean;
-    platform?: NodeJS.Platform | "win32";
-    which?: (command: string) => string | null;
-  } = {},
-) => {
-  const platform = input.platform ?? process.platform;
-  const which = input.which ?? ((command: string) => (typeof Bun.which === "function" ? Bun.which(command) : null));
-  const exists = input.exists ?? existsSync;
-  const resolved = which("codex");
-
-  if (platform === "win32" && resolved) {
-    const target = preferSpawnableSibling(resolved, exists);
-    return resolveNativeCodex(target, exists) ?? target;
-  }
-
-  return resolved ?? "codex";
-};
-
-const defaultSpawnProcess = (
-  args: string[],
-  options?: { cwd?: string; env?: Record<string, string> },
-): SpawnedChild => {
-  const command = resolveCodexCommand();
-  // `child_process.spawn` can't launch a `.cmd`/`.bat` directly on Windows;
-  // fall back to a shell only when we couldn't resolve the native binary.
-  const useShell = process.platform === "win32" && isWindowsShim(command);
-  const child = spawn(command, args, {
-    stdio: ["pipe", "pipe", "pipe"],
-    cwd: options?.cwd,
-    env: { ...process.env, ...options?.env },
-    windowsHide: true,
-    shell: useShell,
-  }) as ChildProcess;
-
-  child.on("error", (err) => {
-    console.error("[codex:spawn] child process error:", err);
-  });
-
-  const onExit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
-    child.once("exit", (code, signal) => resolve({ code, signal }));
-  });
-
-  return {
-    stdin: child.stdin!,
-    stdout: child.stdout!,
-    stderr: child.stderr!,
-    pid: child.pid,
-    kill: () => child.kill(),
-    onExit,
-  };
-};
-
-const defaultDeps: SpawnDeps = { spawnProcess: defaultSpawnProcess };
-
-const toHarnessExit = (exit: { code: number | null; signal: string | null }): HarnessExit => {
-  if (exit.signal === "SIGTERM" || exit.signal === "SIGINT") return { status: "cancelled" };
-  return exit.code === 0 ? { status: "completed" } : { status: "failed" };
-};
-
-const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessage => {
-  const createdAt = Date.now();
-  return {
-    id: `user-${createdAt}`,
-    role: "user",
-    createdAt,
-    parts: [
-      { type: "text", text: prompt },
-      ...attachments.map((attachment) => ({
-        type: "file" as const,
-        fileId: attachment.fileId,
-        filename: attachment.fileName,
-        mediaType: attachment.mimeType ?? undefined,
-        size: attachment.sizeBytes,
-        url: attachment.url,
-      })),
-    ],
-  };
-};
-
-type RunStreamInput = {
+export type { SpawnDeps } from "./codex-process";
+export interface StartSpawnInput {
   prompt: string;
   attachments?: HarnessAttachment[];
+  model?: string | null;
+  params?: { model_reasoning_effort?: string | boolean };
+  cwd?: string;
+  env?: Record<string, string>;
   events: HarnessEventSink;
+}
+export interface ResumeSpawnInput extends StartSpawnInput {
+  agentSessionId: string;
   messageOffset?: number;
-  onThreadStarted?: (threadId: string) => void;
-};
+  questionResponse?: QuestionResponse;
+}
 
-const runStream = async (stdout: Readable, input: RunStreamInput) => {
+const runCodexSession = async (input: StartSpawnInput & Partial<ResumeSpawnInput>, deps: SpawnDeps) => {
+  if (input.questionResponse) throw questionReplyError("Codex question request is no longer pending.");
+  const child = deps.spawnProcess(
+    ["app-server", "--listen", "stdio://", "--enable", "default_mode_request_user_input"],
+    { cwd: input.cwd, env: input.env },
+  );
   const pipeline = createCodexStreamPipeline(input.events, {
     initialMessages: [userMessageFor(input.prompt, input.attachments)],
     indexOffset: input.messageOffset ?? 0,
   });
-
-  const reader = createInterface({ input: stdout, crlfDelay: Number.POSITIVE_INFINITY });
-
-  for await (const line of reader) {
-    const event = parseThreadEvent(line);
-    if (!event) continue;
-
-    if (event.type === "thread.started") {
-      input.onThreadStarted?.(event.thread_id);
-      continue;
+  const publish = (item: import("./types").CodexThreadItem) => pipeline.handleEvent({ type: "item.updated", item });
+  const items = createAppServerItems(publish);
+  const completion = Promise.withResolvers<HarnessExit>();
+  let ended = false;
+  let transcriptPath: string | null = null;
+  const finish = (exit: HarnessExit, event?: CodexThreadEvent) => {
+    if (ended) return;
+    ended = true;
+    void questions.close().finally(() => {
+      if (event) pipeline.handleEvent(event);
+      completion.resolve(exit);
+      child.kill();
+    });
+  };
+  const rpc = createAppServerRpc(child, (message) => {
+    if (ended) return;
+    items.receive(message);
+    questions.receive(message);
+    if (message.method === "turn/completed") {
+      const turn = message.params?.turn as { status: string; error?: { message?: string } };
+      const statuses: Record<string, HarnessExit["status"]> = {
+        completed: "completed",
+        interrupted: "cancelled",
+        failed: "failed",
+      };
+      finish(
+        { status: statuses[turn.status] ?? "failed" },
+        turn.status === "failed"
+          ? { type: "turn.failed", error: turn.error }
+          : { type: "turn.completed", usage: items.getUsage() },
+      );
     }
-
-    pipeline.handleEvent(event);
+  });
+  const questions = createQuestionChannel(rpc.write, publish, (callId, answers, signal) =>
+    confirmQuestionReply(transcriptPath, callId, answers, signal),
+  );
+  child.onExit.then((exit) =>
+    finish({ status: exit.signal === "SIGTERM" || exit.signal === "SIGINT" ? "cancelled" : "failed" }),
+  );
+  rpc.finished.then(
+    () => finish({ status: "failed" }),
+    () => finish({ status: "failed" }),
+  );
+  try {
+    await rpc.request("initialize", {
+      clientInfo: { name: "pstdio", version: "1" },
+      capabilities: { experimentalApi: true },
+    });
+    rpc.write({ method: "initialized" });
+    const result = (await rpc.request(input.agentSessionId ? "thread/resume" : "thread/start", {
+      ...(input.agentSessionId ? { threadId: input.agentSessionId } : {}),
+      ...(input.model ? { model: input.model } : {}),
+      cwd: input.cwd,
+      approvalPolicy: "never",
+      sandbox: "danger-full-access",
+      config: { model_reasoning_effort: input.params?.model_reasoning_effort ?? "medium" },
+    })) as { thread: { id: string; path: string | null } };
+    transcriptPath = result.thread.path;
+    await rpc.request("turn/start", {
+      threadId: result.thread.id,
+      input: [{ type: "text", text: promptWithAttachmentManifest(input.prompt, input.attachments), text_elements: [] }],
+    });
+    return {
+      agentSessionId: result.thread.id,
+      done: Promise.all([completion.promise, child.onExit, rpc.finished.catch(() => {})]).then(([exit]) => exit),
+      stop: () => finish({ status: "cancelled" }),
+      replyQuestion: questions.replyQuestion,
+      timeoutStrategy: "provider",
+      pid: child.pid,
+    } satisfies HarnessSession;
+  } catch (error) {
+    finish({ status: "failed" });
+    throw error;
   }
 };
 
-export type StartSpawnInput = {
-  prompt: string;
-  attachments?: HarnessAttachment[];
-  model?: string | null;
-  params?: CodexParams;
-  cwd?: string;
-  env?: Record<string, string>;
-  events: HarnessEventSink;
-};
-
-export const startCodexSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
-  const child = deps.spawnProcess(buildStartArgs(input), { cwd: input.cwd, env: input.env });
-  // Keep diagnostics from filling the pipe and blocking the executable.
-  child.stderr.resume();
-
-  sendPrompt(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
-
-  let resolveThreadId: (threadId: string) => void;
-  const threadId = new Promise<string>((resolve) => {
-    resolveThreadId = resolve;
-  });
-
-  const pipelineDone = runStream(child.stdout, {
-    prompt: input.prompt,
-    attachments: input.attachments,
-    events: input.events,
-    onThreadStarted: (id) => resolveThreadId(id),
-  });
-
-  const streamEnded = pipelineDone.then(() => {
-    throw new Error("Codex stream ended without providing a thread id");
-  });
-  // The rejection is only meaningful while racing; swallow it once the thread id won.
-  streamEnded.catch(() => {});
-
-  const agentSessionId = await Promise.race([threadId, streamEnded]);
-
-  const done = Promise.all([child.onExit, pipelineDone]).then(([exit]) => toHarnessExit(exit));
-
-  return {
-    agentSessionId,
-    done,
-    stop: child.kill,
-    timeoutStrategy: "provider", // Process exit, not chat activity, owns completion.
-    pid: child.pid,
-  } satisfies HarnessSession;
-};
-
-export type ResumeSpawnInput = StartSpawnInput & {
-  agentSessionId: string;
-  messageOffset?: number;
-};
-
-export const resumeCodexSession = (input: ResumeSpawnInput, deps: SpawnDeps = defaultDeps) => {
-  const child = deps.spawnProcess(buildResumeArgs(input), { cwd: input.cwd, env: input.env });
-  child.stderr.resume();
-
-  sendPrompt(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
-
-  const pipelineDone = runStream(child.stdout, {
-    prompt: input.prompt,
-    attachments: input.attachments,
-    events: input.events,
-    messageOffset: input.messageOffset ?? 0,
-  });
-
-  const done = Promise.all([child.onExit, pipelineDone]).then(([exit]) => toHarnessExit(exit));
-
-  return {
-    agentSessionId: input.agentSessionId,
-    done,
-    stop: child.kill,
-    timeoutStrategy: "provider",
-    pid: child.pid,
-  } satisfies HarnessSession;
-};
+export const startCodexSession = (input: StartSpawnInput, deps: SpawnDeps = { spawnProcess: defaultSpawnProcess }) =>
+  runCodexSession(input, deps);
+export const resumeCodexSession = (input: ResumeSpawnInput, deps: SpawnDeps = { spawnProcess: defaultSpawnProcess }) =>
+  runCodexSession(input, deps);

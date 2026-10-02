@@ -14,6 +14,7 @@ import {
   type ChatInputQuestionResponse,
   QuestionPromptControls,
   SKIPPED_QUESTION_TEXT,
+  toQuestionResponse,
 } from "./chat-input-question-prompt";
 import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
 import { SendButton } from "./send-button";
@@ -198,7 +199,7 @@ export const ChatInput = (props: ChatInputProps) => {
   const submitMessage = async () => {
     if (!responseText) return;
 
-    const questionResponse = questionPrompt ? { answers: question.buildAnswers() } : undefined;
+    const questionResponse = questionPrompt ? toQuestionResponse(questionPrompt, question.buildAnswers()) : undefined;
 
     history.reset();
     setSubmitting(true);
@@ -224,10 +225,10 @@ export const ChatInput = (props: ChatInputProps) => {
     textAttachmentPasteLineThreshold,
   });
 
-  const skipQuestion = async () => {
+  const skipQuestion = async (skippedPrompt: ChatInputQuestionPrompt) => {
     setSubmitting(true);
     try {
-      await onSubmit(SKIPPED_QUESTION_TEXT, attachedResources, buildSkippedQuestionResponse());
+      await onSubmit(SKIPPED_QUESTION_TEXT, attachedResources, buildSkippedQuestionResponse(skippedPrompt));
       resetEditor(true);
       onClearAttachments?.();
     } catch {
@@ -312,7 +313,7 @@ export const ChatInput = (props: ChatInputProps) => {
               variant="ghost"
               disabled={isDisabled || submitting || submitDisabled}
               title="Skip this question and let the agent continue"
-              onClick={() => void skipQuestion()}
+              onClick={() => void skipQuestion(questionPrompt)}
             >
               Skip
             </Button>
