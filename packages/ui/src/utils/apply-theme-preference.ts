@@ -36,6 +36,15 @@ const THEME_TOKEN_PATHS_ATTRIBUTE = "data-pstdio-theme-token-paths";
 
 const getThemePreferenceCssVariableName = (tokenPath: string) => `--chakra-${tokenPath.replaceAll(".", "-")}`;
 
+// Pressed and selected controls use `bg.active`. Its default is tuned for the default surface, so a
+// theme that replaces the surface without its own pressed color can make pressed controls look
+// unpressed. Mix the text color into the surface instead, at about the contrast the default themes
+// use. Hover keeps its default: it must stay visible on every panel surface, not only this one.
+const surfaceActiveColor = `color-mix(in srgb, var(${getThemePreferenceCssVariableName("colors.fg")}) 12%, var(${getThemePreferenceCssVariableName("colors.bg")}))`;
+
+const resolveThemeTokens = (tokens: ThemePreferenceTokens) =>
+  tokens["colors.bg"] ? { "colors.bg.active": surfaceActiveColor, ...tokens } : tokens;
+
 const removeThemeTokens = (el: HTMLElement, theme?: ThemePreferenceOption) => {
   if (!theme?.tokens) return;
 
@@ -60,10 +69,11 @@ const applyThemeTokens = (el: HTMLElement, theme: ThemePreferenceOption) => {
     return;
   }
 
-  for (const [tokenPath, value] of Object.entries(theme.tokens)) {
+  const tokens = resolveThemeTokens(theme.tokens);
+  for (const [tokenPath, value] of Object.entries(tokens)) {
     el.style.setProperty(getThemePreferenceCssVariableName(tokenPath), value);
   }
-  el.setAttribute(THEME_TOKEN_PATHS_ATTRIBUTE, Object.keys(theme.tokens).join("\n"));
+  el.setAttribute(THEME_TOKEN_PATHS_ATTRIBUTE, Object.keys(tokens).join("\n"));
 };
 
 export const applyThemePreference = (
