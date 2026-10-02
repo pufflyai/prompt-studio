@@ -34,4 +34,20 @@ describe("social radar reply ideas", () => {
       commands["save-idea"].run(ctx, { input: { runId: run.runId, threadId: post.id, body: "Hi" } }),
     ).rejects.toThrow("A new post has no reply ideas");
   });
+
+  test("a refreshed snapshot keeps the comments that reply ideas answer", async () => {
+    const { ctx } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const input = foundThread(run.runId);
+    const thread = await commands["save-thread"].run(ctx, { input });
+    await commands["save-idea"].run(ctx, {
+      input: { runId: run.runId, threadId: thread.id, replyTo: "c1", body: "Hi" },
+    });
+    const snapshot = { ...input.snapshot, comments: [{ id: "c2", author: "kim", body: "New comment" }] };
+    await expect(commands["update-thread"].run(ctx, { id: thread.id, input: { snapshot } })).rejects.toThrow(
+      "Keep comment c1",
+    );
+    const kept = { ...snapshot, comments: [...input.snapshot.comments, ...snapshot.comments] };
+    await commands["update-thread"].run(ctx, { id: thread.id, input: { snapshot: kept } });
+  });
 });

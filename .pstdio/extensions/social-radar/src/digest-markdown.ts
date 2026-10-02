@@ -1,11 +1,14 @@
 import { type FoundThread, type Idea, isNewPost, type NewPost, type Run, sites, type Thread } from "./schemas";
 import { siteLabels } from "./sites";
+import { plural } from "./text";
 
 const time = (value: string) => new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 const statusLabel = { running: "Running", done: "Done", failed: "Failed" };
 const ideaCount = (thread: Thread, ideas: Idea[]) => ideas.filter((idea) => idea.threadId === thread.id).length;
-const link = (thread: Thread) => (thread.url ? `[${thread.title}](${thread.url})` : thread.title);
+// Titles and reasons come from scraped sites, so Markdown syntax in them is escaped.
+const escapeMarkdown = (value: string) => value.replace(/\s+/g, " ").replace(/([\\`*_[\]()|#<>])/g, "\\$1");
+const link = (thread: Thread) =>
+  thread.url ? `[${escapeMarkdown(thread.title)}](<${thread.url}>)` : escapeMarkdown(thread.title);
 const foundLine = (thread: FoundThread, ideas: Idea[]) => {
   const count = ideaCount(thread, ideas);
   const details = [siteLabels[thread.site], thread.analysis?.sentiment, count ? plural(count, "idea") : ""];
@@ -13,7 +16,7 @@ const foundLine = (thread: FoundThread, ideas: Idea[]) => {
 };
 const postLine = (post: NewPost) => {
   const sources = post.basedOn?.length ? ` · ${post.basedOn.join(", ")}` : "";
-  return `- ${post.title} · ${siteLabels[post.site]} · ${post.kind}${sources}`;
+  return `- ${escapeMarkdown(post.title)} · ${siteLabels[post.site]} · ${post.kind}${escapeMarkdown(sources)}`;
 };
 const section = (title: string, lines: string[], empty: string) => [
   `## ${title}`,
@@ -23,7 +26,7 @@ const section = (title: string, lines: string[], empty: string) => [
 ];
 const coverageResult = (run: Run, site: (typeof sites)[number]) => {
   const skipped = run.skippedSites?.find((skip) => skip.site === site);
-  if (skipped) return `Skipped: ${skipped.reason}`;
+  if (skipped) return `Skipped: ${escapeMarkdown(skipped.reason)}`;
   return run.searches?.[site] ? "Read" : "Not searched";
 };
 
@@ -38,7 +41,7 @@ export const buildDigestMarkdown = (run: Run, threads: Thread[], ideas: Idea[], 
   const meta = [
     statusLabel[run.status],
     span,
-    plural(searches, "search"),
+    plural(searches, "search", "searches"),
     plural(found.length, "thread"),
     plural(mentions.length, "mention"),
   ];
@@ -49,7 +52,7 @@ export const buildDigestMarkdown = (run: Run, threads: Thread[], ideas: Idea[], 
   return [
     `_${meta.join(" · ")}_`,
     "",
-    run.summary ?? run.failureReason ?? "The agent is still working. Results appear as it saves them.",
+    escapeMarkdown(run.summary ?? run.failureReason ?? "The agent is still working. Results appear as it saves them."),
     "",
     ...section(
       "Mentions",

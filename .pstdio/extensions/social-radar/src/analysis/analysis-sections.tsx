@@ -75,7 +75,7 @@ export const AnalysisSections = (props: AnalysisSectionsProps) => {
         <Kpi label="Answered" value={answered.count} detail={`${answered.gotReply} got a reply`} />
         <Kpi label="Post ideas used" value={postsUsed.count} detail={`of ${postsUsed.total}`} />
       </Grid>
-      <Grid templateColumns="minmax(0, 1fr) minmax(0, 26rem)" gap="md">
+      <Grid templateColumns="minmax(0, 3fr) minmax(0, 2fr)" gap="md">
         <Card title="Mentions per day">
           <DailyBars days={analysis.mentionsPerDay} label={`Mentions per day over ${days} days`} />
         </Card>

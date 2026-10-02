@@ -3,6 +3,7 @@ import type { z } from "zod";
 import { finishRun, isNewPost, type Run } from "./schemas";
 import { readSettings } from "./settings";
 import { changed, qualifiedPageRef, runRef, runsOf, threadsOf } from "./store";
+import { plural } from "./text";
 
 const activeStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
 const pending = new Map<string, Promise<unknown>>();
@@ -77,7 +78,6 @@ export const startRun = (ctx: ExtensionContextBase) =>
       throw error;
     }
   });
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 export const completeRun = (ctx: ExtensionContextBase, input: unknown) =>
   serializeRun(ctx, async () => {
     const data: z.infer<typeof finishRun> = finishRun.parse(input);
@@ -98,9 +98,10 @@ export const completeRun = (ctx: ExtensionContextBase, input: unknown) =>
     await changed(ctx, run.id);
     return { runId: run.id };
   });
-export const sessionFailed = (ctx: ExtensionContextBase, sessionId: string) =>
+/** A session that ends while its run is still running never called finish-run. */
+export const sessionEnded = (ctx: ExtensionContextBase, sessionId: string, reason: string) =>
   serializeRun(ctx, async () => {
     for (const run of await runsOf(ctx).list()) {
-      if (run.status === "running" && run.sessionId === sessionId) await failRun(ctx, run, "Research session failed.");
+      if (run.status === "running" && run.sessionId === sessionId) await failRun(ctx, run, reason);
     }
   });

@@ -1,4 +1,5 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
+import { psTheme } from "@pstdio/ui";
 import { barX, barY, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -6,7 +7,7 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import type { Sentiment } from "../schemas";
 
 // Charts paint with theme tokens, so they follow the light and dark themes.
-const token = (name: string) => `var(--chakra-colors-${name.replace(".", "-")})`;
+const token = (name: string) => psTheme.token.var(`colors.${name}`);
 const countColor = token("blue.solid");
 export const sentimentTokens: Record<Sentiment, string> = {
   negative: "red.solid",

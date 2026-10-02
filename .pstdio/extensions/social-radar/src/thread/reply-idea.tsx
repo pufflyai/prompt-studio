@@ -1,4 +1,4 @@
-import { Badge, Button, HStack, Spacer, Stack, Text, Textarea } from "@chakra-ui/react";
+import { Badge, Button, HStack, Icon, Spacer, Stack, Text, Textarea } from "@chakra-ui/react";
 import { CopyButton, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { Check, Lightbulb, Pencil, X } from "lucide-react";
 import { useState } from "react";
@@ -40,7 +40,7 @@ export const ReplyIdea = (props: ReplyIdeaProps) => {
       <SimpleCardBody>
         <Stack gap="sm">
           <HStack gap="xs">
-            <Lightbulb size={14} />
+            <Icon as={Lightbulb} boxSize="icon-xs" />
             <Badge size="sm" colorPalette="purple">
               {idea.status === "used" ? "Used" : "Reply idea"}
             </Badge>

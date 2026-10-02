@@ -8,7 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
 import { navigationItems, navigationTrees, pages, viewMenus, views } from "./src/pages";
-import { sessionFailed } from "./src/run-lifecycle";
+import { sessionEnded } from "./src/run-lifecycle";
 import { settingProperties } from "./src/settings";
 import { postMedia, runResource, threadResource } from "./src/store";
 
@@ -34,7 +34,12 @@ export default defineExtension({
     defineHook({
       id: "research-failed",
       event: sessionEvents.failed,
-      run: (ctx, event) => sessionFailed(ctx, event.sessionId),
+      run: (ctx, event) => sessionEnded(ctx, event.sessionId, "Research session failed."),
+    }),
+    defineHook({
+      id: "research-ended",
+      event: sessionEvents.completed,
+      run: (ctx, event) => sessionEnded(ctx, event.sessionId, "session ended without finish-run"),
     }),
   ],
   skills: [

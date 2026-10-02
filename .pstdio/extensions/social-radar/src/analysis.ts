@@ -1,7 +1,7 @@
 import { type FoundThread, isNewPost, type Sentiment, type Site, sentiments, type Thread } from "./schemas";
+import { localDay as dayKey } from "./text";
 
 const day = 86_400_000;
-const dayKey = (time: number) => new Date(time).toISOString().slice(0, 10);
 const countBy = <T>(items: T[], key: (item: T) => string) => {
   const counts = new Map<string, number>();
   for (const item of items) counts.set(key(item), (counts.get(key(item)) ?? 0) + 1);

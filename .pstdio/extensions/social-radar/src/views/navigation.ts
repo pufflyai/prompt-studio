@@ -2,7 +2,8 @@ import { defineView, type TreeNode, workbenchPanels } from "@pstdio/sdk/extensio
 import { commands } from "../commands";
 import { isNewPost, type Run, type Thread } from "../schemas";
 import { siteLabels } from "../sites";
-import { newest, pageRef, radarChanged, runRef, runsOf, threadsOf } from "../store";
+import { newest, pageRef, radarChanged, runLabel, runRef, runsOf, threadsOf } from "../store";
+import { plural } from "../text";
 
 const runIcon = (run: Run) => {
   if (run.status === "running") return { icon: "LoaderCircle", iconColor: "fg.info" };
@@ -10,7 +11,6 @@ const runIcon = (run: Run) => {
   if (run.skippedSites?.length) return { icon: "CircleAlert", iconColor: "fg.warning" };
   return { icon: "CircleCheck", iconColor: "fg.success" };
 };
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 // Tree rows show no trailing text, so the tooltip on the status icon carries the run's result.
 const runTooltip = (run: Run, threads: Thread[]) => {
   if (run.status === "running") return "Running";
@@ -40,7 +40,7 @@ const runNode = (run: Run, threads: Thread[]): TreeNode => {
   };
   return {
     id: run.id,
-    label: resource.label,
+    label: runLabel(run),
     ...runIcon(run),
     iconTooltip: runTooltip(run, threads),
     resource,

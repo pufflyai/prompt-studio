@@ -1,4 +1,4 @@
-import { Box, HStack, Image, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Image, Stack, Text } from "@chakra-ui/react";
 import { Chip } from "@pstdio/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Film, Info } from "lucide-react";
@@ -46,7 +46,7 @@ export const MediaTray = (props: MediaTrayProps) => {
         </HStack>
       ) : null}
       <HStack gap="xs" color="fg.muted">
-        <Info size={14} />
+        <Icon as={Info} boxSize="icon-xs" />
         <Text textStyle="label/XS">
           {describeMediaRule(site, rule)}
           {media.data?.length ? ` Files are in post-media/${threadId}/ in the extension storage folder.` : ""}
