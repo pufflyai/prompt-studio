@@ -40,6 +40,29 @@ A successful `createRow` result with string `id` and `title` is passed to the re
 
 Do not return `metadata.resourceParent` or infer a view from a resource type. Resource hierarchy and page destinations are separate contracts. See the [Kanban host](../../../packages/pstdio-workbench/src/extensions/contributions/kanban-renderer-contributions.ts) and the [workbench cookbook](../../guides/extensions/0002-workbench-cookbook.md).
 
+## Settings
+
+`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`. A settings panel without `section` appears in the host's Project group.
+
+A `string` setting can offer choices in two ways:
+
+- `enum` lists fixed values. The host refuses any other value.
+- `options` loads the choices from a command when the Settings tab opens. It uses the same `ParamOptionSource` as command params: `command`, `valueField`, `labelField`, and optional `params`. The command returns a list of rows. A `{ kind: "param-value", key }` param passes the current value of another setting.
+
+A setting with `options` shows as a searchable dropdown, with the same loading and error states as command dialogs. Clearing it removes the saved value, so the setting falls back to its `default`. The host does not check saved values against the options, because choices such as remote branches can disappear after a value is saved. The dropdown keeps showing a saved value that the command no longer lists. Check the value where the extension uses it.
+
+```ts
+"implementation.defaultTargetBranch": {
+  type: "string",
+  scope: "project",
+  default: "",
+  title: "Default target branch",
+  options: { command: implementationTargetsCommand.ref, valueField: "branch", labelField: "branch" },
+},
+```
+
+Only `string` settings accept `options`; on other types the host ignores `options` and reports a warning. The option command must belong to the same extension. A command ref that names no command of the extension is reported as `unknown_setting_option_command`. Setting `options` needs extension API 0.1.2.
+
 ## Authoring Boundaries
 
 Extensions declare metadata and handlers; the host owns installation, project enablement, command routing, workbench chrome, trusted context keys, and layout primitives.

@@ -2,6 +2,7 @@ import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { Checkbox, DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { executeExtensionCommandValue } from "@/shared/extensions/api";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import {
   useExtensionContributions,
@@ -122,6 +123,10 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         onToggleAutomation={(automation, enabled) =>
           setAutomationEnabled.mutate({ instanceId: extension.id, automationId: automation.id, enabled })
         }
+        executeOptionCommand={(commandId, params, signal) => {
+          if (!projectId) return Promise.reject(new Error("Setting options need a project."));
+          return executeExtensionCommandValue(projectId, commandId, params, signal);
+        }}
         onChangeSetting={(key, value) => updateSetting.mutate({ instanceId: extension.id, key, value })}
         onReload={handleReload}
         onUpgrade={handleUpgrade}

@@ -36,6 +36,20 @@ export const executeExtensionCommand = (projectId: string, commandId: string, bo
     },
   );
 
+// Returns the command's value, or throws its failure.
+export const executeExtensionCommandValue = async <T = unknown>(
+  projectId: string,
+  commandId: string,
+  params: Record<string, unknown>,
+  signal?: AbortSignal,
+) => {
+  const response = await executeExtensionCommand(projectId, commandId, { params }, signal);
+  if (!response.outcome.ok) {
+    throw new Error(response.outcome.error?.message ?? response.outcome.reason ?? `Command failed: ${commandId}`);
+  }
+  return response.outcome.value as T;
+};
+
 export const uploadExtensionCommandFile = async (projectId: string, commandId: string, file: File) =>
   apiRequest<{ id: string }>(`/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/files`, {
     method: "POST",

@@ -128,6 +128,7 @@ const meta: Meta<typeof ExtensionDetail> = {
     onBack: noop,
     onToggle: noop,
     onToggleAutomation: noop,
+    executeOptionCommand: async () => [],
     onChangeSetting: noop,
     onReload: noop,
     onUpgrade: noop,

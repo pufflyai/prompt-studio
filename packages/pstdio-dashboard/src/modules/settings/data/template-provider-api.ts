@@ -1,4 +1,4 @@
-import { executeExtensionCommand } from "@/shared/extensions/api";
+import { executeExtensionCommandValue } from "@/shared/extensions/api";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
 export interface ProjectTemplateAsset {
@@ -28,14 +28,6 @@ export const templateTypesForProject = (projectId: string) =>
     .filter((type) => type.commands)
     .sort((left, right) => (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id));
 
-const commandValue = async <T>(projectId: string, commandId: string, params: Record<string, unknown>) => {
-  const response = await executeExtensionCommand(projectId, commandId, { params });
-  if (!response.outcome.ok) {
-    throw new Error(response.outcome.error?.message ?? response.outcome.reason ?? `Command failed: ${commandId}`);
-  }
-  return response.outcome.value as T;
-};
-
 export const getProjectTemplateAssets = async (projectId: string) => {
   const types = templateTypesForProject(projectId);
   const summariesByListCommand = new Map<string, Promise<TemplateSummary[]>>();
@@ -45,7 +37,7 @@ export const getProjectTemplateAssets = async (projectId: string) => {
         const commands = type.commands!;
         let summaries = summariesByListCommand.get(commands.list);
         if (!summaries) {
-          summaries = commandValue<TemplateSummary[]>(projectId, commands.list, {});
+          summaries = executeExtensionCommandValue<TemplateSummary[]>(projectId, commands.list, {});
           summariesByListCommand.set(commands.list, summaries);
         }
         return (await summaries)
@@ -69,10 +61,12 @@ export const getProjectTemplateAssets = async (projectId: string) => {
 };
 
 export const getProjectTemplate = (template: ProjectTemplateAsset) =>
-  commandValue<TemplateContent | null>(template.projectId, template.commands.read, { name: template.name });
+  executeExtensionCommandValue<TemplateContent | null>(template.projectId, template.commands.read, {
+    name: template.name,
+  });
 
 export const saveProjectTemplate = (template: ProjectTemplateAsset, content: string) =>
-  commandValue<TemplateContent>(template.projectId, template.commands.save, {
+  executeExtensionCommandValue<TemplateContent>(template.projectId, template.commands.save, {
     name: template.name,
     title: template.title,
     type: template.localType,
@@ -80,4 +74,4 @@ export const saveProjectTemplate = (template: ProjectTemplateAsset, content: str
   });
 
 export const deleteProjectTemplate = (template: ProjectTemplateAsset) =>
-  commandValue(template.projectId, template.commands.delete, { name: template.name });
+  executeExtensionCommandValue(template.projectId, template.commands.delete, { name: template.name });

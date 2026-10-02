@@ -448,6 +448,103 @@ interface SlotInvocationContext<TContext extends Struct = Struct> {
   kind: UiSlotKind;
   context: TContext;
 }
+type ParamType = "text" | "longtext" | "markdown" | "number" | "boolean" | "select" | "multi-select" | "files" | "harness" | "template" | "resource" | "workspace" | "json" | "list";
+type ParamRequired<TRequired extends boolean | undefined> = TRequired extends true ? {
+  required: true;
+} : TRequired extends false ? {
+  required: false;
+} : {
+  required?: boolean;
+};
+type ParamBase<TValue, TRequired extends boolean | undefined = boolean | undefined> = {
+  label?: Localizable<string>;
+  description?: Localizable<string>;
+  defaultValue?: TValue;
+  metadata?: JsonObject;
+  resolvedFrom?: "resource";
+} & ParamRequired<TRequired>;
+type TextParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
+  type: "text";
+};
+type LongTextParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
+  type: "longtext";
+};
+type MarkdownParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
+  type: "markdown";
+  placeholder?: Localizable<string>;
+};
+type NumberParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<number, TRequired> & {
+  type: "number";
+};
+type FilesParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string[], TRequired> & {
+  type: "files";
+  multiple?: boolean;
+  accept?: string;
+};
+type BooleanParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<boolean, TRequired> & {
+  type: "boolean";
+};
+type ParamValueRef = {
+  kind: "param-value";
+  key: string;
+};
+interface ParamOptionSource {
+  command: CommandRef;
+  valueField: string;
+  labelField: string;
+  params?: Record<string, unknown | ParamValueRef>;
+}
+type ParamOption = {
+  label: string;
+  value: string;
+  icon?: string;
+};
+type SelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
+  type: "select";
+  options: ParamOption[] | ParamOptionSource;
+  allowCustomValues?: boolean;
+};
+type MultiSelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string[], TRequired> & {
+  type: "multi-select";
+  options: ParamOption[] | ParamOptionSource;
+  allowCustomValues?: boolean;
+};
+type HarnessParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<{
+  harnessId: string;
+  model?: string;
+  params?: Record<string, string | boolean>;
+}, TRequired> & {
+  type: "harness";
+};
+type TemplateParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
+  type: "template";
+  templateType: string;
+};
+type ResourceParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<ResourceRef, TRequired> & {
+  type: "resource";
+  resourceType: string;
+};
+type WorkspaceParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<{
+  providerId: string;
+  params?: JsonObject;
+}, TRequired> & {
+  type: "workspace";
+  providers?: string[];
+};
+type JsonParam<T = unknown, TRequired extends boolean | undefined = boolean | undefined> = ParamBase<T, TRequired> & {
+  type: "json";
+};
+type ListParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string[], TRequired> & {
+  type: "list";
+};
+type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefined = boolean | undefined> = TextParam<TRequired> | LongTextParam<TRequired> | MarkdownParam<TRequired> | NumberParam<TRequired> | BooleanParam<TRequired> | SelectParam<TRequired> | MultiSelectParam<TRequired> | FilesParam<TRequired> | HarnessParam<TRequired> | TemplateParam<TRequired> | ResourceParam<TRequired> | WorkspaceParam<TRequired> | JsonParam<TValue, TRequired> | ListParam<TRequired>;
+type ParamObjectSchema = Record<string, ParamDescriptor>;
+type ParamValue<TDescriptor extends ParamDescriptor> = TDescriptor extends ParamDescriptor<infer V> ? V : never;
+type RequiredParamKeys<TSchema extends ParamObjectSchema> = { [K in keyof TSchema]: TSchema[K] extends {
+  required: true;
+} ? K : never; }[keyof TSchema];
+type OptionalParamKeys<TSchema extends ParamObjectSchema> = Exclude<keyof TSchema, RequiredParamKeys<TSchema>>;
+type ParamsOf<TSchema extends ParamObjectSchema> = { [K in RequiredParamKeys<TSchema>]: ParamValue<TSchema[K]>; } & { [K in OptionalParamKeys<TSchema>]?: ParamValue<TSchema[K]>; };
 type RendererEventReference = EventRef | `${string}.${string}`;
 interface RendererContributionBase {
   title: Localizable<string>;
@@ -620,103 +717,6 @@ type WebviewHostCapabilityResult<Capability extends WebviewHostCapability, Param
 } ? Exclude<TerminalSessionResult, {
   operation: "open";
 }> : TerminalSessionResult : WebviewHostCapabilityResults[Capability];
-type ParamType = "text" | "longtext" | "markdown" | "number" | "boolean" | "select" | "multi-select" | "files" | "harness" | "template" | "resource" | "workspace" | "json" | "list";
-type ParamRequired<TRequired extends boolean | undefined> = TRequired extends true ? {
-  required: true;
-} : TRequired extends false ? {
-  required: false;
-} : {
-  required?: boolean;
-};
-type ParamBase<TValue, TRequired extends boolean | undefined = boolean | undefined> = {
-  label?: Localizable<string>;
-  description?: Localizable<string>;
-  defaultValue?: TValue;
-  metadata?: JsonObject;
-  resolvedFrom?: "resource";
-} & ParamRequired<TRequired>;
-type TextParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
-  type: "text";
-};
-type LongTextParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
-  type: "longtext";
-};
-type MarkdownParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
-  type: "markdown";
-  placeholder?: Localizable<string>;
-};
-type NumberParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<number, TRequired> & {
-  type: "number";
-};
-type FilesParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string[], TRequired> & {
-  type: "files";
-  multiple?: boolean;
-  accept?: string;
-};
-type BooleanParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<boolean, TRequired> & {
-  type: "boolean";
-};
-type ParamValueRef = {
-  kind: "param-value";
-  key: string;
-};
-interface ParamOptionSource {
-  command: CommandRef;
-  valueField: string;
-  labelField: string;
-  params?: Record<string, unknown | ParamValueRef>;
-}
-type ParamOption = {
-  label: string;
-  value: string;
-  icon?: string;
-};
-type SelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
-  type: "select";
-  options: ParamOption[] | ParamOptionSource;
-  allowCustomValues?: boolean;
-};
-type MultiSelectParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string[], TRequired> & {
-  type: "multi-select";
-  options: ParamOption[] | ParamOptionSource;
-  allowCustomValues?: boolean;
-};
-type HarnessParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<{
-  harnessId: string;
-  model?: string;
-  params?: Record<string, string | boolean>;
-}, TRequired> & {
-  type: "harness";
-};
-type TemplateParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {
-  type: "template";
-  templateType: string;
-};
-type ResourceParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<ResourceRef, TRequired> & {
-  type: "resource";
-  resourceType: string;
-};
-type WorkspaceParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<{
-  providerId: string;
-  params?: JsonObject;
-}, TRequired> & {
-  type: "workspace";
-  providers?: string[];
-};
-type JsonParam<T = unknown, TRequired extends boolean | undefined = boolean | undefined> = ParamBase<T, TRequired> & {
-  type: "json";
-};
-type ListParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string[], TRequired> & {
-  type: "list";
-};
-type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefined = boolean | undefined> = TextParam<TRequired> | LongTextParam<TRequired> | MarkdownParam<TRequired> | NumberParam<TRequired> | BooleanParam<TRequired> | SelectParam<TRequired> | MultiSelectParam<TRequired> | FilesParam<TRequired> | HarnessParam<TRequired> | TemplateParam<TRequired> | ResourceParam<TRequired> | WorkspaceParam<TRequired> | JsonParam<TValue, TRequired> | ListParam<TRequired>;
-type ParamObjectSchema = Record<string, ParamDescriptor>;
-type ParamValue<TDescriptor extends ParamDescriptor> = TDescriptor extends ParamDescriptor<infer V> ? V : never;
-type RequiredParamKeys<TSchema extends ParamObjectSchema> = { [K in keyof TSchema]: TSchema[K] extends {
-  required: true;
-} ? K : never; }[keyof TSchema];
-type OptionalParamKeys<TSchema extends ParamObjectSchema> = Exclude<keyof TSchema, RequiredParamKeys<TSchema>>;
-type ParamsOf<TSchema extends ParamObjectSchema> = { [K in RequiredParamKeys<TSchema>]: ParamValue<TSchema[K]>; } & { [K in OptionalParamKeys<TSchema>]?: ParamValue<TSchema[K]>; };
 interface ViewToolbarAction<TParams extends Struct = Struct> {
   id: string;
   label: Localizable<string>;
@@ -982,6 +982,7 @@ type ExtensionSettingProperty<TType extends ExtensionSettingValueType = Extensio
   scope: ExtensionSettingScope;
   default?: ExtensionSettingValueForType<TSettingType>;
   enum?: ExtensionSettingValueForType<TSettingType>[];
+  options?: TSettingType extends "string" ? ParamOptionSource : never;
   title?: Localizable<string>;
   description?: Localizable<string>;
 }; }[TType];
@@ -1836,7 +1837,7 @@ interface StatusBarItemContribution extends ContributionDefinition<"status-bar-i
   readonly order?: number;
   readonly when?: WhenExpression;
 }
-export declare const EXTENSION_API_VERSION = "0.1.1";
+export declare const EXTENSION_API_VERSION = "0.1.2";
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema ? ParamsOf<TSchema> : Record<string, never>;
 interface WorkspaceProviderRef {
   version: number;

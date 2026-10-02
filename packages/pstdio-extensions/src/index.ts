@@ -73,6 +73,7 @@ export {
   type ScopeDisposer,
   type ScopedHostApis,
   toCommandPaletteContributions,
+  toSettingDefinitionRecord,
   validateCommandParams,
 } from "./runtime";
 export { collectConventionDiagnostics } from "./runtime/conventions";

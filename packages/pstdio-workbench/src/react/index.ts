@@ -1,5 +1,7 @@
 export type { WorkbenchPanelRenderInput } from "../core";
 export { WorkbenchBreadcrumbView } from "./breadcrumb/breadcrumb-view";
+export type { CommandOptionState, ExecuteOptionCommand } from "./command-palette/command-option-resolver";
+export { CommandOptionStatus } from "./command-palette/command-option-status";
 export { WorkbenchCommandPalette } from "./command-palette/command-palette";
 export type {
   CommandFilesParamValue,
@@ -19,6 +21,7 @@ export type {
   CommandParamFieldProps,
   CommandParamFieldRenderer,
 } from "./command-palette/command-params-dialog";
+export { useCommandOptions } from "./command-palette/use-command-options";
 export { WorkbenchFocusRegion } from "./focus/focus-region";
 export { WorkbenchHeaderActions } from "./header/header-actions";
 export type { WorkbenchHotkeyRegistration } from "./keybindings/workbench-keybinding-dispatcher";

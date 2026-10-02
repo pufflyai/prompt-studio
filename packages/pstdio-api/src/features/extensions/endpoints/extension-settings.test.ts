@@ -36,8 +36,15 @@ const writeSettingsExtension = (root: string) => {
   writeFileSync(
     join(extensionRoot, "extension.ts"),
     `export default {
+      commands: [{ id: "branches", title: "Branches", ref: { kind: "command", id: "branches" }, run: async () => [] }],
       settings: {
         properties: {
+          "target.branch": {
+            type: "string",
+            scope: "project",
+            default: "",
+            options: { command: { kind: "command", id: "branches" }, valueField: "branch", labelField: "branch" },
+          },
           "counter.step": { type: "number", scope: "project", default: 1 },
           "counter.enabled": { type: "boolean", scope: "project", default: true },
           "greeting.tone": {
@@ -167,6 +174,20 @@ describe("extension settings endpoints", () => {
     expect(globalBody.settings).toEqual([
       expect.objectContaining({ key: "greeting.tone", value: "formal", source: "stored" }),
     ]);
+  });
+
+  test("lists the full command id that loads a setting's choices", async () => {
+    const list = await app.request(`/v1/projects/${projectId}/extensions/${instanceId}/settings`);
+    expect((await list.json()).settings).toContainEqual(
+      expect.objectContaining({
+        key: "target.branch",
+        options: {
+          commandId: "pstdio.settings-lab.command.branches",
+          valueField: "branch",
+          labelField: "branch",
+        },
+      }),
+    );
   });
 
   test("rejects unknown keys, invalid values, and scope mismatches", async () => {
