@@ -1,5 +1,18 @@
 # @pstdio/sdk
 
+## 0.40.0
+
+_2026-10-02_
+
+### Minor Changes
+
+- ff2a1b5: Give harnesses a host question channel, so a session that is waiting for the person shows the waiting state instead of looking finished.
+- d717a51: Add correlated question responses and optional live harness replies.
+
+### Patch Changes
+
+- 76c5326: Add scoped harness worker cleanup on extension reload, disablement, and host shutdown, through the new optional `HarnessProvider.dispose` callback in extension API 0.1.1.
+
 ## 0.39.0
 
 _2026-09-30_
