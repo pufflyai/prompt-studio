@@ -5,6 +5,7 @@ import type {
   ViewFilterGroup,
   ViewSort,
 } from "../extension-kernel/types";
+import { DEFAULT_DATA_TABLE_SETTINGS } from "../extension-kernel/types/data-table-renderer";
 import { EMPTY_VIEW_FILTER } from "./collection-view";
 
 export type KanbanViewSettings = Omit<KanbanRendererViewSettings, "ordering">;
@@ -14,15 +15,6 @@ export const DEFAULT_KANBAN_VIEW_SETTINGS: KanbanViewSettings = {
   columnGrouping: "none",
   rowGrouping: "none",
   displayProperties: [],
-};
-
-export const DEFAULT_DATA_TABLE_SETTINGS: DataTableRendererSettings = {
-  grouping: "none",
-  rowNumbers: true,
-  wrapRows: false,
-  showStats: true,
-  hiddenColumns: [],
-  columnOrder: [],
 };
 
 interface DeclaredView<TSettings> {

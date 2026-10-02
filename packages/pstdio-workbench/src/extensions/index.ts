@@ -17,7 +17,10 @@ export {
   registerWorkbenchExtensionControlsRenderers,
   type WorkbenchExtensionControlsAdapter,
 } from "./contributions/controls-renderer-contributions";
-export { registerWorkbenchExtensionDataTableRenderers } from "./contributions/data-table-renderer-contributions";
+export {
+  registerWorkbenchExtensionDataTableRenderers,
+  type WorkbenchExtensionDataTableRendererAdapter,
+} from "./contributions/data-table-renderer-contributions";
 export {
   buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,

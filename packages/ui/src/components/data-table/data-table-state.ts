@@ -1,9 +1,4 @@
-import type {
-  AttributeDescriptor,
-  KanbanRendererFilterState,
-  KanbanRendererRow,
-} from "@/components/kanban-renderer/types";
-import { filterRows } from "../kanban-renderer/kanban-renderer-grouping";
+import type { AttributeDescriptor, KanbanRendererRow } from "@/components/kanban-renderer/types";
 import { resolveDataTableComparableValue } from "./data-table-cell-value";
 import type { DataTableProps, DataTableSelectionAction, RowData } from "./types";
 
@@ -67,27 +62,33 @@ const isNumberColumn = (rows: RowData[], columnKey: string, renderers?: ColumnRe
   return values.length > 0 && values.every((value) => typeof value === "number");
 };
 
+type ColumnOptions = Pick<DataTableProps, "compactHeaders" | "columnRenderers" | "columnTypes" | "groupableColumns">;
+
 const resolveAttributeType = (
   rows: RowData[],
   columnKey: string,
-  renderers?: ColumnRenderers,
+  options: ColumnOptions,
 ): AttributeDescriptor["type"] => {
-  if (isNumberColumn(rows, columnKey, renderers)) return { kind: "number" };
+  const declared = options.columnTypes?.[columnKey];
+  if (declared) return { kind: declared };
+  if (options.columnRenderers?.[columnKey]?.type === "date") return { kind: "date" };
+  if (isNumberColumn(rows, columnKey, options.columnRenderers)) return { kind: "number" };
   return { kind: "string" };
 };
 
+/** Every column is a view field, so filters, sorts, and grouping read them like board attributes. */
 export const buildDataTableRendererAttributes = (
   rows: RowData[],
   columnKeys: string[],
-  compactHeaders?: Partial<Record<string, string>>,
-  renderers?: ColumnRenderers,
+  options: ColumnOptions = {},
 ): AttributeDescriptor[] =>
   columnKeys.map((columnKey) => ({
     id: columnKey,
-    label: compactHeaders?.[columnKey] ?? columnKey,
-    type: resolveAttributeType(rows, columnKey, renderers),
+    label: options.compactHeaders?.[columnKey] ?? columnKey,
+    type: resolveAttributeType(rows, columnKey, options),
     filterable: true,
     sortable: true,
+    groupable: options.groupableColumns?.includes(columnKey) ?? false,
     displayable: true,
   }));
 
@@ -112,12 +113,6 @@ export const buildDataTableRendererRows = (
     };
   });
 
-export const filterDataTableRows = (
-  rows: DataTableRendererRow[],
-  filters: KanbanRendererFilterState,
-  attributes: AttributeDescriptor[],
-) => filterRows(rows, filters, attributes) as DataTableRendererRow[];
-
 export const resolveDataTableColumnOrder = (availableColumnIds: string[], requestedColumnOrder: string[]) => {
   const availableColumnIdSet = new Set(availableColumnIds);
   const orderedColumnIds = requestedColumnOrder.filter((columnId) => availableColumnIdSet.has(columnId));
@@ -127,11 +122,14 @@ export const resolveDataTableColumnOrder = (availableColumnIds: string[], reques
   return [...orderedColumnIds, ...missingColumnIds];
 };
 
-export const toggleHiddenDataTableColumn = (hiddenColumnIds: Set<string>, columnId: string, visible: boolean) => {
-  const next = new Set(hiddenColumnIds);
-  if (visible) next.delete(columnId);
-  else next.add(columnId);
-  return next;
+export const toggleHiddenDataTableColumn = (hiddenColumnIds: string[], columnId: string, visible: boolean) =>
+  visible ? hiddenColumnIds.filter((id) => id !== columnId) : [...new Set([...hiddenColumnIds, columnId])];
+
+/** The text a cell shows, which is all that search looks at. */
+export const dataTableCellText = (value: unknown) => {
+  if (typeof value === "string") return [value];
+  if (typeof value === "number" || typeof value === "boolean") return [String(value)];
+  return [];
 };
 
 export const reorderDataTableColumns = (columnIds: string[], activeColumnId: string, overColumnId: string) => {

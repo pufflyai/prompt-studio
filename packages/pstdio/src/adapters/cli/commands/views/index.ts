@@ -6,7 +6,7 @@ import { ensureApi } from "@/features/ensure-api";
 import { buildViewInput, type ViewFlags } from "./view-input";
 
 export const command = "views [command]";
-export const describe = "Manage shared project board views";
+export const describe = "Manage shared project board and data table views";
 export const middlewares = [() => ensureApi(process.env.PSTDIO_API_URL)];
 interface Args extends ViewFlags {
   "project-id"?: string;
@@ -29,12 +29,17 @@ const id = (yargs: Argv) => base(yargs).option("id", { type: "string", demandOpt
 const edit = (yargs: Argv) =>
   yargs
     .option("title", { type: "string" })
-    .option("filter", { type: "array", string: true })
+    .option("filter", { type: "array", string: true, describe: '"<field> <condition> [value]", repeat to add rules' })
+    .option("filter-json", { type: "string", describe: "A full filter group as JSON" })
+    .option("sort", { type: "array", string: true, describe: "<field>:asc|desc, repeat in priority order" })
+    .option("show", { type: "string", describe: "Card properties, or visible table columns in order" })
     .option("mode", { type: "string", choices: ["board", "list"] })
     .option("columns", { type: "string" })
     .option("rows", { type: "string" })
-    .option("sort", { type: "string" })
-    .option("show", { type: "string" });
+    .option("group", { type: "string", describe: "Table grouping column, or none" })
+    .option("row-numbers", { type: "string", choices: ["show", "hide"] })
+    .option("wrap-rows", { type: "string", choices: ["on", "off"] })
+    .option("stats", { type: "string", choices: ["on", "off"] });
 const run =
   (fn: (api: ReturnType<typeof createClient>["views"], projectId: string, args: Args) => Promise<unknown>) =>
   async (raw: unknown) => {
@@ -49,7 +54,7 @@ export const builder = (yargs: Argv) => {
   return yargs
     .command({
       command: "boards",
-      describe: "List boards and resolved fields",
+      describe: "List boards and data tables with their fields and filter conditions",
       builder: base,
       handler: run((api, p) => api.boards(p)),
     })
@@ -68,8 +73,8 @@ export const builder = (yargs: Argv) => {
       builder: (y) =>
         edit(board(y)).option("title", { type: "string", demandOption: true }).option("copy-from", { type: "string" }),
       handler: run(async (api, p, a) => {
-        const { fields } = await api.board(p, a.board!);
-        return api.create(p, a.board!, { ...buildViewInput(a, fields), title: a.title!, copyFrom: a["copy-from"] });
+        const board = await api.board(p, a.board!);
+        return api.create(p, a.board!, { ...buildViewInput(a, board), title: a.title!, copyFrom: a["copy-from"] });
       }),
     })
     .command({
@@ -79,7 +84,7 @@ export const builder = (yargs: Argv) => {
       handler: run(async (api, p, a) => {
         const view = await api.get(p, a.id!);
         const board = await api.board(p, view.boardId);
-        return api.update(p, a.id!, buildViewInput(a, board.fields));
+        return api.update(p, a.id!, buildViewInput(a, board));
       }),
     })
     .command({

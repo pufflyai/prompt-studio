@@ -1,4 +1,5 @@
 import { Icon as ChakraIcon, Flex, IconButton, Menu, Portal, Table, Text } from "@chakra-ui/react";
+import type { ViewSortDirection } from "@pstdio/sdk/extensions";
 import {
   type Cell,
   flexRender,
@@ -7,7 +8,7 @@ import {
   type Row,
   type Table as TanStackTable,
 } from "@tanstack/react-table";
-import { ArrowDownAZ, ArrowUpAZ, MoreVertical } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronsUpDown, EyeOff, ListFilter } from "lucide-react";
 import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { ListRow } from "../list-row/list-row";
@@ -16,11 +17,14 @@ import type { DataTableCellContext, DataTableProps, RowData } from "./types";
 
 const utilityColumnIds = new Set(["rowIndex", "rowSelection", "rowActions"]);
 
-const getSortMenuIcon = (sortDirection: false | "asc" | "desc") => {
-  if (sortDirection === "asc") return ArrowUpAZ;
-  if (sortDirection === "desc") return ArrowDownAZ;
-  return MoreVertical;
-};
+/** The header field menu is a shortcut into the view: it never keeps a sort or filter of its own. */
+export interface DataTableFieldMenu {
+  sortFor: (columnId: string) => { direction: ViewSortDirection; level: number } | undefined;
+  sortLevels: number;
+  onSort: (columnId: string, direction: ViewSortDirection) => void;
+  onFilterBy: (columnId: string) => void;
+  onHide: (columnId: string) => void;
+}
 
 interface DataTableColumnHeaderProps {
   header: Header<RowData, unknown>;
@@ -28,21 +32,45 @@ interface DataTableColumnHeaderProps {
   table: TanStackTable<RowData>;
   fullWidth?: boolean;
   hasDescription?: boolean;
+  fieldMenu?: DataTableFieldMenu;
 }
 
+const sortIcon = (direction: ViewSortDirection | undefined) => {
+  if (direction === "asc") return ArrowUpNarrowWide;
+  if (direction === "desc") return ArrowDownWideNarrow;
+  return ChevronsUpDown;
+};
+
+interface FieldMenuItemProps {
+  value: string;
+  label: string;
+  icon: typeof ListFilter;
+  onActivate: () => void;
+}
+
+const FieldMenuItem = (props: FieldMenuItemProps) => (
+  <Menu.Item value={props.value} asChild>
+    <ListRow
+      asChild
+      variant="full-width"
+      label={props.label}
+      icon={<ChakraIcon as={props.icon} boxSize="16px" />}
+      onActivate={props.onActivate}
+    />
+  </Menu.Item>
+);
+
 export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
-  const { header, headerGroup, table, fullWidth, hasDescription } = props;
-  const sortDirection = header.column.getIsSorted();
-  const canSortColumn = !utilityColumnIds.has(header.column.id) && table.getCoreRowModel().rows.length > 1;
-  const SortIcon = getSortMenuIcon(sortDirection);
+  const { header, headerGroup, fullWidth, hasDescription, fieldMenu } = props;
+  const columnId = header.column.id;
+  const sort = fieldMenu?.sortFor(columnId);
+  const showsFieldMenu = Boolean(fieldMenu) && !utilityColumnIds.has(columnId);
   const tooltipContent =
-    header.column.id === "rowSelection"
-      ? "Select all"
-      : flexRender(header.column.columnDef.header, header.getContext());
+    columnId === "rowSelection" ? "Select all" : flexRender(header.column.columnDef.header, header.getContext());
 
   return (
     <Table.ColumnHeader
-      data-column-id={header.column.id}
+      data-column-id={columnId}
       textTransform="none"
       borderRight="1px solid"
       _last={{ borderRight: "none" }}
@@ -66,58 +94,59 @@ export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
           <Text as="div" textStyle="label/S/medium" lineHeight="1.2" truncate>
             {flexRender(header.column.columnDef.header, header.getContext())}
           </Text>
-          {canSortColumn && (
+          {showsFieldMenu && fieldMenu ? (
             <Menu.Root>
               <Menu.Trigger asChild>
                 <IconButton
                   ml="2px"
                   size="2xs"
-                  aria-label={sortDirection ? `Sorted ${sortDirection}` : "Sort column"}
+                  minW="auto"
+                  paddingX="2xs"
+                  aria-label={sort ? `Sorted ${sort.direction}` : "Column options"}
                   variant="ghost"
-                  visibility={sortDirection ? "visible" : "hidden"}
-                  _groupHover={{ visibility: "visible" }}
+                  color={sort ? "fg" : "fg.subtle"}
                 >
-                  <ChakraIcon as={SortIcon} boxSize="14px" />
+                  <ChakraIcon as={sortIcon(sort?.direction)} boxSize="14px" />
+                  {sort && fieldMenu.sortLevels > 1 ? (
+                    <Text as="span" textStyle="label/XS" color="fg.muted">
+                      {sort.level}
+                    </Text>
+                  ) : null}
                 </IconButton>
               </Menu.Trigger>
               <Portal>
                 <Menu.Positioner>
                   <Menu.Content zIndex="popover" bg="bg">
-                    <Menu.Item value="sort-asc" asChild>
-                      <ListRow
-                        asChild
-                        variant="full-width"
-                        label="Sort ascending"
-                        icon={<ChakraIcon as={ArrowUpAZ} boxSize="16px" />}
-                        disabled={sortDirection === "asc"}
-                        onActivate={() => header.column.toggleSorting(false)}
-                      />
-                    </Menu.Item>
-                    <Menu.Item value="sort-desc" asChild>
-                      <ListRow
-                        asChild
-                        variant="full-width"
-                        label="Sort descending"
-                        icon={<ChakraIcon as={ArrowDownAZ} boxSize="16px" />}
-                        disabled={sortDirection === "desc"}
-                        onActivate={() => header.column.toggleSorting(true)}
-                      />
-                    </Menu.Item>
-                    {sortDirection && (
-                      <Menu.Item value="clear-sort" asChild>
-                        <ListRow
-                          asChild
-                          variant="full-width"
-                          label="Clear sort"
-                          onActivate={() => header.column.clearSorting()}
-                        />
-                      </Menu.Item>
-                    )}
+                    <FieldMenuItem
+                      value="sort-asc"
+                      label="Sort ascending"
+                      icon={ArrowUpNarrowWide}
+                      onActivate={() => fieldMenu.onSort(columnId, "asc")}
+                    />
+                    <FieldMenuItem
+                      value="sort-desc"
+                      label="Sort descending"
+                      icon={ArrowDownWideNarrow}
+                      onActivate={() => fieldMenu.onSort(columnId, "desc")}
+                    />
+                    <Menu.Separator />
+                    <FieldMenuItem
+                      value="filter"
+                      label="Filter by this field"
+                      icon={ListFilter}
+                      onActivate={() => fieldMenu.onFilterBy(columnId)}
+                    />
+                    <FieldMenuItem
+                      value="hide"
+                      label="Hide column"
+                      icon={EyeOff}
+                      onActivate={() => fieldMenu.onHide(columnId)}
+                    />
                   </Menu.Content>
                 </Menu.Positioner>
               </Portal>
             </Menu.Root>
-          )}
+          ) : null}
           {header.column.getCanResize() && (
             <span
               {...{

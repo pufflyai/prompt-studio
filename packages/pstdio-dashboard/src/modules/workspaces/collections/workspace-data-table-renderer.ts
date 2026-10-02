@@ -11,6 +11,7 @@ const workspaceColumns: DataTableRendererColumn[] = [
   {
     id: "type",
     label: "Type",
+    groupable: true,
     stat: { type: "top-values", limit: 3 },
     renderer: {
       type: "badge",
@@ -24,14 +25,19 @@ const workspaceColumns: DataTableRendererColumn[] = [
   { id: "location", label: "Location", stat: { type: "unique" }, renderer: { type: "path" } },
   { id: "created", label: "Created at", renderer: { type: "date" } },
   { id: "diff", label: "Diff", renderer: { type: "diff" } },
-  // Diagnostic fields stay available from the column menu without crowding the default list.
-  { id: "attempt", label: "Attempt", defaultHidden: true, stat: { type: "unique" } },
-  { id: "provider", label: "Provider", defaultHidden: true, stat: { type: "top-values", limit: 5 } },
-  { id: "state", label: "State", defaultHidden: true, stat: { type: "top-values", limit: 2 } },
-  { id: "error", label: "Provider error", defaultHidden: true, stat: { type: "unique" } },
-  { id: "branch", label: "Branch", defaultHidden: true, stat: { type: "unique" } },
-  { id: "updated", label: "Updated at", defaultHidden: true, renderer: { type: "date" } },
+  { id: "attempt", label: "Attempt", stat: { type: "unique" } },
+  { id: "provider", label: "Provider", stat: { type: "top-values", limit: 5 } },
+  { id: "state", label: "State", groupable: true, stat: { type: "top-values", limit: 2 } },
+  { id: "error", label: "Provider error", stat: { type: "unique" } },
+  { id: "branch", label: "Branch", stat: { type: "unique" } },
+  { id: "updated", label: "Updated at", renderer: { type: "date" } },
 ];
+
+// Diagnostic fields stay available from the Display menu without crowding the default list.
+const defaultSettings = {
+  showStats: false,
+  hiddenColumns: ["attempt", "provider", "state", "error", "branch", "updated"],
+};
 
 const executeWorkspaceQuery = async (ctx: WorkbenchModuleContext, signal: AbortSignal) => {
   const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx), { includeArchived: true });
@@ -53,7 +59,7 @@ export const registerWorkspaceDataTableView = (ctx: WorkbenchModuleContext) => {
         kind: "dataTable",
         resourceKind: "workspace",
         columns: workspaceColumns,
-        defaultShowStats: false,
+        defaultSettings,
         emptyTitle: "No workspaces yet",
         emptyDescription: "Create a workspace to start an isolated attempt for this project.",
         contextKeys: [dashboardSelectedProjectIdContextKey],

@@ -1,6 +1,7 @@
 import { Box, HStack, Icon, Text, Wrap } from "@chakra-ui/react";
 import { type ComponentType, type DragEvent, type ReactNode, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
+import { HighlightedText } from "../collection-view/highlighted-text";
 import { ListRow } from "../list-row/list-row";
 import type { ListRowItem } from "../list-row/list-row.types";
 import { KanbanRendererAttributeBadge } from "./kanban-renderer-attribute-badge";
@@ -10,6 +11,8 @@ export interface KanbanRendererListItem {
   id: string;
   eyebrow?: string;
   title: string;
+  /** Search text to mark in the title and eyebrow. */
+  highlight?: string;
   isGroup?: boolean;
   countBadge?: number;
   countColorPalette?: string;
@@ -118,11 +121,11 @@ const renderLabel = (item: KanbanRendererListItem, isGroup: boolean) => {
     <HStack gap="compact" minW="0" maxW="full" flex="1">
       {item.eyebrow ? (
         <Text data-testid="list-row-eyebrow" flexShrink={0} textStyle="mono/XS" color="fg.muted" truncate>
-          {item.eyebrow}
+          <HighlightedText text={item.eyebrow} query={item.highlight ?? ""} />
         </Text>
       ) : null}
       <Text textStyle="paragraph/S/regular" minW="0" truncate>
-        {item.title}
+        <HighlightedText text={item.title} query={item.highlight ?? ""} />
       </Text>
     </HStack>
   );

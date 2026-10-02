@@ -16,10 +16,10 @@ const queryState: KanbanRendererQueryState = {
     viewMode: "board",
     columnGrouping: "status",
     rowGrouping: "none",
-    ordering: { attributeId: "manual", direction: "asc" },
     displayProperties: [],
   },
-  filters: {},
+  filter: { conjunction: "and", rules: [] },
+  sorts: [],
 };
 
 describe("registerWorkbenchExtensionKanbanRenderers", () => {
@@ -35,11 +35,12 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
           id: "all",
           title: "All tickets",
           settings: queryState.settings,
-          filters: {},
+          filter: queryState.filter,
+          sorts: [{ attributeId: "updated", direction: "desc" }],
         },
       ],
       defaultActiveViewId: "all",
-    } as WorkbenchExtensionKanbanRendererRecord;
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
 
     registerWorkbenchExtensionKanbanRenderers({ projectId: "project-1", workbench, executeCommand: async () => [] }, [
       record,
@@ -47,15 +48,53 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
 
     const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets");
 
-    expect(renderer?.defaultViews).toEqual([
+    expect(renderer?.defaultViews).toMatchObject([
       {
         id: "all",
         title: "All tickets",
         settings: queryState.settings,
-        filters: {},
+        filter: queryState.filter,
+        sorts: [{ attributeId: "updated", direction: "desc" }],
       },
     ]);
     expect(renderer?.defaultActiveViewId).toBe("all");
+  });
+
+  test("sends the view to the query, with the deprecated filters and ordering derived from it", async () => {
+    const workbench = createWorkbench();
+    const params: unknown[] = [];
+    registerWorkbenchExtensionKanbanRenderers(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: async (_commandId, request) => {
+          params.push(request.params);
+          return { rows: [] };
+        },
+      },
+      [{ id: "tickets", extensionId: "pstdio.pstdio-planner", title: "Tickets", queryHandlerId: "query" }],
+    );
+    const filter = {
+      conjunction: "and" as const,
+      rules: [
+        { attributeId: "archived", condition: "is-any-of" as const, value: ["active"] },
+        { attributeId: "status", condition: "is-none-of" as const, value: ["done"] },
+      ],
+    };
+
+    await getWorkbenchRenderers(workbench)
+      .getKanbanRenderer("tickets")
+      ?.executeQuery(
+        { ...queryState, filter, sorts: [{ attributeId: "updated", direction: "desc" }] },
+        new AbortController().signal,
+      );
+
+    expect(params[0]).toMatchObject({
+      filter,
+      sorts: [{ attributeId: "updated", direction: "desc" }],
+      filters: { archived: ["active"] },
+      settings: { columnGrouping: "status", ordering: { attributeId: "updated", direction: "desc" } },
+    });
   });
 
   test("maps extension board column action icons into column actions", async () => {

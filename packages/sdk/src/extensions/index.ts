@@ -27,6 +27,7 @@ export type {
 } from "pstdio-api-contracts/extension-kernel";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
+  DEFAULT_DATA_TABLE_SETTINGS,
   defineSlot,
   dockedWorkbenchRegions,
   EXTENSION_API_VERSION,

@@ -1,0 +1,4 @@
+ALTER TABLE "board_views" ADD COLUMN "filter" jsonb DEFAULT '{"conjunction":"and","rules":[]}'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "board_views" ADD COLUMN "sorts" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
+UPDATE "board_views" SET "filter" = jsonb_build_object('conjunction', 'and', 'rules', COALESCE((SELECT jsonb_agg(jsonb_build_object('attributeId', "entry"."key", 'condition', 'is-any-of', 'value', "entry"."value") ORDER BY "entry"."key") FROM jsonb_each("board_views"."filters") AS "entry" WHERE jsonb_array_length("entry"."value") > 0), '[]'::jsonb)), "sorts" = CASE WHEN COALESCE("settings" -> 'ordering' ->> 'attributeId', 'manual') = 'manual' THEN '[]'::jsonb ELSE jsonb_build_array(jsonb_build_object('attributeId', "settings" -> 'ordering' ->> 'attributeId', 'direction', "settings" -> 'ordering' ->> 'direction')) END, "settings" = "settings" - 'ordering';--> statement-breakpoint
+ALTER TABLE "board_views" DROP COLUMN "filters";

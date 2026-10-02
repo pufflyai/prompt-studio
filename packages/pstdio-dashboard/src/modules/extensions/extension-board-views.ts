@@ -1,7 +1,11 @@
 import type { BoardView, BoardViews } from "@pstdio/sdk/api";
-import { DEFAULT_KANBAN_RENDERER_SETTINGS } from "@pstdio/ui/kanban-renderer";
-import type { KanbanRendererViewsProvider, KanbanRendererViewsSource } from "@pstdio/workbench";
-import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/extensions";
+import type { DataTableRendererSettings, Localizable } from "@pstdio/sdk/extensions";
+import type { CollectionViewsProvider, CollectionViewsSource, KanbanRendererSettings } from "@pstdio/workbench";
+import type {
+  WorkbenchExtensionDataTableRendererAdapter,
+  WorkbenchExtensionKanbanRendererAdapter,
+} from "@pstdio/workbench/extensions";
+import { dataTableBuiltInViews, kanbanBuiltInViews } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
 import {
   getCollectionsVersion,
@@ -19,42 +23,48 @@ import {
 } from "@/shared/extensions/extension-webview-broadcast";
 
 type BoardRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["createViewsProvider"]>>[0];
-export const createSharedBoardViews = (
-  projectId: string,
-  record: BoardRecord,
-  metadata: ResolvedWorkbenchExtensionMetadata,
-): KanbanRendererViewsProvider => {
+type TableRecord = Parameters<NonNullable<WorkbenchExtensionDataTableRendererAdapter["createViewsProvider"]>>[0];
+
+interface SharedViewsInput<TSettings> {
+  projectId: string;
+  record: {
+    id: string;
+    extensionId: string;
+    defaultActiveViewId?: string;
+    defaultViews?: { id: string; isDefault?: boolean }[];
+    refreshEventIds?: string[];
+  };
+  metadata: ResolvedWorkbenchExtensionMetadata;
+  builtIns: (Omit<CollectionViewsSource<TSettings>["views"][number], "title"> & { title: Localizable<string> })[];
+}
+
+/** Saved views for one board or table: its built-in views, then the project's shared views from sync. */
+const createSharedViews = <TSettings>(input: SharedViewsInput<TSettings>): CollectionViewsProvider<TSettings> => {
+  const { projectId, record, metadata } = input;
   const instanceId = metadata.extensions.find((extension) => extension.id === record.extensionId)?.extensionInstanceId;
   const localId = metadata.views.find((view) => view.id === record.id)?.localId;
   const path = `/v1/projects/${encodeURIComponent(projectId)}/boards/${encodeURIComponent(record.id)}/views`;
   const viewPath = (id: string) =>
     `/v1/projects/${encodeURIComponent(projectId)}/board-views/${encodeURIComponent(id)}`;
-  const statusFields = record.attributes?.filter((field) => field.type.kind === "status") ?? [];
-  const settings = {
-    ...DEFAULT_KANBAN_RENDERER_SETTINGS,
-    ...(statusFields.length === 1 ? { columnGrouping: statusFields[0].id } : {}),
-    ...record.defaultSettings,
-  };
-  const builtIns = (
-    record.defaultViews?.length
-      ? record.defaultViews
-      : [{ id: "default", title: "All", settings, filters: record.defaultFilters ?? {} }]
-  ).map((view) => ({ ...view, title: resolveLocalizableString(view.title, record.extensionId), builtIn: true }));
-  let cached: KanbanRendererViewsSource | undefined;
+  const builtIns = input.builtIns.map((view) => ({
+    ...view,
+    title: resolveLocalizableString(view.title, record.extensionId),
+  }));
+  let cached: CollectionViewsSource<TSettings> | undefined;
   let version = -1;
   const matches = (row: Record<string, unknown>) =>
     row.extension_instance_id === instanceId && row.board_id === localId;
-  const actions = {
-    onCreateView: async (input: Parameters<KanbanRendererViewsSource["onCreateView"]>[0]) => {
-      return await apiRequest<BoardView>(path, { method: "POST", body: input });
+  const actions: Omit<CollectionViewsSource<TSettings>, "views" | "defaultViewId"> = {
+    // The views API returns the settings of the board or table it was asked about.
+    onCreateView: async (body) =>
+      (await apiRequest<BoardView>(path, { method: "POST", body })) as BoardView & { settings: TSettings },
+    onUpdateView: async (id, body) => {
+      await apiRequest(viewPath(id), { method: "PATCH", body });
     },
-    onUpdateView: async (id: string, input: Parameters<KanbanRendererViewsSource["onUpdateView"]>[1]) => {
-      await apiRequest(viewPath(id), { method: "PATCH", body: input });
-    },
-    onDeleteView: async (id: string) => {
+    onDeleteView: async (id) => {
       await apiRequest(viewPath(id), { method: "DELETE" });
     },
-    onSetDefaultView: async (viewId: string | null) => {
+    onSetDefaultView: async (viewId) => {
       await apiRequest(`${path}/default`, { method: "PUT", body: { viewId } });
     },
   };
@@ -74,8 +84,9 @@ export const createSharedBoardViews = (
       const saved = rows.map((row) => ({
         id: row.id,
         title: String(row.title),
-        settings: row.settings as KanbanRendererViewsSource["views"][number]["settings"],
-        filters: row.filters as Record<string, string[]>,
+        settings: row.settings as TSettings,
+        filter: row.filter as BoardView["filter"],
+        sorts: row.sorts as BoardView["sorts"],
         builtIn: false,
       }));
       const views = [...builtIns, ...saved];
@@ -84,7 +95,7 @@ export const createSharedBoardViews = (
         chosen,
         record.defaultActiveViewId,
         record.defaultViews?.find((view) => view.isDefault)?.id,
-        views[0].id,
+        views[0]?.id,
       ].find((id) => views.some((view) => view.id === id)) as string;
       version = current;
       cached = { views, defaultViewId, ...actions };
@@ -113,3 +124,27 @@ export const createSharedBoardViews = (
     },
   };
 };
+
+export const createSharedBoardViews = (
+  projectId: string,
+  record: BoardRecord,
+  metadata: ResolvedWorkbenchExtensionMetadata,
+) =>
+  createSharedViews<KanbanRendererSettings>({
+    projectId,
+    record,
+    metadata,
+    builtIns: kanbanBuiltInViews(record).views,
+  });
+
+export const createSharedTableViews = (
+  projectId: string,
+  record: TableRecord,
+  metadata: ResolvedWorkbenchExtensionMetadata,
+) =>
+  createSharedViews<DataTableRendererSettings>({
+    projectId,
+    record,
+    metadata,
+    builtIns: dataTableBuiltInViews(record).views,
+  });

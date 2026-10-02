@@ -8,7 +8,7 @@ export type * from "./contribution-identity";
 export type * from "./contributions";
 export type * from "./control-declarations";
 export type * from "./controls";
-export type * from "./data-table-renderer";
+export * from "./data-table-renderer";
 export type * from "./events";
 export type * from "./extension";
 export type * from "./file-renderer";

@@ -5,6 +5,7 @@ import { type CSSProperties, cloneElement, isValidElement, type ReactNode } from
 
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { HighlightedText } from "../collection-view/highlighted-text";
 import { ListRow } from "../list-row/list-row";
 import { CategoricalColorCell, resolveCategoricalColor } from "./categorical-color-cell";
 import { ColorScaleCell, resolveColorScaleValue } from "./color-scale-cell";
@@ -111,10 +112,11 @@ export const RowActionsCell = (props: CellContext<RowData, unknown>) => {
 interface FormattedCellProps {
   value: unknown;
   wrapRows: boolean;
+  search?: string;
 }
 
 const FormattedCell = (props: FormattedCellProps) => {
-  const { value, wrapRows } = props;
+  const { value, wrapRows, search = "" } = props;
   const displayValue = formatDisplayValue(value);
 
   if (isValidElement(displayValue)) {
@@ -141,7 +143,7 @@ const FormattedCell = (props: FormattedCellProps) => {
       textStyle="paragraph/S/regular"
       whiteSpace={wrapRows ? "normal" : "nowrap"}
     >
-      {displayValue}
+      {typeof displayValue === "string" ? <HighlightedText text={displayValue} query={search} /> : displayValue}
     </Text>
   );
 };
@@ -151,10 +153,11 @@ interface DataCellProps {
   renderer?: DataTableColumnRenderer;
   value: unknown;
   wrapRows: boolean;
+  search?: string;
 }
 
 const DataCell = (props: DataCellProps) => {
-  const { columnLabel, renderer, value, wrapRows } = props;
+  const { columnLabel, renderer, value, wrapRows, search } = props;
 
   if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} />;
 
@@ -180,13 +183,13 @@ const DataCell = (props: DataCellProps) => {
     if (color) {
       return (
         <CategoricalColorCell>
-          <FormattedCell value={value} wrapRows={wrapRows} />
+          <FormattedCell value={value} wrapRows={wrapRows} search={search} />
         </CategoricalColorCell>
       );
     }
   }
 
-  return <FormattedCell value={value} wrapRows={wrapRows} />;
+  return <FormattedCell value={value} wrapRows={wrapRows} search={search} />;
 };
 
 export const RowIndexCell = (props: CellContext<RowData, number>) => {
@@ -200,8 +203,10 @@ export const RowIndexCell = (props: CellContext<RowData, number>) => {
 
 export const ColumnDataCell = (props: CellContext<RowData, unknown>) => {
   const { column, getValue } = props;
-  const { renderer, wrapRows = false } = column.columnDef.meta as DataTableColumnMeta;
-  return <DataCell columnLabel={column.id} renderer={renderer} value={getValue()} wrapRows={wrapRows} />;
+  const { renderer, wrapRows = false, search } = column.columnDef.meta as DataTableColumnMeta;
+  return (
+    <DataCell columnLabel={column.id} renderer={renderer} value={getValue()} wrapRows={wrapRows} search={search} />
+  );
 };
 
 export const ColumnHeader = (props: HeaderContext<RowData, unknown>) => {

@@ -1,7 +1,18 @@
-import type { BoardField } from "pstdio-api-contracts";
-import type { KanbanRendererFilterState, KanbanRendererSettings } from "pstdio-api-contracts/extension-kernel";
+import {
+  type BoardField,
+  dataTableRendererSettingsSchema,
+  findViewFilterProblem,
+  findViewSortsProblem,
+  kanbanViewSettingsSchema,
+} from "pstdio-api-contracts";
+import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
 
-type ViewState = { settings: KanbanRendererSettings; filters: KanbanRendererFilterState };
+export type BoardKind = "kanban" | "dataTable";
+export interface ViewDraft {
+  settings: object;
+  filter: ViewFilterGroup;
+  sorts: ViewSort[];
+}
 export class BoardViewError extends Error {
   constructor(
     message: string,
@@ -10,57 +21,42 @@ export class BoardViewError extends Error {
     super(message);
   }
 }
-const idsFor = (fields: BoardField[], flag: "groupable" | "sortable" | "displayable" | "filterable") =>
+export const idsFor = (fields: BoardField[], flag: "groupable" | "displayable") =>
   fields.filter((field) => field[flag]).map((field) => field.id);
-export const validateBoardView = (view: ViewState, fields: BoardField[]) => {
-  const valid = (value: string, flag: Parameters<typeof idsFor>[1], special: string[] = []) => {
-    const ids = [...special, ...idsFor(fields, flag)];
-    if (!ids.includes(value))
-      throw new BoardViewError(`Invalid ${flag} field "${value}". Valid IDs: ${ids.join(", ")}`);
-  };
-  valid(view.settings.columnGrouping, "groupable", ["none"]);
-  valid(view.settings.rowGrouping, "groupable", ["none"]);
-  valid(view.settings.ordering.attributeId, "sortable", ["manual"]);
-  for (const id of view.settings.displayProperties) valid(id, "displayable");
-  for (const [id, values] of Object.entries(view.filters)) {
-    valid(id, "filterable");
-    const options = fields.find((field) => field.id === id)?.options;
-    if (options && values.some((value) => !options.some((option) => option.value === value)))
-      throw new BoardViewError(
-        `Invalid filter value for "${id}". Valid values: ${options.map((option) => option.value).join(", ")}`,
-      );
-  }
+const checkIds = (ids: string[], valid: string[], label: string) => {
+  const invalid = ids.find((id) => !valid.includes(id));
+  if (invalid !== undefined) throw new BoardViewError(`Invalid ${label} "${invalid}". Valid IDs: ${valid.join(", ")}`);
 };
-export const cleanBoardView = (view: ViewState, fields: BoardField[], defaults: KanbanRendererSettings) => {
-  const groupIds = ["none", ...idsFor(fields, "groupable")];
-  const sortIds = ["manual", ...idsFor(fields, "sortable")];
-  const group = (value: string, fallback: string) => {
-    if (groupIds.includes(value)) return value;
-    return groupIds.includes(fallback) ? fallback : "none";
-  };
-  const filters: KanbanRendererFilterState = {};
-  for (const [id, values] of Object.entries(view.filters)) {
-    const field = fields.find((field) => field.id === id && field.filterable);
-    if (!field) continue;
-    const kept = field.options
-      ? values.filter((value) => field.options!.some((option) => option.value === value))
-      : values;
-    if (kept.length) filters[id] = kept;
-  }
-  const ordering = sortIds.includes(view.settings.ordering.attributeId)
-    ? view.settings.ordering
-    : {
-        ...defaults.ordering,
-        attributeId: sortIds.includes(defaults.ordering.attributeId) ? defaults.ordering.attributeId : "manual",
-      };
-  return {
-    settings: {
-      ...view.settings,
-      columnGrouping: group(view.settings.columnGrouping, defaults.columnGrouping),
-      rowGrouping: group(view.settings.rowGrouping, defaults.rowGrouping),
-      ordering,
-      displayProperties: view.settings.displayProperties.filter((id) => idsFor(fields, "displayable").includes(id)),
-    },
-    filters,
-  };
+const settingsProblem = (keys: string[], kind: string) =>
+  new BoardViewError(`These settings do not fit a ${kind} view. Valid settings: ${keys.join(", ")}`);
+const validateKanbanSettings = (input: object, fields: BoardField[]) => {
+  const parsed = kanbanViewSettingsSchema.strict().safeParse(input);
+  if (!parsed.success) throw settingsProblem(Object.keys(kanbanViewSettingsSchema.shape), "board");
+  const settings = parsed.data;
+  const groupable = ["none", ...idsFor(fields, "groupable")];
+  checkIds([settings.columnGrouping, settings.rowGrouping], groupable, "groupable field");
+  checkIds(settings.displayProperties, idsFor(fields, "displayable"), "displayable field");
+  return settings;
+};
+const validateDataTableSettings = (input: object, fields: BoardField[]) => {
+  const parsed = dataTableRendererSettingsSchema.strict().safeParse(input);
+  if (!parsed.success) throw settingsProblem(Object.keys(dataTableRendererSettingsSchema.shape), "data table");
+  const settings = parsed.data;
+  checkIds([settings.grouping], ["none", ...idsFor(fields, "groupable")], "groupable field");
+  checkIds(
+    [...settings.hiddenColumns, ...settings.columnOrder],
+    fields.map((field) => field.id),
+    "column",
+  );
+  return settings;
+};
+/** Checks a whole view against its board's fields and returns it with settings of the board's kind. */
+export const validateBoardView = (kind: BoardKind, view: ViewDraft, fields: BoardField[]) => {
+  const settings =
+    kind === "kanban"
+      ? validateKanbanSettings(view.settings, fields)
+      : validateDataTableSettings(view.settings, fields);
+  const problem = findViewFilterProblem(view.filter, fields) ?? findViewSortsProblem(view.sorts, fields);
+  if (problem) throw new BoardViewError(problem);
+  return { settings, filter: view.filter, sorts: view.sorts };
 };

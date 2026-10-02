@@ -1,29 +1,37 @@
 import type { ReactNode } from "react";
-import { KanbanRendererToolbar } from "../kanban-renderer/kanban-renderer-toolbar";
-import type { AttributeDescriptor, KanbanRendererRow, KanbanRendererSavedView } from "../kanban-renderer/types";
+import { CollectionViewBar } from "../collection-view/collection-view-bar";
+import type { AttributeDescriptor } from "../kanban-renderer/types";
+import type { DataTableViewsSource } from "./types";
+import type { useDataTableView } from "./use-data-table-view";
 
 interface DataTableHeaderProps {
-  rows: KanbanRendererRow[];
-  attributes: AttributeDescriptor[];
-  storageKey: string;
-  columnControl: ReactNode;
+  view: ReturnType<typeof useDataTableView>;
+  viewsSource?: DataTableViewsSource;
+  displayControl: ReactNode;
   actions?: ReactNode;
-  defaultViews?: KanbanRendererSavedView[];
-  defaultActiveViewId?: string;
 }
 
+// Table columns have no option lists, so every rule is built in the rule editor.
+const noOptions = (_field: AttributeDescriptor) => [];
+
+/** The table uses the same view bar as boards: saved views, Search, Filter, Sort, and Display. */
 export const DataTableHeader = (props: DataTableHeaderProps) => {
-  const { rows, attributes, storageKey, columnControl, actions, defaultViews, defaultActiveViewId } = props;
+  const { view, viewsSource, displayControl, actions } = props;
+  const searching = view.deferredSearch.trim() !== "";
 
   return (
-    <KanbanRendererToolbar
-      rows={rows}
-      storageKey={storageKey}
-      attributes={attributes}
-      defaultSettings={{ viewMode: "list" }}
-      defaultViews={defaultViews}
-      defaultActiveViewId={defaultActiveViewId}
-      displayControl={columnControl}
+    <CollectionViewBar
+      storageKey={view.storageKey}
+      initialState={view.initialState}
+      views={view.views.views}
+      defaultViewId={view.views.defaultId}
+      viewsSource={viewsSource}
+      fields={view.attributes}
+      optionsFor={noOptions}
+      search={view.search}
+      onSearchChange={view.setSearch}
+      searchResultLabel={searching ? `${view.shownRows.length} of ${view.filteredRows.length}` : undefined}
+      displayControl={displayControl}
       actions={actions}
     />
   );

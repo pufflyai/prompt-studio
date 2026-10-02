@@ -1,0 +1,76 @@
+import type { ViewSort } from "@pstdio/sdk/extensions";
+import { getEnumOptions } from "../kanban-renderer/kanban-renderer-enum-helpers";
+import type { AttributeDescriptor, AttributeType, KanbanRendererRow } from "../kanban-renderer/types";
+import { canSortField, findField, getAttributeStringValues, getAttributeValue } from "./collection-view-fields";
+
+/** Option order: declared options first, unknown values after them, missing values last. */
+export const compareEnumValues = (left: string | undefined, right: string | undefined, type: AttributeType) => {
+  if (type.kind !== "enum" && type.kind !== "enum-multi") return 0;
+  const options = getEnumOptions(type);
+  const toIndex = (value: string | undefined) => {
+    if (value === undefined) return options.length;
+    const index = options.findIndex((option) => option.value === value);
+    return index === -1 ? options.length + 1 : index;
+  };
+  return toIndex(left) - toIndex(right);
+};
+
+const toTime = (value: unknown) => {
+  if (typeof value !== "string" && typeof value !== "number") return Number.NaN;
+  return new Date(value).getTime();
+};
+
+const compareFieldValues = (a: KanbanRendererRow, b: KanbanRendererRow, field: AttributeDescriptor) => {
+  const left = getAttributeValue(a, field);
+  const right = getAttributeValue(b, field);
+  if (field.compare) return field.compare(left, right);
+  if (field.type.kind === "date") return toTime(left) - toTime(right);
+  if (field.type.kind === "number") return Number(left) - Number(right);
+  if (field.type.kind === "enum") {
+    const [leftValue] = getAttributeStringValues(a, field);
+    const [rightValue] = getAttributeStringValues(b, field);
+    return compareEnumValues(leftValue, rightValue, field.type);
+  }
+  return String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" });
+};
+
+const isEmpty = (row: KanbanRendererRow, field: AttributeDescriptor) => {
+  const [value] = getAttributeStringValues(row, field);
+  if (value === undefined) return true;
+  if (field.type.kind === "date") return Number.isNaN(toTime(value));
+  if (field.type.kind === "number") return !Number.isFinite(Number(value));
+  return false;
+};
+
+const compileSort = (sort: ViewSort, fields: AttributeDescriptor[]) => {
+  const field = findField(fields, sort.attributeId);
+  if (!field || !canSortField(field)) return undefined;
+  const direction = sort.direction === "asc" ? 1 : -1;
+  // Rows without a value stay last in both directions.
+  return (a: KanbanRendererRow, b: KanbanRendererRow) => {
+    const leftEmpty = isEmpty(a, field);
+    const rightEmpty = isEmpty(b, field);
+    if (leftEmpty || rightEmpty) return Number(leftEmpty) - Number(rightEmpty);
+    return direction * compareFieldValues(a, b, field);
+  };
+};
+
+/** The first sort decides first; ties fall to the next sort and finally keep their incoming order. */
+export const sortRowsByView = <TRow extends KanbanRendererRow>(
+  rows: TRow[],
+  sorts: ViewSort[],
+  fields: AttributeDescriptor[],
+) => {
+  const comparators = sorts.flatMap((sort) => {
+    const compare = compileSort(sort, fields);
+    return compare ? [compare] : [];
+  });
+  if (comparators.length === 0) return rows;
+  return [...rows].sort((a, b) => {
+    for (const compare of comparators) {
+      const result = compare(a, b);
+      if (result !== 0) return result;
+    }
+    return 0;
+  });
+};
