@@ -14,7 +14,7 @@ import {
 import { Activity, type ActivityActor } from "@/components/activity";
 import { DataTable, type RowData } from "@/components/data-table";
 import type { AttributeDescriptor, KanbanRendererRow } from "@/components/kanban-renderer";
-import { KanbanRenderer, MANUAL_ORDERING, NO_GROUPING } from "@/components/kanban-renderer";
+import { KanbanRenderer, NO_GROUPING } from "@/components/kanban-renderer";
 import { MermaidRenderer } from "@/components/mermaid-renderer/mermaid-renderer";
 import { TreeList } from "@/components/tree-list/tree-list";
 import type { TreeListSection } from "@/components/tree-list/tree-list.types";
@@ -186,7 +186,6 @@ export const CompositesSection = () => {
               viewMode: "list",
               columnGrouping: "status",
               rowGrouping: NO_GROUPING,
-              ordering: { attributeId: MANUAL_ORDERING, direction: "asc" },
               displayProperties: ["priority", "owner"],
             }}
             getBoardColumnConfig={kanbanRendererColumnColor}

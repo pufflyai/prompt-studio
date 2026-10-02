@@ -1,15 +1,41 @@
-import type { BoardField, BoardViewUpdate } from "@pstdio/sdk/api";
+import type { BoardSummary, BoardViewUpdate } from "@pstdio/sdk/api";
+import type { DataTableRendererSettings, KanbanRendererSettings, ViewSort } from "@pstdio/sdk/extensions";
+import { buildFilter } from "./view-filter-input";
+
 export interface ViewFlags {
   title?: string;
   filter?: string[];
+  "filter-json"?: string;
+  sort?: string[];
+  show?: string;
   mode?: string;
   columns?: string;
   rows?: string;
-  sort?: string;
-  show?: string;
+  group?: string;
+  "row-numbers"?: string;
+  "wrap-rows"?: string;
+  stats?: string;
 }
-const buildSettings = (flags: ViewFlags) => {
-  const settings: NonNullable<BoardViewUpdate["settings"]> = {};
+type Board = Pick<BoardSummary, "kind" | "fields">;
+const kindFlags = {
+  kanban: ["mode", "columns", "rows"],
+  dataTable: ["group", "row-numbers", "wrap-rows", "stats"],
+} as const;
+const kindNames = { kanban: "board", dataTable: "data table" };
+const refuseOtherKindFlags = (flags: ViewFlags, kind: Board["kind"]) => {
+  const other = kind === "kanban" ? "dataTable" : "kanban";
+  const flag = kindFlags[other].find((flag) => flags[flag] !== undefined);
+  if (flag)
+    throw new Error(
+      `--${flag} applies to ${kindNames[other]} views only. A ${kindNames[kind]} view takes ${[...kindFlags[kind], "show"].map((name) => `--${name}`).join(", ")}`,
+    );
+};
+const toggle = (value: string, on: string, off: string, flag: string) => {
+  if (value !== on && value !== off) throw new Error(`--${flag} must be ${on} or ${off}`);
+  return value === on;
+};
+const buildBoardSettings = (flags: ViewFlags) => {
+  const settings: Partial<Omit<KanbanRendererSettings, "ordering">> = {};
   if (flags.mode !== undefined) {
     if (flags.mode !== "board" && flags.mode !== "list") throw new Error("Mode must be board or list");
     settings.viewMode = flags.mode;
@@ -17,48 +43,41 @@ const buildSettings = (flags: ViewFlags) => {
   if (flags.columns !== undefined) settings.columnGrouping = flags.columns;
   if (flags.rows !== undefined) settings.rowGrouping = flags.rows;
   if (flags.show !== undefined) settings.displayProperties = flags.show.split(",").filter(Boolean);
-  if (flags.sort !== undefined) {
-    const [attributeId, direction, extra] = flags.sort.split(":");
-    if (!attributeId || extra || (direction !== "asc" && direction !== "desc"))
-      throw new Error("Sort must be <field>:asc|desc");
-    settings.ordering = { attributeId, direction };
+  return settings;
+};
+const buildTableSettings = (flags: ViewFlags, board: Board) => {
+  const settings: Partial<DataTableRendererSettings> = {};
+  if (flags.group !== undefined) settings.grouping = flags.group;
+  if (flags["row-numbers"] !== undefined)
+    settings.rowNumbers = toggle(flags["row-numbers"], "show", "hide", "row-numbers");
+  if (flags["wrap-rows"] !== undefined) settings.wrapRows = toggle(flags["wrap-rows"], "on", "off", "wrap-rows");
+  if (flags.stats !== undefined) settings.showStats = toggle(flags.stats, "on", "off", "stats");
+  if (flags.show !== undefined) {
+    // --show lists the visible columns in order; every other column is hidden and keeps its place after them.
+    const shown = flags.show.split(",").filter(Boolean);
+    const others = board.fields.map((field) => field.id).filter((id) => !shown.includes(id));
+    settings.columnOrder = [...shown, ...others];
+    settings.hiddenColumns = others;
   }
   return settings;
 };
-const resolveFilterValue = (field: BoardField, value: string) => {
-  if (!field.options || field.options.some((option) => option.value === value)) return value;
-  const matches = field.options.filter((option) => option.label === value);
-  if (matches.length > 1)
-    throw new Error(`Ambiguous label "${value}". Matching values: ${matches.map((option) => option.value).join(", ")}`);
-  if (!matches.length)
-    throw new Error(
-      `Invalid value "${value}". Valid values: ${field.options.map((option) => option.value).join(", ")}`,
-    );
-  return matches[0].value;
+const buildSorts = (values: string[]) => {
+  if (values.length === 1 && values[0] === "none") return [];
+  return values.map((value): ViewSort => {
+    const [attributeId, direction, extra] = value.split(":");
+    if (!attributeId || extra !== undefined || (direction !== "asc" && direction !== "desc"))
+      throw new Error("Sort must be <field>:asc|desc");
+    return { attributeId, direction };
+  });
 };
-const buildFilters = (values: string[], fields: BoardField[]) => {
-  const filters: Record<string, string[]> = {};
-  for (const filter of values) {
-    const split = filter.indexOf("=");
-    if (split < 1) throw new Error("Filter must be <field>=<value>");
-    const id = filter.slice(0, split);
-    const field = fields.find((field) => field.id === id && field.filterable);
-    if (!field)
-      throw new Error(
-        `Invalid filter field "${id}". Valid IDs: ${fields
-          .filter((field) => field.filterable)
-          .map((field) => field.id)
-          .join(", ")}`,
-      );
-    filters[id] = [...(filters[id] ?? []), resolveFilterValue(field, filter.slice(split + 1))];
-  }
-  return filters;
-};
-export const buildViewInput = (flags: ViewFlags, fields: BoardField[]) => {
+export const buildViewInput = (flags: ViewFlags, board: Board) => {
+  refuseOtherKindFlags(flags, board.kind);
   const input: BoardViewUpdate = {};
   if (flags.title !== undefined) input.title = flags.title;
-  const settings = buildSettings(flags);
+  const settings = board.kind === "kanban" ? buildBoardSettings(flags) : buildTableSettings(flags, board);
   if (Object.keys(settings).length) input.settings = settings;
-  if (flags.filter) input.filters = buildFilters(flags.filter, fields);
+  const filter = buildFilter(flags, board.fields);
+  if (filter) input.filter = filter;
+  if (flags.sort) input.sorts = buildSorts(flags.sort);
   return input;
 };

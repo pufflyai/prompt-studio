@@ -1,6 +1,6 @@
 import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Text } from "@chakra-ui/react";
-import { Check, ChevronDown, List, Settings2, SortAsc, SortDesc, SquareKanban } from "lucide-react";
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, List, Settings2, SquareKanban } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { type MenuOption, resolveSubGroupingOptions } from "./kanban-renderer-helpers";
 import type { KanbanRendererSettings } from "./types";
@@ -8,13 +8,10 @@ import type { KanbanRendererSettings } from "./types";
 interface DisplayMenuProps {
   settings: KanbanRendererSettings;
   groupingOptions: MenuOption[];
-  orderingOptions: MenuOption[];
   displayPropertyOptions: MenuOption[];
   onViewModeChange: (value: KanbanRendererSettings["viewMode"]) => void;
   onColumnGroupingChange: (value: string) => void;
   onRowGroupingChange: (value: string) => void;
-  onOrderingAttributeIdChange: (value: string) => void;
-  onSortDirectionToggle: () => void;
   onDisplayPropertyToggle: (property: string) => void;
 }
 
@@ -24,14 +21,15 @@ const SectionLabel = (props: { children: string }) => (
   </Text>
 );
 
-const Dropdown = (props: {
+export interface DisplayMenuSelectProps {
   label: string;
   value: string;
   options: MenuOption[];
   onSelect: (value: string) => void;
-  valueSuffix?: ReactNode;
-  onSuffixAction?: () => void;
-}) => {
+}
+
+/** A Display menu row: the setting's name on the left, its value and a menu on the right. */
+export const DisplayMenuSelect = (props: DisplayMenuSelectProps) => {
   const selectedLabel = props.options.find((option) => option.value === props.value)?.label ?? props.label;
   const hasNoneFirst = props.options[0]?.value === "none";
 
@@ -44,7 +42,6 @@ const Dropdown = (props: {
             <Text textStyle="label/S/regular" truncate>
               {selectedLabel}
             </Text>
-            {props.valueSuffix}
           </HStack>
           <ChevronDown size={12} />
         </Button>
@@ -62,14 +59,6 @@ const Dropdown = (props: {
               </Menu.Item>
             </Fragment>
           ))}
-          {props.onSuffixAction ? (
-            <>
-              <Menu.Separator />
-              <Menu.Item value="toggle-direction" onClick={props.onSuffixAction}>
-                Reverse order
-              </Menu.Item>
-            </>
-          ) : null}
         </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>
@@ -80,13 +69,10 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
   const {
     settings,
     groupingOptions,
-    orderingOptions,
     displayPropertyOptions,
     onViewModeChange,
     onColumnGroupingChange,
     onRowGroupingChange,
-    onOrderingAttributeIdChange,
-    onSortDirectionToggle,
     onDisplayPropertyToggle,
   } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -149,7 +135,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
               </Button>
             </HStack>
 
-            <Dropdown
+            <DisplayMenuSelect
               label="Grouping"
               value={settings.columnGrouping}
               options={groupingOptions}
@@ -158,26 +144,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 if (value === "none" || value === settings.rowGrouping) onRowGroupingChange("none");
               }}
             />
-            <Dropdown
-              label="Ordering"
-              value={settings.ordering.attributeId}
-              options={orderingOptions}
-              valueSuffix={
-                settings.ordering.attributeId === "manual" ? undefined : (
-                  <Icon
-                    as={settings.ordering.direction === "asc" ? SortAsc : SortDesc}
-                    aria-label={`${settings.ordering.direction === "asc" ? "Ascending" : "Descending"} order`}
-                    aria-hidden={false}
-                    role="img"
-                    boxSize="0.875rem"
-                    flexShrink={0}
-                  />
-                )
-              }
-              onSelect={onOrderingAttributeIdChange}
-              onSuffixAction={settings.ordering.attributeId === "manual" ? undefined : onSortDirectionToggle}
-            />
-            <Dropdown
+            <DisplayMenuSelect
               label="Sub-grouping"
               value={settings.rowGrouping}
               options={resolveSubGroupingOptions(groupingOptions, settings.columnGrouping)}

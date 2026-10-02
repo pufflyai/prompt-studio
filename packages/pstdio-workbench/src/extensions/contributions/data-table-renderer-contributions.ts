@@ -1,7 +1,9 @@
-import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
+import type { DataTableRendererSettings } from "@pstdio/sdk/extensions";
+import { dataTableBuiltInViews, type WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
 import type {
+  CollectionViewsProvider,
   DataTableRendererColumn,
   DataTableRendererQueryResult,
   DataTableRendererRow,
@@ -14,6 +16,13 @@ import { createExtensionSlot, executeWorkbenchExtensionCommand } from "../host/w
 import { mapViewToolbarActions } from "./view-toolbar-actions";
 
 const localize = (value: unknown, fallback = "") => text(value as Parameters<typeof text>[0], fallback);
+
+export interface WorkbenchExtensionDataTableRendererAdapter {
+  /** Shared saved views for the table, such as the dashboard's project views. */
+  createViewsProvider?: (
+    record: WorkbenchExtensionDataTableRendererRecord,
+  ) => CollectionViewsProvider<DataTableRendererSettings>;
+}
 type WireColumn = NonNullable<WorkbenchExtensionDataTableRendererRecord["columns"]>[number];
 const toColumn = (column: WireColumn): DataTableRendererColumn => ({
   ...column,
@@ -50,7 +59,9 @@ const toRow = (row: { id: string; values: Record<string, unknown>; resource?: Re
 const registerRenderer = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionDataTableRendererRecord,
+  adapter: WorkbenchExtensionDataTableRendererAdapter,
 ) => {
+  const builtIns = dataTableBuiltInViews(record);
   const originalRows = new WeakMap<DataTableRendererRow, Parameters<typeof toRow>[0]>();
   const slot = createExtensionSlot({
     id: record.id,
@@ -92,6 +103,12 @@ const registerRenderer = (
       columns: record.columns?.map(toColumn),
       initialPageSize: record.initialPageSize,
       pageSizeOptions: record.pageSizeOptions,
+      defaultSettings: builtIns.settings,
+      defaultFilter: record.defaultFilter,
+      defaultSorts: record.defaultSorts,
+      defaultViews: builtIns.views.map((view) => ({ ...view, title: localize(view.title, view.id) })),
+      defaultActiveViewId: record.defaultActiveViewId,
+      viewsProvider: adapter.createViewsProvider?.(record),
       selectionMode: record.selectionMode,
       selectionActions: record.selectionActions?.map((action) => ({
         id: action.id,
@@ -102,8 +119,8 @@ const registerRenderer = (
       })),
       emptyTitle: record.emptyTitle ? localize(record.emptyTitle) : undefined,
       emptyDescription: record.emptyDescription ? localize(record.emptyDescription) : undefined,
-      executeQuery: async ({ resource, modeId }, signal) => {
-        const value = await run(record.queryHandlerId, {}, resource, modeId, signal);
+      executeQuery: async ({ resource, modeId, filter, sorts, settings }, signal) => {
+        const value = await run(record.queryHandlerId, { filter, sorts, settings }, resource, modeId, signal);
         if (!isQueryResult(value)) return { rows: [] };
         const rows = value.rows.map((row) => {
           const mapped = toRow(row);
@@ -136,8 +153,9 @@ const registerRenderer = (
 export const registerWorkbenchExtensionDataTableRenderers = (
   context: WorkbenchExtensionCommandContext,
   records: WorkbenchExtensionDataTableRendererRecord[],
+  adapter: WorkbenchExtensionDataTableRendererAdapter = {},
 ): Disposable => {
-  const disposables: Disposable[] = records.map((record) => registerRenderer(context, record));
+  const disposables: Disposable[] = records.map((record) => registerRenderer(context, record, adapter));
   return {
     dispose() {
       for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();

@@ -1,3 +1,4 @@
+import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -8,7 +9,6 @@ import type {
   BoardColumnConfig,
   KanbanRendererCreateRowConfig,
   KanbanRendererCreateSubmission,
-  KanbanRendererFilterState,
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
@@ -20,7 +20,8 @@ import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export interface KanbanRendererQueryState {
   settings: KanbanRendererSettings;
-  filters: KanbanRendererFilterState;
+  filter: ViewFilterGroup;
+  sorts: ViewSort[];
 }
 
 export interface KanbanRendererContribution<
@@ -52,9 +53,10 @@ export interface KanbanRendererContribution<
   emptyTitle?: string;
   emptyDescription?: string;
 
-  /** Initial settings/filters applied when the kanban renderer mounts. */
+  /** The view state used before a saved view is active. */
   defaultSettings?: Partial<KanbanRendererSettings>;
-  defaultFilters?: KanbanRendererFilterState;
+  defaultFilter?: ViewFilterGroup;
+  defaultSorts?: ViewSort[];
   viewsProvider?: KanbanRendererViewsProvider;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
@@ -77,7 +79,7 @@ export interface KanbanRendererContribution<
    * column value).
    */
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
-  /** Manual within-column reorder (only fires when ordering is manual). */
+  /** Manual within-column reorder. Only fires while the view has no sorts. */
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   createRow?: KanbanRendererCreateRowConfig;
   onCreateRow?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;

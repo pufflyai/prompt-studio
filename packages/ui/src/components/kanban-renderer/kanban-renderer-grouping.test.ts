@@ -1,8 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
-import { countFilterValues, filterRows, groupRows, orderRows } from "./kanban-renderer-grouping";
+import { countFilterValues, groupRows } from "./kanban-renderer-grouping";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
-import { MANUAL_ORDERING } from "./types";
 
 const attributes: AttributeDescriptor[] = [
   {
@@ -176,72 +175,6 @@ describe("groupRows", () => {
     });
 
     expect(groups.map((group) => group.key)).toEqual(["shipped", "backlog", "active"]);
-  });
-});
-
-describe("orderRows", () => {
-  it("orders by title in ascending direction", () => {
-    const ordered = orderRows(rows, { attributeId: "title", direction: "asc" }, attributes);
-    expect(ordered.map((row) => row.id)).toEqual(["1", "2", "3"]);
-  });
-
-  it("orders by date in descending direction", () => {
-    const ordered = orderRows(rows, { attributeId: "updated", direction: "desc" }, attributes);
-    expect(ordered.map((row) => row.id)).toEqual(["3", "2", "1"]);
-  });
-
-  it("orders by enum attribute using declared option index", () => {
-    const priorityRows: KanbanRendererRow[] = [
-      { id: "a", title: "A", attributes: { priority: "low" } },
-      { id: "b", title: "B", attributes: { priority: "high" } },
-      { id: "c", title: "C", attributes: { priority: "medium" } },
-      { id: "d", title: "D", attributes: {} },
-    ];
-
-    const ordered = orderRows(priorityRows, { attributeId: "priority", direction: "asc" }, attributes);
-
-    expect(ordered.map((row) => row.id)).toEqual(["b", "c", "a", "d"]);
-  });
-
-  it("returns rows unchanged when ordering is manual", () => {
-    const ordered = orderRows(rows, { attributeId: MANUAL_ORDERING, direction: "asc" }, attributes);
-    expect(ordered.map((row) => row.id)).toEqual(["1", "2", "3"]);
-  });
-
-  it("returns rows unchanged when ordering references an unknown attribute", () => {
-    const ordered = orderRows(rows, { attributeId: "nonexistent", direction: "asc" }, attributes);
-    expect(ordered.map((row) => row.id)).toEqual(["1", "2", "3"]);
-  });
-});
-
-describe("filterRows", () => {
-  it("returns all rows when no filters are active", () => {
-    expect(filterRows(rows, {}, attributes)).toEqual(rows);
-  });
-
-  it("applies a single enum filter", () => {
-    const filtered = filterRows(rows, { status: ["todo"] }, attributes);
-    expect(filtered.map((row) => row.id)).toEqual(["1", "3"]);
-  });
-
-  it("applies selected enum filter values", () => {
-    const filtered = filterRows(rows, { status: ["todo", "in_progress"] }, attributes);
-    expect(filtered.map((row) => row.id)).toEqual(["1", "2", "3"]);
-  });
-
-  it("applies multiple filters", () => {
-    const filtered = filterRows(rows, { status: ["todo"], component: ["frontend"] }, attributes);
-    expect(filtered.map((row) => row.id)).toEqual(["1"]);
-  });
-
-  it("filters by enum-multi with 'has any of' semantics", () => {
-    const filtered = filterRows(rows, { labels: ["bug"] }, attributes);
-    expect(filtered.map((row) => row.id)).toEqual(["2"]);
-  });
-
-  it("ignores filters referencing unknown attribute ids", () => {
-    const filtered = filterRows(rows, { unknown: ["x"] }, attributes);
-    expect(filtered).toEqual(rows);
   });
 });
 

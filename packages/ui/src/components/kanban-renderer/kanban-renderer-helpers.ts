@@ -1,42 +1,17 @@
+import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { createElement, type ReactNode } from "react";
+import { getAttributeStringValues, getAttributeValue } from "../collection-view/collection-view-fields";
+import { isFilterGroup } from "../collection-view/collection-view-filter";
 import { CollectionBadge } from "./collection-badge";
 import type { AttributeBadge } from "./kanban-renderer-badge-helpers";
 import { renderEnumBadge, renderMultiEnumBadge } from "./kanban-renderer-badge-helpers";
 import { getEnumOptions, toTitleCase } from "./kanban-renderer-enum-helpers";
-import type {
-  AttributeDescriptor,
-  CollectionBadgeItem,
-  KanbanRendererFilterState,
-  KanbanRendererRow,
-  KanbanRendererSettings,
-} from "./types";
-import { findAttribute, MANUAL_ORDERING, NO_GROUPING } from "./types";
+import type { AttributeDescriptor, CollectionBadgeItem, KanbanRendererRow } from "./types";
+import { findAttribute, NO_GROUPING } from "./types";
 
 export type { AttributeBadge } from "./kanban-renderer-badge-helpers";
 export { getAttributeBadgeColorPalette } from "./kanban-renderer-badge-helpers";
 export { enumOptionLabel, findEnumOption, getEnumOptions, toTitleCase } from "./kanban-renderer-enum-helpers";
-
-/**
- * Read a typed attribute value out of a row. enum-multi normalizes to an array;
- * single-valued kinds normalize to undefined when missing.
- */
-export const getAttributeValue = (row: KanbanRendererRow, descriptor: AttributeDescriptor) => {
-  const raw = row.attributes[descriptor.id];
-  if (descriptor.type.kind === "enum-multi") {
-    if (Array.isArray(raw)) return raw.filter((entry): entry is string => typeof entry === "string");
-    return [] as string[];
-  }
-  return raw;
-};
-
-export const getAttributeStringValues = (row: KanbanRendererRow, descriptor: AttributeDescriptor): string[] => {
-  const value = getAttributeValue(row, descriptor);
-  if (descriptor.type.kind === "enum-multi") return value as string[];
-  if (value === null || value === undefined) return [];
-  if (typeof value === "string") return value === "" ? [] : [value];
-  if (typeof value === "number") return [String(value)];
-  return [];
-};
 
 const formatDateValue = (value: unknown) => {
   if (typeof value !== "string" || value === "") return null;
@@ -250,16 +225,6 @@ export const buildGroupingOptions = (attributes: AttributeDescriptor[]): MenuOpt
   return options;
 };
 
-export const buildOrderingOptions = (attributes: AttributeDescriptor[]): MenuOption[] => {
-  const options: MenuOption[] = [{ value: MANUAL_ORDERING, label: "Manual" }];
-  options.push({ value: "title", label: "Title" });
-  for (const descriptor of attributes) {
-    if (!descriptor.sortable) continue;
-    options.push({ value: descriptor.id, label: descriptor.label });
-  }
-  return options;
-};
-
 export const buildDisplayPropertyOptions = (attributes: AttributeDescriptor[]): MenuOption[] => {
   const options: MenuOption[] = [];
   for (const descriptor of attributes) {
@@ -279,63 +244,26 @@ export const resolveListDropTargetColumnKey = (columnGrouping: string, placement
   return placement?.columnKey;
 };
 
+/**
+ * Board columns for every declared option, so empty columns stay visible. A root "is any of" or
+ * "is none of" rule on the grouping field limits them to what the filter can still show.
+ */
 export const resolveKnownColumnKeys = (
   columnGrouping: string,
   attributes: AttributeDescriptor[],
-  filters?: KanbanRendererFilterState,
+  filter?: ViewFilterGroup,
 ) => {
   if (columnGrouping === NO_GROUPING) return undefined;
   const descriptor = findAttribute(attributes, columnGrouping);
-  const active = filters?.[columnGrouping];
-  if (descriptor && active && active.length > 0) return normalizeFilterValues(descriptor, active);
-  if (!descriptor) return undefined;
-  if (descriptor.type.kind === "enum") return getEnumOptions(descriptor.type).map((option) => option.value);
-  return undefined;
-};
-
-export const normalizeFilterValues = (_descriptor: AttributeDescriptor, values: string[]) => values;
-
-export const omitFilterCategory = (filters: KanbanRendererFilterState, id: string): KanbanRendererFilterState => {
-  const next = { ...filters };
-  delete next[id];
-  return next;
-};
-
-/**
- * Drop persisted settings entries that reference attribute ids no longer
- * declared by the contribution. Falls back to defaults for missing grouping
- * and ordering attributes so a stale saved view still loads cleanly.
- */
-export const sanitizeSettings = (
-  settings: KanbanRendererSettings,
-  attributes: AttributeDescriptor[],
-): KanbanRendererSettings => {
-  const knownIds = new Set(attributes.map((attribute) => attribute.id));
-  const validGroupingId = (id: string) => id === NO_GROUPING || knownIds.has(id);
-  const validOrderingId = (id: string) => id === MANUAL_ORDERING || id === "title" || knownIds.has(id);
-
-  const columnGrouping = validGroupingId(settings.columnGrouping) ? settings.columnGrouping : NO_GROUPING;
-  const rowGrouping = validGroupingId(settings.rowGrouping) ? settings.rowGrouping : NO_GROUPING;
-  const orderingId = validOrderingId(settings.ordering.attributeId) ? settings.ordering.attributeId : MANUAL_ORDERING;
-  const displayProperties = settings.displayProperties.filter(validGroupingId);
-
-  return {
-    viewMode: settings.viewMode,
-    columnGrouping,
-    rowGrouping,
-    ordering: { attributeId: orderingId, direction: settings.ordering.direction },
-    displayProperties,
-  };
-};
-
-export const sanitizeFilters = (filters: KanbanRendererFilterState, attributes: AttributeDescriptor[]) => {
-  const attributesById = new Map(attributes.map((attribute) => [attribute.id, attribute]));
-  const next: KanbanRendererFilterState = {};
-  for (const [id, values] of Object.entries(filters)) {
-    const descriptor = attributesById.get(id);
-    if (!descriptor) continue;
-    if (!values || values.length === 0) continue;
-    next[id] = normalizeFilterValues(descriptor, values);
+  if (!descriptor || descriptor.type.kind !== "enum") return undefined;
+  let keys = getEnumOptions(descriptor.type).map((option) => option.value);
+  if (filter?.conjunction !== "and") return keys;
+  for (const rule of filter.rules) {
+    if (isFilterGroup(rule) || rule.attributeId !== columnGrouping || !Array.isArray(rule.value) || !rule.value.length)
+      continue;
+    const values = rule.value;
+    if (rule.condition === "is-any-of") keys = keys.filter((key) => values.includes(key));
+    if (rule.condition === "is-none-of") keys = keys.filter((key) => !values.includes(key));
   }
-  return next;
+  return keys;
 };

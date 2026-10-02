@@ -59,7 +59,7 @@ export const registerBoardViewsSmokeTests = () => {
         return JSON.parse(result.stdout);
       };
       const boards = cli("boards");
-      expect(boards).toContainEqual(expect.objectContaining({ id: board }));
+      expect(boards).toContainEqual(expect.objectContaining({ id: board, kind: "kanban" }));
       const created = cli(
         "create",
         "--board",
@@ -67,14 +67,30 @@ export const registerBoardViewsSmokeTests = () => {
         "--title",
         "Agent view",
         "--filter",
-        "archived=Active",
+        "archived is-any-of Active",
+        "--filter",
+        "status is-none-of done",
+        "--sort",
+        "updated:desc",
+        "--sort",
+        "created:asc",
         "--mode",
         "list",
       );
       expect(created).toMatchObject({
         title: "Agent view",
         builtIn: false,
-        filters: { archived: ["active"] },
+        filter: {
+          conjunction: "and",
+          rules: [
+            { attributeId: "archived", condition: "is-any-of", value: ["active"] },
+            { attributeId: "status", condition: "is-none-of", value: ["done"] },
+          ],
+        },
+        sorts: [
+          { attributeId: "updated", direction: "desc" },
+          { attributeId: "created", direction: "asc" },
+        ],
         settings: { viewMode: "list" },
       });
       cli("set-default", "--board", board, "--id", created.id);
@@ -92,12 +108,19 @@ export const registerBoardViewsSmokeTests = () => {
         }),
       );
       const snapshot = await readSnapshot(runtime.baseUrl, runtimeAuthorization(runtime.descriptor));
-      expect(snapshot.board_views).toContainEqual(expect.objectContaining({ id: created.id, title: "Shared default" }));
+      expect(snapshot.board_views).toContainEqual(
+        expect.objectContaining({
+          id: created.id,
+          title: "Shared default",
+          filter: created.filter,
+          sorts: created.sorts,
+        }),
+      );
       expect(snapshot.board_default_views).toContainEqual(
         expect.objectContaining({ id: expect.any(String), default_view_id: created.id }),
       );
       const copy = cli("create", "--board", board, "--title", "Copy", "--copy-from", created.id);
-      expect(copy.filters).toEqual(created.filters);
+      expect(copy).toMatchObject({ filter: created.filter, sorts: created.sorts });
       const ordered = cli("reorder", "--board", board, "--ids", `${copy.id},${created.id}`);
       expect(
         ordered.views.filter((view: { builtIn: boolean }) => !view.builtIn).map((view: { id: string }) => view.id),

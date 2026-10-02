@@ -1,23 +1,16 @@
 import { Box, Flex, Table } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
-import { useKanbanRendererStore } from "../kanban-renderer/use-kanban-renderer-store";
 import { DataTableHeader } from "./data-table-header";
 import { DataTableRowDisplayMenu } from "./data-table-row-display";
-import {
-  buildDataTableRendererAttributes,
-  buildDataTableRendererRows,
-  filterDataTableRows,
-  resolveDataTableToolbarStorageKey,
-  resolveSelectionActions,
-  shouldEnableSelection,
-} from "./data-table-state";
+import { resolveSelectionActions, shouldEnableSelection } from "./data-table-state";
 import { EditModeDataTableBody } from "./edit-mode-data-table-body";
 import { EditModeDataTableHeader } from "./edit-mode-data-table-header";
 import { EditModeSelectionHeader } from "./edit-mode-data-table-selection";
 import { PaginationFooter } from "./pagination-footer";
 import { SelectionToolbar } from "./selection-toolbar";
 import type { DataTableEditModeColumn, DataTableProps, RowData } from "./types";
+import { useDataTableView } from "./use-data-table-view";
 
 const createId = (kind: "column" | "row") => {
   const unique = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
@@ -35,12 +28,6 @@ interface ActiveHeader {
   draft: string;
 }
 
-const buildRendererInitialState = (props: Pick<DataTableProps, "defaultViews" | "defaultActiveViewId">) => ({
-  settings: { viewMode: "list" as const },
-  views: props.defaultViews,
-  activeViewId: props.defaultActiveViewId,
-});
-
 export const EditModeDataTable = (props: DataTableProps) => {
   const {
     data,
@@ -52,24 +39,23 @@ export const EditModeDataTable = (props: DataTableProps) => {
     getRowId,
     columnIcons,
     toolbarStorageKey,
-    defaultViews,
-    defaultActiveViewId,
   } = props;
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(() => Math.min(Math.max(initialPageSize, 1), 50));
   const [activeCell, setActiveCell] = useState<ActiveCell | null>(null);
   const [activeHeader, setActiveHeader] = useState<ActiveHeader | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(() => new Set());
-  const [wrapRows, setWrapRows] = useState(false);
   const columns = editMode?.columns ?? [];
   const columnKeys = columns.map((column) => column.id);
-  const columnLabels = Object.fromEntries(columns.map((column) => [column.id, column.label]));
-  const rendererAttributes = buildDataTableRendererAttributes(data, columnKeys, columnLabels);
-  const rendererRows = buildDataTableRendererRows(data, columnKeys, getRowId);
-  const resolvedToolbarStorageKey = resolveDataTableToolbarStorageKey({ toolbarStorageKey, columnKeys });
-  const rendererInitialState = buildRendererInitialState(props);
-  const filters = useKanbanRendererStore(resolvedToolbarStorageKey, (state) => state.filters, rendererInitialState);
-  const filteredRendererRows = filterDataTableRows(rendererRows, filters, rendererAttributes);
+  // Edit mode owns its columns, so keys outside them, such as row ids, never become view fields.
+  const view = useDataTableView({
+    ...props,
+    compactHeaders: Object.fromEntries(columns.map((column) => [column.id, column.label])),
+    hiddenColumns: Object.keys(data[0] ?? {}).filter((key) => !columnKeys.includes(key)),
+  });
+  const wrapRows = view.settings.wrapRows;
+  const setWrapRows = (next: boolean) => view.setSettings({ wrapRows: next });
+  const filteredRendererRows = view.shownRows;
   const filteredData = filteredRendererRows.map((row) => row.sourceRow);
   const cappedPageSizeOptions = [...new Set(pageSizeOptions.filter((option) => option > 0 && option <= 50))];
   const pageCount = Math.max(Math.ceil(filteredData.length / pageSize), 1);
@@ -164,14 +150,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
   return (
     <Flex direction="column" width="100%" gap="2xs">
       {toolbarStorageKey ? (
-        <DataTableHeader
-          rows={rendererRows}
-          storageKey={resolvedToolbarStorageKey}
-          attributes={rendererAttributes}
-          columnControl={rowDisplayControl}
-          defaultViews={defaultViews}
-          defaultActiveViewId={defaultActiveViewId}
-        />
+        <DataTableHeader view={view} viewsSource={props.viewsSource} displayControl={rowDisplayControl} />
       ) : null}
       <Box position="relative" width="100%">
         <ScrollArea
@@ -264,7 +243,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
           pageIndex={pageIndex}
           pageSize={pageSize}
           pageSizeOptions={cappedPageSizeOptions}
-          totalRows={filteredData.length}
+          summary={`${filteredData.length} rows`}
           onPageChange={setPageIndex}
           onPageSizeChange={changePageSize}
         />

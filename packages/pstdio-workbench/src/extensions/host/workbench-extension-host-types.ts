@@ -17,6 +17,7 @@ import type {
   ExtensionWebviewArtifactCapabilities,
   ExtensionWebviewFileCapabilities,
 } from "../bridge/webview-command-capabilities";
+import type { WorkbenchExtensionDataTableRendererAdapter } from "../contributions/data-table-renderer-contributions";
 import type {
   WorkbenchExtensionMenuRegistration,
   WorkbenchExtensionMenuSlotConfig,
@@ -44,6 +45,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   createWebviewTheme?: CreateBridgeWebviewTheme;
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   kanbanAdapter?: WorkbenchExtensionKanbanRendererAdapter;
+  dataTableAdapter?: WorkbenchExtensionDataTableRendererAdapter;
   menuSlotsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuTargetsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuRegistrations?: readonly WorkbenchExtensionHostMenuRegistration[];

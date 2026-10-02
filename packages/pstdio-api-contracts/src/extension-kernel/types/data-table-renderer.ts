@@ -21,6 +21,16 @@ export interface DataTableRendererSettings {
   columnOrder: string[];
 }
 
+/** What a data table view shows until a contribution or a saved view says otherwise. */
+export const DEFAULT_DATA_TABLE_SETTINGS: DataTableRendererSettings = {
+  grouping: "none",
+  rowNumbers: true,
+  wrapRows: false,
+  showStats: true,
+  hiddenColumns: [],
+  columnOrder: [],
+};
+
 export interface DataTableRendererSavedView {
   id: string;
   title: Localizable<string>;

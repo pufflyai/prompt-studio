@@ -16,10 +16,10 @@ const queryState: KanbanRendererQueryState = {
     viewMode: "board",
     columnGrouping: "workflow",
     rowGrouping: "none",
-    ordering: { attributeId: "manual", direction: "asc" },
     displayProperties: [],
   },
-  filters: {},
+  filter: { conjunction: "and", rules: [] },
+  sorts: [],
 };
 
 test("keeps rows and query metadata from the latest overlapping request", async () => {

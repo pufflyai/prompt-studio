@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { filterRowsByView } from "../collection-view/collection-view-filter";
 import {
   buildDataTableRendererAttributes,
   buildDataTableRendererRows,
-  filterDataTableRows,
   getSelectedOriginalRows,
   reorderDataTableColumns,
   resolveDataTableColumnOrder,
@@ -61,13 +61,19 @@ describe("data table state helpers", () => {
     ];
     const columnKeys = ["Status", "Amount", "Approved"];
 
-    const attributes = buildDataTableRendererAttributes(rows, columnKeys, { Status: "State" });
+    const attributes = buildDataTableRendererAttributes(rows, columnKeys, {
+      compactHeaders: { Status: "State" },
+      columnTypes: { Approved: "string" },
+      groupableColumns: ["Status"],
+    });
     const rendererRows = buildDataTableRendererRows(rows, columnKeys);
 
-    expect(attributes.map((attribute) => [attribute.id, attribute.label, attribute.type.kind])).toEqual([
-      ["Status", "State", "string"],
-      ["Amount", "Amount", "number"],
-      ["Approved", "Approved", "string"],
+    expect(
+      attributes.map((attribute) => [attribute.id, attribute.label, attribute.type.kind, attribute.groupable]),
+    ).toEqual([
+      ["Status", "State", "string", true],
+      ["Amount", "Amount", "number", false],
+      ["Approved", "Approved", "string", false],
     ]);
     expect(rendererRows[0]).toMatchObject({
       id: "row-1",
@@ -84,25 +90,23 @@ describe("data table state helpers", () => {
     ];
     const renderers = { Diff: { type: "diff" as const } };
 
-    const attributes = buildDataTableRendererAttributes(rows, ["Diff"], undefined, renderers);
+    const attributes = buildDataTableRendererAttributes(rows, ["Diff"], { columnRenderers: renderers });
     const rendererRows = buildDataTableRendererRows(rows, ["Diff"], undefined, renderers);
 
     expect(rendererRows.map((row) => row.attributes.Diff)).toEqual([15, "Not supported"]);
-    expect(filterDataTableRows(rendererRows, { Diff: ["Not supported"] }, attributes)).toHaveLength(1);
+    const rule = { attributeId: "Diff", condition: "is" as const, value: "Not supported" };
+    expect(filterRowsByView(rendererRows, { conjunction: "and", rules: [rule] }, attributes)).toHaveLength(1);
   });
 
-  test("filters table rows through kanban-renderer filter state", () => {
-    const rows: RowData[] = [
-      { id: "row-1", Status: "Paid" },
-      { id: "row-2", Status: "Pending" },
-    ];
-    const columnKeys = ["Status"];
-    const attributes = buildDataTableRendererAttributes(rows, columnKeys);
-    const rendererRows = buildDataTableRendererRows(rows, columnKeys);
+  test("a declared column type and the date renderer decide how rules compare a column", () => {
+    const rows: RowData[] = [{ id: "row-1", Score: "70", Updated: "2026-10-01" }];
 
-    expect(filterDataTableRows(rendererRows, { Status: ["Pending"] }, attributes).map((row) => row.id)).toEqual([
-      "row-2",
-    ]);
+    const attributes = buildDataTableRendererAttributes(rows, ["Score", "Updated"], {
+      columnTypes: { Score: "number" },
+      columnRenderers: { Updated: { type: "date" } },
+    });
+
+    expect(attributes.map((attribute) => attribute.type.kind)).toEqual(["number", "date"]);
   });
 
   test("keeps column order aligned with available columns", () => {

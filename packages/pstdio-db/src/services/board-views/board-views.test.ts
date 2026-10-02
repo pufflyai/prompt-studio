@@ -15,9 +15,16 @@ const settings = {
   viewMode: "board" as const,
   columnGrouping: "status",
   rowGrouping: "none",
-  ordering: { attributeId: "title", direction: "asc" as const },
   displayProperties: [],
 };
+const statusIs = (value: string) => ({
+  filter: {
+    conjunction: "and" as const,
+    rules: [{ attributeId: "status", condition: "is-any-of" as const, value: [value] }],
+  },
+  sorts: [{ attributeId: "title", direction: "asc" as const }],
+});
+const unfiltered = { filter: { conjunction: "and" as const, rules: [] }, sorts: [] };
 
 beforeEach(async () => {
   connection = await createDb({ path: ":memory:" });
@@ -42,8 +49,8 @@ afterEach(async () => {
 });
 
 test("persists scoped views in order and clears a deleted default atomically", async () => {
-  const first = await service.create({ ...scope, title: "First", settings, filters: {} });
-  const second = await service.create({ ...scope, title: "Second", settings, filters: { status: ["todo"] } });
+  const first = await service.create({ ...scope, title: "First", settings, ...unfiltered });
+  const second = await service.create({ ...scope, title: "Second", settings, ...statusIs("todo") });
   await service.reorder(scope, [second.id, first.id]);
   expect((await service.list(scope)).map((row) => row.id)).toEqual([second.id, first.id]);
   await service.setDefault(scope, first.id);
@@ -56,8 +63,8 @@ test("persists scoped views in order and clears a deleted default atomically", a
 });
 
 test("rejects incomplete ordering without changing any saved order", async () => {
-  const first = await service.create({ ...scope, title: "First", settings, filters: {} });
-  const second = await service.create({ ...scope, title: "Second", settings, filters: {} });
+  const first = await service.create({ ...scope, title: "First", settings, ...unfiltered });
+  const second = await service.create({ ...scope, title: "Second", settings, ...unfiltered });
   await expect(service.reorder(scope, [second.id])).rejects.toThrow("every saved view exactly once");
   expect((await service.list(scope)).map((row) => row.id)).toEqual([first.id, second.id]);
 });
@@ -68,15 +75,15 @@ test("treats views and built-in defaults as extension user data and cascades pro
   expect(await userData.hasUserData(scope.extension_instance_id)).toBe(true);
   await userData.deleteForInstance(scope.extension_instance_id);
   expect(await service.getDefault(scope)).toBeNull();
-  await service.create({ ...scope, title: "Shared", settings, filters: {} });
+  await service.create({ ...scope, title: "Shared", settings, ...unfiltered });
   expect(await userData.hasUserData(scope.extension_instance_id)).toBe(true);
   await connection.db.delete(projects).where(eq(projects.id, scope.project_id));
   expect(await service.list(scope)).toEqual([]);
 });
 
 test("a cleanup from an older read cannot replace a newer user edit", async () => {
-  const original = await service.create({ ...scope, title: "Shared", settings, filters: { status: ["old"] } });
-  await service.update(scope.project_id, original.id, { filters: { status: ["new"] } });
-  expect(await service.clean(original, { settings, filters: {} })).toBeNull();
-  expect((await service.get(scope.project_id, original.id))?.filters).toEqual({ status: ["new"] });
+  const original = await service.create({ ...scope, title: "Shared", settings, ...statusIs("old") });
+  await service.update(scope.project_id, original.id, { filter: statusIs("new").filter });
+  expect(await service.clean(original, { settings, ...unfiltered })).toBeNull();
+  expect((await service.get(scope.project_id, original.id))?.filter).toEqual(statusIs("new").filter);
 });

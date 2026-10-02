@@ -194,10 +194,10 @@ test("snapshots shared board views and emits their project cascade deletions", a
       viewMode: "board",
       columnGrouping: "none",
       rowGrouping: "none",
-      ordering: { attributeId: "manual", direction: "asc" },
       displayProperties: [],
     },
-    filters: {},
+    filter: { conjunction: "and", rules: [] },
+    sorts: [],
   });
   await views.setDefault(scope, view.id);
   const sync = createSyncService({ db, eventBus });
