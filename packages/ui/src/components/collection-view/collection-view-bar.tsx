@@ -201,6 +201,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             )}
             <Button
               ref={addFilterRef}
+              aria-label="Add filter"
               size="2xs"
               variant="ghost"
               flexShrink={0}
