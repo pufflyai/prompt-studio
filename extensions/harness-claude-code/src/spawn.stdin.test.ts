@@ -1,56 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { PassThrough, Writable } from "node:stream";
-import type { JsonPatch } from "@pstdio/sdk/extensions";
+import { controlledChild, recordingSink, waitForStreamIo } from "./mocks/controlled-child";
 import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
-
-const recordingSink = () => {
-  const patches: JsonPatch[] = [];
-  const sink = { getMessages: () => [], push: (patch: JsonPatch) => patches.push(patch) };
-  return { patches, sink };
-};
-
-const controlledChild = () => {
-  let ended = false;
-  const writes: string[] = [];
-  let resolveExit: (exit: { code: number | null; signal: string | null }) => void = () => {};
-  const stdout = new PassThrough();
-  const stdin = new Writable({
-    write(_chunk, _encoding, callback) {
-      callback();
-    },
-    final(callback) {
-      ended = true;
-      callback();
-    },
-  });
-  // Record every write the harness attempts, including one a real child's pipe would reject.
-  const passThroughWrite = stdin.write.bind(stdin);
-  stdin.write = ((chunk: unknown, ...rest: unknown[]) => {
-    writes.push(String(chunk));
-    return (passThroughWrite as (...args: unknown[]) => boolean)(chunk, ...rest);
-  }) as typeof stdin.write;
-
-  const onExit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
-    resolveExit = resolve;
-  });
-
-  return {
-    child: {
-      stdin,
-      stdout,
-      stderr: new PassThrough(),
-      kill: () => {},
-      onExit,
-      exit: () => {
-        stdout.end();
-        resolveExit({ code: 0, signal: null });
-      },
-    },
-    stdinEnded: () => ended,
-    written: () => writes.map((line) => JSON.parse(line)),
-    emit: (event: object) => stdout.write(`${JSON.stringify(event)}\n`),
-  };
-};
 
 const backgroundTasks = (taskIds: string[]) => ({
   type: "system",
@@ -72,8 +22,6 @@ const startWithSessionId = (child: ReturnType<typeof controlledChild>["child"]) 
   child.stdout.write(`${JSON.stringify({ type: "system", subtype: "init", session_id: "session-abc" })}\n`);
   return session;
 };
-
-const waitForStreamIo = () => new Promise((resolve) => setTimeout(resolve, 10));
 
 describe("Claude process stdin across turns", () => {
   test("ends stdin when a turn ends with no background task", async () => {

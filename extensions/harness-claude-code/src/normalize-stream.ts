@@ -1,10 +1,19 @@
 import type { SessionMessage } from "@pstdio/sdk/extensions";
-import { classifyToolAction, normalizeErrorPart } from "./message-parts";
-import type { ClaudeCodeContentBlock, RawLogEvent } from "./types";
+import { normalizeErrorPart, toolResultPart, toolUsePart } from "./message-parts";
+import type { ClaudeCodeContentBlock, ClaudeCodeToolResultBlock, ClaudeCodeToolUseBlock, RawLogEvent } from "./types";
 import { parseStdoutLine } from "./types";
 import { parseTimestamp } from "./utils";
 
 type StreamContext = { index: number; toolMap: Map<string, string> };
+
+const trackToolUse = (block: ClaudeCodeToolUseBlock, ctx: StreamContext) => {
+  const part = toolUsePart(block);
+  ctx.toolMap.set(block.id, part.tool);
+  return part;
+};
+
+const trackedToolResult = (block: ClaudeCodeToolResultBlock, ctx: StreamContext, toolUseResult?: unknown) =>
+  toolResultPart(ctx.toolMap.get(block.tool_use_id) ?? "unknown", block, toolUseResult);
 
 const handleContentBlockDelta = (parsed: Record<string, unknown>, ctx: StreamContext): SessionMessage | null => {
   const delta = parsed.delta as Record<string, unknown> | undefined;
@@ -36,43 +45,19 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
   if (!block) return null;
 
   if (block.type === "tool_use") {
-    const tool = block.name as string;
-    const callId = block.id as string;
-    ctx.toolMap.set(callId, tool);
     return {
       id: `stream-tool-${ctx.index}`,
       role: "assistant",
-      parts: [
-        {
-          type: "tool",
-          tool,
-          callId,
-          actionType: classifyToolAction(tool),
-          status: "pending",
-          state: { input: block.input },
-        },
-      ],
+      parts: [trackToolUse(block as ClaudeCodeToolUseBlock, ctx)],
       index: ctx.index,
     };
   }
 
   if (block.type === "tool_result") {
-    const callId = block.tool_use_id as string;
-    const tool = ctx.toolMap.get(callId) ?? "unknown";
-    const isError = block.is_error === true;
     return {
       id: `stream-tool-result-${ctx.index}`,
       role: "assistant",
-      parts: [
-        {
-          type: "tool",
-          tool,
-          callId,
-          actionType: classifyToolAction(tool),
-          status: isError ? "failed" : "completed",
-          state: { output: block.content, errorText: isError ? "Tool execution failed" : undefined },
-        },
-      ],
+      parts: [trackedToolResult(block as ClaudeCodeToolResultBlock, ctx)],
       index: ctx.index,
     };
   }
@@ -109,40 +94,19 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
   }
 
   if (block.type === "tool_use") {
-    ctx.toolMap.set(block.id, block.name);
     return {
       id: `stream-assistant-tool-${ctx.index}`,
       role: "assistant",
-      parts: [
-        {
-          type: "tool",
-          tool: block.name,
-          callId: block.id,
-          actionType: classifyToolAction(block.name),
-          status: "pending",
-          state: { input: block.input },
-        },
-      ],
+      parts: [trackToolUse(block, ctx)],
       index: ctx.index,
     };
   }
 
   if (block.type === "tool_result") {
-    const tool = ctx.toolMap.get(block.tool_use_id) ?? "unknown";
-    const isError = block.is_error === true;
     return {
       id: `stream-assistant-tool-result-${ctx.index}`,
       role: "assistant",
-      parts: [
-        {
-          type: "tool",
-          tool,
-          callId: block.tool_use_id,
-          actionType: classifyToolAction(tool),
-          status: isError ? "failed" : "completed",
-          state: { output: block.content, errorText: isError ? "Tool execution failed" : undefined },
-        },
-      ],
+      parts: [trackedToolResult(block, ctx)],
       index: ctx.index,
     };
   }
@@ -180,6 +144,21 @@ const handleAssistant = (parsed: Record<string, unknown>, ctx: StreamContext): S
   return messages;
 };
 
+// Claude reports every tool result in a `user` event. The person's own text is already in the chat.
+const handleUser = (parsed: Record<string, unknown>, ctx: StreamContext): SessionMessage[] => {
+  const content = (parsed.message as Record<string, unknown> | undefined)?.content;
+  if (!Array.isArray(content)) return [];
+
+  return (content as ClaudeCodeContentBlock[])
+    .filter((block): block is ClaudeCodeToolResultBlock => block.type === "tool_result")
+    .map((block, offset) => ({
+      id: `stream-user-tool-result-${ctx.index + offset}`,
+      role: "assistant",
+      parts: [trackedToolResult(block, ctx, parsed.tool_use_result)],
+      index: ctx.index + offset,
+    }));
+};
+
 const handleResult = (parsed: Record<string, unknown>, ctx: StreamContext): SessionMessage => {
   const usage = (parsed.usage ?? {}) as Record<string, number | undefined>;
   return {
@@ -213,6 +192,10 @@ const dispatchStdoutEvent = (parsed: Record<string, unknown>, ctx: StreamContext
 
   if (eventType === "assistant") {
     return handleAssistant(parsed, ctx);
+  }
+
+  if (eventType === "user") {
+    return handleUser(parsed, ctx);
   }
 
   if (eventType === "result") {

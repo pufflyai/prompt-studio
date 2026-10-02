@@ -1,4 +1,11 @@
-import type { ErrorPart, SessionMessage, ToolPartActionType } from "@pstdio/sdk/extensions";
+import type {
+  ErrorPart,
+  SessionMessage,
+  SessionMessagePart,
+  ToolPart,
+  ToolPartActionType,
+} from "@pstdio/sdk/extensions";
+import type { AskUserQuestionInput, ClaudeCodeToolResultBlock, ClaudeCodeToolUseBlock } from "./types";
 
 const READ_TOOLS = new Set(["Read", "Glob", "Grep"]);
 const WRITE_TOOLS = new Set(["Write", "Edit", "NotebookEdit", "TodoWrite"]);
@@ -12,6 +19,73 @@ export const classifyToolAction = (toolName: string): ToolPartActionType => {
   if (NETWORK_TOOLS.has(toolName)) return "network";
   return "other";
 };
+
+export const ASK_USER_QUESTION = "AskUserQuestion";
+
+// The neutral tool the chat question form reads, shared with the other harnesses.
+const QUESTION_TOOL = "question";
+
+const QUESTION_UNAVAILABLE = "This question is no longer available.";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+// `custom` offers Other. Claude accepts a typed answer that matches none of its options.
+const toQuestionInput = (input: unknown) => {
+  const questions = (input as Partial<AskUserQuestionInput> | null)?.questions;
+  // Invalid tool inputs still reach the chat before Claude reports their schema error.
+  if (!Array.isArray(questions) || !questions.every(isRecord)) return input;
+  return {
+    questions: questions.map(({ multiSelect, ...question }) => ({
+      ...question,
+      multiple: multiSelect === true,
+      custom: true,
+    })),
+  };
+};
+
+export const toolUsePart = (block: ClaudeCodeToolUseBlock): ToolPart => {
+  const isQuestion = block.name === ASK_USER_QUESTION;
+  const tool = isQuestion ? QUESTION_TOOL : block.name;
+  return {
+    type: "tool",
+    tool,
+    callId: block.id,
+    actionType: classifyToolAction(tool),
+    status: "pending",
+    state: { input: isQuestion ? toQuestionInput(block.input) : block.input },
+  };
+};
+
+/** `tool` is the name `toolUsePart` gave the call, so a question result stays a question. */
+export const toolResultPart = (tool: string, block: ClaudeCodeToolResultBlock, toolUseResult?: unknown): ToolPart => {
+  const isError = block.is_error === true;
+  const isQuestion = tool === QUESTION_TOOL;
+  // Claude stores an answer as `{ questions, answers }`, which the question form cannot read as a
+  // reply. Claude's own text says what the person chose, or that they skipped, so keep that instead.
+  const output =
+    !isQuestion && isRecord(toolUseResult) ? { ...toolUseResult, returnDisplay: block.content } : block.content;
+  const errorText = isQuestion && typeof block.content === "string" ? block.content : "Tool execution failed";
+
+  return {
+    type: "tool",
+    tool,
+    callId: block.tool_use_id,
+    actionType: classifyToolAction(tool),
+    status: isError ? "failed" : "completed",
+    state: { output, errorText: isError ? errorText : undefined },
+  };
+};
+
+export const isOpenQuestion = (part: SessionMessagePart): part is ToolPart =>
+  part.type === "tool" && part.tool === QUESTION_TOOL && (part.status === "pending" || part.status === "running");
+
+/** Closes a question whose Claude process ended before the person answered. Nobody can answer it now. */
+export const closeQuestionPart = (part: ToolPart): ToolPart => ({
+  ...part,
+  status: "failed",
+  state: { ...part.state, output: QUESTION_UNAVAILABLE, errorText: QUESTION_UNAVAILABLE },
+});
 
 export const mergeToolResultMessage = (previous: SessionMessage, message: SessionMessage): SessionMessage => {
   const previousPart = previous.parts[0];

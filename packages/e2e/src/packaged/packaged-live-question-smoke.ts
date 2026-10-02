@@ -42,8 +42,12 @@ export const registerLiveQuestionSmokeTests = () => {
             const done = new Promise(resolve => { finish = resolve; });
             const part = { type: "tool", tool: "question", callId: "request-1", status: "pending", state: { input: { questions: [{ id: "greeting", question: "Which greeting?", options: [{ label: "Hi" }] }] } } };
             input.events.push({ op: "add", path: "/messages/0", value: { id: "question", role: "assistant", parts: [part] } });
-            void input.questions.ask({ id: "host-question", toolUseId: "request-2", questions: [{ question: "Which color?", options: [{ label: "Blue" }] }] }).then(response => {
+            const hostPart = { ...part, callId: "request-2" };
+            input.events.push({ op: "add", path: "/messages/1", value: { id: "host-question", role: "assistant", parts: [hostPart] } });
+            void input.questions.ask({ id: "host-question", toolUseId: "request-2", questions: [{ question: "Which color?", options: [{ label: "Blue" }] }] }).then(async response => {
               writeFileSync(${JSON.stringify(hostEvidence)}, JSON.stringify(response));
+              await new Promise(resolve => setTimeout(resolve, 50));
+              input.events.push({ op: "replace", path: "/messages/1", value: { id: "host-question", role: "assistant", parts: [{ ...hostPart, status: "completed", state: { output: response.answers.flat().join(", ") } }] } });
               finish({ status: "completed" });
             });
             return { agentSessionId: "native-thread", done, stop() { throw new Error("Reply stopped the run"); },
@@ -122,11 +126,32 @@ export const registerLiveQuestionSmokeTests = () => {
             question_response: { callId: "expired-request", answers: [["Blue"]] },
           }),
         ).rejects.toThrow("400");
+        const uploaded = await fetch(`${started.baseUrl}/v1/projects/${project.id}/session-attachments`, {
+          method: "POST",
+          headers: {
+            ...runtimeAuthorization(started.descriptor),
+            "content-type": "text/plain",
+            "x-file-name": "notes.txt",
+          },
+          body: "notes",
+        });
+        expect(uploaded.status).toBe(201);
+        const file = await uploaded.json();
+        await expect(
+          request(`/sessions/${session.id}/follow-up`, "POST", {
+            prompt: "Blue",
+            question_response: { callId: "request-2", answers: scenario.host },
+            attachments: [{ file_id: file.file_id }],
+          }),
+        ).rejects.toThrow("400");
         const hostReply = await request(`/sessions/${session.id}/follow-up`, "POST", {
           prompt: "Blue",
           question_response: { callId: "request-2", answers: scenario.host },
         });
         expect(hostReply.follow_up.status).toBe("dispatched");
+        expect((await request(`/sessions/${session.id}/conversation`)).messages[1].parts[0]).toMatchObject({
+          status: "completed",
+        });
         for (
           let attempt = 0;
           attempt < 50 && (await request(`/sessions/${session.id}`)).status !== "completed";

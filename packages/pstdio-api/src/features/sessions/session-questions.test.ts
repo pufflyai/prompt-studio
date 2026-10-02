@@ -3,6 +3,7 @@ import type { HarnessExit, HarnessSession, HarnessStartInput, QuestionResponse }
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { ANSWER_WITH_FILES_ERROR } from "./live-question-reply";
 
 const ASKING_ID = testHarnessId("asking");
 
@@ -126,6 +127,32 @@ describe("harness questions", () => {
 
     const queued = await handle.app.request(`/v1/sessions/${session.id}/queued-messages`);
     expect(await queued.json()).toEqual({ messages: [] });
+  });
+
+  test("an answer cannot carry files, so the question stays open instead of losing them", async () => {
+    const handle = await openApp();
+    close = handle.close;
+
+    const session = await startAskingSession(handle.app);
+    await waitForStatus(handle.app, session.id, "awaiting_input");
+    const upload = await handle.app.request(`/v1/projects/${session.project_id}/session-attachments`, {
+      method: "POST",
+      headers: { "content-type": "text/plain", "x-file-name": "notes.txt" },
+      body: "notes",
+    });
+    const attachment = await upload.json();
+
+    const followUp = await handle.app.request(`/v1/sessions/${session.id}/follow-up`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: "Blue", attachments: [{ file_id: attachment.file_id }] }),
+    });
+
+    expect(followUp.status).toBe(400);
+    expect(await followUp.json()).toEqual({ error: ANSWER_WITH_FILES_ERROR });
+    expect(handle.asking.state.answer).toBeNull();
+    expect(handle.deps.sessionService.store.get(session.id)?.questionService.hasPending()).toBe(true);
+    expect((await handle.deps.sessionService.get(session.id))?.status).toBe("awaiting_input");
   });
 
   test("an answer that lands after the run ended leaves the terminal status alone", async () => {
