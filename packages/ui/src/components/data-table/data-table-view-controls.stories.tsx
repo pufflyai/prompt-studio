@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { DataTable } from "./data-table";
 import type { DataTableProps, DataTableSavedView, DataTableViewsSource, RowData } from "./types";
@@ -53,9 +53,8 @@ interface TableProps extends Partial<DataTableProps> {
 const Table = (props: TableProps) => {
   const { storageKey, ...rest } = props;
   const reset = useDataTableViewStore(storageKey, (state) => state.reset, rest);
-  useEffect(() => {
-    reset();
-  }, [reset]);
+  // Reset during the first render, before the renderer picks its first view in an effect.
+  useState(reset);
   return (
     <Box height="32rem">
       <DataTable {...tableProps} {...rest} toolbarStorageKey={storageKey} />
@@ -160,5 +159,19 @@ export const RowNumbersHidden: Story = {
   render: () => <Table storageKey="storybook-data-table-no-row-numbers" defaultSettings={{ rowNumbers: false }} />,
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector('[data-column-id="rowIndex"]')).toBeNull();
+  },
+};
+
+/** A new sort, filter, grouping, or search starts again on the first page. */
+export const PageResetsOnViewChange: Story = {
+  render: () => <Table storageKey="storybook-data-table-page-reset" initialPageSize={3} pageSizeOptions={[3, 10]} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Go to next page" }));
+    await expect(canvas.getByRole("button", { name: "Go to previous page" })).toBeEnabled();
+    const header = canvasElement.querySelector('[data-column-id="Score"]') as HTMLElement;
+    await userEvent.click(within(header).getByRole("button", { name: "Column options" }));
+    await userEvent.click(await within(document.body).findByText("Sort ascending"));
+    await expect(canvas.getByRole("button", { name: "Go to previous page" })).toBeDisabled();
   },
 };

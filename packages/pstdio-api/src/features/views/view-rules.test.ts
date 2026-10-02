@@ -19,6 +19,7 @@ const fields = [
   field("status", "enum", { groupable: true, options: [{ value: "todo", label: "To do" }] }),
   field("tags", "enum-multi", { options: [{ value: "bug", label: "Bug" }] }),
   field("score", "number"),
+  field("parent", "string"),
 ];
 const board = {
   viewMode: "board" as const,
@@ -66,7 +67,7 @@ test("cleans removed fields, options, and sorts using valid board defaults", () 
   });
 });
 
-test("cleanup maps option conditions between single and multi-value fields", () => {
+test("cleanup maps option conditions, converts old exact values, and keeps rules that stopped fitting", () => {
   const result = cleanBoardView(
     { kind: "kanban", settings: board },
     {
@@ -74,6 +75,7 @@ test("cleanup maps option conditions between single and multi-value fields", () 
       filter: and(
         { attributeId: "tags", condition: "is-any-of", value: ["bug"] },
         { attributeId: "status", condition: "has-none-of", value: ["todo"] },
+        { attributeId: "parent", condition: "is-any-of", value: ["PS-1", "PS-2"] },
         { attributeId: "score", condition: "contains", value: "7" },
       ),
       sorts: [{ attributeId: "tags", direction: "asc" }],
@@ -84,39 +86,53 @@ test("cleanup maps option conditions between single and multi-value fields", () 
     and(
       { attributeId: "tags", condition: "has-any-of", value: ["bug"] },
       { attributeId: "status", condition: "is-none-of", value: ["todo"] },
+      {
+        conjunction: "or",
+        rules: [
+          { attributeId: "parent", condition: "is", value: "PS-1" },
+          { attributeId: "parent", condition: "is", value: "PS-2" },
+        ],
+      },
+      { attributeId: "score", condition: "contains", value: "7" },
     ),
   );
-  expect(result.sorts).toEqual([]);
+  expect(result.sorts).toEqual([{ attributeId: "tags", direction: "asc" }]);
 });
 
 test("refuses rules and sorts the board's fields do not accept, listing the valid choices", () => {
   const check = (filter: ViewFilterGroup, sorts?: Parameters<typeof draft>[1]) => () =>
-    validateBoardView("kanban", draft(filter, sorts), fields);
+    validateBoardView("kanban", draft(filter, sorts), fields, { filter, sorts });
   expect(check(and({ attributeId: "score", condition: "contains", value: "7" }))).toThrow(
     VIEW_FILTER_CONDITIONS.number.join(", "),
   );
   expect(check(and({ attributeId: "status", condition: "is-any-of", value: ["deleted"] }))).toThrow(
     'Invalid filter value "deleted" for "status". Valid values: todo',
   );
-  expect(check(and({ attributeId: "missing", condition: "is", value: "x" }))).toThrow("status, tags, score");
+  expect(check(and({ attributeId: "missing", condition: "is", value: "x" }))).toThrow("status, tags, score, parent");
   const tooDeep = {
     conjunction: "and",
     rules: [{ conjunction: "or", rules: [{ conjunction: "and", rules: [] }] }],
   } as unknown as ViewFilterGroup;
   expect(check(tooDeep)).toThrow("A nested group may hold rules only");
-  expect(check(and(), [{ attributeId: "tags", direction: "asc" }])).toThrow("Valid IDs: status, score");
+  expect(check(and(), [{ attributeId: "tags", direction: "asc" }])).toThrow("Valid IDs: status, score, parent");
   expect(check(and({ attributeId: "score", condition: "gte", value: 70 }))).not.toThrow();
+});
+
+test("does not check stored rules again when a request changes something else", () => {
+  const stored = and({ attributeId: "score", condition: "contains", value: "7" });
+  expect(() => validateBoardView("kanban", draft(stored), fields, {})).not.toThrow();
+  expect(() => validateBoardView("kanban", draft(stored), fields, { filter: stored })).toThrow("does not accept");
 });
 
 test("checks data table settings against the table's columns", () => {
   const check = (settings: object) => () =>
-    validateBoardView("dataTable", { settings, filter: and(), sorts: [] }, fields);
+    validateBoardView("dataTable", { settings, filter: and(), sorts: [] }, fields, {});
   expect(check(table)).not.toThrow();
   expect(check({ ...table, grouping: "score" })).toThrow("Valid IDs: none, status");
-  expect(check({ ...table, hiddenColumns: ["gone"] })).toThrow("Valid IDs: status, tags, score");
+  expect(check({ ...table, hiddenColumns: ["gone"] })).toThrow("Valid IDs: status, tags, score, parent");
   expect(check({ ...table, viewMode: "list" })).toThrow("do not fit a data table view");
-  expect(() => validateBoardView("kanban", draft(and()), fields)).not.toThrow();
-  expect(() => validateBoardView("kanban", { ...draft(and()), settings: table }, fields)).toThrow(
+  expect(() => validateBoardView("kanban", draft(and()), fields, {})).not.toThrow();
+  expect(() => validateBoardView("kanban", { ...draft(and()), settings: table }, fields, {})).toThrow(
     "do not fit a board view",
   );
 });

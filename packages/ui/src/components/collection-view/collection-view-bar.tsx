@@ -193,7 +193,11 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
                     open={openRuleIndex === index}
                     onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
                     onChange={(next) => setFilter(setRuleAt(filter, [index], next))}
-                    onRemove={() => setFilter(setRuleAt(filter, [index], undefined))}
+                    onRemove={() => {
+                      // The next rule moves into this place and must not open in its popover.
+                      setOpenRuleIndex(null);
+                      setFilter(setRuleAt(filter, [index], undefined));
+                    }}
                     onOpenAdvanced={() => open("advanced", filterButtonRef)}
                   />
                 ),

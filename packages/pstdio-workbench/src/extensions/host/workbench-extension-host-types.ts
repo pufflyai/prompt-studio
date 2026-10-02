@@ -23,7 +23,7 @@ import type {
   WorkbenchExtensionMenuSlotConfig,
   WorkbenchExtensionMenuWhenBuilder,
 } from "../contributions/extension-contributions";
-import type { WorkbenchExtensionKanbanRendererAdapter } from "../contributions/kanban-renderer-contributions";
+import type { WorkbenchExtensionKanbanRendererAdapter } from "../contributions/kanban-renderer-adapter";
 import type { RegisterWorkbenchExtensionTreeRenderersInput } from "../contributions/tree-renderer-contributions";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import type { WorkbenchExtensionRefreshEvent } from "./workbench-extension-refresh";

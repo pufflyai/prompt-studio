@@ -113,7 +113,8 @@ export const DefaultDisplay = {
     const menu = within(await within(document.body).findByRole("dialog"));
     await userEvent.click(menu.getByText("Statistics"));
     await userEvent.click(menu.getByText("Provider"));
-    await expect(await canvas.findByText("pstdio.root")).toBeVisible();
+    // The value shows in its cell and, once statistics load, in the column's top values.
+    await expect((await canvas.findAllByText("pstdio.root"))[0]).toBeVisible();
     await expect((await canvas.findAllByText("50%")).length).toBeGreaterThan(0);
   },
 };

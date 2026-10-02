@@ -198,7 +198,7 @@ export const ColumnStats = {
     await expect(columnMenu.getByRole("checkbox", { name: "Invoice" })).toBeChecked();
     await expect(canvas.getByRole("columnheader", { name: "Invoice" })).toBeInTheDocument();
 
-    const statisticsSwitch = columnMenu.getByRole("switch", { name: "Statistics" });
+    const statisticsSwitch = columnMenu.getByRole("switch", { name: /^Statistics/ });
     await expect(statisticsSwitch).toBeChecked();
     await userEvent.click(displayMenu.getByText("Statistics", { exact: true }));
     await expect(statisticsSwitch).not.toBeChecked();
@@ -284,7 +284,7 @@ export const SelectableRows = {
   },
   play: async ({ canvasElement }: PlayContext) => {
     const canvas = within(canvasElement);
-    const header = canvas.getByTestId("kanban-renderer-header");
+    const header = canvas.getByTestId("collection-view-bar");
     const rowSelectors = canvas.getAllByLabelText("Select row");
 
     await expect(within(header).queryByText("48 rows")).not.toBeInTheDocument();
@@ -331,7 +331,7 @@ export const DynamicRowActions = {
     const rows = canvas.getAllByRole("row").slice(1);
 
     await userEvent.click(within(rows[0]!).getByRole("button", { name: "Row actions" }));
-    await expect(within(document.body).getByRole("menuitem", { name: "Archive invoice" })).toBeVisible();
+    await expect(await within(document.body).findByRole("menuitem", { name: "Archive invoice" })).toBeVisible();
     await userEvent.keyboard("{Escape}");
     await expect(within(rows[1]!).queryByRole("button", { name: "Row actions" })).not.toBeInTheDocument();
   },

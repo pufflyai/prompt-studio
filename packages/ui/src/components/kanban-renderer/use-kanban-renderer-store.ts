@@ -1,10 +1,5 @@
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
-import {
-  type CollectionViewStoreState,
-  getCollectionViewStore,
-  useCollectionViewStore,
-} from "../collection-view/use-collection-view-store";
-import type { KanbanRendererStorage } from "./kanban-renderer-storage";
+import { type CollectionViewStoreState, useCollectionViewStore } from "../collection-view/use-collection-view-store";
 import { DEFAULT_KANBAN_RENDERER_SETTINGS, type KanbanRendererSettings } from "./types";
 
 export type KanbanRendererState = CollectionViewStoreState<KanbanRendererSettings>;
@@ -20,12 +15,6 @@ export const kanbanRendererInitialState = (initialState?: KanbanRendererStoreIni
   filter: initialState?.filter,
   sorts: initialState?.sorts,
 });
-
-export const getKanbanRendererStore = (
-  storageKey: string,
-  initialState?: KanbanRendererStoreInitialState,
-  storage?: KanbanRendererStorage,
-) => getCollectionViewStore(storageKey, kanbanRendererInitialState(initialState), storage);
 
 /** The unsaved view state of one board. Hosts read it to send the view to their query. */
 export const useKanbanRendererStore = <T>(

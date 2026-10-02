@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
@@ -40,9 +40,8 @@ const ViewControlsBoard = (props: ViewControlsBoardProps) => {
     sorts: defaultSorts,
   };
   const reset = useKanbanRendererStore(storageKey, (state) => state.reset, initialState);
-  useEffect(() => {
-    reset();
-  }, [reset]);
+  // Reset during the first render, before the renderer picks its first view in an effect.
+  useState(reset);
 
   return (
     <Box p="sm" height="560px">

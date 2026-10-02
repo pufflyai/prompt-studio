@@ -47,13 +47,13 @@ beforeEach(async () => {
   writeFileSync(
     join(source, "extension.ts"),
     `
-let values=[{value:"todo",label:"To do"},{value:"gone",label:"Gone"}], fail=false;
+let values=[{value:"todo",label:"To do"},{value:"gone",label:"Gone"}], fail=false, inbox=[{id:"a",values:{title:"Mail",score:5}}];
 const legacySettings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",ordering:{attributeId:"manual",direction:"asc"},displayProperties:["state"]};
 const settings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",displayProperties:["state"]};
 const filter={conjunction:"and",rules:[]};
 export default {
-commands:[{id:"remove",ref:{kind:"command",id:"remove"},title:"Remove",params:{},run:()=>{values=values.slice(0,1);return null;}},{id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{fail=true;return null;}}],
-views:[...["legacy","explicit"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",defaultActiveViewId:id==="explicit"?"first":undefined,defaultViews:[{id:"first",title:"First",settings:legacySettings,filters:{}},{id:"flagged",title:"Flagged",settings:legacySettings,filters:{},isDefault:true}],query:()=>({rows:[]})}})),{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true},{id:"score",label:"Score"}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80}},{id:"b",values:{name:"Docs",status:null,score:40}}]})}}]
+commands:[{id:"remove",ref:{kind:"command",id:"remove"},title:"Remove",params:{},run:()=>{values=values.slice(0,1);return null;}},{id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{fail=true;return null;}},{id:"empty",ref:{kind:"command",id:"empty"},title:"Empty",params:{},run:()=>{inbox=[];return null;}}],
+views:[...["legacy","explicit"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",defaultActiveViewId:id==="explicit"?"first":undefined,defaultViews:[{id:"first",title:"First",settings:legacySettings,filters:{}},{id:"flagged",title:"Flagged",settings:legacySettings,filters:{},isDefault:true}],query:()=>({rows:[]})}})),{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true},{id:"score",label:"Score"}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80}},{id:"b",values:{name:"Docs",status:null,score:40}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
 };`,
   );
   handle = await createTestApp();
@@ -207,4 +207,15 @@ test("data table views resolve fields from columns and save shared views", async
   const wrongKind = await request(`/board-views/${view.id}`, "PATCH", { settings: { viewMode: "list" } });
   expect(wrongKind.status).toBe(400);
   expect(await wrongKind.text()).toContain("do not fit a data table view");
+});
+
+test("a table that cannot describe its columns keeps its saved views", async () => {
+  const tableId = "test.boards.view.inbox";
+  const filter = { conjunction: "and", rules: [{ attributeId: "score", condition: "gte", value: 1 }] };
+  const created = await request(`/boards/${tableId}/views`, "POST", { title: "Scored", filter });
+  expect(created.status).toBe(201);
+  const view = await created.json();
+  await command("empty");
+  const listed = await (await request(`/boards/${tableId}/views`)).json();
+  expect(listed.views.find((saved: { id: string }) => saved.id === view.id)).toMatchObject({ filter });
 });

@@ -2,14 +2,19 @@ import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { findField, formatFieldText } from "../collection-view/collection-view-fields";
 import { filterRowsByView } from "../collection-view/collection-view-filter";
-import { groupKey } from "../collection-view/collection-view-grouping";
 import { searchRows } from "../collection-view/collection-view-search";
 import { sortRowsByView } from "../collection-view/collection-view-sort";
 import type { BoardColumnConfig } from "./kanban-renderer";
 import type { KanbanRendererBoardColumn, KanbanRendererBoardGroup } from "./kanban-renderer-board";
-import type { KanbanRendererColumnGroup } from "./kanban-renderer-grouping";
+import { groupRows, type KanbanRendererColumnGroup } from "./kanban-renderer-grouping";
 import { collectDisplayBadges, collectDisplayCustomSlots, findEnumOption } from "./kanban-renderer-helpers";
-import { type AttributeDescriptor, findAttribute, type KanbanRendererRow, type KanbanRendererSettings } from "./types";
+import {
+  type AttributeDescriptor,
+  findAttribute,
+  type KanbanRendererRow,
+  type KanbanRendererSettings,
+  NO_GROUPING,
+} from "./types";
 
 export const rowEyebrow = (row: KanbanRendererRow) => {
   const shorthand = row.attributes.id;
@@ -30,10 +35,15 @@ export const narrowKanbanRows = <TRow extends KanbanRendererRow>(input: NarrowKa
   const { rows, filter, fields, attributes, settings, search } = input;
   const displayProperties = settings.displayProperties.filter((property) => property !== "id");
   const showsId = settings.displayProperties.includes("id");
-  // Search matches only what a card shows: its title, its id when shown, and its visible properties.
+  // Lists always show a row's short id. Boards show an id only when it is a display property.
+  const idTexts = (row: KanbanRendererRow) => {
+    if (settings.viewMode === "list") return typeof row.attributes.id === "string" ? [row.attributes.id] : [];
+    return showsId ? [rowEyebrow(row)] : [];
+  };
+  // Search matches only what a row shows: its title, its id when shown, and its visible properties.
   const searchTexts = (row: KanbanRendererRow) => [
     row.title,
-    ...(showsId ? [rowEyebrow(row)] : []),
+    ...idTexts(row),
     ...displayProperties.flatMap((id) => {
       const field = findField(attributes, id);
       return field ? formatFieldText(row, field) : [];
@@ -41,13 +51,12 @@ export const narrowKanbanRows = <TRow extends KanbanRendererRow>(input: NarrowKa
   ];
   const filteredRows = filterRowsByView(rows, filter, fields);
   const visibleRows = searchRows(filteredRows, search, searchTexts);
-  const columnField = findAttribute(attributes, settings.columnGrouping);
-  const columnTotals = new Map<string, number>();
-  if (columnField)
-    for (const row of filteredRows) {
-      const key = groupKey(row, columnField);
-      columnTotals.set(key, (columnTotals.get(key) ?? 0) + 1);
-    }
+  const columns = groupRows(filteredRows, {
+    attributes,
+    columnGrouping: settings.columnGrouping,
+    rowGrouping: NO_GROUPING,
+  });
+  const columnTotals = new Map(columns.map((column) => [column.key, column.rows.length]));
   return { filteredRows, visibleRows, columnTotals };
 };
 
@@ -115,7 +124,7 @@ export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: B
       actions: columnConfig.actions ?? [],
       items: toBoardItems(column.rows),
       groups,
-      totalCount: columnTotals ? (columnTotals.get(column.key) ?? column.rows.length) : undefined,
+      totalCount: columnTotals?.get(column.key),
     };
   });
 };

@@ -1,7 +1,13 @@
 import type { ViewSort } from "@pstdio/sdk/extensions";
 import { getEnumOptions } from "../kanban-renderer/kanban-renderer-enum-helpers";
 import type { AttributeDescriptor, AttributeType, KanbanRendererRow } from "../kanban-renderer/types";
-import { canSortField, findField, getAttributeStringValues, getAttributeValue } from "./collection-view-fields";
+import {
+  canSortField,
+  findField,
+  getAttributeStringValues,
+  getAttributeValue,
+  parseViewDate,
+} from "./collection-view-fields";
 
 /** Option order: declared options first, unknown values after them, missing values last. */
 export const compareEnumValues = (left: string | undefined, right: string | undefined, type: AttributeType) => {
@@ -15,10 +21,7 @@ export const compareEnumValues = (left: string | undefined, right: string | unde
   return toIndex(left) - toIndex(right);
 };
 
-const toTime = (value: unknown) => {
-  if (typeof value !== "string" && typeof value !== "number") return Number.NaN;
-  return new Date(value).getTime();
-};
+const toTime = (value: unknown) => parseViewDate(value)?.getTime() ?? Number.NaN;
 
 const compareFieldValues = (a: KanbanRendererRow, b: KanbanRendererRow, field: AttributeDescriptor) => {
   const left = getAttributeValue(a, field);
@@ -35,9 +38,9 @@ const compareFieldValues = (a: KanbanRendererRow, b: KanbanRendererRow, field: A
 };
 
 const isEmpty = (row: KanbanRendererRow, field: AttributeDescriptor) => {
+  if (field.type.kind === "date") return parseViewDate(getAttributeValue(row, field)) === undefined;
   const [value] = getAttributeStringValues(row, field);
   if (value === undefined) return true;
-  if (field.type.kind === "date") return Number.isNaN(toTime(value));
   if (field.type.kind === "number") return !Number.isFinite(Number(value));
   return false;
 };

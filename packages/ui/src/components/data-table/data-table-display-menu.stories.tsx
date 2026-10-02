@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { DataTableDisplayMenu } from "./data-table-display-menu";
 import { reorderDataTableColumns, toggleHiddenDataTableColumn } from "./data-table-state";
@@ -59,7 +59,8 @@ export const Defaults: Story = {
   render: () => <Menu />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Display settings" }));
-    await expect(await within(document.body).findByText("6 of 6 shown")).toBeVisible();
+    // The popover fades in, so wait until it is visible.
+    await waitFor(() => expect(within(document.body).getByText("6 of 6 shown")).toBeVisible());
   },
 };
 
@@ -71,7 +72,8 @@ export const HiddenColumn: Story = {
   render: () => <Menu settings={{ hiddenColumns: ["Score"] }} />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Display settings" }));
-    await expect(await within(document.body).findByText("5 of 6 shown")).toBeVisible();
+    // The popover fades in, so wait until it is visible.
+    await waitFor(() => expect(within(document.body).getByText("5 of 6 shown")).toBeVisible());
   },
 };
 

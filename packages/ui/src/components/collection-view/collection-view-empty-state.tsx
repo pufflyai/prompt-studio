@@ -8,7 +8,8 @@ export interface CollectionViewEmptyStateProps {
   /** How many rows the view's filter hides. */
   hiddenCount: number;
   onClearSearch: () => void;
-  onEditFilter: () => void;
+  /** Left out when the view shows no filter controls to open. */
+  onEditFilter?: () => void;
 }
 
 /** Names what hides the rows and offers the one action that brings them back. Search comes first: it is the latest thing the person did. */
@@ -37,10 +38,12 @@ export const CollectionViewEmptyState = (props: CollectionViewEmptyStateProps) =
       title="Nothing matches this view"
       description={`${ruleCount} filter ${ruleCount === 1 ? "rule hides" : "rules hide"} all ${hiddenCount} ${hiddenCount === 1 ? "item" : "items"}.`}
     >
-      <Button size="2xs" variant="outline" onClick={onEditFilter}>
-        <ListFilter />
-        Edit filter
-      </Button>
+      {onEditFilter ? (
+        <Button size="2xs" variant="outline" onClick={onEditFilter}>
+          <ListFilter />
+          Edit filter
+        </Button>
+      ) : null}
     </EmptyState>
   );
 };

@@ -70,7 +70,7 @@ Built-in extension views are read-only. Duplicate a built-in to change it. Any s
 
 The default order is the chosen project default, then the extension's `defaultActiveViewId`, then a built-in with the deprecated `isDefault` flag, then the first available view. Built-ins appear first; saved views follow their stored order.
 
-When the API reads views, it removes what no longer fits the board: rules on missing fields, missing option values, rules left with no values, empty groups, and sorts on missing fields. A rule whose field changes between a single option and several options keeps its meaning, for example `is-any-of` becomes `has-any-of`. A failed query keeps saved views unchanged.
+When the API reads views, it removes what no longer fits the board: rules on missing fields, missing option values, rules left with no values, empty groups, and sorts on missing fields. A rule whose field changes between a single option and several options keeps its meaning, for example `is-any-of` becomes `has-any-of`. Views saved before conditions existed picked exact values on every field, so an `is-any-of` list on a text, number, or date field becomes `is` rules, joined by `or` when there are several. Any other rule whose condition no longer fits its field stays saved: the renderer skips it, and it works again if the field returns to its old kind. A failed query, or a data table that returns no rows to describe its columns, keeps saved views unchanged.
 
 Disabled boards are unavailable but keep their data. Uninstall keeps a disabled instance when it has user data, unless data deletion is requested. Removed board declarations leave orphaned views that can be listed and deleted.
 

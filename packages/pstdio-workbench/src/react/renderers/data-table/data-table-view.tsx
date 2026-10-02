@@ -58,18 +58,14 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
+    queryKey: resolveDataTableRendererQueryKey(
+      contribution,
+      placement.resource,
+      workbench.modes.getActiveModeId(),
+      contextValues,
+    ),
     // Filter and sorts can narrow what the query returns. Display settings and search never run it again.
-    queryKey: JSON.stringify([
-      resolveDataTableRendererQueryKey(
-        contribution,
-        placement.resource,
-        workbench.modes.getActiveModeId(),
-        contextValues,
-      ),
-      filter,
-      sorts,
-    ]),
-
+    refreshKey: JSON.stringify([filter, sorts]),
     load: (signal) =>
       contribution.executeQuery(
         { resource: placement.resource, modeId: workbench.modes.getActiveModeId(), filter, sorts, settings },

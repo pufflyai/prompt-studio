@@ -82,12 +82,9 @@ export const ViewSortMenu = (props: ViewSortMenuProps) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const usedIds = sorts.map((sort) => sort.attributeId);
   const nextField = fields.find((field) => !usedIds.includes(field.id));
-  const replace = (index: number, sort: ViewSort | undefined) =>
-    onChange(
-      sort
-        ? sorts.map((entry, entryIndex) => (entryIndex === index ? sort : entry))
-        : sorts.filter((_, entryIndex) => entryIndex !== index),
-    );
+  const change = (index: number, sort: ViewSort) =>
+    onChange(sorts.map((entry, entryIndex) => (entryIndex === index ? sort : entry)));
+  const remove = (index: number) => onChange(sorts.filter((_, entryIndex) => entryIndex !== index));
   const handleDragEnd = (event: DragEndEvent) => {
     const from = usedIds.indexOf(String(event.active.id));
     const to = event.over ? usedIds.indexOf(String(event.over.id)) : -1;
@@ -108,8 +105,8 @@ export const ViewSortMenu = (props: ViewSortMenuProps) => {
                 fields={fields}
                 sort={sort}
                 usedIds={usedIds}
-                onChange={(next) => replace(index, next)}
-                onRemove={() => replace(index, undefined)}
+                onChange={(next) => change(index, next)}
+                onRemove={() => remove(index)}
               />
             ))}
           </SortableContext>

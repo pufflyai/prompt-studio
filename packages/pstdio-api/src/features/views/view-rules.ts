@@ -50,13 +50,24 @@ const validateDataTableSettings = (input: object, fields: BoardField[]) => {
   );
   return settings;
 };
-/** Checks a whole view against its board's fields and returns it with settings of the board's kind. */
-export const validateBoardView = (kind: BoardKind, view: ViewDraft, fields: BoardField[]) => {
+/**
+ * Checks the settings of a view, and the filter and sorts a request sends. Rules a view already
+ * stores are not checked again: cleanup keeps rules that stopped fitting their field, and an
+ * unrelated edit such as a rename must not fail because of them.
+ */
+export const validateBoardView = (
+  kind: BoardKind,
+  view: ViewDraft,
+  fields: BoardField[],
+  sent: { filter?: unknown; sorts?: unknown },
+) => {
   const settings =
     kind === "kanban"
       ? validateKanbanSettings(view.settings, fields)
       : validateDataTableSettings(view.settings, fields);
-  const problem = findViewFilterProblem(view.filter, fields) ?? findViewSortsProblem(view.sorts, fields);
+  const problem =
+    (sent.filter === undefined ? undefined : findViewFilterProblem(view.filter, fields)) ??
+    (sent.sorts === undefined ? undefined : findViewSortsProblem(view.sorts, fields));
   if (problem) throw new BoardViewError(problem);
   return { settings, filter: view.filter, sorts: view.sorts };
 };

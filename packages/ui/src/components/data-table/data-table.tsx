@@ -47,15 +47,19 @@ const DatasetDataTable = (props: DataTableProps) => {
   } = props;
   const view = useDataTableView(props);
   const { settings, setSettings, sorts, setSorts, filter, startRule, setOpenMenu } = view;
-  const [pageIndex, setPageIndex] = useState(0);
+  // A different filter, sort, grouping, or search starts again on the first page.
+  const pageKey = JSON.stringify([filter, sorts, settings.grouping, view.deferredSearch]);
+  const [pagePosition, setPagePosition] = useState({ key: pageKey, index: 0 });
+  const pageIndex = pagePosition.key === pageKey ? pagePosition.index : 0;
+  const setPageIndex = (index: number) => setPagePosition({ key: pageKey, index });
   const [pageSize, setPageSize] = useState(() => resolveInitialPageSize({ initialPageSize }));
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const enableSelection = shouldEnableSelection(props);
   const selectionActions = resolveSelectionActions(props);
   const { groups } = view;
-  // Collapsed groups give their rows back to the pages.
-  const shownRows = groups ? groups.flatMap((group) => (collapsed.has(group.key) ? [] : group.rows)) : view.shownRows;
+  // Rows in collapsed groups leave the pages but still count for statistics, selection, and row numbers.
+  const shownRows = groups ? groups.flatMap((group) => group.rows) : view.shownRows;
   const page = groups
     ? pageGroupedRows(groups, collapsed, pageIndex, pageSize)
     : pageRows(shownRows, pageIndex, pageSize);

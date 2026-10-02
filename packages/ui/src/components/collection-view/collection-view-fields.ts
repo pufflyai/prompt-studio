@@ -64,9 +64,14 @@ export const getAttributeStringValues = (row: KanbanRendererRow, descriptor: Att
   return [];
 };
 
-const formatDate = (value: string) => {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** A date-only value names a day on the viewer's calendar, not midnight in UTC. */
+export const parseViewDate = (value: unknown) => {
+  if (typeof value !== "string" && typeof value !== "number") return undefined;
+  const day = typeof value === "string" ? DATE_ONLY.exec(value) : null;
+  const date = day ? new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3])) : new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 };
 
 /** The text a view shows for a field: option labels, dates as dates, everything else as written. */
@@ -74,6 +79,7 @@ export const formatFieldText = (row: KanbanRendererRow, field: AttributeDescript
   const values = getAttributeStringValues(row, field);
   if (field.type.kind === "enum" || field.type.kind === "enum-multi")
     return values.map((value) => enumOptionLabel(field.type, value));
-  if (field.type.kind === "date") return values.map(formatDate);
-  return values;
+  if (field.type.kind !== "date") return values;
+  const date = parseViewDate(getAttributeValue(row, field));
+  return date ? [date.toLocaleDateString()] : values;
 };

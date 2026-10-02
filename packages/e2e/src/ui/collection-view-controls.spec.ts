@@ -31,7 +31,7 @@ const execute = async (request: APIRequestContext, projectId: string, commandId:
   expect(result.ok(), await result.text()).toBe(true);
 };
 
-const views = (projectId: string, origin: string, ...args: string[]) =>
+const views = (origin: string, ...args: string[]) =>
   spawnSync(
     "bun",
     ["--conditions=source", resolve(import.meta.dirname, "../../../pstdio/src/index.ts"), "views", ...args],
@@ -109,7 +109,6 @@ test("boards search, filter with conditions, and save sorts that agents can buil
     // Agents build the same view through pst views, and invalid conditions name the valid ones.
     const statusValue = status.options![0]!.value;
     const created = views(
-      project.id,
       project.origin,
       "create",
       "--project-id",
@@ -131,7 +130,6 @@ test("boards search, filter with conditions, and save sorts that agents can buil
     await page.getByRole("tab", { name: "Agent open", exact: true }).click();
     await expect(page.getByRole("button", { name: "Edit Status filter", exact: true })).toBeVisible();
     const refused = views(
-      project.id,
       project.origin,
       "create",
       "--project-id",
@@ -172,7 +170,7 @@ test("data tables sort from the header and share saved views", async ({ page, re
     await page.getByRole("button", { name: "Save as new view", exact: true }).click();
     await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveAttribute("aria-selected", "true");
 
-    const listed = views(project.id, project.origin, "list", "--project-id", project.id, "--board", artifactsTable);
+    const listed = views(project.origin, "list", "--project-id", project.id, "--board", artifactsTable);
     expect(listed.status, listed.stderr).toBe(0);
     const saved = JSON.parse(listed.stdout).views.find((view: { title: string }) => view.title === "All copy");
     expect(saved).toMatchObject({

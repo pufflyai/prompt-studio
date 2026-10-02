@@ -221,7 +221,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           ruleCount={countFilterRules(filter)}
           hiddenCount={rows.length}
           onClearSearch={() => setSearch("")}
-          onEditFilter={() => setOpenMenu("advanced")}
+          onEditFilter={hideToolbar ? undefined : () => setOpenMenu("advanced")}
         />
       ) : null}
       {contentPlaceholder === undefined && (rows.length === 0 || visibleRows.length > 0) ? (
