@@ -51,12 +51,16 @@ export const writeSettings = async (settings: ExtensionSettingsApi, input: unkno
   for (const [key, value] of Object.entries(data)) await settings.set(key, value);
   return data;
 };
+const settingType = (value: unknown) => {
+  if (typeof value === "string") return "string";
+  return Array.isArray(value) ? "array" : "object";
+};
 const titles: Record<string, string> = { brandTerms: "Brand terms", voice: "Writing voice" };
 export const settingProperties = Object.fromEntries(
   Object.entries(defaults).map(([key, value]) => [
     key,
     {
-      type: typeof value === "string" ? "string" : Array.isArray(value) ? "array" : "object",
+      type: settingType(value),
       scope: "project",
       default: value,
       title: titles[key] ?? key[0].toUpperCase() + key.slice(1),

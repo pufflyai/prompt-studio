@@ -26558,7 +26558,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Each site has its own media rule, kept with the site list in the extension. X takes up to 4 images, or 1 video or GIF; Hacker News takes none. The tray offers only what the site allows, for replies too.",
+                  "content": "Each site has its own media rule, kept with the site list in the extension. X takes up to 4 images, or 1 video or GIF; Hacker News takes none. Only new posts carry media, and only what the site allows.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,

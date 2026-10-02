@@ -24,6 +24,9 @@ export const saveThreadCommand = defineCommand({
       return { id, created: true };
     }
     const url = canonicalThreadUrl(data.url);
+    // A published new post keeps its own id, so a search that finds it again must not save it twice.
+    const posted = (await threadsOf(ctx).list()).find((thread) => isNewPost(thread) && thread.url === url);
+    if (posted) return { id: posted.id, created: false };
     const id = threadId(url);
     const created = await threadsOf(ctx).createIfAbsent(id, { ...data, url, id, status: "new", foundAt });
     if (created) await changed(ctx, id);
@@ -43,6 +46,15 @@ export const updateThreadCommand = defineCommand({
     const wrong = Object.keys(patch).filter((key) => foreign.includes(key));
     if (wrong.length) throw new Error(`This thread has no ${wrong.join(", ")} field.`);
     if (patch.outcome && thread.status !== "answered") throw new Error("Only an answered thread has an outcome.");
+    if (patch.snapshot) {
+      // Reply ideas point at snapshot comments, so a refreshed snapshot must keep those comments.
+      const kept = new Set(patch.snapshot.comments.map((comment) => comment.id));
+      const ideas = await ideasOf(ctx).list();
+      const lost = ideas.find(
+        (idea) => idea.threadId === id && idea.replyTo && idea.status !== "dismissed" && !kept.has(idea.replyTo),
+      );
+      if (lost) throw new Error(`Keep comment ${lost.replyTo} in the snapshot; a reply idea answers it.`);
+    }
     const outcomeCheckedAt = patch.outcome ? new Date().toISOString() : thread.outcomeCheckedAt;
     await threadsOf(ctx).update(id, { ...thread, ...patch, outcomeCheckedAt } as Thread);
     await changed(ctx, id);
@@ -78,7 +90,9 @@ export const setThreadStatus = defineCommand({
       return { id };
     }
     if (!url) throw new Error("Paste the link of the post you published.");
-    const posted: NewPost = { ...thread, status: value, answeredAt, url: canonicalThreadUrl(url) };
+    const link = canonicalThreadUrl(url);
+    if (await threadsOf(ctx).get(threadId(link))) throw new Error("This link is already saved as a thread.");
+    const posted: NewPost = { ...thread, status: value, answeredAt, url: link };
     await threadsOf(ctx).update(id, posted);
     await changed(ctx, id);
     return { id };

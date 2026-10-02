@@ -17,16 +17,15 @@ export const requireThread = async (ctx: ExtensionContextBase, id: string) => {
   if (!thread) throw new Error("Thread not found.");
   return thread;
 };
+const runTime = (run: Run) =>
+  new Date(run.startedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+const runDate = (run: Run) => new Date(run.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+/** The Sidenav row says "Today"; stored and shared labels keep the date, so they do not go stale. */
 export const runLabel = (run: Run, now = new Date()) => {
-  const started = new Date(run.startedAt);
-  const time = started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  const day =
-    started.toDateString() === now.toDateString()
-      ? "Today"
-      : started.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `${day} · ${time}`;
+  const today = new Date(run.startedAt).toDateString() === now.toDateString();
+  return `${today ? "Today" : runDate(run)} · ${runTime(run)}`;
 };
-export const runRef = (run: Run) => ({ type: runResource.id, id: run.id, label: runLabel(run) });
+export const runRef = (run: Run) => ({ type: runResource.id, id: run.id, label: `${runDate(run)} · ${runTime(run)}` });
 export const threadRef = (thread: Thread) => ({ type: threadResource.id, id: thread.id, label: thread.title });
 // Pages reference each other by local id; views and pages would otherwise import each other.
 export const pageRef = (id: "radar" | "threads" | "thread" | "run") => ({ kind: "page" as const, id });

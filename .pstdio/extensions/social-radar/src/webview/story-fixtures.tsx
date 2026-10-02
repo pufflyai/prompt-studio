@@ -129,16 +129,19 @@ const client = {
 const queryClient = new QueryClient();
 
 /** Gives stories the radar context without a host; commands are not called. */
-export const RadarStory = (props: { children: ReactNode }) => (
-  <QueryClientProvider client={queryClient}>
-    <RadarContext.Provider
-      value={{
-        host: {} as GuestHost,
-        client,
-        propsStore: { get: () => ({}), subscribe: () => () => {} },
-      }}
-    >
-      {props.children}
-    </RadarContext.Provider>
-  </QueryClientProvider>
-);
+export const RadarStory = (props: { children: ReactNode }) => {
+  const { children } = props;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RadarContext.Provider
+        value={{
+          host: {} as GuestHost,
+          client,
+          propsStore: { get: () => ({}), subscribe: () => () => {} },
+        }}
+      >
+        {children}
+      </RadarContext.Provider>
+    </QueryClientProvider>
+  );
+};

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Run } from "../schemas";
+import type { Run, Thread } from "../schemas";
 import { commands } from ".";
 import { finish, foundThread, newPost, setup } from "./test-context";
 
@@ -80,5 +80,21 @@ describe("social radar runs", () => {
     expect(context.followUps.map((thread) => thread.id)).toEqual([saved.id]);
     await commands["record-outcome"].run(ctx, { threadId: saved.id, outcome: "No response" });
     expect((await commands["get-context"].run(ctx, { runId: run.runId })).followUps).toHaveLength(0);
+  });
+
+  test("follows up on answered threads for a week only", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const recent = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    const old = await commands["save-thread"].run(ctx, {
+      input: foundThread(run.runId, "https://news.ycombinator.com/item?id=7"),
+    });
+    for (const id of [recent.id, old.id]) await commands["set-thread-status"].run(ctx, { id, status: "answered" });
+    const threads = storage.collection<Thread>("threads");
+    const stale = await threads.get(old.id);
+    if (!stale) throw new Error("Missing thread");
+    await threads.update(old.id, { ...stale, answeredAt: new Date(Date.now() - 8 * 86_400_000).toISOString() });
+    const { followUps } = await commands["get-context"].run(ctx, { runId: run.runId });
+    expect(followUps.map((thread) => thread.id)).toEqual([recent.id]);
   });
 });

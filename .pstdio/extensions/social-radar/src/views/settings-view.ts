@@ -3,6 +3,7 @@ import { type Run, type Site, sites } from "../schemas";
 import { readSettings, writeSettings } from "../settings";
 import { siteLabels } from "../sites";
 import { changed, newest, radarChanged, runsOf } from "../store";
+import { plural } from "../text";
 
 const listControl = (id: string, name: string, values: string[], description?: string): ControlParam => ({
   id,
@@ -16,7 +17,6 @@ const listControl = (id: string, name: string, values: string[], description?: s
   defaultValue: values,
   options: values.map((value) => ({ id: value, name: value })),
 });
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 // The group description is the site's status line: what it costs, or why recent runs skipped it.
 const siteStatus = (site: Site, runs: Run[], budget: number, targets: number) => {
   const finished = runs.filter((run) => run.status === "done");
@@ -24,7 +24,7 @@ const siteStatus = (site: Site, runs: Run[], budget: number, targets: number) =>
   while (finished[streak]?.skippedSites?.some((skip) => skip.site === site)) streak += 1;
   const reason = finished[0]?.skippedSites?.find((skip) => skip.site === site)?.reason;
   if (streak && reason) return `Skipped on the last ${plural(streak, "run")}: ${reason}`;
-  return `${plural(budget, "search")} · ${targets ? plural(targets, "target") : "no targets"}`;
+  return `${plural(budget, "search", "searches")} · ${targets ? plural(targets, "target") : "no targets"}`;
 };
 const readList = (values: ControlValueMap, id: string) => {
   const value = values[id];

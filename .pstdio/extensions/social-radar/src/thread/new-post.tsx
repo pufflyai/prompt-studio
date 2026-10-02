@@ -1,4 +1,4 @@
-import { Badge, Button, HStack, Input, Separator, Spacer, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, HStack, Icon, Input, Separator, Spacer, Stack, Text } from "@chakra-ui/react";
 import { CopyButton, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { Check, Lightbulb, Pencil, X } from "lucide-react";
 import { useState } from "react";
@@ -29,7 +29,7 @@ export const NewPostDraft = (props: NewPostDraftProps) => {
         <SimpleCardBody>
           <Stack gap="sm">
             <HStack gap="xs">
-              <Lightbulb size={14} />
+              <Icon as={Lightbulb} boxSize="icon-xs" />
               <Badge size="sm" colorPalette="purple">
                 Draft post
               </Badge>

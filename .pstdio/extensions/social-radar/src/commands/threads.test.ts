@@ -67,4 +67,30 @@ describe("social radar threads", () => {
       "Only an answered thread has an outcome.",
     );
   });
+
+  test("a published post found again by a search is not saved twice", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const post = await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
+    const link = "https://x.com/prompt_studio/status/1";
+    await commands["set-thread-status"].run(ctx, { id: post.id, status: "answered", url: link });
+    const found = await commands["save-thread"].run(ctx, {
+      input: { ...foundThread(run.runId, link), site: "x", mention: true },
+    });
+    expect(found).toEqual({ id: post.id, created: false });
+    expect(await storage.collection<Thread>("threads").list()).toHaveLength(1);
+  });
+
+  test("refuses a snapshot whose comments answer themselves", async () => {
+    const { ctx } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const input = foundThread(run.runId);
+    const comments = [
+      { id: "a", parentId: "b", author: "sam", body: "One" },
+      { id: "b", parentId: "a", author: "dana", body: "Two" },
+    ];
+    await expect(
+      commands["save-thread"].run(ctx, { input: { ...input, snapshot: { ...input.snapshot, comments } } }),
+    ).rejects.toThrow("answers itself");
+  });
 });

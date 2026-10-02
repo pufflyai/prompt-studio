@@ -1,4 +1,5 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { z } from "zod";
 import { buildAnalysis } from "../analysis";
 import { siteSchema } from "../schemas";
 import { newest, runsOf, threadsOf } from "../store";
@@ -13,12 +14,17 @@ export const listAnalysis = defineCommand({
   },
   async run(ctx, { site, days }) {
     const finished = newest(
-      (await runsOf(ctx).list()).filter((run) => run.finishedAt),
+      (await runsOf(ctx).list()).filter((run) => run.status === "done"),
       (run) => run.finishedAt ?? "",
     );
     const analysis = buildAnalysis({
       threads: await threadsOf(ctx).list(),
-      days: days ?? 14,
+      days: z
+        .number()
+        .int()
+        .min(1)
+        .max(90)
+        .parse(days ?? 14),
       site: site ? siteSchema.parse(site) : undefined,
     });
     return { ...analysis, updatedAt: finished[0]?.finishedAt ?? null };

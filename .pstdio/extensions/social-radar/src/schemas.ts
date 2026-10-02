@@ -30,7 +30,24 @@ export const snapshotSchema = z.object({
     score: z.number().int().optional(),
     commentCount: z.number().int().nonnegative().optional(),
   }),
-  comments: z.array(snapshotComment).max(30),
+  comments: z
+    .array(snapshotComment)
+    .max(30)
+    .superRefine((comments, ctx) => {
+      // Comments form a tree: unique ids, and no comment answers itself through its parents.
+      const parents = new Map(comments.map((comment) => [comment.id, comment.parentId]));
+      if (parents.size !== comments.length) ctx.addIssue({ code: "custom", message: "Comment ids must be unique." });
+      for (const comment of comments) {
+        const seen = new Set([comment.id]);
+        for (let parent = comment.parentId; parent; parent = parents.get(parent)) {
+          if (seen.has(parent)) {
+            ctx.addIssue({ code: "custom", message: `Comment ${comment.id} answers itself.` });
+            break;
+          }
+          seen.add(parent);
+        }
+      }
+    }),
 });
 const count = z.number().int().nonnegative();
 export const analysisSchema = z.object({
