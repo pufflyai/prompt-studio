@@ -94,7 +94,9 @@ test("boards search, filter with conditions, and save sorts that agents can buil
     await page.getByRole("button", { name: "Reset", exact: true }).click();
     await expect(cards).toHaveCount(3);
 
-    // Two sort levels saved with a new view survive a reload.
+    // The Tickets board declares the deprecated `ordering: created desc`, which arrives as its first sort.
+    await expect(page.getByRole("button", { name: "Sorted by Created" })).toBeVisible();
+    // Two more sort levels saved with a new view survive a reload.
     await page.getByRole("button", { name: "Sort", exact: true }).click();
     await page.getByRole("button", { name: "Add sort", exact: true }).click();
     await page.getByRole("button", { name: "Add sort", exact: true }).click();
@@ -102,7 +104,7 @@ test("boards search, filter with conditions, and save sorts that agents can buil
     await page.getByRole("button", { name: "Save as new view", exact: true }).click();
     await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveAttribute("aria-selected", "true");
     await page.reload();
-    await expect(page.getByRole("button", { name: /^Sorted by / })).toHaveText(/\+1/);
+    await expect(page.getByRole("button", { name: "Sorted by Created" })).toHaveText(/\+2/);
 
     // Agents build the same view through pst views, and invalid conditions name the valid ones.
     const statusValue = status.options![0]!.value;
@@ -139,10 +141,10 @@ test("boards search, filter with conditions, and save sorts that agents can buil
       "--title",
       "Broken",
       "--filter",
-      "created contains 7",
+      "title gt 7",
     );
     expect(refused.status).not.toBe(0);
-    expect(refused.stderr).toContain("is-before");
+    expect(refused.stderr).toContain("Valid conditions: contains, does-not-contain");
   } finally {
     await request.delete(`/v1/projects/${project.id}`);
   }
@@ -164,7 +166,7 @@ test("data tables sort from the header and share saved views", async ({ page, re
     expect(scores.map(Number)).toEqual([...scores.map(Number)].sort((left, right) => right - left));
 
     await page.getByRole("button", { name: "Display settings" }).last().click();
-    await page.getByRole("switch", { name: "Row numbers" }).click({ force: true });
+    await page.getByTestId("data-table-display-menu").getByText("Row numbers").click();
     await page.keyboard.press("Escape");
     await expect(page.locator('[data-column-id="rowIndex"]')).toHaveCount(0);
     await page.getByRole("button", { name: "Save as new view", exact: true }).click();
