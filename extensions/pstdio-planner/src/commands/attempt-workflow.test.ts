@@ -34,7 +34,6 @@ const setup = async () => {
     dependsOn: [],
     blockedReason: null,
     userPrompt: null,
-    parallelizable: "yes",
     draft: false,
     archived: false,
     sortOrder: 0,

@@ -30134,7 +30134,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -72676,7 +72676,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -93366,7 +93366,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -93438,7 +93438,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 994,
+              "y": 989,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -122407,7 +122407,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -123939,6 +123939,2130 @@
           }
         }
       }
+    },
+    {
+      "type": "frame",
+      "id": "pVB2w",
+      "x": 16600,
+      "y": 19839,
+      "name": "Planner · Run attempt can't start",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1500,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 48,
+      "padding": 72,
+      "children": [
+        {
+          "type": "frame",
+          "id": "uNxIU",
+          "name": "Frame Header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "piiV2",
+              "name": "Kicker",
+              "fill": "$ds-fg-subtle",
+              "content": "PRODUCTION · PLANNER · RUN ATTEMPT",
+              "fontFamily": "$font-heading",
+              "fontSize": 12,
+              "fontWeight": "600",
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "text",
+              "id": "ywXmi",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "When a ticket can't start",
+              "lineHeight": 1.05,
+              "fontFamily": "$font-display",
+              "fontSize": 44,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "sOqNI",
+              "name": "Sub",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "A ticket can start when nothing blocks it: every ticket in depends_on is Done or has an attempt to build on, and the project has a free attempt slot. When a ticket can't start, Run keeps the dialog open and shows why in an error box above the actions. The fields keep their values, so the user can try again once the blocker is gone. The error box replaces the toast; the failure is reported once.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 15,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "qucQl",
+          "name": "Divider 1",
+          "fill": "$ds-border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "L8oiFL",
+          "name": "01 · Dialog states",
+          "width": "fill_container",
+          "gap": 48,
+          "children": [
+            {
+              "type": "frame",
+              "id": "NsK5H",
+              "name": "A · Depends on an unfinished ticket",
+              "width": 512,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hLLUF",
+                  "name": "Caption",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "W15aG",
+                      "name": "Caption title",
+                      "fill": "$ds-fg",
+                      "content": "A · Depends on an unfinished ticket",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "wgpl4",
+                      "name": "Caption note",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "PS-458 depends on PS-457. PS-457 is In Progress and has no approved attempt, so there is nothing to build on yet.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XwnWp",
+                  "name": "Dialog · Run attempt",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "gOkKF",
+                      "name": "Header",
+                      "width": "fill_container",
+                      "height": 52,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "iLRoh",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Run attempt",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "id": "kyHgB",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "width": 28,
+                          "height": 28,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QKDAz",
+                      "name": "Body · Fields",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "l89Po",
+                          "name": "Model selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "FiYWY",
+                              "name": "User Role label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "H42cUr",
+                                  "name": "Model label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Model",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "v342cr",
+                                  "name": "Model help",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xBBsL",
+                              "name": "Model trigger",
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "L0LEr",
+                                  "name": "Model selected icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "cpu",
+                                  "library": "lucide",
+                                  "fill": "#AEB8C8"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "wSTp4",
+                                  "name": "Model selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "GPT-5.3 Codex",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "MN4IY",
+                                  "name": "Model chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Q2EaE",
+                          "name": "Workspace selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "o4ehm",
+                              "name": "Programming Languages label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "YL0vb",
+                                  "name": "Workspace label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Workspace",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "KuX3n",
+                                  "name": "Workspace help",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "PHExU",
+                              "name": "Workspace trigger",
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "v7jwrq",
+                                  "name": "Workspace selected icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "git-branch",
+                                  "library": "lucide",
+                                  "fill": "#AEB8C8"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fcgD5",
+                                  "name": "Workspace selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "New worktree · main",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "fIK4P",
+                                  "name": "Workspace chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Wm78l",
+                          "name": "Reasoning effort selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Vcrfb",
+                              "name": "Navigation Section label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "yxFn4",
+                                  "name": "Reasoning effort label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Reasoning effort",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "yywEV",
+                                  "name": "Reasoning effort help",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "UWtV9",
+                              "name": "Reasoning effort trigger",
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "tEkml",
+                                  "name": "Reasoning effort selected icon",
+                                  "theme": {
+                                    "palette": "blue"
+                                  },
+                                  "width": 14,
+                                  "height": 14,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "IqPx1",
+                                      "x": 0,
+                                      "y": 9,
+                                      "name": "Bar 1",
+                                      "fill": "$pal-500",
+                                      "width": 2.5,
+                                      "height": 5
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "j5MYB",
+                                      "x": 3.83,
+                                      "y": 6,
+                                      "name": "Bar 2",
+                                      "fill": "$pal-500",
+                                      "width": 2.5,
+                                      "height": 8
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "zMggp",
+                                      "x": 7.66,
+                                      "y": 3,
+                                      "name": "Bar 3",
+                                      "fill": "$ds-border",
+                                      "width": 2.5,
+                                      "height": 11
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "WpLLY",
+                                      "x": 11.49,
+                                      "y": 0,
+                                      "name": "Bar 4",
+                                      "fill": "$ds-border",
+                                      "width": 2.5,
+                                      "height": 14
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fBrbF",
+                                  "name": "Reasoning effort selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "Medium",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "N9pOl",
+                                  "name": "Reasoning effort chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "H7IYrM",
+                          "name": "Mode selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "teXIc",
+                              "name": "Mode label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "l2v0Q",
+                                  "name": "Mode label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Mode",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "d8IWhA",
+                                  "name": "Mode help",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xfBHo",
+                              "name": "Mode trigger",
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "av7ou",
+                                  "name": "Mode selected icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "git-fork",
+                                  "library": "lucide",
+                                  "fill": "#AEB8C8"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "dpYsH",
+                                  "name": "Mode selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "Worktree",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "uAsd2",
+                                  "name": "Mode chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mSfch",
+                      "name": "Error zone",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        16,
+                        16,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "id": "fths4",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Error · can't start",
+                          "width": "fill_container",
+                          "theme": {
+                            "status": "error"
+                          },
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "circle-x"
+                            },
+                            "GL4gS": {
+                              "content": "PS-458 can't start: it waits on PS-457, which is not done and has no attempt to build on."
+                            },
+                            "B8etL": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "eIY3z",
+                      "name": "Footer",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "end",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "R6f7kx",
+                          "name": "Actions",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "cVwCY",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Cancel",
+                              "height": 32,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false,
+                                  "width": 16,
+                                  "height": 16
+                                },
+                                "Hf4GT": {
+                                  "content": "Cancel"
+                                },
+                                "khvEs": {
+                                  "theme": {
+                                    "kbd": "raised",
+                                    "size": "md"
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "id": "ddIYh",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Run",
+                              "height": 32,
+                              "theme": {
+                                "btn": "primary",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false,
+                                  "width": 16,
+                                  "height": 16
+                                },
+                                "Hf4GT": {
+                                  "content": "Run"
+                                },
+                                "khvEs": {
+                                  "theme": {
+                                    "kbd": "raised",
+                                    "size": "md"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dq8LA",
+              "name": "B · No free attempt slot",
+              "width": 512,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "DVie8",
+                  "name": "Caption",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "qYm9G",
+                      "name": "Caption title",
+                      "fill": "$ds-fg",
+                      "content": "B · No free attempt slot",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "k7v271",
+                      "name": "Caption note",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "PS-471 and PS-470 are being implemented. The project allows 2 attempts at a time (Maximum in-progress tickets).",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xauDs",
+                  "name": "Dialog · Run attempt",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "B8MssI",
+                      "name": "Header",
+                      "width": "fill_container",
+                      "height": 52,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fVpoe",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Run attempt",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "id": "M9rD9",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "width": 28,
+                          "height": 28,
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x",
+                              "width": 14,
+                              "height": 14
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AYUw1",
+                      "name": "Body · Fields",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "V4VIv",
+                          "name": "Model selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "wuEvq",
+                              "name": "User Role label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "CMDFm",
+                                  "name": "Model label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Model",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "WVyM8",
+                                  "name": "Model help",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "sbSqP",
+                              "name": "Model trigger",
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "S5WeF",
+                                  "name": "Model selected icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "cpu",
+                                  "library": "lucide",
+                                  "fill": "#AEB8C8"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "h4vbsC",
+                                  "name": "Model selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "GPT-5.3 Codex",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "rv1mk",
+                                  "name": "Model chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hDpwi",
+                          "name": "Workspace selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "l6cMi",
+                              "name": "Programming Languages label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "XFMZN",
+                                  "name": "Workspace label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Workspace",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "kIptV",
+                                  "name": "Workspace help",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "QHiZM",
+                              "name": "Workspace trigger",
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "ZWvfI",
+                                  "name": "Workspace selected icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "git-branch",
+                                  "library": "lucide",
+                                  "fill": "#AEB8C8"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "f9HEi",
+                                  "name": "Workspace selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "New worktree · main",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "Byfzp",
+                                  "name": "Workspace chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "JKapK",
+                          "name": "Reasoning effort selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "e50TzA",
+                              "name": "Navigation Section label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wH34P",
+                                  "name": "Reasoning effort label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Reasoning effort",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "Vy8V7",
+                                  "name": "Reasoning effort help",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "TXveT",
+                              "name": "Reasoning effort trigger",
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "nylRj",
+                                  "name": "Reasoning effort selected icon",
+                                  "theme": {
+                                    "palette": "blue"
+                                  },
+                                  "width": 14,
+                                  "height": 14,
+                                  "layout": "none",
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "Qaeno",
+                                      "x": 0,
+                                      "y": 9,
+                                      "name": "Bar 1",
+                                      "fill": "$pal-500",
+                                      "width": 2.5,
+                                      "height": 5
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "slEcL",
+                                      "x": 3.83,
+                                      "y": 6,
+                                      "name": "Bar 2",
+                                      "fill": "$pal-500",
+                                      "width": 2.5,
+                                      "height": 8
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "C9Xgb",
+                                      "x": 7.66,
+                                      "y": 3,
+                                      "name": "Bar 3",
+                                      "fill": "$ds-border",
+                                      "width": 2.5,
+                                      "height": 11
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "MBrWB",
+                                      "x": 11.49,
+                                      "y": 0,
+                                      "name": "Bar 4",
+                                      "fill": "$ds-border",
+                                      "width": 2.5,
+                                      "height": 14
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "t94H7",
+                                  "name": "Reasoning effort selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "Medium",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "ZJ6RN",
+                                  "name": "Reasoning effort chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "O5zSBf",
+                          "name": "Mode selection row",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "NMqt5",
+                              "name": "Mode label",
+                              "gap": 5,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Scr3M",
+                                  "name": "Mode label text",
+                                  "fill": "#9BA1AB",
+                                  "content": "Mode",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "Gd7GP",
+                                  "name": "Mode help",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "circle-help",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "XcSM8",
+                              "name": "Mode trigger",
+                              "height": 32,
+                              "fill": "#0D1017",
+                              "cornerRadius": 4,
+                              "stroke": "#2E333F",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "fwkaH",
+                                  "name": "Mode selected icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "icon": "git-fork",
+                                  "library": "lucide",
+                                  "fill": "#AEB8C8"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fRQEq",
+                                  "name": "Mode selected value",
+                                  "fill": "#E8EAED",
+                                  "content": "Worktree",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "T4JPv",
+                                  "name": "Mode chevron",
+                                  "width": 13,
+                                  "height": 13,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "#777D87"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Q5MCl4",
+                      "name": "Error zone",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        0,
+                        16,
+                        16,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "id": "tt7hR",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Error · can't start",
+                          "width": "fill_container",
+                          "theme": {
+                            "status": "error"
+                          },
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "circle-x"
+                            },
+                            "GL4gS": {
+                              "content": "PS-458 can't start: 2 attempts are running, and this project allows 2 at a time. Wait for one to finish, or raise Maximum in-progress tickets in the Planner settings."
+                            },
+                            "B8etL": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lf8xQ",
+                      "name": "Footer",
+                      "width": "fill_container",
+                      "height": 56,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "end",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "S7fNa",
+                          "name": "Actions",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "ZhoUW",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Cancel",
+                              "height": 32,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false,
+                                  "width": 16,
+                                  "height": 16
+                                },
+                                "Hf4GT": {
+                                  "content": "Cancel"
+                                },
+                                "khvEs": {
+                                  "theme": {
+                                    "kbd": "raised",
+                                    "size": "md"
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "id": "CNwby",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Run",
+                              "height": 32,
+                              "theme": {
+                                "btn": "primary",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false,
+                                  "width": 16,
+                                  "height": 16
+                                },
+                                "Hf4GT": {
+                                  "content": "Run"
+                                },
+                                "khvEs": {
+                                  "theme": {
+                                    "kbd": "raised",
+                                    "size": "md"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "kMKct",
+          "name": "Divider 2",
+          "fill": "$ds-border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "TyGJ4",
+          "name": "02 · Reason messages",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "EsHeO",
+              "name": "Section header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "aJ3ly",
+                  "name": "Section title",
+                  "fill": "$ds-fg",
+                  "content": "Reason messages",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "ZFakm",
+                  "name": "Section note",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "The planner writes one message per reason. It names the ticket and says what to do next. The error box shows the message as its title, with no body. Reasons marked * also ask a person to fix the ticket graph (human request), as today.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "U4I8i2",
+              "name": "Reason table",
+              "clip": true,
+              "width": "fill_container",
+              "cornerRadius": 8,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "A6UT3",
+                  "name": "Header row",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "OHCGc",
+                      "name": "Cell",
+                      "width": 300,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "IsKIX",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Reason",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-heading",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S3AXV",
+                      "name": "Cell",
+                      "width": 420,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i6oDP",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "When",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-heading",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fjXeX",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "aZzSn",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Message",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-heading",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "s8LjvV",
+                  "name": "Row · dependency-not-ready",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "abwKL",
+                      "name": "Cell",
+                      "width": 300,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "LOEyL",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "dependency-not-ready",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Z5AyTC",
+                      "name": "Cell",
+                      "width": 420,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "b2lSLb",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A ticket in the depends_on chain is not Done and has no approved or selected attempt.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WZlGt",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QLz20",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "PS-458 can't start: it waits on PS-457, which is not done and has no attempt to build on.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "N1liO6",
+                  "name": "Row · dependency-missing *",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "OMoZw",
+                      "name": "Cell",
+                      "width": 300,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "K1i2b",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "dependency-missing *",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "cSMSW",
+                      "name": "Cell",
+                      "width": 420,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ASXKp",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "depends_on names a ticket that does not exist.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mjvxa",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "E3Te1",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "PS-458 can't start: it depends on PS-999, which no longer exists. Remove it from depends_on.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xFeGn",
+                  "name": "Row · dependency-cycle *",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "zcZZM",
+                      "name": "Cell",
+                      "width": 300,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "HZjGJ",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "dependency-cycle *",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "txCBk",
+                      "name": "Cell",
+                      "width": 420,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bA7O8",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Tickets in depends_on depend on each other.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "G7U7m",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "JV05q",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "PS-458 can't start: its dependencies form a loop. Remove one dependency to break it.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "N9O8r",
+                  "name": "Row · ambiguous-dependency-attempt *",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "C6LVE5",
+                      "name": "Cell",
+                      "width": 300,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "R6DAoQ",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "ambiguous-dependency-attempt *",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rXLay",
+                      "name": "Cell",
+                      "width": 420,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hizab",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A dependency has more than one approved attempt and none is selected.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "W0NPs4",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "O7SQAA",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "PS-458 can't start: PS-457 has more than one approved attempt. Choose the one PS-458 should build on.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lDleK",
+                  "name": "Row · divergent-dependency-attempts *",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uVqYg",
+                      "name": "Cell",
+                      "width": 300,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sY3Uh",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "divergent-dependency-attempts *",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "h1iWd",
+                      "name": "Cell",
+                      "width": 420,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "U1Pod6",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Two dependencies have attempts that don't build on each other.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yMGSi",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "c1Vc4",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "PS-458 can't start: the attempts for PS-455 and PS-457 don't build on each other. Merge one of them first.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "NNqhT",
+                  "name": "Row · capacity-full",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "u9Civ",
+                      "name": "Cell",
+                      "width": 300,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FJvE2",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "capacity-full",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gDnNn",
+                      "name": "Cell",
+                      "width": 420,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "dGzIS",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The project already runs the maximum number of attempts.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "M72mCK",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MmLvO",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "PS-458 can't start: 2 attempts are running, and this project allows 2 at a time. Wait for one to finish, or raise Maximum in-progress tickets in the Planner settings.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "z4ibHm",
+                  "name": "Row · launch-claimed",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Xii5j",
+                      "name": "Cell",
+                      "width": 300,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "T2SSJ6",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "launch-claimed",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "kNX10",
+                      "name": "Cell",
+                      "width": 420,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "W36upN",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Another Run attempt for the same ticket is still starting.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hn2vt",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "JjAqU",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "An attempt for PS-458 is already starting. Try again in a moment.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

@@ -57,7 +57,6 @@ export const ticketToMarkdown = async (storage: ExtensionStorageApi, ticket: Sto
     parentShorthand,
     userPrompt: ticket.userPrompt ?? null,
     dependsOn: dependencyShorthands,
-    parallelizable: ticket.parallelizable ?? null,
     blockedReason: ticket.blockedReason ?? null,
     tagNames,
   });

@@ -1,6 +1,7 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import type { Command, RegisteredCommand } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandParamsDialog } from "./command-params-dialog";
@@ -251,4 +252,41 @@ export const FailedOptions: Story = {
 export const EmptyOptions: Story = {
   ...DependentOptions,
   args: { request: dynamicRequest, executeOptionCommand: async () => [] },
+};
+
+// The planner's "Run attempt": when the ticket cannot start, Run keeps the dialog open
+// and shows the command's reason above the actions.
+const runAttemptCommand = registerCommand({
+  id: "pstdio-planner.run-attempt",
+  label: "Run attempt",
+  params: {
+    model: {
+      type: "select",
+      label: "Model",
+      defaultValue: "opus",
+      options: [{ label: "Claude Opus", value: "opus", icon: "Cpu" }],
+    },
+    mode: {
+      type: "select",
+      label: "Mode",
+      defaultValue: "worktree",
+      options: [{ label: "Worktree", value: "worktree", icon: "GitFork" }],
+    },
+  },
+});
+
+export const RunFailed: Story = {
+  render: (args) => <CommandParameterExample {...args} />,
+  args: {
+    request: { label: "Run attempt", record: runAttemptCommand },
+    onRun: async () => {
+      throw new Error("PS-458 can't start: it waits on PS-457, which is not done and has no attempt to build on.");
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Open parameter form" }));
+    const dialog = within(document.body);
+    await userEvent.click(await dialog.findByRole("button", { name: "Run" }));
+    await expect(await dialog.findByText(/PS-458 can't start: it waits on PS-457/)).toBeVisible();
+  },
 };

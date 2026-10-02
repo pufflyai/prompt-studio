@@ -17,11 +17,8 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
 import { hasCommandParameters } from "./command-palette-params";
 import { useWorkbenchCommandPaletteResourceEntries } from "./command-palette-resources";
-import {
-  type CommandParamFieldRenderer,
-  CommandParamsDialog,
-  type CommandParamsRequest,
-} from "./command-params-dialog";
+import type { CommandParamFieldRenderer, CommandParamsRequest } from "./command-params-dialog";
+import { PaletteParamsDialog } from "./palette-params-dialog";
 import {
   COMMAND_MODE_ID,
   getPaletteInitialActiveIndex,
@@ -203,7 +200,6 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
   const themePreviewRef = useRef<WorkbenchThemePreviewState | null>(null);
-  const paramsRequest = useWorkbenchStore(workbench.commandPalette.store, (state) => state.paramsRequest);
   const [liveQuery, setLiveQuery] = useState(initialQuery);
   const commandPaletteResourceEntries = useWorkbenchCommandPaletteResourceEntries({
     workbench,
@@ -331,18 +327,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
           }}
         />
       </Box>
-      <CommandParamsDialog
-        request={paramsRequest}
-        renderParamField={renderParamField}
-        executeOptionCommand={(id, args, signal) =>
-          workbench.commands.executeCommand(id, args, { ...paramsRequest?.context, signal })
-        }
-        prepareArgs={(input) =>
-          workbench.commands.prepareCommandArgs(input.commandId, input.args, input.context, input.onArgsChange)
-        }
-        onClose={() => workbench.commandPalette.clearParams()}
-        onRun={(input) => executePaletteCommand({ workbench, ...input })}
-      />
+      <PaletteParamsDialog workbench={workbench} renderParamField={renderParamField} />
     </>
   );
 };

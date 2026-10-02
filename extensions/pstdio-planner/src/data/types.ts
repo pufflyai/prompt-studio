@@ -55,7 +55,6 @@ export interface StoredTicket {
   // Draft-workflow fields, round-tripped through the local ticket.md frontmatter by
   // the CLI write/save/pull commands; absent on board-created tickets.
   userPrompt?: string | null;
-  parallelizable?: string | null;
   draft?: boolean;
   archived: boolean;
   sortOrder: number;

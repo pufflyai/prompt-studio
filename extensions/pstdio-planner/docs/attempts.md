@@ -20,6 +20,24 @@ The Git provider creates an isolated worktree. Managed implementation and review
 usable base commit. Workspace setup failures are reported before an attempt
 session starts.
 
+## When a Ticket Can Start
+
+Only blockers decide whether a ticket can start. A ticket can start when all of these are true:
+
+- Every ticket in `depends_on` is Done, or has exactly one attempt to build on: an
+  approved attempt, or the attempt selected for that ticket. Their attempts must
+  build on each other.
+- Fewer attempts are being implemented than **Maximum in-progress tickets**
+  (`automation.maxInProgress`, default 2) allows.
+- No other Run attempt for the same ticket is still starting.
+
+Tickets without blockers run side by side up to that limit. When a ticket cannot
+start, `run-attempt` fails with a message that names the blocker and the next step,
+and the Run attempt dialog shows it. A missing dependency, a dependency loop, or
+dependency attempts that are ambiguous or don't build on each other also ask a
+person to fix the ticket graph. `attempt-readiness` still returns the structured
+`reason` for agents and the CLI.
+
 ## Current Flow
 
 1. `pstdio.pstdio-planner.command.attempt-readiness` resolves the full dependency graph and an
@@ -27,7 +45,8 @@ session starts.
    workspace tip.
 2. `pstdio.pstdio-planner.command.run-attempt` acquires an atomic ticket claim, recomputes
    readiness, creates the workspace from that commit, and starts an implementation
-   session with `ticket` and `planner-attempt` anchors.
+   session with `ticket` and `planner-attempt` anchors. It fails with the reason
+   when the ticket cannot start.
 3. The implementation agent saves a change request report and calls
    `pstdio.pstdio-planner.command.submit-change-request`. Planner validates the session,
    workspace HEAD, report, and expected attempt state before appending a revision.

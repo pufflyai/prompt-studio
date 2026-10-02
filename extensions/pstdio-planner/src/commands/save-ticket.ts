@@ -97,7 +97,6 @@ export const saveTicketCommand = defineCommand({
       files,
       userPrompt: frontmatter.userPrompt ?? ticket.userPrompt ?? null,
       dependsOn,
-      parallelizable: frontmatter.parallelizable ?? ticket.parallelizable ?? null,
       blockedReason: frontmatter.blockedReason ?? null,
       draft: false,
       updatedAt: new Date().toISOString(),

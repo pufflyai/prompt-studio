@@ -6,7 +6,6 @@ export interface AttemptReadinessTicket {
   shorthand: string;
   statusId: string | null;
   dependsOn?: string | string[] | null;
-  parallelizable?: string | null;
 }
 
 export type AttemptReadinessResult =
@@ -25,7 +24,6 @@ export type AttemptReadinessResult =
         | "dependency-missing"
         | "ambiguous-dependency-attempt"
         | "divergent-dependency-attempts"
-        | "non-parallel-attempt-active"
         | "capacity-full";
       dependencyIds: string[];
     };
@@ -37,9 +35,8 @@ interface ResolveAttemptReadinessInput {
   selections: TicketAttemptSelection[];
   doneStatusIds: Set<string>;
   mainHeadSha: string;
-  hasActiveImplementation: boolean;
-  activeImplementationCount?: number;
-  maxInProgress?: number;
+  activeImplementationCount: number;
+  maxInProgress: number;
   isAncestor(baseSha: string, headSha: string): Promise<boolean>;
 }
 
@@ -51,20 +48,6 @@ const isSelectedAttemptViable = (attempt: AttemptRecord) => {
 
 const isApprovedAttempt = (attempt: AttemptRecord) => attempt.state === "approved" && latestHead(attempt) !== null;
 
-const capacityWait = (input: ResolveAttemptReadinessInput, target: AttemptReadinessTicket) => {
-  if (target.parallelizable?.trim().toLowerCase() === "no" && input.hasActiveImplementation) {
-    return { decision: "wait" as const, reason: "non-parallel-attempt-active" as const, dependencyIds: [] };
-  }
-  if (
-    input.maxInProgress !== undefined &&
-    input.activeImplementationCount !== undefined &&
-    input.activeImplementationCount >= input.maxInProgress
-  ) {
-    return { decision: "wait" as const, reason: "capacity-full" as const, dependencyIds: [] };
-  }
-  return null;
-};
-
 export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInput): Promise<AttemptReadinessResult> => {
   const byRef = new Map(
     input.tickets.flatMap((ticket) => [
@@ -75,8 +58,9 @@ export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInpu
   const target = byRef.get(input.target);
   if (!target) return { decision: "wait", reason: "dependency-missing", dependencyIds: [input.target] };
 
-  const wait = capacityWait(input, target);
-  if (wait) return wait;
+  if (input.activeImplementationCount >= input.maxInProgress) {
+    return { decision: "wait", reason: "capacity-full", dependencyIds: [] };
+  }
 
   const unresolved = new Map<string, AttemptReadinessTicket>();
   const visited = new Set<string>();

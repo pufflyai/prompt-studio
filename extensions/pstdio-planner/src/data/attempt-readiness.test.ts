@@ -34,7 +34,6 @@ const ticket = (id: string, dependsOn: string[] = []) => ({
   shorthand: id,
   statusId: "ready",
   dependsOn,
-  parallelizable: "yes",
 });
 
 const resolve = (input: {
@@ -43,6 +42,7 @@ const resolve = (input: {
   selections?: TicketAttemptSelection[];
   ancestors?: Array<[string, string]>;
   target?: string;
+  activeImplementationCount?: number;
 }) =>
   resolveAttemptReadiness({
     target: input.target ?? "PS-3",
@@ -51,7 +51,8 @@ const resolve = (input: {
     selections: input.selections ?? [],
     doneStatusIds: new Set(["done"]),
     mainHeadSha: "main",
-    hasActiveImplementation: false,
+    activeImplementationCount: input.activeImplementationCount ?? 0,
+    maxInProgress: 2,
     isAncestor: async (base, head) =>
       base === head || (input.ancestors ?? []).some(([a, b]) => a === base && b === head),
   });
@@ -66,6 +67,21 @@ describe("attempt readiness", () => {
       baseWorkspaceId: null,
       baseHeadSha: "main",
       dependencyAttemptIds: [],
+    });
+  });
+
+  test("starts a ticket without blockers while another attempt is implementing", async () => {
+    await expect(resolve({ tickets: [ticket("PS-3")], activeImplementationCount: 1 })).resolves.toMatchObject({
+      decision: "ready",
+      mode: "main",
+    });
+  });
+
+  test("waits while every attempt slot is in use", async () => {
+    await expect(resolve({ tickets: [ticket("PS-3")], activeImplementationCount: 2 })).resolves.toEqual({
+      decision: "wait",
+      reason: "capacity-full",
+      dependencyIds: [],
     });
   });
 

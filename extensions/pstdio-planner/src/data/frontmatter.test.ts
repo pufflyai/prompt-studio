@@ -27,7 +27,6 @@ describe("ticket frontmatter", () => {
       parentShorthand: null,
       userPrompt: null,
       dependsOn: ["T-1", "T-2"],
-      parallelizable: null,
       blockedReason: null,
       tagNames: [],
     });
