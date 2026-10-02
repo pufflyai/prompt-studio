@@ -1,0 +1,70 @@
+import { describe, expect, test } from "bun:test";
+import type { Thread } from "../schemas";
+import { commands } from ".";
+import { finish, foundThread, newPost, setup } from "./test-context";
+
+describe("social radar threads", () => {
+  test("saves a known thread URL once across runs", async () => {
+    const { ctx, sessions } = setup();
+    const first = await commands["run-daily"].run(ctx, {});
+    const saved = await commands["save-thread"].run(ctx, { input: foundThread(first.runId) });
+    await commands["finish-run"].run(ctx, { input: finish(first.runId) });
+    sessions[0].status = "completed";
+    const next = await commands["run-daily"].run(ctx, {});
+    const again = await commands["save-thread"].run(ctx, {
+      input: foundThread(next.runId, "https://NEWS.ycombinator.com/item/?id=42"),
+    });
+    expect(again).toEqual({ id: saved.id, created: false });
+  });
+
+  test("an answered thread keeps its answer and cannot move back", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const saved = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    await commands["set-thread-status"].run(ctx, { id: saved.id, status: "answered" });
+    const answered = await storage.collection<Thread>("threads").get(saved.id);
+    expect(answered).toMatchObject({ status: "answered", answeredAt: expect.any(String) });
+    for (const status of ["new", "saved", "skipped"])
+      await expect(commands["set-thread-status"].run(ctx, { id: saved.id, status })).rejects.toThrow(
+        "Answered threads cannot move back.",
+      );
+    expect(await storage.collection<Thread>("threads").get(saved.id)).toEqual(answered);
+  });
+
+  test("a new post is a thread that needs its link to become answered", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const post = await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
+    expect(await storage.collection<Thread>("threads").get(post.id)).toMatchObject({ kind: "demo", status: "new" });
+    await expect(commands["set-thread-status"].run(ctx, { id: post.id, status: "answered" })).rejects.toThrow(
+      "Paste the link",
+    );
+    await commands["set-thread-status"].run(ctx, {
+      id: post.id,
+      status: "answered",
+      url: "https://x.com/prompt_studio/status/1/",
+    });
+    expect(await storage.collection<Thread>("threads").get(post.id)).toMatchObject({
+      status: "answered",
+      url: "https://x.com/prompt_studio/status/1",
+    });
+  });
+
+  test("revises a thread's own fields and refuses fields of the other thread type", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const found = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    const post = await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
+    await commands["update-thread"].run(ctx, { id: post.id, input: { draft: "A shorter draft." } });
+    expect(await storage.collection<Thread>("threads").get(post.id)).toMatchObject({ draft: "A shorter draft." });
+    await expect(commands["update-thread"].run(ctx, { id: found.id, input: { draft: "No" } })).rejects.toThrow(
+      "This thread has no draft field.",
+    );
+    await expect(commands["update-thread"].run(ctx, { id: post.id, input: { relevance: 2 } })).rejects.toThrow(
+      "This thread has no relevance field.",
+    );
+    await expect(commands["update-thread"].run(ctx, { id: found.id, input: { outcome: "Early" } })).rejects.toThrow(
+      "Only an answered thread has an outcome.",
+    );
+  });
+});

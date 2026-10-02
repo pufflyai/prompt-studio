@@ -8,6 +8,7 @@ const emptyTargets = Object.fromEntries(sites.map((site) => [site, [] as string[
 >;
 
 export const defaults = {
+  brandTerms: ["Prompt Studio", "pstdio"],
   topics: ["manage several coding agents", "internal tools with Claude Code", "agent workbench", "bespoke tools"],
   competitors: [] as string[],
   targets: { ...emptyTargets, reddit: ["r/ClaudeAI", "r/LocalLLaMA", "r/ChatGPTCoding"] },
@@ -16,24 +17,26 @@ export const defaults = {
   budgets: { hn: 4, reddit: 4, bluesky: 3, devto: 2, github: 2, youtube: 2, x: 3, linkedin: 3, scrollScreens: 3 },
 };
 const count = z.number().int().nonnegative().max(20);
-const budgetSchema = z.object({
-  hn: count,
-  reddit: count,
-  bluesky: count,
-  devto: count,
-  github: count,
-  youtube: count,
-  x: count,
-  linkedin: count,
-  scrollScreens: count,
-});
+const terms = z.array(z.string().trim().min(1));
 export const settingsSchema = z.object({
-  topics: z.array(z.string().trim().min(1)).min(1),
-  competitors: z.array(z.string().trim().min(1)),
-  targets: z.record(siteSchema, z.array(z.string().trim().min(1))),
+  brandTerms: terms.min(1),
+  topics: terms.min(1),
+  competitors: terms,
+  targets: z.record(siteSchema, terms),
   voice: z.string().trim().min(1),
-  budgets: budgetSchema,
+  budgets: z.object({
+    hn: count,
+    reddit: count,
+    bluesky: count,
+    devto: count,
+    github: count,
+    youtube: count,
+    x: count,
+    linkedin: count,
+    scrollScreens: count,
+  }),
 });
+export type RadarSettings = z.infer<typeof settingsSchema>;
 export const readSettings = async (settings: ExtensionSettingsApi) => {
   const values = await settings.all();
   return settingsSchema.parse({
@@ -48,6 +51,7 @@ export const writeSettings = async (settings: ExtensionSettingsApi, input: unkno
   for (const [key, value] of Object.entries(data)) await settings.set(key, value);
   return data;
 };
+const titles: Record<string, string> = { brandTerms: "Brand terms", voice: "Writing voice" };
 export const settingProperties = Object.fromEntries(
   Object.entries(defaults).map(([key, value]) => [
     key,
@@ -55,7 +59,7 @@ export const settingProperties = Object.fromEntries(
       type: typeof value === "string" ? "string" : Array.isArray(value) ? "array" : "object",
       scope: "project",
       default: value,
-      title: key === "voice" ? "Writing voice" : key[0].toUpperCase() + key.slice(1),
+      title: titles[key] ?? key[0].toUpperCase() + key.slice(1),
     },
   ]),
 ) as Record<string, ExtensionSettingProperty>;

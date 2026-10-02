@@ -24412,7 +24412,7 @@
               "id": "zjyGR",
               "name": "Open questions",
               "fill": "$ds-fg",
-              "content": "Open questions",
+              "content": "Decisions",
               "fontFamily": "$font-heading",
               "fontSize": 16,
               "fontWeight": "600"
@@ -24424,7 +24424,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 1180,
-              "content": "Decide these before implementation.",
+              "content": "Settled before implementation, using only what the platform has today.",
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 13,
@@ -24446,7 +24446,7 @@
               "width": "fill_container",
               "fill": "$ds-bg-subtle",
               "cornerRadius": 8,
-              "stroke": "$ds-accent-border",
+              "stroke": "$ds-border-subtle",
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
@@ -24471,7 +24471,7 @@
                       "height": 13,
                       "icon": "database",
                       "library": "lucide",
-                      "fill": "$ds-warning"
+                      "fill": "$ds-fg-muted"
                     },
                     {
                       "type": "text",
@@ -24492,7 +24492,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "How much of a thread should the agent keep? Text only, about 20 comments, refreshed on follow-up runs, is the proposal.",
+                  "content": "Text only: the post and about 20 top comments, refreshed on follow-up runs.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -24507,7 +24507,7 @@
               "width": "fill_container",
               "fill": "$ds-bg-subtle",
               "cornerRadius": 8,
-              "stroke": "$ds-accent-border",
+              "stroke": "$ds-border-subtle",
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
@@ -24532,7 +24532,7 @@
                       "height": 13,
                       "icon": "wrench",
                       "library": "lucide",
-                      "fill": "$ds-warning"
+                      "fill": "$ds-fg-muted"
                     },
                     {
                       "type": "text",
@@ -24553,7 +24553,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Screenshots and recordings need Playwright; GIF and MP4 need ffmpeg. Ship them with the extension, or offer media only where a project has them?",
+                  "content": "Offer media only where the project has Playwright and ffmpeg. The extension ships neither.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -24568,7 +24568,7 @@
               "width": "fill_container",
               "fill": "$ds-bg-subtle",
               "cornerRadius": 8,
-              "stroke": "$ds-accent-border",
+              "stroke": "$ds-border-subtle",
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
@@ -24593,7 +24593,7 @@
                       "height": 13,
                       "icon": "download",
                       "library": "lucide",
-                      "fill": "$ds-warning"
+                      "fill": "$ds-fg-muted"
                     },
                     {
                       "type": "text",
@@ -24614,7 +24614,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Webviews cannot play video, copy images or download files. Add host support for all three, or have users open the media folder?",
+                  "content": "Users open the post's media folder. The tray shows images and lists other files by name.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -25675,293 +25675,21 @@
                                               "children": [
                                                 {
                                                   "type": "frame",
-                                                  "id": "Ys7vs",
+                                                  "id": "V1JbEN",
                                                   "name": "Attached",
-                                                  "width": "fill_container",
-                                                  "gap": 12,
+                                                  "gap": 8,
                                                   "alignItems": "center",
                                                   "children": [
                                                     {
-                                                      "type": "frame",
-                                                      "id": "JXBb5",
-                                                      "name": "Video · review-flow.mp4",
-                                                      "clip": true,
-                                                      "width": 240,
-                                                      "height": 135,
-                                                      "fill": "$ds-bg-subtle",
-                                                      "cornerRadius": 6,
-                                                      "stroke": "$ds-border",
-                                                      "strokeWidth": 1,
-                                                      "strokeAlignment": "inner",
-                                                      "layout": "none",
-                                                      "children": [
-                                                        {
-                                                          "type": "frame",
-                                                          "id": "NNhem",
-                                                          "x": 0,
-                                                          "y": 0,
-                                                          "name": "Poster · top bar",
-                                                          "width": 240,
-                                                          "height": 16,
-                                                          "fill": "$ds-surface"
-                                                        },
-                                                        {
-                                                          "type": "frame",
-                                                          "id": "Pn4Bk",
-                                                          "x": 0,
-                                                          "y": 16,
-                                                          "name": "Poster · sidenav",
-                                                          "width": 44,
-                                                          "height": 119,
-                                                          "fill": "$ds-bg"
-                                                        },
-                                                        {
-                                                          "type": "frame",
-                                                          "id": "yXNEJ",
-                                                          "x": 54,
-                                                          "y": 26,
-                                                          "name": "Poster · row 1",
-                                                          "width": 176,
-                                                          "height": 12,
-                                                          "fill": "$ds-surface",
-                                                          "cornerRadius": 3
-                                                        },
-                                                        {
-                                                          "type": "ellipse",
-                                                          "id": "ikcZq",
-                                                          "x": 58,
-                                                          "y": 29,
-                                                          "name": "Poster · ring 1",
-                                                          "fill": "$ds-success",
-                                                          "width": 6,
-                                                          "height": 6
-                                                        },
-                                                        {
-                                                          "type": "frame",
-                                                          "id": "WZuNZ",
-                                                          "x": 54,
-                                                          "y": 46,
-                                                          "name": "Poster · row 2",
-                                                          "width": 176,
-                                                          "height": 12,
-                                                          "fill": "$ds-surface",
-                                                          "cornerRadius": 3
-                                                        },
-                                                        {
-                                                          "type": "ellipse",
-                                                          "id": "tt9VW",
-                                                          "x": 58,
-                                                          "y": 49,
-                                                          "name": "Poster · ring 2",
-                                                          "fill": "$ds-success",
-                                                          "width": 6,
-                                                          "height": 6
-                                                        },
-                                                        {
-                                                          "type": "frame",
-                                                          "id": "T2zvj",
-                                                          "x": 54,
-                                                          "y": 66,
-                                                          "name": "Poster · row 3",
-                                                          "width": 176,
-                                                          "height": 12,
-                                                          "fill": "$ds-surface",
-                                                          "cornerRadius": 3
-                                                        },
-                                                        {
-                                                          "type": "ellipse",
-                                                          "id": "j517eM",
-                                                          "x": 58,
-                                                          "y": 69,
-                                                          "name": "Poster · ring 3",
-                                                          "fill": "$ds-fg-subtle",
-                                                          "width": 6,
-                                                          "height": 6
-                                                        },
-                                                        {
-                                                          "type": "frame",
-                                                          "id": "Qg1RB",
-                                                          "x": 54,
-                                                          "y": 86,
-                                                          "name": "Poster · row 4",
-                                                          "width": 176,
-                                                          "height": 12,
-                                                          "fill": "$ds-surface",
-                                                          "cornerRadius": 3
-                                                        },
-                                                        {
-                                                          "type": "ellipse",
-                                                          "id": "N9EIM",
-                                                          "x": 58,
-                                                          "y": 89,
-                                                          "name": "Poster · ring 4",
-                                                          "fill": "$ds-fg-subtle",
-                                                          "width": 6,
-                                                          "height": 6
-                                                        },
-                                                        {
-                                                          "type": "frame",
-                                                          "id": "Lbvxl",
-                                                          "x": 54,
-                                                          "y": 106,
-                                                          "name": "Poster · row 5",
-                                                          "width": 176,
-                                                          "height": 12,
-                                                          "fill": "$ds-surface",
-                                                          "cornerRadius": 3
-                                                        },
-                                                        {
-                                                          "type": "ellipse",
-                                                          "id": "D8DzO8",
-                                                          "x": 58,
-                                                          "y": 109,
-                                                          "name": "Poster · ring 5",
-                                                          "fill": "$ds-fg-subtle",
-                                                          "width": 6,
-                                                          "height": 6
-                                                        },
-                                                        {
-                                                          "type": "ellipse",
-                                                          "id": "J2Ys8",
-                                                          "x": 102,
-                                                          "y": 49,
-                                                          "name": "Play",
-                                                          "fill": "$ds-bg-inverted",
-                                                          "width": 36,
-                                                          "height": 36
-                                                        },
-                                                        {
-                                                          "type": "icon",
-                                                          "id": "MeAkm",
-                                                          "x": 113,
-                                                          "y": 60,
-                                                          "name": "play",
-                                                          "width": 14,
-                                                          "height": 14,
-                                                          "icon": "play",
-                                                          "library": "lucide",
-                                                          "fill": "$ds-fg-inverted"
-                                                        },
-                                                        {
-                                                          "id": "iiLS0",
-                                                          "type": "ref",
-                                                          "ref": "dbK8Z",
-                                                          "name": "Badge · 0:12",
-                                                          "x": 198,
-                                                          "y": 112,
-                                                          "height": 16,
-                                                          "theme": {
-                                                            "badge": "solid",
-                                                            "palette": "gray",
-                                                            "size": "xs"
-                                                          },
-                                                          "descendants": {
-                                                            "ohhQY": {
-                                                              "enabled": false
-                                                            },
-                                                            "FaaBK": {
-                                                              "content": "0:12"
-                                                            }
-                                                          }
+                                                      "id": "VWCpj",
+                                                      "type": "ref",
+                                                      "ref": "Tboo4",
+                                                      "name": "Chip · review-flow.mp4",
+                                                      "descendants": {
+                                                        "L109Bg": {
+                                                          "content": "review-flow.mp4"
                                                         }
-                                                      ]
-                                                    },
-                                                    {
-                                                      "type": "frame",
-                                                      "id": "SnBtp",
-                                                      "name": "Media meta",
-                                                      "width": "fill_container",
-                                                      "layout": "vertical",
-                                                      "gap": 4,
-                                                      "children": [
-                                                        {
-                                                          "type": "text",
-                                                          "id": "Fwhp0",
-                                                          "name": "review-flow.mp4",
-                                                          "fill": "$ds-fg",
-                                                          "content": "review-flow.mp4",
-                                                          "fontFamily": "$font-body",
-                                                          "fontSize": 12,
-                                                          "fontWeight": "600"
-                                                        },
-                                                        {
-                                                          "type": "text",
-                                                          "id": "FBq8m",
-                                                          "name": "Kind",
-                                                          "fill": "$ds-fg-muted",
-                                                          "content": "Screen recording · 0:12 · made by the agent",
-                                                          "fontFamily": "$font-body",
-                                                          "fontSize": 11,
-                                                          "fontWeight": "normal"
-                                                        },
-                                                        {
-                                                          "type": "text",
-                                                          "id": "fa9L4",
-                                                          "name": "Brief",
-                                                          "fill": "$ds-fg-subtle",
-                                                          "content": "Shows the review page while one session is approved.",
-                                                          "fontFamily": "$font-body",
-                                                          "fontSize": 11,
-                                                          "fontWeight": "normal"
-                                                        },
-                                                        {
-                                                          "type": "frame",
-                                                          "id": "bga0W",
-                                                          "name": "Media actions",
-                                                          "gap": 2,
-                                                          "padding": [
-                                                            4,
-                                                            0,
-                                                            0,
-                                                            0
-                                                          ],
-                                                          "alignItems": "center",
-                                                          "children": [
-                                                            {
-                                                              "id": "Z4P2cV",
-                                                              "type": "ref",
-                                                              "ref": "c24zV7",
-                                                              "name": "Button · Save as…",
-                                                              "height": 24,
-                                                              "theme": {
-                                                                "btn": "ghost",
-                                                                "size": "2xs"
-                                                              },
-                                                              "descendants": {
-                                                                "DsEVd": {
-                                                                  "icon": "download",
-                                                                  "width": 12,
-                                                                  "height": 12
-                                                                },
-                                                                "Hf4GT": {
-                                                                  "content": "Save as…"
-                                                                }
-                                                              }
-                                                            },
-                                                            {
-                                                              "id": "lXAV2",
-                                                              "type": "ref",
-                                                              "ref": "c24zV7",
-                                                              "name": "Button · Remove",
-                                                              "height": 24,
-                                                              "theme": {
-                                                                "btn": "ghost",
-                                                                "size": "2xs"
-                                                              },
-                                                              "descendants": {
-                                                                "DsEVd": {
-                                                                  "icon": "trash-2",
-                                                                  "width": 12,
-                                                                  "height": 12
-                                                                },
-                                                                "Hf4GT": {
-                                                                  "content": "Remove"
-                                                                }
-                                                              }
-                                                            }
-                                                          ]
-                                                        }
-                                                      ]
+                                                      }
                                                     }
                                                   ]
                                                 },
@@ -25988,7 +25716,7 @@
                                                       "id": "YUBah",
                                                       "name": "Rule",
                                                       "fill": "$ds-fg-subtle",
-                                                      "content": "X takes 1 video, or up to 4 images. This post is full.",
+                                                      "content": "X takes 1 video, or up to 4 images. Files are in the post's media folder.",
                                                       "fontFamily": "$font-body",
                                                       "fontSize": 11,
                                                       "fontWeight": "normal"
@@ -26011,6 +25739,7 @@
                                                         "size": "2xs",
                                                         "btn-interaction": "disabled"
                                                       },
+                                                      "enabled": false,
                                                       "descendants": {
                                                         "DsEVd": {
                                                           "icon": "paperclip",
@@ -26951,7 +26680,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Media are files in the thread's folder of a post-media artifact mount, so the folder is the media list. Add file uploads with files.upload; the agent passes a workspace path.",
+                  "content": "Media are files in the thread's folder of a post-media artifact mount, so the folder is the media list. The agent adds each file from a workspace path with add-media.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -26966,7 +26695,7 @@
               "width": "fill_container",
               "fill": "$ds-bg-subtle",
               "cornerRadius": 8,
-              "stroke": "$ds-accent-border",
+              "stroke": "$ds-border-subtle",
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
@@ -26986,19 +26715,19 @@
                     {
                       "type": "icon",
                       "id": "maaOu",
-                      "name": "triangle-alert",
+                      "name": "folder-open",
                       "width": 13,
                       "height": 13,
-                      "icon": "triangle-alert",
+                      "icon": "folder-open",
                       "library": "lucide",
-                      "fill": "$ds-warning"
+                      "fill": "$ds-fg-muted"
                     },
                     {
                       "type": "text",
                       "id": "SkRNf",
                       "name": "Platform gaps",
                       "fill": "$ds-fg",
-                      "content": "Platform gaps",
+                      "content": "No new host features",
                       "fontFamily": "$font-heading",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -27012,7 +26741,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Webviews show raster images only, copy text only and cannot download. Video needs a poster frame or host playback, and Save as… needs a host save action.",
+                  "content": "The tray shows images and lists other files by name. To play a video or save a file, open the post's media folder.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,

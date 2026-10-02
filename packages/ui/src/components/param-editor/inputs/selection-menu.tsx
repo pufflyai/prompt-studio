@@ -108,13 +108,15 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
         disabled={isDisabled}
         textStyle={size === "xs" ? "label/XS" : "label/S/regular"}
         width={fullWidth ? "100%" : undefined}
+        minW="0"
+        flexShrink={1}
         _hover={{ bg: "bg.hover", borderColor: "border.accent-light" }}
         _active={{ bg: "bg.active", borderColor: "border.accent-light" }}
         _expanded={{ bg: "bg.active", borderColor: "border.accent-light" }}
         _focusVisible={{ borderColor: "border.accent-light", outline: "none", boxShadow: "none" }}
       >
-        <Flex alignItems="center" justifyContent="space-between" gap="xs" w={fullWidth ? "full" : undefined}>
-          <Flex alignItems="center" gap="xs">
+        <Flex alignItems="center" justifyContent="space-between" gap="xs" minW="0" w={fullWidth ? "full" : undefined}>
+          <Flex alignItems="center" gap="xs" minW="0">
             {triggerLabel}
           </Flex>
           <ChevronDown size={14} />
