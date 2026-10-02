@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbench } from "@pstdio/workbench";
+import { registerWorkbenchExtensionContributions } from "@pstdio/workbench/extensions";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
 import { createSettingsModule } from "./module";
@@ -69,5 +71,73 @@ describe("createSettingsModule", () => {
     expect(byId("project-folder")).toMatchObject({ kind: "view", scope: "project" });
     expect(byId("skills")).toMatchObject({ kind: "collection", scope: "project" });
     expect(byId("danger-zone")).toMatchObject({ kind: "view", scope: "project" });
+  });
+
+  test("keeps Danger zone below the panels extensions add to the Project group", () => {
+    const workbench = createWorkbench();
+    workbench.registerModule(createSettingsModule());
+    const extensionId = "pstdio.pstdio-planner";
+    const metadata = {
+      extensions: [],
+      commands: [],
+      diagnostics: [],
+      menuContributions: [],
+      commandPaletteContributions: [],
+      modes: [],
+      pages: [],
+      views: [
+        {
+          id: `${extensionId}.view.ticket-tags-settings`,
+          localId: "ticket-tags-settings",
+          extensionId,
+          title: "Ticket tags",
+          body: {
+            kind: "webview",
+            webview: {
+              entry: { kind: "package-asset", path: "./src/tags.tsx", baseUrl: "file:///extension/" },
+              runtimeUrl: "/v1/extensions/runtime",
+              moduleUrl: "/v1/extensions/installed/pstdio-planner/webviews/ticket-tags-settings/module.js",
+            },
+          },
+        },
+      ],
+      viewMenus: [],
+      placements: [],
+      resourceKinds: [],
+      resourceHierarchyProviders: [],
+      navigationItems: [],
+      navigationTrees: [],
+      statusBarItems: [],
+      statuses: [],
+      activityItems: [],
+      settingsSections: [],
+      settingsPanels: [
+        {
+          id: `${extensionId}.settings-panel.ticket-tags`,
+          extensionId,
+          view: { extensionId, kind: "view", id: "ticket-tags-settings" },
+          slot: { id: "project.settingsPanels" },
+        },
+      ],
+      commandPaletteResources: [],
+      keybindings: [],
+      settingsDefinitions: [],
+    } satisfies WorkbenchExtensionMetadata;
+
+    registerWorkbenchExtensionContributions({
+      executeCommand: () => undefined,
+      metadata,
+      projectId: "project-1",
+      settingsSectionId: "project",
+      settingsSectionTitle: "Project",
+      workbench,
+    });
+
+    const projectPanels = workbench.settings
+      .listPanels()
+      .filter((panel) => panel.section === "project")
+      .map((panel) => panel.id);
+    expect(projectPanels).toContain(`${extensionId}.settings-panel.ticket-tags`);
+    expect(projectPanels.at(-1)).toBe("danger-zone");
   });
 });

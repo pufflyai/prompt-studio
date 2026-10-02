@@ -24,6 +24,14 @@ export const extensionSettingsPanelRecordSchema = z.object({
   webview: extensionWebviewContributionSchema,
 });
 
+// The declared command ref is resolved to its full command id, so clients can run it directly.
+export const extensionSettingOptionSourceSchema = z.object({
+  commandId: z.string(),
+  valueField: z.string(),
+  labelField: z.string(),
+  params: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const extensionSettingDefinitionRecordSchema = z.object({
   key: z.string(),
   extensionId: z.string(),
@@ -31,6 +39,7 @@ export const extensionSettingDefinitionRecordSchema = z.object({
   scope: extensionSettingScopeSchema,
   default: z.unknown().optional(),
   enum: z.array(z.unknown()).optional(),
+  options: extensionSettingOptionSourceSchema.optional(),
   title: localizableStringSchema.optional(),
   description: localizableStringSchema.optional(),
 });

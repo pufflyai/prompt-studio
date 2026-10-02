@@ -33,6 +33,22 @@ describe("extension settings contracts", () => {
     });
   });
 
+  test("keeps the command that loads a string setting's choices", () => {
+    const branch = {
+      key: "implementation.defaultTargetBranch",
+      extensionId: "pstdio.pstdio-planner",
+      type: "string" as const,
+      scope: "project" as const,
+      default: "",
+      options: {
+        commandId: "pstdio.pstdio-planner.command.implementation-targets",
+        valueField: "branch",
+        labelField: "branch",
+      },
+    };
+    expect(extensionSettingDefinitionRecordSchema.parse(branch)).toEqual(branch);
+  });
+
   test("includes declared settings in extension metadata responses", () => {
     expect(
       extensionsCheckResponseSchema.parse({

@@ -231,7 +231,8 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     title: "Danger zone",
     section: "project",
     scope: "project",
-    order: 90,
+    // Destructive actions stay last, below the panels extensions add to this group.
+    order: Number.MAX_SAFE_INTEGER,
     icon: "TriangleAlert",
     viewId: settingsViewIds.dangerZone,
   });

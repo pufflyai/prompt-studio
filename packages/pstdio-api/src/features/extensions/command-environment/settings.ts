@@ -1,21 +1,10 @@
-import type { ExtensionSettingDefinitionRecord } from "pstdio-api-contracts";
 import {
   type CommandRunnerEnvironment,
   createReadBoundary,
   type RuntimeExtensionSettingRecord,
+  toSettingDefinitionRecord,
 } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
-
-const toSettingDefinition = (setting: RuntimeExtensionSettingRecord): ExtensionSettingDefinitionRecord => ({
-  key: setting.key,
-  extensionId: setting.extensionId,
-  type: setting.contribution.type,
-  scope: setting.contribution.scope,
-  default: setting.contribution.default,
-  enum: setting.contribution.enum,
-  title: setting.contribution.title,
-  description: setting.contribution.description,
-});
 
 export const createSettingsApi = (
   deps: ExtensionsRouteDeps,
@@ -31,7 +20,7 @@ export const createSettingsApi = (
     extensionId: input.extensionId,
     extensionInstanceId: input.extensionInstanceId,
     installedExtensionId: input.installedExtensionId,
-    definitions: (input.settings ?? []).map(toSettingDefinition),
+    definitions: (input.settings ?? []).map(toSettingDefinitionRecord),
   };
 
   return {

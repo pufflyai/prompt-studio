@@ -21,7 +21,7 @@ import { validateParamOptions } from "./param-options";
 import { registerProviders } from "./providers";
 import { validateResourcePrefixes } from "./resource-prefixes";
 import { registerSchedules } from "./schedules";
-import { registerSettings } from "./settings";
+import { registerSettings, validateSettingOptions } from "./settings";
 import { registerTranslations } from "./translations";
 import { registerUiModel } from "./ui-model";
 import { registerWebviewValidation } from "./webview-validation";
@@ -112,6 +112,7 @@ export const normalizeExtensionSources = (
   }
 
   validateParamOptions(runtime);
+  validateSettingOptions(runtime);
   validateCompositionRelationships(runtime);
   validateResourcePrefixes(runtime);
   validatePageDefinitions(runtime);

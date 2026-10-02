@@ -13,6 +13,7 @@ import type {
 } from "./contribution-identity";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { ParamOptionSource } from "./params";
 import type { RendererEventReference } from "./renderer-base";
 import type { PackageAssetDescriptor, ResourceRef } from "./resources";
 import type { SlotRef } from "./slots";
@@ -167,6 +168,11 @@ export type ExtensionSettingProperty<TType extends ExtensionSettingValueType = E
     scope: ExtensionSettingScope;
     default?: ExtensionSettingValueForType<TSettingType>;
     enum?: ExtensionSettingValueForType<TSettingType>[];
+    /**
+     * String settings only. Loads the choices from a command when the settings form
+     * opens, like a command param's `options`. Saved values are not checked against it.
+     */
+    options?: TSettingType extends "string" ? ParamOptionSource : never;
     title?: Localizable<string>;
     description?: Localizable<string>;
   };

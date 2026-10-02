@@ -1,11 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
-import {
-  type ExtensionSettingDefinitionRecord,
-  listExtensionSettingsResponseSchema,
-  updateExtensionSettingRequestSchema,
-} from "pstdio-api-contracts";
-import type { ExtensionRuntime } from "pstdio-extensions";
+import { listExtensionSettingsResponseSchema, updateExtensionSettingRequestSchema } from "pstdio-api-contracts";
+import { type ExtensionRuntime, toSettingDefinitionRecord } from "pstdio-extensions";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import { ExtensionSettingError, type ExtensionSettingsContext } from "../extension-settings-service";
@@ -13,17 +9,6 @@ import { ExtensionSettingError, type ExtensionSettingsContext } from "../extensi
 const errorSchema = z.object({ error: z.string(), code: z.string().optional() });
 
 const settingKeyParam = z.string().openapi({ description: "Extension setting key" });
-
-const toDefinition = (setting: ExtensionRuntime["settings"][number]): ExtensionSettingDefinitionRecord => ({
-  key: setting.key,
-  extensionId: setting.extensionId,
-  type: setting.contribution.type,
-  scope: setting.contribution.scope,
-  default: setting.contribution.default,
-  enum: setting.contribution.enum,
-  title: setting.contribution.title,
-  description: setting.contribution.description,
-});
 
 const settingsContextForRuntime = (
   runtime: ExtensionRuntime,
@@ -34,7 +19,7 @@ const settingsContextForRuntime = (
   },
 ): ExtensionSettingsContext => ({
   ...input,
-  definitions: runtime.settings.map(toDefinition),
+  definitions: runtime.settings.map(toSettingDefinitionRecord),
 });
 
 const settingErrorResponse = (c: Context<AppBindings>, error: ExtensionSettingError) =>

@@ -6,6 +6,7 @@ import { type CollectionChange, subscribeCollections } from "@/lib/sync/collecti
 import {
   addLocalExtensionFolder,
   type DroppedExtensionFolder,
+  deleteProjectExtensionSetting,
   executeExtensionCommand,
   getExtensionContributions,
   getMarketplaceExtensionContributions,
@@ -179,8 +180,10 @@ export const useProjectExtensionSettings = (projectId: string | undefined, insta
 export const useUpdateProjectExtensionSetting = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ instanceId, key, value }: { instanceId: string; key: string; value: unknown }) => {
+    // `undefined` removes the saved value, so the setting falls back to its default.
+    mutationFn: async ({ instanceId, key, value }: { instanceId: string; key: string; value: unknown }) => {
       if (!projectId) throw new Error("Project id is required to update extension settings.");
+      if (value === undefined) return deleteProjectExtensionSetting(projectId, instanceId, key);
       return updateProjectExtensionSetting(projectId, instanceId, key, value);
     },
     onSuccess: (_result, variables) => {

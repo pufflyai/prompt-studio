@@ -35,6 +35,7 @@ export {
   type ReservedKeybindingPlatform,
   type ReservedKeybindingReason,
 } from "./normalize/reserved-keybindings";
+export { toSettingDefinitionRecord } from "./normalize/settings";
 export {
   type ExtensionLoadScope,
   getExtensionApiVersionError,

@@ -1,12 +1,8 @@
-import type {
-  ExtensionKeybindingRecord,
-  ExtensionMenuContribution,
-  ExtensionSettingDefinitionRecord,
-  WorkbenchExtensionMetadata,
-} from "@pstdio/sdk/api";
+import type { ExtensionKeybindingRecord, ExtensionMenuContribution, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/sdk/extensions";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import { serializeWhenExpression } from "../../runtime/normalize/references";
+import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
 import type { ExtensionRuntime } from "../../types/runtime";
 import {
   commandRef,
@@ -104,19 +100,6 @@ export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][numb
     when: serializeWhenExpression(binding.when, binding.extensionId) as ExtensionKeybindingRecord["when"],
   };
 };
-
-const toSettingDefinitionRecord = (
-  setting: ExtensionRuntime["settings"][number],
-): ExtensionSettingDefinitionRecord => ({
-  key: setting.key,
-  extensionId: setting.extensionId,
-  type: setting.contribution.type,
-  scope: setting.contribution.scope,
-  default: setting.contribution.default,
-  enum: setting.contribution.enum,
-  title: setting.contribution.title,
-  description: setting.contribution.description,
-});
 
 const toCommandPaletteResource = (provider: ExtensionRuntime["commandPaletteResources"][number]) => {
   const queryHandlerId = (provider.contribution as typeof provider.contribution & { queryHandlerId?: string })

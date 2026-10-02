@@ -6,7 +6,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
-import { ParamEditor } from "@pstdio/ui/param-editor";
+import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
 import { ArrowLeft, ArrowUpCircle, Blocks, Puzzle, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -14,7 +14,8 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDetailHealth } from "./extension-detail-health";
-import { settingsToParams, settingsToValues } from "./extension-settings-params";
+import { ExtensionSettingsForm } from "./extension-settings-form";
+import { settingsToParams } from "./extension-settings-params";
 
 export interface ExtensionDetailProps {
   projectId?: string;
@@ -31,6 +32,9 @@ export interface ExtensionDetailProps {
   onBack: () => void;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => void;
+  /** Runs the commands that load a setting's choices. */
+  executeOptionCommand: ExecuteOptionCommand;
+  /** `undefined` removes the saved value. */
   onChangeSetting: (key: string, value: unknown) => void;
   onReload: () => void;
   onUpgrade: () => void;
@@ -53,6 +57,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onBack,
     onToggle,
     onToggleAutomation,
+    executeOptionCommand,
     onChangeSetting,
     onReload,
     onUpgrade,
@@ -63,7 +68,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
   // Changed source on disk is adopted by reloading it. Upgrade is only for sources a release replaces.
   const showReload = !extension.canUpgrade && extension.updateAvailable;
   const hasErrorDiagnostics = diagnostics.some((diagnostic) => diagnostic.severity === "error");
-  const settingsParams = settingsToParams(settings);
+  const hasSettings = settingsToParams(settings).length > 0;
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
     onToggle(details.checked);
   };
@@ -193,12 +198,11 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         <Tabs.Content value="settings">
           <Stack gap="lg">
             <Stack gap="lg" paddingX="lg">
-              {settingsParams.length > 0 ? (
-                <ParamEditor
-                  params={settingsParams}
-                  defaultValues={settingsToValues(settings)}
-                  onChange={(id, value) => onChangeSetting(id, value)}
-                  variant="small"
+              {hasSettings ? (
+                <ExtensionSettingsForm
+                  settings={settings}
+                  executeOptionCommand={executeOptionCommand}
+                  onChangeSetting={onChangeSetting}
                 />
               ) : (
                 <EmptyState
