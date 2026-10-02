@@ -39,6 +39,11 @@ Read this file before working on UI or design. Use these patterns across the app
 - Once all shrinking tabs reach their minimum, scroll the tab strip horizontally. Do not shrink tabs further or wrap them onto another row.
 - Scroll the active tab fully into view when a tab is opened or selected, including when closing a tab selects its neighbor.
 
+## Command failures
+
+- Report a command failure once, where the user started it. Dialogs and renderer reads show failures inline. Actions without an inline display use the shared action reporter.
+- The command transport forwards outcomes and notices. It does not report failures.
+
 ## Problems in the chat
 
 - The chat has no banners. A problem appears in the conversation, where the user is looking, styled like an agent error (`AlertMessage`, `status="error"`).

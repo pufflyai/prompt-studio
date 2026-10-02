@@ -1,6 +1,7 @@
 import { Stack } from "@chakra-ui/react";
 import { type ReactNode, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
+import { type KanbanActionErrorHandler, runKanbanAction } from "./kanban-renderer-action";
 import type {
   KanbanRendererBoardColumn,
   KanbanRendererBoardColumnAction,
@@ -66,6 +67,8 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   toolbarActions?: ReactNode;
   toolbarLeading?: ReactNode;
   onRowClick?: (row: TRow) => void;
+  /** Reports a failed badge edit or complete move once and consumes its rejection. */
+  onActionError?: KanbanActionErrorHandler;
   /** Called when a row attribute changes through drag/drop, board movement, or inline controls. */
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
   /** Called for manual row ordering when a dragged row is dropped before another row. */
@@ -98,6 +101,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     defaultViews,
     defaultActiveViewId,
     onRowClick,
+    onActionError,
     onAttributeChange,
     onReorder,
     createRow,
@@ -139,6 +143,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     grouped,
     attributes,
     onRowClick,
+    onActionError,
     onAttributeChange,
     onReorder,
     getRowContextMenuActions,
@@ -155,7 +160,8 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         badges: collectDisplayBadges(row, attributes, cardDisplayProperties),
         customSlots: collectDisplayCustomSlots(row, attributes, cardDisplayProperties),
         onBadgeChange: onAttributeChange
-          ? (attributeId: string, value: unknown) => onAttributeChange(row.id, attributeId, value)
+          ? (attributeId: string, value: unknown) =>
+              runKanbanAction("Update attribute", () => onAttributeChange(row.id, attributeId, value), onActionError)
           : undefined,
         onClick: () => onRowClick?.(row as TRow),
       },
@@ -198,26 +204,36 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     targetColumnId: string,
     context?: { beforeItemId?: string; targetGroupKey?: string },
   ) => {
-    await applyBoardMoveItem({
-      settings,
-      rowId,
-      targetColumnId,
-      targetGroupKey: context?.targetGroupKey,
-      beforeItemId: context?.beforeItemId,
-      onAttributeChange,
-      onReorder,
-    });
+    await runKanbanAction(
+      "Move row",
+      () =>
+        applyBoardMoveItem({
+          settings,
+          rowId,
+          targetColumnId,
+          targetGroupKey: context?.targetGroupKey,
+          beforeItemId: context?.beforeItemId,
+          onAttributeChange,
+          onReorder,
+        }),
+      onActionError,
+    );
   };
 
   const handleBoardMoveToGroup = async (rowId: string, targetGroupKey: string, context?: { beforeItemId?: string }) => {
-    await applyBoardMoveToGroup({
-      settings,
-      rowId,
-      targetGroupKey,
-      beforeItemId: context?.beforeItemId,
-      onAttributeChange,
-      onReorder,
-    });
+    await runKanbanAction(
+      "Move row",
+      () =>
+        applyBoardMoveToGroup({
+          settings,
+          rowId,
+          targetGroupKey,
+          beforeItemId: context?.beforeItemId,
+          onAttributeChange,
+          onReorder,
+        }),
+      onActionError,
+    );
   };
 
   return (

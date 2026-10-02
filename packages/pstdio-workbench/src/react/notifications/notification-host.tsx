@@ -2,6 +2,7 @@ import type { ToastStatusChangeDetails } from "@chakra-ui/react";
 import { toaster } from "@pstdio/ui";
 import { useEffect, useRef } from "react";
 import type { RegisteredWorkbenchNotification, WorkbenchCore, WorkbenchNotificationAction } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 
 // Bridges `workbench.notifications` into the shared `@pstdio/ui` toaster singleton.
 // The Workbench shell renders the viewport once alongside the rest of its chrome.
@@ -11,7 +12,7 @@ interface WorkbenchNotificationHostProps {
 
 const executeNotificationAction = (input: { action: WorkbenchNotificationAction; workbench: WorkbenchCore }) => {
   const { action, workbench } = input;
-  void workbench.commands.executeCommand(action.commandId, action.args).catch(() => undefined);
+  void runUserAction(workbench, action.title, () => workbench.commands.executeCommand(action.commandId, action.args));
 };
 
 export const WorkbenchNotificationHost = (props: WorkbenchNotificationHostProps) => {

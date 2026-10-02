@@ -16,6 +16,7 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
+import { reportUserActionError, runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { RendererReadNotice } from "../renderer-read-notice";
@@ -134,12 +135,15 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const rows = read.value ?? [];
 
   const handleOpenRow = (row: KanbanRendererRow) => {
-    if (contribution.onRowActivate) void Promise.resolve(contribution.onRowActivate(row)).catch(() => undefined);
+    if (contribution.onRowActivate) void runUserAction(workbench, "Open row", () => contribution.onRowActivate!(row));
   };
 
   const getRowContextMenuActions = (row: KanbanRendererRow) => {
     const resourceActions = isKanbanRowResource(row.resource) ? resolveResourceActions(row.resource) : [];
-    const contributionActions = contribution.getRowContextMenuActions?.(row) ?? [];
+    const contributionActions = (contribution.getRowContextMenuActions?.(row) ?? []).map((action) => ({
+      ...action,
+      onClick: () => runUserAction(workbench, action.label, () => action.onClick()),
+    }));
     return mergeKanbanViewRowActions(resourceActions, contributionActions);
   };
   const contentPlaceholder = read.error ? (
@@ -176,11 +180,16 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         getBoardColumnConfig={contribution.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
         onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
+        onActionError={(error, action) => reportUserActionError(workbench, action, error)}
         onAttributeChange={contribution.onAttributeChange}
         onReorder={contribution.onReorder}
         createRow={contribution.createRow}
         onCreateRow={contribution.onCreateRow}
-        onColumnAction={contribution.onColumnAction}
+        onColumnAction={
+          contribution.onColumnAction
+            ? (...args) => runUserAction(workbench, "Column action", () => contribution.onColumnAction!(...args))
+            : undefined
+        }
         getRowContextMenuActions={getRowContextMenuActions}
         toolbarActions={
           <ViewToolbarActions

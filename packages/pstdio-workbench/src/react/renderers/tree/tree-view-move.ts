@@ -6,6 +6,7 @@ import type {
   WorkbenchCore,
 } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
+import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { findNodeInSections } from "./tree-list-adapter";
 
 interface MoveTreeNodeContext {
@@ -27,14 +28,19 @@ export const createMoveTreeNode = (context: MoveTreeNodeContext) =>
           : undefined;
         if (!source || (targetNodeId && !target)) return;
         const trees = getWorkbenchRenderers(context.workbench);
-        void Promise.resolve(
-          context.renderer.moveNode?.(source, target, {
-            resource: context.resource,
-            viewId: context.viewId,
-            state: trees.getTreeState(context.renderer.id),
-            refresh: () => trees.refresh(context.renderer.id),
-            setSelectedNode: (nodeId) => trees.setSelectedNode(context.renderer.id, nodeId),
-          }),
-        ).catch(context.onError);
+        void Promise.resolve()
+          .then(() =>
+            context.renderer.moveNode?.(source, target, {
+              resource: context.resource,
+              viewId: context.viewId,
+              state: trees.getTreeState(context.renderer.id),
+              refresh: () => trees.refresh(context.renderer.id),
+              setSelectedNode: (nodeId) => trees.setSelectedNode(context.renderer.id, nodeId),
+            }),
+          )
+          .catch((error) => {
+            if (context.onError) context.onError(error);
+            else reportUserActionError(context.workbench, "Move", error);
+          });
       }
     : undefined;
