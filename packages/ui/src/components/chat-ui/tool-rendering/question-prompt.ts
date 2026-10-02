@@ -44,6 +44,18 @@ export const getQuestionResponseText = (value: unknown): string | null => {
   );
 };
 
+const carriesAnswers = (value: unknown): boolean => {
+  if (!isRecord(value)) return false;
+  if (Array.isArray(value.answers)) return true;
+  return carriesAnswers(value.response) || carriesAnswers(value.answer);
+};
+
+/**
+ * Whether the person has responded at all. A skipped question answers with no values, so it has a
+ * response payload but no response text; reading the text alone would leave the form open forever.
+ */
+export const hasQuestionResponse = (value: unknown) => getQuestionResponseText(value) !== null || carriesAnswers(value);
+
 const parseQuestionOption = (value: unknown): QuestionFormBlockOption | null => {
   if (typeof value === "string" && value.trim().length > 0) {
     return { label: value, description: undefined };
@@ -110,8 +122,7 @@ export const resolveActiveQuestionPrompt = (messages: SessionMessage[]) => {
       const part = message.parts[partIndex];
       if (part.type !== "tool" || !isQuestionTool(part)) continue;
 
-      const response = getQuestionResponseText(part.state?.output) ?? getQuestionResponseText(part.state?.metadata);
-      if (response) return undefined;
+      if (hasQuestionResponse(part.state?.output) || hasQuestionResponse(part.state?.metadata)) return undefined;
 
       return parseQuestionPrompt(part.state?.input) ?? undefined;
     }
