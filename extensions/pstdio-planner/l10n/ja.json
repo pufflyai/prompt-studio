@@ -27,9 +27,6 @@
   "commands.implementationPolicy.title": "チケット実装の設定を確認",
   "commands.implementationTargets.title": "実装のターゲットブランチを一覧表示",
   "commands.setImplementationTarget.title": "デフォルトのターゲットブランチを設定",
-  "settingsPanels.implementation.title": "実装",
   "settings.implementation.defaultTargetBranch.title": "デフォルトのターゲットブランチ",
-  "settings.implementation.repositoryDefault": "リポジトリのデフォルト",
-  "settings.implementation.noGitFolder": "リモートブランチにはローカルの Git フォルダーが必要です。",
-  "settings.implementation.error": "実装設定を更新できませんでした"
+  "settings.implementation.defaultTargetBranch.description": "新しい作業の対象となるリモートブランチです。クリアするとリポジトリのデフォルトブランチを使用します。"
 }

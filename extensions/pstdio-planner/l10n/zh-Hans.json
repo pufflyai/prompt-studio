@@ -27,9 +27,6 @@
   "commands.implementationPolicy.title": "读取工单实现设置",
   "commands.implementationTargets.title": "列出实现目标分支",
   "commands.setImplementationTarget.title": "设置默认目标分支",
-  "settingsPanels.implementation.title": "实现",
   "settings.implementation.defaultTargetBranch.title": "默认目标分支",
-  "settings.implementation.repositoryDefault": "仓库默认分支",
-  "settings.implementation.noGitFolder": "远程分支需要本地 Git 文件夹。",
-  "settings.implementation.error": "无法更新实现设置"
+  "settings.implementation.defaultTargetBranch.description": "新工作的目标远程分支。清除后将使用仓库默认分支。"
 }

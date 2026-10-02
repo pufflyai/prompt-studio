@@ -27,9 +27,6 @@
   "commands.implementationPolicy.title": "Consultar las opciones de implementación de tickets",
   "commands.implementationTargets.title": "Listar ramas de destino de implementación",
   "commands.setImplementationTarget.title": "Establecer la rama de destino predeterminada",
-  "settingsPanels.implementation.title": "Implementación",
   "settings.implementation.defaultTargetBranch.title": "Rama de destino predeterminada",
-  "settings.implementation.repositoryDefault": "Predeterminada del repositorio",
-  "settings.implementation.noGitFolder": "Las ramas remotas requieren una carpeta Git local.",
-  "settings.implementation.error": "No se pudo actualizar la configuración de implementación"
+  "settings.implementation.defaultTargetBranch.description": "Rama remota a la que apunta el nuevo trabajo. Bórrala para usar la rama predeterminada del repositorio."
 }

@@ -28,11 +28,8 @@
   "commands.implementationPolicy.title": "Lire les options de mise en œuvre des tickets",
   "commands.implementationTargets.title": "Lister les branches cibles d’implémentation",
   "commands.setImplementationTarget.title": "Définir la branche cible par défaut",
-  "settingsPanels.implementation.title": "Implémentation",
   "settings.implementation.defaultTargetBranch.title": "Branche cible par défaut",
-  "settings.implementation.repositoryDefault": "Branche par défaut du dépôt",
-  "settings.implementation.noGitFolder": "Les branches distantes nécessitent un dossier Git local.",
-  "settings.implementation.error": "Impossible de mettre à jour les paramètres d’implémentation",
+  "settings.implementation.defaultTargetBranch.description": "Branche distante visée par les nouveaux travaux. Effacez-la pour utiliser la branche par défaut du dépôt.",
   "ticketWorkspaces.project": "Espace de travail du projet",
   "commands.linkTicket": "Lier le ticket",
   "commands.unlinkTicket": "Délier le ticket"

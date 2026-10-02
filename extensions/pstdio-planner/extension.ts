@@ -10,6 +10,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { plannerTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
+import { implementationTargetsCommand } from "./src/commands/implementation-targets";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
@@ -17,7 +18,7 @@ import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link"
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
 import { ticketStatuses } from "./src/ticket-status-provider";
-import { createPlannerUi, plannerSettingsSection, ticketResourceKind } from "./src/ui-contributions";
+import { createPlannerUi, ticketResourceKind } from "./src/ui-contributions";
 
 const plannerUi = createPlannerUi(import.meta.url);
 
@@ -56,13 +57,19 @@ export default defineExtension({
         scope: "project",
         default: 2,
         title: "Maximum in-progress tickets",
-        description: "Hard cap used by autonomous planner implementation automation.",
+        description:
+          "Most tickets with a running implementation at once. At this limit, Run attempt does not start another ticket, whether automation or a person runs it.",
       },
       "implementation.defaultTargetBranch": {
         type: "string",
         scope: "project",
         default: "",
         title: l10n("settings.implementation.defaultTargetBranch.title", "Default target branch"),
+        description: l10n(
+          "settings.implementation.defaultTargetBranch.description",
+          "Remote branch that new work targets. Clear it to use the repository default branch.",
+        ),
+        options: { command: implementationTargetsCommand.ref, valueField: "branch", labelField: "branch" },
       },
     },
   },
@@ -86,8 +93,6 @@ export default defineExtension({
   navigationTrees: plannerUi.navigationTrees,
   settingsPanels: plannerUi.settingsPanels,
   statuses: [ticketStatuses],
-
-  settingsSections: [plannerSettingsSection],
 
   hooks: [
     worktreeCreatedHook,

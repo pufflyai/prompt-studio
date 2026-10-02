@@ -70,10 +70,10 @@ const setup = async (gitFolder = true) => {
 describe("project implementation target branches", () => {
   test("lists remote branches in the project folder without local or symbolic refs", async () => {
     const { ctx } = await setup();
-    expect(await implementationTargetsCommand.run(ctx, {})).toEqual({
-      branches: ["origin/main", "origin/release/next"],
-      selected: "",
-    });
+    expect(await implementationTargetsCommand.run(ctx, {})).toEqual([
+      { branch: "origin/main" },
+      { branch: "origin/release/next" },
+    ]);
   });
 
   test("shares the project target with commands invoked from an attempt workspace", async () => {
@@ -84,7 +84,6 @@ describe("project implementation target branches", () => {
     expect(await implementationPolicyCommand.run(ctx, {})).toMatchObject({
       defaultTargetBranch: "origin/release/next",
     });
-    expect(await implementationTargetsCommand.run(ctx, {})).toMatchObject({ selected: "origin/release/next" });
   });
 
   test("clears the override to use the repository default", async () => {
@@ -92,12 +91,11 @@ describe("project implementation target branches", () => {
     await setImplementationTargetCommand.run(ctx, { branch: "origin/main" });
     await setImplementationTargetCommand.run(ctx, {});
     expect(await implementationPolicyCommand.run(ctx, {})).toMatchObject({ defaultTargetBranch: null });
-    expect(await implementationTargetsCommand.run(ctx, {})).toMatchObject({ selected: "" });
   });
 
-  test("keeps workflow options available for non-Git project folders", async () => {
+  test("lists no branches but keeps workflow options for non-Git project folders", async () => {
     const { ctx } = await setup(false);
-    expect(await implementationTargetsCommand.run(ctx, {})).toBeNull();
+    expect(await implementationTargetsCommand.run(ctx, {})).toEqual([]);
     expect(await implementationPolicyCommand.run(ctx, {})).toEqual({
       adversarialReview: true,
       openPr: true,
@@ -108,7 +106,7 @@ describe("project implementation target branches", () => {
   test("does not read local Git branches for a remote project workspace", async () => {
     const { ctx } = await setup(false);
     ctx.workspaces.getDefault = async () => ({ id: "remote", execution_kind: "remote", root_path: null });
-    expect(await implementationTargetsCommand.run(ctx, {})).toBeNull();
+    expect(await implementationTargetsCommand.run(ctx, {})).toEqual([]);
   });
 
   test("rejects branches that are not remote branches in the project folder", async () => {

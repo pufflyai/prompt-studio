@@ -64,13 +64,13 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
     .poll(async () =>
       (await settings.getByText(/^(Workbench|Project|Lab|Planner)$/).allTextContents()).map((text) => text.trim()),
     )
-    .toEqual(["Workbench", "Project", "Lab", "Planner"]);
+    .toEqual(["Workbench", "Project", "Lab"]);
   const settingsEntries = await settings.getByRole("option").allTextContents();
   const entryIndex = (label: string) => settingsEntries.findIndex((entry) => entry.trim() === label);
   expect(entryIndex("Extensions")).toBeLessThan(entryIndex("Statuses"));
-  expect(entryIndex("Statuses")).toBeLessThan(entryIndex("Danger zone"));
+  expect(entryIndex("Statuses")).toBeLessThan(entryIndex("Ticket tags"));
+  expect(entryIndex("Ticket tags")).toBeLessThan(entryIndex("Danger zone"));
   expect(entryIndex("Danger zone")).toBeLessThan(entryIndex("Lab (global)"));
-  expect(entryIndex("Lab (project)")).toBeLessThan(entryIndex("Ticket tags"));
   expect(plannerStatusQueries).toBe(1);
   await settings.getByText("Statuses", { exact: true }).click();
   await expect(settings.getByText("Ticket status", { exact: true })).toBeVisible({ timeout: 30_000 });

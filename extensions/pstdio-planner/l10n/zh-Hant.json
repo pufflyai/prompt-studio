@@ -27,9 +27,6 @@
   "commands.implementationPolicy.title": "讀取工單實作設定",
   "commands.implementationTargets.title": "列出實作目標分支",
   "commands.setImplementationTarget.title": "設定預設目標分支",
-  "settingsPanels.implementation.title": "實作",
   "settings.implementation.defaultTargetBranch.title": "預設目標分支",
-  "settings.implementation.repositoryDefault": "儲存庫預設分支",
-  "settings.implementation.noGitFolder": "遠端分支需要本機 Git 資料夾。",
-  "settings.implementation.error": "無法更新實作設定"
+  "settings.implementation.defaultTargetBranch.description": "新工作的目標遠端分支。清除後將使用儲存庫預設分支。"
 }
