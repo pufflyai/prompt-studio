@@ -68,6 +68,17 @@ describe("view sorts", () => {
     ]);
   });
 
+  test("timestamp dates sort with date-only dates", () => {
+    const dated = [row("x", { updated: new Date(2026, 8, 4).getTime() }), ...rows];
+    expect(ids(sortRowsByView(dated, [{ attributeId: "updated", direction: "asc" }], fields))).toEqual([
+      "a",
+      "d",
+      "b",
+      "x",
+      "c",
+    ]);
+  });
+
   test("no sorts, unknown fields, and multi-value fields keep the incoming order", () => {
     expect(sortRowsByView(rows, [], fields)).toBe(rows);
     expect(sortRowsByView(rows, [{ attributeId: "tags", direction: "asc" }], fields)).toBe(rows);

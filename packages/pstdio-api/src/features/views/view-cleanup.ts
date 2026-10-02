@@ -1,10 +1,9 @@
 import {
   type BoardField,
   type BoardViewSettings,
-  canSortViewField,
-  findViewFilterProblem,
   isViewFilterGroup,
   type KanbanViewSettings,
+  legacyRuleFor,
 } from "pstdio-api-contracts";
 import {
   type DataTableRendererSettings,
@@ -33,25 +32,40 @@ const equivalentConditions: Partial<Record<ViewFilterCondition, ViewFilterCondit
   "is-none-of": "has-none-of",
   "has-none-of": "is-none-of",
 };
-const cleanRule = (rule: ViewFilterRule, fields: BoardField[]) => {
+const isListRule = (rule: ViewFilterRule): rule is ViewFilterRule & { value: string[] } =>
+  rule.condition === "is-any-of" && Array.isArray(rule.value);
+
+/**
+ * Removes what refers to fields or options that are gone. A rule whose condition no longer fits its
+ * field is kept: the renderer skips it, and it works again if the field returns to its old kind.
+ */
+const cleanRule = (rule: ViewFilterRule, fields: BoardField[], root: boolean) => {
   const field = fields.find((field) => field.id === rule.attributeId && field.filterable);
   if (!field) return [];
   const accepted = VIEW_FILTER_CONDITIONS[field.kind];
-  const condition = accepted.includes(rule.condition) ? rule.condition : equivalentConditions[rule.condition];
-  if (!condition || !accepted.includes(condition)) return [];
+  const fits = accepted.includes(rule.condition);
+  const equivalent = equivalentConditions[rule.condition];
+  const fitsEquivalent = !fits && equivalent !== undefined && accepted.includes(equivalent);
+  // Saved views from before rules existed picked exact values on text, number, and date fields too.
+  if (!fits && !fitsEquivalent && isListRule(rule)) {
+    const converted = legacyRuleFor(rule.attributeId, rule.value, field.kind);
+    if (!converted || (!root && isViewFilterGroup(converted))) return [];
+    return [converted];
+  }
+  const condition = fitsEquivalent && equivalent ? equivalent : rule.condition;
   const options = field.options;
   const values = Array.isArray(rule.value) ? rule.value : undefined;
   const kept = options ? values?.filter((value) => options.some((option) => option.value === value)) : undefined;
   if (values?.length && kept?.length === 0) return [];
-  const cleaned = kept ? { ...rule, condition, value: kept } : { ...rule, condition };
-  // A rule the API would refuse must go, or every later edit of the view would fail.
-  return findViewFilterProblem({ conjunction: "and", rules: [cleaned] }, fields) ? [] : [cleaned];
+  return [kept ? { ...rule, condition, value: kept } : { ...rule, condition }];
 };
 const cleanFilter = (filter: ViewFilterGroup, fields: BoardField[]): ViewFilterGroup => ({
   ...filter,
   rules: filter.rules.flatMap<ViewFilterRule | ViewFilterGroup>((rule) => {
-    if (!isViewFilterGroup(rule)) return cleanRule(rule, fields);
-    const rules = rule.rules.flatMap((nested) => (isViewFilterGroup(nested) ? [] : cleanRule(nested, fields)));
+    if (!isViewFilterGroup(rule)) return cleanRule(rule, fields, true);
+    const rules = rule.rules.flatMap((nested) =>
+      isViewFilterGroup(nested) ? [] : (cleanRule(nested, fields, false) as ViewFilterRule[]),
+    );
     return rules.length ? [{ ...rule, rules }] : [];
   }),
 });
@@ -87,5 +101,5 @@ export const cleanBoardView = (board: BoardDefaults, view: SavedViewState, field
       ? cleanKanbanSettings(view.settings as KanbanViewSettings, board.settings, fields)
       : cleanDataTableSettings(view.settings as DataTableRendererSettings, board.settings, fields),
   filter: cleanFilter(view.filter, fields),
-  sorts: view.sorts.filter((sort) => fields.some((field) => field.id === sort.attributeId && canSortViewField(field))),
+  sorts: view.sorts.filter((sort) => fields.some((field) => field.id === sort.attributeId)),
 });

@@ -2,7 +2,7 @@ import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
@@ -119,9 +119,8 @@ const Wrapper = (props: {
   };
   const reset = useKanbanRendererStore(storageKey, (state) => state.reset, initialState);
 
-  useEffect(() => {
-    reset();
-  }, [reset]);
+  // Reset during the first render, before the renderer picks its first view in an effect.
+  useState(reset);
 
   const handleAttributeChange = (rowId: string, attributeId: string, value: unknown) => {
     setRows((current) =>
@@ -180,7 +179,7 @@ export const RendererChromeAndTicketMenu: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const renderer = canvas.getByTestId("kanban-renderer");
-    const header = canvas.getByTestId("kanban-renderer-header");
+    const header = canvas.getByTestId("collection-view-bar");
     const firstCard = canvas.getAllByTestId("renderer-card")[0];
     if (!firstCard) throw new Error("Expected a ticket card to render");
 
@@ -189,7 +188,7 @@ export const RendererChromeAndTicketMenu: Story = {
     await expect(canvas.getAllByTestId("column-status-icon")[0]).toBeVisible();
     const boardIconNames = canvas.getAllByTestId("column-status-icon").map(getLucideIconName);
 
-    const filterButton = canvas.getByRole("button", { name: "Filter rows" });
+    const filterButton = canvas.getByRole("button", { name: "Filter" });
     const displayButton = canvas.getByRole("button", { name: "Display settings" });
     const body = within(document.body);
 
@@ -213,7 +212,9 @@ export const RendererChromeAndTicketMenu: Story = {
     const filterDialog = await body.findByRole("dialog");
     const filterButtonBounds = filterButton.getBoundingClientRect();
     const filterDialogBounds = filterDialog.getBoundingClientRect();
-    await expect(Math.abs(filterDialogBounds.right - filterButtonBounds.right)).toBeLessThanOrEqual(1);
+    // The popover opens under its button; near the window edge it shifts to stay on screen.
+    await expect(filterDialogBounds.left).toBeLessThanOrEqual(filterButtonBounds.left + 1);
+    await expect(filterDialogBounds.right).toBeGreaterThanOrEqual(filterButtonBounds.right - 1);
     await expect(filterDialogBounds.top).toBeGreaterThanOrEqual(filterButtonBounds.bottom);
     await userEvent.click(filterButton);
     await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
@@ -318,7 +319,8 @@ export const SavedFilteredView: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const filterPill = canvas.getByRole("button", { name: "Remove Assignee filter" }).parentElement;
+    // The renderer selects its saved view in an effect, which can run after the play function starts.
+    const filterPill = (await canvas.findByRole("button", { name: "Remove Assignee filter" })).parentElement;
     if (!filterPill) throw new Error("Expected the saved filter pill to render");
 
     await expect(within(filterPill).getByText("Assignee is")).toBeVisible();
@@ -394,12 +396,12 @@ export const RendererOwnedCreateForm: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(within(canvas.getByTestId("board-column-todo")).getByRole("button", { name: "Create row" }));
-    const dialog = within(document.body).getByRole("dialog");
-    await expect(within(dialog).getByText("Status · Todo")).toBeInTheDocument();
-    await userEvent.type(within(dialog).getByLabelText("Description"), "Restore ticket creation");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Create ticket" }));
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    await expect(dialog.getByText("Todo")).toBeInTheDocument();
+    await userEvent.type(dialog.getByLabelText("Description"), "Restore ticket creation");
+    await userEvent.click(dialog.getByRole("button", { name: "Create ticket" }));
     await expect(
-      within(canvas.getByTestId("board-column-todo")).getByText("Restore ticket creation"),
+      await within(canvas.getByTestId("board-column-todo")).findByText("Restore ticket creation"),
     ).toBeInTheDocument();
   },
 };
@@ -444,6 +446,18 @@ export const SwitchView: Story = {
   },
 };
 
+// Testing Library's fireEvent copies the DataTransfer for each event, which drops the card id
+// between dragstart and drop in a real browser. One shared DataTransfer keeps it, as a person's drag does.
+const dragCardTo = (card: Element, target: Element) => {
+  const dataTransfer = new DataTransfer();
+  const fire = (element: Element, type: string) =>
+    element.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer }));
+  fire(card, "dragstart");
+  fire(target, "dragover");
+  fire(target, "drop");
+  fire(card, "dragend");
+};
+
 export const DragAndDrop: Story = {
   render: () => <Wrapper />,
   play: async ({ canvasElement }) => {
@@ -452,16 +466,10 @@ export const DragAndDrop: Story = {
     const doneColumn = canvas.getByTestId("board-column-done");
     await expect(within(doneColumn).getByText("Write docs")).toBeInTheDocument();
 
-    const card = canvas.getByText("Write docs").closest("[draggable]")!;
-    const todoColumn = canvas.getByTestId("board-column-todo");
+    dragCardTo(canvas.getByText("Write docs").closest("[draggable]")!, canvas.getByTestId("board-column-todo"));
 
-    const dataTransfer = new DataTransfer();
-    fireEvent.dragStart(card, { dataTransfer });
-    fireEvent.dragOver(todoColumn, { dataTransfer });
-    fireEvent.drop(todoColumn, { dataTransfer });
-    fireEvent.dragEnd(card, { dataTransfer });
-
-    await expect(within(canvas.getByTestId("board-column-todo")).getByText("Write docs")).toBeInTheDocument();
+    // The move saves the new status before the card changes columns.
+    await expect(await within(canvas.getByTestId("board-column-todo")).findByText("Write docs")).toBeInTheDocument();
     await expect(within(canvas.getByTestId("board-column-done")).queryByText("Write docs")).not.toBeInTheDocument();
   },
 };
@@ -471,18 +479,10 @@ export const EmptyColumnPersists: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    const dragCard = (title: string, targetTestId: string) => {
-      const card = canvas.getByText(title).closest("[draggable]")!;
-      const target = canvas.getByTestId(targetTestId);
-      const dataTransfer = new DataTransfer();
-      fireEvent.dragStart(card, { dataTransfer });
-      fireEvent.dragOver(target, { dataTransfer });
-      fireEvent.drop(target, { dataTransfer });
-      fireEvent.dragEnd(card, { dataTransfer });
-    };
-
-    dragCard("Write docs", "board-column-todo");
-    dragCard("Set up CI pipeline", "board-column-todo");
+    for (const title of ["Write docs", "Set up CI pipeline"]) {
+      dragCardTo(canvas.getByText(title).closest("[draggable]")!, canvas.getByTestId("board-column-todo"));
+      await expect(await within(canvas.getByTestId("board-column-todo")).findByText(title)).toBeInTheDocument();
+    }
 
     await expect(canvas.getByTestId("board-column-done")).toBeInTheDocument();
   },

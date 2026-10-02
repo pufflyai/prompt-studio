@@ -74,7 +74,7 @@ export const ViewSearchField = (props: ViewSearchFieldProps) => {
           {resultLabel}
         </Text>
       ) : null}
-      <IconButton aria-label="Clear search" variant="ghost" size="2xs" minW="1rem" h="1rem" onClick={close}>
+      <IconButton aria-label="Close search" variant="ghost" size="2xs" minW="1rem" h="1rem" onClick={close}>
         <Icon as={X} boxSize="0.6875rem" color="fg.subtle" />
       </IconButton>
     </HStack>

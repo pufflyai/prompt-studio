@@ -152,7 +152,7 @@ const dataTableResultSchema = z.object({
 });
 type DataTableColumn = NonNullable<z.infer<typeof dataTableResultSchema>["columns"]>[number];
 const resolveDataTableFields = async (deps: BoardViewsDeps, board: Extract<ResolvedBoard, { kind: "dataTable" }>) => {
-  const result = dataTableResultSchema.parse(
+  const parsed = dataTableResultSchema.safeParse(
     await runQuery(deps, board, board.body.queryHandlerId, {
       renderer: rendererOf(board),
       filter: EMPTY_VIEW_FILTER,
@@ -160,6 +160,8 @@ const resolveDataTableFields = async (deps: BoardViewsDeps, board: Extract<Resol
       settings: board.settings,
     } satisfies DataTableRendererQueryParams),
   );
+  if (!parsed.success) throw new BoardViewError("Table fields could not be resolved", 503);
+  const result = parsed.data;
   // The same order the table uses to choose its columns.
   const firstRow = result.rows[0];
   const columns: DataTableColumn[] =

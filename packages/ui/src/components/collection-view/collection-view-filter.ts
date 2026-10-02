@@ -1,6 +1,12 @@
 import type { ViewFilterGroup, ViewFilterRule } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor, KanbanRendererRow } from "../kanban-renderer/types";
-import { acceptedCondition, findField, getAttributeStringValues, getAttributeValue } from "./collection-view-fields";
+import {
+  acceptedCondition,
+  findField,
+  getAttributeStringValues,
+  getAttributeValue,
+  parseViewDate,
+} from "./collection-view-fields";
 
 type RowTest = (row: KanbanRendererRow) => boolean;
 
@@ -24,9 +30,8 @@ export const resolveViewDay = (value: string, today: Date) => {
 };
 
 const rowDay = (value: unknown) => {
-  if (typeof value !== "string" && typeof value !== "number") return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : dayKey(date);
+  const date = parseViewDate(value);
+  return date && dayKey(date);
 };
 
 const rowNumber = (value: unknown) => {
@@ -104,8 +109,13 @@ const compileValueRule = (
 /** Returns undefined for a rule that is still being built or no longer fits its field. */
 const compileRule = (rule: ViewFilterRule, fields: AttributeDescriptor[], today: Date): RowTest | undefined => {
   const field = findField(fields, rule.attributeId);
-  const condition = field ? acceptedCondition(field, rule.condition) : undefined;
-  if (!field || !condition) return undefined;
+  if (!field) return undefined;
+  const condition = acceptedCondition(field, rule.condition);
+  // Old views picked exact values on every field. When a host cannot tell a field's kind up front,
+  // they still arrive as "any of" lists, and keep their meaning.
+  if (!condition && rule.condition === "is-any-of" && Array.isArray(rule.value))
+    return compileListRule(field, rule.condition, rule.value);
+  if (!condition) return undefined;
   if (condition === "is-empty") return (row) => getAttributeStringValues(row, field).length === 0;
   if (condition === "is-not-empty") return (row) => getAttributeStringValues(row, field).length > 0;
   return compileValueRule(field, condition, rule.value, today);

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   legacyFiltersFromViewFilter,
   legacyOrderingFromSorts,
+  legacyRuleFor,
   normalizeKanbanViewDefaults,
 } from "./collection-view-legacy";
 
@@ -60,6 +61,31 @@ describe("deprecated kanban view fields", () => {
     });
   });
 
+  test("exact values on text, number, and date fields become is rules", () => {
+    expect(legacyRuleFor("parent", ["PS-100"], "string")).toEqual({
+      attributeId: "parent",
+      condition: "is",
+      value: "PS-100",
+    });
+    expect(legacyRuleFor("score", ["70", "80"], "number")).toEqual({
+      conjunction: "or",
+      rules: [
+        { attributeId: "score", condition: "is", value: 70 },
+        { attributeId: "score", condition: "is", value: 80 },
+      ],
+    });
+    expect(legacyRuleFor("updated", ["2026-09-20T09:00:00.000Z"], "date")).toEqual({
+      attributeId: "updated",
+      condition: "is",
+      value: "2026-09-20",
+    });
+    expect(legacyRuleFor("owner", ["alex"], undefined)).toEqual({
+      attributeId: "owner",
+      condition: "is-any-of",
+      value: ["alex"],
+    });
+  });
+
   test("queries still receive filters and ordering derived from the view", () => {
     expect(
       legacyFiltersFromViewFilter({
@@ -80,11 +106,11 @@ describe("deprecated kanban view fields", () => {
       }),
     ).toEqual({});
     expect(
-      legacyFiltersFromViewFilter(
-        { conjunction: "and", rules: [{ attributeId: "archived", condition: "is-none-of", value: ["active"] }] },
-        (id) => (id === "archived" ? ["active", "archived"] : undefined),
-      ),
-    ).toEqual({ archived: ["archived"] });
+      legacyFiltersFromViewFilter({
+        conjunction: "and",
+        rules: [{ attributeId: "archived", condition: "is-none-of", value: ["active"] }],
+      }),
+    ).toEqual({});
     expect(legacyOrderingFromSorts([])).toEqual({ attributeId: "manual", direction: "asc" });
     expect(legacyOrderingFromSorts([{ attributeId: "score", direction: "desc" }])).toEqual({
       attributeId: "score",

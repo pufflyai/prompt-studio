@@ -119,8 +119,10 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
-    // Search is not part of the key, so typing never runs the query again.
-    queryKey: JSON.stringify([contribution.id, settings, filter, sorts]),
+    queryKey: contribution.id,
+    // The view can narrow what the query returns, so it loads again while the board stays on
+    // screen. Search is not part of it, so typing a search never runs the query.
+    refreshKey: JSON.stringify([settings, filter, sorts]),
 
     load: (signal) => contribution.executeQuery({ settings, filter, sorts }, signal),
     subscribe: (refresh) => {

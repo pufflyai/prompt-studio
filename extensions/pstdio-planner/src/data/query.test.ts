@@ -337,6 +337,39 @@ describe("runTicketsQuery archive filtering", () => {
   });
 });
 
+describe("runTicketsQuery archive rules in the view filter", () => {
+  test.each([
+    ["no archive rule", { conjunction: "and", rules: [] }, ["Active"]],
+    [
+      "archive state is none of active",
+      { conjunction: "and", rules: [{ attributeId: "archived", condition: "is-none-of", value: ["active"] }] },
+      ["Active", "Archived"],
+    ],
+    [
+      "archive rule inside an or group",
+      {
+        conjunction: "and",
+        rules: [
+          {
+            conjunction: "or",
+            rules: [{ attributeId: "archived", condition: "is-any-of", value: ["archived"] }],
+          },
+        ],
+      },
+      ["Active", "Archived"],
+    ],
+  ])("loads the archive sets the renderer may show for %s", async (_name, filter, expectedTitles) => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    await putTicket(storage, makeTicket({ shorthand: "T-1", title: "Active", archived: false, sortOrder: 0 }));
+    await putTicket(storage, makeTicket({ shorthand: "T-2", title: "Archived", archived: true, sortOrder: 1 }));
+
+    const result = await runTicketsQuery({ storage, projectId: "proj-1", filter });
+
+    expect(result.rows.map((row) => row.title)).toEqual(expectedTitles);
+  });
+});
+
 describe("runTicketsQuery ordering and hierarchy", () => {
   test("orders rows by sortOrder", async () => {
     const storage = createMemoryStorage();

@@ -31,9 +31,10 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
   });
   const listResolved = async (board: ResolvedBoard) => {
     let rows: (Awaited<ReturnType<typeof db.list>>[number] | null)[] = await db.list(board.scope);
-    // A failed extension query is never evidence that a saved field disappeared.
+    // A failed extension query, or a table that cannot describe its columns yet, is never
+    // evidence that a saved field disappeared.
     const fields = await resolveBoardFields(deps, board).catch(() => null);
-    if (fields)
+    if (fields?.length)
       rows = await Promise.all(
         rows.map(async (row) => {
           if (!row) return null;
@@ -117,7 +118,7 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
         filter: input.filter ?? source?.filter ?? board.body.defaultFilter ?? EMPTY_VIEW_FILTER,
         sorts: input.sorts ?? source?.sorts ?? board.body.defaultSorts ?? [],
       };
-      const state = validateBoardView(board.kind, draft, await resolveBoardFields(deps, board));
+      const state = validateBoardView(board.kind, draft, await resolveBoardFields(deps, board), input);
       const row = await db.create({ ...board.scope, title: input.title, ...state });
       emitView(row);
       return savedView(board, row);
@@ -129,7 +130,7 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
         filter: input.filter ?? row.filter,
         sorts: input.sorts ?? row.sorts,
       };
-      const state = validateBoardView(board!.kind, draft, await resolveBoardFields(deps, board!));
+      const state = validateBoardView(board!.kind, draft, await resolveBoardFields(deps, board!), input);
       const updated = await db.update(projectId, id, {
         ...state,
         ...(input.title === undefined ? {} : { title: input.title }),

@@ -333,7 +333,7 @@ Deprecated fields still work and are converted where the host reads the contribu
 | `filters` in `defaultViews` | `filter` |
 | `params.filters` and `params.settings.ordering` in a kanban query | `params.filter` and `params.sorts` |
 
-The host keeps sending `params.filters`, derived from root `is-any-of` and `has-any-of` rules (and `is-none-of` rules on fields with declared options) when the root joins with `"and"`, and `params.settings.ordering`, the first sort or `manual`.
+The host keeps sending `params.filters`, derived from root `is-any-of` and `has-any-of` rules when the root joins with `"and"`, and `params.settings.ordering`, the first sort or `manual`.
 
 ## Shared views
 

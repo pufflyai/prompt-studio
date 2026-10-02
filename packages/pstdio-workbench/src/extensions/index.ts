@@ -36,10 +36,8 @@ export {
   type RegisterWorkbenchExtensionFileRenderersInput,
   registerWorkbenchExtensionFileRenderers,
 } from "./contributions/file-renderer-contributions";
-export {
-  registerWorkbenchExtensionKanbanRenderers,
-  type WorkbenchExtensionKanbanRendererAdapter,
-} from "./contributions/kanban-renderer-contributions";
+export type { WorkbenchExtensionKanbanRendererAdapter } from "./contributions/kanban-renderer-adapter";
+export { registerWorkbenchExtensionKanbanRenderers } from "./contributions/kanban-renderer-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,

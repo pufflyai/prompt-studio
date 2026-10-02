@@ -72,6 +72,15 @@ describe("view filters", () => {
     expect(resolveViewDay("today-2", new Date(2026, 0, 1))).toBe(20_251_230);
   });
 
+  test("date-only values and timestamps name a day on the viewer's calendar", () => {
+    const dated = [row("d", "Day only", { updated: "2026-10-02" }), row("e", "Stamp", { updated: today.getTime() })];
+    const filter: ViewFilterGroup = {
+      conjunction: "and",
+      rules: [{ attributeId: "updated", condition: "is", value: "today" }],
+    };
+    expect(filterRowsByView(dated, filter, fields, today).map((entry) => entry.id)).toEqual(["d", "e"]);
+  });
+
   test("option conditions compare value ids", () => {
     expect(only({ attributeId: "status", condition: "is-any-of", value: ["done"] })).toEqual(["b"]);
     expect(only({ attributeId: "status", condition: "is-none-of", value: ["done"] })).toEqual(["a", "c"]);
@@ -115,6 +124,11 @@ describe("view filters", () => {
     expect(only({ attributeId: "status", condition: "is-any-of", value: [] })).toEqual(["a", "b", "c"]);
     expect(only({ attributeId: "gone", condition: "is-empty" })).toEqual(["a", "b", "c"]);
     expect(only({ attributeId: "score", condition: "contains", value: "9" })).toEqual(["a", "b", "c"]);
+  });
+
+  test("old exact-value lists keep matching text and number fields", () => {
+    expect(only({ attributeId: "title", condition: "is-any-of", value: ["Harness params"] })).toEqual(["c"]);
+    expect(only({ attributeId: "score", condition: "is-any-of", value: ["92", "70"] })).toEqual(["a", "c"]);
   });
 
   test("the built-in title field reads the row title", () => {

@@ -2,7 +2,7 @@ import { Box, Icon, IconButton } from "@chakra-ui/react";
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Settings2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { CollectionViewBar } from "./collection-view-bar";
 import { storyFields, storyFilter, storyOptions } from "./collection-view-story-fixtures";
@@ -59,13 +59,13 @@ const Bar = (props: BarProps) => {
   const reset = useCollectionViewStore(storageKey, initialState, (state) => state.reset);
   const activateView = useCollectionViewStore(storageKey, initialState, (state) => state.activateView);
   const setSorts = useCollectionViewStore(storageKey, initialState, (state) => state.setSorts);
-  const [first] = savedViews;
-  // Each story starts from its first view, then applies its edits.
-  useEffect(() => {
+  // Each story starts from its first view, then applies its edits. This runs during the first
+  // render, so the bar's own effects and the play function see the story's state.
+  useState(() => {
     reset();
-    if (first) activateView(first);
+    if (savedViews[0]) activateView(savedViews[0]);
     if (editedSorts) setSorts(editedSorts);
-  }, [reset, activateView, setSorts, first, editedSorts]);
+  });
 
   return (
     <Box bg="bg">

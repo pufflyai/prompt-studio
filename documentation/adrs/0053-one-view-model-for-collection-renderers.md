@@ -22,7 +22,7 @@ People expect what Notion and Airtable offer: conditions that fit the field type
 6. Extension-declared data table views get shared saved views in `board_views`, next to board views. The views API calls both "boards" and reports their `kind`.
 7. Data table grouping, row numbers, wrapping, statistics, and the column list are display settings of the view. Tables group by exact value with the same grouping helpers as boards, so one group order rule covers both.
 8. The deprecated `filters`, `defaultFilters`, and `settings.ordering` are converted in one place, where the host reads a contribution. Queries still receive the deprecated fields, derived from the view. The deprecated fields are removed together in the next breaking extension API release.
-9. Saved views keep their meaning through the upgrade. The one migration that adds `filter` and `sorts` converts each stored `filters` entry into an `is-any-of` rule and `settings.ordering` into one sort, then drops the old column. The field kind is not stored, so the views API's cleanup on read turns `is-any-of` into `has-any-of` for multi-value fields. The same cleanup keeps any rule meaningful when an extension changes a field between single and multi-value options.
+9. Saved views keep their meaning through the upgrade. The one migration that adds `filter` and `sorts` converts each stored `filters` entry into an `is-any-of` rule and `settings.ordering` into one sort, then drops the old column. The field kind is not stored, so the views API's cleanup on read finishes the conversion once it knows the fields: `is-any-of` becomes `has-any-of` on multi-value fields, and `is` rules joined by `or` on text, number, and date fields. Until then, the renderer reads such a list as exact values. The same cleanup keeps any rule meaningful when an extension changes a field between single and multi-value options.
 
 ## Options considered
 
@@ -58,6 +58,6 @@ People expect what Notion and Airtable offer: conditions that fit the field type
 - People and agents describe a view the same way, and the API refuses rules the UI could not show.
 - Tables remember their sort, grouping, and columns, and extension tables can share views.
 - Queries now re-run when the filter or sorts change, because they may narrow what they load. Typing a search never runs a query.
-- Old extensions keep working. An extension that narrows its query with the deprecated `filters` only sees root "any of" rules (and "none of" rules on fields with declared options), so other conditions may load more rows than before. The renderer still filters them, so the result stays correct.
+- Old extensions keep working. An extension that narrows its query with the deprecated `filters` only sees root "any of" rules, so other conditions may load more rows than before. The renderer still filters them, so the result stays correct.
 - First-party extensions resolve `@pstdio/sdk` from the registry, so they move from the deprecated fields to `defaultFilter` and `defaultSorts` after a release that contains them.
 - Large collections still load in full. If a board grows beyond what the browser can filter, a later decision moves evaluation into the query. The `filter` and `sorts` that queries already receive make that possible without a new contract.
