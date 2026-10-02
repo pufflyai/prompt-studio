@@ -4,7 +4,6 @@ import {
   defineNavigationTree,
   definePage,
   defineSettingsPanel,
-  defineSettingsSection,
   defineView,
   defineViewMenu,
   l10n,
@@ -31,23 +30,9 @@ import { ticketResourceKind } from "./resource-kinds";
 import { ticketStatuses } from "./ticket-status-provider";
 
 export { ticketResourceKind } from "./resource-kinds";
-export const plannerSettingsSection = defineSettingsSection({
-  id: "planner",
-  title: l10n("settingsSections.planner.title", "Planner"),
-  order: 40,
-});
-const createPlannerSettingsViews = (baseUrl: string) => ({
-  implementationSettings: defineView({
-    id: "implementation-settings",
-    title: l10n("settingsPanels.implementation.title", "Implementation"),
-    icon: "git-pull-request",
-    body: {
-      kind: "webview",
-      entry: packageAsset("./src/views/implementation-settings.tsx", baseUrl),
-      capabilities: ["commands.execute", "extension.settings.all", "extension.settings.set"],
-    },
-  }),
-  tagSettings: defineView({
+
+const createTagSettingsView = (baseUrl: string) =>
+  defineView({
     id: "ticket-tags-settings",
     title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
     icon: "tag",
@@ -56,8 +41,7 @@ const createPlannerSettingsViews = (baseUrl: string) => ({
       entry: packageAsset("./src/views/tags-settings-panel.tsx", baseUrl),
       capabilities: ["commands.execute"],
     },
-  }),
-});
+  });
 const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
   const ticketsPage = definePage({
     id: "tickets",
@@ -92,7 +76,7 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
   return { ticketDetailPage, ticketsPage };
 };
 export const createPlannerUi = (baseUrl: string) => {
-  const { tagSettings, implementationSettings } = createPlannerSettingsViews(baseUrl);
+  const tagSettings = createTagSettingsView(baseUrl);
   const tickets = defineView({
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
@@ -188,7 +172,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings, implementationSettings],
+    views: [tickets, editor, files, properties, tagSettings],
     pages: [ticketsPage, ticketDetailPage],
     viewMenus: [
       defineViewMenu({
@@ -217,18 +201,12 @@ export const createPlannerUi = (baseUrl: string) => {
         view: files.ref,
       }),
     ],
+    // No section: the host lists Ticket tags in its Project group, next to Statuses.
     settingsPanels: [
-      defineSettingsPanel({
-        id: "implementation",
-        view: implementationSettings.ref,
-        slot: workbenchSlots.projectSettings,
-        section: plannerSettingsSection.ref,
-      }),
       defineSettingsPanel({
         id: "ticket-tags",
         view: tagSettings.ref,
         slot: workbenchSlots.projectSettings,
-        section: plannerSettingsSection.ref,
       }),
     ],
   };

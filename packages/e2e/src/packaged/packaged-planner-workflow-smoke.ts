@@ -68,7 +68,7 @@ export const expectPlannerWorkflow = async (
     openPr: true,
     defaultTargetBranch: null,
   });
-  expect(await execute("implementation-targets", {}, other.id)).toBeNull();
+  expect(await execute("implementation-targets", {}, other.id)).toEqual([]);
 
   const projectFolder = join(tempRoot, "project");
   const git = (...args: string[]) => execFileSync("git", args, { cwd: projectFolder, stdio: "pipe" });
@@ -77,10 +77,7 @@ export const expectPlannerWorkflow = async (
   git("update-ref", "refs/remotes/origin/main", "HEAD");
   git("update-ref", "refs/remotes/origin/release", "HEAD");
   git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
-  expect(await execute("implementation-targets")).toEqual({
-    branches: ["origin/main", "origin/release"],
-    selected: "",
-  });
+  expect(await execute("implementation-targets")).toEqual([{ branch: "origin/main" }, { branch: "origin/release" }]);
   await execute("set-implementation-target", { branch: "origin/release" });
   expect(await readPolicy()).toMatchObject({ defaultTargetBranch: "origin/release" });
   expect(await execute("implementation-policy", {}, other.id)).toEqual({

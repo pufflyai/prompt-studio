@@ -27,9 +27,6 @@
   "commands.implementationPolicy.title": "티켓 구현 설정 읽기",
   "commands.implementationTargets.title": "구현 대상 브랜치 목록",
   "commands.setImplementationTarget.title": "기본 대상 브랜치 설정",
-  "settingsPanels.implementation.title": "구현",
   "settings.implementation.defaultTargetBranch.title": "기본 대상 브랜치",
-  "settings.implementation.repositoryDefault": "저장소 기본값",
-  "settings.implementation.noGitFolder": "원격 브랜치를 사용하려면 로컬 Git 폴더가 필요합니다.",
-  "settings.implementation.error": "구현 설정을 업데이트할 수 없습니다"
+  "settings.implementation.defaultTargetBranch.description": "새 작업이 대상으로 하는 원격 브랜치입니다. 지우면 저장소 기본 브랜치를 사용합니다."
 }

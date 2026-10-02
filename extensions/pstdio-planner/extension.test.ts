@@ -330,9 +330,6 @@ describe("pstdio planner workspace contributions", () => {
     expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toBeUndefined();
   });
   test("provides Planner's shared status fields", () => {
-    expect(extension.settingsSections).toEqual([
-      expect.objectContaining({ id: "planner", order: 40, title: expect.objectContaining({ default: "Planner" }) }),
-    ]);
     expect(extension.statuses?.map((provider) => provider.id)).toEqual(["ticket-statuses"]);
   });
 });

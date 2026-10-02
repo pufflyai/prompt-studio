@@ -184,6 +184,29 @@ Harness handlers also receive host-wide, extension-scoped `state`. See `host-sto
 Return transport-safe JSON values from commands. To reject before a command runs, use middleware and
 `ctx.commands.reject({ code, reason })`.
 
+## Settings
+
+Declare settings under `settings.properties` with a `type` and a `scope` of `"project"` or `"global"`. The Settings
+tab on the extension's page edits `boolean`, `number`, and `string` settings. Read them with `ctx.settings`.
+
+A `string` setting can offer fixed choices with `enum`, or load them from a command with `options`. `options` takes the
+same fields as command param options: `command`, `valueField`, `labelField`, and optional `params`. The command must
+belong to the same extension and return a list of rows:
+
+```ts
+"target.branch": {
+  type: "string",
+  scope: "project",
+  default: "",
+  title: "Target branch",
+  options: { command: listBranches.ref, valueField: "branch", labelField: "branch" },
+},
+```
+
+The form shows a searchable dropdown. Clearing it removes the saved value, so the setting uses its `default`. Saved
+values are not checked against the options, and a saved value the command no longer lists stays selected. Check the
+value where the extension uses it. Setting `options` needs extension API 0.1.2, so declare `engines.pstdio: "^0.1.2"`.
+
 ## Middlewares
 
 Reference a command with a typed `CommandRef` or a string `commandId`.

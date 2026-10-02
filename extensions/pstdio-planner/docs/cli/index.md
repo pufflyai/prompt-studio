@@ -71,4 +71,12 @@ pst pstdio-planner run-attempt
 pst pstdio-planner run-review
 ```
 
+`implementation-targets` lists the remote branches in the project's Git folder, one row per branch. It returns an empty list when the project has no local Git folder. The Default target branch dropdown on the Planner extension page loads the same rows.
+
+```json
+[{ "branch": "origin/main" }, { "branch": "origin/release" }]
+```
+
+`set-implementation-target` saves one of those branches and rejects any other name. Run it without `--branch` to use the repository default branch again. `implementation-policy` returns the saved branch as `defaultTargetBranch`.
+
 Use `--help` on any path before calling workflow commands directly. Their parameters are meant for agent and automation flows and can include revision IDs, report IDs, and expected state versions.
