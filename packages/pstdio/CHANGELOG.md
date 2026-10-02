@@ -1,5 +1,24 @@
 # pstdio
 
+## 0.40.0
+
+_2026-10-02_
+
+### Minor Changes
+
+- ff2a1b5: Give harnesses a host question channel, so a session that is waiting for the person shows the waiting state instead of looking finished.
+- d717a51: Add correlated question responses and optional live harness replies.
+
+### Patch Changes
+
+- 20353d8: Fix panel menus to reopen attached when space allows, float in panels 580 px wide or narrower, and size floating menus to their content.
+- a35bf53: Keep each project's layout, including the Side Panel, across project switches, reloads, and desktop restarts.
+- da3a21d: Let users leave a Sidenav level through a project crumb that returns to their last root-level page
+- a7997c0: Let a person skip an agent's question, and offer free text as an "Other" choice so a single-choice question answers with one value.
+- a297ebb: Remember selected harness parameters when reopening conversations and starting new sessions.
+- 76c5326: Add scoped harness worker cleanup on extension reload, disablement, and host shutdown, through the new optional `HarnessProvider.dispose` callback in extension API 0.1.1.
+- ec042b3: Keep the chat work timer anchored to the current agent run across navigation and reloads.
+
 ## 0.39.0
 
 _2026-09-30_

@@ -1,5 +1,13 @@
 # harness-claude-code
 
+## 0.40.0
+
+_2026-10-02_
+
+### Patch Changes
+
+- 49a535c: Keep Claude Code running while it waits for its own background task, and report the result when the task ends.
+
 ## 0.39.0
 
 _2026-09-30_

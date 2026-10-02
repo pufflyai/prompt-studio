@@ -1,5 +1,13 @@
 # pstdio-planner
 
+## 0.40.0
+
+_2026-10-02_
+
+### Patch Changes
+
+- 930499a: Add the Open tickets command to the Planner command palette.
+
 ## 0.39.0
 
 _2026-09-30_

@@ -1,5 +1,15 @@
 # @pstdio/workbench
 
+## 0.40.0
+
+_2026-10-02_
+
+### Patch Changes
+
+- 20353d8: Fix panel menus to reopen attached when space allows, float in panels 580 px wide or narrower, and size floating menus to their content.
+- a35bf53: Keep each project's layout, including the Side Panel, across project switches, reloads, and desktop restarts.
+- da3a21d: Let users leave a Sidenav level through a project crumb that returns to their last root-level page
+
 ## 0.39.0
 
 _2026-09-30_

@@ -1,5 +1,13 @@
 # @pstdio/desktop
 
+## 0.40.0
+
+_2026-10-02_
+
+### Patch Changes
+
+- a35bf53: Keep each project's layout, including the Side Panel, across project switches, reloads, and desktop restarts.
+
 ## 0.39.0
 
 _2026-09-30_

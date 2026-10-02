@@ -1,5 +1,15 @@
 # @pstdio/ui
 
+## 0.40.0
+
+_2026-10-02_
+
+### Patch Changes
+
+- 20353d8: Fix panel menus to reopen attached when space allows, float in panels 580 px wide or narrower, and size floating menus to their content.
+- a7997c0: Let a person skip an agent's question, and offer free text as an "Other" choice so a single-choice question answers with one value.
+- ec042b3: Keep the chat work timer anchored to the current agent run across navigation and reloads.
+
 ## 0.39.0
 
 _2026-09-30_
