@@ -4,7 +4,6 @@ user_prompt: "{{USER_PROMPT}}"
 created: "{{CREATED_AT}}"
 parent_id: "{{PARENT_ID}}"
 depends_on: []
-parallelizable: "[no|yes]"
 blocked_reason: ""
 ---
 

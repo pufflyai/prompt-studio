@@ -36,7 +36,6 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
     dependsOn: null,
     blockedReason: null,
     userPrompt: null,
-    parallelizable: null,
     draft: false,
     archived: false,
     sortOrder: 0,

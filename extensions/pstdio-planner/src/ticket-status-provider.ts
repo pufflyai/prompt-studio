@@ -1,4 +1,5 @@
 import { defineStatuses, type WorkflowStatus } from "@pstdio/sdk/extensions";
+import { cleanupLegacyTicketFields } from "./data/cleanup-legacy-ticket-fields";
 import { cleanupLegacyWorkspaceStatus } from "./data/cleanup-legacy-workspace-status";
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
 import { seedDefaultStatuses } from "./data/seed";
@@ -53,6 +54,7 @@ export const ticketStatuses = defineStatuses({
   ],
   async query(ctx) {
     await cleanupLegacyWorkspaceStatus(ctx.storage);
+    await cleanupLegacyTicketFields(ctx.storage);
     return { statuses: sortedBySortOrder(await seedDefaultStatuses(ctx.storage)).map(toWorkflowStatus) };
   },
   async save(ctx, input) {

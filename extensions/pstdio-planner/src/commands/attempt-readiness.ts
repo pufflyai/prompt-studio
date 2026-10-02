@@ -35,7 +35,6 @@ export const loadAttemptReadiness = async (
     shorthand: ticketRef,
     statusId: null,
     dependsOn: [],
-    parallelizable: null,
   };
   const tickets = storedTarget ? storedTickets : [...storedTickets, target];
   if (
@@ -54,7 +53,6 @@ export const loadAttemptReadiness = async (
     (attempt) => attempt.state === "implementing" || attempt.state === "changes_requested",
   );
   const sessions = await Promise.all(active.map((attempt) => ctx.sessions.get(attempt.implementationSessionId)));
-  const hasActiveImplementation = sessions.some((session) => liveStatuses.has(session?.status ?? ""));
   const activeImplementationCount = sessions.filter((session) => liveStatuses.has(session?.status ?? "")).length;
   const settings = await ctx.settings.all();
   const configuredCapacity = settings["automation.maxInProgress"];
@@ -76,7 +74,6 @@ export const loadAttemptReadiness = async (
     selections,
     doneStatusIds,
     mainHeadSha,
-    hasActiveImplementation,
     activeImplementationCount,
     maxInProgress,
     isAncestor: async (baseSha, headSha) => {
@@ -89,7 +86,7 @@ export const loadAttemptReadiness = async (
     },
   });
 
-  return { readiness, workspace: home, target };
+  return { readiness, workspace: home, target, capacity: { running: activeImplementationCount, limit: maxInProgress } };
 };
 
 export const attemptReadinessCommand = defineCommand({

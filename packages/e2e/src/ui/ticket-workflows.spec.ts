@@ -211,3 +211,24 @@ test("Run attempt starts from the chosen base branch", async ({ page, fixture })
     execFileSync("git", ["-C", outcome.value.workspace.root_path, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   ).toBe(baseSha);
 });
+
+test("Run attempt keeps the dialog open and shows why the ticket cannot start", async ({ page, request, fixture }) => {
+  const blocker = await createPlannerTicket(request, apiBase, fixture.project.id, {
+    content: "# Blocker\n\nFinish this first.",
+  });
+  await executePlannerCommand(request, apiBase, fixture.project.id, "update-ticket", {
+    id: fixture.ticket.id,
+    dependsOn: [blocker.shorthand],
+  });
+
+  await openTicket(page, fixture.project.id);
+  await page
+    .getByRole("button", { name: `Actions for ${fixture.ticket.shorthand} Ticket workflow`, exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: "Run attempt", exact: true }).click();
+  const dialog = page.getByRole("dialog").filter({ has: page.getByText("Run attempt", { exact: true }) });
+  await dialog.getByRole("button", { name: "Run", exact: true }).click();
+
+  await expect(dialog.getByRole("alert")).toContainText(blocker.shorthand);
+  await expect(dialog.getByRole("button", { name: "Run", exact: true })).toBeEnabled();
+});

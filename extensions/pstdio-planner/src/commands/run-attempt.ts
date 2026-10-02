@@ -2,6 +2,7 @@ import { defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/ex
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, launchClaimsCollection, putAttempt } from "../data/attempt-storage";
 import type { AttemptLaunchClaim, AttemptRecord, HumanRequestReason } from "../data/attempt-types";
+import { attemptWaitMessage } from "../data/attempt-wait-message";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
@@ -58,26 +59,34 @@ export const runAttemptCommand = defineCommand({
       await claims.deleteIfValue(ticketIdentity.id, existing);
     }
     if (!(await claims.createIfAbsent(ticketIdentity.id, claim))) {
-      return { decision: "wait" as const, reason: "launch-claimed" as const, dependencyIds: [] };
+      throw new Error(`An attempt for ${ticketIdentity.shorthand} is already starting. Try again in a moment.`);
     }
 
     try {
-      const { readiness } = await loadAttemptReadiness(ctx, ticketRef, {
+      const { readiness, capacity } = await loadAttemptReadiness(ctx, ticketRef, {
         base: typeof chosenBase === "string" ? chosenBase : undefined,
       });
       if (readiness.decision === "wait") {
+        const message = attemptWaitMessage(ticketIdentity.shorthand, readiness, capacity);
         const storedTicket = await findTicket(ctx.storage, ticketRef);
         if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {
+          // The readiness reason is what the person who started the attempt needs, so a
+          // failed handoff must not replace it.
           await requestHuman(ctx, {
             ticket: storedTicket.id,
             reason: readiness.reason as HumanRequestReason,
-            question: `${storedTicket.shorthand} cannot start because ${readiness.reason}. Dependencies: ${readiness.dependencyIds.join(", ") || "none"}.`,
+            question: message,
             expectedAction:
               "Repair the dependency graph or select the intended dependency attempt, then resolve this request.",
             expectedTicketStatusId: storedTicket.statusId,
-          });
+          }).catch((error: unknown) =>
+            ctx.logger.warn("Could not request human input for a ticket that cannot start", {
+              ticket: storedTicket.shorthand,
+              error: error instanceof Error ? error.message : String(error),
+            }),
+          );
         }
-        return readiness;
+        throw new Error(message);
       }
       const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(
         ctx,

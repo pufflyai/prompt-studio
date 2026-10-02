@@ -47,6 +47,14 @@ not browser file objects.
 
 <Source code={commandParamsSources.files} language="tsx" />
 
+## When a command fails
+
+When the command throws, the dialog stays open and shows the error message in an error box above the actions. The
+field values stay, so the user can fix the cause and press **Run** again. Press **Open parameter form**, then **Run**, to
+see the planner's "Run attempt" refusing a ticket that waits on another one.
+
+<Canvas of={CommandParameterStories.RunFailed} sourceState="none" />
+
 ## Rules
 
 Define parameters on the command. Do not build another form beside the command surface.

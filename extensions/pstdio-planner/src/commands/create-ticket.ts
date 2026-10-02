@@ -85,7 +85,6 @@ export const createTicketCommand = defineCommand({
       dependsOn,
       blockedReason: null,
       userPrompt: null,
-      parallelizable: null,
       draft: false,
       archived: false,
       sortOrder,

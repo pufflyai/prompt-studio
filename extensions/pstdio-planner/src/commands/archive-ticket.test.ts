@@ -21,7 +21,6 @@ const makeTicket = (overrides: Partial<StoredTicket> = {}) =>
     dependsOn: null,
     blockedReason: null,
     userPrompt: null,
-    parallelizable: null,
     draft: false,
     archived: false,
     sortOrder: 0,

@@ -17,7 +17,6 @@ export interface TicketFrontmatterFields {
   parentShorthand: string | null;
   userPrompt: string | null;
   dependsOn: string[];
-  parallelizable: string | null;
   blockedReason: string | null;
   tagNames: string[];
 }
@@ -32,7 +31,6 @@ export const buildTicketFrontmatter = (fields: TicketFrontmatterFields) => {
   if (fields.draft !== null) lines.push(`draft: ${fields.draft}`);
   if (fields.parentShorthand) lines.push(`parent_id: ${q(fields.parentShorthand)}`);
   if (fields.dependsOn.length > 0) lines.push(`depends_on: ${formatList(fields.dependsOn)}`);
-  if (fields.parallelizable) lines.push(`parallelizable: ${q(fields.parallelizable)}`);
   if (fields.blockedReason) lines.push(`blocked_reason: ${q(fields.blockedReason)}`);
   if (fields.tagNames.length > 0) lines.push(`tags: ${formatList(fields.tagNames)}`);
 
@@ -53,7 +51,6 @@ export interface ParsedTicketFrontmatter {
   draft?: boolean;
   parentShorthand?: string;
   dependsOn?: string[];
-  parallelizable?: string;
   blockedReason?: string;
   tagNames?: string[];
 }
@@ -69,7 +66,6 @@ const parseList = (raw: string) => {
 const FRONTMATTER_KEYS: Record<string, keyof ParsedTicketFrontmatter> = {
   user_prompt: "userPrompt",
   parent_id: "parentShorthand",
-  parallelizable: "parallelizable",
   blocked_reason: "blockedReason",
 };
 

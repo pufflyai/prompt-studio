@@ -10,7 +10,6 @@ export interface PlannerTicket {
   createdAt: string;
   updatedAt: string;
   dependsOn?: string | string[] | null;
-  parallelizable?: string | null;
 }
 
 export interface PlannerStatus {
@@ -85,8 +84,7 @@ export const planner = {
   refineTicket: plannerCommand<{ ticket: string }, { id: string }>("refine-ticket"),
   runAttempt: plannerCommand<
     { ticket: string },
-    | { decision: "started"; attempt: PlannerAttempt; session: { id: string } }
-    | { decision: "wait"; reason: string; dependencyIds: string[] }
+    { decision: "started"; attempt: PlannerAttempt; session: { id: string } }
   >("run-attempt"),
   runReview: plannerCommand<
     { workspaceId: string; expectedRevision?: number },

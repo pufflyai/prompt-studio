@@ -16,7 +16,7 @@ Refine a Planner ticket by adding researched detail and applying a template when
    - References, scope, implementation notes with the real files/modules to touch.
    - Implementation steps in the order to do them.
    - Acceptance criteria and the commands that validate them when tests exist.
-   - `parallelizable` and `depends_on` in frontmatter. Priority and type stay in tags.
+   - `depends_on` in frontmatter. Priority and type stay in tags.
 5. Save the ticket with `pst tickets save --id <shorthand>`.
 6. Mark a proposal ready for review with `pst tickets proposal-refined --id <shorthand>`.
 7. Stop after refinement. Do not implement code unless the user asked for it.
