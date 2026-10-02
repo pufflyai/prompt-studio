@@ -469,32 +469,14 @@ export default defineExtension({ harnesses: [myAgent] });
 - Implement `reattach` (and advertise `SessionReattach`) to re-bind orphaned provider sessions after a host restart.
 - Consumers select a harness with `ctx.sessions.create({ harness: { harnessId, model } })` using the namespaced id.
 
-### Board and table views
+### Shared kanban views
 
-Kanban and data table views share one view model: a `filter` (one root group of
-`{ attributeId, condition, value }` rules joined by `"and"` or `"or"`, with at most
-one level of nested groups), ordered `sorts`, and display `settings`. Each field
-kind accepts a fixed list of conditions; read them from `VIEW_FILTER_CONDITIONS`
-in `@pstdio/sdk/extensions`. Search is screen state and is never saved or sent to
-a query.
-
-Declare the starting view with `defaultFilter`, `defaultSorts`, and
-`defaultSettings`. Data table columns can declare `type` (`"string"`, `"number"`,
-`"date"`) and `groupable: true`, and table `defaultSettings` can set `grouping`,
-`rowNumbers`, `wrapRows`, `showStats`, `hiddenColumns`, and `columnOrder`. The
-query receives `filter`, `sorts`, and `settings`; use them only to narrow what
-you load, because the renderer applies the full view to the rows you return.
-`defaultFilters`, `settings.ordering`, and `filters` in `defaultViews` are
-deprecated; the host converts them, and the new field wins when both are set.
-
-### Shared views
-
-The host owns saved views per project, extension instance, and local view ID,
-for kanban and data table views alike. Do not persist user-created views in
-extension storage. Keep view and field IDs stable across releases. Return
-complete attributes or columns from queries; the host uses them and status
-providers to validate saved settings, rules, and sorts. A successful query can
-remove rules for deleted fields and options. A failed query preserves them.
+The host owns saved views per project, extension instance, and local board ID.
+Do not persist user-created board views in extension storage. Keep board and
+field IDs stable across releases. Return complete attributes from board queries;
+the host uses them and status providers to validate saved settings and filters.
+A successful query can remove filters for deleted fields and options. A failed
+query preserves saved filters.
 
 `defaultViews` declares read-only built-ins. Use `defaultActiveViewId` for the
 extension fallback. The deprecated `isDefault` flag is a fallback when that ID is
