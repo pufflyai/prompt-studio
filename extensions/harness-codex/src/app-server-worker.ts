@@ -91,6 +91,10 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
       command,
       transcriptPath: () => transcriptPath,
       write: rpc.write,
+      onProtocolError: (error) => {
+        operation.fail(error);
+        lost();
+      },
       onFinish: () => {
         if (active === operation) active = undefined;
         runInput.signal?.removeEventListener("abort", abort);

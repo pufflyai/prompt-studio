@@ -256,16 +256,28 @@ test("fails and releases a provider that exits successfully without completing i
   }
 });
 
-test("reports uncertain completion when the protocol cannot be read", async () => {
+test("reports disconnection for unreadable native events received before turn acknowledgement", async () => {
   const session = await startCodexSession(
     {
       prompt: "Fail protocol",
-      env: { PSTDIO_TEST_MODE: "protocol-error" },
+      env: { PSTDIO_SESSION_ID: "protocol-recovery", PSTDIO_TEST_MODE: "protocol-error" },
       events: { getMessages: () => [], push: () => {} },
     },
     fixtureDeps,
   );
   expect(await session.done).toEqual({ status: "disconnected" });
+  expect(session.agentSessionId).toBe("thread-fixture");
+  const followUp = await resumeCodexSession(
+    {
+      agentSessionId: session.agentSessionId,
+      prompt: "Continue",
+      env: { PSTDIO_SESSION_ID: "protocol-recovery", PSTDIO_TEST_MODE: "complete" },
+      events: { getMessages: () => [], push: () => {} },
+    },
+    fixtureDeps,
+  );
+  expect(await followUp.done).toEqual({ status: "completed" });
+  expect(followUp.agentSessionId).toBe(session.agentSessionId);
 });
 
 test("releases the live run when its protocol stream reports an error", async () => {

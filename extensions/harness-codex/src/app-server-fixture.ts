@@ -32,16 +32,17 @@ for await (const line of createInterface({ input: process.stdin })) {
     emit({ method: "turn/completed", params: { turn: { id: "turn-1", status: "interrupted" } } });
   }
   if (message.method === "turn/start") {
+    if (process.env.PSTDIO_TEST_MODE === "protocol-error") {
+      emit({ method: "item/started", params: { item: null } });
+      emit({ id: message.id, result: { turn: { id: "turn-1" } } });
+      continue;
+    }
     emit({ id: message.id, result: { turn: { id: "turn-1" } } });
     emit({
       method: "item/completed",
       params: { item: { id: "input", type: "agentMessage", text: JSON.stringify(message.params) } },
     });
     emit({ method: "turn/started", params: { turn: { id: "turn-1" } } });
-    if (process.env.PSTDIO_TEST_MODE === "protocol-error") {
-      emit({ method: "item/started", params: { item: null } });
-      continue;
-    }
     if (process.env.PSTDIO_TEST_MODE === "close") {
       process.exit(0);
     }

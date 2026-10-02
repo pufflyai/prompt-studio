@@ -20,6 +20,7 @@ export const createAppServerOperation = (
     transcriptPath: () => string | null;
     write: (message: RpcMessage) => void;
     onFinish: () => void;
+    onProtocolError: (error: unknown) => void;
   },
 ) => {
   const completion = Promise.withResolvers<HarnessExit>();
@@ -83,7 +84,7 @@ export const createAppServerOperation = (
     items.receive(message);
     questions.receive(message);
   };
-  const receive = (message: RpcMessage) => {
+  const receiveNotification = (message: RpcMessage) => {
     if (finished || !sent) return;
     if (!acknowledged) {
       earlyEvents.push(message);
@@ -101,6 +102,13 @@ export const createAppServerOperation = (
       return;
     }
     receiveItems(message);
+  };
+  const receive = (message: RpcMessage) => {
+    try {
+      receiveNotification(message);
+    } catch (error) {
+      options.onProtocolError(error);
+    }
   };
   return {
     done: completion.promise,
