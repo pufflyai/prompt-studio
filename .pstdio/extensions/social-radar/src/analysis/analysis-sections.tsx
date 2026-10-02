@@ -1,5 +1,5 @@
-import { Box, Grid, HStack, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, ListRow, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { Box, Flex, Grid, HStack, Text } from "@chakra-ui/react";
+import { EmptyState, ListRow, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { RadarAnalysis } from "../analysis";
 import { siteLabels } from "../sites";
@@ -36,22 +36,21 @@ interface CardProps {
   meta?: string;
   children: ReactNode;
 }
+// Cards fill their grid cell, and their content takes the height left under the title.
 const Card = (props: CardProps) => {
   const { title, meta, children } = props;
   return (
-    <SimpleCard minW="0">
-      <SimpleCardBody>
-        <Stack gap="md">
-          <HStack justify="space-between">
-            <Text textStyle="label/M/medium">{title}</Text>
-            {meta ? (
-              <Text textStyle="label/XS" color="fg.muted">
-                {meta}
-              </Text>
-            ) : null}
-          </HStack>
-          {children}
-        </Stack>
+    <SimpleCard minW="0" minH="0" display="flex" flexDirection="column">
+      <SimpleCardBody flex="1" minH="0" display="flex" flexDirection="column" gap="md">
+        <HStack justify="space-between" flexShrink={0}>
+          <Text textStyle="label/M/medium">{title}</Text>
+          {meta ? (
+            <Text textStyle="label/XS" color="fg.muted">
+              {meta}
+            </Text>
+          ) : null}
+        </HStack>
+        {children}
       </SimpleCardBody>
     </SimpleCard>
   );
@@ -68,14 +67,20 @@ export const AnalysisSections = (props: AnalysisSectionsProps) => {
   const { analysis, onOpenMention } = props;
   const { mentions, threadsFound, answered, postsUsed, days } = analysis;
   return (
-    <Stack gap="md">
-      <Grid templateColumns="repeat(4, minmax(0, 1fr))" gap="md">
+    <Flex direction="column" gap="md" flex="1" minH="0">
+      <Grid templateColumns="repeat(4, minmax(0, 1fr))" gap="md" flexShrink={0}>
         <Kpi label="Mentions" value={mentions.count} detail={signed(mentions.change)} />
         <Kpi label="Threads found" value={threadsFound} />
         <Kpi label="Answered" value={answered.count} detail={`${answered.gotReply} got a reply`} />
         <Kpi label="Post ideas used" value={postsUsed.count} detail={`of ${postsUsed.total}`} />
       </Grid>
-      <Grid templateColumns="minmax(0, 3fr) minmax(0, 2fr)" gap="md">
+      <Grid
+        templateColumns="minmax(0, 3fr) minmax(0, 2fr)"
+        templateRows="repeat(2, minmax(0, 1fr))"
+        gap="md"
+        flex="1"
+        minH="0"
+      >
         <Card title="Mentions per day">
           <DailyBars days={analysis.mentionsPerDay} label={`Mentions per day over ${days} days`} />
         </Card>
@@ -97,7 +102,7 @@ export const AnalysisSections = (props: AnalysisSectionsProps) => {
         </Card>
         <Card title="Recent mentions" meta="Opens the thread">
           {analysis.recentMentions.length ? (
-            <Box>
+            <ScrollArea flex="1" minH="0">
               {analysis.recentMentions.map((mention) => (
                 <ListRow
                   key={mention.id}
@@ -113,12 +118,12 @@ export const AnalysisSections = (props: AnalysisSectionsProps) => {
                   onActivate={() => onOpenMention(mention)}
                 />
               ))}
-            </Box>
+            </ScrollArea>
           ) : (
             <EmptyState title="No mentions yet" description="Threads that name a brand term appear here." />
           )}
         </Card>
       </Grid>
-    </Stack>
+    </Flex>
   );
 };

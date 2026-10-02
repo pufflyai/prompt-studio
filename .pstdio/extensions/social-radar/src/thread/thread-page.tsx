@@ -12,15 +12,26 @@ import { NewPostDraft } from "./new-post";
 
 const statusPalette: Record<Thread["status"], string> = {
   new: "purple",
-  saved: "yellow",
+  idea: "yellow",
   answered: "green",
   skipped: "gray",
 };
 const statusLabel: Record<Thread["status"], string> = {
   new: "New",
-  saved: "Saved",
+  idea: "Idea",
   answered: "Answered",
   skipped: "Skipped",
+};
+// Each status offers the moves the rules allow; a skipped thread returns to its open status.
+const statusActions = (thread: Thread) => {
+  const open = isNewPost(thread) ? "idea" : "new";
+  if (thread.status === "answered") return [];
+  if (thread.status === "skipped") return [{ value: open, label: "Restore" }];
+  if (isNewPost(thread)) return [{ value: "skipped", label: "Skip" }];
+  return [
+    { value: "answered", label: "Mark answered" },
+    { value: "skipped", label: "Skip" },
+  ];
 };
 const metaLine = (thread: Thread) => {
   if (isNewPost(thread))
@@ -71,9 +82,7 @@ const ThreadView = (props: { id: string }) => {
   if (!data.data) return error ? <AlertMessage status="error" title={error.message} /> : null;
   const { thread, ideas, mediaRule, sourceTitles } = data.data;
   const draft = isNewPost(thread) && thread.status !== "answered";
-  const actions = (["saved", "skipped", ...(isNewPost(thread) ? [] : ["answered"])] as Thread["status"][]).filter(
-    (value) => value !== thread.status && thread.status !== "answered",
-  );
+  const actions = statusActions(thread);
   return (
     <Flex direction="column" h="full" minH="0">
       <HStack gap="sm" px="lg" py="sm" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0}>
@@ -101,9 +110,9 @@ const ThreadView = (props: { id: string }) => {
             <Portal>
               <Menu.Positioner>
                 <Menu.Content>
-                  {actions.map((value) => (
-                    <Menu.Item key={value} value={value}>
-                      {value === "answered" ? "Mark answered" : `Mark ${statusLabel[value].toLowerCase()}`}
+                  {actions.map((action) => (
+                    <Menu.Item key={action.value} value={action.value}>
+                      {action.label}
                     </Menu.Item>
                   ))}
                 </Menu.Content>

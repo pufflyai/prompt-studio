@@ -50,7 +50,7 @@ export const ThreadInsights = (props: { thread: FoundThread | NewPost }) => {
             <SentimentBar counts={analysis.replySentiment} label="Sentiment of replies" />
           </Section>
           <Section title="Common topics in this thread">
-            <RankedBars label="Common topics in this thread" rows={analysis.topics} />
+            <RankedBars label="Common topics in this thread" rows={analysis.topics} fixedHeight />
           </Section>
           <Section title="Questions people ask">
             {analysis.questions.length ? (

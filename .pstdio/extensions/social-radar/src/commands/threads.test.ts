@@ -24,7 +24,7 @@ describe("social radar threads", () => {
     await commands["set-thread-status"].run(ctx, { id: saved.id, status: "answered" });
     const answered = await storage.collection<Thread>("threads").get(saved.id);
     expect(answered).toMatchObject({ status: "answered", answeredAt: expect.any(String) });
-    for (const status of ["new", "saved", "skipped"])
+    for (const status of ["new", "skipped"])
       await expect(commands["set-thread-status"].run(ctx, { id: saved.id, status })).rejects.toThrow(
         "Answered threads cannot move back.",
       );
@@ -35,7 +35,7 @@ describe("social radar threads", () => {
     const { ctx, storage } = setup();
     const run = await commands["run-daily"].run(ctx, {});
     const post = await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
-    expect(await storage.collection<Thread>("threads").get(post.id)).toMatchObject({ kind: "demo", status: "new" });
+    expect(await storage.collection<Thread>("threads").get(post.id)).toMatchObject({ kind: "demo", status: "idea" });
     await expect(commands["set-thread-status"].run(ctx, { id: post.id, status: "answered" })).rejects.toThrow(
       "Paste the link",
     );
@@ -92,5 +92,21 @@ describe("social radar threads", () => {
     await expect(
       commands["save-thread"].run(ctx, { input: { ...input, snapshot: { ...input.snapshot, comments } } }),
     ).rejects.toThrow("answers itself");
+  });
+
+  test("found threads are new and new posts are ideas until answered or skipped", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const found = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    const post = await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
+    await expect(commands["set-thread-status"].run(ctx, { id: found.id, status: "idea" })).rejects.toThrow(
+      "Only a new post is an idea.",
+    );
+    await expect(commands["set-thread-status"].run(ctx, { id: post.id, status: "new" })).rejects.toThrow(
+      "A new post is an idea, not a found thread.",
+    );
+    await commands["set-thread-status"].run(ctx, { id: post.id, status: "skipped" });
+    await commands["set-thread-status"].run(ctx, { id: post.id, status: "idea" });
+    expect(await storage.collection<Thread>("threads").get(post.id)).toMatchObject({ status: "idea" });
   });
 });

@@ -104,7 +104,7 @@ export const storyPost: NewPost = {
   reason: "Two threads this week show people building review pages for agent diffs.",
   tags: ["#BuildInPublic", "#AIagents"],
   basedOn: ["thread-1", "abc1234"],
-  status: "new",
+  status: "idea",
   foundAt: hoursAgo(1),
 };
 

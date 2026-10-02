@@ -13,7 +13,7 @@ const seedCommand = `defineCommand({ id: "seed", title: "Seed radar", async run(
     snapshot: { takenAt: now, post: { author: "dana", body: "I built a review page in an evening." }, comments: [{ id: "c1", author: "sam", body: "How does it compare to Cursor?" }] },
     analysis: { summary: "People like the review page.", sentiment: "positive", replySentiment: { negative: 0, neutral: 1, positive: 2 }, topics: [{ label: "review flow", count: 2 }], questions: ["How does it compare to Cursor?"] } });
   await ctx.storage.collection("ideas").put("idea-1", { id: "idea-1", runId: "run-1", threadId: "thread-1", replyTo: "c1", body: "Different jobs.\\n\\nBuild the review tool here.", status: "new", createdAt: now });
-  await ctx.storage.collection("threads").put("post-1", { id: "post-1", runId: "run-1", kind: "demo", site: "x", title: "Review page in ten minutes", draft: "I built a review page in ten minutes.", reason: "Two threads ask for it.", tags: ["#BuildInPublic"], basedOn: ["thread-1"], status: "new", foundAt: now });
+  await ctx.storage.collection("threads").put("post-1", { id: "post-1", runId: "run-1", kind: "demo", site: "x", title: "Review page in ten minutes", draft: "I built a review page in ten minutes.", reason: "Two threads ask for it.", tags: ["#BuildInPublic"], basedOn: ["thread-1"], status: "idea", foundAt: now });
   return {};
 } })`;
 
@@ -96,6 +96,8 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await page.getByRole("option", { name: "Threads", exact: true }).click();
     await expect(page.getByText("Tried Prompt Studio for reviews", { exact: true })).toBeVisible();
     await expect(page.getByText("@ Mention").first()).toBeVisible();
+    // One level grouped by status: threads to join are New, posts to publish are Ideas.
+    for (const group of ["New", "Ideas"]) await expect(page.getByText(group, { exact: true }).first()).toBeVisible();
     await shot(page, "02-threads");
 
     // 03: copy a reply idea from under the comment it answers, then mark it used.
@@ -131,6 +133,11 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await expect(page.getByText("Coverage", { exact: true })).toBeVisible();
     await expect(page.getByText("Skipped: Browser unavailable")).toBeVisible();
     await shot(page, "05-digest");
+
+    // 06: settings are a page of their own in the Sidenav level.
+    await page.getByRole("option", { name: "Settings", exact: true }).first().click();
+    await expect(page.getByText("Brand terms", { exact: true })).toBeVisible();
+    await shot(page, "06-settings");
   } finally {
     if (projectId) await request.delete(`/v1/projects/${projectId}`);
     rmSync(root, { recursive: true, force: true });

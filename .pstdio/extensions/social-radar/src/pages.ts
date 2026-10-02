@@ -1,10 +1,4 @@
-import {
-  defineNavigationItem,
-  defineNavigationTree,
-  definePage,
-  defineViewMenu,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
+import { defineNavigationItem, defineNavigationTree, definePage, workbenchModes } from "@pstdio/sdk/extensions";
 import { runResource, threadResource } from "./store";
 import { digestView } from "./views/digest";
 import { radarTree } from "./views/navigation";
@@ -53,12 +47,19 @@ const runPage = definePage({
   slots: [],
 });
 
-export const pages = [radarPage, threadsPage, threadPage, runPage];
+const settingsPage = definePage({
+  id: "settings",
+  title: "Settings",
+  icon: "settings",
+  path: "social-radar/settings",
+  mode: workbenchModes.project,
+  parent: radarPage.ref,
+  main: { kind: "view", view: settingsView.ref, cardinality: "one" },
+  slots: [],
+});
+
+export const pages = [radarPage, threadsPage, threadPage, runPage, settingsPage];
 export const views = [analysisView, threadsBoard, threadView, digestView, settingsView, radarTree];
-// Settings sit next to every radar view instead of on a page of their own.
-export const viewMenus = [analysisView, threadsBoard, threadView, digestView].map((owner) =>
-  defineViewMenu({ id: `settings-${owner.id}`, owner: owner.ref, view: settingsView.ref, side: "right" }),
-);
 export const navigationItems = [
   defineNavigationItem({
     id: "radar",
