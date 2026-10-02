@@ -31,6 +31,7 @@ import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionModelControls } from "./session-model-controls";
 import { SessionWorkspaceControl } from "./session-workspace-control";
+import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
 import { useSessionChatDraft } from "./use-session-chat-draft";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
@@ -114,6 +115,14 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     selectedModel,
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
+  const commandComposer = useCommandComposer(
+    sessionId,
+    selectedAgent,
+    chatDraft,
+    reconnect,
+    view.status,
+    view.lastRequestStarted,
+  );
   const { pendingFollowUp, setPendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } =
     usePendingSessionFollowUp(sessionId, messages, view.lastRequestStarted, view.status === "in_progress");
   const pendingIdRef = useRef(0);
@@ -128,8 +137,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     attachments: SessionAttachment[],
     questionResponse: ChatInputQuestionResponse | undefined,
     onSubmitted?: () => void,
-  ) =>
-    submitSessionMessage({
+  ) => {
+    const command = commandComposer.submit(text, attachments, questionResponse, onSubmitted);
+    if (command) return command;
+    return submitSessionMessage({
       sessionId,
       lastRequestStarted: view.lastRequestStarted,
       projectId,
@@ -152,6 +163,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
         openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId, pending });
       },
     });
+  };
   const unsent =
     pendingFollowUp?.failure && shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null;
 
@@ -171,28 +183,31 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             conversationKey={`dashboard-workbench-session:${view.id}`}
             messages={splitDisplay.messages}
             conversationNotices={
-              <SessionChatNotices
-                error={error}
-                queueError={queueError}
-                reconnect={reconnect}
-                refreshQueue={refreshQueue}
-                unsent={
-                  unsent?.failure
-                    ? {
-                        notice: unsent.failure,
-                        onRetry: () => {
-                          setPendingFollowUp(null);
-                          void send(unsent.prompt, unsent.attachments ?? [], unsent.questionResponse);
-                        },
-                        onClose: () => {
-                          setPendingFollowUp(null);
-                          chatDraft.restore(unsent.prompt);
-                          draftAttachments.restoreAttachments(unsent.attachments ?? []);
-                        },
-                      }
-                    : undefined
-                }
-              />
+              <>
+                {commandComposer.notices}
+                <SessionChatNotices
+                  error={error}
+                  queueError={queueError}
+                  reconnect={reconnect}
+                  refreshQueue={refreshQueue}
+                  unsent={
+                    unsent?.failure
+                      ? {
+                          notice: unsent.failure,
+                          onRetry: () => {
+                            setPendingFollowUp(null);
+                            void send(unsent.prompt, unsent.attachments ?? [], unsent.questionResponse);
+                          },
+                          onClose: () => {
+                            setPendingFollowUp(null);
+                            chatDraft.restore(unsent.prompt);
+                            draftAttachments.restoreAttachments(unsent.attachments ?? []);
+                          },
+                        }
+                      : undefined
+                  }
+                />
+              </>
             }
             queuedFollowUps={splitDisplay.queuedFollowUps}
             onQueuedFollowUpUpdate={sessionId ? handleQueuedFollowUpUpdate : undefined}
@@ -206,7 +221,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             loaderComponent={<ChatSkeleton />}
             chatInputPlaceholder="Reply to the agent..."
             chatInputDefaultValue={chatDraft.seed}
-            onChatInputChange={chatDraft.change}
+            onChatInputChange={commandComposer.change}
+            composerHeader={commandComposer.header}
             attachedResources={attachedResources}
             actions={
               <>

@@ -1,3 +1,18 @@
+import type {
+  HarnessCommandContext,
+  HarnessCommandState,
+  HarnessOperation,
+  PreparedHarnessOperation,
+} from "../../harness-commands";
+
+export type {
+  HarnessCommandContext,
+  HarnessCommandState,
+  HarnessOperation,
+  HarnessOperationResult,
+  PreparedHarnessOperation,
+} from "../../harness-commands";
+
 import type { AgentModel } from "../../agents";
 import type {
   AgentCapability,
@@ -114,6 +129,14 @@ export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
  */
 export interface HarnessProvider extends ContributionDefinition<"harness"> {
   label: Localizable<string>;
+  /** Native commands and optional mode presentation. Older harnesses may omit both methods. */
+  getCommandState?(ctx: HarnessContext, input: HarnessCommandContext): MaybePromise<HarnessCommandState>;
+  /** Validate and describe execution needs without performing a mutation. */
+  prepareOperation?(
+    ctx: HarnessContext,
+    input: HarnessCommandContext,
+    operation: HarnessOperation,
+  ): MaybePromise<PreparedHarnessOperation>;
   /** Declares skill directories so the host installs project skills for this agent. Absent = no skill setup. */
   skills?: HarnessSkillsLayout;
   /** Discrete run params the host can render, persist as defaults, validate, and pass to start/resume. */

@@ -24,6 +24,7 @@ interface ChatPanelComposerProps {
   conversationKey?: string;
   recentUserMessages: string[];
   actions?: ReactNode;
+  composerHeader?: ReactNode;
   attachedResources?: string[];
   attachmentList?: ReactNode;
   chatInputAutoFocus: boolean;
@@ -93,6 +94,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     conversationKey,
     recentUserMessages,
     actions,
+    composerHeader,
     attachedResources,
     attachmentList,
     chatInputAutoFocus,
@@ -130,6 +132,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
         bg={hasWorkspaceHub ? "bg.subtle" : undefined}
       >
         {workspaceHub}
+        {composerHeader}
         <QueuedFollowUpList
           items={queuedFollowUps}
           editingItemId={queuedComposer.editingItemId}

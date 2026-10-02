@@ -18,12 +18,18 @@ for await (const line of createInterface({ input: process.stdin })) {
     process.exit(0);
   }
   if (message.method === "initialize") emit({ id: message.id, result: {} });
+  if (message.method === "thread/goal/get") emit({ id: message.id, result: { goal: null } });
+  if (message.method === "thread/read") emit({ id: message.id, result: { thread: { turns: [] } } });
   if (message.method === "thread/start" || message.method === "thread/resume") {
     emit({ id: message.id, result: { thread: { id: "thread-fixture", path: process.env.PSTDIO_TEST_TRANSCRIPT } } });
     emit({
       method: "item/completed",
       params: { item: { id: "config", type: "agentMessage", text: JSON.stringify(message) } },
     });
+  }
+  if (message.method === "turn/interrupt") {
+    emit({ id: message.id, result: {} });
+    emit({ method: "turn/completed", params: { turn: { id: "turn-1", status: "interrupted" } } });
   }
   if (message.method === "turn/start") {
     emit({ id: message.id, result: { turn: { id: "turn-1" } } });

@@ -45,6 +45,7 @@ export interface ChatPanelProps {
   onChatInputChange?: (text: string) => void;
   /** Extra controls rendered in the chat input toolbar (attach, model, params). */
   actions?: ReactNode;
+  composerHeader?: ReactNode;
   attachedResources?: string[];
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
@@ -86,6 +87,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onAttachText,
     onChatInputChange,
     actions,
+    composerHeader,
     attachedResources,
     onClearAttachments,
     attachmentList,
@@ -184,6 +186,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
         conversationKey={conversationKey ?? messages[0]?.id}
         recentUserMessages={getRecentUserPrompts(messages)}
         actions={actions}
+        composerHeader={composerHeader}
         attachedResources={attachedResources}
         attachmentList={attachmentList}
         chatInputAutoFocus={chatInputAutoFocus}

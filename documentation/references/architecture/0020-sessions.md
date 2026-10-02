@@ -13,7 +13,7 @@ CLI and dashboard clients call the session API. Domain services coordinate datab
 Every session has two identifiers:
 
 - `session.id` — Prompt Studio's database record for lifecycle, metadata, and cached content.
-- `session.agent_session_id` — the external agent's own session/thread ID (for `opencode` or `claude-code`).
+- `session.agent_session_id` — the external agent's own session/thread ID (for Codex, OpenCode, or Claude Code).
 
 A session is associated with a workspace via the `workspace_sessions` join table. When no workspace is supplied, the server links the default workspace. Sessions resolve their local or remote execution target through that workspace. A workspace can have multiple sessions (e.g. an implementation session followed by a review session).
 
@@ -278,3 +278,7 @@ The dashboard uses TanStack DB collections with the SDK SSE sync client:
 ## Restart recovery
 
 - Delivery logs are not persisted. Complete conversation checkpoints and provider history support recovery after API restart. Stale `in_progress` sessions are reattached when the agent supports it (OpenCode) or transitioned to `disconnected` otherwise, via the startup sweep (`runStartupTasks` → `resolveOrphanedSessions`; see [Session Status Lifecycle](0019-session-status-lifecycle.md)).
+
+## Native harness operations
+
+Optional [harness commands and modes](../extensions/0015-harness-commands.md) use the same session, workspace, execution slot, conversation, cancellation, and checkpoint owners as normal turns. Native state remains in the provider. Existing session parameters store planning selections. A native acknowledgement does not finish an operation; its terminal event does.

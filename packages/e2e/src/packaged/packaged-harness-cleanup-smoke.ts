@@ -35,7 +35,9 @@ export const registerHarnessCleanupSmokeTests = () => {
         export default { harnesses: [{
           id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker",
           capabilities: () => [], start: run, resume: run,
-          listModels(ctx) { used.add(ctx.projectId); return []; },
+          getCommandState: () => ({ commands: [{ name: "/goal", description: "Native fixture command" }], modes: [], slashCommands: true }),
+          prepareOperation: (_ctx, _input, operation) => ({ execution: "control", invoke: async () => ({ kind: "completed", message: operation.text }) }),
+          listModels(ctx) { if (ctx.projectId) used.add(ctx.projectId); return []; },
           dispose(ctx) {
             if (used.delete(ctx.projectId)) appendFileSync(${JSON.stringify(evidence)}, JSON.stringify(ctx.projectId) + "\\n");
           },
@@ -71,6 +73,19 @@ export const registerHarnessCleanupSmokeTests = () => {
           version: null,
         });
         projects.push({ id: project.id, instanceId: enabled.instanceId });
+        const session = await request("/sessions", "POST", {
+          project_id: project.id,
+          title: "Native commands",
+          prompt: "Hello",
+          agent: "test.cleanup-smoke.harness.worker",
+        });
+        const state = await request(`/sessions/${session.id}/harness-commands`);
+        expect(state.commands[0].name).toBe("/goal");
+        const outcome = await request(`/sessions/${session.id}/harness-commands`, "POST", {
+          harnessId: state.harnessId,
+          operation: { kind: "command", text: "/goal  exact native argument" },
+        });
+        expect(outcome).toMatchObject({ status: "completed", message: "/goal  exact native argument" });
         await request(`/agents/test.cleanup-smoke.harness.worker/models?project=${project.id}`);
       }
       const releases = () =>

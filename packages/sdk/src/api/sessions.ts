@@ -4,6 +4,8 @@ export type {
   FollowUpDecision,
   FollowUpInput,
   FollowUpResponse,
+  HarnessCommandState,
+  HarnessOperation,
   ListSessionActivityInput,
   ListSessionActivityResponse,
   ResolveSessionIdInput,
@@ -14,5 +16,4 @@ export type {
   SessionConversationSources,
   SessionQueuedMessagesResponse,
 } from "pstdio-api-contracts";
-
 export { sessionAttachmentMimeTypesByExtension } from "pstdio-api-contracts";
