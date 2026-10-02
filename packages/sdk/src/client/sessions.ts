@@ -3,6 +3,8 @@ import type {
   CreateSessionInput,
   FollowUpInput,
   FollowUpResponse,
+  HarnessCommandState,
+  HarnessOperation,
   ListSessionActivityInput,
   ListSessionActivityResponse,
   ResolveSessionIdInput,
@@ -27,6 +29,12 @@ export type ListSessionsInput = {
 export type SessionClient = {
   list(projectId: string, input?: ListSessionsInput): Promise<Session[]>;
   get(sessionId: string): Promise<Session>;
+  getHarnessCommands(sessionId: string, signal?: AbortSignal): Promise<HarnessCommandState & { harnessId: string }>;
+  invokeHarnessOperation(
+    sessionId: string,
+    operation: HarnessOperation,
+    harnessId?: string,
+  ): Promise<{ status: "completed" | "started"; message?: string }>;
   uploadAttachment(
     projectId: string,
     input: { name: string; data: Uint8Array | ArrayBuffer; mimeType?: string | null },
@@ -108,6 +116,9 @@ export const createSessionClient = (request: RequestFn, clientOptions: ClientOpt
       return request(`/v1/sessions/${sessionId}/activity${query ? `?${query}` : ""}`);
     },
     list: (projectId, input) => request(`/v1/sessions?${buildSessionsQuery(projectId, input)}`),
+    getHarnessCommands: (sessionId, signal) => request(`/v1/sessions/${sessionId}/harness-commands`, { signal }),
+    invokeHarnessOperation: (sessionId, operation, harnessId) =>
+      request(`/v1/sessions/${sessionId}/harness-commands`, { method: "POST", body: { operation, harnessId } }),
     get: (sessionId) => request(`/v1/sessions/${sessionId}`),
     uploadAttachment: (projectId, input) =>
       request(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments`, {
