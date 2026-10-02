@@ -57,13 +57,15 @@ const Bar = (props: BarProps) => {
   };
   const views = useCollectionViews({ storageKey, initialState, viewsSource });
   const reset = useCollectionViewStore(storageKey, initialState, (state) => state.reset);
+  const activateView = useCollectionViewStore(storageKey, initialState, (state) => state.activateView);
   const setSorts = useCollectionViewStore(storageKey, initialState, (state) => state.setSorts);
+  const [first] = savedViews;
+  // Each story starts from its first view, then applies its edits.
   useEffect(() => {
     reset();
-  }, [reset]);
-  useEffect(() => {
+    if (first) activateView(first);
     if (editedSorts) setSorts(editedSorts);
-  }, [editedSorts, setSorts]);
+  }, [reset, activateView, setSorts, first, editedSorts]);
 
   return (
     <Box bg="bg">
