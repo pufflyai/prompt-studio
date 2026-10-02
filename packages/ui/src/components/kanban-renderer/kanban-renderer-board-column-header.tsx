@@ -27,7 +27,7 @@ export const ColumnHeader = (props: ColumnHeaderProps) => {
       <Text textStyle="label/S/medium">{column.label}</Text>
 
       <Badge variant="number" size="xs" colorPalette="gray">
-        {column.totalCount === undefined ? column.items.length : `${column.items.length} of ${column.totalCount}`}
+        {column.totalCount ? `${column.items.length} of ${column.totalCount}` : column.items.length}
       </Badge>
 
       <Spacer />
