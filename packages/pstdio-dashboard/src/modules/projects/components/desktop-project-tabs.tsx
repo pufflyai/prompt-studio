@@ -1,5 +1,5 @@
 import { IconButton } from "@chakra-ui/react";
-import { WindowTabs, WindowTitleBar } from "@pstdio/ui";
+import { Tooltip, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { Folder, Plus } from "lucide-react";
@@ -46,15 +46,16 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
         onClose={(id) => void controller.close(workbench, id)}
         onReorder={(id, targetId) => controller.reorder(workbench, id, targetId)}
       />
-      <IconButton
-        aria-label="Open project"
-        title="Open project"
-        variant="ghost"
-        size="xs"
-        onClick={() => void workbench.commands.executeCommand(dashboardCommandIds.openProjects)}
-      >
-        <Plus />
-      </IconButton>
+      <Tooltip content="Open / create project" openDelay={300} positioning={{ placement: "bottom" }}>
+        <IconButton
+          aria-label="Open / create project"
+          variant="ghost"
+          size="xs"
+          onClick={() => void workbench.commands.executeCommand(dashboardCommandIds.openProjects)}
+        >
+          <Plus />
+        </IconButton>
+      </Tooltip>
     </WindowTitleBar>
   );
 };
