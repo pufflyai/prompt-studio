@@ -1,11 +1,12 @@
 import { chakra } from "@chakra-ui/react";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { HighlightedText } from "../collection-view/highlighted-text";
 
 // Long paths keep their start and final characters, so the folder name stays readable (design/DESIGN.md).
 const visibleEndLength = 5;
 
-export const DataTablePathCell = (props: { value: string }) => {
-  const { value } = props;
+export const DataTablePathCell = (props: { value: string; search?: string }) => {
+  const { value, search = "" } = props;
   const start = value.slice(0, -visibleEndLength);
   const end = value.slice(-visibleEndLength);
 
@@ -20,9 +21,11 @@ export const DataTablePathCell = (props: { value: string }) => {
         whiteSpace="nowrap"
       >
         <chakra.span overflow="hidden" textOverflow="ellipsis">
-          {start}
+          <HighlightedText text={start} query={search} />
         </chakra.span>
-        <chakra.span flexShrink={0}>{end}</chakra.span>
+        <chakra.span flexShrink={0}>
+          <HighlightedText text={end} query={search} />
+        </chakra.span>
       </chakra.span>
     </Tooltip>
   );

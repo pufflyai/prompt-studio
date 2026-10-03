@@ -1,5 +1,5 @@
 import { index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
-import { type BoardViewSettings, EMPTY_VIEW_FILTER } from "pstdio-api-contracts";
+import type { BoardViewSettings } from "pstdio-api-contracts";
 import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
 import { extension_instances } from "./extensions";
 import { projects } from "./projects";
@@ -21,8 +21,7 @@ export const board_views = pgTable(
     ...boardScope(),
     title: text("title").notNull(),
     settings: jsonb("settings").$type<BoardViewSettings>().notNull(),
-    // The defaults fill rows that existed before views stored rules and sorts.
-    filter: jsonb("filter").$type<ViewFilterGroup>().notNull().default(EMPTY_VIEW_FILTER),
+    filter: jsonb("filter").$type<ViewFilterGroup>().notNull(),
     sorts: jsonb("sorts").$type<ViewSort[]>().notNull().default([]),
     sort_order: integer("sort_order").notNull(),
     created_at: text("created_at").notNull(),

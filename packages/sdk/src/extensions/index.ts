@@ -45,6 +45,8 @@ export {
   projectEvents,
   projectSlots,
   qualifyNavigationTarget,
+  resolveDataTableComparableValue,
+  resolveDataTableFieldKind,
   sessionEvents,
   sessionSlots,
   VIEW_FILTER_CONDITIONS,

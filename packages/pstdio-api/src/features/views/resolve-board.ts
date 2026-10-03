@@ -13,6 +13,7 @@ import {
   type DataTableRendererQueryParams,
   type KanbanRendererQueryParams,
   type Localizable,
+  resolveDataTableFieldKind,
   VIEW_FILTER_CONDITIONS,
   type ViewFieldKind,
 } from "pstdio-api-contracts/extension-kernel";
@@ -167,11 +168,10 @@ const resolveDataTableFields = async (deps: BoardViewsDeps, board: Extract<Resol
   const columns: DataTableColumn[] =
     result.columns ?? board.body.columns ?? (firstRow ? Object.keys(firstRow.values).map((id) => ({ id })) : []);
   return columns.map((column) => {
-    const values = result.rows
-      .map((row) => row.values[column.id])
-      .filter((value) => value !== null && value !== undefined);
-    const inferred = values.length > 0 && values.every((value) => typeof value === "number") ? "number" : "string";
-    const kind = column.type ?? inferred;
+    const kind = resolveDataTableFieldKind(
+      result.rows.map((row) => row.values[column.id]),
+      column,
+    );
     return {
       id: column.id,
       label: text(column.label, column.id),

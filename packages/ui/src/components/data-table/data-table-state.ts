@@ -1,5 +1,10 @@
+import { resolveDataTableFieldKind } from "@pstdio/sdk/extensions";
+import { isValidElement, type ReactNode } from "react";
 import type { AttributeDescriptor, KanbanRendererRow } from "@/components/kanban-renderer/types";
-import { resolveDataTableComparableValue } from "./data-table-cell-value";
+import { isDataTableDiffValue, resolveDataTableComparableValue } from "./data-table-cell-value";
+import { formatDataTableRelativeDate } from "./data-table-date-cell";
+import { getJsonCellSummary } from "./friendly-json-display";
+import { formatDisplayValue } from "./helpers";
 import type { DataTableProps, DataTableSelectionAction, RowData } from "./types";
 
 export const defaultPageSize = 30;
@@ -55,13 +60,6 @@ const toAttributeValue = (value: unknown, renderer?: NonNullable<ColumnRenderers
   return raw;
 };
 
-const isNumberColumn = (rows: RowData[], columnKey: string, renderers?: ColumnRenderers) => {
-  const values = rows
-    .map((row) => toAttributeValue(row[columnKey], renderers?.[columnKey]))
-    .filter((value) => value !== null && value !== undefined);
-  return values.length > 0 && values.every((value) => typeof value === "number");
-};
-
 type ColumnOptions = Pick<DataTableProps, "compactHeaders" | "columnRenderers" | "columnTypes" | "groupableColumns">;
 
 const resolveAttributeType = (
@@ -69,11 +67,12 @@ const resolveAttributeType = (
   columnKey: string,
   options: ColumnOptions,
 ): AttributeDescriptor["type"] => {
-  const declared = options.columnTypes?.[columnKey];
-  if (declared) return { kind: declared };
-  if (options.columnRenderers?.[columnKey]?.type === "date") return { kind: "date" };
-  if (isNumberColumn(rows, columnKey, options.columnRenderers)) return { kind: "number" };
-  return { kind: "string" };
+  return {
+    kind: resolveDataTableFieldKind(
+      rows.map((row) => row[columnKey]),
+      { type: options.columnTypes?.[columnKey], renderer: options.columnRenderers?.[columnKey] },
+    ),
+  };
 };
 
 /** Every column is a view field, so filters, sorts, and grouping read them like board attributes. */
@@ -126,10 +125,25 @@ export const toggleHiddenDataTableColumn = (hiddenColumnIds: string[], columnId:
   visible ? hiddenColumnIds.filter((id) => id !== columnId) : [...new Set([...hiddenColumnIds, columnId])];
 
 /** The text a cell shows, which is all that search looks at. */
-export const dataTableCellText = (value: unknown) => {
-  if (typeof value === "string") return [value];
-  if (typeof value === "number" || typeof value === "boolean") return [String(value)];
+const nodeText = (value: ReactNode): string[] => {
+  if (typeof value === "string" || typeof value === "number") return [String(value)];
+  if (Array.isArray(value)) return value.flatMap(nodeText);
+  if (isValidElement<{ children?: ReactNode }>(value)) return nodeText(value.props.children);
   return [];
+};
+export const dataTableCellText = (
+  value: unknown,
+  renderer?: NonNullable<ColumnRenderers>[string],
+  now = new Date(),
+) => {
+  if (renderer?.type === "json") return [getJsonCellSummary(value)];
+  if (renderer?.type === "badge" && ["string", "number", "boolean"].includes(typeof value)) return [String(value)];
+  if (renderer?.type === "date") {
+    const label = formatDataTableRelativeDate(value, now);
+    if (label) return [label];
+  }
+  if (renderer?.type === "diff" && isDataTableDiffValue(value)) return [`+${value.additions}`, `-${value.deletions}`];
+  return nodeText(formatDisplayValue(value));
 };
 
 export const reorderDataTableColumns = (columnIds: string[], activeColumnId: string, overColumnId: string) => {

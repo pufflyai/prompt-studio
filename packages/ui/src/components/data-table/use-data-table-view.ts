@@ -70,7 +70,7 @@ export const useDataTableView = (props: DataTableProps) => {
   const sortedRows = sortRowsByView(filteredRows, sorts, attributes);
   // Hidden columns keep their rules but are not searched: search matches only what the view shows.
   const shownRows = searchRows(sortedRows, deferredSearch, (row) =>
-    visibleColumnKeys.flatMap((key) => dataTableCellText(row.sourceRow[key])),
+    visibleColumnKeys.flatMap((key) => dataTableCellText(row.sourceRow[key], columnRenderers?.[key])),
   );
   const groupField = findField(attributes, settings.grouping);
   const groups = groupField?.groupable ? groupRowsByField(shownRows, groupField) : undefined;

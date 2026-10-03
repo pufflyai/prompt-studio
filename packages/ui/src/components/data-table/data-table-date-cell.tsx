@@ -1,6 +1,7 @@
 import { Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { HighlightedText } from "../collection-view/highlighted-text";
 
 const relativeUnits = [
   { unit: "year", seconds: 365 * 24 * 60 * 60 },
@@ -28,10 +29,11 @@ export const formatDataTableRelativeDate = (value: unknown, now = new Date(), lo
 
 interface DataTableDateCellProps {
   value: string;
+  search?: string;
 }
 
 export const DataTableDateCell = (props: DataTableDateCellProps) => {
-  const { value } = props;
+  const { value, search = "" } = props;
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -43,7 +45,7 @@ export const DataTableDateCell = (props: DataTableDateCellProps) => {
   return (
     <Tooltip content={fullDate} openDelay={300}>
       <Text as="span" tabIndex={0} textStyle="paragraph/S/regular" color="fg.muted" whiteSpace="nowrap">
-        {relativeLabel}
+        <HighlightedText text={relativeLabel ?? ""} query={search} />
       </Text>
     </Tooltip>
   );

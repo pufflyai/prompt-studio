@@ -118,3 +118,17 @@ export const DefaultDisplay = {
     await expect((await canvas.findAllByText("50%")).length).toBeGreaterThan(0);
   },
 };
+
+export const SearchCellValues = {
+  args: {
+    data: [
+      { Name: { display: "Completed", sortValue: 1 }, Created: hoursAgo(5), Diff: { additions: 128, deletions: 14 } },
+      { Name: { display: "Pending", sortValue: 2 }, Created: hoursAgo(1), Diff: { additions: 0, deletions: 0 } },
+    ],
+    columnRenderers: { Created: { type: "date" }, Diff: { type: "diff" } },
+    fullWidth: true,
+    toolbarStorageKey: "storybook-data-table-search-cell-values",
+    defaultSettings: { showStats: false },
+  },
+  render: StoryFrame,
+};
