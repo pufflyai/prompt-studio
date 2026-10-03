@@ -17,7 +17,7 @@ export interface CollectionViewSnapshot<TSettings> {
   activeViewId: string;
 }
 
-export type CollectionViewMenu = "picker" | "advanced" | "sort";
+export type CollectionViewMenu = "picker" | "filter" | "sort";
 
 export interface CollectionViewStoreInitialState<TSettings> {
   settings: TSettings;
@@ -32,7 +32,7 @@ export interface CollectionViewStoreState<TSettings> extends CollectionViewSnaps
   openRuleIndex: number | null;
   setOpenMenu: (menu: CollectionViewMenu | null) => void;
   setOpenRuleIndex: (index: number | null) => void;
-  /** Adds a rule for the field and opens its editor: its pill, or the advanced filter when the root joins with "or". */
+  /** Adds a rule for the field and opens its pill editor. */
   startRule: (field: AttributeDescriptor) => void;
   setSettings: (settings: Partial<TSettings>) => void;
   setFilter: (filter: ViewFilterGroup) => void;
@@ -73,7 +73,6 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
         startRule: (field) =>
           set((state) => {
             const filter = addRule(state.filter, newRule(field));
-            if (filter.conjunction === "or") return { filter, openMenu: "advanced", openRuleIndex: null };
             return { filter, openMenu: null, openRuleIndex: filter.rules.length - 1 };
           }),
         setSettings: (settings) => set((state) => ({ settings: { ...state.settings, ...settings } })),

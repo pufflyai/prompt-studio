@@ -10,8 +10,6 @@ import {
 
 type RowTest = (row: KanbanRendererRow) => boolean;
 
-export const isFilterGroup = (rule: ViewFilterRule | ViewFilterGroup): rule is ViewFilterGroup => "conjunction" in rule;
-
 const RELATIVE_DAY = /^today([+-]\d+)?$/;
 const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -131,7 +129,7 @@ const compileRule = (rule: ViewFilterRule, fields: AttributeDescriptor[], today:
 
 const compileGroup = (group: ViewFilterGroup, fields: AttributeDescriptor[], today: Date): RowTest | undefined => {
   const tests = group.rules.flatMap((rule) => {
-    const test = isFilterGroup(rule) ? compileGroup(rule, fields, today) : compileRule(rule, fields, today);
+    const test = compileRule(rule, fields, today);
     return test ? [test] : [];
   });
   if (tests.length === 0) return undefined;
@@ -151,5 +149,4 @@ export const filterRowsByView = <TRow extends KanbanRendererRow>(
 };
 
 /** The number of rules a person sees in the criteria row and the Filter button. */
-export const countFilterRules = (filter: ViewFilterGroup) =>
-  filter.rules.reduce((count, rule) => count + (isFilterGroup(rule) ? rule.rules.length : 1), 0);
+export const countFilterRules = (filter: ViewFilterGroup) => filter.rules.length;

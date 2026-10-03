@@ -230,3 +230,22 @@ test("date-rendered table filters can be saved and reopened", async () => {
   const saved = await (await request(`/board-views/${view.id}`)).json();
   expect(saved.filter).toEqual(filter);
 });
+
+test("exact scalar lists stay flat through edits and saved-view reads", async () => {
+  const path = "/boards/test.boards.view.scores/views";
+  const filter = {
+    conjunction: "and",
+    rules: [
+      { attributeId: "name", condition: "is-any-of", value: ["Chat", "Docs"] },
+      { attributeId: "score", condition: "is-any-of", value: ["80", "40"] },
+      { attributeId: "updated", condition: "is-any-of", value: ["2026-10-01", "2026-10-02"] },
+    ],
+  };
+  const response = await request(path, "POST", { title: "Selected values", filter });
+  expect(response.status).toBe(201);
+  const view = await response.json();
+  expect(view.filter).toEqual(filter);
+  const edited = await request(`/board-views/${view.id}`, "PATCH", { title: "Renamed", filter });
+  expect(edited.status).toBe(200);
+  expect((await (await request(`/board-views/${view.id}`)).json()).filter).toEqual(filter);
+});

@@ -1,10 +1,11 @@
 import { Badge, Box, Button, HStack, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { ChevronRight, ListFilter, Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { ListRow } from "../list-row/list-row";
+import { fieldIcon } from "./collection-view-field-icon";
 import { isOptionField } from "./collection-view-fields";
 import { optionLabel } from "./collection-view-labels";
 import { clearQuickOptions, quickOptionValues, setQuickOptions } from "./collection-view-rules";
@@ -19,7 +20,6 @@ export interface FilterMenuProps {
   onChange: (filter: ViewFilterGroup) => void;
   /** A field without options gets a new rule and opens its editor. */
   onPickField: (field: AttributeDescriptor) => void;
-  onOpenAdvanced: () => void;
 }
 
 const contentProps = { p: "2xs", display: "flex", flexDirection: "column", gap: "1px" } as const;
@@ -32,7 +32,7 @@ const selectedDescription = (field: AttributeDescriptor, values: string[]) => {
 
 /** The quick property picker. Option fields get an "is any of" rule; other fields open the rule editor. */
 export const FilterMenu = (props: FilterMenuProps) => {
-  const { fields, filter, optionsFor, onChange, onPickField, onOpenAdvanced } = props;
+  const { fields, filter, optionsFor, onChange, onPickField } = props;
   const [query, setQuery] = useState("");
   const optionFields = fields.filter(isOptionField);
   const [activeId, setActiveId] = useState(optionFields[0]?.id ?? "");
@@ -85,6 +85,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
                   role="button"
                   variant="compact"
                   isSelected={active?.id === field.id}
+                  icon={<Icon as={fieldIcon(field)} />}
                   label={
                     <HStack minW="0" width="full" gap="2xs">
                       <Text textStyle="label/S/regular" truncate>
@@ -139,12 +140,6 @@ export const FilterMenu = (props: FilterMenuProps) => {
             </>
           ) : null}
         </Stack>
-      </HStack>
-      <HStack borderTopWidth="1px" borderColor="border.subtle" paddingX="2xs" paddingY="2xs">
-        <Button size="2xs" variant="ghost" onClick={onOpenAdvanced}>
-          <ListFilter />
-          Advanced filter
-        </Button>
       </HStack>
     </Stack>
   );

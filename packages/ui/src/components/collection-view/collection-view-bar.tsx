@@ -1,13 +1,13 @@
 import { Box, Button, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
 import { ArrowUpDown, ListFilter, Plus, RotateCcw } from "lucide-react";
-import { type ReactNode, type RefObject, useRef, useState } from "react";
+import { Fragment, type ReactNode, type RefObject, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { CollectionItemLabelContext } from "./collection-item-label";
 import { canSortField, findField } from "./collection-view-fields";
-import { countFilterRules, isFilterGroup } from "./collection-view-filter";
-import { FilterRulePill, GroupPill, SortPill } from "./collection-view-pills";
-import { removeGroupAt, setRuleAt } from "./collection-view-rules";
+import { countFilterRules } from "./collection-view-filter";
+import { FilterRulePill, SortPill } from "./collection-view-pills";
+import { setRuleAt } from "./collection-view-rules";
 import { CollectionViewTabs } from "./collection-view-tabs";
 import type { CollectionSavedView, CollectionViewsSource } from "./collection-view-types";
 import { FilterMenu } from "./filter-menu";
@@ -146,7 +146,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             icon={ListFilter}
             count={countFilterRules(filter)}
             buttonRef={filterButtonRef}
-            onClick={() => open("picker", filterButtonRef)}
+            onClick={() => open("filter", filterButtonRef)}
           />
           <CountButton
             label="Sort"
@@ -179,40 +179,27 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
               {sorts.length > 0 && filter.rules.length > 0 ? (
                 <Box width="1px" height="1rem" flexShrink={0} bg="border" />
               ) : null}
-              {filter.conjunction === "or" && filter.rules.length > 0 ? (
-                <GroupPill
-                  group={filter}
-                  onOpen={() => open("advanced", filterButtonRef)}
-                  onRemove={() => setFilter({ conjunction: "and", rules: [] })}
-                />
-              ) : (
-                filter.rules.map((rule, index) =>
-                  isFilterGroup(rule) ? (
-                    <GroupPill
-                      key={`group:${index}`}
-                      group={rule}
-                      onOpen={() => open("advanced", filterButtonRef)}
-                      onRemove={() => setFilter(removeGroupAt(filter, index))}
-                    />
-                  ) : (
-                    <FilterRulePill
-                      key={`${index}:${rule.attributeId}`}
-                      fields={filterFields}
-                      rule={rule}
-                      options={optionsForId(rule.attributeId)}
-                      open={openRuleIndex === index}
-                      onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
-                      onChange={(next) => setFilter(setRuleAt(filter, [index], next))}
-                      onRemove={() => {
-                        // The next rule moves into this place and must not open in its popover.
-                        setOpenRuleIndex(null);
-                        setFilter(setRuleAt(filter, [index], undefined));
-                      }}
-                      onOpenAdvanced={() => open("advanced", filterButtonRef)}
-                    />
-                  ),
-                )
-              )}
+              {filter.rules.map((rule, index) => (
+                <Fragment key={`${index}:${rule.attributeId}`}>
+                  {index > 0 ? (
+                    <Text textStyle="label/XS" color="fg.muted">
+                      {filter.conjunction === "and" ? "And" : "Or"}
+                    </Text>
+                  ) : null}
+                  <FilterRulePill
+                    fields={filterFields}
+                    rule={rule}
+                    options={optionsForId(rule.attributeId)}
+                    open={openRuleIndex === index}
+                    onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
+                    onChange={(next) => setFilter(setRuleAt(filter, index, next))}
+                    onRemove={() => {
+                      setOpenRuleIndex(null);
+                      setFilter(setRuleAt(filter, index, undefined));
+                    }}
+                  />
+                </Fragment>
+              ))}
               <Button
                 ref={addFilterRef}
                 aria-label="Add filter"
@@ -273,12 +260,11 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             optionsFor={optionsFor}
             onChange={setFilter}
             onPickField={startRule}
-            onOpenAdvanced={() => setOpenMenu("advanced")}
           />
         </ViewBarPopover>
         <ViewBarPopover
-          open={openMenu === "advanced"}
-          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "advanced" : null)}
+          open={openMenu === "filter"}
+          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "filter" : null)}
           anchorRef={anchor}
           width="40rem"
           testId="view-filter-popover"
@@ -292,7 +278,18 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
           width="25rem"
           testId="view-sort-popover"
         >
-          <ViewSortMenu fields={sortFields} sorts={sorts} onChange={setSorts} />
+          <ViewSortMenu
+            fields={sortFields}
+            sorts={sorts}
+            onChange={(next) => {
+              if (next.length === 0) {
+                // The criteria pill disappears with the last sort. Close before removing its anchor.
+                setOpenMenu(null);
+                setAnchor(sortButtonRef);
+              }
+              setSorts(next);
+            }}
+          />
         </ViewBarPopover>
       </Stack>
     </CollectionItemLabelContext.Provider>

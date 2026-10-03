@@ -153,7 +153,7 @@ const DatasetDataTable = (props: DataTableProps) => {
             ruleCount={countFilterRules(filter)}
             hiddenCount={total}
             onClearSearch={() => view.setSearch("")}
-            onEditFilter={() => setOpenMenu("advanced")}
+            onEditFilter={() => setOpenMenu("filter")}
           />
         ) : (
           <DataTableGrid

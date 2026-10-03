@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { ViewSort, ViewSortDirection } from "@pstdio/sdk/extensions";
 import { GripVertical, Plus, Trash2, X } from "lucide-react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { fieldIcon } from "./collection-view-field-icon";
 import { findField } from "./collection-view-fields";
 import { sortDirectionLabel } from "./collection-view-labels";
 import { RuleSelect } from "./rule-select";
@@ -30,7 +31,6 @@ const SortRuleRow = (props: SortRuleRowProps) => {
     id: sort.attributeId,
   });
   const field = findField(fields, sort.attributeId);
-  const choices = fields.filter((entry) => entry.id === sort.attributeId || !usedIds.includes(entry.id));
 
   return (
     <HStack
@@ -55,7 +55,12 @@ const SortRuleRow = (props: SortRuleRowProps) => {
       <RuleSelect
         aria-label="Sort field"
         width="9.5rem"
-        options={choices.map((entry) => ({ value: entry.id, label: entry.label }))}
+        options={fields.map((entry) => ({
+          value: entry.id,
+          label: entry.label,
+          icon: fieldIcon(entry),
+          disabled: entry.id !== sort.attributeId && usedIds.includes(entry.id),
+        }))}
         value={sort.attributeId}
         onSelect={(attributeId) => onChange({ ...sort, attributeId })}
       />

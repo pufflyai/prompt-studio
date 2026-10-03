@@ -27,7 +27,6 @@ const Picker = (props: { filter?: ViewFilterGroup }) => {
         optionsFor={storyOptions}
         onChange={setFilter}
         onPickField={(field) => setPicked(field.id)}
-        onOpenAdvanced={() => setPicked("advanced")}
       />
       <Text data-testid="filter-value" textStyle="label/XS" padding="xs">
         {JSON.stringify(filter.rules)}

@@ -1,9 +1,7 @@
 import {
   type BoardField,
   type BoardViewSettings,
-  isViewFilterGroup,
   type KanbanViewSettings,
-  legacyRuleFor,
   normalizeBooleanViewRule,
 } from "pstdio-api-contracts";
 import {
@@ -33,14 +31,11 @@ const equivalentConditions: Partial<Record<ViewFilterCondition, ViewFilterCondit
   "is-none-of": "has-none-of",
   "has-none-of": "is-none-of",
 };
-const isListRule = (rule: ViewFilterRule): rule is ViewFilterRule & { value: string[] } =>
-  rule.condition === "is-any-of" && Array.isArray(rule.value);
-
 /**
  * Removes what refers to fields or options that are gone. A rule whose condition no longer fits its
  * field is kept: the renderer skips it, and it works again if the field returns to its old kind.
  */
-const cleanRule = (rule: ViewFilterRule, fields: BoardField[], root: boolean) => {
+const cleanRule = (rule: ViewFilterRule, fields: BoardField[]) => {
   const field = fields.find((field) => field.id === rule.attributeId && field.filterable);
   if (!field) return [];
   rule = normalizeBooleanViewRule(rule, field);
@@ -48,12 +43,6 @@ const cleanRule = (rule: ViewFilterRule, fields: BoardField[], root: boolean) =>
   const fits = accepted.includes(rule.condition);
   const equivalent = equivalentConditions[rule.condition];
   const fitsEquivalent = !fits && equivalent !== undefined && accepted.includes(equivalent);
-  // Saved views from before rules existed picked exact values on text, number, and date fields too.
-  if (!fits && !fitsEquivalent && isListRule(rule)) {
-    const converted = legacyRuleFor(rule.attributeId, rule.value, field.kind);
-    if (!converted || (!root && isViewFilterGroup(converted))) return [];
-    return [converted];
-  }
   const condition = fitsEquivalent && equivalent ? equivalent : rule.condition;
   const options = field.options;
   const values = Array.isArray(rule.value) ? rule.value : undefined;
@@ -63,13 +52,7 @@ const cleanRule = (rule: ViewFilterRule, fields: BoardField[], root: boolean) =>
 };
 const cleanFilter = (filter: ViewFilterGroup, fields: BoardField[]): ViewFilterGroup => ({
   ...filter,
-  rules: filter.rules.flatMap<ViewFilterRule | ViewFilterGroup>((rule) => {
-    if (!isViewFilterGroup(rule)) return cleanRule(rule, fields, true);
-    const rules = rule.rules.flatMap((nested) =>
-      isViewFilterGroup(nested) ? [] : (cleanRule(nested, fields, false) as ViewFilterRule[]),
-    );
-    return rules.length ? [{ ...rule, rules }] : [];
-  }),
+  rules: filter.rules.flatMap((rule) => cleanRule(rule, fields)),
 });
 const grouping = (value: string, fallback: string, fields: BoardField[]) => {
   const ids = ["none", ...idsFor(fields, "groupable")];

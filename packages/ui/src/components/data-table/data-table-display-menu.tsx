@@ -2,13 +2,14 @@ import { Box, HStack, Icon, IconButton, Popover, Portal, Stack, Text } from "@ch
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Calendar, Check, CircleDashed, GripVertical, Hash, Settings2, Type } from "lucide-react";
+import { Check, GripVertical, Settings2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { SearchableMenuInput } from "@/components/overlays/searchable-menu-input";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Switch } from "@/components/primitives/switch";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { fieldIcon } from "../collection-view/collection-view-field-icon";
 import { DisplayMenuSelect } from "../kanban-renderer/display-menu";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import type { DataTableSettings } from "./types";
@@ -22,11 +23,6 @@ export interface DataTableDisplayMenuProps {
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
   onColumnReorder: (activeColumnId: string, overColumnId: string) => void;
 }
-
-const TYPE_ICONS = { string: Type, number: Hash, date: Calendar } as const;
-
-const typeIcon = (column: AttributeDescriptor) =>
-  TYPE_ICONS[column.type.kind as keyof typeof TYPE_ICONS] ?? CircleDashed;
 
 const SectionLabel = (props: { children: string; end?: string }) => (
   <HStack paddingX="xs" paddingTop="xs" paddingBottom="2xs">
@@ -109,7 +105,7 @@ const ColumnRow = (props: ColumnRowProps) => {
           {column.label}
         </Text>
       </Checkbox>
-      <Icon as={typeIcon(column)} boxSize="0.75rem" color="fg.subtle" flexShrink={0} />
+      <Icon as={fieldIcon(column)} boxSize="0.75rem" color="fg.subtle" flexShrink={0} />
     </HStack>
   );
 };

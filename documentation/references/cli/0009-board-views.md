@@ -4,7 +4,7 @@ Saved views belong to a project and a board. A board is an extension view of kin
 
 A view has three parts:
 
-- `filter`: one root group of rules. A group joins its rules with one conjunction, `and` or `or`. The root group may hold rules and groups. A nested group may hold rules only.
+- `filter`: one root group of rules. A group joins its rules with one conjunction, `and` or `or`. All rules share that conjunction. Filters have one level.
 - `sorts`: an ordered list of `{ attributeId, direction }`. The first sort decides first. An empty list means manual order on a board and query order on a table.
 - `settings`: display settings for the board's kind.
 
@@ -35,6 +35,7 @@ Commands print JSON. Use `--project-id` outside a linked folder. `pst views boar
 
 | Field kind | Conditions | Value |
 | --- | --- | --- |
+| `boolean` | `is`, `is-not` | `true` or `false`; the UI reads “Ticket is Archived” or “Ticket is not Archived” |
 | `string` | `contains`, `does-not-contain`, `is`, `is-not` | Text. Compares ignore case |
 | `number` | `is`, `is-not`, `gt`, `gte`, `lt`, `lte` | A number |
 | `date` | `is`, `is-before`, `is-after`, `is-on-or-before`, `is-on-or-after` | A day: `2026-10-02`, `today`, `today-7`, or `today+7` |
@@ -43,17 +44,14 @@ Commands print JSON. Use `--project-id` outside a linked folder. `pst views boar
 
 Every kind also accepts `is-empty` and `is-not-empty`, which take no value. Relative days such as `today-7` resolve against the viewer's date each time the view opens. A field of kind `enum-multi` cannot be sorted.
 
-Use `--filter-json` for `or` and nested groups. It takes a full filter group and cannot be combined with `--filter`:
+Use `--filter-json` for `or`. It takes a full filter group and cannot be combined with `--filter`:
 
 ```sh
 pst views update --id <viewId> --filter-json '{
-  "conjunction": "and",
+  "conjunction": "or",
   "rules": [
-    { "attributeId": "status", "condition": "is-none-of", "value": ["done"] },
-    { "conjunction": "or", "rules": [
-      { "attributeId": "assignee", "condition": "is-any-of", "value": ["alex"] },
-      { "attributeId": "updated", "condition": "is-after", "value": "today-7" }
-    ] }
+    { "attributeId": "assignee", "condition": "is-any-of", "value": ["alex"] },
+    { "attributeId": "updated", "condition": "is-after", "value": "today-7" }
   ]
 }'
 ```
@@ -70,7 +68,7 @@ Built-in extension views are read-only. Duplicate a built-in to change it. Any s
 
 The default order is the chosen project default, then the extension's `defaultActiveViewId`, then a built-in with the deprecated `isDefault` flag, then the first available view. Built-ins appear first; saved views follow their stored order.
 
-When the API reads views, it removes what no longer fits the board: rules on missing fields, missing option values, rules left with no values, empty groups, and sorts on missing fields. A rule whose field changes between a single option and several options keeps its meaning, for example `is-any-of` becomes `has-any-of`. Views saved before conditions existed picked exact values on every field, so an `is-any-of` list on a text, number, or date field becomes `is` rules, joined by `or` when there are several. Any other rule whose condition no longer fits its field stays saved: the renderer skips it, and it works again if the field returns to its old kind. A failed query, or a data table that returns no rows to describe its columns, keeps saved views unchanged.
+When the API reads views, it removes what no longer fits the board: rules on missing fields, missing option values, rules left with no values, and sorts on missing fields. A rule whose field changes between a single option and several options keeps its meaning, for example `is-any-of` becomes `has-any-of`. Views saved before conditions existed picked exact values on every field, so an `is-any-of` list on a text, number, or date field keeps exact membership. Text stays case-sensitive and timestamps stay exact. These deprecated lists remain editable; new scalar rules use the conditions above. Any other rule whose condition no longer fits its field stays saved: the renderer skips it, and it works again if the field returns to its old kind. A failed query, or a data table that returns no rows to describe its columns, keeps saved views unchanged.
 
 Disabled boards are unavailable but keep their data. Uninstall keeps a disabled instance when it has user data, unless data deletion is requested. Removed board declarations leave orphaned views that can be listed and deleted.
 
@@ -91,4 +89,4 @@ All paths below start with `/v1/projects/{projectId}`.
 | PUT | `/boards/{boardId}/views/order` | Exact saved-view order: `{viewIds}` |
 | PUT | `/boards/{boardId}/views/default` | Set or clear: `{viewId: string \| null}` |
 
-Use `createClient().views` in the SDK. Built-in mutations return 409 with duplication guidance. Invalid input returns 400 with the valid choices: an unknown field lists the fields that allow filtering or sorting, a condition the field does not accept lists that field's conditions, an unknown option lists the field's option values, and a group nested too deep says that a nested group may hold rules only. Settings of the other board kind are refused. See [the ownership decision](../../adrs/0048-shared-project-board-views.md).
+Use `createClient().views` in the SDK. Built-in mutations return 409 with duplication guidance. Invalid input returns 400 with the valid choices: an unknown field lists the fields that allow filtering or sorting, a condition the field does not accept lists that field's conditions, an unknown option lists the field's option values. Settings of the other board kind are refused. See [the ownership decision](../../adrs/0048-shared-project-board-views.md).

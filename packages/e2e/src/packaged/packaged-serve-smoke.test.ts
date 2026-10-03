@@ -9,6 +9,7 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
+// Includes flat And/Or filters surviving CLI edits and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Core extension checks include Notes page ownership and Planner's Open tickets command.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";

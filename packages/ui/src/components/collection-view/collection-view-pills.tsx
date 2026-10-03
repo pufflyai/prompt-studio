@@ -1,16 +1,11 @@
 import { Button, chakra, HStack, Icon, Popover, Portal, Text } from "@chakra-ui/react";
-import {
-  normalizeBooleanViewRule,
-  type ViewFilterGroup,
-  type ViewFilterRule,
-  type ViewSort,
-} from "@pstdio/sdk/extensions";
+import { normalizeBooleanViewRule, type ViewFilterRule, type ViewSort } from "@pstdio/sdk/extensions";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, X } from "lucide-react";
 import type { ComponentProps, ReactNode, Ref } from "react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { useCollectionItemLabel } from "./collection-item-label";
 import { findField } from "./collection-view-fields";
-import { groupLabel, groupLead, pillConditionLabel, ruleValueLabel } from "./collection-view-labels";
+import { pillConditionLabel, ruleValueLabel } from "./collection-view-labels";
 import type { RuleValueOption } from "./filter-rule-value";
 import { ViewFilterRuleEditor } from "./view-filter-rule-editor";
 
@@ -76,12 +71,11 @@ export interface FilterRulePillProps {
   onOpenChange: (open: boolean) => void;
   onChange: (rule: ViewFilterRule) => void;
   onRemove: () => void;
-  onOpenAdvanced: () => void;
 }
 
 /** Reads as a sentence, such as "Status is not Done", and opens the editor for its rule. */
 export const FilterRulePill = (props: FilterRulePillProps) => {
-  const { fields, rule: savedRule, options, open, onOpenChange, onChange, onRemove, onOpenAdvanced } = props;
+  const { fields, rule: savedRule, options, open, onOpenChange, onChange, onRemove } = props;
   const field = findField(fields, savedRule.attributeId);
   const rule = field ? normalizeBooleanViewRule(savedRule, field.type) : savedRule;
   const itemLabel = useCollectionItemLabel();
@@ -118,36 +112,12 @@ export const FilterRulePill = (props: FilterRulePillProps) => {
                 options={options}
                 onChange={onChange}
                 onDelete={onRemove}
-                onOpenAdvanced={onOpenAdvanced}
               />
             ) : null}
           </Popover.Content>
         </Popover.Positioner>
       </Portal>
     </Popover.Root>
-  );
-};
-
-export interface GroupPillProps {
-  group: ViewFilterGroup;
-  onOpen: () => void;
-  onRemove: () => void;
-}
-
-/** A group reads as one pill, such as "Any of 2 rules", and opens the advanced filter. */
-export const GroupPill = (props: GroupPillProps) => {
-  const { group, onOpen, onRemove } = props;
-  return (
-    <PillShell removeLabel="Remove filter group" onRemove={onRemove}>
-      <PillLabel aria-label={`Edit filter group: ${groupLabel(group)}`} onClick={onOpen}>
-        <Text textStyle="label/XS" color="fg.muted">
-          {groupLead(group)}
-        </Text>
-        <Text textStyle="label/XS/medium">
-          {group.rules.length} {group.rules.length === 1 ? "rule" : "rules"}
-        </Text>
-      </PillLabel>
-    </PillShell>
   );
 };
 

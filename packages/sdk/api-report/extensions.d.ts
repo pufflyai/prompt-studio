@@ -99,7 +99,7 @@ type ViewFilterRule = {
 };
 type ViewFilterGroup = {
   conjunction: "and" | "or";
-  rules: Array<ViewFilterRule | ViewFilterGroup>;
+  rules: ViewFilterRule[];
 };
 type ViewSortDirection = "asc" | "desc";
 type ViewSort = {

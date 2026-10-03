@@ -61,28 +61,21 @@ describe("deprecated kanban view fields", () => {
     });
   });
 
-  test("exact values on text, number, and date fields become is rules", () => {
-    expect(legacyRuleFor("parent", ["PS-100"], "string")).toEqual({
+  test("keeps exact scalar selections as lists", () => {
+    expect(legacyRuleFor("parent", ["PS-100", "ps-100"], "string")).toEqual({
       attributeId: "parent",
-      condition: "is",
-      value: "PS-100",
+      condition: "is-any-of",
+      value: ["PS-100", "ps-100"],
     });
     expect(legacyRuleFor("score", ["70", "80"], "number")).toEqual({
-      conjunction: "or",
-      rules: [
-        { attributeId: "score", condition: "is", value: 70 },
-        { attributeId: "score", condition: "is", value: 80 },
-      ],
+      attributeId: "score",
+      condition: "is-any-of",
+      value: ["70", "80"],
     });
     expect(legacyRuleFor("updated", ["2026-09-20T09:00:00.000Z"], "date")).toEqual({
       attributeId: "updated",
-      condition: "is",
-      value: "2026-09-20",
-    });
-    expect(legacyRuleFor("owner", ["alex"], undefined)).toEqual({
-      attributeId: "owner",
       condition: "is-any-of",
-      value: ["alex"],
+      value: ["2026-09-20T09:00:00.000Z"],
     });
   });
 
@@ -95,7 +88,6 @@ describe("deprecated kanban view fields", () => {
           { attributeId: "archived", condition: "is-any-of", value: ["archived"] },
           { attributeId: "status", condition: "is-none-of", value: ["done"] },
           { attributeId: "tags", condition: "has-any-of", value: [] },
-          { conjunction: "or", rules: [{ attributeId: "owner", condition: "is-any-of", value: ["alex"] }] },
         ],
       }),
     ).toEqual({ archived: ["active"] });

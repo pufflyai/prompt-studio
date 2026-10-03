@@ -94,7 +94,23 @@ export const registerBoardViewsSmokeTests = () => {
         settings: { viewMode: "list" },
       });
       cli("set-default", "--board", board, "--id", created.id);
-      cli("update", "--id", created.id, "--title", "Shared default");
+      const filter = {
+        conjunction: "or",
+        rules: [
+          { attributeId: "title", condition: "contains", value: "review" },
+          { attributeId: "status", condition: "is-any-of", value: ["done"] },
+        ],
+      };
+      const updated = cli(
+        "update",
+        "--id",
+        created.id,
+        "--title",
+        "Shared default",
+        "--filter-json",
+        JSON.stringify(filter),
+      );
+      expect(updated.filter).toEqual(filter);
       await stopProcess(child);
       runtime = await startPackagedServe(root, env);
       child = runtime.child;
@@ -104,6 +120,7 @@ export const registerBoardViewsSmokeTests = () => {
         expect.objectContaining({
           id: created.id,
           title: "Shared default",
+          filter,
           settings: expect.objectContaining({ viewMode: "list" }),
         }),
       );
@@ -112,7 +129,7 @@ export const registerBoardViewsSmokeTests = () => {
         expect.objectContaining({
           id: created.id,
           title: "Shared default",
-          filter: created.filter,
+          filter,
           sorts: created.sorts,
         }),
       );
@@ -120,7 +137,7 @@ export const registerBoardViewsSmokeTests = () => {
         expect.objectContaining({ id: expect.any(String), default_view_id: created.id }),
       );
       const copy = cli("create", "--board", board, "--title", "Copy", "--copy-from", created.id);
-      expect(copy).toMatchObject({ filter: created.filter, sorts: created.sorts });
+      expect(copy).toMatchObject({ filter, sorts: created.sorts });
       const ordered = cli("reorder", "--board", board, "--ids", `${copy.id},${created.id}`);
       expect(
         ordered.views.filter((view: { builtIn: boolean }) => !view.builtIn).map((view: { id: string }) => view.id),

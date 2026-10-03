@@ -26,6 +26,7 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const valueKind = (field: AttributeDescriptor, rule: ViewFilterRule) => {
   if (rule.condition === "is-empty" || rule.condition === "is-not-empty") return "none";
+  if (Array.isArray(rule.value)) return "options";
   if (field.type.kind === "boolean") return "boolean";
   if (field.type.kind === "number") return "number";
   if (field.type.kind === "date") return "day";
@@ -35,6 +36,13 @@ const valueKind = (field: AttributeDescriptor, rule: ViewFilterRule) => {
 
 const toggle = (values: string[], value: string) =>
   values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
+
+const withSavedOptions = (options: RuleValueOption[], rule: ViewFilterRule) => [
+  ...options,
+  ...listValue(rule)
+    .filter((value) => !options.some((option) => option.value === value))
+    .map<RuleValueOption>((value) => ({ value, label: value })),
+];
 
 const listValue = (rule: ViewFilterRule) => (Array.isArray(rule.value) ? rule.value : []);
 
@@ -93,7 +101,8 @@ const DayValue = (props: RuleValueProps) => {
 
 /** The value control inside a rule row. */
 export const RuleValueControl = (props: RuleValueProps) => {
-  const { field, rule, options, onChange } = props;
+  const { field, rule, options: suppliedOptions, onChange } = props;
+  const options = withSavedOptions(suppliedOptions, rule);
   const kind = valueKind(field, rule);
   if (kind === "none") return null;
   if (kind === "boolean")
@@ -118,7 +127,8 @@ export const RuleValueControl = (props: RuleValueProps) => {
 };
 
 const OptionChecklist = (props: RuleValueProps) => {
-  const { rule, options, onChange } = props;
+  const { rule, options: suppliedOptions, onChange } = props;
+  const options = withSavedOptions(suppliedOptions, rule);
   const [query, setQuery] = useState("");
   const selected = listValue(rule);
   const needle = query.trim().toLocaleLowerCase();

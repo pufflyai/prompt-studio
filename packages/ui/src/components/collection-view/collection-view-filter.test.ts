@@ -100,23 +100,15 @@ describe("view filters", () => {
     expect(only({ attributeId: "owner", condition: "is-empty" })).toEqual(["b", "c"]);
   });
 
-  test("an or group inside an and group", () => {
-    const filter: ViewFilterGroup = {
-      conjunction: "and",
-      rules: [
-        { attributeId: "status", condition: "is-none-of", value: ["done"] },
-        {
-          conjunction: "or",
-          rules: [
-            { attributeId: "owner", condition: "is-any-of", value: ["alex"] },
-            { attributeId: "score", condition: "gte", value: 70 },
-          ],
-        },
-      ],
-    };
-
-    expect(idsFor(filter)).toEqual(["a", "c"]);
-    expect(countFilterRules(filter)).toBe(3);
+  test("all rules use the selected conjunction", () => {
+    const rules: ViewFilterRule[] = [
+      { attributeId: "status", condition: "is-none-of", value: ["done"] },
+      { attributeId: "owner", condition: "is-any-of", value: ["alex"] },
+      { attributeId: "score", condition: "gte", value: 70 },
+    ];
+    expect(idsFor({ conjunction: "and", rules })).toEqual(["a"]);
+    expect(idsFor({ conjunction: "or", rules })).toEqual(["a", "c"]);
+    expect(countFilterRules({ conjunction: "and", rules })).toBe(3);
   });
 
   test("rules still being built or no longer fitting a field never hide rows", () => {
@@ -128,6 +120,9 @@ describe("view filters", () => {
 
   test("old exact-value lists keep matching text and number fields", () => {
     expect(only({ attributeId: "title", condition: "is-any-of", value: ["Harness params"] })).toEqual(["c"]);
+    expect(only({ attributeId: "title", condition: "is-any-of", value: ["harness params"] })).toEqual([]);
+    expect(only({ attributeId: "updated", condition: "is-any-of", value: ["2026-10-01T09:00:00"] })).toEqual(["a"]);
+    expect(only({ attributeId: "updated", condition: "is-any-of", value: ["2026-10-01T10:00:00"] })).toEqual([]);
     expect(only({ attributeId: "score", condition: "is-any-of", value: ["92", "70"] })).toEqual(["a", "c"]);
   });
 
