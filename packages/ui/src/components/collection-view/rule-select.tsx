@@ -64,6 +64,7 @@ export const RuleSelect = (props: RuleSelectProps) => {
         label: option.label,
         icon: option.icon,
         iconColor: option.iconColor,
+        variant: "compact",
         secondaryLabel: option.count === undefined ? undefined : String(option.count),
         isDisabled: option.disabled,
         isSelected: selected.includes(option.value),

@@ -23,10 +23,17 @@ export const viewFilterRuleSchema = z.object({
   condition: viewFilterConditionSchema,
   value: z.union([z.boolean(), z.string(), z.number(), z.array(z.string())]).optional(),
 });
-export const viewFilterGroupSchema = z.object({
+const advancedFilterGroupSchema = z.strictObject({
   conjunction: z.enum(["and", "or"]),
   rules: z.array(viewFilterRuleSchema),
 });
+export const viewFilterGroupSchema = advancedFilterGroupSchema
+  .extend({
+    groups: z.array(advancedFilterGroupSchema).optional(),
+  })
+  .refine((filter) => !filter.groups?.length || filter.conjunction === "and", {
+    message: "Normal rules and advanced groups combine using AND",
+  });
 
 const viewSortSchema = z.object({ attributeId: z.string().min(1), direction: z.enum(["asc", "desc"]) });
 export const viewSortsSchema = z.array(viewSortSchema).max(1, "A view allows only one sort");
@@ -98,7 +105,7 @@ const ruleProblem = (rule: ViewFilterRule, fields: ViewRuleField[]) => {
 
 /** The first reason the filter does not fit the fields, or undefined. */
 export const findViewFilterProblem = (filter: ViewFilterGroup, fields: ViewRuleField[]) => {
-  for (const rule of filter.rules) {
+  for (const rule of [...filter.rules, ...(filter.groups ?? []).flatMap((group) => group.rules)]) {
     const problem = ruleProblem(rule, fields);
     if (problem) return problem;
   }

@@ -137,6 +137,10 @@ const compileGroup = (group: ViewFilterGroup, fields: AttributeDescriptor[], tod
     const test = compileRule(rule, fields, today);
     return test ? [test] : [];
   });
+  for (const child of group.groups ?? []) {
+    const test = compileGroup(child, fields, today);
+    if (test) tests.push(test);
+  }
   if (tests.length === 0) return undefined;
   if (group.conjunction === "or") return (row) => tests.some((test) => test(row));
   return (row) => tests.every((test) => test(row));
@@ -154,4 +158,5 @@ export const filterRowsByView = <TRow extends KanbanRendererRow>(
 };
 
 /** The number of rules a person sees in the criteria row and the Filter button. */
-export const countFilterRules = (filter: ViewFilterGroup) => filter.rules.length;
+export const countFilterRules = (filter: ViewFilterGroup) =>
+  filter.rules.length + (filter.groups ?? []).reduce((count, group) => count + group.rules.length, 0);

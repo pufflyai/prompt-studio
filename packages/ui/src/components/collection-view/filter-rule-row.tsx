@@ -15,14 +15,14 @@ type Conjunction = ViewFilterGroup["conjunction"];
 interface RuleLeadProps {
   index: number;
   conjunction: Conjunction;
-  onConjunctionChange: (conjunction: Conjunction) => void;
+  onConjunctionChange?: (conjunction: Conjunction) => void;
 }
 
 /** A filter has one conjunction, so only its second rule offers a choice and later rules repeat it. */
 export const RuleLead = (props: RuleLeadProps) => {
   const { index, conjunction, onConjunctionChange } = props;
   const label = conjunction === "and" ? "And" : "Or";
-  if (index === 1)
+  if (index === 1 && onConjunctionChange)
     return (
       <RuleSelect
         aria-label="Conjunction"

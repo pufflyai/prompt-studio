@@ -46,6 +46,23 @@ const idsFor = (filter: ViewFilterGroup) => filterRowsByView(rows, filter, field
 const only = (rule: ViewFilterRule) => idsFor({ conjunction: "and", rules: [rule] });
 
 describe("view filters", () => {
+  test("normal rules combine with an advanced OR group using AND", () => {
+    const filter = {
+      conjunction: "and" as const,
+      rules: [{ attributeId: "score", condition: "gte" as const, value: 70 }],
+      groups: [
+        {
+          conjunction: "or" as const,
+          rules: [
+            { attributeId: "status", condition: "is-any-of" as const, value: ["done"] },
+            { attributeId: "owner", condition: "is-any-of" as const, value: ["alex"] },
+          ],
+        },
+      ],
+    };
+    expect(idsFor(filter)).toEqual(["a"]);
+    expect(countFilterRules(filter)).toBe(3);
+  });
   test("text conditions ignore case", () => {
     expect(only({ attributeId: "title", condition: "contains", value: "CHAT" })).toEqual(["a", "b"]);
     expect(only({ attributeId: "title", condition: "does-not-contain", value: "chat" })).toEqual(["c"]);

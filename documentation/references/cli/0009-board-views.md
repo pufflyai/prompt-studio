@@ -4,7 +4,7 @@ Saved views belong to a project and a board. A board is an extension view of kin
 
 A view has three parts:
 
-- `filter`: one root group of rules. A group joins its rules with one conjunction, `and` or `or`. All rules share that conjunction. Filters have one level.
+- `filter`: normal rules join with `and`. Optional `groups` hold one level of advanced rules, each with its own `and` or `or` conjunction. Normal rules and advanced groups combine using `and`. Existing whole-view `or` filters remain supported and appear as an Advanced filter bubble.
 - `sorts`: zero or one `{ attributeId, direction }` pair. Display settings own this single ordering. An empty list means manual order on a board and query order on a table.
 - `settings`: display settings for the board's kind.
 
@@ -44,21 +44,29 @@ Commands print JSON. Use `--project-id` outside a linked folder. `pst views boar
 
 Every kind also accepts `is-empty` and `is-not-empty`, which take no value. Relative days such as `today-7` resolve against the viewer's date each time the view opens. A field of kind `enum-multi` cannot be sorted.
 
-Use `--filter-json` for `or`. It takes a full filter group and cannot be combined with `--filter`:
+Use `--filter-json` for advanced groups or a whole-view `or`. It takes a full filter and cannot be combined with `--filter`. This example requires an unarchived ticket and either the selected assignee or a recent update:
 
 ```sh
 pst views update --id <viewId> --filter-json '{
-  "conjunction": "or",
+  "conjunction": "and",
   "rules": [
-    { "attributeId": "assignee", "condition": "is-any-of", "value": ["alex"] },
-    { "attributeId": "updated", "condition": "is-after", "value": "today-7" }
+    { "attributeId": "archived", "condition": "is", "value": false }
+  ],
+  "groups": [
+    {
+      "conjunction": "or",
+      "rules": [
+        { "attributeId": "assignee", "condition": "is-any-of", "value": ["alex"] },
+        { "attributeId": "updated", "condition": "is-after", "value": "today-7" }
+      ]
+    }
   ]
 }'
 ```
 
 `--sort <field>:asc|desc` sets the view's single sort. A second sort is rejected. `--filter none` and `--sort none` clear them. A board's card title is the built-in `string` field `title`.
 
-Filter pills have separate property, condition, and value controls. Option menus show “is” and “is not”; the stored condition follows the field type. Each value can be checked independently and shows its supplied icon and color.
+Filter pills have separate property, condition, and value controls. Option menus show “is” and “is not” for one value, or “is one of” and “is not one of” for multiple values; the stored condition follows the field type. Each value can be checked independently and shows its supplied icon and color. The normal filter menu uses AND. Add an Advanced filter bubble to choose AND or OR within a group. Groups cannot contain other groups.
 
 ## Display settings
 

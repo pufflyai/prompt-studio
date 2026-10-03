@@ -7,5 +7,9 @@ export const normalizeBooleanViewFilter = (filter: ViewFilterGroup, fields: Attr
     const field = fields.find((field) => field.id === rule.attributeId);
     return field ? normalizeBooleanViewRule(rule, field.type) : rule;
   });
-  return rules.some((rule, index) => rule !== filter.rules[index]) ? { ...filter, rules } : filter;
+  const groups = filter.groups?.map((group) => normalizeBooleanViewFilter(group, fields));
+  const changed =
+    rules.some((rule, index) => rule !== filter.rules[index]) ||
+    groups?.some((group, index) => group !== filter.groups?.[index]);
+  return changed ? { ...filter, rules, ...(groups ? { groups } : {}) } : filter;
 };

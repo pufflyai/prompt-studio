@@ -114,7 +114,7 @@ export const RuleValueControl = (props: RuleValueProps) => {
   if (kind === "none") return null;
   if (kind === "boolean")
     return (
-      <Text textStyle="label/S/medium" paddingX="xs">
+      <Text textStyle={props.variant === "filter-segment" ? "label/XS" : "label/S/medium"} paddingX="xs">
         {field.label}
       </Text>
     );
@@ -192,6 +192,7 @@ const OptionChecklist = (props: RuleValueProps) => {
                   {option.icon ? (
                     <Icon
                       as={getIconComponent(option.icon)}
+                      boxSize="3"
                       color={option.color ? `${option.color}.500` : "fg.muted"}
                     />
                   ) : null}

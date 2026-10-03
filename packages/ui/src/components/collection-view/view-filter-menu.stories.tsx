@@ -15,11 +15,17 @@ export default meta;
 
 type Story = StoryObj;
 
-const Menu = (props: { filter: ViewFilterGroup }) => {
+const Menu = (props: { filter: ViewFilterGroup; advanced?: boolean }) => {
   const [filter, setFilter] = useState(props.filter);
   return (
     <Box width="40rem" padding="2xs" borderWidth="1px" borderColor="border" borderRadius="md" bg="bg">
-      <ViewFilterMenu fields={storyFields} filter={filter} optionsFor={storyOptions} onChange={setFilter} />
+      <ViewFilterMenu
+        advanced={props.advanced}
+        fields={storyFields}
+        filter={filter}
+        optionsFor={storyOptions}
+        onChange={setFilter}
+      />
     </Box>
   );
 };
@@ -40,7 +46,7 @@ export const SimpleRules: Story = {
 
 /** Every rule uses the same And/Or choice. */
 export const AllOrAnyRules: Story = {
-  render: () => <Menu filter={storyFilter} />,
+  render: () => <Menu advanced filter={storyFilter} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Conjunction" }));

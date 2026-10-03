@@ -40,6 +40,9 @@ export const pillConditionLabel = (rule: ViewFilterRule, field?: AttributeDescri
   )
     return conditionLabel(rule.condition === "is" ? "is-not" : "is");
   const single = Array.isArray(rule.value) && rule.value.length === 1;
+  const many = Array.isArray(rule.value) && rule.value.length > 1;
+  if (many && ["is-any-of", "has-any-of"].includes(rule.condition)) return "is one of";
+  if (many && ["is-none-of", "has-none-of"].includes(rule.condition)) return "is not one of";
   if (single && rule.condition === "is-any-of") return "is";
   if (single && rule.condition === "is-none-of") return "is not";
   return conditionLabel(rule.condition, field);
