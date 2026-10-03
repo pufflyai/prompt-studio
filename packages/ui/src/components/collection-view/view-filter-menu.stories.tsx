@@ -38,14 +38,16 @@ export const SimpleRules: Story = {
   ),
 };
 
-/** "A and (B or C)": the root joins with And and the nested group joins with Or. */
-export const OrGroup: Story = {
+/** Every rule uses the same And/Or choice. */
+export const AllOrAnyRules: Story = {
   render: () => <Menu filter={storyFilter} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByTestId("filter-rule-group")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Add filter group" }));
-    await expect(canvas.getAllByTestId("filter-rule-group")).toHaveLength(2);
+    await userEvent.click(canvas.getByRole("button", { name: "Conjunction" }));
+    await userEvent.click(canvas.getByRole("menuitem", { name: "Or", exact: true }));
+    await expect(canvas.getByRole("button", { name: "Conjunction" })).toHaveTextContent("Or");
+    await userEvent.click(canvas.getAllByRole("button", { name: "Remove filter" })[0]!);
+    await expect(canvas.getAllByTestId("filter-rule-row")).toHaveLength(3);
   },
 };
 

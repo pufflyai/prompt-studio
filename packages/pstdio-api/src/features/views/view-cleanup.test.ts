@@ -23,16 +23,11 @@ test("saved enum filters migrate to booleans before generic field cleanup", () =
     sorts: [],
     filter: {
       conjunction: "and" as const,
-      rules: [
-        {
-          conjunction: "or" as const,
-          rules: [{ attributeId: "archived", condition: "is-any-of" as const, value: ["active"] }],
-        },
-      ],
+      rules: [{ attributeId: "archived", condition: "is-any-of" as const, value: ["active"] }],
     },
   };
   expect(cleanBoardView({ kind: "kanban", settings }, state, fields).filter).toEqual({
     conjunction: "and",
-    rules: [{ conjunction: "or", rules: [{ attributeId: "archived", condition: "is", value: false }] }],
+    rules: [{ attributeId: "archived", condition: "is", value: false }],
   });
 });

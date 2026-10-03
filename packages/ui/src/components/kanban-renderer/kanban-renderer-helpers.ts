@@ -1,7 +1,6 @@
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { createElement, type ReactNode } from "react";
 import { getAttributeStringValues, getAttributeValue } from "../collection-view/collection-view-fields";
-import { isFilterGroup } from "../collection-view/collection-view-filter";
 import { CollectionBadge } from "./collection-badge";
 import type { AttributeBadge } from "./kanban-renderer-badge-helpers";
 import { renderEnumBadge, renderMultiEnumBadge } from "./kanban-renderer-badge-helpers";
@@ -259,8 +258,7 @@ export const resolveKnownColumnKeys = (
   let keys = getEnumOptions(descriptor.type).map((option) => option.value);
   if (filter?.conjunction !== "and") return keys;
   for (const rule of filter.rules) {
-    if (isFilterGroup(rule) || rule.attributeId !== columnGrouping || !Array.isArray(rule.value) || !rule.value.length)
-      continue;
+    if (rule.attributeId !== columnGrouping || !Array.isArray(rule.value) || !rule.value.length) continue;
     const values = rule.value;
     if (rule.condition === "is-any-of") keys = keys.filter((key) => values.includes(key));
     if (rule.condition === "is-none-of") keys = keys.filter((key) => !values.includes(key));

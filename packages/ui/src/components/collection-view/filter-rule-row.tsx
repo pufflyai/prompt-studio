@@ -1,8 +1,9 @@
-import { HStack, Icon, IconButton, Menu, Text } from "@chakra-ui/react";
+import { HStack, Icon, IconButton, Text } from "@chakra-ui/react";
 import { normalizeBooleanViewRule, type ViewFilterGroup, type ViewFilterRule } from "@pstdio/sdk/extensions";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { X } from "lucide-react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { useCollectionItemLabel } from "./collection-item-label";
+import { fieldIcon } from "./collection-view-field-icon";
 import { findField } from "./collection-view-fields";
 import { newRule } from "./collection-view-rules";
 import { RuleValueControl, type RuleValueOption } from "./filter-rule-value";
@@ -17,7 +18,7 @@ interface RuleLeadProps {
   onConjunctionChange: (conjunction: Conjunction) => void;
 }
 
-/** A group has one conjunction, so only its second rule offers a choice and later rules repeat it. */
+/** A filter has one conjunction, so only its second rule offers a choice and later rules repeat it. */
 export const RuleLead = (props: RuleLeadProps) => {
   const { index, conjunction, onConjunctionChange } = props;
   const label = conjunction === "and" ? "And" : "Or";
@@ -38,32 +39,6 @@ export const RuleLead = (props: RuleLeadProps) => {
     <Text width="3.75rem" flexShrink={0} paddingX="xs" textStyle="label/S/regular" color="fg.muted">
       {index === 0 ? "Where" : label}
     </Text>
-  );
-};
-
-export interface RuleActionsMenuProps {
-  label: string;
-  onDelete: () => void;
-}
-
-export const RuleActionsMenu = (props: RuleActionsMenuProps) => {
-  const { label, onDelete } = props;
-  return (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton aria-label={label} variant="ghost" size="2xs" flexShrink={0}>
-          <Icon as={MoreHorizontal} />
-        </IconButton>
-      </Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content>
-          <Menu.Item value="delete" onClick={onDelete}>
-            <Icon as={Trash2} boxSize="0.875rem" />
-            Delete
-          </Menu.Item>
-        </Menu.Content>
-      </Menu.Positioner>
-    </Menu.Root>
   );
 };
 
@@ -88,7 +63,7 @@ export const FilterRuleRow = (props: FilterRuleRowProps) => {
         aria-label="Field"
         width="8.75rem"
         showSearch
-        options={fields.map((entry) => ({ value: entry.id, label: entry.label }))}
+        options={fields.map((entry) => ({ value: entry.id, label: entry.label, icon: fieldIcon(entry) }))}
         selectedLabel={field?.type.kind === "boolean" && typeof rule.value === "boolean" ? itemLabel : undefined}
         value={rule.attributeId}
         onSelect={(id) => {
@@ -112,7 +87,9 @@ export const FilterRuleRow = (props: FilterRuleRowProps) => {
         </Text>
       )}
       <HStack flex="1" />
-      <RuleActionsMenu label="Rule actions" onDelete={onDelete} />
+      <IconButton aria-label="Remove filter" variant="ghost" size="2xs" flexShrink={0} onClick={onDelete}>
+        <Icon as={X} />
+      </IconButton>
     </HStack>
   );
 };

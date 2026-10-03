@@ -33,8 +33,8 @@ export type ViewFilterRule = {
 
 export type ViewFilterGroup = {
   conjunction: "and" | "or";
-  /** The root group may hold rules and groups. A nested group may hold rules only. */
-  rules: Array<ViewFilterRule | ViewFilterGroup>;
+  /** All rules share one conjunction. Filters have one level. */
+  rules: ViewFilterRule[];
 };
 
 export type ViewSortDirection = "asc" | "desc";

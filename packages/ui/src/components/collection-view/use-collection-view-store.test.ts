@@ -85,7 +85,7 @@ describe("collection view store", () => {
     expect(store.getState()).toMatchObject({ filter: done, openRuleIndex: null, expandedGroups: {} });
   });
 
-  test("a new rule on an or filter opens the advanced filter instead of a pill", () => {
+  test("a new rule opens its editor with either conjunction", () => {
     const store = createCollectionViewStore({
       storageKey: "or-root",
       initialState: { settings, filter: { conjunction: "or", rules: [] } },
@@ -93,7 +93,7 @@ describe("collection view store", () => {
 
     store.getState().startRule(status);
 
-    expect(store.getState()).toMatchObject({ openMenu: "advanced", openRuleIndex: null });
+    expect(store.getState()).toMatchObject({ openMenu: null, openRuleIndex: 0 });
     expect(store.getState().filter.rules).toEqual([{ attributeId: "status", condition: "is-any-of" }]);
   });
 

@@ -24,12 +24,7 @@ export const storyFilter: ViewFilterGroup = {
   rules: [
     { attributeId: "status", condition: "is-none-of", value: ["done"] },
     { attributeId: "priority", condition: "is-any-of", value: ["high", "medium"] },
-    {
-      conjunction: "or",
-      rules: [
-        { attributeId: "assignee", condition: "is-any-of", value: ["Alex"] },
-        { attributeId: "updated", condition: "is-after", value: "today-7" },
-      ],
-    },
+    { attributeId: "assignee", condition: "is-any-of", value: ["Alex"] },
+    { attributeId: "updated", condition: "is-after", value: "today-7" },
   ],
 };

@@ -1,4 +1,4 @@
-import type { ViewFilterCondition, ViewFilterGroup, ViewFilterRule, ViewSortDirection } from "@pstdio/sdk/extensions";
+import type { ViewFilterCondition, ViewFilterRule, ViewSortDirection } from "@pstdio/sdk/extensions";
 import { enumOptionLabel } from "../kanban-renderer/kanban-renderer-enum-helpers";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 
@@ -70,12 +70,6 @@ export const ruleValueLabel = (rule: ViewFilterRule, field?: AttributeDescriptor
   if (field?.type.kind === "date" && typeof value === "string") return dayLabel(value);
   return String(value);
 };
-
-export const groupLead = (group: ViewFilterGroup) => (group.conjunction === "or" ? "Any of" : "All of");
-
-/** A nested group, or a root joined by "or", reads as one pill. */
-export const groupLabel = (group: ViewFilterGroup) =>
-  `${groupLead(group)} ${group.rules.length} ${group.rules.length === 1 ? "rule" : "rules"}`;
 
 const DIRECTION_LABELS: Record<string, [string, string]> = {
   boolean: ["False first", "True first"],

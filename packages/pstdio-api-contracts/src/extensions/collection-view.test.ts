@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
   findViewFilterProblem,
   findViewSortsProblem,
-  NESTED_GROUP_PROBLEM,
   type ViewRuleField,
   viewFilterGroupSchema,
 } from "./collection-view";
@@ -28,19 +27,23 @@ const filterOf = (rules: Parameters<typeof findViewFilterProblem>[0]["rules"]) =
 });
 
 describe("view filter validation", () => {
+  test("accepts exact lists from deprecated scalar filters when saving a view", () => {
+    const filter = filterOf([
+      { attributeId: "title", condition: "is-any-of", value: ["Chat", "chat"] },
+      { attributeId: "score", condition: "is-any-of", value: ["70", "80"] },
+      { attributeId: "updated", condition: "is-any-of", value: ["2026-10-02T09:00:00Z"] },
+    ]);
+    expect(viewFilterGroupSchema.safeParse(filter).success).toBe(true);
+    expect(findViewFilterProblem(filter, fields)).toBeUndefined();
+  });
   test("accepts rules that fit each field kind", () => {
     const filter = filterOf([
       { attributeId: "title", condition: "contains", value: "chat" },
       { attributeId: "score", condition: "gte", value: 70 },
       { attributeId: "updated", condition: "is-after", value: "today-7" },
       { attributeId: "status", condition: "is-none-of", value: ["done"] },
-      {
-        conjunction: "or",
-        rules: [
-          { attributeId: "tags", condition: "has-any-of", value: ["ui"] },
-          { attributeId: "updated", condition: "is-empty" },
-        ],
-      },
+      { attributeId: "tags", condition: "has-any-of", value: ["ui"] },
+      { attributeId: "updated", condition: "is-empty" },
     ]);
 
     expect(findViewFilterProblem(filter, fields)).toBeUndefined();
@@ -83,15 +86,6 @@ describe("view filter validation", () => {
 
   test("keeps rules that are still being built", () => {
     expect(findViewFilterProblem(filterOf([{ attributeId: "score", condition: "gt" }]), fields)).toBeUndefined();
-  });
-
-  test("refuses a group inside a nested group", () => {
-    const filter = filterOf([
-      { conjunction: "or", rules: [{ conjunction: "and", rules: [{ attributeId: "title", condition: "is-empty" }] }] },
-    ]);
-
-    expect(findViewFilterProblem(filter, fields)).toBe(NESTED_GROUP_PROBLEM);
-    expect(viewFilterGroupSchema.safeParse(filter).error?.issues[0]?.message).toBe(NESTED_GROUP_PROBLEM);
   });
 });
 

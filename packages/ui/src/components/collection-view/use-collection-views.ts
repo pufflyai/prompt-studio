@@ -3,7 +3,6 @@ import { useEffect, useRef } from "react";
 import { useStore } from "zustand";
 import { useKanbanRendererStorage } from "../kanban-renderer/kanban-renderer-storage";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
-import { isFilterGroup } from "./collection-view-filter";
 import {
   type CollectionSavedView,
   type CollectionViewState,
@@ -23,15 +22,11 @@ const comparableSettings = (settings: unknown) =>
 
 const comparableFilter = (filter: ViewFilterGroup): unknown => ({
   conjunction: filter.conjunction,
-  rules: filter.rules.map((rule) =>
-    isFilterGroup(rule)
-      ? comparableFilter(rule)
-      : {
-          attributeId: rule.attributeId,
-          condition: rule.condition,
-          value: Array.isArray(rule.value) ? [...rule.value].sort() : rule.value,
-        },
-  ),
+  rules: filter.rules.map((rule) => ({
+    attributeId: rule.attributeId,
+    condition: rule.condition,
+    value: Array.isArray(rule.value) ? [...rule.value].sort() : rule.value,
+  })),
 });
 
 /** Search never counts: it is screen state, so it never marks a view as changed. */

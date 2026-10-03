@@ -20338,7 +20338,7 @@
                       "type": "frame",
                       "id": "FpUeP",
                       "name": "cmp/RuleSelect",
-                      "context": "Compact select used inside filter and sort rules. Opens a SearchableMenu. Icon is optional (field type glyph). Width comes from the caller: fixed in rule rows so the columns of a rule list line up.",
+                      "context": "Compact select for filter and sort rules. Always show all choices, with a check on the selected value. Property choices have their type icons. Floating menus extend beyond parent popovers, sized to the viewport.",
                       "reusable": true,
                       "width": 140,
                       "height": 24,
@@ -20706,7 +20706,7 @@
                       "type": "frame",
                       "id": "MIZVS",
                       "name": "cmp/FilterRuleRow",
-                      "context": "One filter rule: field, operator, value. The first rule of a group reads Where; later rules show the group's conjunction. Only the second rule's conjunction is a select; the rest repeat it as text, because a group has one conjunction (And or Or), never a mix. Operators depend on the field type. Is empty and Is not empty hide the value select.",
+                      "context": "One filter rule in a single-level list. Where starts the list; And or Or joins all later rules. Field selectors show type icons and every option, with the selected option checked. Each rule ends with the same X delete control as a sort row.",
                       "reusable": true,
                       "width": 600,
                       "height": 28,
@@ -20805,7 +20805,7 @@
                           "id": "OdY3B",
                           "type": "ref",
                           "ref": "nvvgg",
-                          "name": "More",
+                          "name": "Remove filter",
                           "width": 24,
                           "height": 24,
                           "theme": {
@@ -20814,7 +20814,7 @@
                           },
                           "descendants": {
                             "k7mgm": {
-                              "icon": "ellipsis",
+                              "icon": "x",
                               "width": 12,
                               "height": 12
                             }
@@ -21048,7 +21048,7 @@
                       "type": "frame",
                       "id": "XrEDw",
                       "name": "cmp/CollectionViewBar",
-                      "context": "One view bar for the data table and both kanban displays. Left: saved views. Right: Search, Filter, Sort, Display. Filter and Sort show their rule count when the view has rules. The criteria row appears whenever the view has a sort or a filter, saved or not, so nothing that hides rows is ever invisible. Search is not part of the view: it never marks the tab as changed and never shows in the criteria row. Search, Filter, Sort, and Display have matching hover and focus tooltips. Each popover opens 8px below its own trigger and right-aligns to it.",
+                      "context": "Collection view bar with flat filter pills. All rules share one And/Or choice in the Filter menu. No filter groups or advanced mode.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "#00000000",
@@ -21361,24 +21361,6 @@
                               }
                             },
                             {
-                              "id": "b1rgq",
-                              "type": "ref",
-                              "ref": "IZ2hX",
-                              "name": "Filter · Group",
-                              "descendants": {
-                                "SCREL": {
-                                  "content": "Any of"
-                                },
-                                "zwIz1": {
-                                  "content": "",
-                                  "enabled": false
-                                },
-                                "N5wsTd": {
-                                  "content": "2 rules"
-                                }
-                              }
-                            },
-                            {
                               "id": "jaLn7",
                               "type": "ref",
                               "ref": "c24zV7",
@@ -21492,9 +21474,6 @@
                             },
                             "FVm2G/N5wsTd": {
                               "content": "design, platform"
-                            },
-                            "b1rgq": {
-                              "enabled": false
                             }
                           }
                         },
@@ -22246,9 +22225,6 @@
                             },
                             "FVm2G/N5wsTd": {
                               "content": "70"
-                            },
-                            "b1rgq": {
-                              "enabled": false
                             }
                           }
                         },
@@ -26116,9 +26092,8 @@
                       "type": "frame",
                       "id": "GzF1C",
                       "name": "cmp/ViewFilterMenu",
-                      "context": "Advanced filter. Rules combine with one conjunction per group. A group nests one level deep, which covers 'A and (B or C)' without becoming a query language. The quick property picker (cmp/KanbanRendererFilterMenu) still adds 'is any of' rules; this menu opens when a view already has rules, or from 'Advanced filter'.",
+                      "context": "The only filter editor. A single flat list of rules with one And or Or conjunction. Every row has a property icon and an X delete control. Add a rule or delete filters; there are no nested groups.",
                       "reusable": true,
-                      "clip": true,
                       "width": 640,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
@@ -26241,147 +26216,6 @@
                                   "content": "High, Urgent"
                                 }
                               }
-                            },
-                            {
-                              "type": "frame",
-                              "id": "b97hZ",
-                              "name": "Rule · Group",
-                              "width": "fill_container",
-                              "gap": 6,
-                              "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "lkKUs",
-                                  "name": "Conjunction",
-                                  "width": 60,
-                                  "height": 24,
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "ZHpOY",
-                                      "name": "And",
-                                      "fill": "$ds-fg-muted",
-                                      "content": "And",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "zpWtI",
-                                  "name": "Group",
-                                  "width": "fill_container",
-                                  "fill": "$ds-bg-subtle",
-                                  "cornerRadius": 6,
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "layout": "vertical",
-                                  "gap": 6,
-                                  "padding": 8,
-                                  "children": [
-                                    {
-                                      "id": "afKDg",
-                                      "type": "ref",
-                                      "ref": "MIZVS",
-                                      "name": "Rule · Assignee",
-                                      "width": "fill_container",
-                                      "descendants": {
-                                        "zG1ZH": {
-                                          "enabled": true,
-                                          "content": "Where"
-                                        },
-                                        "HDXGT": {
-                                          "enabled": false
-                                        },
-                                        "HDXGT/b1L0Y": {
-                                          "content": "Where"
-                                        },
-                                        "JVfto/qARZy": {
-                                          "icon": "user"
-                                        },
-                                        "JVfto/b1L0Y": {
-                                          "content": "Assignee"
-                                        },
-                                        "MsUBA/b1L0Y": {
-                                          "content": "is any of"
-                                        },
-                                        "kYV23": {
-                                          "enabled": true
-                                        },
-                                        "kYV23/qARZy": {
-                                          "icon": "circle-user"
-                                        },
-                                        "kYV23/b1L0Y": {
-                                          "content": "Alex"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "N1FOKI",
-                                      "type": "ref",
-                                      "ref": "MIZVS",
-                                      "name": "Rule · Updated",
-                                      "width": "fill_container",
-                                      "descendants": {
-                                        "zG1ZH": {
-                                          "enabled": false,
-                                          "content": "Or▾"
-                                        },
-                                        "HDXGT": {
-                                          "enabled": true
-                                        },
-                                        "HDXGT/b1L0Y": {
-                                          "content": "Or"
-                                        },
-                                        "JVfto/qARZy": {
-                                          "icon": "calendar"
-                                        },
-                                        "JVfto/b1L0Y": {
-                                          "content": "Updated"
-                                        },
-                                        "MsUBA/b1L0Y": {
-                                          "content": "is after"
-                                        },
-                                        "kYV23": {
-                                          "enabled": true
-                                        },
-                                        "kYV23/qARZy": {
-                                          "icon": "calendar-clock"
-                                        },
-                                        "kYV23/b1L0Y": {
-                                          "content": "7 days ago"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "id": "hphY5",
-                                      "type": "ref",
-                                      "ref": "c24zV7",
-                                      "name": "Add rule to group",
-                                      "height": 24,
-                                      "theme": {
-                                        "btn": "ghost",
-                                        "size": "2xs"
-                                      },
-                                      "descendants": {
-                                        "DsEVd": {
-                                          "enabled": true,
-                                          "icon": "plus",
-                                          "width": 12,
-                                          "height": 12
-                                        },
-                                        "Hf4GT": {
-                                          "content": "Add filter rule"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                }
-                              ]
                             }
                           ]
                         },
@@ -26440,28 +26274,6 @@
                               }
                             },
                             {
-                              "id": "vXihQ",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Add group",
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": true,
-                                  "icon": "list-plus",
-                                  "width": 12,
-                                  "height": 12
-                                },
-                                "Hf4GT": {
-                                  "content": "Add filter group"
-                                }
-                              }
-                            },
-                            {
                               "type": "frame",
                               "id": "d5H7uQ",
                               "name": "Sp",
@@ -26498,9 +26310,8 @@
                       "type": "frame",
                       "id": "Fg2fR",
                       "name": "cmp/ViewFilterRuleEditor",
-                      "context": "Opens from a filter pill. Edits that one rule in place: the operator select at the top, then the value control for the field type. Options fields list their options with a check; text fields show an input; dates show a date and relative choices. The menu carries Delete filter and Move to advanced filter.",
+                      "context": "Opens from a filter pill. The header has its subject, operator, and X delete control. Nested option menus extend beyond the editor and show every choice with a check for the selected choice.",
                       "reusable": true,
-                      "clip": true,
                       "width": 300,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
@@ -26561,7 +26372,7 @@
                               "id": "Rw39P",
                               "type": "ref",
                               "ref": "nvvgg",
-                              "name": "More",
+                              "name": "Remove filter",
                               "width": 24,
                               "height": 24,
                               "theme": {
@@ -26570,7 +26381,7 @@
                               },
                               "descendants": {
                                 "k7mgm": {
-                                  "icon": "ellipsis",
+                                  "icon": "x",
                                   "width": 12,
                                   "height": 12
                                 }
@@ -26753,9 +26564,8 @@
                       "type": "frame",
                       "id": "M8FhE",
                       "name": "cmp/ViewSortMenu",
-                      "context": "Sort levels in priority order. Boards sort cards inside each column; column order still follows the grouping field's options. With no sort, a board that supports reordering keeps its manual drag order.",
+                      "context": "Sort levels in priority order. Property selectors show type icons. Direction menus extend beyond the parent and show both choices with the selected one checked. Deleting the last sort closes the menu before its criteria anchor disappears.",
                       "reusable": true,
-                      "clip": true,
                       "width": 400,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
@@ -26813,7 +26623,7 @@
                               "width": "fill_container",
                               "descendants": {
                                 "nEeEK/qARZy": {
-                                  "icon": "signal"
+                                  "icon": "circle-dashed"
                                 },
                                 "nEeEK/b1L0Y": {
                                   "content": "Priority"
@@ -35505,9 +35315,6 @@
                         },
                         "FVm2G/N5wsTd": {
                           "content": "design, platform"
-                        },
-                        "b1rgq": {
-                          "enabled": false
                         }
                       }
                     },
@@ -64766,9 +64573,6 @@
                     },
                     "FVm2G/N5wsTd": {
                       "content": "design, platform"
-                    },
-                    "b1rgq": {
-                      "enabled": false
                     }
                   }
                 },
@@ -128160,9 +127964,6 @@
                     "FVm2G/N5wsTd": {
                       "content": "design, platform"
                     },
-                    "b1rgq": {
-                      "enabled": false
-                    },
                     "n267u": {
                       "enabled": false
                     },
@@ -129011,9 +128812,6 @@
                       "content": "Priority"
                     },
                     "FVm2G": {
-                      "enabled": false
-                    },
-                    "b1rgq": {
                       "enabled": false
                     }
                   }
@@ -130591,9 +130389,6 @@
                       "enabled": false
                     },
                     "FVm2G": {
-                      "enabled": false
-                    },
-                    "b1rgq": {
                       "enabled": false
                     }
                   }

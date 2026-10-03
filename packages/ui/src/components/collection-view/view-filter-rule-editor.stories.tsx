@@ -26,7 +26,6 @@ const Editor = (props: { rule: ViewFilterRule }) => {
         options={storyOptions(field)}
         onChange={setRule}
         onDelete={() => undefined}
-        onOpenAdvanced={() => undefined}
       />
     </Box>
   );

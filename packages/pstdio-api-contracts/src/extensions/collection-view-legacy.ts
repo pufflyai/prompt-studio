@@ -9,35 +9,20 @@ import type {
   ViewFilterRule,
   ViewSort,
 } from "../extension-kernel/types";
-import { isViewFilterGroup } from "./collection-view";
 
 type FieldKinds = Partial<Record<string, ViewFieldKind>>;
 type Ordering = KanbanRendererSettings["ordering"];
 
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
-
-/**
- * The old filter picked exact values for every field. Option fields keep "any of"; text, number,
- * and date fields become "is" rules, joined by "or" when several values were picked.
- */
+/** Deprecated filter maps use exact membership, with OR within each field's selected values. */
 export const legacyRuleFor = (
   attributeId: string,
   values: string[],
   kind: ViewFieldKind | undefined,
-): ViewFilterRule | ViewFilterGroup | undefined => {
-  if (kind === "enum-multi") return { attributeId, condition: "has-any-of", value: [...values] };
-  if (kind !== "string" && kind !== "number" && kind !== "date")
-    return { attributeId, condition: "is-any-of", value: [...values] };
-  const rules = values.flatMap((value): ViewFilterRule[] => {
-    if (kind === "string") return [{ attributeId, condition: "is", value }];
-    if (kind === "number")
-      return Number.isFinite(Number(value)) ? [{ attributeId, condition: "is", value: Number(value) }] : [];
-    const day = ISO_DAY.exec(value)?.[0];
-    return day ? [{ attributeId, condition: "is", value: day }] : [];
-  });
-  if (rules.length <= 1) return rules[0];
-  return { conjunction: "or", rules };
-};
+): ViewFilterRule => ({
+  attributeId,
+  condition: kind === "enum-multi" ? "has-any-of" : "is-any-of",
+  value: [...values],
+});
 
 export const viewFilterFromLegacyFilters = (
   filters: KanbanRendererFilterState | undefined,
@@ -63,7 +48,7 @@ export const legacyFiltersFromViewFilter = (filter: ViewFilterGroup) => {
   const filters: KanbanRendererFilterState = {};
   if (filter.conjunction !== "and") return filters;
   for (const rule of filter.rules) {
-    if (isViewFilterGroup(rule) || filters[rule.attributeId]) continue;
+    if (filters[rule.attributeId]) continue;
     if (rule.condition !== "is-any-of" && rule.condition !== "has-any-of") continue;
     if (Array.isArray(rule.value) && rule.value.length > 0) filters[rule.attributeId] = [...rule.value];
   }

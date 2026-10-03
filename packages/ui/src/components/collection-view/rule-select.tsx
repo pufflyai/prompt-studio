@@ -7,6 +7,7 @@ export interface RuleSelectOption {
   value: string;
   label: string;
   icon?: ElementType;
+  disabled?: boolean;
 }
 
 export interface RuleSelectProps {
@@ -39,6 +40,7 @@ export const RuleSelect = (props: RuleSelectProps) => {
   return (
     <SearchableMenu
       portalled={false}
+      positioning={{ strategy: "fixed", hideWhenDetached: true }}
       closeOnSelect={!multiple}
       showSearch={showSearch ?? options.length > 8}
       searchPlaceholder="Search…"
@@ -52,6 +54,7 @@ export const RuleSelect = (props: RuleSelectProps) => {
         id: option.value,
         label: option.label,
         icon: option.icon,
+        isDisabled: option.disabled,
         isSelected: selected.includes(option.value),
         onSelect: () => onSelect(option.value),
       }))}

@@ -9,7 +9,6 @@ import {
 } from "../extension-kernel/types/collection-view";
 
 export const EMPTY_VIEW_FILTER: ViewFilterGroup = { conjunction: "and", rules: [] };
-export const NESTED_GROUP_PROBLEM = "A nested group may hold rules only";
 export const VIEW_DAY_PATTERN = /^(\d{4}-\d{2}-\d{2}|today([+-]\d+)?)$/;
 
 const conditionIds = [...new Set(Object.values(VIEW_FILTER_CONDITIONS).flat())] as [
@@ -24,25 +23,17 @@ export const viewFilterRuleSchema = z.object({
   condition: viewFilterConditionSchema,
   value: z.union([z.boolean(), z.string(), z.number(), z.array(z.string())]).optional(),
 });
-const groupOf = <T extends z.ZodType>(rule: T) =>
-  z.object({ conjunction: z.enum(["and", "or"]), rules: z.array(rule) });
-
-export const isViewFilterGroup = (rule: ViewFilterRule | ViewFilterGroup): rule is ViewFilterGroup =>
-  "conjunction" in rule;
-
-const hasTooDeepGroup = (filter: ViewFilterGroup) =>
-  filter.rules.some((rule) => isViewFilterGroup(rule) && rule.rules.some(isViewFilterGroup));
-
-// The shape accepts one level more than the model allows, so the refine can explain the limit.
-export const viewFilterGroupSchema = groupOf(
-  z.union([viewFilterRuleSchema, groupOf(z.union([viewFilterRuleSchema, groupOf(viewFilterRuleSchema)]))]),
-).refine((filter) => !hasTooDeepGroup(filter), { message: NESTED_GROUP_PROBLEM });
+export const viewFilterGroupSchema = z.object({
+  conjunction: z.enum(["and", "or"]),
+  rules: z.array(viewFilterRuleSchema),
+});
 
 export const viewSortSchema = z.object({ attributeId: z.string().min(1), direction: z.enum(["asc", "desc"]) });
 
 /** What a rule's value must be for a condition the field kind accepts. */
 export const viewFilterValueKind = (kind: ViewFieldKind, condition: ViewFilterCondition) => {
   if (condition === "is-empty" || condition === "is-not-empty") return "none" as const;
+  if (condition === "is-any-of") return "options" as const;
   if (kind === "boolean") return "boolean" as const;
   if (kind === "number") return "number" as const;
   if (kind === "date") return "day" as const;
@@ -88,7 +79,9 @@ const ruleProblem = (rule: ViewFilterRule, fields: ViewRuleField[]) => {
   if (!field)
     return `Invalid filter field "${rule.attributeId}". Valid IDs: ${filterable.map((field) => field.id).join(", ")}`;
   const conditions = VIEW_FILTER_CONDITIONS[field.kind];
-  if (!conditions.includes(rule.condition))
+  // Deprecated filter maps used exact value lists on scalar fields too. Keep them editable.
+  const legacyList = rule.condition === "is-any-of" && ["string", "number", "date"].includes(field.kind);
+  if (!conditions.includes(rule.condition) && !legacyList)
     return `Field "${field.id}" does not accept "${rule.condition}". Valid conditions: ${conditions.join(", ")}`;
   const valueKind = viewFilterValueKind(field.kind, rule.condition);
   if (!valueFits(rule.value, valueKind))
@@ -103,9 +96,7 @@ const ruleProblem = (rule: ViewFilterRule, fields: ViewRuleField[]) => {
 
 /** The first reason the filter does not fit the fields, or undefined. */
 export const findViewFilterProblem = (filter: ViewFilterGroup, fields: ViewRuleField[]) => {
-  if (hasTooDeepGroup(filter)) return NESTED_GROUP_PROBLEM;
-  const rules = filter.rules.flatMap((rule) => (isViewFilterGroup(rule) ? rule.rules : [rule])) as ViewFilterRule[];
-  for (const rule of rules) {
+  for (const rule of filter.rules) {
     const problem = ruleProblem(rule, fields);
     if (problem) return problem;
   }

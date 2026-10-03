@@ -52,7 +52,7 @@ export const ViewBarPopover = (props: ViewBarPopoverProps) => {
             maxWidth="calc(100vw - 32px)"
             padding={padding}
             gap="0"
-            overflow="hidden"
+            overflow="visible"
           >
             {children}
           </Popover.Content>

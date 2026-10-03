@@ -3,7 +3,7 @@ import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Settings2 } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { CollectionViewBar } from "./collection-view-bar";
 import { storyFields, storyFilter, storyOptions } from "./collection-view-story-fixtures";
 import { type CollectionSavedView, EMPTY_VIEW_FILTER } from "./collection-view-types";
@@ -160,5 +160,40 @@ export const BooleanPredicate: Story = {
     await userEvent.click(body.getByRole("button", { name: "Condition" }));
     await userEvent.click(body.getByRole("menuitem", { name: "is", exact: true }));
     await expect(pill).toHaveTextContent("Ticket isArchived");
+  },
+};
+
+/** Both directions remain visible and the last sort closes its disappearing pill's popover. */
+export const NestedSortChoices: Story = {
+  render: () => <Bar storageKey="storybook-sort-choices" sorts={[{ attributeId: "updated", direction: "desc" }]} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "Sorted by Updated" }));
+    await userEvent.click(await body.findByRole("button", { name: "Sort direction" }));
+    const menu = await body.findByRole("menu");
+    const newest = within(menu).getByRole("menuitem", { name: "Newest first" });
+    const oldest = within(menu).getByRole("menuitem", { name: "Oldest first" });
+    await expect(newest.querySelector(".lucide-check")).toBeInTheDocument();
+    await waitFor(() => {
+      const bounds = menu.getBoundingClientRect();
+      for (const option of [newest, oldest]) {
+        const row = option.getBoundingClientRect();
+        expect(row.top).toBeGreaterThanOrEqual(bounds.top);
+        expect(row.bottom).toBeLessThanOrEqual(bounds.bottom);
+      }
+    });
+    await userEvent.click(oldest);
+    await userEvent.click(body.getByRole("button", { name: "Sort direction" }));
+    const reopened = await body.findByRole("menu");
+    await expect(
+      within(reopened).getByRole("menuitem", { name: "Oldest first" }).querySelector(".lucide-check"),
+    ).toBeInTheDocument();
+    await userEvent.click(within(reopened).getByRole("menuitem", { name: "Newest first" }));
+    await expect(body.getByRole("button", { name: "Sort direction" })).toHaveTextContent("Newest first");
+    await userEvent.click(body.getByRole("button", { name: "Delete sort", exact: true }));
+    await waitFor(() => expect(body.queryByTestId("view-sort-popover")).not.toBeInTheDocument());
+    await userEvent.click(canvas.getByRole("button", { name: "Sort", exact: true }));
+    await waitFor(() => expect(body.getByText("No sorts. Rows keep their own order.")).toBeVisible());
   },
 };

@@ -22,7 +22,7 @@ test("boolean predicates compare actual truth values", () => {
   expect(select("is-not", false)).toEqual(["0", "2"]);
 });
 
-test("saved boolean rules normalize inside groups and preserve both-value predicates", () => {
+test("saved boolean rules normalize and preserve both-value predicates", () => {
   const migratedFields: AttributeDescriptor[] = [
     { ...fields[0]!, type: { kind: "boolean", legacyValues: { active: false, archived: true } } },
   ];
@@ -30,18 +30,12 @@ test("saved boolean rules normalize inside groups and preserve both-value predic
     conjunction: "or" as const,
     rules: [
       { attributeId: "archived", condition: "is-none-of" as const, value: ["active", "archived"] },
-      {
-        conjunction: "and" as const,
-        rules: [{ attributeId: "archived", condition: "is-any-of" as const, value: ["active"] }],
-      },
+      { attributeId: "archived", condition: "is-any-of" as const, value: ["active"] },
     ],
   };
   const normalized = normalizeBooleanViewFilter(filter, migratedFields);
   expect(normalized.rules[0]).toEqual({ attributeId: "archived", condition: "is-empty" });
-  expect(normalized.rules[1]).toEqual({
-    conjunction: "and",
-    rules: [{ attributeId: "archived", condition: "is", value: false }],
-  });
+  expect(normalized.rules[1]).toEqual({ attributeId: "archived", condition: "is", value: false });
   const tickets = rows.slice(0, 2);
   expect(filterRowsByView(tickets, filter, migratedFields).map((row) => row.id)).toEqual(["1"]);
   expect(normalizeBooleanViewFilter(normalized, migratedFields)).toBe(normalized);

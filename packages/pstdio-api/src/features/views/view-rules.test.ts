@@ -51,7 +51,6 @@ test("cleans removed fields, options, and sorts using valid board defaults", () 
         { attributeId: "status", condition: "is-any-of", value: ["todo", "deleted"] },
         { attributeId: "status", condition: "is-none-of", value: ["deleted"] },
         { attributeId: "missing", condition: "is", value: "anything" },
-        { conjunction: "or", rules: [{ attributeId: "missing", condition: "is", value: "x" }] },
       ),
       sorts: [
         { attributeId: "gone", direction: "asc" },
@@ -67,7 +66,7 @@ test("cleans removed fields, options, and sorts using valid board defaults", () 
   });
 });
 
-test("cleanup maps option conditions, converts old exact values, and keeps rules that stopped fitting", () => {
+test("cleanup maps option conditions, preserves exact lists, and keeps rules that stopped fitting", () => {
   const result = cleanBoardView(
     { kind: "kanban", settings: board },
     {
@@ -86,13 +85,7 @@ test("cleanup maps option conditions, converts old exact values, and keeps rules
     and(
       { attributeId: "tags", condition: "has-any-of", value: ["bug"] },
       { attributeId: "status", condition: "is-none-of", value: ["todo"] },
-      {
-        conjunction: "or",
-        rules: [
-          { attributeId: "parent", condition: "is", value: "PS-1" },
-          { attributeId: "parent", condition: "is", value: "PS-2" },
-        ],
-      },
+      { attributeId: "parent", condition: "is-any-of", value: ["PS-1", "PS-2"] },
       { attributeId: "score", condition: "contains", value: "7" },
     ),
   );
@@ -109,11 +102,6 @@ test("refuses rules and sorts the board's fields do not accept, listing the vali
     'Invalid filter value "deleted" for "status". Valid values: todo',
   );
   expect(check(and({ attributeId: "missing", condition: "is", value: "x" }))).toThrow("status, tags, score, parent");
-  const tooDeep = {
-    conjunction: "and",
-    rules: [{ conjunction: "or", rules: [{ conjunction: "and", rules: [] }] }],
-  } as unknown as ViewFilterGroup;
-  expect(check(tooDeep)).toThrow("A nested group may hold rules only");
   expect(check(and(), [{ attributeId: "tags", direction: "asc" }])).toThrow("Valid IDs: status, score, parent");
   expect(check(and({ attributeId: "score", condition: "gte", value: 70 }))).not.toThrow();
 });
