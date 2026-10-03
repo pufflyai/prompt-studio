@@ -243,6 +243,8 @@ A view with `body.kind: "webview"` points at an entry with `packageAsset()`. Dec
 webview needs, such as `commands.execute`, `navigation.open`, `notification.show`, `preferences.get`, and
 `preferences.set`. Settings panels and status-bar items reference that view instead of declaring another body.
 
+To copy text, declare `clipboard.write` and call `navigator.clipboard.writeText(text)` from a click handler inside the webview. The host delegates `clipboard-write` only to declared views. This is a browser permission, not a bridge method. Clipboard reads remain blocked. `@pstdio/ui` exports `CopyButton` for this action.
+
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
 
 A webview can read files from an artifact mount its extension defines. Declare one grant per mount with

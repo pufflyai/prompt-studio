@@ -144,7 +144,9 @@ export const SelectionInput = (props: SelectionInputProps) => {
       triggerLabel={
         <>
           {selectionOptionIcon(triggerOption, "14px")}
-          {getDisplayText()}
+          <Box as="span" truncate>
+            {getDisplayText()}
+          </Box>
         </>
       }
       options={availableOptions}
@@ -175,7 +177,8 @@ export const SelectionInput = (props: SelectionInputProps) => {
   return (
     <Box>
       <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
-        {label}
+        {/* A long value truncates in its button instead of squeezing out the label. */}
+        {label ? <Box flexShrink={0}>{label}</Box> : null}
         {menu}
       </Flex>
     </Box>

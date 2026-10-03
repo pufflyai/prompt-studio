@@ -40,3 +40,5 @@ Declare direct dependencies in the consuming package. A helper workspace can exp
 `workspace:*` is appropriate only inside a workspace containing that dependency. A portable extension install needs published versions or packaged local dependencies. For local dependency fixtures, follow the directory and symlink rules in [validation](validation.md); do not assume the author's repository `node_modules` will be available on another machine.
 
 A host reload defect, package resolver defect, or shared UI initialization defect belongs to the platform. Do not add aliases, global initialization hacks, or chrome overrides to these general examples. Report the failing entry and versions, and keep any necessary temporary exception with its owning ADR rather than teaching it as the normal authoring pattern.
+
+For copy actions, add `clipboard.write` to the view capabilities and use `CopyButton` from `@pstdio/ui`. Writes happen in the guest click handler; there is no clipboard bridge method. Clipboard reads are not supported.

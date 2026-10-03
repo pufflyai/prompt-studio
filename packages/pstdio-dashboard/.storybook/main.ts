@@ -12,6 +12,7 @@ const rootDir = dirname(fileURLToPath(import.meta.url));
 const config: StorybookConfig = {
   stories: [
     "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+    "../../../.pstdio/extensions/social-radar/src/**/*.stories.tsx",
     "../../../extensions/pstdio-artifacts/src/**/*.stories.tsx",
     "../../../extensions/pstdio-planner/src/**/*.stories.tsx",
   ],
