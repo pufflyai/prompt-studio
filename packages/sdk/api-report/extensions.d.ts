@@ -1260,6 +1260,12 @@ declare const harnessCommandStateSchema: z.ZodObject<{
     state: z.ZodString;
     tagText: z.ZodOptional<z.ZodString>;
     closeActionId: z.ZodOptional<z.ZodString>;
+    confirmation: z.ZodOptional<z.ZodObject<{
+      id: z.ZodString;
+      title: z.ZodString;
+      actionId: z.ZodString;
+      cancelLabel: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
     actions: z.ZodArray<z.ZodObject<{
       id: z.ZodString;
       label: z.ZodString;

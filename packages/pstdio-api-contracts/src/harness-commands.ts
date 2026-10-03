@@ -40,6 +40,16 @@ export const harnessModeSchema = z.object({
   tagText: z.string().optional(),
   /** An advertised native action to invoke when the person closes the tag. */
   closeActionId: z.string().optional(),
+  /** An explicit native decision, presented as a modal rather than a status surface. */
+  confirmation: z
+    .object({
+      /** Native revision identity. Pass it as the advertised action's argument. */
+      id: z.string(),
+      title: z.string(),
+      actionId: z.string(),
+      cancelLabel: z.string().optional(),
+    })
+    .optional(),
   actions: z.array(harnessModeActionSchema),
 });
 export const harnessCommandStateSchema = z.object({

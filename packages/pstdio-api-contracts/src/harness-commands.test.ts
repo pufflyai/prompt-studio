@@ -35,3 +35,26 @@ test("accepts existing command presentations without tagged input", () => {
   };
   expect(harnessCommandStateSchema.parse(state)).toEqual(state);
 });
+
+test("preserves a provider-owned mode confirmation and its native revision", () => {
+  const state = {
+    slashCommands: true,
+    commands: [],
+    modes: [
+      {
+        id: "planning",
+        label: "Plan",
+        description: "Build the agreed feature.",
+        state: "Awaiting approval",
+        confirmation: {
+          id: "native-plan-revision",
+          title: "Approve plan",
+          actionId: "implement",
+          cancelLabel: "Keep planning",
+        },
+        actions: [{ id: "implement", label: "Approve and implement" }],
+      },
+    ],
+  };
+  expect(harnessCommandStateSchema.parse(state)).toEqual(state);
+});
