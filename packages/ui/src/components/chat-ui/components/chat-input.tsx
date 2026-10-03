@@ -1,7 +1,7 @@
 import { Box, Button, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
-import { getTextFromSerializedEditorState, PromptEditor, type ReferenceItem } from "../../rich-text";
+import { getTextFromSerializedEditorState, type PromptCommand, PromptEditor } from "../../rich-text";
 import {
   type ChatInputAction,
   resolveChatInputButtonAction,
@@ -52,8 +52,7 @@ export interface ChatInputProps {
   autoFocus?: boolean;
   focusSignal?: number;
   submitTitle?: string;
-  references?: ReferenceItem[];
-  onAddReference?: (resourceId: string, resourceType: ReferenceItem["resourceType"]) => void;
+  commands?: PromptCommand[];
 }
 
 const ChatInputPlaceholder = (props: { placeholder?: string }) => {
@@ -123,8 +122,7 @@ export const ChatInput = (props: ChatInputProps) => {
     autoFocus = false,
     focusSignal = 0,
     submitTitle,
-    references = [],
-    onAddReference,
+    commands = [],
   } = props;
 
   const restingBorderColor = recessed ? "border.subtle" : "border";
@@ -298,8 +296,7 @@ export const ChatInput = (props: ChatInputProps) => {
                   history.change(nextText);
                 }}
                 onSubmit={() => runAction(resolveChatInputKeyboardAction(actionState))}
-                references={references}
-                onAddReference={onAddReference}
+                commands={commands}
               />
             </Flex>
           </ScrollArea>

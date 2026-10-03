@@ -238,6 +238,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             chatInputDefaultValue={chatDraft.seed}
             onChatInputChange={commandComposer.change}
             composerHeader={commandComposer.header}
+            chatInputCommands={commandComposer.suggestions}
             attachedResources={attachedResources}
             actions={
               <>

@@ -11,38 +11,26 @@ const meta: Meta<typeof HarnessControls> = {
   component: HarnessControls,
   args: {
     query: "/",
-    commands: [
-      { name: "/plan", description: "Select native planning.", argumentHelp: "[task]" },
-      { name: "/compact", description: "Compact this thread." },
-    ],
     modes: [],
-    onInsert: () => {},
     onLiteralChange: () => {},
     onAction: async () => {},
   },
 };
 export default meta;
 type Story = StoryObj<typeof HarnessControls>;
-export const CommandCompletion: Story = {};
 const NewConversationComposer = (props: HarnessControlsProps) => {
-  const { commands } = props;
   const [query, setQuery] = useState("");
-  const [seed, setSeed] = useState("");
   return (
     <>
-      <HarnessControls
-        {...props}
-        commands={commands}
-        modes={[]}
-        query={query}
-        onInsert={(text) => {
-          setSeed(text);
-          setQuery(text);
-        }}
-        onLiteralChange={() => {}}
-        onAction={async () => {}}
+      <HarnessControls {...props} modes={[]} query={query} onLiteralChange={() => {}} onAction={async () => {}} />
+      <ChatInput
+        defaultState={createSerializedPromptState("")}
+        onChange={setQuery}
+        commands={[
+          { name: "/plan", description: "Select native planning.", argumentHelp: "[task]" },
+          { name: "/compact", description: "Compact this thread." },
+        ]}
       />
-      <ChatInput defaultState={createSerializedPromptState(seed)} onChange={setQuery} />
     </>
   );
 };
@@ -51,7 +39,7 @@ export const NewConversation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(canvas.getByRole("textbox"), "/");
-    const commands = canvas.getByRole("listbox", { name: "Harness commands" });
+    const commands = within(canvasElement.ownerDocument.body).getByRole("listbox", { name: "Typeahead menu" });
     await expect(commands).toBeVisible();
     await userEvent.click(within(commands).getByRole("option", { name: "/plan" }));
     await expect(canvas.getByRole("textbox")).toHaveTextContent("/plan ");

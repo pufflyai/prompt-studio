@@ -1,87 +1,94 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { PromptEditor, type ReferenceItem } from "./prompt-input";
-
-const sampleReferences: ReferenceItem[] = [
-  { resourceId: "table:users", resourceType: "table", name: "Users", description: "prod.users" },
-  { resourceId: "table:sessions", resourceType: "table", name: "Sessions", description: "prod.sessions_v2" },
-  {
-    resourceId: "connector:bigquery",
-    resourceType: "connector",
-    name: "BigQuery",
-    description: "Analytics",
-  },
-];
-
-const initialState = JSON.stringify(
-  {
-    root: {
-      children: [
-        {
-          children: [
-            {
-              detail: 0,
-              format: 0,
-              mode: "normal",
-              style: "",
-              text: "Type your query here or press / to add a reference.",
-              type: "text",
-              version: 1,
-            },
-          ],
-          direction: "ltr",
-          format: "",
-          indent: 0,
-          type: "paragraph",
-          version: 1,
-        },
-      ],
-      direction: "ltr",
-      format: "",
-      indent: 0,
-      type: "root",
-      version: 1,
-    },
-  },
-  null,
-  2,
-);
+import { useEffect, useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
+import { PromptEditor, type PromptEditorProps } from "./prompt-input";
+import { generateEditorStateFromString } from "./utils";
 
 const meta: Meta<typeof PromptEditor> = {
   title: "Patterns/Editors/Prompt Editor",
   component: PromptEditor,
-  parameters: {
-    layout: "padded",
-  },
+  parameters: { layout: "padded" },
   args: {
-    defaultState: initialState,
-    debug: false,
-    isEditable: true,
-    references: sampleReferences,
-    onChange: (text: string) => console.log("onChange:", text),
-    onError: (error: Error) => console.error(error),
-    onAddReference: (resourceId: string, resourceType: ReferenceItem["resourceType"]) =>
-      console.log("reference added:", resourceId, resourceType),
-  },
-  argTypes: {
-    defaultState: {
-      control: "text",
-      description: "Serialized Lexical editor state (JSON string)",
-    },
-    isEditable: { control: "boolean" },
-    debug: { control: "boolean" },
+    defaultState: JSON.stringify(generateEditorStateFromString()),
+    commands: [
+      { name: "/plan", description: "Select native planning.", argumentHelp: "[task]" },
+      { name: "/compact", description: "Compact this thread." },
+    ],
   },
 };
-
 export default meta;
-
 type Story = StoryObj<typeof PromptEditor>;
-
 export const Basic: Story = {};
+export const ReadOnly: Story = { args: { isEditable: false } };
+export const DebugView: Story = { args: { debug: true } };
 
-export const ReadOnly: Story = {
-  args: { isEditable: false },
+export const SlashPopover: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+    const input = canvas.getByRole("textbox");
+    await userEvent.type(input, "/");
+    await expect(page.getByRole("listbox", { name: "Typeahead menu" })).toBeVisible();
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await expect(input).toHaveTextContent("/compact ");
+    await expect(page.queryByRole("listbox", { name: "Typeahead menu" })).not.toBeInTheDocument();
+  },
 };
 
-export const DebugView: Story = {
-  args: { debug: true },
+export const FilterAndTab: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+    const input = canvas.getByRole("textbox");
+    await userEvent.type(input, "/pl");
+    await expect(page.getAllByRole("option")).toHaveLength(1);
+    await userEvent.keyboard("{Tab}");
+    await expect(input).toHaveTextContent("/plan ");
+    await userEvent.type(input, "Keep my task text");
+    await expect(input).toHaveTextContent("/plan Keep my task text");
+  },
+};
+
+export const DismissPopover: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+    const input = canvas.getByRole("textbox");
+    await userEvent.type(input, "/");
+    await userEvent.keyboard("{Escape}");
+    await expect(input).toHaveTextContent("/");
+    await expect(page.queryByRole("listbox", { name: "Typeahead menu" })).not.toBeInTheDocument();
+  },
+};
+
+export const MultilineDraft: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("textbox");
+    await userEvent.type(input, "/");
+    await userEvent.keyboard("{Shift>}{Enter}{/Shift}");
+    await userEvent.type(input, "Keep this line");
+    await expect(input.innerText).toContain("/\nKeep this line");
+  },
+};
+
+const DiscoveringCommands = (props: PromptEditorProps) => {
+  const { commands = [], ...editorProps } = props;
+  const [query, setQuery] = useState("");
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (query !== "/" || ready) return;
+    const timer = setTimeout(() => setReady(true), 250);
+    return () => clearTimeout(timer);
+  }, [query, ready]);
+  return <PromptEditor {...editorProps} commands={ready ? commands : []} onChange={setQuery} />;
+};
+export const DelayedDiscovery: Story = {
+  render: (args) => <DiscoveringCommands {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.type(canvas.getByRole("textbox"), "/");
+    await expect(await page.findByRole("listbox", { name: "Typeahead menu" })).toBeVisible();
+  },
 };

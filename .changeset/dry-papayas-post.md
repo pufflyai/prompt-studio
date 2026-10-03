@@ -4,4 +4,4 @@
 "@pstdio/ui": minor
 ---
 
-Expose native harness commands and mode controls through sessions and chat.
+Expose native harness commands in slash popovers and retire hash-reference completion.

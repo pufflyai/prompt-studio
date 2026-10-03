@@ -1,6 +1,6 @@
 import { Stack } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useState } from "react";
-import type { ReferenceItem } from "@/components/rich-text";
+import type { PromptCommand } from "@/components/rich-text";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
@@ -30,13 +30,12 @@ interface ChatPanelComposerProps {
   chatInputAutoFocus: boolean;
   chatInputPlaceholder: string;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
-  chatInputReferences: ReferenceItem[];
+  chatInputCommands: PromptCommand[];
   hasWorkspaceHub: boolean;
   inputDisabled: boolean;
   submitDisabled: boolean;
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
-  onChatInputAddReference?: (resourceId: string, resourceType: ReferenceItem["resourceType"]) => void;
   onClearAttachments?: () => void;
   onInterrupt?: () => void;
   onQueuedFollowUpMove?: (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => void;
@@ -100,13 +99,12 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     chatInputAutoFocus,
     chatInputPlaceholder,
     chatInputQuestionPrompt,
-    chatInputReferences,
+    chatInputCommands,
     hasWorkspaceHub,
     inputDisabled,
     submitDisabled,
     onAttachFiles,
     onAttachText,
-    onChatInputAddReference,
     onClearAttachments,
     onInterrupt,
     onQueuedFollowUpMove,
@@ -163,8 +161,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           autoFocus={chatInputAutoFocus}
           focusSignal={queuedComposer.focusSignal}
           submitTitle={queuedComposer.isEditing && !chatInputQuestionPrompt ? "Save queued follow-up" : undefined}
-          references={chatInputReferences}
-          onAddReference={onChatInputAddReference}
+          commands={chatInputCommands}
         />
       </Stack>
     </Stack>

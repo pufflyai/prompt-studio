@@ -1,6 +1,5 @@
 import { Button, Dialog, Field, HStack, Input, Portal, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { ListRow } from "@/components/list-row/list-row";
 import { InfoCard } from "@/components/primitives/info-card";
 import { SimpleCard, SimpleCardBody } from "@/components/primitives/simple-card";
 
@@ -16,20 +15,13 @@ interface HarnessMode {
   state: string;
   actions: HarnessAction[];
 }
-interface HarnessCommand {
-  name: string;
-  description: string;
-  argumentHelp?: string;
-}
 export interface HarnessControlsProps {
   slashCommands?: boolean;
-  commands: HarnessCommand[];
   modes: HarnessMode[];
   query: string;
   pending?: boolean;
   literal?: boolean;
   onLiteralChange: (literal: boolean) => void;
-  onInsert: (text: string) => void;
   onAction: (modeId: string, actionId: string, argument?: string) => Promise<void>;
 }
 const ModeAction = (props: {
@@ -109,11 +101,9 @@ const ModeAction = (props: {
   );
 };
 export const HarnessControls = (props: HarnessControlsProps) => {
-  const { commands, modes, query, pending, literal, onLiteralChange, onInsert, onAction, slashCommands = true } = props;
-  const completing = slashCommands && /^\/[^\s/]*$/.test(query);
+  const { modes, query, pending, literal, onLiteralChange, onAction, slashCommands = true } = props;
   const commandInput = slashCommands && /^\/[^\s/]+(?:\s|$)/.test(query);
-  const matches = completing ? commands.filter((command) => command.name.startsWith(query)) : [];
-  if (!modes.length && !matches.length && !commandInput) return null;
+  if (!modes.length && !commandInput) return null;
   return (
     <Stack gap="xs" aria-label="Harness controls">
       {modes.map((mode) => (
@@ -140,22 +130,6 @@ export const HarnessControls = (props: HarnessControlsProps) => {
           </SimpleCardBody>
         </SimpleCard>
       ))}
-      {matches.length ? (
-        <SimpleCard role="listbox" aria-label="Harness commands">
-          {matches.map((command) => (
-            <ListRow
-              key={command.name}
-              id={command.name}
-              label={command.name}
-              description={[command.description, command.argumentHelp].filter(Boolean).join(" ")}
-              variant="full-width"
-              role="option"
-              disabled={pending}
-              onActivate={() => onInsert(`${command.name} `)}
-            />
-          ))}
-        </SimpleCard>
-      ) : null}
       {commandInput ? (
         <HStack gap="xs">
           <Button

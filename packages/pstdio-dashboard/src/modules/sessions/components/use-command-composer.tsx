@@ -75,6 +75,7 @@ export const useCommandComposer = (
     }
   }, [scope, status, lastRequestStarted, chatDraft]);
   return {
+    suggestions: commands.state?.slashCommands && !commands.invoke.isPending ? commands.state.commands : [],
     submit: (
       text: string,
       attachments: SessionAttachment[],
@@ -121,16 +122,11 @@ export const useCommandComposer = (
     header: commands.state ? (
       <HarnessControls
         slashCommands={commands.state.slashCommands}
-        commands={commands.state.commands}
         modes={commands.state.modes}
         query={commandText}
         pending={commands.invoke.isPending}
         literal={literalCommand}
         onLiteralChange={setLiteralCommand}
-        onInsert={(text) => {
-          chatDraft.restore(text);
-          setCommandText(text);
-        }}
         onAction={async (modeId, actionId, argument) => {
           const result = await invokeCommand({ kind: "mode-action", modeId, actionId, argument });
           if (result.sessionId) onCreated(result.sessionId, "New session");

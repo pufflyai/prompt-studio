@@ -2,7 +2,7 @@ import { Flex } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
-import type { ReferenceItem } from "@/components/rich-text";
+import type { PromptCommand } from "@/components/rich-text";
 import { resolveActiveQuestionPrompt } from "../tool-rendering/question-prompt";
 import { ChatPrimitives } from "./ai-conversation";
 import { AutoScroll } from "./auto-scroll";
@@ -64,8 +64,7 @@ export interface ChatPanelProps {
   onQueuedFollowUpUpdate?: (itemId: string, prompt: string) => void;
   onQueuedFollowUpRemove?: (itemId: string) => void;
   onQueuedFollowUpMove?: (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => void;
-  chatInputReferences?: ReferenceItem[];
-  onChatInputAddReference?: (resourceId: string, resourceType: ReferenceItem["resourceType"]) => void;
+  chatInputCommands?: PromptCommand[];
 }
 
 export const ChatPanel = (props: ChatPanelProps) => {
@@ -103,8 +102,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onQueuedFollowUpUpdate,
     onQueuedFollowUpRemove,
     onQueuedFollowUpMove,
-    chatInputReferences = [],
-    onChatInputAddReference,
+    chatInputCommands = [],
   } = props;
 
   const merged = normalizeChatMessagesForDisplay(messages, { streaming });
@@ -192,13 +190,12 @@ export const ChatPanel = (props: ChatPanelProps) => {
         chatInputAutoFocus={chatInputAutoFocus}
         chatInputPlaceholder={chatInputPlaceholder}
         chatInputQuestionPrompt={activeQuestionPrompt}
-        chatInputReferences={chatInputReferences}
+        chatInputCommands={chatInputCommands}
         hasWorkspaceHub={hasWorkspaceHub}
         inputDisabled={inputDisabled}
         submitDisabled={submitDisabled}
         onAttachFiles={onAttachFiles}
         onAttachText={onAttachText}
-        onChatInputAddReference={onChatInputAddReference}
         onClearAttachments={onClearAttachments}
         onInterrupt={onInterrupt}
         onQueuedFollowUpMove={onQueuedFollowUpMove}

@@ -18,6 +18,8 @@ The input provides the session and native IDs, current model and parameters, and
 
 ## Client tools
 
+Chat completes native commands in an editor popover when `/` starts the message. Type to filter, use arrow keys to select, and press Enter or Tab to insert the selected command as plain text. Escape closes the popover without changing the draft. Sending invokes the native command; completion alone never runs it. The old `#` reference-completion trigger is removed.
+
 `client.sessions.getHarnessCommands(sessionId)` reads the current selected harness's descriptors and authoritative state. `client.sessions.invokeHarnessOperation(sessionId, operation, harnessId?)` invokes the same operation used by chat. Supplying the discovered qualified harness ID rejects a stale invocation after the harness changes.
 
 `client.sessions.getDraftHarnessCommands({ project_id, agent, workspace_id?, model?, params? })` uses `POST /v1/sessions/harness-command-state` to discover commands before the first message. It resolves the same selected or default workspace and effective parameters as session creation. Starting a conversation with a native operation uses `client.sessions.create({ project_id, title, agent, operation, ... })`. Provide either `prompt` or `operation`, and do not attach files to a native operation. The host creates the session only on submission, then dispatches through the same operation owner used by existing sessions. The response includes `operation_result` for native replies. Rejected first operations return the created session as failed, so callers can show the error and retry in that conversation. A cancelled or disconnected operation keeps its authoritative status and any accepted native identity.

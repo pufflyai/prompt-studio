@@ -336,8 +336,7 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
     onQueuedFollowUpUpdate,
     onQueuedFollowUpRemove,
     onQueuedFollowUpMove,
-    chatInputReferences,
-    onChatInputAddReference,
+    chatInputCommands,
   } = props;
 
   const [messages, setMessages] = useState<SessionMessage[]>(initialMessages);
@@ -404,8 +403,7 @@ function MockChatPanelRenderer(props: ChatPanelProps) {
       onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
       onQueuedFollowUpRemove={onQueuedFollowUpRemove}
       onQueuedFollowUpMove={onQueuedFollowUpMove}
-      chatInputReferences={chatInputReferences}
-      onChatInputAddReference={onChatInputAddReference}
+      chatInputCommands={chatInputCommands}
     />
   );
 }
@@ -476,13 +474,10 @@ export const QueuedFollowUps: Story = {
   args: {
     ...Conversation.args,
     queuedFollowUps: queuedFollowUpItems,
-    chatInputReferences: [
-      { resourceId: "workspace:ps-151", resourceType: "file", name: "PS-151 notes" },
-      { resourceId: "table:sessions", resourceType: "table", name: "Sessions" },
+    chatInputCommands: [
+      { name: "/plan", description: "Select native planning." },
+      { name: "/compact", description: "Compact this thread." },
     ],
-    onChatInputAddReference: (resourceId: string, resourceType: "table" | "connector" | "file") => {
-      console.log("Reference added", { resourceId, resourceType });
-    },
   },
 };
 
