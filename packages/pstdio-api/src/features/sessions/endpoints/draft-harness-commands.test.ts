@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { realpathSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import type { HarnessCommandContext } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
@@ -57,7 +57,7 @@ test("a new conversation discovers native commands without creating a session or
     expect(discovered).toEqual([
       expect.objectContaining({
         projectId: project.id,
-        cwd: realpathSync(folder.initial_workspace.params.path),
+        cwd: await realpath(folder.initial_workspace.params.path),
         model: "fake",
         params: { planning: true },
       }),

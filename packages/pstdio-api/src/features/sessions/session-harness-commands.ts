@@ -222,7 +222,12 @@ export const createSessionHarnessOperation = async (
   signal?: AbortSignal,
 ) => {
   const session = await deps.sessionService.create({ ...input, status: "completed" }, { emitStartedHook: false });
-  await onCreated(session);
+  try {
+    await onCreated(session);
+  } catch (error) {
+    await deps.sessionService.transitionStatus(session.id, "failed");
+    throw error;
+  }
   try {
     const operation_result = await invokeSessionHarnessOperation(
       deps,
