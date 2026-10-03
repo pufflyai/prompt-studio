@@ -2,7 +2,6 @@ import type {
   HarnessCommandContext,
   HarnessExit,
   HarnessOperation,
-  HarnessOperationResult,
   HarnessParams,
   HarnessSession,
   PreparedHarnessOperation,
@@ -17,6 +16,7 @@ import {
   rejectStoreSessionCancellation,
 } from "./session-request-cancellation";
 import { hasCreateCapacity, withSchedulingLock } from "./session-scheduler-internals";
+import type { ActiveSession } from "./session-store";
 import { toHarnessWorkspaceContext } from "./session-workspace-context";
 import { trackHarnessSession } from "./track-harness-session";
 
@@ -68,18 +68,30 @@ const invokeControl = async (
   id: string,
   prepared: PreparedHarnessOperation,
   harnessId: string,
+  entry: ActiveSession,
+  control: { signal: AbortSignal; release(): void },
   signal?: AbortSignal,
 ) => {
-  const conversation = await deps.sessionService.store.get(id)?.conversationReady;
-  let result: HarnessOperationResult;
   try {
-    result = await prepared.invoke({ events: conversation ?? { getMessages: () => [], push: () => {} }, signal });
+    const controlSignal = signal ? AbortSignal.any([signal, control.signal]) : control.signal;
+    controlSignal.throwIfAborted();
+    const conversation = await entry.conversationReady;
+    const result = await prepared.invoke({
+      events: conversation,
+      approvals: entry.approvalService,
+      questions: entry.questionService,
+      signal: controlSignal,
+    });
+    if (result.kind !== "completed") throw new Error("A harness control cannot start exclusive work.");
+    await saveParams(deps, id, result.params, harnessId);
+    controlSignal.throwIfAborted();
+    return { status: "completed" as const, message: result.message };
   } catch (error) {
+    if (error instanceof HarnessOperationError) throw error;
     throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
+  } finally {
+    control.release();
   }
-  if (result.kind !== "completed") throw new Error("A harness control cannot start exclusive work.");
-  await saveParams(deps, id, result.params, harnessId);
-  return { status: "completed" as const, message: result.message };
 };
 export const invokeSessionHarnessOperation = async (
   deps: SessionsRouteDeps,
@@ -98,20 +110,38 @@ export const invokeSessionHarnessOperation = async (
     } catch (error) {
       throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
     }
-    if (prepared.execution === "control") return { harnessId: harness.id, prepared, entry: null };
-    if (session.status === "in_progress" || session.status === "awaiting_input" || session.status === "queued")
+    const active = deps.sessionService.store.get(id);
+    if (active?.cancellationRequested) throw new HarnessOperationError("The session is stopping.", 409);
+    if (prepared.execution === "control" && active?.session) {
+      const finished = Promise.withResolvers<void>();
+      const invocation = { done: finished.promise, abort: new AbortController() };
+      active.controlInvocations.add(invocation);
+      const release = () => {
+        active.controlInvocations.delete(invocation);
+        finished.resolve();
+      };
+      return {
+        harnessId: harness.id,
+        prepared,
+        entry: null,
+        control: { entry: active, release, signal: invocation.abort.signal },
+      };
+    }
+    if (["in_progress", "awaiting_input", "queued"].includes(session.status))
       throw new HarnessOperationError("Finish or stop the current work before running this command.", 409);
-    if (!(await hasCreateCapacity(deps)))
+    if (prepared.execution === "exclusive" && !(await hasCreateCapacity(deps)))
       throw new HarnessOperationError("All execution slots are in use. Try again when one is free.", 409);
     const resumed = await deps.sessionService.resume(id, {
       expectedStatus: session.status as "completed" | "failed" | "cancelled" | "disconnected",
     });
     if (!resumed) throw new HarnessOperationError("Session changed before the command started.", 409);
     const entry = initializeConversation(id, deps, async () => {}, signal);
-    return { harnessId: harness.id, prepared, entry };
+    return { harnessId: harness.id, prepared, entry, control: null };
   });
   const { harnessId, prepared, entry } = context;
-  if (!entry) return invokeControl(deps, id, prepared, harnessId, signal);
+  if (context.control)
+    return invokeControl(deps, id, prepared, harnessId, context.control.entry, context.control, signal);
+  if (!entry) throw new Error("Harness command has no conversation owner.");
 
   const abort = new AbortController();
   const invocationSignal = signal ? AbortSignal.any([signal, abort.signal]) : abort.signal;
@@ -129,7 +159,14 @@ export const invokeSessionHarnessOperation = async (
   try {
     const conversation = await entry.conversationReady;
     invocationSignal.throwIfAborted();
-    const result = await prepared.invoke({ events: conversation, signal: invocationSignal });
+    const result = await prepared.invoke({
+      events: conversation,
+      approvals: entry.approvalService,
+      questions: entry.questionService,
+      signal: invocationSignal,
+    });
+    if (prepared.execution === "control" && result.kind !== "completed")
+      throw new Error("A harness control cannot start exclusive work.");
     if (result.kind === "started") {
       accepted = result.session;
       await withSchedulingLock(async () => {
