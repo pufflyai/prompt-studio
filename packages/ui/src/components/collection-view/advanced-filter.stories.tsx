@@ -95,9 +95,8 @@ export const ClearAllFilters: Story = {
     const trigger = canvas.getByRole("button", { name: "Filter", exact: true });
     expect(trigger.textContent?.trim()).toBe("2");
     await userEvent.click(trigger);
-    await body.findByTestId("filter-menu");
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(canvas.getByRole("button", { name: "Clear all filters" }));
+    const footer = await body.findByTestId("filter-menu-footer");
+    await userEvent.click(within(footer).getByRole("button", { name: "Clear all", exact: true }));
     expect(trigger.textContent?.trim()).toBe("");
     await expect(canvas.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
     await expect(canvas.getByLabelText("Unsaved view changes")).toBeVisible();

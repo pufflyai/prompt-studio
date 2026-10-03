@@ -1,4 +1,4 @@
-import { Badge, Box, Button, HStack, Icon, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterGroup, ViewFilterRule } from "@pstdio/sdk/extensions";
 import { ChevronRight, ListFilter, Search } from "lucide-react";
 import { useState } from "react";
@@ -7,8 +7,7 @@ import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { ListRow } from "../list-row/list-row";
 import { fieldIcon } from "./collection-view-field-icon";
 import { isOptionField } from "./collection-view-fields";
-import { optionLabel } from "./collection-view-labels";
-import { quickOptionValues } from "./collection-view-rules";
+import { countFilterRules } from "./collection-view-filter";
 import { FilterPickerValues } from "./filter-picker-values";
 import type { RuleValueOption } from "./filter-rule-value";
 
@@ -19,15 +18,10 @@ export interface FilterMenuProps {
   optionsFor: (field: AttributeDescriptor) => RuleValueOption[];
   onSelectRule: (rule: ViewFilterRule) => void;
   onAddAdvanced?: () => void;
+  onClear?: () => void;
 }
 
 const contentProps = { p: "2xs", display: "flex", flexDirection: "column", gap: "1px" } as const;
-
-const selectedDescription = (field: AttributeDescriptor, values: string[]) => {
-  const labels = values.map((value) => optionLabel(field, value));
-  if (labels.length <= 2) return labels.join(", ");
-  return `${labels.slice(0, 2).join(", ")} +${(labels.length - 2).toString()}`;
-};
 
 /** Browse a property, then commit a value and continue in its bubble. */
 export const FilterMenu = (props: FilterMenuProps) => {
@@ -35,9 +29,9 @@ export const FilterMenu = (props: FilterMenuProps) => {
   const [query, setQuery] = useState("");
   const optionFields = fields.filter(isOptionField);
   const [activeId, setActiveId] = useState(optionFields[0]?.id ?? fields[0]?.id ?? "");
-  const active = fields.find((field) => field.id === activeId) ?? fields[0];
   const needle = query.trim().toLocaleLowerCase();
   const visible = fields.filter((field) => field.label.toLocaleLowerCase().includes(needle));
+  const active = visible.find((field) => field.id === activeId);
 
   return (
     <Stack data-testid="filter-menu" height="min(320px, calc(100vh - 32px))" gap="0" overflow="hidden">
@@ -66,46 +60,24 @@ export const FilterMenu = (props: FilterMenuProps) => {
           minH="0"
         >
           <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain" }} contentProps={contentProps}>
-            {visible.map((field) => {
-              const values = isOptionField(field) ? quickOptionValues(filter, field.id) : [];
-              return (
-                <ListRow
-                  key={field.id}
-                  id={field.id}
-                  role="button"
-                  variant="compact"
-                  isSelected={active?.id === field.id}
-                  icon={<Icon as={fieldIcon(field)} boxSize="3" />}
-                  label={
-                    <HStack minW="0" width="full" gap="2xs">
-                      <Text textStyle="label/S/regular" truncate>
-                        {field.label}
-                      </Text>
-                      {values.length > 0 ? (
-                        <Text textStyle="label/XS" color="fg.menu-item.secondary" truncate>
-                          {selectedDescription(field, values)}
-                        </Text>
-                      ) : null}
-                    </HStack>
-                  }
-                  endContent={
-                    values.length > 0 ? (
-                      <Badge variant="number" colorPalette="gray">
-                        {values.length}
-                      </Badge>
-                    ) : (
-                      <Icon as={ChevronRight} boxSize="0.875rem" color="fg.subtle" />
-                    )
-                  }
-                  onActivate={() => setActiveId(field.id)}
-                />
-              );
-            })}
+            {visible.map((field) => (
+              <ListRow
+                key={field.id}
+                id={field.id}
+                role="button"
+                variant="compact"
+                isSelected={active?.id === field.id}
+                icon={<Icon as={fieldIcon(field)} boxSize="3" />}
+                label={field.label}
+                endContent={<Icon as={ChevronRight} boxSize="3" color="fg.subtle" />}
+                onActivate={() => setActiveId(field.id)}
+              />
+            ))}
           </ScrollArea>
         </Stack>
         <Stack flex="1" minW="0" minH="0" gap="0">
           {active ? (
-            <Box flex="1" minH="0" paddingX="2xs">
+            <Box data-testid="filter-value-column" flex="1" minH="0" paddingX="2xs">
               <FilterPickerValues
                 field={active}
                 rule={filter.rules.find((rule) => rule.attributeId === active.id)}
@@ -116,11 +88,34 @@ export const FilterMenu = (props: FilterMenuProps) => {
           ) : null}
         </Stack>
       </HStack>
-      {props.onAddAdvanced ? (
+      {props.onAddAdvanced || props.onClear ? (
         <HStack data-testid="filter-menu-footer" padding="2xs" borderTopWidth="1px" borderColor="border.subtle">
-          <Button size="2xs" variant="ghost" onClick={props.onAddAdvanced}>
-            <ListFilter /> Advanced filter
-          </Button>
+          {props.onAddAdvanced ? (
+            <ListRow
+              id="advanced-filter"
+              role="button"
+              variant="compact"
+              flex="1"
+              label="Advanced filter"
+              icon={<Icon as={ListFilter} boxSize="3" />}
+              onActivate={props.onAddAdvanced}
+            />
+          ) : (
+            <Box flex="1" />
+          )}
+          {props.onClear ? (
+            <ListRow
+              id="clear-all"
+              role="button"
+              aria-label="Clear all"
+              variant="compact"
+              flex="1"
+              label=""
+              endContent={<Text textStyle="label/S/regular">Clear all</Text>}
+              disabled={countFilterRules(filter) === 0}
+              onActivate={props.onClear}
+            />
+          ) : null}
         </HStack>
       ) : null}
     </Stack>

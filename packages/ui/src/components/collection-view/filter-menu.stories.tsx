@@ -78,6 +78,28 @@ export const WithSelectedValues: Story = {
   ),
 };
 
+export const SearchPropertyScope: Story = {
+  render: () => <Picker />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Priority", exact: true }));
+    await expect(canvas.getByRole("checkbox", { name: "High", exact: true })).toBeVisible();
+    const search = canvas.getByRole("textbox", { name: "Filter properties" });
+    await userEvent.type(search, "title");
+    expect(canvas.queryByRole("checkbox", { name: "High", exact: true })).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "Title", exact: true }));
+    const row = canvas.getByRole("button", { name: "Filter by text", exact: true });
+    const column = row.closest('[data-testid="filter-value-column"]')!;
+    const style = getComputedStyle(column);
+    expect(row.getBoundingClientRect().width).toBe(
+      column.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight),
+    );
+    expect(row.getBoundingClientRect().height).toBe(28);
+    await userEvent.clear(search);
+    await expect(canvas.getByRole("button", { name: "Filter by text", exact: true })).toBeVisible();
+  },
+};
+
 export const MatchCounts: Story = {
   render: () => (
     <Box width="440px">

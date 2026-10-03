@@ -1,5 +1,5 @@
 import { Box, Button, Dialog, Icon, IconButton, Input, Tabs, Text } from "@chakra-ui/react";
-import { Copy, ListPlus, Pencil, Trash2 } from "lucide-react";
+import { Copy, LayersPlus, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -105,18 +105,20 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
               ),
           },
           {
+            key: "default",
+            label: view.id === defaultViewId ? "Clear default" : "Set as default",
+            icon: <Icon as={view.id === defaultViewId ? PinOff : Pin} boxSize="3" />,
+            separatorBefore: true,
+            isDisabled: busy,
+            onClick: () => run(() => viewsSource.onSetDefaultView(view.id === defaultViewId ? null : view.id)),
+          },
+          {
             key: "delete",
             label: "Delete view",
             icon: <Icon as={Trash2} boxSize="0.875rem" />,
             isDisabled: view.builtIn || busy,
             separatorBefore: true,
             onClick: () => run(() => viewsSource.onDeleteView(view.id)),
-          },
-          {
-            key: "default",
-            label: view.id === defaultViewId ? "Clear default" : "Set as default",
-            isDisabled: busy,
-            onClick: () => run(() => viewsSource.onSetDefaultView(view.id === defaultViewId ? null : view.id)),
           },
         ]
       : [];
@@ -164,7 +166,7 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
           disabled={!viewsSource || busy}
           onClick={() => viewsSource && run(() => createView({ title: nextViewTitle(views), ...state }))}
         >
-          <Icon as={ListPlus} />
+          <Icon as={LayersPlus} />
         </IconButton>
       </Tooltip>
       {renameTarget && viewsSource ? (

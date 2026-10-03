@@ -143,20 +143,6 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             buttonRef={filterButtonRef}
             onClick={() => open(filterButtonRef)}
           />
-          {countFilterRules(filter) > 0 ? (
-            <Button
-              size="2xs"
-              variant="ghost"
-              aria-label="Clear all filters"
-              onClick={() => {
-                setOpenMenu(null);
-                setOpenRuleIndex(null);
-                setFilter(EMPTY_VIEW_FILTER);
-              }}
-            >
-              Clear
-            </Button>
-          ) : null}
           {displayControl}
           {actions}
         </HStack>
@@ -257,6 +243,11 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             optionsFor={optionsFor}
             onSelectRule={selectRule}
             onAddAdvanced={addAdvanced}
+            onClear={() => {
+              setOpenMenu(null);
+              setOpenRuleIndex(null);
+              setFilter(EMPTY_VIEW_FILTER);
+            }}
           />
         </ViewBarPopover>
       </Stack>

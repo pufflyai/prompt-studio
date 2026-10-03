@@ -33,7 +33,10 @@ export const NoRules: Story = {
       expect(menu.getBoundingClientRect().left).toBeGreaterThan(0);
     });
     await userEvent.keyboard("{Escape}");
-    await userEvent.click(canvas.getByRole("button", { name: "Clear all filters" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Add filter", exact: true }));
+    const footer = await body.findByTestId("filter-menu-footer");
+    await userEvent.click(within(footer).getByRole("button", { name: "Clear all", exact: true }));
+    await waitFor(() => expect(popover).not.toBeVisible());
     await expect(canvas.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
   },
 };

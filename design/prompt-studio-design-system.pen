@@ -21040,7 +21040,7 @@
                       "type": "frame",
                       "id": "XrEDw",
                       "name": "cmp/CollectionViewBar",
-                      "context": "Views use list-plus to add. Filter opens the property picker; Clear beside it resets all normal/Advanced rules. Choosing a value closes the picker and opens its bubble menu. Bubble field labels are static; predicates and values remain editable.",
+                      "context": "Views use layers-plus. Filter commits by selecting a value and transfers to its bubble. Clear all is only in the picker footer, at the right. Field labels stay fixed.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "#00000000",
@@ -21180,7 +21180,7 @@
                               },
                               "descendants": {
                                 "k7mgm": {
-                                  "icon": "list-plus",
+                                  "icon": "layers-plus",
                                   "width": 12,
                                   "height": 12
                                 }
@@ -21238,28 +21238,6 @@
                                 },
                                 "Hf4GT": {
                                   "content": "3"
-                                }
-                              }
-                            },
-                            {
-                              "id": "YwEgB",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Clear all filters",
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "height": 24,
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": false
-                                },
-                                "Hf4GT": {
-                                  "content": "Clear"
-                                },
-                                "khvEs": {
-                                  "enabled": false
                                 }
                               }
                             },
@@ -24249,7 +24227,7 @@
                       "type": "frame",
                       "id": "V7ww8",
                       "name": "cmp/KanbanRendererFilterMenu",
-                      "context": "Browse properties without creating a rule. Choosing an option closes this picker and opens the new bubble values menu. Number and date fields keep a local draft and commit with Apply filter or Enter. Text fields offer Filter by text. No value search or close X. Clear belongs beside Filter in the bar; Advanced creation is in the footer.",
+                      "context": "Search hides values when their active property is outside the results, without changing the saved filter. Property rows show only the property label and arrow. All actions use 28px full-width row items. Clear all is bottom right in the footer; Advanced is bottom left. Selecting a value transfers to its bubble.",
                       "reusable": true,
                       "width": 440,
                       "height": 320,
@@ -24396,7 +24374,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Status",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24427,7 +24405,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Assignee",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24458,7 +24436,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Label",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24489,7 +24467,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Priority",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24520,7 +24498,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Target date",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24551,7 +24529,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Workspace",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24650,7 +24628,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Backlog",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24700,7 +24678,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Ready",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24750,7 +24728,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "In Progress",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24800,7 +24778,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Blocked",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24850,7 +24828,7 @@
                                         },
                                         "UTbhN": {
                                           "content": "Done",
-                                          "fill": "#F7F8F8"
+                                          "fill": "$ds-fg"
                                         },
                                         "zFstx": {
                                           "content": "",
@@ -24908,6 +24886,7 @@
                                 "size": "2xs"
                               },
                               "height": 24,
+                              "enabled": false,
                               "descendants": {
                                 "DsEVd": {
                                   "icon": "list-filter"
@@ -24916,6 +24895,56 @@
                                   "content": "Advanced filter"
                                 },
                                 "khvEs": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "QiPCw",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Advanced filter row",
+                              "width": "fill_container",
+                              "height": 28,
+                              "descendants": {
+                                "UEgTp": {
+                                  "icon": "list-filter",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "UTbhN": {
+                                  "content": "Advanced filter",
+                                  "fill": "$ds-fg"
+                                },
+                                "zFstx": {
+                                  "enabled": false
+                                },
+                                "OxQag": {
+                                  "enabled": false
+                                }
+                              }
+                            },
+                            {
+                              "id": "l5np0",
+                              "type": "ref",
+                              "ref": "sgbRV",
+                              "name": "Clear all row",
+                              "width": "fill_container",
+                              "height": 28,
+                              "descendants": {
+                                "UEgTp": {
+                                  "enabled": false
+                                },
+                                "UTbhN": {
+                                  "content": "Clear all",
+                                  "textAlign": "right",
+                                  "width": "fill_container",
+                                  "fill": "$ds-fg"
+                                },
+                                "zFstx": {
+                                  "enabled": false
+                                },
+                                "OxQag": {
                                   "enabled": false
                                 }
                               }
@@ -132746,6 +132775,197 @@
               "content": "Apply filter"
             },
             "khvEs": {
+              "enabled": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "uzmgP",
+      "type": "ref",
+      "ref": "V7ww8",
+      "name": "Filter picker text action",
+      "x": 25400,
+      "y": 0,
+      "width": 440,
+      "height": 320,
+      "descendants": {
+        "QsVCn/UEgTp": {
+          "icon": "type"
+        },
+        "QsVCn/UTbhN": {
+          "content": "Title"
+        },
+        "H1JHi": {
+          "layout": "vertical"
+        },
+        "DR0XM": {
+          "type": "frame",
+          "id": "Owrad",
+          "name": "Text action column",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            0,
+            4,
+            4,
+            4
+          ],
+          "children": [
+            {
+              "id": "AsYAa",
+              "type": "ref",
+              "ref": "sgbRV",
+              "name": "Filter by text row",
+              "width": "fill_container",
+              "height": 28,
+              "descendants": {
+                "UEgTp": {
+                  "icon": "type",
+                  "width": 12,
+                  "height": 12
+                },
+                "UTbhN": {
+                  "content": "Filter by text"
+                },
+                "zFstx": {
+                  "enabled": false
+                },
+                "OxQag": {
+                  "enabled": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "frame",
+      "id": "eHbSw",
+      "x": 25880,
+      "y": 0,
+      "name": "Saved view context actions",
+      "context": "Default action has an icon and its own group above Delete. Separators stay inside menu bounds with no negative horizontal margin. Short menus do not scroll; long menus still scroll vertically.",
+      "width": 280,
+      "height": 118,
+      "fill": "$ds-bg",
+      "cornerRadius": "$overlay-radius",
+      "stroke": "$ds-border-subtle",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "bfYox",
+          "type": "ref",
+          "ref": "sgbRV",
+          "name": "Rename",
+          "width": "fill_container",
+          "height": 28,
+          "descendants": {
+            "UEgTp": {
+              "icon": "pencil",
+              "width": 14,
+              "height": 14
+            },
+            "UTbhN": {
+              "content": "Rename"
+            },
+            "zFstx": {
+              "enabled": false
+            },
+            "OxQag": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "id": "ck0I8",
+          "type": "ref",
+          "ref": "sgbRV",
+          "name": "Duplicate",
+          "width": "fill_container",
+          "height": 28,
+          "descendants": {
+            "UEgTp": {
+              "icon": "copy",
+              "width": 14,
+              "height": 14
+            },
+            "UTbhN": {
+              "content": "Duplicate"
+            },
+            "zFstx": {
+              "enabled": false
+            },
+            "OxQag": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "e8Vxj",
+          "name": "Action group separator",
+          "width": "fill_container",
+          "height": 1,
+          "fill": "$ds-border-subtle"
+        },
+        {
+          "id": "F2TexO",
+          "type": "ref",
+          "ref": "sgbRV",
+          "name": "Set as default",
+          "width": "fill_container",
+          "height": 28,
+          "descendants": {
+            "UEgTp": {
+              "icon": "pin",
+              "width": 14,
+              "height": 14
+            },
+            "UTbhN": {
+              "content": "Set as default"
+            },
+            "zFstx": {
+              "enabled": false
+            },
+            "OxQag": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "WZhXt",
+          "name": "Action group separator",
+          "width": "fill_container",
+          "height": 1,
+          "fill": "$ds-border-subtle"
+        },
+        {
+          "id": "C1anF",
+          "type": "ref",
+          "ref": "sgbRV",
+          "name": "Delete view",
+          "width": "fill_container",
+          "height": 28,
+          "descendants": {
+            "UEgTp": {
+              "icon": "trash-2",
+              "width": 14,
+              "height": 14
+            },
+            "UTbhN": {
+              "content": "Delete view"
+            },
+            "zFstx": {
+              "enabled": false
+            },
+            "OxQag": {
               "enabled": false
             }
           }
