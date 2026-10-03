@@ -225,7 +225,14 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
         : { commands: [], modes: [], slashCommands: false },
     prepareOperation: async (input, operation, options) => {
       if (!provider.prepareOperation) throw new Error("This harness does not support native commands.");
-      const prepared = await provider.prepareOperation(await ctx(options), input, operation);
+      const context = await ctx(options);
+      if (operation.kind === "command" && provider.getCommandState) {
+        const state = await provider.getCommandState(context, input);
+        const name = /^\/\S+/.exec(operation.text)?.[0];
+        const command = state.commands.find((entry) => entry.name === name);
+        if (command?.disabledReason) throw new Error(command.disabledReason);
+      }
+      const prepared = await provider.prepareOperation(context, input, operation);
       ensureActive();
       return {
         execution: prepared.execution,

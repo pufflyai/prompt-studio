@@ -1,6 +1,12 @@
-type NativeCommandDraft = { harnessId: string } & (
+import type { ComposerIntent } from "./composer-command";
+
+export interface SubmittedCommand {
+  intent: ComposerIntent;
+  objective: string;
+}
+type NativeCommandDraft = { harnessId: string; submitted?: SubmittedCommand } & (
   | { kind: "pending"; text: string; previousRequest: string | null | undefined; message?: string }
-  | { kind: "outcome"; message: string }
+  | { kind: "outcome"; message?: string }
 );
 
 // Creating a session can remount the composer. Transfer its pending native input

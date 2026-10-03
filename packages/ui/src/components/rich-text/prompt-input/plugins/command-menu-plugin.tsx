@@ -1,16 +1,19 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LexicalTypeaheadMenuPlugin, MenuOption } from "@lexical/react/LexicalTypeaheadMenuPlugin";
-import { $createTextNode, $getRoot, $getSelection, $isRangeSelection, $setSelection } from "lexical";
+import { $createTextNode, $getSelection, $setSelection } from "lexical";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
-import { SimpleCard } from "@/components/primitives/simple-card";
+import { matchCommandQuery } from "./command-query";
 
 export interface PromptCommand {
   name: string;
   description: string;
   argumentHelp?: string;
+  disabledReason?: string;
+  /** Select local draft intent without inserting native command text. */
+  onSelect?: () => void;
 }
 
 class CommandOption extends MenuOption {
@@ -30,11 +33,12 @@ interface CommandMenuProps {
 
 const CommandMenu = (props: CommandMenuProps) => {
   const { options, selectedIndex, onSelect, onHighlight } = props;
+  const styles = useSlotRecipe({ key: "menu" })();
   useEffect(() => {
     options[selectedIndex ?? -1]?.ref?.current?.scrollIntoView({ block: "nearest" });
   }, [options, selectedIndex]);
   return (
-    <SimpleCard position="absolute" bottom="100%" mb="lg" minW="xs" maxW="sm" zIndex="popover" layerStyle="modal">
+    <Box css={styles.content} position="absolute" bottom="100%" mb="2xs" zIndex="popover">
       <ScrollArea maxH="xs" showHorizontalScrollbar={false}>
         {options.map((option, index) => (
           <ListRow
@@ -42,10 +46,13 @@ const CommandMenu = (props: CommandMenuProps) => {
             id={`typeahead-item-${index}`}
             ref={option.setRefElement}
             role="option"
+            aria-label={option.command.name}
+            aria-disabled={Boolean(option.command.disabledReason)}
             tabIndex={-1}
             variant="full-width"
             label={option.command.name}
-            description={[option.command.description, option.command.argumentHelp].filter(Boolean).join(" ")}
+            description={option.command.disabledReason ?? option.command.description}
+            disabled={Boolean(option.command.disabledReason)}
             isSelected={selectedIndex === index}
             onMouseDown={(event) => event.preventDefault()}
             onPointerMove={() => onHighlight(index)}
@@ -53,7 +60,7 @@ const CommandMenu = (props: CommandMenuProps) => {
           />
         ))}
       </ScrollArea>
-    </SimpleCard>
+    </Box>
   );
 };
 
@@ -62,7 +69,9 @@ export const CommandMenuPlugin = (props: { commands: PromptCommand[] }) => {
   const [editor] = useLexicalComposerContext();
   const [query, setQuery] = useState<string | null>(null);
   useEffect(() => {
-    // Discovery can finish after typing. A new catalog refreshes the existing selection.
+    // Refresh completion after discovery only while the editor owns focus.
+    const root = editor.getRootElement();
+    if (!root?.contains(root.ownerDocument.activeElement)) return;
     editor.update(() => {
       const selection = $getSelection();
       if (selection) $setSelection(selection.clone());
@@ -75,20 +84,21 @@ export const CommandMenuPlugin = (props: { commands: PromptCommand[] }) => {
       onQueryChange={setQuery}
       options={options}
       triggerFn={(text) => {
-        const selection = $getSelection();
-        if (!$isRangeSelection(selection) || selection.anchor.getNode() !== $getRoot().getFirstDescendant())
-          return null;
-        if (!/^\/[^\s/]*$/.test(text) || !commands.some((command) => command.name.startsWith(text))) return null;
-        return { leadOffset: 0, matchingString: text.slice(1), replaceableString: text };
+        const match = matchCommandQuery(text);
+        if (!match || !commands.some((command) => command.name.startsWith(`/${match.matchingString}`))) return null;
+        return match;
       }}
       onSelectOption={(option, node, closeMenu) => {
+        if (option.command.disabledReason) return;
         editor.update(() => {
-          node?.replace($createTextNode(`${option.command.name} `)).selectEnd();
+          node?.replace($createTextNode(option.command.onSelect ? "" : `${option.command.name} `)).selectEnd();
           closeMenu();
         });
+        option.command.onSelect?.();
       }}
-      menuRenderFn={(anchor, { options, selectedIndex, selectOptionAndCleanUp, setHighlightedIndex }) =>
-        anchor.current
+      menuRenderFn={(anchor, { options, selectedIndex, selectOptionAndCleanUp, setHighlightedIndex }) => {
+        anchor.current?.setAttribute("aria-label", "Harness commands");
+        return anchor.current
           ? createPortal(
               <CommandMenu
                 options={options}
@@ -101,8 +111,10 @@ export const CommandMenuPlugin = (props: { commands: PromptCommand[] }) => {
               />,
               anchor.current,
             )
-          : null
-      }
+          : null;
+      }}
     />
   );
 };
+
+import { Box, useSlotRecipe } from "@chakra-ui/react";

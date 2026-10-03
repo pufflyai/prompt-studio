@@ -1,7 +1,7 @@
-import { Button, Dialog, Field, HStack, Input, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, Field, HStack, Input, Menu, Popover, Portal, Stack, Tag, Text, useSlotRecipe } from "@chakra-ui/react";
 import { useState } from "react";
-import { InfoCard } from "@/components/primitives/info-card";
-import { SimpleCard, SimpleCardBody } from "@/components/primitives/simple-card";
+import { ListRow } from "@/components/list-row/list-row";
+import { Tooltip } from "@/components/primitives/tooltip";
 
 interface HarnessAction {
   id: string;
@@ -13,138 +13,215 @@ interface HarnessMode {
   label: string;
   description: string;
   state: string;
+  tagText?: string;
+  closeActionId?: string;
   actions: HarnessAction[];
+}
+interface LocalTag {
+  label: string;
+  description: string;
+  onClose: () => void;
+  closeLabel?: string;
 }
 export interface HarnessControlsProps {
   slashCommands?: boolean;
   modes: HarnessMode[];
+  draftTag?: LocalTag;
+  sentTag?: LocalTag;
   query: string;
   pending?: boolean;
+  unavailable?: boolean;
   literal?: boolean;
+  onRefresh?: () => void;
   onLiteralChange: (literal: boolean) => void;
-  onAction: (modeId: string, actionId: string, argument?: string) => Promise<void>;
+  onAction: (modeId: string, actionId: string, argument?: string, modeSnapshot?: HarnessMode) => Promise<void>;
 }
-const ModeAction = (props: {
-  modeId: string;
-  action: HarnessAction;
-  pending?: boolean;
-  onAction: HarnessControlsProps["onAction"];
-}) => {
-  const { modeId, action, pending, onAction } = props;
-  const [open, setOpen] = useState(false);
-  const [argument, setArgument] = useState(action.argument?.value ?? "");
-  const submit = async () => {
-    try {
-      await onAction(modeId, action.id, argument);
-      setOpen(false);
-    } catch {
-      /* The conversation owns operation errors. */
-    }
-  };
-  if (!action.argument)
-    return (
-      <Button
-        size="2xs"
-        variant="outline"
-        disabled={pending}
-        onClick={() => {
-          void onAction(modeId, action.id).catch(() => {});
-        }}
-      >
-        {action.label}
-      </Button>
-    );
+
+const shortLabel = (text: string) => (text.length > 48 ? `${text.slice(0, 34)}…${text.slice(-12)}` : text);
+
+const LocalModeTag = (props: { tag: LocalTag; onRefresh?: () => void }) => {
+  const { tag, onRefresh } = props;
   return (
-    <Dialog.Root
-      open={open}
-      onOpenChange={(details) => {
-        setOpen(details.open);
-        if (details.open) setArgument(action.argument?.value ?? "");
-      }}
-    >
-      <Dialog.Trigger asChild>
-        <Button size="2xs" variant="outline" disabled={pending}>
-          {action.label}
-        </Button>
-      </Dialog.Trigger>
+    <Menu.Root>
+      <Tooltip content={tag.description} openDelay={300} closeDelay={150}>
+        <Tag.Root variant="ticket" size="composer">
+          <Menu.Trigger asChild>
+            <Tag.Label asChild>
+              <button type="button" aria-label={tag.description}>
+                {shortLabel(tag.label)}
+              </button>
+            </Tag.Label>
+          </Menu.Trigger>
+          <Tag.CloseTrigger aria-label={tag.closeLabel ?? `Remove ${tag.label}`} onClick={tag.onClose} />
+        </Tag.Root>
+      </Tooltip>
       <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>{action.label}</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <Field.Root>
-                <Field.Label>{action.argument.label}</Field.Label>
-                <Input size="sm" value={argument} onChange={(event) => setArgument(event.target.value)} />
-              </Field.Root>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Button size="sm" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={pending || !argument.trim()}
-                onClick={() => {
-                  void submit();
-                }}
-              >
-                Save
-              </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
+        <Menu.Positioner>
+          <Menu.Content>
+            <Text p="sm" textStyle="label/S/regular" overflowWrap="anywhere">
+              {tag.description}
+            </Text>
+            {onRefresh ? (
+              <Menu.Item value="refresh" onClick={onRefresh}>
+                Check status
+              </Menu.Item>
+            ) : null}
+          </Menu.Content>
+        </Menu.Positioner>
       </Portal>
-    </Dialog.Root>
+    </Menu.Root>
   );
 };
-export const HarnessControls = (props: HarnessControlsProps) => {
-  const { modes, query, pending, literal, onLiteralChange, onAction, slashCommands = true } = props;
-  const commandInput = slashCommands && /^\/[^\s/]+(?:\s|$)/.test(query);
-  if (!modes.length && !commandInput) return null;
+
+const NativeModeTag = (props: {
+  mode: HarnessMode;
+  pending?: boolean;
+  unavailable?: boolean;
+  onRefresh?: () => void;
+  onAction: HarnessControlsProps["onAction"];
+}) => {
+  const { mode, pending, unavailable, onRefresh, onAction } = props;
+  const styles = useSlotRecipe({ key: "menu" })();
+  const [editing, setEditing] = useState<{ action: HarnessAction; mode: HarnessMode } | null>(null);
+  const [argument, setArgument] = useState("");
+  const [open, setOpen] = useState(false);
+  const closeAction = mode.actions.find((action) => action.id === mode.closeActionId && !action.argument);
+  const invoke = async (action: HarnessAction, value?: string, modeSnapshot = mode) => {
+    try {
+      await onAction(mode.id, action.id, value, modeSnapshot);
+      setEditing(null);
+      setOpen(false);
+    } catch {
+      /* The conversation owns operation errors. Keep the native tag until readback. */
+    }
+  };
+  let summary = mode.tagText;
+  if (pending) summary = ["Checking", mode.tagText].filter(Boolean).join(" · ");
+  if (unavailable) summary = ["Status unavailable", mode.tagText].filter(Boolean).join(" · ");
+  const label = [mode.label, summary].filter(Boolean).join(": ");
   return (
-    <Stack gap="xs" aria-label="Harness controls">
-      {modes.map((mode) => (
-        <SimpleCard key={mode.id}>
-          <SimpleCardBody>
-            <InfoCard
-              title={mode.label}
-              description={mode.description}
-              infoItems={[{ label: "State", value: mode.state }]}
-              actions={
-                <HStack flexWrap="wrap" gap="2xs">
-                  {mode.actions.map((action) => (
-                    <ModeAction
-                      key={action.id}
-                      modeId={mode.id}
-                      action={action}
-                      pending={pending}
-                      onAction={onAction}
-                    />
-                  ))}
-                </HStack>
-              }
+    <Popover.Root
+      open={open}
+      positioning={{ placement: "top-start" }}
+      onOpenChange={(details) => {
+        setOpen(details.open);
+        if (!details.open) setEditing(null);
+      }}
+    >
+      <Tooltip
+        content={`${mode.label}: ${mode.description} · ${unavailable ? "Status unavailable" : mode.state}`}
+        openDelay={300}
+        closeDelay={150}
+      >
+        <Tag.Root variant="ticket" size="composer">
+          <Popover.Trigger asChild>
+            <Tag.Label asChild>
+              <button type="button" aria-label={`${mode.label} details`}>
+                {shortLabel(label)}
+              </button>
+            </Tag.Label>
+          </Popover.Trigger>
+          {closeAction ? (
+            <Tag.CloseTrigger
+              aria-label={closeAction.label}
+              disabled={pending || unavailable}
+              onClick={() => void invoke(closeAction)}
             />
-          </SimpleCardBody>
-        </SimpleCard>
+          ) : null}
+        </Tag.Root>
+      </Tooltip>
+      <Portal>
+        <Popover.Positioner>
+          <Popover.Content css={styles.content} aria-label={`${mode.label} details`}>
+            <Stack p="sm" gap="xs">
+              <Text textStyle="label/S/medium">{mode.label}</Text>
+              <Text textStyle="label/S/regular" overflowWrap="anywhere">
+                {mode.description}
+              </Text>
+              <Text textStyle="label/XS/regular" color="fg.muted">
+                {unavailable ? "Status unavailable" : mode.state}
+              </Text>
+              {editing?.action.argument ? (
+                <Field.Root>
+                  <Field.Label>{editing.action.argument.label}</Field.Label>
+                  <Input autoFocus size="sm" value={argument} onChange={(event) => setArgument(event.target.value)} />
+                  <HStack>
+                    <Button size="xs" variant="ghost" onClick={() => setEditing(null)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      disabled={pending || unavailable || !argument.trim()}
+                      onClick={() => void invoke(editing.action, argument, editing.mode)}
+                    >
+                      Apply
+                    </Button>
+                  </HStack>
+                </Field.Root>
+              ) : null}
+            </Stack>
+            {!editing
+              ? mode.actions.map((action) => (
+                  <ListRow
+                    key={action.id}
+                    role="button"
+                    variant="full-width"
+                    label={action.label}
+                    disabled={pending || unavailable}
+                    onActivate={() => {
+                      if (action.argument) {
+                        setArgument(action.argument.value ?? "");
+                        setEditing({ action, mode });
+                      } else void invoke(action);
+                    }}
+                  />
+                ))
+              : null}
+            {onRefresh ? (
+              <ListRow role="button" variant="full-width" label="Check status" onActivate={onRefresh} />
+            ) : null}
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
+    </Popover.Root>
+  );
+};
+
+export const HarnessControls = (props: HarnessControlsProps) => {
+  const {
+    modes,
+    draftTag,
+    sentTag,
+    query,
+    pending,
+    unavailable,
+    literal,
+    onRefresh,
+    onLiteralChange,
+    onAction,
+    slashCommands = true,
+  } = props;
+  const commandInput = !draftTag && slashCommands && /^\/[^\s/]+(?:\s|$)/.test(query);
+  return (
+    <HStack gap="2xs" minW="0" aria-label="Harness controls">
+      {modes.map((mode) => (
+        <NativeModeTag
+          key={mode.id}
+          mode={mode}
+          pending={pending}
+          unavailable={unavailable}
+          onRefresh={onRefresh}
+          onAction={onAction}
+        />
       ))}
+      {draftTag ? <LocalModeTag tag={draftTag} /> : null}
+      {sentTag ? <LocalModeTag tag={sentTag} onRefresh={onRefresh} /> : null}
       {commandInput ? (
-        <HStack gap="xs">
-          <Button
-            size="2xs"
-            variant="outline"
-            aria-pressed={Boolean(literal)}
-            onClick={() => onLiteralChange(!literal)}
-          >
-            {literal ? "Send as message" : "Run native command"}
-          </Button>
-          <Text textStyle="label/XS/regular" color="fg.muted">
-            {literal ? "Slash text will be sent as written." : "Select to send slash text as a message."}
-          </Text>
-        </HStack>
+        <Button size="xs" variant="ghost" aria-pressed={Boolean(literal)} onClick={() => onLiteralChange(!literal)}>
+          {literal ? "Send as message" : "Run native command"}
+        </Button>
       ) : null}
-    </Stack>
+    </HStack>
   );
 };

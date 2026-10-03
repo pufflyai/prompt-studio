@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DraftHarnessCommandInput, HarnessCommandState, HarnessOperation } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
+import { assertCurrentNativeAction } from "../chat/native-action-state";
 export const useHarnessCommands = (
   sessionId: string | null,
   harnessId: string,
@@ -24,10 +25,20 @@ export const useHarnessCommands = (
   const invoke = useMutation<
     { status: "started" | "completed"; message?: string; sessionId?: string },
     Error,
-    HarnessOperation
+    { operation: HarnessOperation; modeSnapshot?: HarnessCommandState["modes"][number] }
   >({
-    mutationFn: (operation: HarnessOperation) =>
-      !sessionId
+    mutationFn: async ({ operation, modeSnapshot }) => {
+      if (operation.kind === "mode-action") {
+        const fresh = await state.refetch();
+        if (fresh.error || fresh.data?.harnessId !== harnessId)
+          throw new Error("Native status is unavailable. Check status before trying again.");
+        assertCurrentNativeAction(
+          modeSnapshot ? [modeSnapshot] : (state.data?.modes ?? []),
+          fresh.data.modes,
+          operation,
+        );
+      }
+      return !sessionId
         ? createCommand(operation)
         : apiRequest<{ status: "started" | "completed"; message?: string; sessionId?: string }>(
             `/v1/sessions/${sessionId}/harness-commands`,
@@ -35,9 +46,10 @@ export const useHarnessCommands = (
               method: "POST",
               body: { operation, harnessId },
             },
-          ),
-    onSettled: () => {
-      void client.invalidateQueries({ queryKey });
+          );
+    },
+    onSettled: async () => {
+      await client.invalidateQueries({ queryKey });
     },
   });
   return {
@@ -45,5 +57,6 @@ export const useHarnessCommands = (
     invoke,
     loading: state.isLoading,
     error: state.error,
+    refresh: () => void state.refetch(),
   };
 };

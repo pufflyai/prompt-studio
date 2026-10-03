@@ -1,5 +1,5 @@
-import { Box, Button, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
+import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { getTextFromSerializedEditorState, type PromptCommand, PromptEditor } from "../../rich-text";
 import {
@@ -160,7 +160,11 @@ export const ChatInput = (props: ChatInputProps) => {
     },
   });
 
-  const handleContainerClick = () => {
+  const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target;
+    // Portaled controls bubble through React, but own their focus outside this box.
+    if (!(target instanceof Element) || !event.currentTarget.contains(target)) return;
+    if (target.closest("button, input, textarea, select, a, label, [role=button], [role=combobox]")) return;
     setIsSelected(true);
     focusPromptEditor(containerRef.current);
   };
@@ -302,8 +306,11 @@ export const ChatInput = (props: ChatInputProps) => {
           </ScrollArea>
         )}
         <HStack gap="1" minH={COMPOSER_CONTROL_HEIGHT} align="center">
-          {actions}
-          <Spacer />
+          <ScrollArea flex="1" minW="0" showVerticalScrollbar={false} showHorizontalScrollbar>
+            <HStack gap="1" width="max-content" minH={COMPOSER_CONTROL_HEIGHT}>
+              {actions}
+            </HStack>
+          </ScrollArea>
           {questionPrompt ? (
             <Button
               size="xs"

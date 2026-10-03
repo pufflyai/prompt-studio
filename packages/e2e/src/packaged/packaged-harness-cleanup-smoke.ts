@@ -35,7 +35,7 @@ export const registerHarnessCleanupSmokeTests = () => {
         export default { harnesses: [{
           id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker",
           capabilities: () => [], start: run, resume: run,
-          getCommandState: () => ({ commands: [{ name: "/goal", description: "Native fixture command" }], modes: [], slashCommands: true }),
+          getCommandState: () => ({ commands: [{ name: "/goal", description: "Native fixture command", composer: { label: "Goal", modeId: "goal", reservedArguments: ["clear"] } }], modes: [{ id: "goal", label: "Goal", description: "Native objective", state: "paused", tagText: "paused: Native objective", closeActionId: "clear", actions: [{ id: "clear", label: "Clear" }] }], slashCommands: true }),
           prepareOperation: (_ctx, _input, operation) => ({ execution: "control", invoke: async () => ({ kind: "completed", message: operation.text }) }),
           listModels(ctx) { if (ctx.projectId) used.add(ctx.projectId); return []; },
           dispose(ctx) {
@@ -78,6 +78,11 @@ export const registerHarnessCleanupSmokeTests = () => {
           agent: "test.cleanup-smoke.harness.worker",
         });
         expect(draftState.commands[0].name).toBe("/goal");
+        expect(draftState.commands[0].composer).toEqual({
+          label: "Goal",
+          modeId: "goal",
+          reservedArguments: ["clear"],
+        });
         const firstCommand = await request("/sessions", "POST", {
           project_id: project.id,
           title: "First native command",
@@ -96,6 +101,7 @@ export const registerHarnessCleanupSmokeTests = () => {
         });
         const state = await request(`/sessions/${session.id}/harness-commands`);
         expect(state.commands[0].name).toBe("/goal");
+        expect(state.modes[0]).toMatchObject({ tagText: "paused: Native objective", closeActionId: "clear" });
         const outcome = await request(`/sessions/${session.id}/harness-commands`, "POST", {
           harnessId: state.harnessId,
           operation: { kind: "command", text: "/goal  exact native argument" },

@@ -23,6 +23,7 @@ import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout
 import { skeletonRecipe } from "./recipes/skeleton";
 import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
+import { tagSlotRecipe } from "./recipes/tag";
 import { textareaRecipe } from "./recipes/textarea";
 import { timelineSlotRecipe } from "./recipes/timeline";
 import { tooltipRecipe } from "./recipes/tooltip";
@@ -72,6 +73,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      tag: tagSlotRecipe,
       windowTitleBar: windowTitleBarRecipe,
       windowTabs: windowTabsRecipe,
       resizableSplitLayout: resizableSplitLayoutSlotRecipe,

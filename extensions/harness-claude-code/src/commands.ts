@@ -10,18 +10,32 @@ import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
 export const claudeCommandState = (input: HarnessCommandDiscoveryContext): HarnessCommandState => ({
   slashCommands: true,
   commands: [
-    { name: "/plan", description: "Select Claude's native planning permission mode.", argumentHelp: "[task]" },
+    {
+      name: "/plan",
+      description: "Select Claude's native planning permission mode.",
+      argumentHelp: "[task]",
+      composer: { label: "Plan", modeId: "planning" },
+    },
     { name: "/compact", description: "Compact Claude's native conversation.", argumentHelp: "[instructions]" },
-    { name: "/goal", description: "Send a native Claude goal command.", argumentHelp: "[condition]" },
+    {
+      name: "/goal",
+      description: "Send a native Claude goal command. Goal status is not available through this harness.",
+      argumentHelp: "[condition]",
+      composer: { label: "Goal", reservedArguments: ["clear", "stop", "off", "reset", "none", "cancel"] },
+      ...(input.params?.permission_mode === "plan"
+        ? { disabledReason: "Leave planning before submitting a goal. This combination is not verified." }
+        : {}),
+    },
   ],
   modes:
     input.params?.permission_mode === "plan"
       ? [
           {
             id: "planning",
-            label: "Planning",
+            label: "Plan",
             description: "Claude planning permission mode is selected for the next turn.",
             state: "Next turn",
+            closeActionId: "default",
             actions: [{ id: "default", label: "Leave planning" }],
           },
         ]

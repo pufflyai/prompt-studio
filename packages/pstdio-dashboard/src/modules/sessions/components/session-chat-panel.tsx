@@ -237,7 +237,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             chatInputPlaceholder="Reply to the agent..."
             chatInputDefaultValue={chatDraft.seed}
             onChatInputChange={commandComposer.change}
-            composerHeader={commandComposer.header}
             chatInputCommands={commandComposer.suggestions}
             attachedResources={attachedResources}
             actions={
@@ -257,6 +256,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
                   harnessParamOverrides={harnessParamOverrides}
                   setHarnessParamOverrides={setHarnessParamOverrides}
                 />
+                {commandComposer.controls}
               </>
             }
             attachmentList={

@@ -142,6 +142,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0003 — PRD: Dashboard browser page titles](../requirements/dashboard/0003-page-titles.md)
 - [0004 — PRD: Dashboard Sessions](../requirements/dashboard/0004-sessions.md)
 - [0005 — PRD: Dashboard settings and folder projects](../requirements/dashboard/0005-settings.md)
+- [0006 — PRD: Composer modes and provider state](../requirements/dashboard/0006-composer-modes.md)
 
 ### Extensions
 
