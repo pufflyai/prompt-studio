@@ -61,6 +61,7 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
 
   await row("Tickets").click();
   await expect(page).toHaveURL(/\/tickets$/);
+  await expect(row("Tickets")).toHaveAttribute("aria-selected", "true");
   await row("Sessions").click();
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await row("Level session").click();

@@ -70,14 +70,6 @@ const resolveActiveResourceNodeIds = (
 };
 const findSectionNode = (sections: TreeViewSection[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>) =>
   listSectionNodes(sections, childrenByNodeId).find((node) => node.id === nodeId);
-export const filterTreeListSelection = (
-  sections: TreeViewSection[],
-  childrenByNodeId: Record<string, TreeNode[]>,
-  selection: string | string[] | undefined,
-) => {
-  const selectedIds = typeof selection === "string" ? [selection] : (selection ?? []);
-  return activeNodeIds(selectedIds.filter((nodeId) => findSectionNode(sections, nodeId, childrenByNodeId)));
-};
 const pageRefsEqual = (left: PageRef, right: PageRef) => left.id === right.id && left.extensionId === right.extensionId;
 const targetMatchesPage = (target: NavigationTarget | undefined, activePage: PageRef, activeResource?: ResourceRef) => {
   // A resource panel owns its selection; its containing page can host other open resources.

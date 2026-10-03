@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchSelectionResourceMetadata, type ResourceRef } from "../../../core";
-import {
-  canVirtualizeTreeSections,
-  filterTreeListSelection,
-  resolveTreeListActiveNodeId,
-  resolveTreeListSelection,
-} from "./tree-list-adapter";
+import { canVirtualizeTreeSections, resolveTreeListActiveNodeId, resolveTreeListSelection } from "./tree-list-adapter";
 
 const ticketsResource = {
   type: "dashboard-view",
@@ -148,14 +143,6 @@ describe("resolveTreeListSelection", () => {
         selectedNodeId: "src/old.ts",
       }),
     ).toBe("src/index.ts");
-  });
-});
-describe("filterTreeListSelection", () => {
-  test("keeps the global selection only in the slot that contains it", () => {
-    const header = [{ id: "header", nodes: [{ id: "search", label: "Search" }] }];
-    const body = [{ id: "body", nodes: [{ id: "sessions", label: "Sessions" }] }];
-    expect(filterTreeListSelection(header, {}, "search")).toBe("search");
-    expect(filterTreeListSelection(body, {}, "search")).toBeUndefined();
   });
 });
 describe("canVirtualizeTreeSections", () => {
