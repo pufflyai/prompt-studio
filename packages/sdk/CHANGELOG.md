@@ -1,5 +1,13 @@
 # @pstdio/sdk
 
+## 0.40.1
+
+_2026-10-03_
+
+### Patch Changes
+
+- 8d68e16: Let string extension settings load their dropdown choices from a command with the new `options` field in extension API 0.1.2.
+
 ## 0.40.0
 
 _2026-10-02_

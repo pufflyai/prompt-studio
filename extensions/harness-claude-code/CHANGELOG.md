@@ -1,5 +1,13 @@
 # harness-claude-code
 
+## 0.40.1
+
+_2026-10-03_
+
+### Patch Changes
+
+- 8542b56: Let Claude Code ask the person a question in the chat form and continue the same run with the answer or Skip.
+
 ## 0.40.0
 
 _2026-10-02_

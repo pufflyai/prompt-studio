@@ -1,5 +1,13 @@
 # @pstdio/desktop
 
+## 0.40.1
+
+_2026-10-03_
+
+### Patch Changes
+
+- b2f4cfb: Give the macOS DMG window a Prompt Studio background with the app and Applications icons on each side of a drag arrow.
+
 ## 0.40.0
 
 _2026-10-02_

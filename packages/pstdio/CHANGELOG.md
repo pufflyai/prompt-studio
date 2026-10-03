@@ -1,5 +1,22 @@
 # pstdio
 
+## 0.40.1
+
+_2026-10-03_
+
+### Patch Changes
+
+- 8542b56: Confirm question answers after their tool results arrive, reject repeated or cancelled replies, and refuse answers with files instead of dropping the files.
+- b2f4cfb: Give the macOS DMG window a Prompt Studio background with the app and Applications icons on each side of a drag arrow.
+- 8542b56: Let Claude Code ask the person a question in the chat form and continue the same run with the answer or Skip.
+- 7b1d280: Move the Planner's implementation settings onto its extension page with a dropdown for the default target branch, list Ticket tags above Danger zone, and return `[{ branch }]` rows from `pst pstdio-planner implementation-targets`.
+- 61bfc4f: Decide whether a ticket can start from its dependencies alone, and show why Run attempt cannot start a ticket in the dialog.
+- 8d68e16: Let string extension settings load their dropdown choices from a command with the new `options` field in extension API 0.1.2.
+- 4b23942: Show Sidenav rows as selected after users move them into the header or footer.
+- 4b23942: Show open panel toggles and other pressed controls as selected in color themes that set a background but no selection color.
+- 51b102b: Show Codex clarification questions in the shared composer and deliver correlated answers or Skip to the live run.
+- 8863793: Show an accessible tooltip on the project open / create button.
+
 ## 0.40.0
 
 _2026-10-02_

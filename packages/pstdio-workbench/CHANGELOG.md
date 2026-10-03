@@ -1,5 +1,15 @@
 # @pstdio/workbench
 
+## 0.40.1
+
+_2026-10-03_
+
+### Patch Changes
+
+- 61bfc4f: Decide whether a ticket can start from its dependencies alone, and show why Run attempt cannot start a ticket in the dialog.
+- 4b23942: Show Sidenav rows as selected after users move them into the header or footer.
+- 8d68e16: Export `useCommandOptions` and `CommandOptionStatus` so hosts can load command-backed options outside command dialogs.
+
 ## 0.40.0
 
 _2026-10-02_
