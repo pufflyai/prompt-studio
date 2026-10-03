@@ -13,7 +13,8 @@ export const startKeyboardTabDrag = async (tab: Locator) => {
 export const openPackagedProject = async (page: Page, project: { id: string; name: string }) => {
   const { id, name } = project;
   const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
-  if (!(await picker.isVisible())) await page.getByRole("button", { name: "Open project", exact: true }).click();
+  if (!(await picker.isVisible()))
+    await page.getByRole("button", { name: /^Open (?:project|\/ create project)$/ }).click();
   await picker.getByText(name, { exact: true }).click();
   await expect(page.getByRole("tab", { name, exact: true })).toHaveAttribute("aria-selected", "true");
   // Tab selection precedes project boot, which restores the page and its overlays.

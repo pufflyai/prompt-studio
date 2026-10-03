@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
+import { allowPageClose } from "./lifecycle-actions";
 import {
   createPackagedHome,
   disposePackagedApp,
@@ -53,7 +54,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
       await expect.poll(() => readHeartbeat(heartbeatPath)?.pid).toBe(probePid);
       await app.finishTrace();
       if (shutdown === "desktop quit") {
-        await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
+        await allowPageClose(app.page, () => app!.page.evaluate(() => void window.promptStudioDesktop.quitApp()));
         await waitForExit(app.child);
       } else {
         const close = runPackagedCli(home, ["close"]);

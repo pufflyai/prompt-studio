@@ -2,6 +2,7 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
+import { allowPageClose } from "./lifecycle-actions";
 import {
   createPackagedHome,
   disposePackagedApp,
@@ -48,14 +49,14 @@ test("reorders project tabs with mouse and keyboard and restores their order aft
     const firstTab = app.page.getByRole("tab", { name: first.name, exact: true });
     const dragStatus = app.page.getByRole("status");
     const announcedOver = (targetId: string) => dragStatus.filter({ hasText: new RegExp(`${first.id}.*${targetId}`) });
-    await firstTab.click();
+    await firstTab.focus();
     await startKeyboardTabDrag(firstTab);
     await expect(announcedOver(first.id)).toHaveCount(1);
     await app.page.keyboard.press("ArrowRight");
     await expect(announcedOver(second.id)).toHaveCount(1);
     await app.page.keyboard.press("Space");
     await expect(projectTabs).toHaveText([second.name, first.name]);
-    await firstTab.click();
+    await firstTab.focus();
     await startKeyboardTabDrag(firstTab);
     await expect(announcedOver(first.id)).toHaveCount(1);
     await app.page.keyboard.press("ArrowLeft");
@@ -64,11 +65,12 @@ test("reorders project tabs with mouse and keyboard and restores their order aft
     await expect(projectTabs).toHaveText([second.name, first.name]);
     await dragProjectTab(app.page, first.name, second.name);
     await expect(projectTabs).toHaveText([first.name, second.name]);
+    await expect(app.page).toHaveURL(firstPageUrl);
 
     expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
     const runtimeBeforeRelaunch = readDescriptor(home)!;
     await app.finishTrace();
-    await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
+    await allowPageClose(app.page, () => app!.page.evaluate(() => void window.promptStudioDesktop.quitApp()));
     await waitForExit(app.child);
     await app.browser.close();
     app = await launchPackagedApp(home);
