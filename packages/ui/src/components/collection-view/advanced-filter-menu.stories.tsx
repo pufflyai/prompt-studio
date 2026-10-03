@@ -3,29 +3,23 @@ import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { AdvancedFilterMenu } from "./advanced-filter-menu";
 import { storyFields, storyFilter, storyOptions } from "./collection-view-story-fixtures";
-import { ViewFilterMenu } from "./view-filter-menu";
 
-const meta: Meta<typeof ViewFilterMenu> = {
-  title: "Patterns/Collection View/View Filter Menu",
-  component: ViewFilterMenu,
+const meta: Meta<typeof AdvancedFilterMenu> = {
+  title: "Patterns/Collection View/Advanced Filter Menu",
+  component: AdvancedFilterMenu,
 };
 
 export default meta;
 
 type Story = StoryObj;
 
-const Menu = (props: { filter: ViewFilterGroup; advanced?: boolean }) => {
+const Menu = (props: { filter: ViewFilterGroup }) => {
   const [filter, setFilter] = useState(props.filter);
   return (
     <Box width="40rem" padding="2xs" borderWidth="1px" borderColor="border" borderRadius="md" bg="bg">
-      <ViewFilterMenu
-        advanced={props.advanced}
-        fields={storyFields}
-        filter={filter}
-        optionsFor={storyOptions}
-        onChange={setFilter}
-      />
+      <AdvancedFilterMenu fields={storyFields} filter={filter} optionsFor={storyOptions} onChange={setFilter} />
     </Box>
   );
 };
@@ -46,7 +40,7 @@ export const SimpleRules: Story = {
 
 /** Every rule uses the same And/Or choice. */
 export const AllOrAnyRules: Story = {
-  render: () => <Menu advanced filter={storyFilter} />,
+  render: () => <Menu filter={storyFilter} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Conjunction" }));

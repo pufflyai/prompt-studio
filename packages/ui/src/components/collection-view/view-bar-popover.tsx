@@ -38,6 +38,7 @@ export const ViewBarPopover = (props: ViewBarPopoverProps) => {
       closeOnInteractOutside={false}
       positioning={{
         placement: "bottom-start",
+        hideWhenDetached: true,
         offset: { mainAxis: 8 },
         getAnchorElement: () => anchorRef.current,
       }}

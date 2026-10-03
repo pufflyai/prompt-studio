@@ -1,20 +1,33 @@
 import { describe, expect, test } from "bun:test";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
-import {
-  addRule,
-  clearQuickOptions,
-  quickOptionValues,
-  selectRuleValues,
-  setQuickOptions,
-  setRuleAt,
-} from "./collection-view-rules";
+import { addRule, quickOptionValues, selectRuleValues, setQuickOptions, setRuleAt } from "./collection-view-rules";
 
 const status: AttributeDescriptor = { id: "status", label: "Status", type: { kind: "enum", options: [] } };
 const tags: AttributeDescriptor = { id: "tags", label: "Tags", type: { kind: "enum-multi", options: [] } };
 const empty: ViewFilterGroup = { conjunction: "and", rules: [] };
 
 describe("quick option rules", () => {
+  test("the property picker edits an existing negative selection in place", () => {
+    const filter: ViewFilterGroup = {
+      conjunction: "and",
+      rules: [{ attributeId: "status", condition: "is-none-of", value: ["done"] }],
+    };
+    expect(quickOptionValues(filter, "status")).toEqual(["done"]);
+    expect(setQuickOptions(filter, status, ["done", "todo"]).rules).toEqual([
+      { attributeId: "status", condition: "is-none-of", value: ["done", "todo"] },
+    ]);
+  });
+
+  test("choosing values completes an unfinished membership rule in place", () => {
+    const filter: ViewFilterGroup = {
+      conjunction: "and",
+      rules: [{ attributeId: "status", condition: "is-none-of" }],
+    };
+    expect(setQuickOptions(filter, status, ["todo"]).rules).toEqual([
+      { attributeId: "status", condition: "is-none-of", value: ["todo"] },
+    ]);
+  });
   test("choosing values writes one any-of rule per field and removes it when empty", () => {
     let filter = setQuickOptions(empty, status, ["todo"]);
     filter = setQuickOptions(filter, status, ["todo", "doing"]);
@@ -28,7 +41,6 @@ describe("quick option rules", () => {
 
     filter = setQuickOptions(filter, status, []);
     expect(filter.rules).toEqual([{ attributeId: "tags", condition: "has-any-of", value: ["ui"] }]);
-    expect(clearQuickOptions(filter, "tags")).toEqual(empty);
   });
 
   test("a quick rule respects the chosen conjunction", () => {

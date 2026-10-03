@@ -20256,7 +20256,7 @@
                               "type": "text",
                               "id": "zwIz1",
                               "name": "Op",
-                              "fill": "$ds-fg-subtle",
+                              "fill": "$ds-fg-muted",
                               "content": "is",
                               "fontFamily": "$font-body",
                               "fontSize": 10,
@@ -21040,7 +21040,7 @@
                       "type": "frame",
                       "id": "XrEDw",
                       "name": "cmp/CollectionViewBar",
-                      "context": "Saved views, search, filters, and Display. The criteria row contains only flat filter clauses. Display owns the single sort.",
+                      "context": "Saved views, search, normal and Advanced filter bubbles, and Display. No conjunction text between bubbles. Both filter controls open the same property picker.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "#00000000",
@@ -22395,11 +22395,11 @@
                               "fontWeight": "600"
                             },
                             {
-                              "id": "v5aWM",
+                              "id": "Mcwng",
                               "type": "ref",
                               "ref": "V7ww8",
                               "name": "DataTable filter",
-                              "width": "fill_container",
+                              "width": 440,
                               "descendants": {
                                 "rTKKI": {
                                   "content": "Filter table rows…"
@@ -22482,11 +22482,11 @@
                               "fontWeight": "600"
                             },
                             {
-                              "id": "Nz7MZ",
+                              "id": "vNLhe",
                               "type": "ref",
                               "ref": "V7ww8",
                               "name": "Kanban filter",
-                              "width": "fill_container",
+                              "width": 440,
                               "descendants": {
                                 "QsVCn": {
                                   "theme": {
@@ -24227,7 +24227,7 @@
                       "type": "frame",
                       "id": "V7ww8",
                       "name": "cmp/KanbanRendererFilterMenu",
-                      "context": "Canonical two-column renderer filter popover. When View Bar opens it, the surface sits 8px below the Filter control with their right edges aligned. Search occupies its own top row. Below it, the PROPERTY and active-property headings sit in separate column headers so they never overlap search. The property column is fixed at 188px and separated from the flexible options column by a $ds-border-subtle hairline; all row content fills the remaining container width. DataTable and Kanban share this primary menu surface and anatomy while overriding available fields.",
+                      "context": "The only normal filter menu. Both toolbar Filter and + Filter open this property picker. One clear-all control sits beside Filter by; no column headers or per-property clears. Advanced filter is in the footer. Value checkboxes are on the right.",
                       "reusable": true,
                       "width": 440,
                       "height": 320,
@@ -24272,10 +24272,29 @@
                               "id": "rTKKI",
                               "name": "P",
                               "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
                               "content": "Filter by…",
                               "fontFamily": "$font-body",
                               "fontSize": 13,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "Xc5FT",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Clear all filters",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "x"
+                                }
+                              }
                             }
                           ]
                         },
@@ -24303,8 +24322,11 @@
                                 {
                                   "type": "frame",
                                   "id": "Q3GoH",
+                                  "x": 0,
+                                  "y": 0,
                                   "name": "Property header",
-                                  "width": "fill_container",
+                                  "enabled": false,
+                                  "width": 188,
                                   "height": 32,
                                   "padding": [
                                     0,
@@ -24552,8 +24574,11 @@
                                 {
                                   "type": "frame",
                                   "id": "uMM4U",
+                                  "x": 0,
+                                  "y": 0,
                                   "name": "Options header",
-                                  "width": "fill_container",
+                                  "enabled": false,
+                                  "width": 252,
                                   "height": 32,
                                   "padding": [
                                     0,
@@ -24614,7 +24639,9 @@
                                       "descendants": {
                                         "UEgTp": {
                                           "icon": "circle",
-                                          "fill": "#8B9099"
+                                          "fill": "#8B9099",
+                                          "width": 12,
+                                          "height": 12
                                         },
                                         "UTbhN": {
                                           "content": "Backlog",
@@ -24625,9 +24652,21 @@
                                           "enabled": false
                                         },
                                         "OxQag": {
-                                          "enabled": true,
-                                          "icon": "check",
-                                          "fill": "#F7F8F8"
+                                          "id": "O9ERlk",
+                                          "type": "ref",
+                                          "ref": "IVFN2",
+                                          "name": "Value checkbox",
+                                          "width": 14,
+                                          "height": 14,
+                                          "descendants": {
+                                            "KkCyF": {
+                                              "width": 16,
+                                              "height": 16
+                                            },
+                                            "DFyJZ": {
+                                              "enabled": false
+                                            }
+                                          }
                                         }
                                       }
                                     },
@@ -24645,7 +24684,9 @@
                                       "descendants": {
                                         "UEgTp": {
                                           "icon": "circle",
-                                          "fill": "#16A34A"
+                                          "fill": "#16A34A",
+                                          "width": 12,
+                                          "height": 12
                                         },
                                         "UTbhN": {
                                           "content": "Ready",
@@ -24656,9 +24697,21 @@
                                           "enabled": false
                                         },
                                         "OxQag": {
-                                          "enabled": false,
-                                          "icon": "check",
-                                          "fill": "#F7F8F8"
+                                          "id": "y820gZ",
+                                          "type": "ref",
+                                          "ref": "IVFN2",
+                                          "name": "Value checkbox",
+                                          "width": 14,
+                                          "height": 14,
+                                          "descendants": {
+                                            "KkCyF": {
+                                              "width": 16,
+                                              "height": 16
+                                            },
+                                            "DFyJZ": {
+                                              "enabled": false
+                                            }
+                                          }
                                         }
                                       }
                                     },
@@ -24676,7 +24729,9 @@
                                       "descendants": {
                                         "UEgTp": {
                                           "icon": "circle",
-                                          "fill": "#3B82F6"
+                                          "fill": "#3B82F6",
+                                          "width": 12,
+                                          "height": 12
                                         },
                                         "UTbhN": {
                                           "content": "In Progress",
@@ -24687,9 +24742,21 @@
                                           "enabled": false
                                         },
                                         "OxQag": {
-                                          "enabled": false,
-                                          "icon": "check",
-                                          "fill": "#F7F8F8"
+                                          "id": "vNv6T",
+                                          "type": "ref",
+                                          "ref": "IVFN2",
+                                          "name": "Value checkbox",
+                                          "width": 14,
+                                          "height": 14,
+                                          "descendants": {
+                                            "KkCyF": {
+                                              "width": 16,
+                                              "height": 16
+                                            },
+                                            "DFyJZ": {
+                                              "enabled": false
+                                            }
+                                          }
                                         }
                                       }
                                     },
@@ -24707,7 +24774,9 @@
                                       "descendants": {
                                         "UEgTp": {
                                           "icon": "circle",
-                                          "fill": "#EF4444"
+                                          "fill": "#EF4444",
+                                          "width": 12,
+                                          "height": 12
                                         },
                                         "UTbhN": {
                                           "content": "Blocked",
@@ -24718,9 +24787,21 @@
                                           "enabled": false
                                         },
                                         "OxQag": {
-                                          "enabled": false,
-                                          "icon": "check",
-                                          "fill": "#F7F8F8"
+                                          "id": "c2BFOo",
+                                          "type": "ref",
+                                          "ref": "IVFN2",
+                                          "name": "Value checkbox",
+                                          "width": 14,
+                                          "height": 14,
+                                          "descendants": {
+                                            "KkCyF": {
+                                              "width": 16,
+                                              "height": 16
+                                            },
+                                            "DFyJZ": {
+                                              "enabled": false
+                                            }
+                                          }
                                         }
                                       }
                                     },
@@ -24738,7 +24819,9 @@
                                       "descendants": {
                                         "UEgTp": {
                                           "icon": "check-circle",
-                                          "fill": "#8B9099"
+                                          "fill": "#8B9099",
+                                          "width": 12,
+                                          "height": 12
                                         },
                                         "UTbhN": {
                                           "content": "Done",
@@ -24749,15 +24832,63 @@
                                           "enabled": false
                                         },
                                         "OxQag": {
-                                          "enabled": false,
-                                          "icon": "check",
-                                          "fill": "#F7F8F8"
+                                          "id": "E1O4MH",
+                                          "type": "ref",
+                                          "ref": "IVFN2",
+                                          "name": "Value checkbox",
+                                          "width": 14,
+                                          "height": 14,
+                                          "descendants": {
+                                            "KkCyF": {
+                                              "width": 16,
+                                              "height": 16
+                                            },
+                                            "DFyJZ": {
+                                              "enabled": false
+                                            }
+                                          }
                                         }
                                       }
                                     }
                                   ]
                                 }
                               ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "R0vJd9",
+                          "name": "Footer",
+                          "width": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "padding": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "FyFPU",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Advanced filter",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "DsEVd": {
+                                  "icon": "list-filter"
+                                },
+                                "Hf4GT": {
+                                  "content": "Advanced filter"
+                                },
+                                "khvEs": {
+                                  "enabled": false
+                                }
+                              }
                             }
                           ]
                         }
@@ -26208,8 +26339,8 @@
                     {
                       "type": "frame",
                       "id": "GzF1C",
-                      "name": "cmp/ViewFilterMenu",
-                      "context": "Normal filter rules use AND only. Add Advanced filter to create a separate bubble with an AND/OR rule group. All groups combine with normal rules using AND.",
+                      "name": "cmp/AdvancedFilterRuleList",
+                      "context": "Flat rule editor used only by Advanced bubbles. Rules share an AND/OR conjunction. Add rule in the footer; remove the group with its bubble X.",
                       "reusable": true,
                       "width": 640,
                       "fill": "$ds-bg",
@@ -26224,8 +26355,11 @@
                         {
                           "type": "frame",
                           "id": "oGUJf",
+                          "x": 6,
+                          "y": 6,
                           "name": "L · FILTER",
-                          "width": "fill_container",
+                          "enabled": false,
+                          "width": "fill_container(628)",
                           "padding": [
                             7,
                             8,
@@ -26306,11 +26440,11 @@
                               "width": "fill_container",
                               "descendants": {
                                 "zG1ZH": {
-                                  "enabled": true,
+                                  "enabled": false,
                                   "content": "And"
                                 },
                                 "HDXGT": {
-                                  "enabled": false
+                                  "enabled": true
                                 },
                                 "HDXGT/b1L0Y": {
                                   "content": "And"
@@ -26409,6 +26543,7 @@
                                 "btn": "ghost",
                                 "size": "2xs"
                               },
+                              "enabled": false,
                               "descendants": {
                                 "DsEVd": {
                                   "enabled": true,
@@ -26431,6 +26566,7 @@
                                 "btn": "ghost",
                                 "size": "2xs"
                               },
+                              "enabled": false,
                               "descendants": {
                                 "DsEVd": {
                                   "enabled": true,
@@ -65692,7 +65828,7 @@
               "gap": 20,
               "children": [
                 {
-                  "id": "uptQk",
+                  "id": "d4v6O",
                   "type": "ref",
                   "ref": "V7ww8",
                   "name": "FilterPopover",
@@ -94892,7 +95028,7 @@
               ]
             },
             {
-              "id": "P4jRMs",
+              "id": "BwiOD",
               "type": "ref",
               "ref": "V7ww8",
               "name": "DataTable filter popover",

@@ -3,12 +3,12 @@ import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { ListFilter, X } from "lucide-react";
 import { useRef, useState } from "react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { AdvancedFilterMenu } from "./advanced-filter-menu";
 import { useCollectionItemLabel } from "./collection-item-label";
 import { findField } from "./collection-view-fields";
 import { pillConditionLabel, ruleValueLabel } from "./collection-view-labels";
 import type { RuleValueOption } from "./filter-rule-value";
 import { ViewBarPopover } from "./view-bar-popover";
-import { ViewFilterMenu } from "./view-filter-menu";
 
 interface AdvancedFilterPillProps {
   group: ViewFilterGroup;
@@ -55,7 +55,7 @@ export const AdvancedFilterPill = (props: AdvancedFilterPillProps) => {
         width="40rem"
         testId="advanced-filter-popover"
       >
-        <ViewFilterMenu advanced fields={fields} filter={group} optionsFor={optionsFor} onChange={onChange} />
+        <AdvancedFilterMenu fields={fields} filter={group} optionsFor={optionsFor} onChange={onChange} />
       </ViewBarPopover>
     </HStack>
   );

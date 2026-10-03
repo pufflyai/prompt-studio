@@ -31,25 +31,26 @@ export const setConjunction = (
   ...filter,
   conjunction,
 });
-const isAnyOf = (rule: ViewFilterRule) => rule.condition === "is-any-of" || rule.condition === "has-any-of";
+const isOptionRule = (rule: ViewFilterRule) =>
+  Array.isArray(rule.value) ||
+  ["is-any-of", "is-none-of", "has-any-of", "has-all-of", "has-none-of", "is-empty", "is-not-empty"].includes(
+    rule.condition,
+  );
 
-/** The picker edits one list rule per field, using the view's chosen conjunction. */
+/** The picker edits the field's existing selection without changing its predicate. */
 export const quickOptionValues = (filter: ViewFilterGroup, attributeId: string) => {
-  const rule = filter.rules.find((entry) => entry.attributeId === attributeId && isAnyOf(entry));
+  const rule = filter.rules.find((entry) => entry.attributeId === attributeId && isOptionRule(entry));
   return rule && Array.isArray(rule.value) ? rule.value : [];
 };
 export const setQuickOptions = (filter: ViewFilterGroup, field: AttributeDescriptor, values: string[]) => {
-  const index = filter.rules.findIndex((entry) => entry.attributeId === field.id && isAnyOf(entry));
+  const index = filter.rules.findIndex((entry) => entry.attributeId === field.id && isOptionRule(entry));
+  const existing = filter.rules[index];
   const rule: ViewFilterRule | undefined = values.length
-    ? { attributeId: field.id, condition: defaultCondition(field), value: values }
+    ? selectRuleValues(field, existing ?? newRule(field), values)
     : undefined;
   if (index === -1) return rule ? addRule(filter, rule) : filter;
   return setRuleAt(filter, index, rule);
 };
-export const clearQuickOptions = (filter: ViewFilterGroup, attributeId: string): ViewFilterGroup => ({
-  ...filter,
-  rules: filter.rules.filter((entry) => entry.attributeId !== attributeId || !isAnyOf(entry)),
-});
 
 /** Selecting a categorical value replaces an empty predicate in the same edit. */
 export const selectRuleValues = (

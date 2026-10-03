@@ -31,7 +31,7 @@ interface ConditionSelectProps {
   rule: ViewFilterRule;
   width?: string;
   onChange: (rule: ViewFilterRule) => void;
-  variant?: "subtle" | "filter-segment";
+  variant?: "subtle" | "filter-segment" | "filter-condition";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
