@@ -73,7 +73,13 @@ export const useDataTableView = (props: DataTableProps) => {
     visibleColumnKeys.flatMap((key) => dataTableCellText(row.sourceRow[key], columnRenderers?.[key])),
   );
   const groupField = findField(attributes, settings.grouping);
-  const groups = groupField?.groupable ? groupRowsByField(shownRows, groupField) : undefined;
+  const groups = groupField?.groupable
+    ? groupRowsByField(
+        shownRows,
+        groupField,
+        groupRowsByField(rows, groupField).map((group) => group.key),
+      )
+    : undefined;
 
   return {
     ...store,

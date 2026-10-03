@@ -25,8 +25,10 @@ const Picker = (props: { filter?: ViewFilterGroup }) => {
         fields={storyFields}
         filter={filter}
         optionsFor={storyOptions}
-        onChange={setFilter}
-        onPickField={(field) => setPicked(field.id)}
+        onSelectRule={(rule) => {
+          setFilter({ ...filter, rules: [rule] });
+          setPicked(rule.attributeId);
+        }}
       />
       <Text data-testid="filter-value" textStyle="label/XS" padding="xs">
         {JSON.stringify(filter.rules)}
@@ -49,8 +51,7 @@ export const OptionValues: Story = {
     expect(checkbox.left).toBeGreaterThan(label.right);
     await userEvent.click(option);
     await expect(canvas.getByTestId("filter-value")).toHaveTextContent('"condition":"is-any-of"');
-    await userEvent.click(canvas.getByRole("button", { name: "Clear all filters" }));
-    await expect(canvas.getByTestId("filter-value")).toHaveTextContent("[]");
+    expect(checkbox.width).toBe(12);
   },
 };
 
@@ -60,6 +61,8 @@ export const TextField: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: /Title/ }));
+    await expect(canvas.getByTestId("filter-value")).toHaveTextContent("[]");
+    await userEvent.click(canvas.getByRole("button", { name: "Filter by text", exact: true }));
     await expect(canvas.getByTestId("picked-field")).toHaveTextContent("title");
   },
 };
@@ -73,4 +76,24 @@ export const WithSelectedValues: Story = {
       }}
     />
   ),
+};
+
+export const MatchCounts: Story = {
+  render: () => (
+    <Box width="440px">
+      <FilterMenu
+        fields={storyFields}
+        filter={EMPTY_VIEW_FILTER}
+        optionsFor={(field) => storyOptions(field).map((option, index) => ({ ...option, count: index === 0 ? 0 : 5 }))}
+        onSelectRule={() => undefined}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const todo = canvas.getByRole("checkbox", { name: "Todo", exact: true });
+    const progress = canvas.getByRole("checkbox", { name: "In progress", exact: true });
+    await expect(within(progress).getByText("5", { exact: true })).toBeVisible();
+    expect(within(todo).queryByText("0", { exact: true })).toBeNull();
+  },
 };

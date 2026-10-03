@@ -41,6 +41,11 @@ export const editableSlotRecipe = defineSlotRecipe({
   },
   variants: {
     size: {
+      xs: {
+        preview: { textStyle: "label/XS", lineHeight: "1rem", px: "xs" },
+        input: { textStyle: "label/XS", lineHeight: "1rem", px: "xs" },
+        textarea: { textStyle: "label/XS", lineHeight: "1rem", px: "xs" },
+      },
       sm: {
         preview: {
           textStyle: "label/S/medium",

@@ -1,5 +1,5 @@
 import { Box, Button, Dialog, Icon, IconButton, Input, Tabs, Text } from "@chakra-ui/react";
-import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, ListPlus, Pencil, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -164,7 +164,7 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
           disabled={!viewsSource || busy}
           onClick={() => viewsSource && run(() => createView({ title: nextViewTitle(views), ...state }))}
         >
-          <Icon as={Plus} />
+          <Icon as={ListPlus} />
         </IconButton>
       </Tooltip>
       {renameTarget && viewsSource ? (

@@ -162,3 +162,38 @@ describe("collection view store", () => {
     expect(store.getState().settings.viewMode).toBe("list");
   });
 });
+
+describe("picker selection", () => {
+  test("commits a value and transfers the open menu to its bubble", () => {
+    const store = createCollectionViewStore({ storageKey: "picker-commit", initialState: { settings } });
+    store.getState().setOpenMenu("filter");
+    const rule = { attributeId: "status", condition: "is-any-of" as const, value: ["todo"] };
+    store.getState().selectRule(rule);
+    expect(store.getState()).toMatchObject({
+      filter: { conjunction: "and", rules: [rule] },
+      openMenu: null,
+      openRuleIndex: 0,
+    });
+  });
+  test("completes an existing negative rule in place and keeps advanced groups", () => {
+    const groups = [
+      {
+        conjunction: "or" as const,
+        rules: [{ attributeId: "title", condition: "contains" as const, value: "review" }],
+      },
+    ];
+    const filter = {
+      conjunction: "and" as const,
+      rules: [{ attributeId: "status", condition: "is-none-of" as const }],
+      groups,
+    };
+    const store = createCollectionViewStore({ storageKey: "picker-negative", initialState: { settings, filter } });
+    const rule = { ...filter.rules[0]!, value: ["todo"] };
+    store.getState().selectRule(rule);
+    expect(store.getState()).toMatchObject({
+      filter: { conjunction: "and", rules: [rule], groups },
+      openMenu: null,
+      openRuleIndex: 0,
+    });
+  });
+});

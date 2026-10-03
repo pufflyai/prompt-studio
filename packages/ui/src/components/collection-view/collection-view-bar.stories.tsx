@@ -21,24 +21,20 @@ export const NoRules: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const popover = await body.findByTestId("filter-menu-popover");
-    const expectAnchored = async () => {
-      await waitFor(() => {
-        const trigger = canvas.getByRole("button", { name: "Filter", exact: true }).getBoundingClientRect();
-        const bounds = popover.getBoundingClientRect();
-        expect(bounds.top).toBeGreaterThanOrEqual(trigger.bottom);
-        expect(bounds.left).toBeGreaterThan(0);
-      });
-    };
-    await expectAnchored();
     await userEvent.click(within(popover).getByRole("checkbox", { name: "Todo", exact: true }));
     await expect(canvas.getByRole("group", { name: "Status filter" })).toBeVisible();
-    await expectAnchored();
-    await userEvent.click(within(popover).getByRole("button", { name: "Clear all filters", exact: true }));
-    await expect(within(popover).getByRole("checkbox", { name: "Todo", exact: true })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
-    await expectAnchored();
+    await waitFor(() => expect(popover).not.toBeVisible());
+    const menu = await body.findByRole("menu");
+    const trigger = within(canvas.getByRole("group", { name: "Status filter" })).getByRole("button", {
+      name: "Values",
+    });
+    await waitFor(() => {
+      expect(menu.getBoundingClientRect().top).toBeGreaterThanOrEqual(trigger.getBoundingClientRect().bottom);
+      expect(menu.getBoundingClientRect().left).toBeGreaterThan(0);
+    });
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(canvas.getByRole("button", { name: "Clear all filters" }));
+    await expect(canvas.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
   },
 };
 
@@ -68,7 +64,7 @@ export const SharedPropertyPicker: Story = {
     const body = within(canvasElement.ownerDocument.body);
     const pill = within(canvas.getByRole("group", { name: "Status filter" }));
     expect(getComputedStyle(pill.getByRole("button", { name: "Condition" })).color).not.toBe(
-      getComputedStyle(pill.getByRole("button", { name: "Field" })).color,
+      getComputedStyle(pill.getByText("Status", { exact: true })).color,
     );
     for (const name of ["Filter", "Add filter"]) {
       await userEvent.click(canvas.getByRole("button", { name, exact: true }));
@@ -83,34 +79,22 @@ export const SharedPropertyPicker: Story = {
   },
 };
 
-/** Clearing the lower picker closes it before its last criterion removes the anchor. */
-export const ClearLastFilterFromPicker: Story = {
-  render: () => <Bar storageKey="storybook-clear-lower-picker" />,
+/** Selecting from the moving lower trigger continues on the stable bubble instead. */
+export const LowerPickerHandoff: Story = {
+  render: () => <Bar storageKey="storybook-lower-picker-handoff" filter={storyFilter} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
-    await userEvent.click(body.getByRole("checkbox", { name: "Todo", exact: true }));
-    await userEvent.keyboard("{Escape}");
     await userEvent.click(canvas.getByRole("button", { name: "Add filter", exact: true }));
-    const popover = await body.findByTestId("filter-menu-popover");
-    await waitFor(() => expect(popover).toBeVisible());
-    const positions: DOMRect[] = [];
-    let frame = 0;
-    const observe = () => {
-      if (popover.isConnected && getComputedStyle(popover.parentElement!).visibility !== "hidden") {
-        positions.push(popover.getBoundingClientRect());
-      }
-      frame = requestAnimationFrame(observe);
-    };
-    frame = requestAnimationFrame(observe);
-    await userEvent.click(within(popover).getByRole("button", { name: "Clear all filters" }));
-    await waitFor(() => expect(popover).not.toBeVisible());
-    cancelAnimationFrame(frame);
-    for (const position of positions) {
-      expect(position.left).toBeGreaterThan(0);
-      expect(position.top).toBeGreaterThan(0);
-    }
+    const picker = await body.findByTestId("filter-menu");
+    await userEvent.click(within(picker).getByRole("button", { name: "Labels", exact: true }));
+    await userEvent.click(within(picker).getByRole("checkbox", { name: "Bug", exact: true }));
+    await waitFor(() => expect(picker).not.toBeVisible());
+    const menu = await body.findByRole("menu");
+    await userEvent.click(within(menu).getByRole("menuitemcheckbox", { name: /Regression/ }));
+    await expect(
+      within(canvas.getByRole("group", { name: "Labels filter" })).getByRole("button", { name: "Values" }),
+    ).toHaveTextContent("Bug, Regression");
   },
 };
 
@@ -153,7 +137,7 @@ export const BooleanPredicate: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const pill = canvas.getByRole("group", { name: "Archived filter" });
-    await expect(within(pill).getByRole("button", { name: "Field" })).toHaveTextContent("Ticket");
+    await expect(within(pill).getByText("Ticket", { exact: true })).toHaveTextContent("Ticket");
     await expect(within(pill).getByRole("button", { name: "Condition" })).toHaveTextContent("is not");
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(within(pill).getByRole("button", { name: "Condition" }));
@@ -210,7 +194,7 @@ export const IndependentFilterChoices: Story = {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     const pill = within(canvas.getByRole("group", { name: "Status filter" }));
-    await expect(pill.getByRole("button", { name: "Field" }).querySelector("svg")).toBeNull();
+    await expect(pill.getByText("Status", { exact: true })).toBeVisible();
     await userEvent.click(pill.getByRole("button", { name: "Condition" }));
     await expect(body.getAllByRole("menuitem")).toHaveLength(2);
     await userEvent.click(body.getByRole("menuitem", { name: "is not", exact: true }));
@@ -229,9 +213,6 @@ export const IndependentFilterChoices: Story = {
     await expect(todo).toHaveAttribute("aria-checked", "false");
     await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("Done");
     await userEvent.keyboard("{Escape}");
-    await userEvent.click(pill.getByRole("button", { name: "Field" }));
-    await userEvent.click(body.getByRole("menuitem", { name: "Priority", exact: true }));
-    await expect(canvas.getByRole("group", { name: "Priority filter" })).toBeVisible();
   },
 };
 

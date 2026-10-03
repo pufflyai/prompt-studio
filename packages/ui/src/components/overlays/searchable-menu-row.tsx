@@ -20,7 +20,7 @@ export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
         checked={Boolean(item.isSelected)}
         readOnly
         pointerEvents="none"
-        size="sm"
+        size={item.variant === "compact" ? "xs" : "sm"}
         inputProps={{ tabIndex: -1, "aria-hidden": true }}
       />
     </HStack>

@@ -1,4 +1,4 @@
-import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import type { ViewFilterGroup, ViewFilterRule, ViewSort } from "@pstdio/sdk/extensions";
 import { useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore, type StoreApi } from "zustand/vanilla";
@@ -6,7 +6,7 @@ import { createBrowserStorage } from "../../utils/browser-storage";
 import { type KanbanRendererStorage, useKanbanRendererStorage } from "../kanban-renderer/kanban-renderer-storage";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { normalFilter } from "./advanced-filter";
-import { addRule, newRule } from "./collection-view-rules";
+import { addRule, newRule, setRuleAt } from "./collection-view-rules";
 import { type CollectionSavedView, EMPTY_VIEW_FILTER } from "./collection-view-types";
 
 /** The unsaved state of one renderer: the active view and the edits made on top of it. */
@@ -35,6 +35,8 @@ export interface CollectionViewStoreState<TSettings> extends CollectionViewSnaps
   setOpenRuleIndex: (index: number | null) => void;
   /** Adds a rule for the field and opens its pill editor. */
   startRule: (field: AttributeDescriptor) => void;
+  /** Commits a picker selection and transfers editing to its bubble. */
+  selectRule: (rule: ViewFilterRule) => void;
   setSettings: (settings: Partial<TSettings>) => void;
   setFilter: (filter: ViewFilterGroup) => void;
   setSorts: (sorts: ViewSort[]) => void;
@@ -78,6 +80,13 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
             if (index !== -1) return { filter: current, openMenu: null, openRuleIndex: index };
             const filter = addRule(current, newRule(field));
             return { filter, openMenu: null, openRuleIndex: filter.rules.length - 1 };
+          }),
+        selectRule: (rule) =>
+          set((state) => {
+            const current = normalFilter(state.filter);
+            const index = current.rules.findIndex((entry) => entry.attributeId === rule.attributeId);
+            const filter = index === -1 ? addRule(current, rule) : setRuleAt(current, index, rule);
+            return { filter, openMenu: null, openRuleIndex: index === -1 ? filter.rules.length - 1 : index };
           }),
         setSettings: (settings) => set((state) => ({ settings: { ...state.settings, ...settings } })),
         setFilter: (filter) => set({ filter }),

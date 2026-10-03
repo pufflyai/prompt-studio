@@ -20198,7 +20198,7 @@
                       "type": "frame",
                       "id": "IZ2hX",
                       "name": "cmp/FilterPill",
-                      "context": "Independent filter segments share 10px text; option conditions read is one of / is not one of when multiple values are selected.",
+                      "context": "Static property label. Only predicate and values are editable. Multiple positive choices read is any of; negative choices always read is not. Text values use the shared Editable xs preview/input.",
                       "reusable": true,
                       "height": 24,
                       "fill": "$ds-surface",
@@ -20211,7 +20211,7 @@
                         {
                           "type": "frame",
                           "id": "hBbLs",
-                          "name": "Key button",
+                          "name": "Static property label",
                           "height": "fill_container",
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": {
@@ -21040,7 +21040,7 @@
                       "type": "frame",
                       "id": "XrEDw",
                       "name": "cmp/CollectionViewBar",
-                      "context": "Saved views, search, normal and Advanced filter bubbles, and Display. No conjunction text between bubbles. Both filter controls open the same property picker.",
+                      "context": "Views use list-plus to add. Filter opens the property picker; Clear beside it resets all normal/Advanced rules. Choosing a value closes the picker and opens its bubble menu. Bubble field labels are static; predicates and values remain editable.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "#00000000",
@@ -21180,7 +21180,7 @@
                               },
                               "descendants": {
                                 "k7mgm": {
-                                  "icon": "plus",
+                                  "icon": "list-plus",
                                   "width": 12,
                                   "height": 12
                                 }
@@ -21238,6 +21238,28 @@
                                 },
                                 "Hf4GT": {
                                   "content": "3"
+                                }
+                              }
+                            },
+                            {
+                              "id": "YwEgB",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Clear all filters",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Clear"
+                                },
+                                "khvEs": {
+                                  "enabled": false
                                 }
                               }
                             },
@@ -24227,7 +24249,7 @@
                       "type": "frame",
                       "id": "V7ww8",
                       "name": "cmp/KanbanRendererFilterMenu",
-                      "context": "The only normal filter menu. Both toolbar Filter and + Filter open this property picker. One clear-all control sits beside Filter by; no column headers or per-property clears. Advanced filter is in the footer. Value checkboxes are on the right.",
+                      "context": "Browse properties without creating a rule. Choosing an option closes this picker and opens the new bubble values menu. Number and date fields keep a local draft and commit with Apply filter or Enter. Text fields offer Filter by text. No value search or close X. Clear belongs beside Filter in the bar; Advanced creation is in the footer.",
                       "reusable": true,
                       "width": 440,
                       "height": 320,
@@ -24278,23 +24300,6 @@
                               "fontFamily": "$font-body",
                               "fontSize": 13,
                               "fontWeight": "normal"
-                            },
-                            {
-                              "id": "Xc5FT",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Clear all filters",
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "width": 24,
-                              "height": 24,
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "x"
-                                }
-                              }
                             }
                           ]
                         },
@@ -24656,12 +24661,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -24701,12 +24711,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -24746,12 +24761,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -24791,12 +24811,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -24836,12 +24861,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -33701,7 +33731,7 @@
                       "type": "frame",
                       "id": "QylI1",
                       "name": "cmp/Editable",
-                      "context": "recipes/editable.ts: label/L/medium (16/500), line height 24, radius 2xs; preview hover bg.hover; input bg with a 2px border outline. Sizes sm 12 / md 14. editable axis: preview | hover | editing.",
+                      "context": "Editable preview, hover and editing states. Filter bubbles use xs: 10px regular text, 16px line height, shared padding and hover.",
                       "theme": {
                         "editable": "preview"
                       },
@@ -132633,6 +132663,92 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "id": "CotiM",
+      "type": "ref",
+      "ref": "IZ2hX",
+      "name": "Filter text editable preview",
+      "x": 1302,
+      "y": 0,
+      "descendants": {
+        "SCREL": {
+          "content": "Title"
+        },
+        "zwIz1": {
+          "content": "contains"
+        },
+        "Hsj3H": {
+          "id": "fReNS",
+          "type": "ref",
+          "ref": "QylI1",
+          "name": "Text value editable xs",
+          "height": 20,
+          "descendants": {
+            "YsEIa": {
+              "content": "review",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "frame",
+      "id": "RM6vq",
+      "x": 25120,
+      "y": 0,
+      "name": "Filter number or date draft",
+      "context": "The picker keeps a complete draft. Apply filter or Enter creates the bubble; browsing and typing do not change the view.",
+      "width": 240,
+      "height": 64,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 4,
+      "children": [
+        {
+          "id": "tj7zP",
+          "type": "ref",
+          "ref": "nbn0J",
+          "name": "Number draft",
+          "width": "fill_container",
+          "height": 24,
+          "theme": {
+            "size": "2xs",
+            "field": "default"
+          },
+          "descendants": {
+            "hcIyD": {
+              "content": "70",
+              "fill": "$ds-fg"
+            }
+          }
+        },
+        {
+          "id": "OOYmN",
+          "type": "ref",
+          "ref": "c24zV7",
+          "name": "Apply filter",
+          "height": 24,
+          "theme": {
+            "size": "2xs",
+            "btn": "subtle"
+          },
+          "descendants": {
+            "DsEVd": {
+              "enabled": false
+            },
+            "Hf4GT": {
+              "content": "Apply filter"
+            },
+            "khvEs": {
+              "enabled": false
+            }
+          }
         }
       ]
     }

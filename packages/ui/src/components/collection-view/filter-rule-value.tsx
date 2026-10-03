@@ -1,6 +1,5 @@
-import { HStack, Icon, Input, Stack, Text } from "@chakra-ui/react";
+import { Editable, HStack, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterRule } from "@pstdio/sdk/extensions";
-import { useState } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { getIconComponent } from "@/components/primitives/icon-options";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -80,6 +79,26 @@ const TextValue = (props: RuleValueProps & { width?: string }) => {
   );
 };
 
+const TextBubbleValue = (props: RuleValueProps) => {
+  const { rule, onChange, open, onOpenChange } = props;
+  return (
+    <Editable.Root
+      size="xs"
+      value={typeof rule.value === "string" ? rule.value : ""}
+      placeholder="Value…"
+      edit={open}
+      activationMode="click"
+      selectOnFocus
+      onEditChange={(details) => onOpenChange?.(details.edit)}
+      onValueChange={(details) => onChange(details.value)}
+      onValueRevert={(details) => onChange(details.value)}
+    >
+      <Editable.Preview />
+      <Editable.Input aria-label="Value" />
+    </Editable.Root>
+  );
+};
+
 /** A day relative to today stays current; an exact day stays fixed. */
 const DayValue = (props: RuleValueProps) => {
   const { rule, onChange } = props;
@@ -119,7 +138,8 @@ export const RuleValueControl = (props: RuleValueProps) => {
       </Text>
     );
   if (kind === "number") return <NumberValue {...props} width="9rem" />;
-  if (kind === "text") return <TextValue {...props} width="9rem" />;
+  if (kind === "text")
+    return props.variant === "filter-segment" ? <TextBubbleValue {...props} /> : <TextValue {...props} width="9rem" />;
   if (kind === "day") return <DayValue {...props} />;
   const selectedLabel = rule.condition === "is-empty" || rule.condition === "is-not-empty" ? "Empty" : undefined;
   const allValuesLabel =
@@ -152,24 +172,12 @@ export const RuleValueControl = (props: RuleValueProps) => {
 const OptionChecklist = (props: RuleValueProps) => {
   const { rule, options: suppliedOptions, onChange } = props;
   const options = withSavedOptions(suppliedOptions, rule);
-  const [query, setQuery] = useState("");
   const selected = listValue(rule);
-  const needle = query.trim().toLocaleLowerCase();
-  const visible = options.filter((option) => option.label.toLocaleLowerCase().includes(needle));
 
   return (
     <Stack gap="0" minH="0">
-      <Input
-        aria-label="Search options"
-        size="2xs"
-        variant="borderless"
-        placeholder="Search options…"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        onKeyDown={(event) => event.stopPropagation()}
-      />
       <ScrollArea maxH="15rem" viewportProps={{ overscrollBehavior: "contain" }}>
-        {visible.map((option) => {
+        {options.map((option) => {
           const checked = selected.includes(option.value);
           return (
             <ListRow
@@ -195,18 +203,18 @@ const OptionChecklist = (props: RuleValueProps) => {
               }
               endContent={
                 <HStack gap="xs">
-                  {option.count === undefined ? null : (
+                  {option.count && option.count > 0 ? (
                     <Text textStyle="label/XS" color="fg.muted">
                       {option.count}
                     </Text>
-                  )}
+                  ) : null}
                   <Checkbox
                     checked={checked}
                     readOnly
                     aria-readonly="true"
                     inputProps={{ tabIndex: -1, "aria-hidden": true }}
                     pointerEvents="none"
-                    size="sm"
+                    size="xs"
                   />
                 </HStack>
               }
