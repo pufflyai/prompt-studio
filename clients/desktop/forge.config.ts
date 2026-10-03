@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
+import type { MakerDMGConfig } from "@electron-forge/maker-dmg";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { version } from "./package.json";
@@ -78,7 +79,19 @@ const config: ForgeConfig = {
     {
       name: "@electron-forge/maker-dmg",
       platforms: ["darwin"],
-      config: { name: "Prompt Studio", icon: join(assetsRoot, "icon.icns"), format: "ULFO" },
+      config: {
+        name: "Prompt Studio",
+        icon: join(assetsRoot, "icon.icns"),
+        // appdmg picks up dmg-background@2x.png next to this file for Retina screens.
+        background: join(assetsRoot, "dmg-background.png"),
+        iconSize: 96,
+        // Positions match the clear areas around the arrow in the background artwork.
+        contents: ({ appPath }) => [
+          { x: 192, y: 260, type: "file", path: appPath },
+          { x: 466, y: 260, type: "link", path: "/Applications" },
+        ],
+        format: "ULFO",
+      } satisfies MakerDMGConfig,
     },
     {
       name: "@electron-forge/maker-deb",
