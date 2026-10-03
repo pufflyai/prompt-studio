@@ -5,6 +5,7 @@ declare const agentModelSchema: z.ZodObject<{
   description: z.ZodOptional<z.ZodString>;
   isDefault: z.ZodOptional<z.ZodBoolean>;
   paramOverrides: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodNullable<z.ZodUnion<readonly [z.ZodObject<{
+    control: z.ZodOptional<z.ZodLiteral<"command">>;
     label: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
       $l10n: z.ZodString;
       default: z.ZodOptional<z.ZodString>;
@@ -23,6 +24,7 @@ declare const agentModelSchema: z.ZodObject<{
       icon: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
   }, z.core.$strip>, z.ZodObject<{
+    control: z.ZodOptional<z.ZodLiteral<"command">>;
     label: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
       $l10n: z.ZodString;
       default: z.ZodOptional<z.ZodString>;
@@ -1336,9 +1338,11 @@ interface HarnessSkillsLayout {
 type RetryableHarnessReattachError = Error & {
   readonly retryable: true;
 };
-type HarnessParamDescriptor = (Omit<SelectParam, "options" | "allowCustomValues"> & {
+type HarnessParamDescriptor = ((Omit<SelectParam, "options" | "allowCustomValues"> & {
   options: ParamOption[];
-}) | BooleanParam;
+}) | BooleanParam) & {
+  control?: "command";
+};
 type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
 interface HarnessProvider extends ContributionDefinition<"harness"> {
   label: Localizable<string>;

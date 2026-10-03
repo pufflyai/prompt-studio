@@ -4,6 +4,8 @@ Harnesses own native command meaning. Core provides discovery, dispatch, executi
 
 ## Public provider API
 
+Declare `control: "command"` on a harness parameter when commands own its composer control. The composer omits its inline picker but keeps its native schema, default, and value. For example, `/plan` and its mode tag control a planning parameter. Other model parameters keep their normal controls. Core never guesses this relationship from a parameter or provider name.
+
 The optional `HarnessProvider.getCommandState(ctx, input)` returns `commands`, `modes`, and `slashCommands`. Providers without this method continue ordinary prompting. Commands carry a name, description, and optional argument help. Discovery is help, not an invocation allowlist.
 
 Discovery runs in new conversations too. `HarnessCommandDiscoveryContext` provides the selected workspace, model, and effective parameters before a session exists. Its host and native session IDs are absent until created. Discovery must not create a native conversation or submit a prompt. Operation preparation still requires a real host session through `HarnessCommandContext`.

@@ -2,6 +2,24 @@ import { describe, expect, test } from "bun:test";
 import { agentInfoSchema, agentModelSchema, findAgentModel, resolveAgentModelParams } from "./agents";
 
 describe("agentInfoSchema", () => {
+  test("preserves command-owned composer controls without dropping native parameter defaults", () => {
+    const parameter = {
+      type: "select" as const,
+      control: "command" as const,
+      defaultValue: "default",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Plan", value: "plan" },
+      ],
+    };
+    const parsed = agentInfoSchema.parse({
+      id: "external",
+      name: "External",
+      availability: { type: "INSTALLED" },
+      params: { mode: parameter },
+    });
+    expect(parsed.params?.mode).toEqual(parameter);
+  });
   test("preserves optional select option icons", () => {
     const parsed = agentInfoSchema.parse({
       id: "codex",
