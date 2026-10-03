@@ -1,14 +1,18 @@
 import { expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
+import { createDb } from "./connection.pglite";
 import { migrateThrough } from "./migrate-through";
 import * as schema from "./schemas.pg";
 
 const migrationsFolder = join(import.meta.dir, "../../drizzle");
 
 test("saved board views keep their filters and ordering as rules and sorts", async () => {
+  const root = mkdtempSync(join(tmpdir(), "board-view-upgrade-"));
+  const dbPath = join(root, "database");
   const pglite = new PGlite();
   await pglite.waitReady;
   try {
@@ -35,9 +39,18 @@ test("saved board views keep their filters and ordering as rules and sorts", asy
     );
     await insert("manual", { ...display, ordering: { attributeId: "manual", direction: "asc" } }, {});
 
-    await migrate(db, { migrationsFolder });
-
-    const { rows } = await pglite.query("SELECT id, settings, filter, sorts FROM board_views ORDER BY id");
+    const image = await pglite.dumpDataDir("none");
+    await pglite.close();
+    const persisted = new PGlite(dbPath, { loadDataDir: image });
+    await persisted.waitReady;
+    await persisted.close();
+    const current = await createDb({ path: dbPath });
+    const { rows } = await current.pglite.query("SELECT id, settings, filter, sorts FROM board_views ORDER BY id");
+    await current.close();
+    const reopened = await createDb({ path: dbPath });
+    const second = await reopened.pglite.query("SELECT id, settings, filter, sorts FROM board_views ORDER BY id");
+    await reopened.close();
+    expect(second.rows).toEqual(rows);
     expect(rows).toEqual([
       { id: "manual", settings: display, filter: { conjunction: "and", rules: [] }, sorts: [] },
       {
@@ -46,14 +59,15 @@ test("saved board views keep their filters and ordering as rules and sorts", asy
         filter: {
           conjunction: "and",
           rules: [
-            { attributeId: "priority", condition: "is-any-of", value: ["urgent", "high"] },
             { attributeId: "status", condition: "is-any-of", value: ["todo"] },
+            { attributeId: "priority", condition: "is-any-of", value: ["urgent", "high"] },
           ],
         },
         sorts: [{ attributeId: "updated", direction: "desc" }],
       },
     ]);
   } finally {
-    await pglite.close();
+    if(!pglite.closed) await pglite.close();
+    rmSync(root, { recursive: true, force: true });
   }
 });

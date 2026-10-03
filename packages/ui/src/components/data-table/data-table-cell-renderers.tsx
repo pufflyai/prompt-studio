@@ -143,7 +143,11 @@ const FormattedCell = (props: FormattedCellProps) => {
       textStyle="paragraph/S/regular"
       whiteSpace={wrapRows ? "normal" : "nowrap"}
     >
-      {typeof displayValue === "string" ? <HighlightedText text={displayValue} query={search} /> : displayValue}
+      {typeof displayValue === "string" || typeof displayValue === "number" ? (
+        <HighlightedText text={String(displayValue)} query={search} />
+      ) : (
+        displayValue
+      )}
     </Text>
   );
 };
@@ -159,23 +163,27 @@ interface DataCellProps {
 const DataCell = (props: DataCellProps) => {
   const { columnLabel, renderer, value, wrapRows, search } = props;
 
-  if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} />;
+  if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} search={search} />;
 
   if (renderer?.type === "badge" && ["string", "number", "boolean"].includes(typeof value)) {
-    return <DataTableBadgeCell value={value as string | number | boolean} categories={renderer.categories} />;
+    return (
+      <DataTableBadgeCell value={value as string | number | boolean} search={search} categories={renderer.categories} />
+    );
   }
 
-  if (renderer?.type === "diff" && isDataTableDiffValue(value)) return <DataTableDiffCell value={value} />;
+  if (renderer?.type === "diff" && isDataTableDiffValue(value))
+    return <DataTableDiffCell value={value} search={search} />;
 
-  if (renderer?.type === "path" && typeof value === "string" && !wrapRows) return <DataTablePathCell value={value} />;
+  if (renderer?.type === "path" && typeof value === "string" && !wrapRows)
+    return <DataTablePathCell value={value} search={search} />;
 
   if (renderer?.type === "date") {
-    if (formatDataTableRelativeDate(value)) return <DataTableDateCell value={value as string} />;
+    if (formatDataTableRelativeDate(value)) return <DataTableDateCell value={value as string} search={search} />;
   }
 
   if (renderer?.type === "color-scale") {
     const color = resolveColorScaleValue(value, renderer.stops);
-    if (color && typeof value === "number") return <ColorScaleCell value={value} />;
+    if (color && typeof value === "number") return <ColorScaleCell value={value} search={search} />;
   }
 
   if (renderer?.type === "categorical-color") {

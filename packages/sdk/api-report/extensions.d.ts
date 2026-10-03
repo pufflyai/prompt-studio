@@ -2823,6 +2823,15 @@ export declare const workbenchSlots: {
 export declare const localContributionIdPattern: RegExp;
 export declare const isValidLocalContributionId: (id: string) => boolean;
 export declare const localContributionIdGrammar = "lowercase kebab-case segments separated by dots, such as \"ticket-status.create\"";
+export declare const resolveDataTableComparableValue: (value: unknown, renderer?: {
+  type: string;
+}) => unknown;
+export declare const resolveDataTableFieldKind: (values: unknown[], column?: {
+  type?: "string" | "number" | "date";
+  renderer?: {
+    type: string;
+  };
+}) => "string" | "number" | "date";
 type WorkspaceType = string;
 interface WorkspaceProvisionPayload {
   projectId: string;
