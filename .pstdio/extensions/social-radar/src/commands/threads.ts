@@ -93,7 +93,8 @@ export const setThreadStatus = defineCommand({
     }
     if (!url) throw new Error("Paste the link of the post you published.");
     const link = canonicalThreadUrl(url);
-    if (await threadsOf(ctx).get(threadId(link))) throw new Error("This link is already saved as a thread.");
+    if ((await threadsOf(ctx).list()).some((saved) => saved.url === link))
+      throw new Error("This link is already saved as a thread.");
     const posted: NewPost = { ...thread, status: value, answeredAt, url: link };
     await threadsOf(ctx).update(id, posted);
     await changed(ctx, id);

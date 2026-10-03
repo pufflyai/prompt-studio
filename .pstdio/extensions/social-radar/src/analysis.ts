@@ -1,7 +1,6 @@
 import { type FoundThread, isNewPost, type Sentiment, type Site, sentiments, type Thread } from "./schemas";
 import { localDay as dayKey } from "./text";
 
-const day = 86_400_000;
 const countBy = <T>(items: T[], key: (item: T) => string) => {
   const counts = new Map<string, number>();
   for (const item of items) counts.set(key(item), (counts.get(key(item)) ?? 0) + 1);
@@ -25,7 +24,12 @@ interface AnalysisInput {
 /** Adds up the tags the agent saved on threads; it never reads the sites. */
 export const buildAnalysis = (input: AnalysisInput) => {
   const { threads, days, site, now = Date.now() } = input;
-  const start = now - days * day;
+  const startDate = new Date(now);
+  startDate.setHours(0, 0, 0, 0);
+  startDate.setDate(startDate.getDate() - days + 1);
+  const start = startDate.getTime();
+  const previousStart = new Date(start);
+  previousStart.setDate(previousStart.getDate() - days);
   const inSite = threads.filter((thread) => !site || thread.site === site);
   const inWindow = (thread: Thread, from: number, to: number) => {
     const time = Date.parse(thread.foundAt);
@@ -37,7 +41,7 @@ export const buildAnalysis = (input: AnalysisInput) => {
   const posts = inSite.filter((thread) => isNewPost(thread) && inWindow(thread, start, now + 1));
   const mentions = found.filter((thread) => thread.mention);
   const earlier = inSite.filter(
-    (thread) => !isNewPost(thread) && thread.mention && inWindow(thread, start - days * day, start),
+    (thread) => !isNewPost(thread) && thread.mention && inWindow(thread, previousStart.getTime(), start),
   ).length;
   const answered = found.filter((thread) => thread.status === "answered");
   const perDay = countBy(mentions, (thread) => dayKey(Date.parse(thread.foundAt)));
@@ -55,7 +59,9 @@ export const buildAnalysis = (input: AnalysisInput) => {
     answered: { count: answered.length, gotReply: answered.filter(gotReply).length },
     postsUsed: { count: posts.filter((post) => post.status === "answered").length, total: posts.length },
     mentionsPerDay: Array.from({ length: days }, (_, index) => {
-      const key = dayKey(now - (days - 1 - index) * day);
+      const date = new Date(start);
+      date.setDate(date.getDate() + index);
+      const key = dayKey(date.getTime());
       return { day: key, count: perDay.get(key) ?? 0 };
     }),
     mentionSentiment: sentiment,
