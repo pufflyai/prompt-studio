@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { homedir as osHomedir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -43,6 +44,17 @@ export const resolvePstdioLogPath = (input: ResolvePstdioHomeInput = {}) =>
 
 export const resolvePstdioRuntimeDescriptorPath = (input: ResolvePstdioHomeInput = {}) =>
   join(resolvePstdioHome(input), "runtime.json");
+
+// The desktop app serves its local performance snapshot here while monitoring is on.
+// Windows has no socket files, so it uses a named pipe derived from the home.
+export const resolvePstdioPerformanceEndpoint = (
+  input: ResolvePstdioHomeInput = {},
+  platform: NodeJS.Platform = process.platform,
+) => {
+  const home = resolvePstdioHome(input);
+  if (platform !== "win32") return join(home, "performance.sock");
+  return `\\\\.\\pipe\\pstdio-performance-${createHash("sha256").update(home).digest("hex").slice(0, 16)}`;
+};
 
 export const resolvePstdioStatePath = (input: ResolvePstdioHomeInput = {}) => join(resolvePstdioHome(input), "state");
 

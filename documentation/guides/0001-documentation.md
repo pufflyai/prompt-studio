@@ -36,6 +36,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 ## Guides
 
 - [0002 — Start using Prompt Studio](0002-getting-started.md)
+- [0003 — Developer tools](0003-developer-tools.md)
 
 ### Development
 

@@ -491,5 +491,59 @@
     "description": "Try beta features. This setting applies to every project and dashboard connected to this installation.",
     "notifications": "Notifications",
     "loading": "Loading settings…"
+  },
+  "performance": {
+    "settings": {
+      "title": "Performance monitoring",
+      "description": "Measure CPU, memory, and slow frames in this app. Nothing is measured while this is off. Measurements stay on this device and are never uploaded.",
+      "enable": "Enable performance monitoring",
+      "helperOff": "Saved on this device only. Other devices and remote runtimes keep their own setting.",
+      "helperDesktopOn": "On for this device. Samples every 2 seconds and keeps the last 30 seconds.",
+      "helperBrowserOn": "On for this browser. Records slow frames while this tab is open.",
+      "openView": "Open performance view",
+      "saveError": "Could not change performance monitoring."
+    },
+    "view": {
+      "title": "Performance",
+      "copy": "Copy snapshot",
+      "copyError": "Could not copy the snapshot.",
+      "waiting": "Collecting the first sample…",
+      "loadError": "Could not read performance measurements.",
+      "sustainedTitle": "Sustained high CPU",
+      "sustainedBody": "{{process}} averaged {{cpu}} CPU over the last {{seconds}} seconds.",
+      "browserTitle": "Process CPU and memory are unavailable",
+      "browserBody": "Open Prompt Studio desktop to measure each process. This browser can still report slow frames.",
+      "processes": "Processes",
+      "processesCaption": "CPU is a share of one core. One busy core shows about 100%, so values can go above 100%. Memory is each process's working set: the RAM it uses now.",
+      "slowFrames": "Slow frames",
+      "slowFramesCaption": "Frames that took 50 ms or longer, newest first. Script names come from the app bundle; addresses are removed.",
+      "noSlowFrames": "No slow frames yet.",
+      "longTasksOnly": "This renderer reports long tasks without script names.",
+      "framesUnsupported": "This renderer cannot report slow frames.",
+      "window": "Sampled every {{interval}} s · last sample covers {{window}} s",
+      "sharedBy": "Shared by {{names}}",
+      "frameScript": "{{source}} · {{duration}} ms script",
+      "unknownScript": "Unattributed work",
+      "unknownExtension": "Unknown extension",
+      "roles": {
+        "main": "App",
+        "gpu": "GPU",
+        "utility": "Utility",
+        "workbench": "Workbench",
+        "startup": "Startup window",
+        "extension-frames": "Extension frames",
+        "renderer": "Renderer",
+        "other": "Other process"
+      },
+      "roleDescriptions": {
+        "main": "Electron main process",
+        "gpu": "Graphics",
+        "utility": "Chromium service",
+        "workbench": "Dashboard window",
+        "startup": "Hidden while the workbench is open",
+        "renderer": "Not linked to a window or extension",
+        "other": "Chromium helper"
+      }
+    }
   }
 }

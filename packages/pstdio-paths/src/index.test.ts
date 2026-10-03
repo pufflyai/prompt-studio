@@ -6,6 +6,7 @@ import {
   resolvePstdioDbPath,
   resolvePstdioHome,
   resolvePstdioLogPath,
+  resolvePstdioPerformanceEndpoint,
   resolvePstdioRuntimeDescriptorPath,
   resolvePstdioStatePath,
   resolvePstdioStoragePath,
@@ -53,4 +54,13 @@ test("default state paths derive from pstdio home", () => {
 
 test("expandHomePath expands tilde paths", () => {
   expect(expandHomePath("~/project", resolve("/home/user"))).toBe(resolve("/home/user/project"));
+});
+
+test("the performance endpoint is a socket in the home, or a pipe named after it on Windows", () => {
+  const input = { env: { PSTDIO_HOME: resolve("/tmp/pstdio-home") } };
+
+  expect(resolvePstdioPerformanceEndpoint(input, "darwin")).toBe(resolve("/tmp/pstdio-home/performance.sock"));
+  const pipe = resolvePstdioPerformanceEndpoint(input, "win32");
+  expect(pipe).toMatch(/^\\\\\.\\pipe\\pstdio-performance-[0-9a-f]{16}$/);
+  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: resolve("/tmp/other") } }, "win32")).not.toBe(pipe);
 });

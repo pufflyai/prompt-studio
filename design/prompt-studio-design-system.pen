@@ -126063,6 +126063,1746 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "vwOTF",
+      "x": 24000,
+      "y": 18634,
+      "name": "Developer Tools · Performance Monitoring · Production",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 2000,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 30,
+      "padding": [
+        48,
+        40
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "QRhKk",
+          "name": "Header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "UTwU0",
+              "name": "Kicker",
+              "fill": "$ds-fg-subtle",
+              "content": "PRODUCTION · SETTINGS · DEVELOPER TOOLS",
+              "fontFamily": "$font-heading",
+              "fontSize": 12,
+              "fontWeight": "600",
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "text",
+              "id": "jASnu",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "Performance monitoring",
+              "lineHeight": 1.05,
+              "fontFamily": "$font-display",
+              "fontSize": 44,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "MKEd7",
+              "name": "Sub",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 1240,
+              "content": "Developer tools has one switch. It is off by default and is saved on this device only. When it is on, a live view in the Secondary Panel shows which parts of the app use CPU and memory, and which frames were slow. Turning it off stops every timer and observer and clears the samples.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JErOJ",
+          "name": "Settings Exhibits",
+          "width": "fill_container",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Kk05u",
+              "name": "settings · developer tools · off",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "VzQEZ",
+                  "name": "H",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ArTzF",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "settings · developer tools · off",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "K2Q6Ic",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The default. The Developer tools section is global, so it shows without a project. No timers, observers, or metrics IPC run while the switch is off, including after a restart.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e25go1",
+                  "name": "Settings Surface",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 360,
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Q9SfjM",
+                      "name": "Head",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "GsaC6",
+                          "name": "I",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "settings",
+                          "library": "lucide",
+                          "fill": "$ds-accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "t90wn",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ZSluF",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        },
+                        {
+                          "id": "g7TA0I",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "K22PTv",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "P6FId",
+                          "name": "Sections",
+                          "width": 220,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "D2PaAv",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "WORKBENCH",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "C7Lyx",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Runtime",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "cpu"
+                                },
+                                "ROY2j": {
+                                  "content": "Runtime",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "G9BA5Y",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "NY084",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "DEVELOPER TOOLS",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "fy5w5",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Performance",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "gauge"
+                                },
+                                "ROY2j": {
+                                  "content": "Performance",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Hq4RM",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "tTV2Q",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "EXPERIMENTAL",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "coADt",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Beta features",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "flask-conical"
+                                },
+                                "ROY2j": {
+                                  "content": "Beta features",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "srPlq",
+                          "name": "Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "pbV1u",
+                              "name": "Intro",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "L56Qu",
+                                  "name": "Title",
+                                  "fill": "$ds-fg",
+                                  "content": "Performance monitoring",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "P55yVT",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Measure CPU, memory, and slow frames in this app. Nothing is measured while this is off. Measurements stay on this device and are never uploaded.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "UuDdh",
+                              "name": "Switch Card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 12,
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "KZ0Fn",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "i0eAfU",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "lxOFT",
+                                          "name": "Name",
+                                          "fill": "$ds-fg",
+                                          "content": "Enable performance monitoring",
+                                          "fontFamily": "$font-label",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "iytkd",
+                                          "name": "Helper",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Saved on this device only. Other devices and remote runtimes keep their own setting.",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "GdfWB",
+                                      "type": "ref",
+                                      "ref": "ZVbcE",
+                                      "name": "Switch",
+                                      "theme": {
+                                        "switch": "off"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "p5EC9S",
+              "name": "settings · developer tools · on",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "CyyLH",
+                  "name": "H",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "UlPBU",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "settings · developer tools · on",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bYUOz",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Turning the switch on starts the one collector for this device, adds the view to the Secondary Panel, and shows a button that opens it. Turning it off closes the view, stops sampling, and clears the samples.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LPYru",
+                  "name": "Settings Surface",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 360,
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "cwk0R",
+                      "name": "Head",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "K1LusD",
+                          "name": "I",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "settings",
+                          "library": "lucide",
+                          "fill": "$ds-accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ssUhw",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "tCc9c",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        },
+                        {
+                          "id": "F4NNgK",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Ml7rZ",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "DVjAK",
+                          "name": "Sections",
+                          "width": 220,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ihTfC",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "WORKBENCH",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "KYKns",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Runtime",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "cpu"
+                                },
+                                "ROY2j": {
+                                  "content": "Runtime",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "S1Wmm",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "Sz8Rb",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "DEVELOPER TOOLS",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "NYUtQ",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Performance",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "gauge"
+                                },
+                                "ROY2j": {
+                                  "content": "Performance",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "f2RrW",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "sgJ6i",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "EXPERIMENTAL",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "E50huW",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Beta features",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "flask-conical"
+                                },
+                                "ROY2j": {
+                                  "content": "Beta features",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ydjNm",
+                          "name": "Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "uOSa2",
+                              "name": "Intro",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "i527yk",
+                                  "name": "Title",
+                                  "fill": "$ds-fg",
+                                  "content": "Performance monitoring",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Gh7DH",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Measure CPU, memory, and slow frames in this app. Nothing is measured while this is off. Measurements stay on this device and are never uploaded.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tIQsw",
+                              "name": "Switch Card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 12,
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "L8sjH",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "JlaRp",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "dhMQp",
+                                          "name": "Name",
+                                          "fill": "$ds-fg",
+                                          "content": "Enable performance monitoring",
+                                          "fontFamily": "$font-label",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "g5wrA",
+                                          "name": "Helper",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "On for this device. Samples every 2 seconds and keeps the last 30 seconds.",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "dB9Ij",
+                                      "type": "ref",
+                                      "ref": "ZVbcE",
+                                      "name": "Switch",
+                                      "theme": {
+                                        "switch": "on"
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "NxoMs",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Open performance view",
+                                  "theme": {
+                                    "btn": "outline",
+                                    "size": "sm"
+                                  },
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "icon": "gauge"
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Open performance view"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "s8s7N",
+          "name": "View Exhibits",
+          "width": "fill_container",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "z6WIei",
+              "name": "view · desktop",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "geEKt",
+                  "name": "H",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rE0f9",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "view · desktop",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "D3FIET",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The desktop app reports every process. Sandboxed extension frames share one renderer process, so the row names the extensions it hosts and never splits or repeats their CPU. A warning appears only after a 30-second average stays at 80% or more.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "oJlRx",
+                  "name": "Side Panel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 6,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "QvSPz",
+                      "name": "Panel Header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8,
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "TmGOL",
+                          "name": "I",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "gauge",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "fKNOI",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Performance",
+                          "fontFamily": "$font-label",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "UsJDy",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yVAs8",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        8
+                      ],
+                      "children": [
+                        {
+                          "id": "ZRdTb",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Sustained CPU",
+                          "theme": {
+                            "status": "warning"
+                          },
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "triangle-alert"
+                            },
+                            "GL4gS": {
+                              "content": "Sustained high CPU"
+                            },
+                            "B8etL": {
+                              "content": "Workbench averaged 104% CPU over the last 30 seconds."
+                            },
+                            "dqGb1": {
+                              "enabled": true,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cmraT",
+                          "name": "PROCESSES",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            4,
+                            12,
+                            0,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "iyirn",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "PROCESSES",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "KDIv9",
+                              "name": "C",
+                              "fill": "$ds-fg-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "CPU is a share of one core. One busy core shows about 100%, so values can go above 100%. Memory is the RAM each process uses now.",
+                              "lineHeight": 1.45,
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kS1WA",
+                          "name": "Process Rows",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "id": "xRm6I",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Workbench",
+                              "height": 48,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "app-window"
+                                },
+                                "h0cJn": {
+                                  "content": "Workbench",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": true,
+                                  "content": "Dashboard window",
+                                  "fontSize": 11
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "104% · 212 MB",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            },
+                            {
+                              "id": "c5Ee3",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Extension frames",
+                              "height": 48,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "puzzle"
+                                },
+                                "h0cJn": {
+                                  "content": "Extension frames",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": true,
+                                  "content": "Shared by Lab and Shader Lab",
+                                  "fontSize": 11
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "28% · 96 MB",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            },
+                            {
+                              "id": "Keg7o",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "GPU",
+                              "height": 36,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "monitor"
+                                },
+                                "h0cJn": {
+                                  "content": "GPU",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": false
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "11% · 80 MB",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            },
+                            {
+                              "id": "VP4ON",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "App",
+                              "height": 48,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "box"
+                                },
+                                "h0cJn": {
+                                  "content": "App",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": true,
+                                  "content": "Electron main process",
+                                  "fontSize": 11
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "1.2% · 153 MB",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            },
+                            {
+                              "id": "z7Rgsa",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Network Service",
+                              "height": 36,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "network"
+                                },
+                                "h0cJn": {
+                                  "content": "Network Service",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": false
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "0.1% · 48 MB",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            },
+                            {
+                              "id": "udqit",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Startup window",
+                              "height": 48,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "panel-top"
+                                },
+                                "h0cJn": {
+                                  "content": "Startup window",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": true,
+                                  "content": "Hidden while the workbench is open",
+                                  "fontSize": 11
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "0% · 84 MB",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l7IUPD",
+                          "name": "SLOW FRAMES",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            4,
+                            12,
+                            0,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "QbdJq",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "SLOW FRAMES",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "F95bqz",
+                              "name": "C",
+                              "fill": "$ds-fg-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Frames that took 50 ms or longer, newest first. Script names come from the app bundle; addresses are removed.",
+                              "lineHeight": 1.45,
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "gBDdP",
+                          "name": "Frame Rows",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "id": "Y8caII",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Promise.then",
+                              "height": 48,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "timer"
+                                },
+                                "h0cJn": {
+                                  "content": "Promise.then",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": true,
+                                  "content": "index-4f2a.js · 160 ms script",
+                                  "fontSize": 11
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "182 ms",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            },
+                            {
+                              "id": "AHniS",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "requestAnimationFrame",
+                              "height": 48,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "timer"
+                                },
+                                "h0cJn": {
+                                  "content": "requestAnimationFrame",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": true,
+                                  "content": "chat-ui-1c9e.js · 71 ms script",
+                                  "fontSize": 11
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "96 ms",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fe4b2",
+                          "name": "Toolbar",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            0,
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "g2wVQd",
+                              "name": "Window",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Sampled every 2 s · last sample covers 2.0 s",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "Aia3J",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Copy snapshot",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "copy",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uWyUG",
+              "name": "view · browser",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "bBsMm",
+                  "name": "H",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n8cJr",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "view · browser",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "yegGk",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "A browser tab cannot read process CPU or memory. The view says so instead of showing zeros, and keeps the slow-frame list that the browser can measure.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "llMHE",
+                  "name": "Side Panel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 6,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "OBq91",
+                      "name": "Panel Header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8,
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "JeRy7",
+                          "name": "I",
+                          "width": 14,
+                          "height": 14,
+                          "icon": "gauge",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "zeSwq",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Performance",
+                          "fontFamily": "$font-label",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "qGkrj",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "siqzr",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        8
+                      ],
+                      "children": [
+                        {
+                          "id": "d6T1zR",
+                          "type": "ref",
+                          "ref": "So6vB",
+                          "name": "Browser only",
+                          "theme": {
+                            "status": "info"
+                          },
+                          "descendants": {
+                            "sAoE1": {
+                              "icon": "info"
+                            },
+                            "GL4gS": {
+                              "content": "Process CPU and memory are unavailable"
+                            },
+                            "B8etL": {
+                              "content": "Open Prompt Studio desktop to measure each process. This browser can still report slow frames."
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "dyGwt",
+                          "name": "SLOW FRAMES",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            4,
+                            12,
+                            0,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "z5hqWE",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "SLOW FRAMES",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "e6WTYz",
+                              "name": "C",
+                              "fill": "$ds-fg-muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Frames that took 50 ms or longer, newest first.",
+                              "lineHeight": 1.45,
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y5LPkE",
+                          "name": "Frame Rows",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "id": "PXlsb",
+                              "type": "ref",
+                              "ref": "hIyB7",
+                              "name": "Promise.then",
+                              "height": 48,
+                              "theme": {
+                                "row": "default"
+                              },
+                              "descendants": {
+                                "vsjz1": {
+                                  "icon": "timer"
+                                },
+                                "h0cJn": {
+                                  "content": "Promise.then",
+                                  "fontSize": 13
+                                },
+                                "lTPwv": {
+                                  "enabled": true,
+                                  "content": "index-4f2a.js · 160 ms script",
+                                  "fontSize": 11
+                                },
+                                "E8VVm": {
+                                  "enabled": true,
+                                  "theme": {
+                                    "badge": "plain",
+                                    "palette": "gray",
+                                    "size": "sm"
+                                  }
+                                },
+                                "E8VVm/ohhQY": {
+                                  "enabled": false
+                                },
+                                "E8VVm/FaaBK": {
+                                  "content": "182 ms",
+                                  "fontFamily": "$font-mono"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "r8lHU",
+                          "name": "Toolbar",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            0,
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "r8xUAI",
+                              "name": "Window",
+                              "fill": "$ds-fg-subtle",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "ZPAv1",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Copy snapshot",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "copy",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
