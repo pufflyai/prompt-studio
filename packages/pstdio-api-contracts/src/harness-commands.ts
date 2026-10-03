@@ -53,6 +53,23 @@ export type HarnessCommandContext = {
   model?: string | null;
   params?: HarnessParams;
 };
+/** Discovery also runs before a conversation has a host or native session. */
+export type HarnessCommandDiscoveryContext = Omit<HarnessCommandContext, "sessionId"> & { sessionId?: string };
+export const draftHarnessCommandInputSchema = z
+  .object({
+    project_id: z.string().min(1),
+    agent: z.string().min(1),
+    workspace_id: z.string().optional(),
+    model: z.string().optional(),
+    params: z.record(z.string(), z.union([z.string(), z.boolean()])).optional(),
+  })
+  .strict();
+export type DraftHarnessCommandInput = z.infer<typeof draftHarnessCommandInputSchema>;
+export const harnessOperationResponseSchema = z.object({
+  status: z.enum(["completed", "started"]),
+  message: z.string().optional(),
+});
+export type HarnessOperationResponse = z.infer<typeof harnessOperationResponseSchema>;
 export type HarnessOperationResult =
   | { kind: "completed"; message?: string; params?: HarnessParams }
   | { kind: "started"; session: HarnessSession; params?: HarnessParams };
