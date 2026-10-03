@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { resolvePstdioPerformanceEndpoint } from "pstdio-paths";
+import { dirname, join } from "node:path";
+import { readPerformanceEndpointDescriptor, resolvePstdioPerformanceEndpoint } from "pstdio-paths";
 import { openPerformanceEndpoint } from "./performance-endpoint";
 
 const roots: string[] = [];
@@ -14,17 +14,21 @@ const endpointPath = () => {
   return resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: root } });
 };
 
-const read = (path: string) =>
-  new Promise<unknown>((resolve) => {
-    const socket = connect(path);
+const read = async (path: string, credential?: string) => {
+  const descriptor = readPerformanceEndpointDescriptor(path);
+  if (!descriptor) return null;
+  return new Promise<unknown>((resolve, reject) => {
+    const socket = connect(descriptor.port, "127.0.0.1");
     let body = "";
     socket.setEncoding("utf8");
+    socket.on("connect", () => socket.write(`${credential ?? descriptor.token}\n`));
     socket.on("data", (chunk: string) => {
       body += chunk;
     });
-    socket.on("end", () => resolve(JSON.parse(body)));
-    socket.on("error", () => resolve(null));
+    socket.on("end", () => resolve(body ? JSON.parse(body) : null));
+    socket.on("error", reject);
   });
+};
 
 afterEach(() => {
   for (const root of roots) rmSync(root, { force: true, recursive: true });
@@ -32,27 +36,43 @@ afterEach(() => {
 });
 
 describe("performance endpoint", () => {
-  test("answers each local connection with the current snapshot", async () => {
+  test("does not read a snapshot for a connection without its credential", async () => {
     const path = endpointPath();
     let reads = 0;
     const endpoint = await openPerformanceEndpoint(path, () => ({ reads: ++reads }));
+    try {
+      expect(await read(path, "wrong-token")).toBeNull();
+      expect(await read(path, "")).toBeNull();
+      expect(reads).toBe(0);
+    } finally {
+      await endpoint.close();
+    }
+  });
 
-    expect(await read(path)).toEqual({ reads: 1 });
-    expect(await read(path)).toEqual({ reads: 2 });
-    if (process.platform !== "win32") expect(statSync(path).mode & 0o777).toBe(0o600);
-
-    await endpoint.close();
-    if (process.platform !== "win32") expect(existsSync(path)).toBe(false);
+  test("answers authenticated local connections and removes credentials when closed", async () => {
+    const path = endpointPath();
+    let reads = 0;
+    const endpoint = await openPerformanceEndpoint(path, () => ({ reads: ++reads }));
+    try {
+      expect(await read(path)).toEqual({ reads: 1 });
+      expect(await read(path)).toEqual({ reads: 2 });
+      if (process.platform !== "win32") {
+        expect(statSync(path).mode & 0o777).toBe(0o600);
+        expect(statSync(dirname(path)).mode & 0o777).toBe(0o700);
+      }
+    } finally {
+      await endpoint.close();
+    }
+    expect(existsSync(path)).toBe(false);
     expect(await read(path)).toBeNull();
   });
 
-  test("closes even when a client never closes its side", async () => {
+  test("closes even when a client never authenticates or closes its side", async () => {
     const path = endpointPath();
     const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));
-    const client = connect({ path, allowHalfOpen: true });
-    client.resume();
-    await new Promise((resolve) => client.once("end", resolve));
-
+    const descriptor = readPerformanceEndpointDescriptor(path)!;
+    const client = connect({ port: descriptor.port, host: "127.0.0.1", allowHalfOpen: true });
+    await new Promise((resolve) => client.once("connect", resolve));
     const closed = await Promise.race([
       endpoint.close().then(() => "closed"),
       new Promise((resolve) => setTimeout(() => resolve("stalled"), 1_000)),
@@ -61,20 +81,42 @@ describe("performance endpoint", () => {
     expect(closed).toBe("closed");
   });
 
-  test.skipIf(process.platform === "win32")("replaces a socket left behind by a crashed app", async () => {
+  test("preserves an active owner and rotates credentials when reopened", async () => {
     const path = endpointPath();
-    const crashed = spawn(process.execPath, [
-      "-e",
-      `require("node:net").createServer().listen(${JSON.stringify(path)}, () => console.log("ready"))`,
-    ]);
-    await new Promise<void>((resolve) => crashed.stdout.once("data", () => resolve()));
-    // A killed process cannot remove its socket file.
-    crashed.kill("SIGKILL");
-    await new Promise((resolve) => crashed.once("exit", resolve));
-    expect(existsSync(path)).toBe(true);
-
     const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));
+    const first = readPerformanceEndpointDescriptor(path)!;
+    await expect(openPerformanceEndpoint(path, () => null)).rejects.toThrow("Another app");
     expect(await read(path)).toEqual({ ok: true });
     await endpoint.close();
+    const restarted = await openPerformanceEndpoint(path, () => ({ restarted: true }));
+    try {
+      expect(readPerformanceEndpointDescriptor(path)?.token).not.toBe(first.token);
+      expect(await read(path, first.token)).toBeNull();
+      expect(await read(path)).toEqual({ restarted: true });
+    } finally {
+      await restarted.close();
+    }
+  });
+
+  test.skipIf(process.platform !== "win32")("Windows grants credential access only to the current user", async () => {
+    const path = endpointPath();
+    const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));
+    try {
+      const identity = execFileSync("whoami", ["/user", "/fo", "csv", "/nh"], { encoding: "utf8" });
+      const sid = identity.match(/S-1-5-\d+(?:-\d+)+/)?.[0];
+      const script =
+        "$acl=Get-Acl -LiteralPath $env:PSTDIO_ACL_TEST_PATH; @($acl.Access | ForEach-Object {$_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value}) | ConvertTo-Json -Compress";
+      for (const target of [dirname(path), path]) {
+        const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], {
+          encoding: "utf8",
+          env: { ...process.env, PSTDIO_ACL_TEST_PATH: target },
+        });
+        expect([JSON.parse(output)].flat()).toEqual([sid]);
+      }
+      expect(await read(path)).toEqual({ ok: true });
+      expect(await read(path, "wrong-token")).toBeNull();
+    } finally {
+      await endpoint.close();
+    }
   });
 });

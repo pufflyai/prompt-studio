@@ -24,6 +24,29 @@ const frame = (durationMs: number) => ({
 });
 
 describe("browser performance monitoring", () => {
+  test("does not restart reporting when the saved switch loads after disposal", async () => {
+    let complete!: (enabled: boolean) => void;
+    let reports = 0;
+    const pending = new Promise<boolean>((resolve) => {
+      complete = resolve;
+    });
+    const controller = createPerformanceMonitoringController({
+      kind: "desktop",
+      isEnabled: () => pending,
+      setEnabled: async () => {},
+      snapshot: async () => null,
+      reportFrames: () => {
+        reports += 1;
+      },
+    });
+    const loading = controller.load();
+    controller.dispose();
+    complete(true);
+    await loading;
+    controller.dispose();
+    expect(reports).toBe(0);
+  });
+
   test("is off by default and measures nothing", async () => {
     const controller = createPerformanceMonitoringController(createPerformanceHost(undefined, createStorage()));
     await controller.load();

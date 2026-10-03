@@ -1,9 +1,13 @@
-import { chmodSync, lstatSync, rmSync } from "node:fs";
-import { connect, createServer, type Server, type Socket } from "node:net";
+import { randomBytes } from "node:crypto";
+import { rmSync, writeFileSync } from "node:fs";
+import { connect, createServer, type Socket } from "node:net";
+import { dirname } from "node:path";
+import { readPerformanceEndpointDescriptor } from "pstdio-paths";
+import { securePerformanceDirectory } from "./secure-performance-directory";
 
-const isServing = (path: string) =>
+const isServing = (port: number) =>
   new Promise<boolean>((resolve) => {
-    const socket = connect(path);
+    const socket = connect(port, "127.0.0.1");
     socket.once("connect", () => {
       socket.destroy();
       resolve(true);
@@ -11,52 +15,63 @@ const isServing = (path: string) =>
     socket.once("error", () => resolve(false));
   });
 
-// A crashed app cannot remove its socket file. Remove it only when nothing answers.
-const removeStaleSocket = async (path: string) => {
-  try {
-    if (!lstatSync(path).isSocket()) return;
-  } catch {
-    return;
-  }
-  if (await isServing(path)) throw new Error("Another app is already serving performance diagnostics.");
-  rmSync(path, { force: true });
-};
-
-const closeServer = (server: Server, sockets: Set<Socket>, path: string, socketFile: boolean) =>
-  new Promise<void>((resolve) => {
-    // A client that keeps its side open must not delay turning monitoring off or quitting.
-    for (const socket of sockets) socket.destroy();
-    server.close(() => {
-      if (socketFile) rmSync(path, { force: true });
-      resolve();
-    });
-  });
-
-// Serves the local snapshot to `pst performance` on this device. It never reads
-// requests: every connection receives the current snapshot and is closed.
+// The credential file protects access on every platform. The listener accepts
+// only loopback connections and never reads a snapshot before authenticating.
 export const openPerformanceEndpoint = async (path: string, read: () => unknown) => {
-  const socketFile = process.platform !== "win32";
-  if (socketFile) await removeStaleSocket(path);
+  const previous = readPerformanceEndpointDescriptor(path);
+  if (previous && (await isServing(previous.port))) {
+    throw new Error("Another app is already serving performance diagnostics.");
+  }
+  rmSync(path, { force: true });
+  securePerformanceDirectory(dirname(path));
+  const token = randomBytes(32).toString("hex");
   const sockets = new Set<Socket>();
-  const server = createServer((socket) => {
+  const server = createServer({ allowHalfOpen: true }, (socket) => {
     sockets.add(socket);
     socket.on("close", () => sockets.delete(socket));
     socket.on("error", () => {});
-    socket.end(`${JSON.stringify(read())}\n`);
+    socket.setEncoding("utf8");
+    socket.setTimeout(2_000, () => socket.destroy());
+    let request = "";
+    const authenticate = (chunk: string) => {
+      request += chunk;
+      if (request.length > token.length + 1) {
+        socket.end();
+        return;
+      }
+      if (!request.endsWith("\n")) return;
+      socket.off("data", authenticate);
+      if (request !== `${token}\n`) {
+        socket.end();
+        return;
+      }
+      socket.end(`${JSON.stringify(read())}\n`);
+    };
+    socket.on("data", authenticate);
+    socket.on("end", () => socket.end());
   });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
-    server.listen(path, () => {
+    server.listen(0, "127.0.0.1", () => {
       server.off("error", reject);
       resolve();
     });
   });
+  const close = () =>
+    new Promise<void>((resolve) => {
+      for (const socket of sockets) socket.destroy();
+      server.close(() => {
+        rmSync(path, { force: true });
+        resolve();
+      });
+    });
   try {
-    // Only the signed-in user may read it, matching what that user sees in the app.
-    if (socketFile) chmodSync(path, 0o600);
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Performance endpoint did not bind locally.");
+    writeFileSync(path, JSON.stringify({ port: address.port, token }), { mode: 0o600, flag: "wx" });
   } catch (error) {
-    await closeServer(server, sockets, path, socketFile);
+    await close();
     throw error;
   }
-  return { close: () => closeServer(server, sockets, path, socketFile) };
+  return { close };
 };

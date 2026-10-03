@@ -56,19 +56,16 @@ test("expandHomePath expands tilde paths", () => {
   expect(expandHomePath("~/project", resolve("/home/user"))).toBe(resolve("/home/user/project"));
 });
 
-test("the performance endpoint is a socket in the home, or a pipe named after it on Windows", () => {
-  const input = { env: { PSTDIO_HOME: resolve("/tmp/pstdio-home") } };
-
-  expect(resolvePstdioPerformanceEndpoint(input, "darwin")).toBe(resolve("/tmp/pstdio-home/performance.sock"));
-  const pipe = resolvePstdioPerformanceEndpoint(input, "win32");
-  expect(pipe).toMatch(/^\\\\\.\\pipe\\pstdio-performance-[0-9a-f]{16}$/);
-  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: resolve("/tmp/other") } }, "win32")).not.toBe(pipe);
+test("the performance endpoint descriptor belongs to its home", () => {
+  const home = resolve("/tmp/pstdio-home");
+  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } })).toBe(
+    resolve(home, "performance/endpoint.json"),
+  );
 });
 
-test("a home too long for a socket path keeps the endpoint in the temporary directory", () => {
+test("a long home does not limit the performance endpoint", () => {
   const home = resolve(`/tmp/${"nested-folder/".repeat(8)}pstdio-home`);
-  const endpoint = resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } }, "darwin", "/tmp/user-temp");
-
-  expect(endpoint).toMatch(/^\/tmp\/user-temp\/pstdio-performance-[0-9a-f]{16}\.sock$/);
-  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } }, "darwin", "/tmp/user-temp")).toBe(endpoint);
+  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } })).toBe(
+    resolve(home, "performance/endpoint.json"),
+  );
 });

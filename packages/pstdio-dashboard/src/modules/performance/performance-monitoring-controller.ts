@@ -6,9 +6,11 @@ import { observeSlowFrames } from "./slow-frame-observer";
 export const createPerformanceMonitoringController = (host: PerformanceHost) => {
   let enabled: boolean | undefined;
   let stopObserver: (() => void) | undefined;
+  let disposed = false;
   const listeners = new Set<() => void>();
 
   const apply = (next: boolean) => {
+    if (disposed) return;
     enabled = next;
     if (next) stopObserver ??= observeSlowFrames(host.reportFrames);
     else {
@@ -35,6 +37,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       };
     },
     dispose: () => {
+      disposed = true;
       stopObserver?.();
       stopObserver = undefined;
       listeners.clear();
