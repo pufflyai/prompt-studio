@@ -192,6 +192,12 @@ jobs:
           sudo chmod 4755 clients/desktop/node_modules/electron/dist/chrome-sandbox
 
       # The source suite reuses the desktop build from packaging.
+      - name: Load desktop checks from the workflow revision
+        shell: bash
+        env:
+          DESKTOP_VALIDATION_REF: ${{ github.sha }}
+        run: git restore --source="$DESKTOP_VALIDATION_REF" -- clients/desktop/src/e2e
+
       - name: Test source Electron
         if: matrix.platform != 'linux' && !matrix.essential_only
         working-directory: clients/desktop

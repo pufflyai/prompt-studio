@@ -221,6 +221,14 @@ executables, verifies the packaged fuse policy, and uploads readiness results
 and browser traces. Trace export removes runtime cookies and bearer
 credentials from every text entry before artifacts are uploaded.
 
+Release builds use the requested package tag. The Electron specs and their helpers
+come from the workflow revision, so a manual run can correct a release check for
+an existing draft without changing its tagged application. Windows signing trusts
+the `main` branch's GitHub identity. Merge corrected checks before retrying a draft,
+then run `Release Desktop` on `main`, set `version` to the
+existing version, and set `tag` to its `pstdio@<version>` tag. The final job publishes
+the draft only after every native target passes all checks.
+
 The secured compiled-runtime browser suite runs Chromium, Firefox, and WebKit.
 `bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
 It proves opaque iframe command and project-setting persistence across reloads.

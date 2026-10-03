@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
+import { allowPageClose } from "./lifecycle-actions";
 import {
   attachStartupTimings,
   createPackagedHome,
@@ -121,13 +122,15 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
 
     await test.step("Save the first window trace before Quit", () => first!.finishTrace());
     await test.step("Change the Side Panel and immediately Quit the first desktop window", () =>
-      first!.page.evaluate(() => {
-        const { sidePanel } = (
-          window as unknown as { __pstdioDashboardWorkbench: { sidePanel: { setMode(mode: "attached"): void } } }
-        ).__pstdioDashboardWorkbench;
-        sidePanel.setMode("attached");
-        void window.promptStudioDesktop.quitApp();
-      }));
+      allowPageClose(first!.page, () =>
+        first!.page.evaluate(() => {
+          const { sidePanel } = (
+            window as unknown as { __pstdioDashboardWorkbench: { sidePanel: { setMode(mode: "attached"): void } } }
+          ).__pstdioDashboardWorkbench;
+          sidePanel.setMode("attached");
+          void window.promptStudioDesktop.quitApp();
+        }),
+      ));
     await test.step("Wait for the first desktop process to exit", () => waitForExit(first!.child));
     await test.step("Probe the persistent runtime after desktop exit", async () => {
       expect(

@@ -216,8 +216,8 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
   }
 };
 
-export const waitForExit = (child: ChildProcess) =>
-  new Promise<void>((resolveExit, rejectExit) => {
+export const waitForExit = async (child: ChildProcess) => {
+  await new Promise<void>((resolveExit, rejectExit) => {
     if (child.exitCode !== null || child.signalCode !== null) {
       resolveExit();
       return;
@@ -228,6 +228,9 @@ export const waitForExit = (child: ChildProcess) =>
       resolveExit();
     });
   });
+  expect(child.exitCode).toBe(0);
+  expect(child.signalCode).toBeNull();
+};
 
 export const runPackagedCli = (home: string, args: string[]) =>
   new Promise<{ exitCode: number | null; stderr: string; stdout: string }>((resolveExit) => {
