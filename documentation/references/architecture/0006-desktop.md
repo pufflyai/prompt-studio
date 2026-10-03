@@ -122,6 +122,13 @@ macOS release staging signs the Bun runtime with the release identity, hardened 
 Release targets are Apple Silicon macOS arm64, Intel macOS x64, Linux x64, and
 Windows x64. Forge produces ZIP and DMG artifacts on macOS, ZIP and DEB artifacts
 on Linux, and a signed Squirrel Setup installer and update package on Windows.
+The DMG opens a Finder window with a static background,
+`assets/dmg-background.png` and its `@2x` Retina copy. Both are exported from
+the `Desktop · macOS installer · Background` frame in
+`design/prompt-studio-website.pen`. Forge places the real app icon and the
+Applications link in the clear areas on each side of the painted arrow. Finder
+owns the copy, its progress, and replace prompts. No Prompt Studio code runs
+while Finder copies the app, so the window cannot report that the copy finished.
 Windows signs through Azure Artifact Signing with GitHub OIDC and the Public
 Trust profile. The final signed sidecar checksum is recorded before Squirrel
 creates its update package. The package enables ASAR integrity and an

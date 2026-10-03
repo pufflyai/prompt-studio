@@ -22188,6 +22188,157 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "v7RL6W",
+      "x": 0,
+      "y": 2464,
+      "name": "Desktop · macOS installer · Background",
+      "context": "Static Finder background for the macOS DMG (658 × 498 points). Finder draws the real app icon at (192, 260) and the Applications link at (466, 260); keep both areas and the arrow clear. Export at 1x and 2x to clients/desktop/assets/dmg-background.png and dmg-background@2x.png.",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 658,
+      "height": 498,
+      "fill": "$ds-bg-subtle",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "cornerRadius": 16,
+          "id": "JgVtI",
+          "x": 30,
+          "y": 120,
+          "name": "Command",
+          "rotation": 28,
+          "fill": "$landing-command",
+          "width": 112,
+          "height": 32
+        },
+        {
+          "type": "path",
+          "id": "EPFMj",
+          "x": 540,
+          "y": 72,
+          "name": "Skill",
+          "rotation": -78,
+          "geometry": "M0 0l88 0a44 44 0 0 1-88 0z",
+          "viewBox": [
+            0,
+            0,
+            88,
+            44
+          ],
+          "fill": "$landing-skill",
+          "width": 88,
+          "height": 44
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 24,
+          "id": "tSqwI",
+          "x": 40,
+          "y": 404,
+          "name": "Page",
+          "rotation": 8,
+          "fill": "$landing-page",
+          "width": 72,
+          "height": 72
+        },
+        {
+          "type": "ellipse",
+          "id": "xBNF0",
+          "x": 600,
+          "y": 358,
+          "name": "Schedule",
+          "fill": "$landing-schedule",
+          "width": 28,
+          "height": 28
+        },
+        {
+          "type": "path",
+          "id": "IBtrn",
+          "x": 556,
+          "y": 440,
+          "name": "Hook",
+          "rotation": 35,
+          "geometry": "M24 0h16v24h24v16h-24v24h-16v-24h-24v-16h24z",
+          "viewBox": [
+            0,
+            0,
+            64,
+            64
+          ],
+          "fill": "$landing-skill",
+          "width": 56,
+          "height": 56
+        },
+        {
+          "type": "rectangle",
+          "id": "K14bT",
+          "x": 0,
+          "y": 0,
+          "name": "Frosted glass",
+          "fill": "#FFFFFF40",
+          "width": 658,
+          "height": 498,
+          "effect": {
+            "type": "background_blur",
+            "radius": 6
+          }
+        },
+        {
+          "type": "frame",
+          "id": "RY5NY",
+          "x": 36,
+          "y": 28,
+          "name": "Brand",
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "path",
+              "id": "VdGKC",
+              "name": "Prompt Studio logo",
+              "geometry": "M8 0c-4.41828 0-8 3.58172-8 8v10c0 4.4183 3.58172 8 8 8h10c4.4183 0 8-3.5817 8-8v-10c0-4.41828-3.5817-8-8-8h-10z m5 11c0 1.6569-1.3431 3-3 3-1.65685 0-3-1.3431-3-3 0-1.65685 1.34315-3 3-3 1.6569 0 3 1.34315 3 3z m2 0c0 2.7614-2.2386 5-5 5-2.76142 0-5-2.2386-5-5 0-2.76142 2.23858-5 5-5 2.7614 0 5 2.23858 5 5z",
+              "fillRule": "evenodd",
+              "viewBox": [
+                0,
+                0,
+                26,
+                26
+              ],
+              "fill": "$ds-fg",
+              "width": 18,
+              "height": 18
+            },
+            {
+              "type": "text",
+              "id": "PxLDk",
+              "name": "Brand name",
+              "fill": "$ds-fg",
+              "content": "Prompt Studio",
+              "fontFamily": "$font-heading",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "icon",
+          "id": "dQ0jV",
+          "x": 308,
+          "y": 240,
+          "name": "Drag arrow",
+          "width": 40,
+          "height": 40,
+          "icon": "arrow-right",
+          "library": "lucide",
+          "fill": "$ds-fg"
+        }
+      ]
     }
   ],
   "themes": {

@@ -15,7 +15,12 @@ Choose the artifact for the computer that will run Prompt Studio:
 | Linux x64 | `Prompt-Studio-<version>-linux-x64.deb` | portable ZIP |
 | Windows x64 | `Prompt-Studio-<version>-win32-x64-Setup.exe` | — |
 
-On macOS, drag the app to Applications and open it. On the first launch from
+On macOS, open the DMG. Its window shows the app, an arrow, and the Applications
+folder. Drag the app onto Applications. Finder copies it. It may show a
+progress window, and it shows its own replace prompt or error when needed. The
+window itself does not change after the
+drop. When the copy finishes, open Applications and launch Prompt Studio from
+there, not from the DMG. On the first launch from
 Applications, the app links `/usr/local/bin/pst` to its bundled runtime. macOS asks
 for an administrator password if the directory requires it. Cancelling leaves
 the app usable and does not repeat the prompt on later launches. Choose
