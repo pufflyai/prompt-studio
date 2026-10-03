@@ -5,6 +5,7 @@ import type {
   WorkbenchCore,
   WorkbenchPanelRegion,
 } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 
 interface OpenPanelWidgetInput {
   workbench: WorkbenchCore;
@@ -27,10 +28,12 @@ export const openPanelWidget = (input: OpenPanelWidgetInput) => {
   if (open) {
     open(resource);
   } else if (widget.openCommand) {
-    void workbench.commands.executeCommand(widget.openCommand.commandId, widget.openCommand.args, {
-      source: "panel-add",
-      ...(resource ? { resource } : {}),
-    });
+    void runUserAction(workbench, widget.title, () =>
+      workbench.commands.executeCommand(widget.openCommand!.commandId, widget.openCommand!.args, {
+        source: "panel-add",
+        ...(resource ? { resource } : {}),
+      }),
+    );
   } else {
     const widgetResource = widget.resourceKinds?.length || widget.canOpen ? resource : undefined;
     // Adding a tab from the region's "+" tray is the user asking for a tab that stays.

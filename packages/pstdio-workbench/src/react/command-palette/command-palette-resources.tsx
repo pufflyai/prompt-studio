@@ -1,6 +1,7 @@
 import type { PaletteEntry } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { SEARCH_MODE_ID } from "./palette-view";
@@ -47,7 +48,7 @@ export const useWorkbenchCommandPaletteResourceEntries = (input: UseWorkbenchCom
               icon: result.icon ? <WorkbenchIcon name={result.icon} /> : undefined,
               onActivate: () => {
                 onClose();
-                void Promise.resolve(result.activate()).catch(() => undefined);
+                void runUserAction(workbench, result.label, () => result.activate());
               },
             })),
           ),

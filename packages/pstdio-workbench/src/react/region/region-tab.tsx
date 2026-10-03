@@ -5,6 +5,7 @@ import { ListRow } from "@pstdio/ui";
 import { type KeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode, useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchTabSnapshot, WorkbenchWidgetPlacement } from "../../core";
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../shared/icon";
 import { resolveTabIconName } from "./region-tabs-visibility";
 
@@ -175,10 +176,12 @@ const activateTabAction = (
   action: NonNullable<WorkbenchTabMenuGroup["rows"][number]["action"]>,
 ) => {
   if (action.kind === "command") {
-    void workbench.commands.executeCommand(action.commandId, action.args);
+    void runUserAction(workbench, workbench.commands.getCommand(action.commandId)?.command.label ?? "Command", () =>
+      workbench.commands.executeCommand(action.commandId, action.args),
+    );
     return;
   }
-  void workbench.navigation.openTarget(action.target);
+  void runUserAction(workbench, "Open", () => workbench.navigation.openTarget(action.target));
 };
 const WorkbenchStructuredTabMenu = (props: { groups: readonly WorkbenchTabMenuGroup[]; workbench: WorkbenchCore }) => {
   const { groups, workbench } = props;

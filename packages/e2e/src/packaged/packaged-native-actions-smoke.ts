@@ -25,6 +25,7 @@ const run = {kind:"command",id:"run"};
 const input = {value:{type:"select",options:{command:choices,valueField:"id",labelField:"name"}}};
 export default {
   commands:[
+    {id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{throw new Error("Native action failed");}},
     {id:"choices",ref:choices,title:"Choices",params:{},run:()=>[{id:"one",name:"One"}]},
     {id:"run",ref:run,title:"Run",params:input,run:(_ctx:unknown,params:unknown)=>params},
   ],
@@ -62,6 +63,9 @@ export const expectPackagedNativeActions = async (input: {
       headers: { ...input.headers, "content-type": "application/json" },
       body: JSON.stringify({ source: "cli", params }),
     });
+  expect(await (await execute("fail", {})).json()).toMatchObject({
+    outcome: { ok: false, status: "error", error: { message: "Native action failed" } },
+  });
   expect(await (await execute("choices", {})).json()).toMatchObject({
     outcome: { status: "success", value: [{ id: "one", name: "One" }] },
   });

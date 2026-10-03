@@ -256,6 +256,7 @@ export {
   resolveAnchorRegion,
   resourceContextMenuPath,
   resourceHierarchyCycleCode,
+  runUserAction,
   settleReadBatch,
   standardResourceIcons,
   workbenchCommandPaletteMenuPath,

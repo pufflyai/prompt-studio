@@ -11,6 +11,7 @@ import {
   type WorkbenchCore,
   workbenchCommandPaletteMenuPath,
 } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -83,8 +84,6 @@ const createShortcutByCommandId = (workbench: WorkbenchCore) =>
 const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
   binding ? <PaletteShortcut binding={binding} /> : undefined;
 
-const getCommandErrorMessage = (error: unknown) => (error instanceof Error ? error.message : "Command failed.");
-
 const commandExecutionContext = (workbench: WorkbenchCore): WorkbenchCommandExecutionContext | undefined => {
   const resource = workbench.getPrimaryResource();
   return resource ? { resource } : undefined;
@@ -98,11 +97,7 @@ const executePaletteCommand = async (input: {
   label: string;
 }) => {
   const { args, commandId, context, label, workbench } = input;
-  try {
-    await workbench.commands.executeCommand(commandId, args, context);
-  } catch (error) {
-    workbench.notifications.show({ level: "error", title: `${label} failed`, message: getCommandErrorMessage(error) });
-  }
+  await runUserAction(workbench, label, () => workbench.commands.executeCommand(commandId, args, context));
 };
 
 const createEntry = (input: {

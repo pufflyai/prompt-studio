@@ -10,6 +10,7 @@ import {
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchRegion as WorkbenchRegionId, WorkbenchWidgetPlacement } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
 import type { WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
@@ -109,7 +110,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
       workbench.commandPalette.requestParams({ record: { command }, label: item.label, args: item.args });
       return;
     }
-    void workbench.commands.executeCommand(item.commandId, item.args).catch(() => undefined);
+    void runUserAction(workbench, item.label, () => workbench.commands.executeCommand(item.commandId, item.args));
   };
   const leadingActions = leadingItems.map((item) => (
     <Tooltip key={item.id} content={item.label}>
