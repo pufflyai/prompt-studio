@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -119,4 +119,30 @@ describe("performance endpoint", () => {
       await endpoint.close();
     }
   });
+});
+
+test("an oversized credential cannot keep feeding a rejected connection", async () => {
+  const root = mkdtempSync(join(tmpdir(), "performance-rejected-client-"));
+  const path = join(root, "access", "endpoint.json");
+  const endpoint = await openPerformanceEndpoint(path, () => ({ secret: "snapshot" }));
+  const { port } = JSON.parse(readFileSync(path, "utf8"));
+  const client = connect({ port, host: "127.0.0.1", allowHalfOpen: true });
+  client.on("error", () => {});
+  const closed = new Promise<string>((resolve) => client.once("close", () => resolve("closed")));
+  const ended = new Promise<void>((resolve) => client.once("end", resolve));
+  client.resume();
+  try {
+    await new Promise((resolve) => client.once("connect", resolve));
+    client.write("x".repeat(512));
+    await ended;
+    // TCP permits the rejected client to keep sending after receiving the server FIN.
+    client.write("x".repeat(512));
+    expect(
+      await Promise.race([closed, new Promise<string>((resolve) => setTimeout(() => resolve("still accepted"), 100))]),
+    ).toBe("closed");
+  } finally {
+    client.destroy();
+    await endpoint.close();
+    rmSync(root, { recursive: true, force: true });
+  }
 });

@@ -34,15 +34,15 @@ export const openPerformanceEndpoint = async (path: string, read: () => unknown)
     socket.setTimeout(2_000, () => socket.destroy());
     let request = "";
     const authenticate = (chunk: string) => {
-      request += chunk;
-      if (request.length > token.length + 1) {
-        socket.end();
+      if (request.length + chunk.length > token.length + 1) {
+        socket.destroy();
         return;
       }
+      request += chunk;
       if (!request.endsWith("\n")) return;
       socket.off("data", authenticate);
       if (request !== `${token}\n`) {
-        socket.end();
+        socket.destroy();
         return;
       }
       socket.end(`${JSON.stringify(read())}\n`);
