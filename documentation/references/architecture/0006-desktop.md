@@ -223,8 +223,9 @@ credentials from every text entry before artifacts are uploaded.
 
 Release builds use the requested package tag. The Electron specs and their helpers
 come from the workflow revision, so a manual run can correct a release check for
-an existing draft without changing its tagged application. To retry a draft, run
-`Release Desktop` on the branch with the corrected checks, set `version` to the
+an existing draft without changing its tagged application. Windows signing trusts
+the `main` branch's GitHub identity. Merge corrected checks before retrying a draft,
+then run `Release Desktop` on `main`, set `version` to the
 existing version, and set `tag` to its `pstdio@<version>` tag. The final job publishes
 the draft only after every native target passes all checks.
 
