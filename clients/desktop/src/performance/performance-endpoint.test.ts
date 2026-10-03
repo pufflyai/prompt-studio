@@ -104,15 +104,21 @@ describe("performance endpoint", () => {
     const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));
     try {
       const identity = execFileSync("whoami", ["/user", "/fo", "csv", "/nh"], { encoding: "utf8" });
-      const sid = identity.match(/S-1-5-\d+(?:-\d+)+/)?.[0];
-      const script = `
-$acl = Get-Acl -LiteralPath $env:PSTDIO_ACL_TEST_PATH
-$sids = @($acl.Access | ForEach-Object {$_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value})
-ConvertTo-Json -Compress -InputObject $sids
-`;
-      for (const target of [dirname(path), path]) {
-        const output = await runWindowsPowerShell(script, { PSTDIO_ACL_TEST_PATH: target });
-        expect([JSON.parse(output)].flat()).toEqual([sid]);
+      const sid = identity.match(/S-1-5-\d+(?:-\d+)+/)![0]!;
+      const targets = [
+        [dirname(path), "Directory"],
+        [path, "File"],
+      ] as const;
+      for (const [target, kind] of targets) {
+        const output = await runWindowsPowerShell(
+          `
+$acl = [System.IO.${kind}]::GetAccessControl($env:PSTDIO_ACL_TEST_PATH)
+$rules = $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])
+foreach ($rule in $rules) { [Console]::WriteLine($rule.IdentityReference.Value) }
+`,
+          { PSTDIO_ACL_TEST_PATH: target },
+        );
+        expect(output.split(/\r?\n/)).toEqual([sid]);
       }
       expect(await read(path)).toEqual({ ok: true });
       expect(await read(path, "wrong-token")).toBeNull();
