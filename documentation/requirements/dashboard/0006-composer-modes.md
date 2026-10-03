@@ -18,7 +18,7 @@ The [Pencil design system](../../../design/prompt-studio-design-system.pen) defi
 - `bNCZX`: provider details and unavailable status.
 - `FxIuM`: combinations and plan progress.
 - `bMVMu`: goal lifecycle and edge cases.
-- `WbrYo`: native plan approval Dialog.
+- `WbrYo`: native plan approval in the question composer.
 
 Follow the [shared design rules](../../../design/DESIGN.md). Send uses the existing primary IconButton; attach and model controls use ghost styling. Goal and Plan use the same subtle pill styling as ticket tags, at a matching 28 px height. Tags follow model parameters. Slash menus use shared Menu rows without leading icons or outer padding. Do not add status cards, argument dialogs or Reset to default.
 
@@ -85,15 +85,15 @@ Expose native explanations and task lists when the adapter returns them. A task 
 
 ## Approving a proposed plan
 
-Codex returns completed structured `plan` items in its native thread. While Plan mode is selected, show the latest unapproved proposal in the shared Approve plan Dialog. Ordinary messages such as “approved” do not change the native collaboration mode. Do not infer readiness from assistant prose, step progress or a completed turn without a proposal.
+Codex returns completed structured `plan` items in its native thread. While Plan mode is selected, the composer shows the shared LLM question form for the latest unapproved proposal. Keep the full plan in the conversation and native details. Ordinary messages such as “approved” do not change the native collaboration mode. Do not infer readiness from assistant prose, step progress or a completed turn without a proposal.
 
-The provider advertises a mode `confirmation` with the native revision ID and an available action ID. Show the full proposal markdown. Keep planning, Close and Escape dismiss the Dialog without changing native state or the unsent draft. The Plan tag can reopen the decision. Reload reads the pending native proposal again; a new revision opens a new decision.
+The provider advertises a mode `confirmation` with the native revision ID and an available action ID. Offer Approve and implement and Keep planning choices. Selecting a choice does not dispatch it; use the existing Send button. Keep planning or Skip restores the ordinary editor without changing native state or the unsent draft. The Plan tag can reopen the decision. Reload reads the pending native proposal again; a new revision resets the selection and opens a fresh decision. A pending native LLM question takes priority and its answer follows the native question channel. Approval choices use the provider's advertised mode action instead.
 
 Approve and implement passes the displayed revision to the provider. Recheck native state and reject stale revisions. Codex starts one normal turn in the same native thread with `collaboration_mode: "default"` and the explicit prompt “Implement the approved plan.” Preserve the existing unsent draft and attachments. The extension stores only the approved revision ID because native history retains proposals without recording this approval decision. It never duplicates the plan text. Re-entering Plan mode must not offer the already approved revision again.
 
-Disable approval while the provider is busy or state is unavailable. A rejected dispatch keeps the Dialog open with a closable error; refresh before trying again. After a native session starts, its failure belongs to the conversation and does not replay approval. Dismissal remains available when no dispatch is pending. Goal and plan implementation cannot be combined until the provider verifies that combination.
+Disable approval while the provider is busy or state is unavailable. Keep planning and Skip remain available when no dispatch is pending. A rejected dispatch keeps the question and selected choice with a closable conversation error; refresh before trying again. Approval never sends the unsent draft or consumes its attachments. Queued message edits also stay separate. After a native session starts, its failure belongs to the conversation and does not replay approval. Goal and plan implementation cannot be combined until the provider verifies that combination.
 
-This confirmation path applies to Codex structured proposals. Claude's live `ExitPlanMode` permission request and OpenCode's agent selection keep their native paths. Providers without verified approval metadata receive no inferred approval Dialog.
+This confirmation path applies to Codex structured proposals. Claude's live `ExitPlanMode` permission request and OpenCode's agent selection keep their native paths. Providers without verified approval metadata receive no inferred approval question.
 
 ## Lifecycle and edge cases
 

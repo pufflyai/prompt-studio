@@ -1,4 +1,4 @@
-import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { getTextFromSerializedEditorState, type PromptCommand, PromptEditor } from "../../rich-text";
@@ -14,10 +14,16 @@ import {
   type ChatInputQuestionResponse,
   QuestionPromptControls,
   SKIPPED_QUESTION_TEXT,
-  toQuestionResponse,
 } from "./chat-input-question-prompt";
+import { ChatInputToolbar } from "./chat-input-toolbar";
 import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
-import { SendButton } from "./send-button";
+import {
+  type ComposerDecision,
+  canSubmitComposerResponse,
+  composerQuestionResponse,
+  resolveComposerDecision,
+  submitComposerResponse,
+} from "./composer-decision";
 
 import { useChatInputHistory } from "./use-chat-input-history";
 import { useQuestionPromptState } from "./use-question-prompt-state";
@@ -49,6 +55,7 @@ export interface ChatInputProps {
   /** Recede the resting border to border.subtle when nested inside a stronger shell (the workspace hub). */
   recessed?: boolean;
   questionPrompt?: ChatInputQuestionPrompt;
+  decision?: ComposerDecision;
   autoFocus?: boolean;
   focusSignal?: number;
   submitTitle?: string;
@@ -118,12 +125,15 @@ export const ChatInput = (props: ChatInputProps) => {
     actions,
     attachedToTop = false,
     recessed = false,
-    questionPrompt,
+    questionPrompt: agentQuestionPrompt,
+    decision,
     autoFocus = false,
     focusSignal = 0,
     submitTitle,
     commands = [],
   } = props;
+
+  const { activeDecision, questionPrompt } = resolveComposerDecision(agentQuestionPrompt, decision);
 
   const restingBorderColor = recessed ? "border.subtle" : "border";
   const [submitting, setSubmitting] = useState(false);
@@ -187,12 +197,13 @@ export const ChatInput = (props: ChatInputProps) => {
   };
 
   const responseText = questionPrompt ? question.responseText : text.trim();
+  const questionResponse = composerQuestionResponse(questionPrompt, question.buildAnswers());
   const hasMissingRequiredSelection = question.hasMissingRequiredAnswer;
   const actionState = {
     canInterrupt: streaming && !questionPrompt && Boolean(onInterrupt),
-    canSubmit: !submitDisabled,
+    canSubmit: canSubmitComposerResponse(submitDisabled, activeDecision, questionResponse),
     hasQuestionPrompt: Boolean(questionPrompt),
-    isDisabled: isDisabled || submitting || hasMissingRequiredSelection,
+    isDisabled: isDisabled || submitting || Boolean(activeDecision?.pending) || hasMissingRequiredSelection,
     streaming,
     text: responseText,
   };
@@ -201,14 +212,18 @@ export const ChatInput = (props: ChatInputProps) => {
   const submitMessage = async () => {
     if (!responseText) return;
 
-    const questionResponse = questionPrompt ? toQuestionResponse(questionPrompt, question.buildAnswers()) : undefined;
-
     history.reset();
     setSubmitting(true);
     try {
-      await onSubmit(responseText, attachedResources, questionResponse);
+      await submitComposerResponse({
+        decision: activeDecision,
+        response: questionResponse,
+        text: responseText,
+        attachments: attachedResources,
+        onSubmit,
+        onClearAttachments,
+      });
       resetEditor(true);
-      onClearAttachments?.();
     } catch {
       // Keep the composer intact so failed submissions can be retried.
     } finally {
@@ -230,9 +245,16 @@ export const ChatInput = (props: ChatInputProps) => {
   const skipQuestion = async (skippedPrompt: ChatInputQuestionPrompt) => {
     setSubmitting(true);
     try {
-      await onSubmit(SKIPPED_QUESTION_TEXT, attachedResources, buildSkippedQuestionResponse(skippedPrompt));
+      const response = buildSkippedQuestionResponse(skippedPrompt);
+      await submitComposerResponse({
+        decision: activeDecision,
+        response,
+        text: SKIPPED_QUESTION_TEXT,
+        attachments: attachedResources,
+        onSubmit,
+        onClearAttachments,
+      });
       resetEditor(true);
-      onClearAttachments?.();
     } catch {
       // Keep the form intact so a failed skip can be retried.
     } finally {
@@ -305,31 +327,19 @@ export const ChatInput = (props: ChatInputProps) => {
             </Flex>
           </ScrollArea>
         )}
-        <HStack gap="1" minH={COMPOSER_CONTROL_HEIGHT} align="center">
-          <ScrollArea flex="1" minW="0" showVerticalScrollbar={false} showHorizontalScrollbar>
-            <HStack gap="1" width="max-content" minH={COMPOSER_CONTROL_HEIGHT}>
-              {actions}
-            </HStack>
-          </ScrollArea>
-          {questionPrompt ? (
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={isDisabled || submitting || submitDisabled}
-              title="Skip this question and let the agent continue"
-              onClick={() => void skipQuestion(questionPrompt)}
-            >
-              Skip
-            </Button>
-          ) : null}
-          <SendButton
-            canInterrupt={buttonAction === "interrupt"}
-            title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? messageTitle)}
-            shortcut={buttonAction === "submit" ? "Enter" : undefined}
-            onClick={() => runAction(buttonAction)}
-            disabled={buttonAction === "none"}
-          />
-        </HStack>
+        <ChatInputToolbar
+          actions={actions}
+          questionPrompt={Boolean(questionPrompt)}
+          skipDisabled={isDisabled || submitting || submitDisabled || Boolean(activeDecision?.pending)}
+          skipTitle={activeDecision ? "Dismiss this decision" : "Skip this question and let the agent continue"}
+          onSkip={() => {
+            if (questionPrompt) void skipQuestion(questionPrompt);
+          }}
+          buttonAction={buttonAction}
+          submitTitle={submitTitle}
+          messageTitle={messageTitle}
+          runAction={runAction}
+        />
       </Flex>
     </Box>
   );

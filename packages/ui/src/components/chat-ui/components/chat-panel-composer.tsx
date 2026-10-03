@@ -4,6 +4,7 @@ import type { PromptCommand } from "@/components/rich-text";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
+import type { ComposerDecision } from "./composer-decision";
 import type { QueuedFollowUp } from "./message-types";
 import { QueuedFollowUpList } from "./queued-follow-up-list";
 import type { QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
@@ -30,6 +31,7 @@ interface ChatPanelComposerProps {
   chatInputAutoFocus: boolean;
   chatInputPlaceholder: string;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
+  composerDecision?: ComposerDecision;
   chatInputCommands: PromptCommand[];
   hasWorkspaceHub: boolean;
   inputDisabled: boolean;
@@ -99,6 +101,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     chatInputAutoFocus,
     chatInputPlaceholder,
     chatInputQuestionPrompt,
+    composerDecision,
     chatInputCommands,
     hasWorkspaceHub,
     inputDisabled,
@@ -158,9 +161,14 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           attachedToTop={hasQueuedFollowUps}
           recessed={hasWorkspaceHub}
           questionPrompt={chatInputQuestionPrompt}
+          decision={composerDecision}
           autoFocus={chatInputAutoFocus}
           focusSignal={queuedComposer.focusSignal}
-          submitTitle={queuedComposer.isEditing && !chatInputQuestionPrompt ? "Save queued follow-up" : undefined}
+          submitTitle={
+            queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision
+              ? "Save queued follow-up"
+              : undefined
+          }
           commands={chatInputCommands}
         />
       </Stack>

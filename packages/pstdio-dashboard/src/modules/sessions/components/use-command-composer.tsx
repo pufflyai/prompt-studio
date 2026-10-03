@@ -1,4 +1,3 @@
-import { AlertMessage } from "@pstdio/ui";
 import { type ChatInputQuestionResponse, HarnessControls } from "@pstdio/ui/chat-ui";
 import type {
   DraftHarnessCommandInput,
@@ -13,8 +12,12 @@ import {
   composerCommandProblem,
   taggedCommandOperation,
 } from "../chat/composer-command";
+import { composerCommandSuggestions } from "../chat/composer-command-suggestions";
+import type { createHarnessConfirmation } from "../chat/harness-confirmation";
 import { handOffNativeCommand, type SubmittedCommand, takeNativeCommand } from "../chat/native-command-handoff";
 import { useHarnessCommands } from "../hooks/use-harness-commands";
+import { CommandComposerNotices } from "./command-composer-notices";
+import { useHarnessConfirmation } from "./use-harness-confirmation";
 import type { useSessionChatDraft } from "./use-session-chat-draft";
 export const useCommandComposer = (
   sessionId: string | null,
@@ -151,25 +154,30 @@ export const useCommandComposer = (
     assertSingleCommand(text, commands.state);
     return { kind: "command" as const, text };
   };
+  const invokeModeAction: Parameters<typeof createHarnessConfirmation>[1]["onAction"] = async (
+    modeId,
+    actionId,
+    argument,
+    modeSnapshot,
+  ) => {
+    const result = await invokeCommand({ kind: "mode-action", modeId, actionId, argument }, modeSnapshot);
+    if (result.sessionId) onCreated(result.sessionId, "New session");
+  };
+  const confirmation = useHarnessConfirmation(commands.state?.modes, {
+    scope,
+    pending: commands.invoke.isPending,
+    unavailable: Boolean(commands.error),
+    onAction: invokeModeAction,
+  });
   return {
-    suggestions:
-      commands.state?.slashCommands && !commands.invoke.isPending
-        ? commands.state.commands.map((command) => ({
-            ...command,
-            disabledReason:
-              command.disabledReason ??
-              (intent && command.name !== intent.command.name
-                ? `Remove ${intent.command.composer?.label} first.`
-                : undefined),
-            ...(command.composer
-              ? {
-                  onSelect: () => {
-                    setIntent({ harnessId: selectedAgent, command });
-                  },
-                }
-              : {}),
-          }))
-        : [],
+    decision: confirmation.decision,
+    suggestions: composerCommandSuggestions(
+      commands.state,
+      commands.invoke.isPending,
+      intent,
+      selectedAgent,
+      setIntent,
+    ),
     submit: (
       text: string,
       attachments: SessionAttachment[],
@@ -212,12 +220,9 @@ export const useCommandComposer = (
         }
         pending={commands.invoke.isPending}
         unavailable={Boolean(commands.error)}
-        error={commandError ? { message: commandError, onClose: () => setCommandError(null) } : undefined}
+        onRequestConfirmation={confirmation.reopen}
         onRefresh={commands.refresh}
-        onAction={async (modeId, actionId, argument, modeSnapshot) => {
-          const result = await invokeCommand({ kind: "mode-action", modeId, actionId, argument }, modeSnapshot);
-          if (result.sessionId) onCreated(result.sessionId, "New session");
-        }}
+        onAction={invokeModeAction}
       />
     ),
     change: (text: string) => {
@@ -226,18 +231,12 @@ export const useCommandComposer = (
       setCommandText(text);
     },
     notices: (
-      <>
-        {commandError ? (
-          <AlertMessage status="error" title="Command failed" onClose={() => setCommandError(null)}>
-            {commandError}
-          </AlertMessage>
-        ) : null}
-        {commandOutcome ? (
-          <AlertMessage status="info" title="Command result" onClose={() => setCommandOutcome(null)}>
-            {commandOutcome}
-          </AlertMessage>
-        ) : null}
-      </>
+      <CommandComposerNotices
+        error={commandError}
+        outcome={commandOutcome}
+        onDismissError={() => setCommandError(null)}
+        onDismissOutcome={() => setCommandOutcome(null)}
+      />
     ),
   };
 };

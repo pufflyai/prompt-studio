@@ -10,6 +10,7 @@ import { getRecentUserPrompts } from "./chat-input-history";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import { ChatMessageList } from "./chat-message-list";
 import { ChatPanelComposer, useQueuedFollowUpComposer } from "./chat-panel-composer";
+import type { ComposerDecision } from "./composer-decision";
 import {
   groupMessagesByTurn,
   normalizeChatMessagesForDisplay,
@@ -59,6 +60,7 @@ export interface ChatPanelProps {
   /** Blocks sending while the editor stays usable, for example while no model is selected. */
   submitDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
+  composerDecision?: ComposerDecision;
   chatInputAutoFocus?: boolean;
   queuedFollowUps?: QueuedFollowUp[];
   onQueuedFollowUpUpdate?: (itemId: string, prompt: string) => void;
@@ -97,6 +99,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     inputDisabled = false,
     submitDisabled = false,
     chatInputQuestionPrompt,
+    composerDecision,
     chatInputAutoFocus = false,
     queuedFollowUps = [],
     onQueuedFollowUpUpdate,
@@ -190,6 +193,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
         chatInputAutoFocus={chatInputAutoFocus}
         chatInputPlaceholder={chatInputPlaceholder}
         chatInputQuestionPrompt={activeQuestionPrompt}
+        composerDecision={composerDecision}
         chatInputCommands={chatInputCommands}
         hasWorkspaceHub={hasWorkspaceHub}
         inputDisabled={inputDisabled}

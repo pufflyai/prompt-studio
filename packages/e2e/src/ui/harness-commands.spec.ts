@@ -53,10 +53,10 @@ for (const [harness, modes] of [
       await menu.getByRole("option", { name: "/plan" }).click();
       await expect(controls.getByRole("button", { name: "Remove Plan" })).toBeVisible();
       await send.click();
-      await page.getByRole("dialog", { name: "Approve plan" }).getByRole("button", { name: "Keep planning" }).click();
+      await page.getByRole("button", { name: "Skip", exact: true }).click();
       await expect(controls.getByRole("button", { name: "Plan details" })).toHaveText("Plan");
       await page.reload();
-      await page.getByRole("dialog", { name: "Approve plan" }).getByRole("button", { name: "Keep planning" }).click();
+      await page.getByRole("button", { name: "Skip", exact: true }).click();
       await expect(controls.getByRole("button", { name: "Goal details" })).toBeVisible();
       await expect(controls.getByRole("button", { name: "Plan details" })).toBeVisible();
       await editor.fill("Keep this unsent draft");

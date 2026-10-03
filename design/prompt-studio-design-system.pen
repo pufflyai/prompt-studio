@@ -131442,8 +131442,8 @@
       "id": "WbrYo",
       "x": 8440,
       "y": 8001,
-      "name": "Chat Composer · Plan approval · PS-459",
-      "context": "Plan approval is an explicit decision. Provider-owned confirmation metadata opens this dialog only for a completed native proposed plan. Status tags remain compact; approval is the deliberate modal exception. Never infer readiness from prose or the word approved.",
+      "name": "Chat Composer · Inline plan approval · PS-459",
+      "context": "Plan approval uses the existing LLM question pattern in the composer. No dialog, overlay or focus trap. Full native plan remains in the conversation. Choose Approve and implement or Keep planning, then Send.",
       "theme": {
         "mode": "dark"
       },
@@ -131476,7 +131476,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Review the native proposed plan. Approve exits Plan mode and starts implementation in the same conversation. Keep planning, Escape or Close dismisses without approval or changing the draft.",
+          "content": "Review the native proposed plan in the conversation. The composer asks for a decision using the shared question choices and Send control. The unsent draft returns after the decision.",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
@@ -131484,48 +131484,220 @@
         {
           "type": "frame",
           "id": "BZJ8B",
-          "name": "Approval modal stage",
+          "name": "Conversation and inline question",
           "width": "fill_container",
-          "height": 520,
+          "height": 540,
           "fill": "$ds-bg-subtle",
           "layout": "vertical",
-          "justifyContent": "center",
-          "alignItems": "center",
+          "gap": 24,
+          "padding": 24,
           "children": [
             {
-              "id": "lNtgI",
-              "type": "ref",
-              "ref": "oEM2Q",
-              "name": "Plan approval dialog",
-              "context": "Shared Dialog md and sm buttons. Title and full scrollable markdown plan come from provider state. Primary approval invokes only the advertised action for this plan revision. Keep planning does not change the native mode. On failure retain the dialog and show the error within it; on stale plan require fresh review.",
-              "descendants": {
-                "lhmhO": {
-                  "content": "Approve plan"
+              "type": "text",
+              "id": "wbqZl",
+              "name": "Native plan in conversation",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Update the release workflow\n\n1. Replace the duplicate picker with slash commands.\n2. Keep Goal and Plan tags compact.\n3. Validate native state in isolation.",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "x4xrwM",
+              "name": "Plan approval question composer",
+              "context": "ChatInput (@pstdio/ui). Editor above one toolbar row; attachments are optional. All composer controls and mode tags are 28px high. Root padding and gap are 8px. Toolbar: Attach, model parameter controls, optional closable mode tags, spacer, Send. Attach and parameter buttons use ghost styling. Send uses the implemented primary IconButton with a 16px arrow or filled pause. Mode tags use the shared subtle ticket tag pill styling at 28px. Send swaps arrow-up for pause while streaming. Preserve disabled control styling. Model selection uses the shared SelectorTrigger with ghost styling; the harness belongs in its menu header. Mode tags sit immediately right of all model parameters and use cmp/ComposerModeTag. Selecting /goal at the caret removes only the slash fragment and keeps the objective text. Close removes a draft intent or requests native clear/leave for a submitted mode. Keep the draft and retain native state until acknowledgement. Submitted goal tags keep the objective visible; details and actions depend on provider capabilities. Multiple new intents require verified composition. Use the shared Menu surface with icon-free SearchableMenuItem rows for slash completion. Do not show mode status cards or argument dialogs.",
+              "width": "fill_container",
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kzbBM",
+                  "name": "Approval question",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": [
+                    0,
+                    0,
+                    8,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wSZVT",
+                      "name": "Question title",
+                      "fill": "$ds-fg",
+                      "content": "Approve plan",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "id": "bOgMn",
+                      "type": "ref",
+                      "ref": "KPHF7",
+                      "name": "Approve and implement",
+                      "theme": {
+                        "radio": "on"
+                      },
+                      "descendants": {
+                        "aAkIM": {
+                          "content": "Approve and implement",
+                          "fontSize": 14
+                        }
+                      }
+                    },
+                    {
+                      "id": "vPRoK",
+                      "type": "ref",
+                      "ref": "KPHF7",
+                      "name": "Keep planning",
+                      "theme": {
+                        "radio": "off"
+                      },
+                      "descendants": {
+                        "aAkIM": {
+                          "content": "Keep planning",
+                          "fontSize": 14
+                        }
+                      }
+                    }
+                  ]
                 },
-                "wvanj": {
-                  "content": "Update the release workflow\n\n1. Replace the duplicate picker with slash commands.\n2. Keep Goal and Plan tags compact.\n3. Validate native state in isolation.\n\nApproval leaves Plan mode and starts implementation."
-                },
-                "baBqG": {
-                  "name": "Keep planning",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "sm"
-                  }
-                },
-                "baBqG/Hf4GT": {
-                  "content": "Keep planning"
-                },
-                "aWg2H": {
-                  "name": "Approve and implement",
-                  "theme": {
-                    "btn": "primary",
-                    "size": "sm"
-                  }
-                },
-                "aWg2H/Hf4GT": {
-                  "content": "Approve and implement"
+                {
+                  "type": "frame",
+                  "id": "V7GeBd",
+                  "name": "Question toolbar",
+                  "width": "fill_container",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "UO3c0",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Attach",
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "width": 28,
+                      "height": 28,
+                      "strokeWidth": 0,
+                      "fill": "$btn-fill",
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "paperclip",
+                          "height": 14,
+                          "width": 14
+                        }
+                      }
+                    },
+                    {
+                      "id": "L0LBeV",
+                      "type": "ref",
+                      "ref": "clw66",
+                      "name": "Model",
+                      "height": 28,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 0,
+                      "strokeAlignment": "inner",
+                      "theme": {
+                        "trig": "default",
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "fill": "$btn-fill",
+                      "descendants": {
+                        "xr1ec": {
+                          "enabled": false
+                        },
+                        "l7dix": {
+                          "padding": 0
+                        },
+                        "sefGB": {
+                          "content": "Opus 4.8",
+                          "fontSize": 12,
+                          "fill": "$btn-fg"
+                        },
+                        "Tpujq": {
+                          "fill": "$btn-fg"
+                        }
+                      }
+                    },
+                    {
+                      "id": "wORFt",
+                      "type": "ref",
+                      "ref": "aQk0l",
+                      "name": "Plan tag",
+                      "height": 28,
+                      "descendants": {
+                        "wLHjb": {
+                          "content": "Plan"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DgDpi",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 28
+                    },
+                    {
+                      "id": "JuKLO",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Skip decision",
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Skip"
+                        }
+                      }
+                    },
+                    {
+                      "id": "UInbE",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Send decision",
+                      "theme": {
+                        "btn": "primary",
+                        "size": "xs"
+                      },
+                      "width": 28,
+                      "height": 28,
+                      "strokeWidth": 0,
+                      "fill": "$btn-fill",
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up",
+                          "height": 16,
+                          "width": 16
+                        }
+                      }
+                    }
+                  ]
                 }
-              }
+              ]
             }
           ]
         },
@@ -131536,7 +131708,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Only a completed native proposed plan creates this decision. Codex approval validates its revision, leaves Plan mode and starts a normal turn. A plain approved message stays text. Other providers keep their own native approval paths. Closing preserves Plan and the unsent draft; reopen from the Plan tag. Disable approval while busy or unavailable. Reject stale revisions and keep failed approval open for recovery.",
+          "content": "Send validates the displayed native revision. Approval leaves Plan mode and starts one normal turn in the same thread. Keep planning or Skip restores the draft without native mutation; reopen from Plan details. Unavailable state disables approval. Dispatch failures retain the question and selection. Native LLM questions take priority. Full plan stays in history. Attachments and queued edits remain intact.",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
