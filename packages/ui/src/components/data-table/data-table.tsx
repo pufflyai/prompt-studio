@@ -5,7 +5,6 @@ import { getCoreRowModel, type RowSelectionState, useReactTable } from "@tanstac
 import { useState } from "react";
 import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
 import { findField } from "../collection-view/collection-view-fields";
-import { countFilterRules } from "../collection-view/collection-view-filter";
 import { DisplaySortControl } from "../collection-view/display-sort-control";
 import { buildColumns } from "./build-columns";
 import { DataTableDisplayMenu } from "./data-table-display-menu";
@@ -47,7 +46,7 @@ const DatasetDataTable = (props: DataTableProps) => {
     getCellContextMenuActions,
   } = props;
   const view = useDataTableView(props);
-  const { settings, setSettings, sorts, setSorts, filter, startRule, setOpenMenu } = view;
+  const { settings, setSettings, sorts, setSorts, filter, startRule } = view;
   // A different filter, sort, grouping, or search starts again on the first page.
   const pageKey = JSON.stringify([filter, sorts, settings.grouping, view.deferredSearch]);
   const [pagePosition, setPagePosition] = useState({ key: pageKey, index: 0 });
@@ -120,7 +119,7 @@ const DatasetDataTable = (props: DataTableProps) => {
     .filter(Boolean)
     .join(" · ");
   const showFooter = page.pageCount > 1 || page.shownCount !== total || Boolean(groups);
-  const nothingShown = total > 0 && view.shownRows.length === 0;
+  const nothingShown = total > 0 && view.shownRows.length === 0 && Boolean(view.deferredSearch.trim());
 
   return (
     <Flex direction="column" height="100%" width="100%">
@@ -149,13 +148,7 @@ const DatasetDataTable = (props: DataTableProps) => {
       />
       {props.contentPlaceholder ??
         (nothingShown ? (
-          <CollectionViewEmptyState
-            search={view.deferredSearch}
-            ruleCount={countFilterRules(filter)}
-            hiddenCount={total}
-            onClearSearch={() => view.setSearch("")}
-            onEditFilter={() => setOpenMenu("filter")}
-          />
+          <CollectionViewEmptyState search={view.deferredSearch} onClearSearch={() => view.setSearch("")} />
         ) : (
           <DataTableGrid
             table={table}

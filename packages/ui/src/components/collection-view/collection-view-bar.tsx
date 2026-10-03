@@ -11,7 +11,7 @@ import { countFilterRules } from "./collection-view-filter";
 import { FilterRulePill } from "./collection-view-pills";
 import { setRuleAt } from "./collection-view-rules";
 import { CollectionViewTabs } from "./collection-view-tabs";
-import type { CollectionSavedView, CollectionViewsSource } from "./collection-view-types";
+import { type CollectionSavedView, type CollectionViewsSource, EMPTY_VIEW_FILTER } from "./collection-view-types";
 import { FilterMenu } from "./filter-menu";
 import type { RuleValueOption } from "./filter-rule-value";
 import {
@@ -72,7 +72,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
   const store: CollectionViewStoreState<TSettings> = useCollectionViewStore(storageKey, initialState, (state) => state);
   const { activeViewId, settings, sorts, openMenu, openRuleIndex } = store;
   const filter = normalFilter(store.filter);
-  const { activateView, setFilter, setOpenMenu, setOpenRuleIndex, startRule } = store;
+  const { activateView, setFilter, setOpenMenu, setOpenRuleIndex, selectRule } = store;
   const activeView = views.find((view) => view.id === activeViewId);
   const state = { settings, filter, sorts };
   const dirty = isCollectionViewDirty(activeView, state);
@@ -106,10 +106,6 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
     return field ? optionsFor(field) : [];
   };
   const showCriteria = dirty || filter.rules.length > 0 || Boolean(filter.groups?.length);
-  const changePickerFilter = (next: typeof filter) => {
-    if (anchor === addFilterRef && next.rules.length === 0 && !next.groups?.length) setOpenMenu(null);
-    setFilter(next);
-  };
   const addAdvanced = () => {
     setOpenMenu(null);
     setFilter(addAdvancedGroup(filter));
@@ -147,6 +143,20 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             buttonRef={filterButtonRef}
             onClick={() => open(filterButtonRef)}
           />
+          {countFilterRules(filter) > 0 ? (
+            <Button
+              size="2xs"
+              variant="ghost"
+              aria-label="Clear all filters"
+              onClick={() => {
+                setOpenMenu(null);
+                setOpenRuleIndex(null);
+                setFilter(EMPTY_VIEW_FILTER);
+              }}
+            >
+              Clear
+            </Button>
+          ) : null}
           {displayControl}
           {actions}
         </HStack>
@@ -245,8 +255,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             fields={filterFields}
             filter={filter}
             optionsFor={optionsFor}
-            onChange={changePickerFilter}
-            onPickField={startRule}
+            onSelectRule={selectRule}
             onAddAdvanced={addAdvanced}
           />
         </ViewBarPopover>

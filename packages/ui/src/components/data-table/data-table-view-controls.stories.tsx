@@ -160,3 +160,19 @@ export const PageResetsOnViewChange: Story = {
     await expect(canvas.getByRole("button", { name: "Go to previous page" })).toBeDisabled();
   },
 };
+
+export const EmptyFilteredGroups: Story = {
+  render: () => (
+    <Table
+      storageKey="storybook-empty-table-groups"
+      defaultSettings={{ grouping: "Status" }}
+      defaultFilter={{ conjunction: "and", rules: [{ attributeId: "Score", condition: "gt", value: 1000 }] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("In review", { exact: true })).toBeVisible();
+    await expect(canvas.getByText("In progress", { exact: true })).toBeVisible();
+    await expect(canvas.getByText("No status", { exact: true })).toBeVisible();
+  },
+};

@@ -17124,7 +17124,7 @@
                       "type": "frame",
                       "id": "TwCXd",
                       "name": "cmp/Tab",
-                      "context": "Composable tab. Normal click selects, including an active tab. Right-click, Shift+F10 or touch long-press opens one grouped context menu with contributed actions and shared tab actions. Preview and pinned tabs share user-controlled horizontal order. Height per size: xs 20, sm 24, md 28.",
+                      "context": "Composable tab: icon/status, label, optional accessory, optional close action, and an optional tab-owned context menu. Secondary/right click opens the registered context menu anchored below that tab; tabs without one keep the default browser/workbench behavior.\n\nHeight per size (recipes/tabs.ts): xs 20 · sm 24 · md 28. Icon 12/14/14. Instances set height explicitly.",
                       "theme": {
                         "size": "xs",
                         "tab": "default",
@@ -20198,7 +20198,7 @@
                       "type": "frame",
                       "id": "IZ2hX",
                       "name": "cmp/FilterPill",
-                      "context": "Independent filter segments share 10px text; option conditions read is one of / is not one of when multiple values are selected.",
+                      "context": "Static property label. Only predicate and values are editable. Multiple positive choices read is any of; negative choices always read is not. Text values use the shared Editable xs preview/input.",
                       "reusable": true,
                       "height": 24,
                       "fill": "$ds-surface",
@@ -20211,7 +20211,7 @@
                         {
                           "type": "frame",
                           "id": "hBbLs",
-                          "name": "Key button",
+                          "name": "Static property label",
                           "height": "fill_container",
                           "stroke": "$ds-border-subtle",
                           "strokeWidth": {
@@ -21040,7 +21040,7 @@
                       "type": "frame",
                       "id": "XrEDw",
                       "name": "cmp/CollectionViewBar",
-                      "context": "Saved views, search, normal and Advanced filter bubbles, and Display. No conjunction text between bubbles. Both filter controls open the same property picker.",
+                      "context": "Views use list-plus to add. Filter opens the property picker; Clear beside it resets all normal/Advanced rules. Choosing a value closes the picker and opens its bubble menu. Bubble field labels are static; predicates and values remain editable.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "#00000000",
@@ -21180,7 +21180,7 @@
                               },
                               "descendants": {
                                 "k7mgm": {
-                                  "icon": "plus",
+                                  "icon": "list-plus",
                                   "width": 12,
                                   "height": 12
                                 }
@@ -21238,6 +21238,28 @@
                                 },
                                 "Hf4GT": {
                                   "content": "3"
+                                }
+                              }
+                            },
+                            {
+                              "id": "YwEgB",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Clear all filters",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Clear"
+                                },
+                                "khvEs": {
+                                  "enabled": false
                                 }
                               }
                             },
@@ -24227,7 +24249,7 @@
                       "type": "frame",
                       "id": "V7ww8",
                       "name": "cmp/KanbanRendererFilterMenu",
-                      "context": "The only normal filter menu. Both toolbar Filter and + Filter open this property picker. One clear-all control sits beside Filter by; no column headers or per-property clears. Advanced filter is in the footer. Value checkboxes are on the right.",
+                      "context": "Browse properties without creating a rule. Choosing an option closes this picker and opens the new bubble values menu. Number and date fields keep a local draft and commit with Apply filter or Enter. Text fields offer Filter by text. No value search or close X. Clear belongs beside Filter in the bar; Advanced creation is in the footer.",
                       "reusable": true,
                       "width": 440,
                       "height": 320,
@@ -24278,23 +24300,6 @@
                               "fontFamily": "$font-body",
                               "fontSize": 13,
                               "fontWeight": "normal"
-                            },
-                            {
-                              "id": "Xc5FT",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Clear all filters",
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "width": 24,
-                              "height": 24,
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "x"
-                                }
-                              }
                             }
                           ]
                         },
@@ -24656,12 +24661,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -24701,12 +24711,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -24746,12 +24761,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -24791,12 +24811,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -24836,12 +24861,17 @@
                                           "type": "ref",
                                           "ref": "IVFN2",
                                           "name": "Value checkbox",
-                                          "width": 14,
-                                          "height": 14,
+                                          "width": 12,
+                                          "height": 12,
                                           "descendants": {
                                             "KkCyF": {
-                                              "width": 16,
-                                              "height": 16
+                                              "width": 12,
+                                              "height": 12,
+                                              "cornerRadius": 2
+                                            },
+                                            "bThd3": {
+                                              "width": 10,
+                                              "height": 10
                                             },
                                             "DFyJZ": {
                                               "enabled": false
@@ -33701,7 +33731,7 @@
                       "type": "frame",
                       "id": "QylI1",
                       "name": "cmp/Editable",
-                      "context": "recipes/editable.ts: label/L/medium (16/500), line height 24, radius 2xs; preview hover bg.hover; input bg with a 2px border outline. Sizes sm 12 / md 14. editable axis: preview | hover | editing.",
+                      "context": "Editable preview, hover and editing states. Filter bubbles use xs: 10px regular text, 16px line height, shared padding and hover.",
                       "theme": {
                         "editable": "preview"
                       },
@@ -132637,1223 +132667,88 @@
       ]
     },
     {
-      "type": "frame",
-      "id": "Scxrk",
-      "x": 23000,
+      "id": "CotiM",
+      "type": "ref",
+      "ref": "IZ2hX",
+      "name": "Filter text editable preview",
+      "x": 1302,
       "y": 0,
-      "name": "PS-466 Approved workbench tab layouts",
-      "width": 1200,
+      "descendants": {
+        "SCREL": {
+          "content": "Title"
+        },
+        "zwIz1": {
+          "content": "contains"
+        },
+        "Hsj3H": {
+          "id": "fReNS",
+          "type": "ref",
+          "ref": "QylI1",
+          "name": "Text value editable xs",
+          "height": 20,
+          "descendants": {
+            "YsEIa": {
+              "content": "review",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "frame",
+      "id": "RM6vq",
+      "x": 25120,
+      "y": 0,
+      "name": "Filter number or date draft",
+      "context": "The picker keeps a complete draft. Apply filter or Enter creates the bubble; browsing and typing do not change the view.",
+      "width": 240,
+      "height": 64,
       "fill": "$ds-bg",
       "layout": "vertical",
-      "gap": 20,
-      "padding": 24,
+      "gap": 8,
+      "padding": 4,
       "children": [
         {
-          "type": "text",
-          "id": "utVH2",
-          "name": "Title",
-          "fill": "$ds-fg",
-          "content": "Workbench tabs · Approved option A",
-          "fontFamily": "$font-body",
-          "fontSize": 24,
-          "fontWeight": "normal"
-        },
-        {
-          "type": "text",
-          "id": "U4HmVz",
-          "name": "Rules",
-          "fill": "$ds-fg",
-          "content": "Add follows the tabs. Pinning never changes order. A subtle drop overlay covers only the hovered panel, including its controls.",
-          "fontFamily": "$font-body",
-          "fontSize": 12,
-          "fontWeight": "normal"
-        },
-        {
-          "type": "frame",
-          "id": "lScKJ",
-          "name": "Normal and active tabs",
+          "id": "tj7zP",
+          "type": "ref",
+          "ref": "nbn0J",
+          "name": "Number draft",
           "width": "fill_container",
-          "layout": "vertical",
-          "gap": 8,
-          "children": [
-            {
-              "type": "text",
-              "id": "kIzvc",
-              "name": "Normal and active tabs label",
-              "fill": "$ds-fg",
-              "content": "Normal and active tabs",
-              "fontFamily": "$font-body",
-              "fontSize": 16,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "mUZv6",
-              "name": "Panel tab header",
-              "width": "fill_container",
-              "height": 32,
-              "fill": "$ds-bg",
-              "stroke": "$ds-border",
-              "strokeWidth": {
-                "bottom": 1
-              },
-              "gap": 4,
-              "padding": 4,
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "wjVbE",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Terminal tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "active"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "terminal"
-                    },
-                    "k9XlqC": {
-                      "content": "Terminal",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "KfVkW",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Build navigation tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "layers"
-                    },
-                    "k9XlqC": {
-                      "content": "Build navigation",
-                      "fontStyle": "italic"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "cWDkn",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Notes tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "layers"
-                    },
-                    "k9XlqC": {
-                      "content": "Notes",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "xYXZl",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Add panel",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "plus",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
-                  "type": "frame",
-                  "id": "UEfv3",
-                  "name": "Flexible space",
-                  "width": "fill_container",
-                  "height": 24
-                },
-                {
-                  "id": "D1ShB",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Open left panel menu",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-left-open",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
-                  "id": "volNs",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Open right panel menu",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right-open",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "id": "coTom",
-              "name": "Normal and active tabs guidance",
-              "fill": "$ds-fg",
-              "content": "Normal click selects. Right-click, Shift+F10 and touch long-press open the same grouped menu.",
-              "fontFamily": "$font-body",
-              "fontSize": 12,
-              "fontWeight": "normal"
+          "height": 24,
+          "theme": {
+            "size": "2xs",
+            "field": "default"
+          },
+          "descendants": {
+            "hcIyD": {
+              "content": "70",
+              "fill": "$ds-fg"
             }
-          ]
+          }
         },
         {
-          "type": "frame",
-          "id": "cvdGu",
-          "name": "Insertion across panels",
-          "width": "fill_container",
-          "layout": "vertical",
-          "gap": 8,
-          "children": [
-            {
-              "type": "text",
-              "id": "d4herZ",
-              "name": "Insertion across panels label",
-              "fill": "$ds-fg",
-              "content": "Insertion across panels",
-              "fontFamily": "$font-body",
-              "fontSize": 16,
-              "fontWeight": "normal"
+          "id": "OOYmN",
+          "type": "ref",
+          "ref": "c24zV7",
+          "name": "Apply filter",
+          "height": 24,
+          "theme": {
+            "size": "2xs",
+            "btn": "subtle"
+          },
+          "descendants": {
+            "DsEVd": {
+              "enabled": false
             },
-            {
-              "type": "frame",
-              "id": "GoK7l",
-              "name": "Panel tab header",
-              "width": "fill_container",
-              "height": 32,
-              "fill": "$ds-surface",
-              "stroke": "$ds-border",
-              "strokeWidth": {
-                "bottom": 1
-              },
-              "gap": 4,
-              "padding": 4,
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "Vuam3",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Terminal tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "active"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "terminal"
-                    },
-                    "k9XlqC": {
-                      "content": "Terminal",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "type": "rectangle",
-                  "cornerRadius": 2,
-                  "id": "uXJrz",
-                  "name": "Sidenav placement line rotated vertically",
-                  "fill": "$ds-accent",
-                  "width": 2,
-                  "height": 24
-                },
-                {
-                  "id": "u7WZM",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Build navigation tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "layers"
-                    },
-                    "k9XlqC": {
-                      "content": "Build navigation",
-                      "fontStyle": "italic"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "nXICR",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Notes tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "layers"
-                    },
-                    "k9XlqC": {
-                      "content": "Notes",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "WgSZx",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Add panel",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "plus",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
-                  "type": "frame",
-                  "id": "iMYdH",
-                  "name": "Flexible space",
-                  "width": "fill_container",
-                  "height": 24
-                },
-                {
-                  "id": "jOJhs",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Open left panel menu",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-left-open",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
-                  "id": "oUIJ5",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Open right panel menu",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right-open",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                }
-              ]
+            "Hf4GT": {
+              "content": "Apply filter"
             },
-            {
-              "type": "text",
-              "id": "ALczq",
-              "name": "Insertion across panels guidance",
-              "fill": "$ds-fg",
-              "content": "Use the shared Sidenav 2 px line and highlight. Drag any pinned or preview tab.",
-              "fontFamily": "$font-body",
-              "fontSize": 12,
-              "fontWeight": "normal"
+            "khvEs": {
+              "enabled": false
             }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "X7VdJZ",
-          "name": "Tray after headerless drop",
-          "width": "fill_container",
-          "layout": "vertical",
-          "gap": 8,
-          "children": [
-            {
-              "type": "text",
-              "id": "f2DlvS",
-              "name": "Tray after headerless drop label",
-              "fill": "$ds-fg",
-              "content": "Tray after headerless drop",
-              "fontFamily": "$font-body",
-              "fontSize": 16,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "CcDIF",
-              "name": "Panel tab header",
-              "width": "fill_container",
-              "height": 32,
-              "fill": "$ds-bg",
-              "stroke": "$ds-border",
-              "strokeWidth": {
-                "bottom": 1
-              },
-              "gap": 4,
-              "padding": 4,
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "NqnVg",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Workspace tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "active"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "layers"
-                    },
-                    "k9XlqC": {
-                      "content": "Workspace",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "bmf8c",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Terminal tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "terminal"
-                    },
-                    "k9XlqC": {
-                      "content": "Terminal",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "wFs3P",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Add panel",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "plus",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
-                  "type": "frame",
-                  "id": "j1lM1W",
-                  "name": "Flexible space",
-                  "width": "fill_container",
-                  "height": 24
-                },
-                {
-                  "id": "r8hvZj",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Open left panel menu",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-left-open",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
-                  "id": "LOT9w",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Open right panel menu",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right-open",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "id": "S7kS90",
-              "name": "Tray after headerless drop guidance",
-              "fill": "$ds-fg",
-              "content": "Original page stays open beside the moved tool. Preserve instance, draft and route.",
-              "fontFamily": "$font-body",
-              "fontSize": 12,
-              "fontWeight": "normal"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "MYIZD",
-          "name": "Crowded tray",
-          "width": "fill_container",
-          "layout": "vertical",
-          "gap": 8,
-          "children": [
-            {
-              "type": "text",
-              "id": "g2SSp7",
-              "name": "Crowded tray label",
-              "fill": "$ds-fg",
-              "content": "Crowded tray",
-              "fontFamily": "$font-body",
-              "fontSize": 16,
-              "fontWeight": "normal"
-            },
-            {
-              "type": "frame",
-              "id": "q9b1Jl",
-              "name": "Panel tab header",
-              "width": "fill_container",
-              "height": 32,
-              "fill": "$ds-bg",
-              "stroke": "$ds-border",
-              "strokeWidth": {
-                "bottom": 1
-              },
-              "gap": 4,
-              "padding": 4,
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "FdUuV",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Terminal tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "active"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "terminal"
-                    },
-                    "k9XlqC": {
-                      "content": "Terminal",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "g71iq",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Build navigation tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "layers"
-                    },
-                    "k9XlqC": {
-                      "content": "Build navigation",
-                      "fontStyle": "italic"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "mFVxO",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Notes tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "layers"
-                    },
-                    "k9XlqC": {
-                      "content": "Notes",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "v1uA9c",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Inspector tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "layers"
-                    },
-                    "k9XlqC": {
-                      "content": "Inspector",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "LGJNx",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Terminal 2 tab",
-                  "height": 24,
-                  "theme": {
-                    "size": "sm",
-                    "tab": "default"
-                  },
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "terminal"
-                    },
-                    "k9XlqC": {
-                      "content": "Terminal 2",
-                      "fontStyle": "normal"
-                    },
-                    "g1LJJh": {
-                      "enabled": true
-                    }
-                  }
-                },
-                {
-                  "id": "izYPI",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Add panel",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "plus",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
-                  "type": "frame",
-                  "id": "i9CKg2",
-                  "name": "Flexible space",
-                  "width": "fill_container",
-                  "height": 24
-                },
-                {
-                  "id": "wOPYj",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Open left panel menu",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-left-open",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                },
-                {
-                  "id": "XfRyu",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Open right panel menu",
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "width": 24,
-                  "height": 24,
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right-open",
-                      "width": 14,
-                      "height": 14
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "type": "text",
-              "id": "g1KOO",
-              "name": "Crowded tray guidance",
-              "fill": "$ds-fg",
-              "content": "Tabs shrink to 48 px, then scroll. Add and panel menu controls remain visible.",
-              "fontFamily": "$font-body",
-              "fontSize": 12,
-              "fontWeight": "normal"
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "bIBx1",
-          "name": "Headerless states",
-          "width": "fill_container",
-          "gap": 16,
-          "children": [
-            {
-              "type": "frame",
-              "id": "KWQds",
-              "name": "Headerless at rest",
-              "width": "fill_container",
-              "height": 140,
-              "fill": "$ds-bg",
-              "cornerRadius": 4,
-              "stroke": "$ds-border",
-              "strokeWidth": 1,
-              "layout": "vertical",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "pC9AW",
-                  "name": "Page content",
-                  "fill": "$ds-fg",
-                  "content": "Workspace page · No permanent header",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "AIiyI",
-              "name": "Main hovered during drag",
-              "context": "Panel drop feedback only appears while the dragged tab is over this allowed panel. Use a subtle full-container overlay; no persistent top band.",
-              "clip": true,
-              "width": "fill_container",
-              "height": 180,
-              "fill": "$ds-bg",
-              "cornerRadius": 4,
-              "stroke": "$ds-border",
-              "strokeWidth": 1,
-              "layout": "vertical",
-              "children": [
-                {
-                  "type": "frame",
-                  "id": "i1GOVG",
-                  "layoutPosition": "absolute",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Full panel hover overlay",
-                  "context": "Shared panel tab drop overlay: 4% accent fill, 1 px accent outline, full panel bounds, pointer-transparent, shown only for the hovered valid destination.",
-                  "reusable": true,
-                  "width": 568,
-                  "height": 180,
-                  "fill": {
-                    "type": "gradient",
-                    "gradientType": "linear",
-                    "enabled": true,
-                    "opacity": 0.04,
-                    "rotation": 0,
-                    "size": {
-                      "height": 1
-                    },
-                    "colors": [
-                      {
-                        "color": "$ds-accent",
-                        "position": 0
-                      },
-                      {
-                        "color": "$ds-accent",
-                        "position": 1
-                      }
-                    ]
-                  },
-                  "cornerRadius": 4,
-                  "stroke": "$ds-accent",
-                  "strokeWidth": 1,
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "St7Oy",
-                      "name": "Drop guidance",
-                      "fill": "$ds-fg-muted",
-                      "content": "Drop here to add a tab",
-                      "fontFamily": "$font-body",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "text",
-                  "id": "Ww437",
-                  "layoutPosition": "absolute",
-                  "x": 12,
-                  "y": 12,
-                  "name": "Page content",
-                  "fill": "$ds-fg",
-                  "content": "Workspace page · No permanent header",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "xbGWr",
-          "name": "Menus and reset",
-          "width": "fill_container",
-          "gap": 24,
-          "children": [
-            {
-              "type": "frame",
-              "id": "B8Ixmr",
-              "name": "Grouped tab context menu",
-              "width": "fill_container",
-              "cornerRadius": 4,
-              "stroke": "$ds-border",
-              "strokeWidth": 1,
-              "layout": "vertical",
-              "gap": 8,
-              "padding": 12,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "mW12q",
-                  "name": "Grouped tab context menu title",
-                  "fill": "$ds-fg",
-                  "content": "Grouped tab context menu",
-                  "fontFamily": "$font-body",
-                  "fontSize": 16,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "FldbP",
-                  "name": "Session",
-                  "fill": "$ds-fg",
-                  "content": "Session",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "InndH",
-                  "name": "Rename session",
-                  "fill": "$ds-fg",
-                  "content": "Rename session",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "D2eB11",
-                  "name": "Recent sessions",
-                  "fill": "$ds-fg",
-                  "content": "Recent sessions",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "xtHMH",
-                  "name": "View all sessions",
-                  "fill": "$ds-fg",
-                  "content": "View all sessions",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "o2HIP",
-                  "name": "Tab",
-                  "fill": "$ds-fg",
-                  "content": "Tab",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "h5hEFE",
-                  "name": "Pin / Unpin",
-                  "fill": "$ds-fg",
-                  "content": "Pin / Unpin",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "O7Q6v",
-                  "name": "Move to Main / Side / Secondary",
-                  "fill": "$ds-fg",
-                  "content": "Move to Main / Side / Secondary",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "KdbdP",
-                  "name": "Close",
-                  "fill": "$ds-fg",
-                  "content": "Close",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "tJ7an",
-              "name": "Add panel menu",
-              "width": "fill_container",
-              "cornerRadius": 4,
-              "stroke": "$ds-border",
-              "strokeWidth": 1,
-              "layout": "vertical",
-              "gap": 8,
-              "padding": 12,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "KBJWg",
-                  "name": "Add panel menu title",
-                  "fill": "$ds-fg",
-                  "content": "Add panel menu",
-                  "fontFamily": "$font-body",
-                  "fontSize": 16,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "mskK8",
-                  "name": "Add panel",
-                  "fill": "$ds-fg",
-                  "content": "Add panel",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "rvNA9",
-                  "name": "Session",
-                  "fill": "$ds-fg",
-                  "content": "Session",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "c9wByg",
-                  "name": "Terminal",
-                  "fill": "$ds-fg",
-                  "content": "Terminal",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "ZMlwL",
-                  "name": "Files",
-                  "fill": "$ds-fg",
-                  "content": "Files",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "N5sUS",
-                  "name": "Notes",
-                  "fill": "$ds-fg",
-                  "content": "Notes",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "SvYyZ",
-                  "name": "Inspector",
-                  "fill": "$ds-fg",
-                  "content": "Inspector",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "jYhLZ",
-              "name": "Reset layout",
-              "width": "fill_container",
-              "cornerRadius": 4,
-              "stroke": "$ds-border",
-              "strokeWidth": 1,
-              "layout": "vertical",
-              "gap": 8,
-              "padding": 12,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "jbgej",
-                  "name": "Reset layout title",
-                  "fill": "$ds-fg",
-                  "content": "Reset layout",
-                  "fontFamily": "$font-body",
-                  "fontSize": 16,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "p6D2F6",
-                  "name": "Restore active page and mode defaults",
-                  "fill": "$ds-fg",
-                  "content": "Restore active page and mode defaults",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "St8QP",
-                  "name": "Retain sessions, notes and terminal data",
-                  "fill": "$ds-fg",
-                  "content": "Retain sessions, notes and terminal data",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "wBwAd",
-                  "name": "Keep other projects and modes unchanged",
-                  "fill": "$ds-fg",
-                  "content": "Keep other projects and modes unchanged",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "U4KPLz",
-          "name": "Attached and detached Side drop feedback",
-          "width": "fill_container",
-          "gap": 16,
-          "children": [
-            {
-              "type": "frame",
-              "id": "VlGKA",
-              "name": "Attached Side hover",
-              "clip": true,
-              "width": 448,
-              "height": 260,
-              "cornerRadius": 4,
-              "layout": "none",
-              "children": [
-                {
-                  "id": "GU32J",
-                  "type": "ref",
-                  "ref": "VA9mn",
-                  "name": "Side panel with header controls",
-                  "width": 448,
-                  "height": 260,
-                  "x": 0,
-                  "y": 0
-                },
-                {
-                  "id": "k7tfX",
-                  "type": "ref",
-                  "ref": "i1GOVG",
-                  "name": "Full Side hover overlay",
-                  "width": 448,
-                  "height": 260,
-                  "x": 0,
-                  "y": 0
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "wZU2a",
-              "name": "Detached Side hover",
-              "clip": true,
-              "width": 448,
-              "height": 260,
-              "cornerRadius": 4,
-              "layout": "none",
-              "children": [
-                {
-                  "id": "cS5Ke",
-                  "type": "ref",
-                  "ref": "MXmR5",
-                  "name": "Side panel with header controls",
-                  "width": 448,
-                  "height": 260,
-                  "x": 0,
-                  "y": 0
-                },
-                {
-                  "id": "E0EVf",
-                  "type": "ref",
-                  "ref": "i1GOVG",
-                  "name": "Full Side hover overlay",
-                  "width": 448,
-                  "height": 260,
-                  "x": 0,
-                  "y": 0
-                }
-              ]
-            }
-          ]
+          }
         }
       ]
     }

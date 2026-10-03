@@ -49,8 +49,8 @@ const OptionConditionSelect = (props: ConditionSelectProps) => {
       width={width}
       variant={props.variant}
       options={[
-        { value: "is", label: many ? "is one of" : "is" },
-        { value: "is-not", label: many ? "is not one of" : "is not" },
+        { value: "is", label: many ? "is any of" : "is" },
+        { value: "is-not", label: "is not" },
       ]}
       value={negative ? "is-not" : "is"}
       onSelect={(next) => {

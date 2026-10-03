@@ -1,6 +1,8 @@
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { createElement, type ReactNode } from "react";
 import { getAttributeStringValues, getAttributeValue } from "../collection-view/collection-view-fields";
+import { filterRowsByView } from "../collection-view/collection-view-filter";
+import { emptyGroupKey, groupKey } from "../collection-view/collection-view-grouping";
 import { CollectionBadge } from "./collection-badge";
 import type { AttributeBadge } from "./kanban-renderer-badge-helpers";
 import { renderEnumBadge, renderMultiEnumBadge } from "./kanban-renderer-badge-helpers";
@@ -249,24 +251,30 @@ export const resolveListDropTargetColumnKey = (columnGrouping: string, placement
 };
 
 /**
- * Board columns for every declared option, so empty columns stay visible. A root "is any of" or
- * "is none of" rule on the grouping field limits them to what the filter can still show.
+ * Source rows keep the unassigned column visible. Only rules on the grouping field
+ * limit which columns the filter can still show.
  */
 export const resolveKnownColumnKeys = (
   columnGrouping: string,
   attributes: AttributeDescriptor[],
   filter?: ViewFilterGroup,
+  structureRows: KanbanRendererRow[] = [],
 ) => {
   if (columnGrouping === NO_GROUPING) return undefined;
   const descriptor = findAttribute(attributes, columnGrouping);
   if (!descriptor || descriptor.type.kind !== "enum") return undefined;
-  let keys = getEnumOptions(descriptor.type).map((option) => option.value);
+  const keys = getEnumOptions(descriptor.type).map((option) => option.value);
+  const empty = emptyGroupKey(descriptor);
+  if (structureRows.some((row) => groupKey(row, descriptor) === empty)) keys.push(empty);
   if (filter?.conjunction !== "and") return keys;
-  for (const rule of filter.rules) {
-    if (rule.attributeId !== columnGrouping || !Array.isArray(rule.value) || !rule.value.length) continue;
-    const values = rule.value;
-    if (rule.condition === "is-any-of") keys = keys.filter((key) => values.includes(key));
-    if (rule.condition === "is-none-of") keys = keys.filter((key) => !values.includes(key));
-  }
-  return keys;
+  const candidates = keys.map((key) => ({
+    id: key,
+    title: key,
+    attributes: key === empty ? {} : { [columnGrouping]: key },
+  }));
+  return filterRowsByView(
+    candidates,
+    { conjunction: "and", rules: filter.rules.filter((rule) => rule.attributeId === columnGrouping) },
+    [descriptor],
+  ).map((row) => row.id);
 };

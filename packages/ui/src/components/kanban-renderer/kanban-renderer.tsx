@@ -4,7 +4,6 @@ import { type ReactNode, useDeferredValue, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
 import { withTitleField } from "../collection-view/collection-view-fields";
-import { countFilterRules } from "../collection-view/collection-view-filter";
 import { useCollectionViews } from "../collection-view/use-collection-views";
 import type { KanbanRendererBoardColumnAction } from "./kanban-renderer-board";
 import { buildKanbanBoardColumns, narrowKanbanRows } from "./kanban-renderer-board-columns";
@@ -124,7 +123,6 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
   const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
   const expandedGroups = useKanbanRendererStore(storageKey, (state) => state.expandedGroups, initialState);
   const setExpandedGroup = useKanbanRendererStore(storageKey, (state) => state.setExpandedGroup, initialState);
-  const setOpenMenu = useKanbanRendererStore(storageKey, (state) => state.setOpenMenu, initialState);
 
   const { filteredRows, visibleRows, columnTotals } = narrowKanbanRows({
     rows,
@@ -139,7 +137,8 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     attributes,
     columnGrouping: settings.columnGrouping,
     rowGrouping: settings.rowGrouping,
-    knownColumnKeys: resolveKnownColumnKeys(settings.columnGrouping, attributes, filter),
+    knownColumnKeys: resolveKnownColumnKeys(settings.columnGrouping, attributes, filter, rows),
+    structureRows: rows,
   });
 
   const listItems = buildKanbanRendererListItems({
@@ -233,16 +232,10 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
       )}
 
       {contentPlaceholder !== undefined ? contentPlaceholder : null}
-      {contentPlaceholder === undefined && rows.length > 0 && visibleRows.length === 0 ? (
-        <CollectionViewEmptyState
-          search={deferredSearch}
-          ruleCount={countFilterRules(filter)}
-          hiddenCount={rows.length}
-          onClearSearch={() => setSearch("")}
-          onEditFilter={hideToolbar ? undefined : () => setOpenMenu("filter")}
-        />
+      {contentPlaceholder === undefined && rows.length > 0 && visibleRows.length === 0 && searching ? (
+        <CollectionViewEmptyState search={deferredSearch} onClearSearch={() => setSearch("")} />
       ) : null}
-      {contentPlaceholder === undefined && (rows.length === 0 || visibleRows.length > 0) ? (
+      {contentPlaceholder === undefined && (!searching || rows.length === 0 || visibleRows.length > 0) ? (
         <KanbanRendererContent
           viewMode={settings.viewMode}
           boardColumns={boardColumns}

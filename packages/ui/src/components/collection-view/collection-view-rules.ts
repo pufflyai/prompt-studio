@@ -42,22 +42,16 @@ export const quickOptionValues = (filter: ViewFilterGroup, attributeId: string) 
   const rule = filter.rules.find((entry) => entry.attributeId === attributeId && isOptionRule(entry));
   return rule && Array.isArray(rule.value) ? rule.value : [];
 };
-export const setQuickOptions = (filter: ViewFilterGroup, field: AttributeDescriptor, values: string[]) => {
-  const index = filter.rules.findIndex((entry) => entry.attributeId === field.id && isOptionRule(entry));
-  const existing = filter.rules[index];
-  const rule: ViewFilterRule | undefined = values.length
-    ? selectRuleValues(field, existing ?? newRule(field), values)
-    : undefined;
-  if (index === -1) return rule ? addRule(filter, rule) : filter;
-  return setRuleAt(filter, index, rule);
-};
-
 /** Selecting a categorical value replaces an empty predicate in the same edit. */
 export const selectRuleValues = (
   field: AttributeDescriptor,
   rule: ViewFilterRule,
   value: ViewFilterRule["value"],
 ): ViewFilterRule => {
+  if (field.type.kind === "boolean" && typeof value === "boolean") {
+    const negative = rule.condition === "is-not";
+    return { attributeId: field.id, condition: negative ? "is-not" : "is", value: negative ? !value : value };
+  }
   let condition = rule.condition;
   if (Array.isArray(value) && (condition === "is-empty" || condition === "is-not-empty")) {
     const negative = condition === "is-not-empty";

@@ -66,7 +66,7 @@ pst views update --id <viewId> --filter-json '{
 
 `--sort <field>:asc|desc` sets the view's single sort. A second sort is rejected. `--filter none` and `--sort none` clear them. A board's card title is the built-in `string` field `title`.
 
-Filter pills have separate property, condition, and value controls. Option menus show “is” and “is not” for one value, or “is one of” and “is not one of” for multiple values; the stored condition follows the field type. Each value can be checked independently using its right-side checkbox and shows its supplied icon and color. Both normal filter buttons open the same property picker. One clear-all control sits beside “Filter by…”. The normal filter menu uses AND. Add an Advanced filter bubble from the picker footer to choose AND or OR within a group. Groups cannot contain other groups.
+Filter bubbles have a fixed property label; only their predicate and values can change. Positive option predicates read “is” for one value and “is any of” for multiple values; negative predicates read “is not”. Values have small right-side checkboxes, positive match counts, and their supplied icons and colors. Both normal Filter buttons open the same property picker. Browsing a property does not add a rule. Choosing a value closes the picker and opens its bubble’s values menu; text properties offer “Filter by text” and use inline Editable text. Clear beside the toolbar Filter resets all criteria. Normal rules use AND. Advanced creation is in the picker footer; its flat editor supports AND or OR. Groups cannot contain other groups. Filtered boards, lists and tables keep their groups visible even with no matching items.
 
 ## Display settings
 

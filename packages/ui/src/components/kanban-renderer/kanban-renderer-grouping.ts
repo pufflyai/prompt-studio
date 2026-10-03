@@ -7,6 +7,8 @@ interface GroupingOptions {
   columnGrouping: string;
   rowGrouping: string;
   knownColumnKeys?: string[];
+  /** Source rows define the group structure; filtered rows supply its contents. */
+  structureRows?: KanbanRendererRow[];
 }
 
 type KanbanRendererRowGroup = CollectionRowGroup;
@@ -17,16 +19,18 @@ interface KanbanRendererColumnGroup extends CollectionRowGroup {
 
 /** Columns follow the grouping field's group order; sub-groups split each column the same way. */
 export const groupRows = (rows: KanbanRendererRow[], options: GroupingOptions): KanbanRendererColumnGroup[] => {
-  const { attributes, columnGrouping, rowGrouping, knownColumnKeys } = options;
+  const { attributes, columnGrouping, rowGrouping, knownColumnKeys, structureRows = rows } = options;
   const columnField = findAttribute(attributes, columnGrouping);
   const rowField = findAttribute(attributes, rowGrouping);
+  const structure = columnField ? groupRowsByField(structureRows, columnField) : [];
   const columns = columnField
-    ? groupRowsByField(rows, columnField, knownColumnKeys)
+    ? groupRowsByField(rows, columnField, knownColumnKeys ?? structure.map((group) => group.key))
     : [{ key: "all", label: "All", rows }];
-  return columns.map((column) => ({
-    ...column,
-    subgroups: rowField ? groupRowsByField(column.rows, rowField) : [],
-  }));
+  return columns.map((column) => {
+    const source = columnField ? (structure.find((group) => group.key === column.key)?.rows ?? []) : structureRows;
+    const keys = rowField ? groupRowsByField(source, rowField).map((group) => group.key) : [];
+    return { ...column, subgroups: rowField ? groupRowsByField(column.rows, rowField, keys) : [] };
+  });
 };
 
 export const countFilterValues = (

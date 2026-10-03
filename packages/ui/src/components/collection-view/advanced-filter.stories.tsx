@@ -23,12 +23,12 @@ export const NormalAndAdvanced: Story = {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     const boolean = canvas.getByRole("group", { name: "Archived filter" });
-    const subject = within(boolean).getByRole("button", { name: "Field" }).querySelector("span")!;
-    const predicate = boolean.querySelector(":scope > p")!;
+    const subject = within(boolean).getByText("Ticket", { exact: true });
+    const predicate = within(boolean).getByText("Archived", { exact: true });
     expect(getComputedStyle(predicate).fontSize).toBe(getComputedStyle(subject).fontSize);
     expect(
       within(canvas.getByRole("group", { name: "Priority filter" })).getByRole("button", { name: "Condition" }),
-    ).toHaveTextContent("is one of");
+    ).toHaveTextContent("is any of");
     await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const picker = await body.findByTestId("filter-menu");
     await waitFor(() => expect(within(picker).getByRole("textbox", { name: "Filter properties" })).toBeVisible());
@@ -95,13 +95,11 @@ export const ClearAllFilters: Story = {
     const trigger = canvas.getByRole("button", { name: "Filter", exact: true });
     expect(trigger.textContent?.trim()).toBe("2");
     await userEvent.click(trigger);
-    const picker = await body.findByTestId("filter-menu");
-    await userEvent.click(within(picker).getByRole("button", { name: "Clear all filters" }));
+    await body.findByTestId("filter-menu");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(canvas.getByRole("button", { name: "Clear all filters" }));
     expect(trigger.textContent?.trim()).toBe("");
-    await expect(within(picker).getByRole("checkbox", { name: "Todo", exact: true })).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    await expect(canvas.getByRole("button", { name: "Filter", exact: true })).toBeVisible();
     await expect(canvas.getByLabelText("Unsaved view changes")).toBeVisible();
   },
 };

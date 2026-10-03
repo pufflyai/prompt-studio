@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-
 import { countFilterValues, groupRows } from "./kanban-renderer-grouping";
+import { resolveKnownColumnKeys } from "./kanban-renderer-helpers";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
 const attributes: AttributeDescriptor[] = [
@@ -193,5 +193,52 @@ describe("countFilterValues", () => {
 
   it("returns empty for unknown attribute id", () => {
     expect(countFilterValues(rows, "unknown", attributes)).toEqual({});
+  });
+});
+
+describe("filtering grouped views", () => {
+  it("keeps columns and their subgroups when all cards are filtered out", () => {
+    const groups = groupRows([], {
+      attributes,
+      columnGrouping: "status",
+      rowGrouping: "assignee",
+      structureRows: rows,
+    });
+    expect(groups.map((group) => group.key)).toEqual(["todo", "in_progress"]);
+    expect(groups[0]?.subgroups.map((group) => group.key)).toEqual(["Alice", "No assignee"]);
+    expect(groups[1]?.subgroups.map((group) => group.key)).toEqual(["Bob"]);
+    expect(groups.flatMap((group) => group.rows)).toEqual([]);
+    expect(groups.flatMap((group) => group.subgroups.flatMap((subgroup) => subgroup.rows))).toEqual([]);
+  });
+});
+
+describe("unassigned group structure", () => {
+  it("retains the source unassigned column when another property hides all rows", () => {
+    const source = [{ id: "missing", title: "Unassigned", attributes: { assignee: "Alice" } }];
+    const keys = resolveKnownColumnKeys(
+      "status",
+      attributes,
+      { conjunction: "and", rules: [{ attributeId: "priority", condition: "is-any-of", value: ["high"] }] },
+      source,
+    );
+    const groups = groupRows([], {
+      attributes,
+      columnGrouping: "status",
+      rowGrouping: "assignee",
+      knownColumnKeys: keys,
+      structureRows: source,
+    });
+    expect(groups.map((group) => group.key)).toEqual(["todo", "in_progress", "done", "No status"]);
+    expect(groups[3]?.subgroups.map((group) => group.key)).toEqual(["Alice"]);
+  });
+  it("respects a grouping predicate that excludes unassigned rows", () => {
+    const source = [{ id: "missing", title: "Unassigned", attributes: {} }];
+    const keys = resolveKnownColumnKeys(
+      "status",
+      attributes,
+      { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["todo"] }] },
+      source,
+    );
+    expect(keys).toEqual(["todo"]);
   });
 });

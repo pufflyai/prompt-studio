@@ -3,11 +3,9 @@ import { normalizeBooleanViewRule, type ViewFilterRule } from "@pstdio/sdk/exten
 import { X } from "lucide-react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { useCollectionItemLabel } from "./collection-item-label";
-import { fieldIcon } from "./collection-view-field-icon";
 import { findField } from "./collection-view-fields";
-import { newRule, selectRuleValues } from "./collection-view-rules";
+import { selectRuleValues } from "./collection-view-rules";
 import { RuleValueControl, type RuleValueOption } from "./filter-rule-value";
-import { RuleSelect } from "./rule-select";
 import { ConditionSelect } from "./view-filter-rule-editor";
 
 export interface FilterRulePillProps {
@@ -30,22 +28,9 @@ export const FilterRulePill = (props: FilterRulePillProps) => {
   const boolean = field?.type.kind === "boolean";
   return (
     <HStack role="group" aria-label={`${label} filter`} layerStyle="filterPill" gap="0" flexShrink={0}>
-      <RuleSelect
-        aria-label="Field"
-        variant="filter-segment"
-        showSelectedIcon={false}
-        showSearch
-        value={rule.attributeId}
-        selectedLabel={boolean && typeof rule.value === "boolean" ? itemLabel : undefined}
-        options={fields.map((entry) => ({ value: entry.id, label: entry.label, icon: fieldIcon(entry) }))}
-        onSelect={(id) => {
-          const next = findField(fields, id);
-          if (next && next.id !== field?.id) {
-            onChange(newRule(next));
-            onOpenChange(true);
-          }
-        }}
-      />
+      <Text as="span" textStyle="label/XS" layerStyle="filterLabel" alignItems="center" flexShrink="0">
+        {boolean && typeof rule.value === "boolean" ? itemLabel : label}
+      </Text>
       {field ? (
         <>
           <ConditionSelect
