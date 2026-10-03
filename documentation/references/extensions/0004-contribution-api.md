@@ -265,6 +265,11 @@ export default defineExtension({ themes: [monokai] });
 The runtime qualifies the ref with the extension owner. For publisher `acme` and
 package `planner`, the theme ID is `acme.planner.theme.monokai`.
 
+Pressed and selected controls, such as an open panel's toggle, use
+`editor.selectionBackground`. When a theme sets `editor.background` but not
+`editor.selectionBackground`, the app mixes the theme's text color into its
+background instead, so pressed controls stand out from the main background.
+
 ## Shared kanban views
 
 `defaultViews` defines extension-owned, read-only built-ins. `defaultActiveViewId` chooses the extension fallback. The deprecated `isDefault` flag remains a fallback when `defaultActiveViewId` is absent; use `defaultActiveViewId` in new extensions. The project's shared default takes precedence over both. Do not copy or save built-ins into extension storage.

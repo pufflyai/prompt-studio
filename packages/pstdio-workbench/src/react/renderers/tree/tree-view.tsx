@@ -16,12 +16,7 @@ import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
 import type { TreeActionParamsRequest } from "./tree-actions";
-import {
-  filterTreeListSelection,
-  findNodeInSections,
-  resolveTreeListSelection,
-  toTreeListSection,
-} from "./tree-list-adapter";
+import { findNodeInSections, resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
 import { TreeViewBody } from "./tree-view-body";
@@ -232,9 +227,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     activeResource,
     selectedNodeId: treeState.selectedNodeId,
   });
-  const headerActiveNodeId = filterTreeListSelection(header, childrenByNodeId, activeNodeSelection);
-  const bodyActiveNodeId = filterTreeListSelection(body, childrenByNodeId, activeNodeSelection);
-  const footerActiveNodeId = filterTreeListSelection(footer, childrenByNodeId, activeNodeSelection);
 
   return (
     <TreeListDragProvider
@@ -259,7 +251,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               draggable={Boolean(onSidenavContextActionsChange)}
               expandedNodeIds={treeState.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
-              activeNodeId={headerActiveNodeId}
+              activeNodeId={activeNodeSelection}
               rowVariant="compact"
               // Header sections separate owners (mode and levels), so their rows read as one list.
               sectionGap="1px"
@@ -302,7 +294,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               backgroundContextActions={onSidenavContextActionsChange ? undefined : backgroundContextActions}
               draggable={Boolean(onSidenavContextActionsChange)}
               customizationAvailable={Boolean(onSidenavContextActionsChange)}
-              activeNodeId={bodyActiveNodeId}
+              activeNodeId={activeNodeSelection}
               expandedNodeIds={treeState.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               scrollRef={scrollRef}
@@ -323,7 +315,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               draggable={Boolean(onSidenavContextActionsChange)}
               expandedNodeIds={treeState.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
-              activeNodeId={footerActiveNodeId}
+              activeNodeId={activeNodeSelection}
               rowVariant="compact"
               sectionGap="md"
               nodeGap="1px"

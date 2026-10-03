@@ -26,7 +26,66 @@ const createFakeElement = () => {
   };
 };
 
+const applyTheme = (theme: ThemePreferenceOption) => {
+  const root = createFakeElement();
+  const body = createFakeElement();
+  const previousDocument = globalThis.document;
+  globalThis.document = { documentElement: root, body } as never;
+
+  try {
+    applyThemePreference(theme.id, [theme]);
+    return root;
+  } finally {
+    globalThis.document = previousDocument;
+  }
+};
+
 describe("applyThemePreference", () => {
+  test("mixes the pressed color from the theme surface when the theme leaves it out", () => {
+    const root = applyTheme({
+      id: "lab.kiln",
+      mode: "dark",
+      tokens: { "colors.bg": "#25272b", "colors.fg": "#e7e9ec" },
+    });
+
+    expect(root.style.getPropertyValue("--chakra-colors-bg-active")).toMatch(
+      /^color-mix\(in srgb, var\(--chakra-colors-fg\) \d+%, var\(--chakra-colors-bg\)\)$/,
+    );
+  });
+
+  test("keeps the pressed color a theme defines", () => {
+    const root = applyTheme({
+      id: "lab.dracula",
+      mode: "dark",
+      tokens: { "colors.bg": "#282a36", "colors.bg.active": "#565a6d" },
+    });
+
+    expect(root.style.getPropertyValue("--chakra-colors-bg-active")).toBe("#565a6d");
+  });
+
+  test("keeps the default pressed color for a theme that keeps the default surface", () => {
+    const root = applyTheme({ id: "lab.accent", mode: "light", tokens: { "colors.border.accent": "#66d9ef" } });
+
+    expect(root.style.getPropertyValue("--chakra-colors-bg-active")).toBe("");
+  });
+
+  test("removes the mixed pressed color when the theme changes", () => {
+    const root = createFakeElement();
+    const body = createFakeElement();
+    const previousDocument = globalThis.document;
+    globalThis.document = { documentElement: root, body } as never;
+
+    try {
+      applyThemePreference("lab.kiln", [{ id: "lab.kiln", mode: "dark", tokens: { "colors.bg": "#25272b" } }]);
+      applyThemePreference("pstdio-light");
+
+      expect(root.style.getPropertyValue("--chakra-colors-bg-active")).toBe("");
+      expect(body.style.getPropertyValue("--chakra-colors-bg-active")).toBe("");
+    } finally {
+      globalThis.document = previousDocument;
+    }
+  });
+
   test("removes custom token variables when a previous theme disappears from preferences", () => {
     const root = createFakeElement();
     const body = createFakeElement();
