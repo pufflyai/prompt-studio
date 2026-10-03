@@ -11,6 +11,7 @@ export const defaultCondition = (field: AttributeDescriptor) => fieldConditions(
 export const newRule = (field: AttributeDescriptor): ViewFilterRule => ({
   attributeId: field.id,
   condition: defaultCondition(field),
+  ...(field.type.kind === "boolean" ? { value: true } : {}),
 });
 
 export const ruleAt = (filter: ViewFilterGroup, path: RulePath) => {

@@ -29,7 +29,7 @@ export default {
     {id:"choices",ref:choices,title:"Choices",params:{},run:()=>[{id:"one",name:"One"}]},
     {id:"run",ref:run,title:"Run",params:input,run:(_ctx:unknown,params:unknown)=>params},
   ],
-  views:["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,query:()=>({rows:[]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
+  views:["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
 };
 `,
   );
@@ -51,6 +51,14 @@ export const expectPackagedNativeActions = async (input: {
         entry.extensionId === "test.native-actions" && entry.localId === kind.toLowerCase(),
     );
     expect(view, JSON.stringify(body.diagnostics)).toBeDefined();
+    const filter = { conjunction: "and", rules: [{ attributeId: "approved", condition: "is", value: false }] };
+    const created = await fetch(`${input.baseUrl}/v1/projects/${input.projectId}/boards/${view.id}/views`, {
+      method: "POST",
+      headers: { ...input.headers, "content-type": "application/json" },
+      body: JSON.stringify({ title: "Unapproved", filter }),
+    });
+    expect(created.status).toBe(201);
+    expect(await created.json()).toMatchObject({ filter });
     expect(view.body.toolbarActions[0]).toMatchObject({
       presentation: "primary",
       command: { id: "run", extensionId: "test.native-actions" },

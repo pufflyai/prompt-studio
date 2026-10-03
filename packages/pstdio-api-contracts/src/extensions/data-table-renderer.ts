@@ -33,7 +33,7 @@ const columnRendererSchema = z.discriminatedUnion("type", [
 export const dataTableRendererColumnSchema = z.object({
   id: z.string(),
   label: localizableStringSchema.optional(),
-  type: z.enum(["string", "number", "date"]).optional(),
+  type: z.enum(["string", "number", "boolean", "date"]).optional(),
   groupable: z.boolean().optional(),
   description: localizableStringSchema.optional(),
   icon: z.string().optional(),

@@ -2,6 +2,7 @@ import { HStack, Icon, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterCondition, ViewFilterRule } from "@pstdio/sdk/extensions";
 import { ListFilter, MoreHorizontal, Trash2 } from "lucide-react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { useCollectionItemLabel } from "./collection-item-label";
 import { fieldConditions } from "./collection-view-fields";
 import { conditionLabel } from "./collection-view-labels";
 import { RuleValueEditor, type RuleValueOption } from "./filter-rule-value";
@@ -32,6 +33,12 @@ export const ConditionSelect = (props: {
   onChange: (rule: ViewFilterRule) => void;
 }) => {
   const { field, rule, width, onChange } = props;
+  const boolean = field.type.kind === "boolean";
+  let condition = rule.condition;
+  if (boolean && rule.value === false) {
+    if (rule.condition === "is") condition = "is-not";
+    if (rule.condition === "is-not") condition = "is";
+  }
   return (
     <RuleSelect
       aria-label="Condition"
@@ -40,8 +47,22 @@ export const ConditionSelect = (props: {
         value: condition,
         label: conditionLabel(condition, field),
       }))}
-      value={rule.condition}
-      onSelect={(condition) => onChange(changeCondition(rule, condition as ViewFilterCondition))}
+      value={condition}
+      onSelect={(next) => {
+        if (next === condition && (!boolean || typeof rule.value === "boolean")) return;
+        const selectedCondition = next as ViewFilterCondition;
+        const updated = changeCondition(rule, selectedCondition);
+        if (boolean && (selectedCondition === "is" || selectedCondition === "is-not")) {
+          const negative = rule.condition === "is-not";
+          onChange({
+            attributeId: rule.attributeId,
+            condition: negative ? "is-not" : "is",
+            value: negative ? selectedCondition === "is-not" : selectedCondition === "is",
+          });
+          return;
+        }
+        onChange(updated);
+      }}
     />
   );
 };
@@ -49,12 +70,13 @@ export const ConditionSelect = (props: {
 /** Opens from a filter pill and edits that one rule in place. */
 export const ViewFilterRuleEditor = (props: ViewFilterRuleEditorProps) => {
   const { field, rule, options, onChange, onDelete, onOpenAdvanced } = props;
+  const itemLabel = useCollectionItemLabel();
 
   return (
     <Stack data-testid="view-filter-rule-editor" gap="2xs" minW="0">
       <HStack gap="xs" paddingX="xs" paddingTop="2xs">
         <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0}>
-          {field.label}
+          {field.type.kind === "boolean" && typeof rule.value === "boolean" ? itemLabel : field.label}
         </Text>
         <ConditionSelect field={field} rule={rule} onChange={onChange} />
         <Menu.Root positioning={{ placement: "bottom-end" }}>

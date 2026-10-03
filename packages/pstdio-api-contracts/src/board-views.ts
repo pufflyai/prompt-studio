@@ -6,13 +6,14 @@ import { kanbanViewSettingsSchema } from "./extensions/kanban-renderer";
 export const boardFieldSchema = z.object({
   id: z.string(),
   label: z.string(),
-  kind: z.enum(["enum", "enum-multi", "status", "string", "date", "number", "user"]),
+  kind: z.enum(["enum", "enum-multi", "status", "string", "date", "number", "boolean", "user"]),
   /** Derived from `kind`. Never stored. */
   conditions: z.array(viewFilterConditionSchema),
   filterable: z.boolean(),
   groupable: z.boolean(),
   sortable: z.boolean(),
   displayable: z.boolean(),
+  legacyValues: z.record(z.string(), z.boolean()).optional(),
   options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 export const boardSummarySchema = z.object({

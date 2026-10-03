@@ -142,6 +142,9 @@ const resolveKanbanFields = async (deps: BoardViewsDeps, board: Extract<Resolved
         sortable: attribute.sortable ?? false,
         displayable: attribute.displayable ?? false,
         ...(options ? { options } : {}),
+        ...(attribute.type.kind === "boolean" && attribute.type.legacyValues
+          ? { legacyValues: attribute.type.legacyValues }
+          : {}),
       } satisfies BoardField;
     }),
   );

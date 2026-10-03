@@ -4,6 +4,7 @@ import {
   isViewFilterGroup,
   type KanbanViewSettings,
   legacyRuleFor,
+  normalizeBooleanViewRule,
 } from "pstdio-api-contracts";
 import {
   type DataTableRendererSettings,
@@ -42,6 +43,7 @@ const isListRule = (rule: ViewFilterRule): rule is ViewFilterRule & { value: str
 const cleanRule = (rule: ViewFilterRule, fields: BoardField[], root: boolean) => {
   const field = fields.find((field) => field.id === rule.attributeId && field.filterable);
   if (!field) return [];
+  rule = normalizeBooleanViewRule(rule, field);
   const accepted = VIEW_FILTER_CONDITIONS[field.kind];
   const fits = accepted.includes(rule.condition);
   const equivalent = equivalentConditions[rule.condition];

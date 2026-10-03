@@ -41,6 +41,7 @@ export {
   l10n,
   localContributionIdGrammar,
   localContributionIdPattern,
+  normalizeBooleanViewRule,
   packageAsset,
   projectEvents,
   projectSlots,

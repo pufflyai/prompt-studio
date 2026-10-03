@@ -16,7 +16,7 @@ export const resolveDataTableComparableValue = (value: unknown, renderer?: { typ
 /** The host and renderer must offer the same conditions for a column. */
 export const resolveDataTableFieldKind = (
   values: unknown[],
-  column: { type?: "string" | "number" | "date"; renderer?: { type: string } } = {},
+  column: { type?: "string" | "number" | "boolean" | "date"; renderer?: { type: string } } = {},
 ) => {
   if (column.type) return column.type;
   if (column.renderer?.type === "date") return "date";

@@ -23,6 +23,7 @@ const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
       id: z.string(),
     }),
   }),
+  z.object({ kind: z.literal("boolean"), legacyValues: z.record(z.string(), z.boolean()).optional() }),
   z.object({ kind: z.literal("string") }),
   z.object({ kind: z.literal("date") }),
   z.object({ kind: z.literal("number") }),

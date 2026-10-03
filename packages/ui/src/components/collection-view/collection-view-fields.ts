@@ -57,10 +57,11 @@ export const getAttributeValue = (row: KanbanRendererRow, descriptor: AttributeD
 
 export const getAttributeStringValues = (row: KanbanRendererRow, descriptor: AttributeDescriptor): string[] => {
   const value = getAttributeValue(row, descriptor);
+  if (descriptor.type.kind === "boolean") return typeof value === "boolean" ? [String(value)] : [];
   if (descriptor.type.kind === "enum-multi") return value as string[];
   if (value === null || value === undefined) return [];
   if (typeof value === "string") return value === "" ? [] : [value];
-  if (typeof value === "number") return [String(value)];
+  if (typeof value === "number" || typeof value === "boolean") return [String(value)];
   return [];
 };
 

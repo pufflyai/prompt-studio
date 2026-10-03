@@ -45,6 +45,7 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   rows: TRow[];
   /** Persistent key used by the renderer store for view, filter, grouping, ordering, and list expansion settings. */
   storageKey: string;
+  itemLabel?: string;
   /** Attribute descriptors that define display, filtering, grouping, ordering, and board columns. */
   attributes: AttributeDescriptor[];
   selectedRowId?: string | null;
@@ -111,9 +112,9 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     filter: defaultFilter,
     sorts: defaultSorts,
   });
-  useCollectionViews({ ...props, initialState });
   const attributes = useResolvedAttributes(rawAttributes);
   const fields = withTitleField(attributes);
+  useCollectionViews({ ...props, initialState, fields });
   const [createColumnId, setCreateColumnId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   // Typing stays responsive on large boards; the narrowed rows follow a frame later.
@@ -213,6 +214,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     <Stack data-testid="kanban-renderer" height="100%" minH="0" gap="0" background="bg" overflow="hidden">
       {hideToolbar ? null : (
         <KanbanRendererToolbar
+          itemLabel={props.itemLabel}
           rows={rows}
           storageKey={storageKey}
           attributes={attributes}

@@ -24,6 +24,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Native actions retain failed outcomes for the UI entry point to report.
+// Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";

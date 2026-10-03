@@ -33,6 +33,7 @@ export type EnumOptions = EnumOption[] | EnumOptionsSource;
 export type AttributeType =
   | { kind: "enum"; options: EnumOptions }
   | { kind: "enum-multi"; options: EnumOptions }
+  | { kind: "boolean"; legacyValues?: Record<string, boolean> }
   | { kind: "string" }
   | { kind: "date" }
   | { kind: "number" }

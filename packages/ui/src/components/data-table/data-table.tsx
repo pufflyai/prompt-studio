@@ -125,6 +125,7 @@ const DatasetDataTable = (props: DataTableProps) => {
   return (
     <Flex direction="column" height="100%" width="100%">
       <DataTableHeader
+        itemLabel={props.itemLabel}
         view={view}
         viewsSource={props.viewsSource}
         actions={props.toolbarActions}

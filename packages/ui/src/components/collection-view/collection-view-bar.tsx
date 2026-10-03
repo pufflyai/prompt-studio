@@ -3,6 +3,7 @@ import { ArrowUpDown, ListFilter, Plus, RotateCcw } from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { CollectionItemLabelContext } from "./collection-item-label";
 import { canSortField, findField } from "./collection-view-fields";
 import { countFilterRules, isFilterGroup } from "./collection-view-filter";
 import { FilterRulePill, GroupPill, SortPill } from "./collection-view-pills";
@@ -25,6 +26,8 @@ import { ViewSortMenu } from "./view-sort-menu";
 
 export interface CollectionViewBarProps<TSettings> {
   storageKey: string;
+  /** Singular resource label used as the subject of boolean predicates. */
+  itemLabel?: string;
   initialState: CollectionViewStoreInitialState<TSettings>;
   views: (CollectionSavedView<TSettings> & { builtIn: boolean })[];
   defaultViewId?: string;
@@ -114,176 +117,184 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
   const showCriteria = dirty || filter.rules.length > 0 || sorts.length > 0;
 
   return (
-    <Stack data-testid="collection-view-bar" gap="0" flexShrink={0} borderBottomWidth="1px" borderColor="border.subtle">
-      <HStack height="view-bar" minW="0" gap="2xs" paddingX="xs">
-        {leading}
-        <CollectionViewTabs
-          views={views}
-          activeViewId={activeViewId}
-          defaultViewId={defaultViewId}
-          viewsSource={viewsSource}
-          dirty={dirty}
-          busy={busy}
-          state={state}
-          onActivate={activateView}
-          run={run}
-          createView={createView}
-        />
-        {align === "split" ? <Box flex="1" /> : null}
-        <ViewSearchField value={search} onValueChange={onSearchChange} resultLabel={searchResultLabel} />
-        <CountButton
-          label="Filter"
-          icon={ListFilter}
-          count={countFilterRules(filter)}
-          buttonRef={filterButtonRef}
-          onClick={() => open("picker", filterButtonRef)}
-        />
-        <CountButton
-          label="Sort"
-          icon={ArrowUpDown}
-          count={sorts.length}
-          buttonRef={sortButtonRef}
-          onClick={() => open("sort", sortButtonRef)}
-        />
-        {displayControl}
-        {actions}
-      </HStack>
-
-      {showCriteria ? (
-        <HStack
-          data-testid="collection-view-criteria"
-          height="view-subheader"
-          minW="0"
-          gap="2xs"
-          paddingX="xs"
-          borderTopWidth="1px"
-          borderColor="border.subtle"
-        >
-          <HStack minW="0" gap="2xs" overflowX="auto">
-            <SortPill
-              fields={sortFields}
-              sorts={sorts}
-              buttonRef={sortPillRef}
-              onOpen={() => open("sort", sortPillRef)}
-            />
-            {sorts.length > 0 && filter.rules.length > 0 ? (
-              <Box width="1px" height="1rem" flexShrink={0} bg="border" />
-            ) : null}
-            {filter.conjunction === "or" && filter.rules.length > 0 ? (
-              <GroupPill
-                group={filter}
-                onOpen={() => open("advanced", filterButtonRef)}
-                onRemove={() => setFilter({ conjunction: "and", rules: [] })}
-              />
-            ) : (
-              filter.rules.map((rule, index) =>
-                isFilterGroup(rule) ? (
-                  <GroupPill
-                    key={`group:${index}`}
-                    group={rule}
-                    onOpen={() => open("advanced", filterButtonRef)}
-                    onRemove={() => setFilter(removeGroupAt(filter, index))}
-                  />
-                ) : (
-                  <FilterRulePill
-                    key={`${index}:${rule.attributeId}`}
-                    fields={filterFields}
-                    rule={rule}
-                    options={optionsForId(rule.attributeId)}
-                    open={openRuleIndex === index}
-                    onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
-                    onChange={(next) => setFilter(setRuleAt(filter, [index], next))}
-                    onRemove={() => {
-                      // The next rule moves into this place and must not open in its popover.
-                      setOpenRuleIndex(null);
-                      setFilter(setRuleAt(filter, [index], undefined));
-                    }}
-                    onOpenAdvanced={() => open("advanced", filterButtonRef)}
-                  />
-                ),
-              )
-            )}
-            <Button
-              ref={addFilterRef}
-              aria-label="Add filter"
-              size="2xs"
-              variant="ghost"
-              flexShrink={0}
-              onClick={() => open("picker", addFilterRef)}
-            >
-              <Plus />
-              Filter
-            </Button>
-          </HStack>
-          <Box flex="1" />
-          {dirty ? (
-            <>
-              <Button size="2xs" variant="outline" onClick={() => activeView && activateView(activeView)}>
-                <RotateCcw />
-                Reset
-              </Button>
-              <Button
-                size="2xs"
-                variant="primary"
-                disabled={!viewsSource || busy}
-                onClick={() =>
-                  viewsSource &&
-                  activeView &&
-                  run(() =>
-                    activeView.builtIn
-                      ? createView({ title: `${activeView.title} copy`, ...state })
-                      : viewsSource.onUpdateView(activeView.id, state),
-                  )
-                }
-              >
-                {activeView?.builtIn ? "Save as new view" : "Save view"}
-              </Button>
-            </>
-          ) : null}
+    <CollectionItemLabelContext.Provider value={props.itemLabel ?? "Item"}>
+      <Stack
+        data-testid="collection-view-bar"
+        gap="0"
+        flexShrink={0}
+        borderBottomWidth="1px"
+        borderColor="border.subtle"
+      >
+        <HStack height="view-bar" minW="0" gap="2xs" paddingX="xs">
+          {leading}
+          <CollectionViewTabs
+            views={views}
+            activeViewId={activeViewId}
+            defaultViewId={defaultViewId}
+            viewsSource={viewsSource}
+            dirty={dirty}
+            busy={busy}
+            state={state}
+            onActivate={activateView}
+            run={run}
+            createView={createView}
+          />
+          {align === "split" ? <Box flex="1" /> : null}
+          <ViewSearchField value={search} onValueChange={onSearchChange} resultLabel={searchResultLabel} />
+          <CountButton
+            label="Filter"
+            icon={ListFilter}
+            count={countFilterRules(filter)}
+            buttonRef={filterButtonRef}
+            onClick={() => open("picker", filterButtonRef)}
+          />
+          <CountButton
+            label="Sort"
+            icon={ArrowUpDown}
+            count={sorts.length}
+            buttonRef={sortButtonRef}
+            onClick={() => open("sort", sortButtonRef)}
+          />
+          {displayControl}
+          {actions}
         </HStack>
-      ) : null}
 
-      {error ? (
-        <Text role="alert" color="fg.error" textStyle="label/S" padding="xs">
-          {error}
-        </Text>
-      ) : null}
+        {showCriteria ? (
+          <HStack
+            data-testid="collection-view-criteria"
+            height="view-subheader"
+            minW="0"
+            gap="2xs"
+            paddingX="xs"
+            borderTopWidth="1px"
+            borderColor="border.subtle"
+          >
+            <HStack minW="0" gap="2xs" overflowX="auto">
+              <SortPill
+                fields={sortFields}
+                sorts={sorts}
+                buttonRef={sortPillRef}
+                onOpen={() => open("sort", sortPillRef)}
+              />
+              {sorts.length > 0 && filter.rules.length > 0 ? (
+                <Box width="1px" height="1rem" flexShrink={0} bg="border" />
+              ) : null}
+              {filter.conjunction === "or" && filter.rules.length > 0 ? (
+                <GroupPill
+                  group={filter}
+                  onOpen={() => open("advanced", filterButtonRef)}
+                  onRemove={() => setFilter({ conjunction: "and", rules: [] })}
+                />
+              ) : (
+                filter.rules.map((rule, index) =>
+                  isFilterGroup(rule) ? (
+                    <GroupPill
+                      key={`group:${index}`}
+                      group={rule}
+                      onOpen={() => open("advanced", filterButtonRef)}
+                      onRemove={() => setFilter(removeGroupAt(filter, index))}
+                    />
+                  ) : (
+                    <FilterRulePill
+                      key={`${index}:${rule.attributeId}`}
+                      fields={filterFields}
+                      rule={rule}
+                      options={optionsForId(rule.attributeId)}
+                      open={openRuleIndex === index}
+                      onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
+                      onChange={(next) => setFilter(setRuleAt(filter, [index], next))}
+                      onRemove={() => {
+                        // The next rule moves into this place and must not open in its popover.
+                        setOpenRuleIndex(null);
+                        setFilter(setRuleAt(filter, [index], undefined));
+                      }}
+                      onOpenAdvanced={() => open("advanced", filterButtonRef)}
+                    />
+                  ),
+                )
+              )}
+              <Button
+                ref={addFilterRef}
+                aria-label="Add filter"
+                size="2xs"
+                variant="ghost"
+                flexShrink={0}
+                onClick={() => open("picker", addFilterRef)}
+              >
+                <Plus />
+                Filter
+              </Button>
+            </HStack>
+            <Box flex="1" />
+            {dirty ? (
+              <>
+                <Button size="2xs" variant="outline" onClick={() => activeView && activateView(activeView)}>
+                  <RotateCcw />
+                  Reset
+                </Button>
+                <Button
+                  size="2xs"
+                  variant="primary"
+                  disabled={!viewsSource || busy}
+                  onClick={() =>
+                    viewsSource &&
+                    activeView &&
+                    run(() =>
+                      activeView.builtIn
+                        ? createView({ title: `${activeView.title} copy`, ...state })
+                        : viewsSource.onUpdateView(activeView.id, state),
+                    )
+                  }
+                >
+                  {activeView?.builtIn ? "Save as new view" : "Save view"}
+                </Button>
+              </>
+            ) : null}
+          </HStack>
+        ) : null}
 
-      <ViewBarPopover
-        open={openMenu === "picker"}
-        onOpenChange={(isOpen) => setOpenMenu(isOpen ? "picker" : null)}
-        anchorRef={anchor}
-        width="min(440px, calc(100vw - 32px))"
-        padding="0"
-        testId="filter-menu-popover"
-      >
-        <FilterMenu
-          fields={filterFields}
-          filter={filter}
-          optionsFor={optionsFor}
-          onChange={setFilter}
-          onPickField={startRule}
-          onOpenAdvanced={() => setOpenMenu("advanced")}
-        />
-      </ViewBarPopover>
-      <ViewBarPopover
-        open={openMenu === "advanced"}
-        onOpenChange={(isOpen) => setOpenMenu(isOpen ? "advanced" : null)}
-        anchorRef={anchor}
-        width="40rem"
-        testId="view-filter-popover"
-      >
-        <ViewFilterMenu fields={filterFields} filter={filter} optionsFor={optionsFor} onChange={setFilter} />
-      </ViewBarPopover>
-      <ViewBarPopover
-        open={openMenu === "sort"}
-        onOpenChange={(isOpen) => setOpenMenu(isOpen ? "sort" : null)}
-        anchorRef={anchor}
-        width="25rem"
-        testId="view-sort-popover"
-      >
-        <ViewSortMenu fields={sortFields} sorts={sorts} onChange={setSorts} />
-      </ViewBarPopover>
-    </Stack>
+        {error ? (
+          <Text role="alert" color="fg.error" textStyle="label/S" padding="xs">
+            {error}
+          </Text>
+        ) : null}
+
+        <ViewBarPopover
+          open={openMenu === "picker"}
+          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "picker" : null)}
+          anchorRef={anchor}
+          width="min(440px, calc(100vw - 32px))"
+          padding="0"
+          testId="filter-menu-popover"
+        >
+          <FilterMenu
+            fields={filterFields}
+            filter={filter}
+            optionsFor={optionsFor}
+            onChange={setFilter}
+            onPickField={startRule}
+            onOpenAdvanced={() => setOpenMenu("advanced")}
+          />
+        </ViewBarPopover>
+        <ViewBarPopover
+          open={openMenu === "advanced"}
+          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "advanced" : null)}
+          anchorRef={anchor}
+          width="40rem"
+          testId="view-filter-popover"
+        >
+          <ViewFilterMenu fields={filterFields} filter={filter} optionsFor={optionsFor} onChange={setFilter} />
+        </ViewBarPopover>
+        <ViewBarPopover
+          open={openMenu === "sort"}
+          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "sort" : null)}
+          anchorRef={anchor}
+          width="25rem"
+          testId="view-sort-popover"
+        >
+          <ViewSortMenu fields={sortFields} sorts={sorts} onChange={setSorts} />
+        </ViewBarPopover>
+      </Stack>
+    </CollectionItemLabelContext.Provider>
   );
 };

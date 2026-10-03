@@ -44,7 +44,9 @@ const toNativeViewBody = (
 ): Exclude<WorkbenchExtensionViewBody, { kind: "webview" }> => {
   const body = view.contribution.body as Exclude<ViewBody, { kind: "webview" }>;
   const handlers = body as typeof body & Record<string, unknown>;
+  const resourceKind = body.resourceKind ? normalizedRef(body.resourceKind, view.extensionId) : undefined;
   const common = {
+    ...(resourceKind ? { resourceKind: resourceKind.id } : {}),
     refreshEventIds: refreshEventIds(body.refreshEvents, view.extensionId),
     emptyTitle: body.emptyTitle,
     emptyDescription: body.emptyDescription,

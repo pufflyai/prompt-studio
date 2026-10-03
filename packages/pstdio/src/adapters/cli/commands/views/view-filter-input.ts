@@ -14,6 +14,10 @@ const resolveOption = (field: BoardField, value: string) => {
 };
 const parseValue = (field: BoardField, condition: ViewFilterCondition, raw: string) => {
   const kind = viewFilterValueKind(field.kind, condition);
+  if (kind === "boolean") {
+    if (raw === "true" || raw === "false") return raw === "true";
+    throw new Error(`Condition "${condition}" on "${field.id}" needs a boolean (true or false)`);
+  }
   if (kind === "number") return Number(raw);
   if (kind === "options") return raw.split(",").map((value) => resolveOption(field, value.trim()));
   return raw;

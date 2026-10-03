@@ -26,6 +26,7 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const valueKind = (field: AttributeDescriptor, rule: ViewFilterRule) => {
   if (rule.condition === "is-empty" || rule.condition === "is-not-empty") return "none";
+  if (field.type.kind === "boolean") return "boolean";
   if (field.type.kind === "number") return "number";
   if (field.type.kind === "date") return "day";
   if (field.type.kind === "string") return "text";
@@ -95,6 +96,12 @@ export const RuleValueControl = (props: RuleValueProps) => {
   const { field, rule, options, onChange } = props;
   const kind = valueKind(field, rule);
   if (kind === "none") return null;
+  if (kind === "boolean")
+    return (
+      <Text textStyle="label/S/medium" paddingX="xs">
+        {field.label}
+      </Text>
+    );
   if (kind === "number") return <NumberValue {...props} width="9rem" />;
   if (kind === "text") return <TextValue {...props} width="9rem" />;
   if (kind === "day") return <DayValue {...props} />;
@@ -172,8 +179,15 @@ const OptionChecklist = (props: RuleValueProps) => {
 
 /** The value control inside the rule editor and the quick picker. */
 export const RuleValueEditor = (props: RuleValueProps) => {
-  const kind = valueKind(props.field, props.rule);
+  const { field, rule } = props;
+  const kind = valueKind(field, rule);
   if (kind === "none") return null;
+  if (kind === "boolean")
+    return (
+      <Text textStyle="label/S/medium" paddingX="xs">
+        {field.label}
+      </Text>
+    );
   if (kind === "options") return <OptionChecklist {...props} />;
   if (kind === "day") return <DayValue {...props} />;
   if (kind === "number") return <NumberValue {...props} />;

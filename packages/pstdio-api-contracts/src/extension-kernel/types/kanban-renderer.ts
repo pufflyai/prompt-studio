@@ -23,6 +23,8 @@ export type KanbanRendererAttributeType =
   | { kind: "enum"; options: KanbanRendererEnumOption[] }
   | { kind: "enum-multi"; options: KanbanRendererEnumOption[] }
   | { kind: "status"; statuses: StatusRef }
+  /** Maps old enum IDs when saved views are read. Row values must still be booleans. */
+  | { kind: "boolean"; legacyValues?: Record<string, boolean> }
   | { kind: "string" }
   | { kind: "date" }
   | { kind: "number" }

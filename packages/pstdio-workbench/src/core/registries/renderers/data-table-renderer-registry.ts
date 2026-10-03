@@ -50,7 +50,7 @@ export interface DataTableRendererColumn {
   id: string;
   label?: string;
   /** How filters and sorts compare the column. Without it, the type is inferred from the values. */
-  type?: "string" | "number" | "date";
+  type?: "string" | "number" | "boolean" | "date";
   /** Offers the column under Grouping in the table's Display menu. */
   groupable?: boolean;
   description?: string;

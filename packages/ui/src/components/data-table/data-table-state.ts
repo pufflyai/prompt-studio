@@ -56,7 +56,6 @@ type ColumnRenderers = DataTableProps["columnRenderers"];
 
 const toAttributeValue = (value: unknown, renderer?: NonNullable<ColumnRenderers>[string]) => {
   const raw = resolveDataTableComparableValue(value, renderer);
-  if (typeof raw === "boolean") return String(raw);
   return raw;
 };
 

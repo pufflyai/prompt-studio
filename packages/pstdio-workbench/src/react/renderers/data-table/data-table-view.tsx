@@ -145,6 +145,9 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <DataTable
+        itemLabel={
+          contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
+        }
         toolbarActions={
           <ViewToolbarActions
             workbench={workbench}

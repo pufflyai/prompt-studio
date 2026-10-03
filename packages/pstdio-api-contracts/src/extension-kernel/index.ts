@@ -9,6 +9,7 @@
  */
 
 export { parseExtensionApiDeclaration, supportsExtensionApiVersion } from "./api-versions";
+export { normalizeBooleanViewRule } from "./boolean-view-filter";
 export {
   workbenchModeDefinitions,
   workbenchModes,

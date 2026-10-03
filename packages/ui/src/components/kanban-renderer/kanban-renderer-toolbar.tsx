@@ -20,6 +20,7 @@ import { useResolvedAttributes } from "./use-resolved-attributes";
 export interface KanbanRendererToolbarProps<TRow extends KanbanRendererRow = KanbanRendererRow> {
   rows: TRow[];
   storageKey: string;
+  itemLabel?: string;
   attributes: AttributeDescriptor[];
   defaultSettings?: Partial<KanbanRendererSettings>;
   defaultFilter?: ViewFilterGroup;
@@ -45,8 +46,8 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
     filter: defaultFilter,
     sorts: defaultSorts,
   });
-  const viewState = useCollectionViews({ ...props, initialState });
   const attributes = useResolvedAttributes(rawAttributes);
+  const viewState = useCollectionViews({ ...props, initialState, fields: attributes });
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
   const setSettings = useKanbanRendererStore(storageKey, (state) => state.setSettings, initialState);
   const categories = buildFilterCategories(attributes, rows);
@@ -58,6 +59,7 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
 
   return (
     <CollectionViewBar
+      itemLabel={props.itemLabel}
       storageKey={storageKey}
       initialState={initialState}
       views={viewState.views}

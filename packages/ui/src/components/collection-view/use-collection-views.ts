@@ -2,6 +2,7 @@ import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { useEffect, useRef } from "react";
 import { useStore } from "zustand";
 import { useKanbanRendererStorage } from "../kanban-renderer/kanban-renderer-storage";
+import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { isFilterGroup } from "./collection-view-filter";
 import {
   type CollectionSavedView,
@@ -9,6 +10,7 @@ import {
   type CollectionViewsSource,
   EMPTY_VIEW_FILTER,
 } from "./collection-view-types";
+import { normalizeBooleanViewFilter } from "./normalize-boolean-view-filter";
 import { type CollectionViewStoreInitialState, getCollectionViewStore } from "./use-collection-view-store";
 
 // The order of these lists does not change what the view shows.
@@ -45,6 +47,7 @@ export const isCollectionViewDirty = <TSettings>(
 
 export interface CollectionViewsInput<TSettings> {
   storageKey: string;
+  fields?: AttributeDescriptor[];
   initialState: CollectionViewStoreInitialState<TSettings>;
   viewsSource?: CollectionViewsSource<TSettings>;
   defaultViews?: CollectionSavedView<TSettings>[];
@@ -59,7 +62,13 @@ export const useCollectionViews = <TSettings>(input: CollectionViewsInput<TSetti
   const defaults = input.defaultViews?.length
     ? input.defaultViews
     : [{ id: "default", title: "All", settings, filter, sorts }];
-  const views = input.viewsSource?.views ?? defaults.map((view) => ({ ...view, builtIn: true }));
+  const sourceViews = input.viewsSource?.views ?? defaults.map((view) => ({ ...view, builtIn: true }));
+  const views = input.fields
+    ? sourceViews.map((view) => {
+        const filter = normalizeBooleanViewFilter(view.filter, input.fields!);
+        return filter === view.filter ? view : { ...view, filter };
+      })
+    : sourceViews;
   const defaultId = [
     input.viewsSource?.defaultViewId,
     input.defaultActiveViewId,
@@ -71,6 +80,10 @@ export const useCollectionViews = <TSettings>(input: CollectionViewsInput<TSetti
   );
   useEffect(() => {
     const state = store.getState();
+    if (input.fields) {
+      const normalized = normalizeBooleanViewFilter(state.filter, input.fields);
+      if (normalized !== state.filter) state.setFilter(normalized);
+    }
     const active = views.find((view) => view.id === activeViewId);
     const prior = previous.current;
     if (!active) {
@@ -89,6 +102,6 @@ export const useCollectionViews = <TSettings>(input: CollectionViewsInput<TSetti
       state.activateView(active);
     }
     previous.current = { views, active };
-  }, [store, views, defaultId, activeViewId]);
+  }, [store, views, defaultId, activeViewId, input.fields]);
   return { views, defaultId };
 };

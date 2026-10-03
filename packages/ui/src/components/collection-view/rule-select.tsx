@@ -17,6 +17,7 @@ export interface RuleSelectProps {
   onSelect: (value: string) => void;
   multiple?: boolean;
   placeholder?: string;
+  selectedLabel?: string;
   /** Rule rows pass a fixed width so the columns of a rule list line up. */
   width?: string;
   showSearch?: boolean;
@@ -67,7 +68,7 @@ export const RuleSelect = (props: RuleSelectProps) => {
         >
           {icon ? <Icon as={icon} color="fg.muted" /> : null}
           <Text as="span" flex="1" minW="0" textAlign="start" textStyle="label/XS" truncate>
-            {label}
+            {props.selectedLabel ?? label}
           </Text>
           <Icon as={ChevronDown} color="fg.subtle" />
         </Button>
