@@ -50,7 +50,6 @@ const rendererBaseOmissions = {
   extensionId: true,
   title: true,
   icon: true,
-  resourceKind: true,
 } as const;
 
 const commandActionSchema = z.object({

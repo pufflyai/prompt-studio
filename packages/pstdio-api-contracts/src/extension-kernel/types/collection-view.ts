@@ -28,7 +28,7 @@ export type ViewFilterRule = {
    * Text, a number, a day ("2026-10-02", "today", "today-7", "today+7"),
    * or option values. Absent for is-empty and is-not-empty.
    */
-  value?: string | number | string[];
+  value?: boolean | string | number | string[];
 };
 
 export type ViewFilterGroup = {
@@ -44,12 +44,13 @@ export type ViewSort = {
   direction: ViewSortDirection;
 };
 
-export type ViewFieldKind = "string" | "number" | "date" | "enum" | "status" | "enum-multi" | "user";
+export type ViewFieldKind = "string" | "number" | "boolean" | "date" | "enum" | "status" | "enum-multi" | "user";
 
 const optionConditions: readonly ViewFilterCondition[] = ["is-any-of", "is-none-of", "is-empty", "is-not-empty"];
 
 /** The only list of conditions. The UI, the views API, and the CLI all read it. */
 export const VIEW_FILTER_CONDITIONS: Record<ViewFieldKind, readonly ViewFilterCondition[]> = {
+  boolean: ["is", "is-not", "is-empty", "is-not-empty"],
   string: ["contains", "does-not-contain", "is", "is-not", "is-empty", "is-not-empty"],
   number: ["is", "is-not", "gt", "gte", "lt", "lte", "is-empty", "is-not-empty"],
   date: ["is", "is-before", "is-after", "is-on-or-before", "is-on-or-after", "is-empty", "is-not-empty"],

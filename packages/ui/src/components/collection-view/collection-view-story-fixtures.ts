@@ -6,6 +6,7 @@ import type { RuleValueOption } from "./filter-rule-value";
 
 export const storyFields: AttributeDescriptor[] = withTitleField([
   ...attributes,
+  { id: "archived", label: "Archived", type: { kind: "boolean" }, filterable: true },
   { id: "score", label: "Score", type: { kind: "number" }, filterable: true, sortable: true },
 ]).map((field) => ({ ...field, filterable: true, sortable: field.type.kind !== "enum-multi" }));
 

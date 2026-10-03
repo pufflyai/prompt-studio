@@ -91,6 +91,27 @@ type CreateAutomationRunInput = z.infer<typeof createAutomationRunInputSchema>;
 type AutomationRun = z.infer<typeof automationRunSchema>;
 declare const parseExtensionApiDeclaration: (declaration: string) => string[] | null;
 declare const supportsExtensionApiVersion: (declaration: string, hostVersion: string) => boolean;
+type ViewFilterCondition = "contains" | "does-not-contain" | "is" | "is-not" | "gt" | "gte" | "lt" | "lte" | "is-before" | "is-after" | "is-on-or-before" | "is-on-or-after" | "is-any-of" | "is-none-of" | "has-any-of" | "has-all-of" | "has-none-of" | "is-empty" | "is-not-empty";
+type ViewFilterRule = {
+  attributeId: string;
+  condition: ViewFilterCondition;
+  value?: boolean | string | number | string[];
+};
+type ViewFilterGroup = {
+  conjunction: "and" | "or";
+  rules: Array<ViewFilterRule | ViewFilterGroup>;
+};
+type ViewSortDirection = "asc" | "desc";
+type ViewSort = {
+  attributeId: string;
+  direction: ViewSortDirection;
+};
+type ViewFieldKind = "string" | "number" | "boolean" | "date" | "enum" | "status" | "enum-multi" | "user";
+export declare const VIEW_FILTER_CONDITIONS: Record<ViewFieldKind, readonly ViewFilterCondition[]>;
+export declare const normalizeBooleanViewRule: (rule: ViewFilterRule, type: {
+  kind: string;
+  legacyValues?: Record<string, boolean>;
+}) => ViewFilterRule;
 interface LocalizedString {
   readonly $l10n: string;
   readonly default?: string;
@@ -717,23 +738,6 @@ type WebviewHostCapabilityResult<Capability extends WebviewHostCapability, Param
 } ? Exclude<TerminalSessionResult, {
   operation: "open";
 }> : TerminalSessionResult : WebviewHostCapabilityResults[Capability];
-type ViewFilterCondition = "contains" | "does-not-contain" | "is" | "is-not" | "gt" | "gte" | "lt" | "lte" | "is-before" | "is-after" | "is-on-or-before" | "is-on-or-after" | "is-any-of" | "is-none-of" | "has-any-of" | "has-all-of" | "has-none-of" | "is-empty" | "is-not-empty";
-type ViewFilterRule = {
-  attributeId: string;
-  condition: ViewFilterCondition;
-  value?: string | number | string[];
-};
-type ViewFilterGroup = {
-  conjunction: "and" | "or";
-  rules: Array<ViewFilterRule | ViewFilterGroup>;
-};
-type ViewSortDirection = "asc" | "desc";
-type ViewSort = {
-  attributeId: string;
-  direction: ViewSortDirection;
-};
-type ViewFieldKind = "string" | "number" | "date" | "enum" | "status" | "enum-multi" | "user";
-export declare const VIEW_FILTER_CONDITIONS: Record<ViewFieldKind, readonly ViewFilterCondition[]>;
 interface ViewToolbarAction<TParams extends Struct = Struct> {
   id: string;
   label: Localizable<string>;
@@ -763,6 +767,10 @@ type KanbanRendererAttributeType = {
 } | {
   kind: "status";
   statuses: StatusRef;
+} |
+{
+  kind: "boolean";
+  legacyValues?: Record<string, boolean>;
 } | {
   kind: "string";
 } | {
@@ -1583,7 +1591,7 @@ type DataTableRendererColumnRenderer = {
 interface DataTableRendererColumn {
   id: string;
   label?: Localizable<string>;
-  type?: "string" | "number" | "date";
+  type?: "string" | "number" | "boolean" | "date";
   groupable?: boolean;
   description?: Localizable<string>;
   icon?: string;
@@ -1713,6 +1721,7 @@ interface TreeRendererContribution extends RendererContributionBase {
 type TreeRendererCommandResult = TreeViewSection[] | TreeNode[] | JsonValue;
 type NativeViewBody<Kind extends string, Definition> = {
   readonly kind: Kind;
+  readonly resourceKind?: ResourceKindRef;
 } & Omit<Definition, "title" | "icon" | "resourceKind">;
 type WebviewViewBody = {
   readonly kind: "webview";
@@ -2827,11 +2836,11 @@ export declare const resolveDataTableComparableValue: (value: unknown, renderer?
   type: string;
 }) => unknown;
 export declare const resolveDataTableFieldKind: (values: unknown[], column?: {
-  type?: "string" | "number" | "date";
+  type?: "string" | "number" | "boolean" | "date";
   renderer?: {
     type: string;
   };
-}) => "string" | "number" | "date";
+}) => "string" | "number" | "boolean" | "date";
 type WorkspaceType = string;
 interface WorkspaceProvisionPayload {
   projectId: string;

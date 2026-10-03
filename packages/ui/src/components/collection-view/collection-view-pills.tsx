@@ -1,8 +1,14 @@
 import { Button, chakra, HStack, Icon, Popover, Portal, Text } from "@chakra-ui/react";
-import type { ViewFilterGroup, ViewFilterRule, ViewSort } from "@pstdio/sdk/extensions";
+import {
+  normalizeBooleanViewRule,
+  type ViewFilterGroup,
+  type ViewFilterRule,
+  type ViewSort,
+} from "@pstdio/sdk/extensions";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, X } from "lucide-react";
 import type { ComponentProps, ReactNode, Ref } from "react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { useCollectionItemLabel } from "./collection-item-label";
 import { findField } from "./collection-view-fields";
 import { groupLabel, groupLead, pillConditionLabel, ruleValueLabel } from "./collection-view-labels";
 import type { RuleValueOption } from "./filter-rule-value";
@@ -75,8 +81,10 @@ export interface FilterRulePillProps {
 
 /** Reads as a sentence, such as "Status is not Done", and opens the editor for its rule. */
 export const FilterRulePill = (props: FilterRulePillProps) => {
-  const { fields, rule, options, open, onOpenChange, onChange, onRemove, onOpenAdvanced } = props;
-  const field = findField(fields, rule.attributeId);
+  const { fields, rule: savedRule, options, open, onOpenChange, onChange, onRemove, onOpenAdvanced } = props;
+  const field = findField(fields, savedRule.attributeId);
+  const rule = field ? normalizeBooleanViewRule(savedRule, field.type) : savedRule;
+  const itemLabel = useCollectionItemLabel();
   const label = field?.label ?? rule.attributeId;
 
   return (
@@ -91,7 +99,8 @@ export const FilterRulePill = (props: FilterRulePillProps) => {
         <Popover.Trigger asChild>
           <PillLabel aria-label={`Edit ${label} filter`}>
             <Text textStyle="label/XS" color="fg.muted">
-              {label} {pillConditionLabel(rule, field)}
+              {field?.type.kind === "boolean" && typeof rule.value === "boolean" ? itemLabel : label}{" "}
+              {pillConditionLabel(rule, field)}
             </Text>
             <Text textStyle="label/XS/medium" maxW="12rem" truncate>
               {ruleValueLabel(rule, field)}

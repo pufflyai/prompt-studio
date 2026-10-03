@@ -70,6 +70,7 @@ const Bar = (props: BarProps) => {
   return (
     <Box bg="bg">
       <CollectionViewBar
+        itemLabel="Ticket"
         storageKey={storageKey}
         initialState={initialState}
         views={views.views}
@@ -139,5 +140,25 @@ export const SearchOpen: Story = {
     await userEvent.type(canvas.getByRole("textbox", { name: "Search this view" }), "filter");
     await expect(canvas.getByText("4 of 10")).toBeVisible();
     await expect(canvas.queryByLabelText("Unsaved view changes")).not.toBeInTheDocument();
+  },
+};
+
+/** Booleans name a predicate; the operator selects its truth value. */
+export const BooleanPredicate: Story = {
+  render: () => (
+    <Bar
+      storageKey="storybook-collection-view-boolean"
+      filter={{ conjunction: "and", rules: [{ attributeId: "archived", condition: "is", value: false }] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const pill = canvas.getByRole("button", { name: "Edit Archived filter" });
+    await expect(pill).toHaveTextContent("Ticket is notArchived");
+    await userEvent.click(pill);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByRole("button", { name: "Condition" }));
+    await userEvent.click(body.getByRole("menuitem", { name: "is", exact: true }));
+    await expect(pill).toHaveTextContent("Ticket isArchived");
   },
 };

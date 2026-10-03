@@ -1,4 +1,4 @@
-import type { ViewFilterGroup, ViewFilterRule } from "@pstdio/sdk/extensions";
+import { normalizeBooleanViewRule, type ViewFilterGroup, type ViewFilterRule } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor, KanbanRendererRow } from "../kanban-renderer/types";
 import {
   acceptedCondition,
@@ -92,6 +92,13 @@ const compileValueRule = (
 ): RowTest | undefined => {
   const kind = field.type.kind;
   if (Array.isArray(value)) return compileListRule(field, condition, value);
+  if (kind === "boolean" && typeof value === "boolean") {
+    return (row) => {
+      const actual = getAttributeValue(row, field);
+      if (condition === "is-not" && (actual === undefined || actual === null)) return true;
+      return typeof actual === "boolean" && (condition === "is" ? actual === value : actual !== value);
+    };
+  }
   if (kind === "number" && typeof value === "number") {
     const test = ordered(rowNumber, condition, value);
     return (row: KanbanRendererRow) => test(getAttributeValue(row, field));
@@ -110,10 +117,11 @@ const compileValueRule = (
 const compileRule = (rule: ViewFilterRule, fields: AttributeDescriptor[], today: Date): RowTest | undefined => {
   const field = findField(fields, rule.attributeId);
   if (!field) return undefined;
+  rule = normalizeBooleanViewRule(rule, field.type);
   const condition = acceptedCondition(field, rule.condition);
   // Old views picked exact values on every field. When a host cannot tell a field's kind up front,
   // they still arrive as "any of" lists, and keep their meaning.
-  if (!condition && rule.condition === "is-any-of" && Array.isArray(rule.value))
+  if (!condition && field.type.kind !== "boolean" && rule.condition === "is-any-of" && Array.isArray(rule.value))
     return compileListRule(field, rule.condition, rule.value);
   if (!condition) return undefined;
   if (condition === "is-empty") return (row) => getAttributeStringValues(row, field).length === 0;

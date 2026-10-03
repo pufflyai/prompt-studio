@@ -1,7 +1,8 @@
 import { HStack, Icon, IconButton, Menu, Text } from "@chakra-ui/react";
-import type { ViewFilterGroup, ViewFilterRule } from "@pstdio/sdk/extensions";
+import { normalizeBooleanViewRule, type ViewFilterGroup, type ViewFilterRule } from "@pstdio/sdk/extensions";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { useCollectionItemLabel } from "./collection-item-label";
 import { findField } from "./collection-view-fields";
 import { newRule } from "./collection-view-rules";
 import { RuleValueControl, type RuleValueOption } from "./filter-rule-value";
@@ -75,8 +76,10 @@ export interface FilterRuleRowProps extends RuleLeadProps {
 }
 
 export const FilterRuleRow = (props: FilterRuleRowProps) => {
-  const { fields, rule, optionsFor, onChange, onDelete } = props;
-  const field = findField(fields, rule.attributeId);
+  const { fields, rule: savedRule, optionsFor, onChange, onDelete } = props;
+  const field = findField(fields, savedRule.attributeId);
+  const rule = field ? normalizeBooleanViewRule(savedRule, field.type) : savedRule;
+  const itemLabel = useCollectionItemLabel();
 
   return (
     <HStack data-testid="filter-rule-row" gap="xs" minH="1.75rem" minW="0">
@@ -86,6 +89,7 @@ export const FilterRuleRow = (props: FilterRuleRowProps) => {
         width="8.75rem"
         showSearch
         options={fields.map((entry) => ({ value: entry.id, label: entry.label }))}
+        selectedLabel={field?.type.kind === "boolean" && typeof rule.value === "boolean" ? itemLabel : undefined}
         value={rule.attributeId}
         onSelect={(id) => {
           const next = findField(fields, id);

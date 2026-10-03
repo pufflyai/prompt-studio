@@ -167,6 +167,9 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
       {readNotice}
       <KanbanRenderer
+        itemLabel={
+          contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
+        }
         viewsSource={viewsSource}
         rows={rows}
         contentPlaceholder={read.value ? undefined : contentPlaceholder}

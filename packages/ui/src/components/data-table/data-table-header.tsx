@@ -5,6 +5,7 @@ import type { DataTableViewsSource } from "./types";
 import type { useDataTableView } from "./use-data-table-view";
 
 interface DataTableHeaderProps {
+  itemLabel?: string;
   view: ReturnType<typeof useDataTableView>;
   viewsSource?: DataTableViewsSource;
   displayControl: ReactNode;
@@ -21,6 +22,7 @@ export const DataTableHeader = (props: DataTableHeaderProps) => {
 
   return (
     <CollectionViewBar
+      itemLabel={props.itemLabel}
       storageKey={view.storageKey}
       initialState={view.initialState}
       views={view.views.views}

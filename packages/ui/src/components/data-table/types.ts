@@ -7,7 +7,7 @@ export type DataTableSettings = DataTableRendererSettings;
 export type DataTableSavedView = CollectionSavedView<DataTableSettings>;
 export type DataTableViewsSource = CollectionViewsSource<DataTableSettings>;
 /** How filters and sorts compare a column. Without it the type is inferred from the values. */
-export type DataTableColumnType = "string" | "number" | "date";
+export type DataTableColumnType = "string" | "number" | "boolean" | "date";
 
 export type ColumnType = "boolean" | "date" | "number" | "string" | "unknown";
 
@@ -144,6 +144,7 @@ export interface DataTableProps {
   compactHeaders?: Partial<Record<string, string>>;
   getRowId?: (row: RowData, index: number) => string;
   toolbarStorageKey?: string;
+  itemLabel?: string;
   toolbarActions?: ReactNode;
   contentPlaceholder?: ReactNode;
   defaultSettings?: Partial<DataTableSettings>;

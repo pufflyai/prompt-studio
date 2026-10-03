@@ -20200,7 +20200,7 @@
                       "type": "frame",
                       "id": "IZ2hX",
                       "name": "cmp/FilterPill",
-                      "context": "A committed filter clause. Reads 'Key op Value' then a remove affordance. h 24, radius 4, surface on a border hairline. Key/op are fg.muted, Value is fg at 500 so the clause scans as one phrase with the value emphasised. The x removes the clause, which detaches the active view and raises Save.\n\nAppears in cmp/CollectionViewBar's criteria row whenever the view has a filter, saved or not. A pill opens cmp/ViewFilterRuleEditor for its rule.",
+                      "context": "A committed filter clause. Reads 'Key op Value' then a remove affordance. h 24, radius 4, surface on a border hairline. Key/op are fg.muted, Value is fg at 500 so the clause scans as one phrase with the value emphasised. The x removes the clause, which detaches the active view and raises Save.\n\nAppears in cmp/CollectionViewBar's criteria row whenever the view has a filter, saved or not. A pill opens cmp/ViewFilterRuleEditor for its rule. Boolean rules use the resource kind label as the subject and the property as the predicate: Ticket is Archived or Ticket is not Archived.",
                       "reusable": true,
                       "height": 24,
                       "fill": "$ds-surface",
@@ -132714,6 +132714,86 @@
               "fontFamily": "$font-body",
               "fontSize": 12,
               "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Z6Z5Fz",
+          "name": "Boolean predicates",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "OYiiS",
+              "name": "Boolean grammar",
+              "fill": "$ds-fg-muted",
+              "content": "Boolean fields read as predicates: Ticket is Archived · Ticket is not Archived. The subject comes from the resource kind. The operator changes the truth value; there is no Active option.",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "I6TWG",
+              "type": "ref",
+              "ref": "IZ2hX",
+              "name": "Ticket is Archived",
+              "descendants": {
+                "SCREL": {
+                  "content": "Ticket"
+                },
+                "zwIz1": {
+                  "content": "is"
+                },
+                "N5wsTd": {
+                  "content": "Archived"
+                }
+              }
+            },
+            {
+              "id": "W1rVL",
+              "type": "ref",
+              "ref": "IZ2hX",
+              "name": "Ticket is not Archived",
+              "descendants": {
+                "SCREL": {
+                  "content": "Ticket"
+                },
+                "zwIz1": {
+                  "content": "is not"
+                },
+                "N5wsTd": {
+                  "content": "Archived"
+                }
+              }
+            },
+            {
+              "id": "P0hqqM",
+              "type": "ref",
+              "ref": "Fg2fR",
+              "name": "Boolean editor",
+              "descendants": {
+                "Nt6JQ": {
+                  "content": "Ticket"
+                },
+                "uC9fF/b1L0Y": {
+                  "content": "is not"
+                },
+                "FNYBY": {
+                  "enabled": false
+                },
+                "A8v5Yr": {
+                  "type": "text",
+                  "id": "qFayQ",
+                  "fill": "$ds-fg",
+                  "content": "Archived",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              }
             }
           ]
         }

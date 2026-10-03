@@ -4,6 +4,7 @@ import { callbackSchema } from "./composition-declarations";
 import { localRefSchema } from "./navigation-declaration";
 
 const native = {
+  resourceKind: localRefSchema("resource-kind").optional(),
   refreshEvents: z.array(z.union([z.string().regex(/\./), localRefSchema("event")])).optional(),
   emptyTitle: localizableStringSchema.optional(),
   emptyDescription: localizableStringSchema.optional(),

@@ -280,11 +280,16 @@ Kanban and data table bodies share one view model. A view stores:
 
 Search is screen state. It narrows what is on screen, is never saved, and is never sent to a query.
 
+Boolean fields hold real `true` or `false` values. Their controls read as predicates, such as "Ticket is Archived" or "Ticket is not Archived". Set the native view body's `resourceKind` to a resource-kind ref to use its singular label as the subject; otherwise the subject is "Item". The property label supplies the predicate. `is false` and `is-not true` show the same negative predicate; `is-not` also includes rows with no value. In the CLI, use `--filter "archived is false"`. Data-table columns opt in with `type: "boolean"`; undeclared columns keep their existing text filters.
+
+When changing an enum field to a boolean, declare its old stored IDs in `type.legacyValues`, for example `{ kind: "boolean", legacyValues: { active: false, archived: true } }`. The host normalizes saved rules before cleanup, and the renderer normalizes local view state before edits. This map never coerces row values or allows old option lists in new API writes. Keep the map while saved views may still use those IDs.
+
 Each field kind accepts a fixed list of conditions. `VIEW_FILTER_CONDITIONS` in `@pstdio/sdk/extensions` is the only copy, and the dashboard, the views API, and `pst views` all read it.
 
 | Field kind | Conditions | Sortable |
 | --- | --- | --- |
 | `string` | `contains`, `does-not-contain`, `is`, `is-not`, `is-empty`, `is-not-empty` | yes |
+| `boolean` | `is`, `is-not`, `is-empty`, `is-not-empty` | yes |
 | `number` | `is`, `is-not`, `gt`, `gte`, `lt`, `lte`, `is-empty`, `is-not-empty` | yes |
 | `date` | `is`, `is-before`, `is-after`, `is-on-or-before`, `is-on-or-after`, `is-empty`, `is-not-empty` | yes |
 | `enum`, `status`, `user` | `is-any-of`, `is-none-of`, `is-empty`, `is-not-empty` | yes |

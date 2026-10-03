@@ -63,7 +63,7 @@ describe("data table state helpers", () => {
 
     const attributes = buildDataTableRendererAttributes(rows, columnKeys, {
       compactHeaders: { Status: "State" },
-      columnTypes: { Approved: "string" },
+      columnTypes: { Approved: "boolean" },
       groupableColumns: ["Status"],
     });
     const rendererRows = buildDataTableRendererRows(rows, columnKeys);
@@ -73,12 +73,12 @@ describe("data table state helpers", () => {
     ).toEqual([
       ["Status", "State", "string", true],
       ["Amount", "Amount", "number", false],
-      ["Approved", "Approved", "string", false],
+      ["Approved", "Approved", "boolean", false],
     ]);
     expect(rendererRows[0]).toMatchObject({
       id: "row-1",
       title: "Paid",
-      attributes: { Status: "Paid", Amount: 10, Approved: "true" },
+      attributes: { Status: "Paid", Amount: 10, Approved: true },
       sourceRow: rows[0],
     });
   });
@@ -141,4 +141,26 @@ describe("data table state helpers", () => {
     expect(shouldHighlightActiveRow({ rowId: "row-1", activeRowId: "row-1" })).toBe(false);
     expect(shouldHighlightActiveRow({ rowId: "row-1", activeRowId: "row-1", enableRowActivation: true })).toBe(true);
   });
+});
+
+test("undeclared boolean columns preserve saved text filters", () => {
+  const rows = [
+    { id: "yes", Approved: true },
+    { id: "no", Approved: false },
+  ];
+  const fields = buildDataTableRendererAttributes(rows, ["Approved"]);
+  const rendered = buildDataTableRendererRows(rows, ["Approved"]);
+  expect(fields[0]?.type.kind).toBe("string");
+  for (const [condition, value] of [
+    ["is", "false"],
+    ["contains", "a"],
+  ] as const) {
+    expect(
+      filterRowsByView(
+        rendered,
+        { conjunction: "and", rules: [{ attributeId: "Approved", condition, value }] },
+        fields,
+      ).map((row) => row.id),
+    ).toEqual(["no"]);
+  }
 });

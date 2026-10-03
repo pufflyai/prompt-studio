@@ -22,7 +22,7 @@ export const viewFilterConditionSchema = z.enum(conditionIds);
 export const viewFilterRuleSchema = z.object({
   attributeId: z.string().min(1),
   condition: viewFilterConditionSchema,
-  value: z.union([z.string(), z.number(), z.array(z.string())]).optional(),
+  value: z.union([z.boolean(), z.string(), z.number(), z.array(z.string())]).optional(),
 });
 const groupOf = <T extends z.ZodType>(rule: T) =>
   z.object({ conjunction: z.enum(["and", "or"]), rules: z.array(rule) });
@@ -43,6 +43,7 @@ export const viewSortSchema = z.object({ attributeId: z.string().min(1), directi
 /** What a rule's value must be for a condition the field kind accepts. */
 export const viewFilterValueKind = (kind: ViewFieldKind, condition: ViewFilterCondition) => {
   if (condition === "is-empty" || condition === "is-not-empty") return "none" as const;
+  if (kind === "boolean") return "boolean" as const;
   if (kind === "number") return "number" as const;
   if (kind === "date") return "day" as const;
   if (kind === "string") return "text" as const;
@@ -51,6 +52,7 @@ export const viewFilterValueKind = (kind: ViewFieldKind, condition: ViewFilterCo
 
 const valueNeeds = {
   none: "takes no value",
+  boolean: "needs a boolean",
   number: "needs a number",
   day: "needs a day such as 2026-10-02, today, or today-7",
   text: "needs text",
@@ -61,6 +63,7 @@ const valueNeeds = {
 const valueFits = (value: ViewFilterRule["value"], kind: ReturnType<typeof viewFilterValueKind>) => {
   if (value === undefined) return true;
   if (kind === "none") return false;
+  if (kind === "boolean") return typeof value === "boolean";
   if (kind === "number") return typeof value === "number" && Number.isFinite(value);
   if (kind === "day") return typeof value === "string" && VIEW_DAY_PATTERN.test(value);
   if (kind === "text") return typeof value === "string";

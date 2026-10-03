@@ -72,7 +72,7 @@ const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenc
         extensionId: view.extensionId,
         title: view.title,
         icon: view.icon,
-        resourceKind: resourceKindForView(metadata, view.id),
+        resourceKind: body.resourceKind ?? resourceKindForView(metadata, view.id),
         createRow: body.createRow
           ? {
               title: body.createRow.title,
@@ -109,7 +109,7 @@ const dataTableRenderers = (
         extensionId: view.extensionId,
         title: view.title,
         icon: view.icon,
-        resourceKind: resourceKindForView(metadata, view.id),
+        resourceKind: body.resourceKind ?? resourceKindForView(metadata, view.id),
         selectionActions: commandActions(body.selectionActions),
         rowActions: commandActions(body.rowActions),
         toolbarActions: commandActions(body.toolbarActions),
@@ -126,7 +126,7 @@ const treeRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchE
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,
-            resourceKind: resourceKindForView(metadata, view.id),
+            resourceKind: view.body.resourceKind ?? resourceKindForView(metadata, view.id),
           },
         ]
       : [],
@@ -141,7 +141,7 @@ const fileRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchE
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,
-            resourceKind: resourceKindForView(metadata, view.id),
+            resourceKind: view.body.resourceKind ?? resourceKindForView(metadata, view.id),
           },
         ]
       : [],
@@ -158,7 +158,7 @@ const controlsRenderers = (
             extensionId: view.extensionId,
             title: view.title,
             icon: view.icon,
-            resourceKind: resourceKindForView(metadata, view.id),
+            resourceKind: view.body.resourceKind ?? resourceKindForView(metadata, view.id),
           },
         ]
       : [],

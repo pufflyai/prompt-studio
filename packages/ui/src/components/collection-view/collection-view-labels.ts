@@ -33,6 +33,12 @@ export const conditionLabel = (condition: ViewFilterCondition, field?: Attribute
 
 /** A pill reads as a sentence, so a single option reads "is" or "is not". */
 export const pillConditionLabel = (rule: ViewFilterRule, field?: AttributeDescriptor) => {
+  if (
+    field?.type.kind === "boolean" &&
+    rule.value === false &&
+    (rule.condition === "is" || rule.condition === "is-not")
+  )
+    return conditionLabel(rule.condition === "is" ? "is-not" : "is");
   const single = Array.isArray(rule.value) && rule.value.length === 1;
   if (single && rule.condition === "is-any-of") return "is";
   if (single && rule.condition === "is-none-of") return "is not";
@@ -59,6 +65,7 @@ export const optionLabel = (field: AttributeDescriptor | undefined, value: strin
 export const ruleValueLabel = (rule: ViewFilterRule, field?: AttributeDescriptor) => {
   const { value } = rule;
   if (value === undefined) return "";
+  if (field?.type.kind === "boolean" && typeof value === "boolean") return field.label;
   if (Array.isArray(value)) return value.map((entry) => optionLabel(field, entry)).join(", ");
   if (field?.type.kind === "date" && typeof value === "string") return dayLabel(value);
   return String(value);
@@ -71,6 +78,7 @@ export const groupLabel = (group: ViewFilterGroup) =>
   `${groupLead(group)} ${group.rules.length} ${group.rules.length === 1 ? "rule" : "rules"}`;
 
 const DIRECTION_LABELS: Record<string, [string, string]> = {
+  boolean: ["False first", "True first"],
   number: ["1 → 9", "9 → 1"],
   date: ["Oldest first", "Newest first"],
   enum: ["Option order", "Reverse order"],
