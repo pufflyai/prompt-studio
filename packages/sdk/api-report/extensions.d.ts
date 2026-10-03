@@ -1244,12 +1244,20 @@ declare const harnessCommandStateSchema: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
     argumentHelp: z.ZodOptional<z.ZodString>;
+    composer: z.ZodOptional<z.ZodObject<{
+      label: z.ZodString;
+      modeId: z.ZodOptional<z.ZodString>;
+      reservedArguments: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    }, z.core.$strip>>;
+    disabledReason: z.ZodOptional<z.ZodString>;
   }, z.core.$strip>>;
   modes: z.ZodArray<z.ZodObject<{
     id: z.ZodString;
     label: z.ZodString;
     description: z.ZodString;
     state: z.ZodString;
+    tagText: z.ZodOptional<z.ZodString>;
+    closeActionId: z.ZodOptional<z.ZodString>;
     actions: z.ZodArray<z.ZodObject<{
       id: z.ZodString;
       label: z.ZodString;
