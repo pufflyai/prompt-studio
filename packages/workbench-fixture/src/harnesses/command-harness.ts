@@ -7,7 +7,7 @@ export const createCommandHarness = (modes: boolean) =>
     id: modes ? "native-modes" : "native-action",
     label: modes ? "Native modes fixture" : "Native action fixture",
     params: {
-      planning: { type: "boolean", label: "Planning", defaultValue: false },
+      planning: { type: "boolean", label: "Planning", defaultValue: false, control: "command" },
     },
     getCommandState: async (ctx, input) => {
       const goal = input.sessionId ? await ctx.state.get<string>(`goal:${input.sessionId}`) : undefined;

@@ -151,7 +151,7 @@ const ParamControl = (props: ParamControlProps) => {
 
 export const HarnessParamInlineControls = (props: HarnessParamInlineControlsProps) => {
   const { schema, defaults, overrides, onOverridesChange, disabled = false, size = "sm" } = props;
-  const entries = Object.entries(schema ?? {});
+  const entries = Object.entries(schema ?? {}).filter(([, descriptor]) => descriptor.control !== "command");
   if (entries.length === 0) return null;
 
   return (

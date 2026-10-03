@@ -24,20 +24,14 @@ interface LocalTag {
   closeLabel?: string;
 }
 export interface HarnessControlsProps {
-  slashCommands?: boolean;
   modes: HarnessMode[];
   draftTag?: LocalTag;
   sentTag?: LocalTag;
-  query: string;
   pending?: boolean;
   unavailable?: boolean;
-  literal?: boolean;
   onRefresh?: () => void;
-  onLiteralChange: (literal: boolean) => void;
   onAction: (modeId: string, actionId: string, argument?: string, modeSnapshot?: HarnessMode) => Promise<void>;
 }
-
-const shortLabel = (text: string) => (text.length > 48 ? `${text.slice(0, 34)}…${text.slice(-12)}` : text);
 
 const LocalModeTag = (props: { tag: LocalTag; onRefresh?: () => void }) => {
   const { tag, onRefresh } = props;
@@ -48,7 +42,7 @@ const LocalModeTag = (props: { tag: LocalTag; onRefresh?: () => void }) => {
           <Menu.Trigger asChild>
             <Tag.Label asChild>
               <button type="button" aria-label={tag.description}>
-                {shortLabel(tag.label)}
+                {tag.label}
               </button>
             </Tag.Label>
           </Menu.Trigger>
@@ -95,10 +89,9 @@ const NativeModeTag = (props: {
       /* The conversation owns operation errors. Keep the native tag until readback. */
     }
   };
-  let summary = mode.tagText;
-  if (pending) summary = ["Checking", mode.tagText].filter(Boolean).join(" · ");
-  if (unavailable) summary = ["Status unavailable", mode.tagText].filter(Boolean).join(" · ");
-  const label = [mode.label, summary].filter(Boolean).join(": ");
+  let status = mode.state;
+  if (pending) status = `Checking · Last confirmed: ${mode.state}`;
+  if (unavailable) status = `Status unavailable · Last confirmed: ${mode.state}`;
   return (
     <Popover.Root
       open={open}
@@ -108,16 +101,12 @@ const NativeModeTag = (props: {
         if (!details.open) setEditing(null);
       }}
     >
-      <Tooltip
-        content={`${mode.label}: ${mode.description} · ${unavailable ? "Status unavailable" : mode.state}`}
-        openDelay={300}
-        closeDelay={150}
-      >
+      <Tooltip content={`${mode.label}: ${mode.description} · ${status}`} openDelay={300} closeDelay={150}>
         <Tag.Root variant="ticket" size="composer">
           <Popover.Trigger asChild>
             <Tag.Label asChild>
               <button type="button" aria-label={`${mode.label} details`}>
-                {shortLabel(label)}
+                {mode.label}
               </button>
             </Tag.Label>
           </Popover.Trigger>
@@ -139,7 +128,7 @@ const NativeModeTag = (props: {
                 {mode.description}
               </Text>
               <Text textStyle="label/XS/regular" color="fg.muted">
-                {unavailable ? "Status unavailable" : mode.state}
+                {status}
               </Text>
               {editing?.action.argument ? (
                 <Field.Root>
@@ -189,20 +178,7 @@ const NativeModeTag = (props: {
 };
 
 export const HarnessControls = (props: HarnessControlsProps) => {
-  const {
-    modes,
-    draftTag,
-    sentTag,
-    query,
-    pending,
-    unavailable,
-    literal,
-    onRefresh,
-    onLiteralChange,
-    onAction,
-    slashCommands = true,
-  } = props;
-  const commandInput = !draftTag && slashCommands && /^\/[^\s/]+(?:\s|$)/.test(query);
+  const { modes, draftTag, sentTag, pending, unavailable, onRefresh, onAction } = props;
   return (
     <HStack gap="2xs" minW="0" aria-label="Harness controls">
       {modes.map((mode) => (
@@ -217,11 +193,6 @@ export const HarnessControls = (props: HarnessControlsProps) => {
       ))}
       {draftTag ? <LocalModeTag tag={draftTag} /> : null}
       {sentTag ? <LocalModeTag tag={sentTag} onRefresh={onRefresh} /> : null}
-      {commandInput ? (
-        <Button size="xs" variant="ghost" aria-pressed={Boolean(literal)} onClick={() => onLiteralChange(!literal)}>
-          {literal ? "Send as message" : "Run native command"}
-        </Button>
-      ) : null}
     </HStack>
   );
 };

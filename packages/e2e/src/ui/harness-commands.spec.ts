@@ -41,10 +41,19 @@ for (const [harness, modes] of [
     await send.click();
     await expect(editor).toBeEmpty();
     const controls = page.getByLabel("Harness controls", { exact: true });
+    const goal = controls.getByRole("button", { name: "Goal details" });
+    const expectObjective = async (objective: string) => {
+      await expect(goal).toHaveText("Goal");
+      await goal.hover();
+      await expect(page.getByRole("tooltip")).toContainText(objective);
+    };
     if (modes) {
-      await expect(controls.getByRole("button", { name: "Goal details" })).toContainText("Finish the release notes");
-      await request.post(`${url}/harness-commands`, { data: { operation: { kind: "command", text: "/plan" } } });
-      await expect(controls.getByRole("button", { name: "Plan details" })).toBeVisible();
+      await expectObjective("Finish the release notes");
+      await editor.fill("Review the design /pl");
+      await menu.getByRole("option", { name: "/plan" }).click();
+      await expect(controls.getByRole("button", { name: "Remove Plan" })).toBeVisible();
+      await send.click();
+      await expect(controls.getByRole("button", { name: "Plan details" })).toHaveText("Plan");
       await page.reload();
       await expect(controls.getByRole("button", { name: "Goal details" })).toBeVisible();
       await expect(controls.getByRole("button", { name: "Plan details" })).toBeVisible();
@@ -53,7 +62,7 @@ for (const [harness, modes] of [
       await page.getByRole("button", { name: "Edit", exact: true }).click();
       await page.getByRole("textbox", { name: "Objective" }).fill("Updated native objective");
       await page.getByRole("button", { name: "Apply", exact: true }).click();
-      await expect(controls.getByRole("button", { name: "Goal details" })).toContainText("Updated native objective");
+      await expectObjective("Updated native objective");
       await expect(editor).toHaveText("Keep this unsent draft");
       await controls.getByRole("button", { name: "Goal details" }).click();
       await page.getByRole("button", { name: "Edit", exact: true }).click();
@@ -61,13 +70,13 @@ for (const [harness, modes] of [
       await request.post(`${url}/harness-commands`, {
         data: { operation: { kind: "command", text: "/goal External change" } },
       });
-      await expect(controls.getByRole("button", { name: "Goal details" })).toContainText("External change");
+      await expectObjective("External change");
       await page.getByRole("button", { name: "Apply", exact: true }).click();
       await expect(
         page.getByText("The native mode changed. Review its current details before acting again."),
       ).toBeVisible();
       await expect(page.getByRole("textbox", { name: "Objective" })).toHaveValue("Stale edit");
-      await expect(controls.getByRole("button", { name: "Goal details" })).toContainText("External change");
+      await expectObjective("External change");
       await page.getByRole("button", { name: "Cancel", exact: true }).click();
       await page.keyboard.press("Escape");
       await page.setViewportSize({ width: 600, height: 720 });
@@ -91,16 +100,5 @@ for (const [harness, modes] of [
     await send.click();
     await expect(editor).toHaveText("/fail");
     await expect(page.getByText(/Native command \/fail failed/)).toBeVisible();
-    await editor.fill("/goal");
-    await page.getByRole("button", { name: "Run native command", exact: true }).click();
-    await send.click();
-    await expect.poll(async () => (await (await request.get(url)).json()).status).toBe("completed");
-    const conversation = await (await request.get(`${url}/conversation`)).json();
-    expect(
-      conversation.messages.some(
-        (message: { role: string; parts: { type: string; text?: string }[] }) =>
-          message.role === "user" && message.parts.some((part) => part.text === "/goal"),
-      ),
-    ).toBe(true);
   });
 }

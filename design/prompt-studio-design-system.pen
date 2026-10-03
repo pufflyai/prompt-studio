@@ -26742,6 +26742,7 @@
                           "name": "ChatInput",
                           "width": "fill_container",
                           "stroke": "$ds-border-subtle",
+                          "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                           "descendants": {
                             "scrOP": {
                               "theme": {
@@ -41850,6 +41851,7 @@
                               "type": "ref",
                               "ref": "Tboo4",
                               "name": "ChatInput",
+                              "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                               "descendants": {
                                 "L109Bg": {
                                   "content": "ChatInput"
@@ -45216,6 +45218,7 @@
                   "type": "ref",
                   "ref": "TDV8W",
                   "name": "ChatInput",
+                  "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                   "descendants": {
                     "scrOP": {
                       "theme": {
@@ -126319,7 +126322,7 @@
               "type": "frame",
               "id": "aQk0l",
               "name": "cmp/ComposerModeTag",
-              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal.",
+              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
               "theme": {
                 "badge": "subtle",
                 "palette": "gray",
@@ -126417,6 +126420,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -126463,33 +126467,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "KbJOD",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "stroke": "$ds-border",
-                              "strokeWidth": 0,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -126635,6 +126612,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -126681,33 +126659,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "eBT7H",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "stroke": "$ds-border",
-                              "strokeWidth": 0,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -126815,6 +126766,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -126866,33 +126818,6 @@
                               }
                             },
                             {
-                              "id": "qhkrc",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "stroke": "$ds-border",
-                              "strokeWidth": 0,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
                               "id": "Zynd1",
                               "type": "ref",
                               "ref": "clw66",
@@ -126936,7 +126861,13 @@
                               "padding": [
                                 0,
                                 "$badge-px"
-                              ]
+                              ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "descendants": {
+                                "wLHjb": {
+                                  "content": "Goal"
+                                }
+                              }
                             }
                           ]
                         },
@@ -127005,6 +126936,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -127057,33 +126989,6 @@
                               }
                             },
                             {
-                              "id": "jvzKq",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "stroke": "$ds-border",
-                              "strokeWidth": 0,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
                               "id": "h4naV",
                               "type": "ref",
                               "ref": "clw66",
@@ -127129,6 +127034,7 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Plan in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
                                   "content": "Plan"
@@ -127153,9 +127059,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Active: Finish…notes"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -127180,7 +127087,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The submitted objective stays in the 28px tag. Hover or focus shows the full text; click opens a compact details menu. Active is shown only after provider confirmation.",
+                  "content": "The tag stays short: Goal. Hover or focus shows the submitted objective, native status and available metrics. Click opens compact details. Status is confirmed only by provider readback.",
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -127284,6 +127191,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -127322,32 +127230,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "NhGEg",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -127396,9 +127278,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Active: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -127608,6 +127491,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -127646,32 +127530,6 @@
                                 },
                                 "sefGB": {
                                   "content": "Opus 4.8",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "y4X2ox",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -127720,9 +127578,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Active: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -127941,6 +127800,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -127984,32 +127844,6 @@
                               }
                             },
                             {
-                              "id": "qoOy4",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
                               "id": "uwm6P",
                               "type": "ref",
                               "ref": "clw66",
@@ -128048,7 +127882,7 @@
                               },
                               "fill": "$ds-bg-subtle",
                               "strokeWidth": 0,
-                              "context": "Status unavailable. Label opens details; close is Hide submitted goal, a local dismissal only. Do not clear an unknown native goal.",
+                              "context": "Status unavailable. Label opens details; close is Hide submitted goal, a local dismissal only. Do not clear an unknown native goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "cornerRadius": "$badge-radius",
                               "padding": [
                                 0,
@@ -128056,7 +127890,7 @@
                               ],
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Sent: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -128267,6 +128101,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -128305,32 +128140,6 @@
                                 },
                                 "sefGB": {
                                   "content": "OpenCode",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "rq7oQ",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -128379,6 +128188,7 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Plan in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
                                   "content": "Plan"
@@ -128659,6 +128469,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -128696,32 +128507,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "mQR0v",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -128770,6 +128555,7 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Plan in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
                                   "content": "Plan"
@@ -128893,6 +128679,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -128930,32 +128717,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "IQ4U2",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -129004,6 +128765,7 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Plan in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
                                   "content": "Plan"
@@ -129028,6 +128790,7 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
                                   "content": "Goal"
@@ -129112,6 +128875,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -129149,32 +128913,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "FQ2Pp",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -129223,6 +128961,7 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Plan in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
                                   "content": "Plan"
@@ -129247,9 +128986,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Active: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -129334,6 +129074,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -129371,32 +129112,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "Xa5OF",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -129445,9 +129160,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Active: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -129588,6 +129304,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -129626,32 +129343,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "w63yW",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -129700,9 +129391,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Starting: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -129775,6 +129467,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -129813,32 +129506,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "WEKuI",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -129887,9 +129554,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Paused: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -129986,6 +129654,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -130024,32 +129693,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "yniPQ",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -130098,9 +129741,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Complete: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -130173,6 +129817,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -130211,32 +129856,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "RnQsu",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -130285,9 +129904,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Clearing: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -130393,6 +130013,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -130431,32 +130052,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "Po1BF",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -130505,9 +130100,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Checking: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -130581,6 +130177,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -130619,32 +130216,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "YGRCB",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -130693,9 +130264,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Active: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -130894,6 +130466,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -130932,32 +130505,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "i8Y0yk",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -131006,9 +130553,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Unavailable: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -131081,6 +130629,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -131119,32 +130668,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "AkbXN",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -131193,9 +130716,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Checking: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -131277,6 +130801,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -131315,32 +130840,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "eQiQa",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -131389,6 +130888,7 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
                                   "content": "Goal"
@@ -131464,6 +130964,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -131502,32 +131003,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "MN0LN",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -131576,6 +131051,7 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
                                   "content": "Goal"
@@ -131660,6 +131136,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -131698,32 +131175,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "tAf1a",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -131772,9 +131223,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Active: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }
@@ -131847,6 +131299,7 @@
                       "ref": "TDV8W",
                       "name": "ChatInput",
                       "width": "fill_container",
+                      "context": " Plan is selected through /plan and cleared with the tag close action. Do not render a Default/Plan parameter dropdown or Run native command toggle. Tags contain only the harness label; additional information belongs in hover and focus tooltips.",
                       "descendants": {
                         "m7n0s": {
                           "width": 0
@@ -131885,32 +131338,6 @@
                                 },
                                 "sefGB": {
                                   "content": "GPT-5.4",
-                                  "fontSize": 12
-                                }
-                              }
-                            },
-                            {
-                              "id": "R5UMD",
-                              "type": "ref",
-                              "ref": "clw66",
-                              "name": "Default parameter",
-                              "height": 28,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs",
-                                "trig": "default"
-                              },
-                              "fill": "$btn-fill",
-                              "strokeWidth": 0,
-                              "descendants": {
-                                "xr1ec": {
-                                  "enabled": false
-                                },
-                                "l7dix": {
-                                  "padding": 0
-                                },
-                                "sefGB": {
-                                  "content": "Default",
                                   "fontSize": 12
                                 }
                               }
@@ -131959,9 +131386,10 @@
                                 0,
                                 "$badge-px"
                               ],
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
                               "descendants": {
                                 "wLHjb": {
-                                  "content": "Goal · Active: Migrate…pass"
+                                  "content": "Goal"
                                 }
                               }
                             }

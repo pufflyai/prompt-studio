@@ -40,6 +40,22 @@ export const EffortLevels: Story = {};
 export const RememberedEffort: Story = {
   args: { overrides: { effort: "high" } },
 };
+export const CommandOwnedPlan: Story = {
+  args: {
+    schema: {
+      ...meta.args.schema,
+      collaboration: {
+        type: "select",
+        control: "command",
+        defaultValue: "plan",
+        options: [
+          { label: "Default", value: "default" },
+          { label: "Plan", value: "plan" },
+        ],
+      },
+    },
+  },
+};
 export const LevelColors: Story = {
   render: (props) => (
     <Flex gap="4" wrap="wrap">

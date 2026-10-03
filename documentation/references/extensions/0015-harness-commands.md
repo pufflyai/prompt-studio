@@ -24,7 +24,7 @@ The input provides the session and native IDs, current model and parameters, and
 
 ## Client tools
 
-Chat completes native commands in an editor popover when `/` starts the message. Type to filter, use arrow keys to select, and press Enter or Tab to insert the selected command as plain text. Escape closes the popover without changing the draft. Sending invokes the native command; completion alone never runs it. The old `#` reference-completion trigger is removed.
+Chat completes native commands in an editor popover at a valid caret boundary, including after objective text. Type to filter and use arrow keys, Enter, Tab or pointer selection. Commands with `composer` metadata remove the slash query and tag the remaining draft; other commands insert plain command text. Escape closes the popover without changing the draft. Completion alone never runs a command. The old `#` reference-completion trigger is removed.
 
 `client.sessions.getHarnessCommands(sessionId)` reads the current selected harness's descriptors and authoritative state. `client.sessions.invokeHarnessOperation(sessionId, operation, harnessId?)` invokes the same operation used by chat. Supplying the discovered qualified harness ID rejects a stale invocation after the harness changes.
 
@@ -32,7 +32,7 @@ Chat completes native commands in an editor popover when `/` starts the message.
 
 The authenticated endpoints are `GET` and `POST /v1/sessions/:id/harness-commands`. POST accepts `{ operation, harnessId? }` and returns `status: "completed" | "started"` with an optional native message. Started operations report subsequent status and conversation changes through existing session sync and streams. Exclusive operations reject conflicts rather than creating a second queue. Controls do not reserve another slot.
 
-Chat completion inserts a command into the composer; submission executes it. Unknown manually entered commands still reach the provider. The composer can send slash text as an ordinary message. Absolute paths and embedded slash text remain ordinary prompts. Failed commands retain or restore their draft. Each mode renders its own state and native actions. Reconnect reads provider state again.
+Send executes tagged input or leading native command text directly, without a separate command toggle. Unknown manually entered commands still reach the provider. Absolute paths and embedded slash text remain ordinary prompts, as does slash input for harnesses without native command support. Failed commands retain or restore their draft. Mode tags show short provider labels such as Goal and Plan; hover, keyboard focus and compact details expose the objective and native state. Reconnect reads provider state again.
 
 ## First-party mappings
 

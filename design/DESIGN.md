@@ -44,7 +44,7 @@ Read this file before working on UI or design. Use these patterns across the app
 - Attach and model parameter buttons use the shared `ghost` variant. Send uses the implemented `primary` IconButton, including its disabled and pause states. All controls have a matching 28 px height.
 - Goal, Plan and other composer tags use the shared subtle ticket tag pill shape, muted foreground and medium label. Use the 28 px badge size. Place tags immediately after the model parameters.
 - Slash completion uses the shared Menu surface and full-width menu rows, with no leading icons or outer padding.
-- Submitted goal tags show the objective and confirmed native status. Make the full objective available on hover, keyboard focus and in a compact Popover with Menu styling. Show only provider-supported fields and actions; unavailable status must not appear as Active.
+- Composer tags show short names such as Goal and Plan. Show the objective, native status and available metrics on hover, keyboard focus and in a compact Popover with Menu styling. Show only provider-supported fields and actions; unavailable status must not appear as Active. Select these modes with slash commands rather than a duplicate Default/Plan picker.
 - Multiple composer modes require verified support from the harness. Do not concatenate native slash commands. Keep goal state, planning selection and plan progress separate. See the [composer modes PRD](../documentation/requirements/dashboard/0006-composer-modes.md).
 
 - The chat has no banners. A problem appears in the conversation, where the user is looking, styled like an agent error (`AlertMessage`, `status="error"`).

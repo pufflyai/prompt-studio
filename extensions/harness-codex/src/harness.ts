@@ -61,14 +61,17 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
     label: l10n("harness.codex", "Codex"),
     skills: { dir: ".agents/skills" },
     params: {
-      collaboration_mode: params.select({
-        label: "Collaboration",
-        defaultValue: "default",
-        options: [
-          { label: "Default", value: "default" },
-          { label: "Planning", value: "plan" },
-        ],
-      }),
+      collaboration_mode: {
+        control: "command",
+        ...params.select({
+          label: "Collaboration",
+          defaultValue: "default",
+          options: [
+            { label: "Default", value: "default" },
+            { label: "Planning", value: "plan" },
+          ],
+        }),
+      },
       model_reasoning_effort: params.select({
         label: "Reasoning effort",
         defaultValue: "medium",

@@ -47,7 +47,7 @@ Current source boundaries: [Codex state](../../../extensions/harness-codex/src/c
 
 ## Visible submitted state
 
-After submission, use a compact label such as `Goal · Active: Migrate…pass`. The objective is visible in the toolbar, not only inside a tooltip. Truncate in the middle. Keep the close target at its normal size.
+Keep tag labels short: `Goal` and `Plan`. Show the full submitted objective and native state in the tooltip and compact details. Keep the close target at its normal size. Select these tags with slash commands; do not show a duplicate Default/Plan parameter picker. Providers declare command-owned parameters with `control: "command"` while retaining their schema and native values. Typed native commands submit directly without a Run native command control.
 
 The label opens a compact Popover with shared Menu styling. This supports focus in the inline objective editor. Hover and keyboard focus show the full objective and state after the shared tooltip delay. Touch and keyboard activation open the same details surface.
 
@@ -104,7 +104,7 @@ Expose native explanations and task lists when the adapter returns them. A task 
 | Reserved objective word | Typed native input must distinguish an objective from clear/pause/resume actions. If a text-only native API cannot represent it, explain the unsupported value; do not run a destructive action. |
 | Attachments with goal input | Use only a native operation that supports them. If unavailable, explain before Send and retain them. Do not discard attachments or send a second implicit prompt. |
 | Queued prompt or busy provider | Respect native availability. Keep draft intent and text when an operation cannot run while busy. Revalidate capability and state before dispatch. |
-| Narrow toolbar | Keep one 28 px row. Truncate the objective before shrinking action targets. Scroll remaining controls when needed. |
+| Narrow toolbar | Keep one 28 px row and short Goal/Plan labels. Keep full objectives in tooltips and details. Scroll remaining controls when needed. |
 | Status read | Check status is separate from setting a goal. Preserve the draft while reading. Report unavailable status plainly. |
 
 ## Acceptance for implementation

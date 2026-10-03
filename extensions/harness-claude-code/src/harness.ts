@@ -117,14 +117,17 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     label: l10n("harness.claudeCode", "Claude Code"),
     skills: { dir: ".claude/skills" },
     params: {
-      permission_mode: params.select({
-        label: "Permission mode",
-        defaultValue: "bypassPermissions",
-        options: [
-          { label: "Default", value: "bypassPermissions" },
-          { label: "Planning", value: "plan" },
-        ],
-      }),
+      permission_mode: {
+        control: "command",
+        ...params.select({
+          label: "Permission mode",
+          defaultValue: "bypassPermissions",
+          options: [
+            { label: "Default", value: "bypassPermissions" },
+            { label: "Planning", value: "plan" },
+          ],
+        }),
+      },
       thinking: params.select({
         label: "Thinking",
         defaultValue: "high",

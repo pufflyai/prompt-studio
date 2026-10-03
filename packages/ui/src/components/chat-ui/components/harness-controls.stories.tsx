@@ -11,9 +11,7 @@ const meta: Meta<typeof HarnessControls> = {
   title: "Patterns/Chat/Harness Controls",
   component: HarnessControls,
   args: {
-    query: "/",
     modes: [],
-    onLiteralChange: () => {},
     onAction: async () => {},
   },
 };
@@ -34,10 +32,9 @@ const NewConversationComposer = (props: HarnessControlsProps) => {
           <HarnessControls
             {...props}
             modes={[]}
-            query={query}
             draftTag={
               selected
-                ? { label: "Goal", description: "Goal: draft input", onClose: () => setSelected(false) }
+                ? { label: "Goal", description: `Goal: ${query} · Draft`, onClose: () => setSelected(false) }
                 : undefined
             }
           />
@@ -60,7 +57,12 @@ export const NewConversation: Story = {
     await expect(commands).toBeVisible();
     await userEvent.click(within(commands).getByRole("option", { name: "/goal" }));
     await expect(canvas.getByRole("textbox").innerText.trim()).toBe("Finish the release notes");
-    await expect(canvas.getByRole("button", { name: "Goal: draft input" })).toBeVisible();
+    const goal = canvas.getByRole("button", { name: /Goal: Finish the release notes/ });
+    await expect(goal).toHaveTextContent("Goal");
+    await userEvent.hover(goal);
+    await expect(await within(canvasElement.ownerDocument.body).findByRole("tooltip")).toHaveTextContent(
+      /Finish the release notes/,
+    );
     await userEvent.click(canvas.getByRole("button", { name: "Remove Goal" }));
     await expect(canvas.getByRole("textbox").innerText.trim()).toBe("Finish the release notes");
   },
@@ -73,7 +75,6 @@ export const IndependentModes: Story = {
     />
   ),
   args: {
-    query: "",
     modes: [
       {
         id: "planning",
@@ -101,12 +102,16 @@ export const IndependentModes: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Goal details", exact: true }));
-    await userEvent.click(await body.findByRole("button", { name: "Edit", exact: true }));
+    const goal = canvas.getByRole("button", { name: "Goal details" });
+    await expect(goal).toHaveTextContent("Goal");
+    goal.focus();
+    await expect(await body.findByRole("tooltip")).toHaveTextContent(/Finish the migration/);
+    await userEvent.click(goal);
+    await userEvent.click(await body.findByRole("button", { name: "Edit" }));
     const objective = await body.findByRole("textbox", { name: "Objective" });
     await userEvent.clear(objective);
     await userEvent.type(objective, "Revised native objective");
-    await userEvent.click(body.getByRole("button", { name: "Apply", exact: true }));
+    await userEvent.click(body.getByRole("button", { name: "Apply" }));
     await expect(canvas.getByRole("textbox").innerText).toBe("Keep this unsent draft");
   },
 };
@@ -114,24 +119,21 @@ export const Pending: Story = { args: { ...IndependentModes.args, pending: true 
 export const StatusUnavailable: Story = { args: { ...IndependentModes.args, unavailable: true, onRefresh: () => {} } };
 export const SentReference: Story = {
   args: {
-    query: "",
     sentTag: {
-      label: "Goal: Sent · Finish the release notes",
+      label: "Goal",
       description: "Finish the release notes · Native status is not confirmed. Closing hides this reference only.",
       onClose: () => {},
     },
     onRefresh: () => {},
   },
 };
-export const LiteralInput: Story = { args: { query: "/goal is an example", literal: true } };
 export const NativeError: Story = {
   render: (args) => (
     <>
       <AlertMessage status="error" title="Command not sent">
-        This harness does not support this command. Your draft is ready to edit or send as a message.
+        This harness does not support this command. Your draft is ready to edit.
       </AlertMessage>
       <HarnessControls {...args} />
     </>
   ),
-  args: { query: "/unknown" },
 };

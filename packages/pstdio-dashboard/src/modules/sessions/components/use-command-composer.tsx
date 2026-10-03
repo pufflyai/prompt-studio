@@ -40,7 +40,6 @@ export const useCommandComposer = (
   const draftText = useRef(chatDraft.seed);
   const commands = useHarnessCommands(sessionId, selectedAgent, draft, createCommand);
   const [commandText, setCommandText] = useState("");
-  const [literalCommand, setLiteralCommand] = useState(false);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [commandOutcome, setCommandOutcome] = useState<string | null>(null);
   const [intent, setIntent] = useState<ComposerIntent | null>(null);
@@ -75,7 +74,6 @@ export const useCommandComposer = (
     previousSession.current = sessionId;
     const handedOff = takeNativeCommand(sessionId, selectedAgent);
     pendingCommand.current = handedOff?.kind === "pending" ? { scope, ...handedOff } : null;
-    setLiteralCommand(false);
     setCommandError(null);
     setCommandOutcome(handedOff?.kind === "outcome" ? (handedOff.message ?? null) : null);
     setSubmitted(handedOff?.submitted ?? null);
@@ -141,7 +139,7 @@ export const useCommandComposer = (
       if (questionResponse) throw new Error("Remove the draft tag before answering the agent's question.");
       return taggedCommandOperation(intent, text, selectedAgent, commands.state, attachments.length);
     }
-    if (literalCommand || questionResponse || !/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
+    if (questionResponse || !/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
     if (!commands.state)
       throw new Error(
         commands.loading
@@ -149,7 +147,7 @@ export const useCommandComposer = (
           : "Native commands are unavailable. Reload the session and try again.",
       );
     if (!commands.state.slashCommands) return undefined;
-    if (attachments.length) throw new Error("Remove attachments or send this command as a message.");
+    if (attachments.length) throw new Error("Remove attachments before running this command.");
     assertSingleCommand(text, commands.state);
     return { kind: "command" as const, text };
   };
@@ -167,7 +165,6 @@ export const useCommandComposer = (
               ? {
                   onSelect: () => {
                     setIntent({ harnessId: selectedAgent, command });
-                    setLiteralCommand(false);
                   },
                 }
               : {}),
@@ -190,14 +187,15 @@ export const useCommandComposer = (
     },
     controls: (
       <HarnessControls
-        slashCommands={commands.state?.slashCommands}
         modes={commands.state?.modes ?? []}
         draftTag={
           intent
             ? {
-                label: `${intent.command.composer?.label ?? intent.command.name}${commands.invoke.isPending ? " · Starting" : ""}`,
+                label: intent.command.composer?.label ?? intent.command.name,
                 closeLabel: `Remove ${intent.command.composer?.label ?? intent.command.name}`,
-                description: intentProblem ?? `${intent.command.composer?.label}: draft input`,
+                description:
+                  intentProblem ??
+                  `${intent.command.composer?.label}: ${commandText.trim() || "draft input"} · ${commands.invoke.isPending ? "Starting" : "Draft"}`,
                 onClose: () => setIntent(null),
               }
             : undefined
@@ -205,19 +203,16 @@ export const useCommandComposer = (
         sentTag={
           submitted && !commands.state?.modes.some((mode) => mode.id === submitted.intent.command.composer?.modeId)
             ? {
-                label: `${submitted.intent.command.composer?.label}: Sent · ${submitted.objective}`,
+                label: submitted.intent.command.composer?.label ?? submitted.intent.command.name,
                 description: `${submitted.objective} · Native status is not confirmed. Closing hides this reference only.`,
                 onClose: () => setSubmitted(null),
                 closeLabel: `Hide submitted ${submitted.intent.command.composer?.label?.toLowerCase() ?? "input"}`,
               }
             : undefined
         }
-        query={commandText}
         pending={commands.invoke.isPending}
-        literal={literalCommand}
         unavailable={Boolean(commands.error)}
         onRefresh={commands.refresh}
-        onLiteralChange={setLiteralCommand}
         onAction={async (modeId, actionId, argument, modeSnapshot) => {
           const result = await invokeCommand({ kind: "mode-action", modeId, actionId, argument }, modeSnapshot);
           if (result.sessionId) onCreated(result.sessionId, "New session");
