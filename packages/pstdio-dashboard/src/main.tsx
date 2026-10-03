@@ -41,7 +41,7 @@ const renderDashboard = async () => {
     <StrictMode>
       <QueryClientProvider client={dashboardQueryClient}>
         <KanbanRendererStorageProvider storage={storage}>
-          <SyncProvider>
+          <SyncProvider workbench={dashboardWorkbench}>
             <Workbench
               workbench={dashboardWorkbench}
               titleBar={projectTabs && <DesktopProjectTabs workbench={dashboardWorkbench} {...projectTabs} />}

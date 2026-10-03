@@ -1,4 +1,7 @@
 {
+  "connection": {
+    "lost": "Connexion au serveur perdue. Reconnexion automatique en cours."
+  },
   "buttons": {
     "save": "Enregistrer",
     "cancel": "Annuler",

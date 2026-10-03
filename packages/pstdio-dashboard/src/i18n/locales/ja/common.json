@@ -1,4 +1,7 @@
 {
+  "connection": {
+    "lost": "サーバーとの接続が切れました。自動的に再接続しています。"
+  },
   "folderPicker": {
     "legend": "フォルダ名をクリックして移動 • アクションボタンで選択",
     "manualPathLabel": "パスを手動入力:",

@@ -126063,6 +126063,146 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "vdT1s",
+      "x": 23000,
+      "y": 0,
+      "name": "Backend connection · Status bar",
+      "theme": {
+        "mode": "light"
+      },
+      "width": 560,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "OzMHr",
+          "fill": "$ds-fg",
+          "content": "Backend connection",
+          "fontFamily": "$font-body",
+          "fontSize": 18,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "HHaAW",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Keep loaded navigation visible during an outage. Show a warning in the trailing status bar. Remove it when live sync reconnects.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "JxtIH",
+          "name": "Disconnected · light",
+          "theme": {
+            "mode": "light"
+          },
+          "width": "fill_container",
+          "height": 28,
+          "fill": "$ds-bg",
+          "padding": [
+            0,
+            8
+          ],
+          "justifyContent": "end",
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "DfBj8",
+              "type": "ref",
+              "ref": "dbK8Z",
+              "name": "Backend connection warning",
+              "theme": {
+                "badge": "plain",
+                "palette": "orange",
+                "size": "sm"
+              },
+              "descendants": {
+                "ohhQY": {
+                  "type": "icon",
+                  "id": "Cii5R",
+                  "name": "Warning",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "triangle-alert",
+                  "library": "lucide",
+                  "fill": "$ds-warning"
+                },
+                "FaaBK": {
+                  "content": "Reconnecting",
+                  "fill": "$ds-warning"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "cyBwS",
+          "name": "Disconnected · dark",
+          "theme": {
+            "mode": "dark"
+          },
+          "width": "fill_container",
+          "height": 28,
+          "fill": "$ds-bg",
+          "padding": [
+            0,
+            8
+          ],
+          "justifyContent": "end",
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "wyVvw",
+              "type": "ref",
+              "ref": "dbK8Z",
+              "name": "Backend connection warning",
+              "theme": {
+                "badge": "plain",
+                "palette": "orange",
+                "size": "sm"
+              },
+              "descendants": {
+                "ohhQY": {
+                  "type": "icon",
+                  "id": "WU3QO",
+                  "name": "Warning",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "triangle-alert",
+                  "library": "lucide",
+                  "fill": "$ds-warning"
+                },
+                "FaaBK": {
+                  "content": "Reconnecting",
+                  "fill": "$ds-warning"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "Cnzlf",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Hover or focus: Backend connection lost. Reconnecting automatically. Connected: no warning. View-specific failures retain their error notice.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
     }
   ],
   "themes": {

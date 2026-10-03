@@ -1,4 +1,7 @@
 {
+  "connection": {
+    "lost": "與伺服器的連線已中斷，正在自動重新連線。"
+  },
   "buttons": {
     "save": "儲存",
     "cancel": "取消",
