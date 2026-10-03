@@ -31,17 +31,6 @@ export const setConjunction = (
   ...filter,
   conjunction,
 });
-const isOptionRule = (rule: ViewFilterRule) =>
-  Array.isArray(rule.value) ||
-  ["is-any-of", "is-none-of", "has-any-of", "has-all-of", "has-none-of", "is-empty", "is-not-empty"].includes(
-    rule.condition,
-  );
-
-/** The picker edits the field's existing selection without changing its predicate. */
-export const quickOptionValues = (filter: ViewFilterGroup, attributeId: string) => {
-  const rule = filter.rules.find((entry) => entry.attributeId === attributeId && isOptionRule(entry));
-  return rule && Array.isArray(rule.value) ? rule.value : [];
-};
 /** Selecting a categorical value replaces an empty predicate in the same edit. */
 export const selectRuleValues = (
   field: AttributeDescriptor,

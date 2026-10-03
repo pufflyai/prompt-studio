@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { DataTable } from "./data-table";
 import type { DataTableProps, DataTableSavedView, DataTableViewsSource, RowData } from "./types";
 import { useDataTableViewStore } from "./use-data-table-view";
@@ -122,6 +122,17 @@ const SavedViewsTable = () => {
 /** Filters, sorts, and display settings belong to the saved view. */
 export const SavedViews: Story = {
   render: () => <SavedViewsTable />,
+  play: async ({ canvasElement }) => {
+    fireEvent.contextMenu(within(canvasElement).getByRole("tab", { name: "High score", exact: true }));
+    const menu = await within(document.body).findByRole("menu");
+    const viewport = menu.querySelector('[data-part="viewport"]')!;
+    await waitFor(() => expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.clientWidth));
+    expect(viewport.scrollHeight).toBeLessThanOrEqual(viewport.clientHeight);
+    const items = within(menu).getAllByRole("menuitem");
+    expect(items.map((item) => item.textContent)).toEqual(["Rename", "Duplicate", "Set as default", "Delete view"]);
+    expect(within(menu).getByRole("menuitem", { name: "Set as default" }).querySelector("svg")).not.toBeNull();
+    expect(menu.querySelectorAll('[data-part="separator"]')).toHaveLength(2);
+  },
 };
 
 /** Rows group by value in option order; empty values form the last group, and collapsing is screen state. */

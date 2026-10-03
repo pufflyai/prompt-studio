@@ -1,4 +1,4 @@
-import { Button, Icon, Stack } from "@chakra-ui/react";
+import { Icon, Stack } from "@chakra-ui/react";
 import { normalizeBooleanViewRule, type ViewFilterRule } from "@pstdio/sdk/extensions";
 import { Check, Type, X } from "lucide-react";
 import { useState } from "react";
@@ -32,9 +32,14 @@ const ScalarPickerValue = (props: FilterPickerValuesProps & { rule: ViewFilterRu
       }}
     >
       <RuleValueEditor field={field} rule={{ ...rule, value }} options={options} onChange={setValue} />
-      <Button size="2xs" variant="subtle" disabled={!complete} onClick={submit}>
-        Apply filter
-      </Button>
+      <ListRow
+        id="apply-filter"
+        role="button"
+        variant="compact"
+        label="Apply filter"
+        disabled={!complete}
+        onActivate={submit}
+      />
     </Stack>
   );
 };
@@ -47,9 +52,14 @@ export const FilterPickerValues = (props: FilterPickerValuesProps) => {
   const rule = scalar && ["is-empty", "is-not-empty"].includes(source.condition) ? newRule(field) : source;
   if (field.type.kind === "string")
     return (
-      <Button size="2xs" variant="ghost" justifyContent="start" onClick={() => onSelectRule(rule)}>
-        <Type /> Filter by text
-      </Button>
+      <ListRow
+        id="filter-by-text"
+        role="button"
+        variant="compact"
+        label="Filter by text"
+        icon={<Icon as={Type} boxSize="3" />}
+        onActivate={() => onSelectRule(rule)}
+      />
     );
   if (field.type.kind === "boolean")
     return (
