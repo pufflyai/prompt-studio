@@ -1,6 +1,6 @@
-import { Badge, Box, Button, HStack, Icon, Input, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, Icon, IconButton, Input, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { ChevronRight, ListFilter, Search } from "lucide-react";
+import { ChevronRight, ListFilter, Search, X } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
@@ -8,7 +8,7 @@ import { ListRow } from "../list-row/list-row";
 import { fieldIcon } from "./collection-view-field-icon";
 import { isOptionField } from "./collection-view-fields";
 import { optionLabel } from "./collection-view-labels";
-import { clearQuickOptions, quickOptionValues, setQuickOptions } from "./collection-view-rules";
+import { quickOptionValues, setQuickOptions } from "./collection-view-rules";
 import { EMPTY_VIEW_FILTER } from "./collection-view-types";
 import { RuleValueEditor, type RuleValueOption } from "./filter-rule-value";
 
@@ -57,12 +57,17 @@ export const FilterMenu = (props: FilterMenuProps) => {
           padding="0"
           onChange={(event) => setQuery(event.target.value)}
         />
+        <IconButton
+          aria-label="Clear all filters"
+          title="Clear all filters"
+          size="2xs"
+          variant="ghost"
+          disabled={filter.rules.length === 0 && !filter.groups?.length}
+          onClick={() => onChange(EMPTY_VIEW_FILTER)}
+        >
+          <X />
+        </IconButton>
       </HStack>
-      {props.onAddAdvanced ? (
-        <Button size="2xs" variant="ghost" justifyContent="start" onClick={props.onAddAdvanced}>
-          <ListFilter /> Advanced filter
-        </Button>
-      ) : null}
       <HStack alignItems="stretch" gap="0" flex="1" minH="0">
         <Stack
           data-testid="filter-property-column"
@@ -73,14 +78,6 @@ export const FilterMenu = (props: FilterMenuProps) => {
           gap="0"
           minH="0"
         >
-          <HStack height="2rem" paddingX="sm">
-            <Text textStyle="label/XS/medium" color="fg.muted">
-              PROPERTY
-            </Text>
-            <Button marginLeft="auto" size="2xs" variant="ghost" onClick={() => onChange(EMPTY_VIEW_FILTER)}>
-              Clear all
-            </Button>
-          </HStack>
           <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain" }} contentProps={contentProps}>
             {visible.map((field) => {
               const values = isOptionField(field) ? quickOptionValues(filter, field.id) : [];
@@ -121,32 +118,24 @@ export const FilterMenu = (props: FilterMenuProps) => {
         </Stack>
         <Stack flex="1" minW="0" minH="0" gap="0">
           {active ? (
-            <>
-              <HStack height="2rem" paddingX="sm">
-                <Text textStyle="label/XS/medium" color="fg.muted" truncate>
-                  {active.label.toUpperCase()}
-                </Text>
-                <Button
-                  marginLeft="auto"
-                  size="2xs"
-                  variant="ghost"
-                  onClick={() => onChange(clearQuickOptions(filter, active.id))}
-                >
-                  Clear
-                </Button>
-              </HStack>
-              <Box flex="1" minH="0" paddingX="2xs">
-                <RuleValueEditor
-                  field={active}
-                  rule={{ attributeId: active.id, condition: "is-any-of", value: activeValues }}
-                  options={optionsFor(active)}
-                  onChange={(value) => onChange(setQuickOptions(filter, active, Array.isArray(value) ? value : []))}
-                />
-              </Box>
-            </>
+            <Box flex="1" minH="0" paddingX="2xs">
+              <RuleValueEditor
+                field={active}
+                rule={{ attributeId: active.id, condition: "is-any-of", value: activeValues }}
+                options={optionsFor(active)}
+                onChange={(value) => onChange(setQuickOptions(filter, active, Array.isArray(value) ? value : []))}
+              />
+            </Box>
           ) : null}
         </Stack>
       </HStack>
+      {props.onAddAdvanced ? (
+        <HStack data-testid="filter-menu-footer" padding="2xs" borderTopWidth="1px" borderColor="border.subtle">
+          <Button size="2xs" variant="ghost" onClick={props.onAddAdvanced}>
+            <ListFilter /> Advanced filter
+          </Button>
+        </HStack>
+      ) : null}
     </Stack>
   );
 };

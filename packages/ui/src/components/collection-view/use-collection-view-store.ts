@@ -18,7 +18,7 @@ export interface CollectionViewSnapshot<TSettings> {
   activeViewId: string;
 }
 
-export type CollectionViewMenu = "picker" | "filter";
+export type CollectionViewMenu = "filter";
 
 export interface CollectionViewStoreInitialState<TSettings> {
   settings: TSettings;
@@ -73,7 +73,10 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
           set(openRuleIndex === null ? { openRuleIndex } : { openRuleIndex, openMenu: null }),
         startRule: (field) =>
           set((state) => {
-            const filter = addRule(normalFilter(state.filter), newRule(field));
+            const current = normalFilter(state.filter);
+            const index = current.rules.findIndex((rule) => rule.attributeId === field.id);
+            if (index !== -1) return { filter: current, openMenu: null, openRuleIndex: index };
+            const filter = addRule(current, newRule(field));
             return { filter, openMenu: null, openRuleIndex: filter.rules.length - 1 };
           }),
         setSettings: (settings) => set((state) => ({ settings: { ...state.settings, ...settings } })),

@@ -24,7 +24,7 @@ export interface RuleSelectProps {
   /** Rule rows pass a fixed width so the columns of a rule list line up. */
   width?: string;
   showSearch?: boolean;
-  variant?: "subtle" | "filter-segment";
+  variant?: "subtle" | "filter-segment" | "filter-condition";
   showSelectedIcon?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -87,7 +87,9 @@ export const RuleSelect = (props: RuleSelectProps) => {
           <Text as="span" flex="1" minW="0" textAlign="start" textStyle="label/XS" truncate>
             {props.selectedLabel ?? label}
           </Text>
-          {props.variant !== "filter-segment" ? <Icon as={ChevronDown} color="fg.subtle" /> : null}
+          {props.variant !== "filter-segment" && props.variant !== "filter-condition" ? (
+            <Icon as={ChevronDown} color="fg.subtle" />
+          ) : null}
         </Button>
       }
     />

@@ -20,7 +20,7 @@ export const NoRules: Story = {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
-    const popover = await body.findByTestId("view-filter-popover");
+    const popover = await body.findByTestId("filter-menu-popover");
     const expectAnchored = async () => {
       await waitFor(() => {
         const trigger = canvas.getByRole("button", { name: "Filter", exact: true }).getBoundingClientRect();
@@ -30,11 +30,14 @@ export const NoRules: Story = {
       });
     };
     await expectAnchored();
-    await userEvent.click(body.getByRole("button", { name: "Add filter rule" }));
-    await expect(body.getByTestId("filter-rule-row")).toBeVisible();
+    await userEvent.click(within(popover).getByRole("checkbox", { name: "Todo", exact: true }));
+    await expect(canvas.getByRole("group", { name: "Status filter" })).toBeVisible();
     await expectAnchored();
-    await userEvent.click(within(popover).getByRole("button", { name: "Remove filter", exact: true }));
-    await expect(within(popover).queryByTestId("filter-rule-row")).not.toBeInTheDocument();
+    await userEvent.click(within(popover).getByRole("button", { name: "Clear all filters", exact: true }));
+    await expect(within(popover).getByRole("checkbox", { name: "Todo", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
     await expectAnchored();
   },
 };
@@ -54,6 +57,60 @@ export const RulesSaved: Story = {
     await expect(filter.getByRole("button", { name: "Condition" })).toHaveTextContent("is not");
     await expect(filter.getByRole("button", { name: "Values" })).toHaveTextContent("Done");
     await expect(canvas.queryByRole("button", { name: "Save view" })).not.toBeInTheDocument();
+  },
+};
+
+/** Both normal filter entry points open the same picker and reflect existing exclusions. */
+export const SharedPropertyPicker: Story = {
+  render: () => <Bar storageKey="storybook-shared-property-picker" filter={storyFilter} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const pill = within(canvas.getByRole("group", { name: "Status filter" }));
+    expect(getComputedStyle(pill.getByRole("button", { name: "Condition" })).color).not.toBe(
+      getComputedStyle(pill.getByRole("button", { name: "Field" })).color,
+    );
+    for (const name of ["Filter", "Add filter"]) {
+      await userEvent.click(canvas.getByRole("button", { name, exact: true }));
+      const picker = await body.findByTestId("filter-menu");
+      await waitFor(() => expect(within(picker).getByRole("textbox", { name: "Filter properties" })).toBeVisible());
+      await expect(within(picker).getByRole("checkbox", { name: "Done", exact: true })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+      await userEvent.keyboard("{Escape}");
+    }
+  },
+};
+
+/** Clearing the lower picker closes it before its last criterion removes the anchor. */
+export const ClearLastFilterFromPicker: Story = {
+  render: () => <Bar storageKey="storybook-clear-lower-picker" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
+    await userEvent.click(body.getByRole("checkbox", { name: "Todo", exact: true }));
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(canvas.getByRole("button", { name: "Add filter", exact: true }));
+    const popover = await body.findByTestId("filter-menu-popover");
+    await waitFor(() => expect(popover).toBeVisible());
+    const positions: DOMRect[] = [];
+    let frame = 0;
+    const observe = () => {
+      if (popover.isConnected && getComputedStyle(popover.parentElement!).visibility !== "hidden") {
+        positions.push(popover.getBoundingClientRect());
+      }
+      frame = requestAnimationFrame(observe);
+    };
+    frame = requestAnimationFrame(observe);
+    await userEvent.click(within(popover).getByRole("button", { name: "Clear all filters" }));
+    await waitFor(() => expect(popover).not.toBeVisible());
+    cancelAnimationFrame(frame);
+    for (const position of positions) {
+      expect(position.left).toBeGreaterThan(0);
+      expect(position.top).toBeGreaterThan(0);
+    }
   },
 };
 
@@ -160,6 +217,9 @@ export const IndependentFilterChoices: Story = {
     await userEvent.click(pill.getByRole("button", { name: "Values" }));
     const todo = body.getByRole("menuitemcheckbox", { name: /Todo/ });
     const done = body.getByRole("menuitemcheckbox", { name: /Done/ });
+    const label = todo.querySelector("p")!.getBoundingClientRect();
+    const checkbox = todo.querySelector("[data-part=control]")!.getBoundingClientRect();
+    expect(checkbox.left).toBeGreaterThan(label.right);
     await expect(todo).toHaveAttribute("aria-checked", "true");
     await expect(todo.querySelector(".lucide-circle")).toBeInTheDocument();
     await userEvent.click(done);

@@ -13,7 +13,18 @@ interface SearchableMenuRowProps {
 export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
   const { item, multiple } = props;
   const iconSize = item.variant === "compact" ? "3" : "3.5";
-  let endContent: ReactNode = multiple ? item.secondaryLabel : undefined;
+  let endContent: ReactNode = multiple ? (
+    <HStack gap="xs">
+      {item.secondaryLabel}
+      <Checkbox
+        checked={Boolean(item.isSelected)}
+        readOnly
+        pointerEvents="none"
+        size="sm"
+        inputProps={{ tabIndex: -1, "aria-hidden": true }}
+      />
+    </HStack>
+  ) : undefined;
   if (!multiple && item.isSelected) endContent = <Icon as={Check} boxSize="3.5" />;
   const content = (
     <Box
@@ -36,13 +47,6 @@ export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
         label={
           multiple ? (
             <HStack minW="0" gap="xs">
-              <Checkbox
-                checked={Boolean(item.isSelected)}
-                readOnly
-                pointerEvents="none"
-                size="sm"
-                inputProps={{ tabIndex: -1, "aria-hidden": true }}
-              />
               {item.icon ? <Icon as={item.icon} boxSize={iconSize} color={item.iconColor ?? "fg.muted"} /> : null}
               <Text textStyle="label/S/regular" truncate>
                 {item.label}

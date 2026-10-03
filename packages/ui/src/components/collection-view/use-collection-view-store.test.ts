@@ -24,6 +24,17 @@ beforeEach(() => {
 });
 
 describe("collection view store", () => {
+  test("the property picker opens an existing scalar rule without adding another", () => {
+    const archived: AttributeDescriptor = { id: "archived", label: "Archived", type: { kind: "boolean" } };
+    const filter = {
+      conjunction: "and" as const,
+      rules: [{ attributeId: "archived", condition: "is" as const, value: false }],
+    };
+    const store = createCollectionViewStore({ storageKey: "existing-boolean", initialState: { settings, filter } });
+    store.getState().setOpenMenu("filter");
+    store.getState().startRule(archived);
+    expect(store.getState()).toMatchObject({ filter, openMenu: null, openRuleIndex: 0 });
+  });
   test("starts from the renderer's initial view state", () => {
     const store = createCollectionViewStore({
       storageKey: "initial",

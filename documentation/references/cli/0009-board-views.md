@@ -66,7 +66,7 @@ pst views update --id <viewId> --filter-json '{
 
 `--sort <field>:asc|desc` sets the view's single sort. A second sort is rejected. `--filter none` and `--sort none` clear them. A board's card title is the built-in `string` field `title`.
 
-Filter pills have separate property, condition, and value controls. Option menus show “is” and “is not” for one value, or “is one of” and “is not one of” for multiple values; the stored condition follows the field type. Each value can be checked independently and shows its supplied icon and color. The normal filter menu uses AND. Add an Advanced filter bubble to choose AND or OR within a group. Groups cannot contain other groups.
+Filter pills have separate property, condition, and value controls. Option menus show “is” and “is not” for one value, or “is one of” and “is not one of” for multiple values; the stored condition follows the field type. Each value can be checked independently using its right-side checkbox and shows its supplied icon and color. Both normal filter buttons open the same property picker. One clear-all control sits beside “Filter by…”. The normal filter menu uses AND. Add an Advanced filter bubble from the picker footer to choose AND or OR within a group. Groups cannot contain other groups.
 
 ## Display settings
 

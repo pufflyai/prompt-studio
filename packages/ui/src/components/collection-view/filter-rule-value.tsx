@@ -181,14 +181,6 @@ const OptionChecklist = (props: RuleValueProps) => {
               variant="compact"
               label={
                 <HStack minW="0" gap="xs">
-                  <Checkbox
-                    checked={checked}
-                    readOnly
-                    aria-readonly="true"
-                    inputProps={{ tabIndex: -1, "aria-hidden": true }}
-                    pointerEvents="none"
-                    size="sm"
-                  />
                   {option.icon ? (
                     <Icon
                       as={getIconComponent(option.icon)}
@@ -202,11 +194,21 @@ const OptionChecklist = (props: RuleValueProps) => {
                 </HStack>
               }
               endContent={
-                option.count === undefined ? undefined : (
-                  <Text textStyle="label/XS" color="fg.muted">
-                    {option.count}
-                  </Text>
-                )
+                <HStack gap="xs">
+                  {option.count === undefined ? null : (
+                    <Text textStyle="label/XS" color="fg.muted">
+                      {option.count}
+                    </Text>
+                  )}
+                  <Checkbox
+                    checked={checked}
+                    readOnly
+                    aria-readonly="true"
+                    inputProps={{ tabIndex: -1, "aria-hidden": true }}
+                    pointerEvents="none"
+                    size="sm"
+                  />
+                </HStack>
               }
               onActivate={() => onChange(toggle(selected, option.value))}
             />

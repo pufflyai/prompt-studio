@@ -30,10 +30,14 @@ export const NormalAndAdvanced: Story = {
       within(canvas.getByRole("group", { name: "Priority filter" })).getByRole("button", { name: "Condition" }),
     ).toHaveTextContent("is one of");
     await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
-    await waitFor(() =>
-      expect(within(body.getByTestId("view-filter-popover")).getByText("And", { selector: "p" })).toBeVisible(),
+    const picker = await body.findByTestId("filter-menu");
+    await waitFor(() => expect(within(picker).getByRole("textbox", { name: "Filter properties" })).toBeVisible());
+    await userEvent.click(
+      within(within(picker).getByTestId("filter-menu-footer")).getByRole("button", {
+        name: "Advanced filter",
+        exact: true,
+      }),
     );
-    await userEvent.click(body.getByRole("button", { name: "Advanced filter", exact: true }));
     const popover = await body.findByTestId("advanced-filter-popover");
     await userEvent.click(within(popover).getByRole("button", { name: "Add filter rule" }));
     await userEvent.click(within(popover).getByRole("button", { name: "Add filter rule" }));
@@ -70,5 +74,34 @@ export const ExistingOrView: Story = {
     await waitFor(() =>
       expect(within(canvasElement.ownerDocument.body).getByTestId("advanced-filter-popover")).toBeVisible(),
     );
+  },
+};
+
+/** One clear-all action resets normal criteria and every Advanced bubble together. */
+export const ClearAllFilters: Story = {
+  render: () => (
+    <Bar
+      storageKey="storybook-clear-all-filters"
+      filter={{
+        conjunction: "and",
+        rules: [{ attributeId: "status", condition: "is-any-of", value: ["todo"] }],
+        groups: [{ conjunction: "or", rules: [{ attributeId: "priority", condition: "is-any-of", value: ["high"] }] }],
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const trigger = canvas.getByRole("button", { name: "Filter", exact: true });
+    expect(trigger.textContent?.trim()).toBe("2");
+    await userEvent.click(trigger);
+    const picker = await body.findByTestId("filter-menu");
+    await userEvent.click(within(picker).getByRole("button", { name: "Clear all filters" }));
+    expect(trigger.textContent?.trim()).toBe("");
+    await expect(within(picker).getByRole("checkbox", { name: "Todo", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    await expect(canvas.getByLabelText("Unsaved view changes")).toBeVisible();
   },
 };

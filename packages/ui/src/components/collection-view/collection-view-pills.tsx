@@ -51,7 +51,7 @@ export const FilterRulePill = (props: FilterRulePillProps) => {
           <ConditionSelect
             field={field}
             rule={rule}
-            variant="filter-segment"
+            variant="filter-condition"
             onChange={onChange}
             open={boolean ? open : undefined}
             onOpenChange={boolean ? onOpenChange : undefined}

@@ -43,8 +43,14 @@ export const OptionValues: Story = {
   render: () => <Picker />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("checkbox", { name: "In progress" }));
+    const option = canvas.getByRole("checkbox", { name: "In progress" });
+    const label = within(option).getByText("In progress").getBoundingClientRect();
+    const checkbox = option.querySelector("[data-part=control]")!.getBoundingClientRect();
+    expect(checkbox.left).toBeGreaterThan(label.right);
+    await userEvent.click(option);
     await expect(canvas.getByTestId("filter-value")).toHaveTextContent('"condition":"is-any-of"');
+    await userEvent.click(canvas.getByRole("button", { name: "Clear all filters" }));
+    await expect(canvas.getByTestId("filter-value")).toHaveTextContent("[]");
   },
 };
 

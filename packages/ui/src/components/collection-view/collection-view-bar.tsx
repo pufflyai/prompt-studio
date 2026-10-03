@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ListFilter, Plus, RotateCcw } from "lucide-react";
-import { Fragment, type ReactNode, type RefObject, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { addAdvancedGroup, normalFilter, setAdvancedGroup } from "./advanced-filter";
@@ -15,14 +15,12 @@ import type { CollectionSavedView, CollectionViewsSource } from "./collection-vi
 import { FilterMenu } from "./filter-menu";
 import type { RuleValueOption } from "./filter-rule-value";
 import {
-  type CollectionViewMenu,
   type CollectionViewStoreInitialState,
   type CollectionViewStoreState,
   useCollectionViewStore,
 } from "./use-collection-view-store";
 import { isCollectionViewDirty } from "./use-collection-views";
 import { ViewBarPopover } from "./view-bar-popover";
-import { ViewFilterMenu } from "./view-filter-menu";
 import { ViewSearchField } from "./view-search-field";
 
 export interface CollectionViewBarProps<TSettings> {
@@ -85,9 +83,9 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 
-  const open = (next: CollectionViewMenu, from: RefObject<HTMLButtonElement | null>) => {
+  const open = (from: RefObject<HTMLButtonElement | null>) => {
     setAnchor(from);
-    setOpenMenu(openMenu === next && anchor === from ? null : next);
+    setOpenMenu(openMenu === "filter" && anchor === from ? null : "filter");
   };
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -108,6 +106,10 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
     return field ? optionsFor(field) : [];
   };
   const showCriteria = dirty || filter.rules.length > 0 || Boolean(filter.groups?.length);
+  const changePickerFilter = (next: typeof filter) => {
+    if (anchor === addFilterRef && next.rules.length === 0 && !next.groups?.length) setOpenMenu(null);
+    setFilter(next);
+  };
   const addAdvanced = () => {
     setOpenMenu(null);
     setFilter(addAdvancedGroup(filter));
@@ -143,7 +145,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             icon={ListFilter}
             count={countFilterRules(filter)}
             buttonRef={filterButtonRef}
-            onClick={() => open("filter", filterButtonRef)}
+            onClick={() => open(filterButtonRef)}
           />
           {displayControl}
           {actions}
@@ -161,25 +163,19 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
           >
             <HStack minW="0" gap="2xs" overflowX="auto">
               {filter.rules.map((rule, index) => (
-                <Fragment key={`${index}:${rule.attributeId}`}>
-                  {index > 0 ? (
-                    <Text textStyle="label/XS" color="fg.muted">
-                      And
-                    </Text>
-                  ) : null}
-                  <FilterRulePill
-                    fields={filterFields}
-                    rule={rule}
-                    options={optionsForId(rule.attributeId)}
-                    open={openRuleIndex === index}
-                    onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
-                    onChange={(next) => setFilter(setRuleAt(filter, index, next))}
-                    onRemove={() => {
-                      setOpenRuleIndex(null);
-                      setFilter(setRuleAt(filter, index, undefined));
-                    }}
-                  />
-                </Fragment>
+                <FilterRulePill
+                  key={`${index}:${rule.attributeId}`}
+                  fields={filterFields}
+                  rule={rule}
+                  options={optionsForId(rule.attributeId)}
+                  open={openRuleIndex === index}
+                  onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
+                  onChange={(next) => setFilter(setRuleAt(filter, index, next))}
+                  onRemove={() => {
+                    setOpenRuleIndex(null);
+                    setFilter(setRuleAt(filter, index, undefined));
+                  }}
+                />
               ))}
               {filter.groups?.map((group, index) => (
                 <AdvancedFilterPill
@@ -197,7 +193,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
                 size="2xs"
                 variant="ghost"
                 flexShrink={0}
-                onClick={() => open("picker", addFilterRef)}
+                onClick={() => open(addFilterRef)}
               >
                 <Plus />
                 Filter
@@ -238,8 +234,8 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
         ) : null}
 
         <ViewBarPopover
-          open={openMenu === "picker"}
-          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "picker" : null)}
+          open={openMenu === "filter"}
+          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "filter" : null)}
           anchorRef={anchor}
           width="min(440px, calc(100vw - 32px))"
           padding="0"
@@ -249,23 +245,8 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             fields={filterFields}
             filter={filter}
             optionsFor={optionsFor}
-            onChange={setFilter}
+            onChange={changePickerFilter}
             onPickField={startRule}
-            onAddAdvanced={addAdvanced}
-          />
-        </ViewBarPopover>
-        <ViewBarPopover
-          open={openMenu === "filter"}
-          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "filter" : null)}
-          anchorRef={anchor}
-          width="40rem"
-          testId="view-filter-popover"
-        >
-          <ViewFilterMenu
-            fields={filterFields}
-            filter={filter}
-            optionsFor={optionsFor}
-            onChange={setFilter}
             onAddAdvanced={addAdvanced}
           />
         </ViewBarPopover>
