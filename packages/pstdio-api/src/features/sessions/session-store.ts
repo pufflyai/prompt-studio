@@ -24,7 +24,15 @@ export type ActiveSession = {
   cancellationRequested: boolean;
   submittedAttachmentFileIds: Set<string>;
   conversationReady: Promise<SessionConversation>;
+  controlInvocations: Set<{ done: Promise<void>; abort: AbortController }>;
   checkpointPromise?: Promise<SessionMessage[] | null>;
+};
+
+export const cancelSessionControls = (entry: ActiveSession | null | undefined) => {
+  if (!entry) return;
+  for (const control of entry.controlInvocations) control.abort.abort();
+  entry.approvalService.dispose();
+  entry.questionService.dispose();
 };
 
 // In-memory registry of active sessions (EventStore + channels + harness session per session)
@@ -56,6 +64,7 @@ export const createSessionStore = () => {
       cancellationRequested: false,
       submittedAttachmentFileIds: new Set(),
       conversationReady: ready.promise,
+      controlInvocations: new Set(),
     };
     sessions.set(sessionId, entry);
     if (initialize) {
@@ -94,6 +103,7 @@ export const createSessionStore = () => {
     const entry = sessions.get(sessionId);
     if (!entry) return null;
     entry.cancellationRequested = true;
+    cancelSessionControls(entry);
     return entry;
   };
   const remove = (sessionId: string, expected = sessions.get(sessionId)) => {

@@ -1,5 +1,12 @@
 import { z } from "zod";
-import type { HarnessEventSink, HarnessParams, HarnessSession, HarnessWorkspaceContext } from "./harness";
+import type {
+  HarnessApprovalChannel,
+  HarnessEventSink,
+  HarnessParams,
+  HarnessQuestionChannel,
+  HarnessSession,
+  HarnessWorkspaceContext,
+} from "./harness";
 
 export const harnessCommandSchema = z.object({
   name: z.string(),
@@ -52,5 +59,10 @@ export type HarnessOperationResult =
 export type PreparedHarnessOperation = {
   /** Controls may run during a turn. Exclusive work acquires the host execution slot. */
   execution: "control" | "exclusive";
-  invoke(input: { events: HarnessEventSink; signal?: AbortSignal }): Promise<HarnessOperationResult>;
+  invoke(input: {
+    events: HarnessEventSink;
+    approvals?: HarnessApprovalChannel;
+    questions?: HarnessQuestionChannel;
+    signal?: AbortSignal;
+  }): Promise<HarnessOperationResult>;
 };

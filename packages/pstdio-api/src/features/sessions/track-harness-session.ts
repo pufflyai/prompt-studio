@@ -3,7 +3,7 @@ import { resolveHarnessExit } from "pstdio-api-runtime-host";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { checkpointConversation } from "./session-checkpoint";
-import type { ActiveSession } from "./session-store";
+import { type ActiveSession, cancelSessionControls } from "./session-store";
 
 type TrackingDeps = Pick<SessionsRouteDeps, "fileService" | "sessionService"> & {
   processExitTimeoutMs?: number;
@@ -11,6 +11,14 @@ type TrackingDeps = Pick<SessionsRouteDeps, "fileService" | "sessionService"> & 
 };
 
 const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
+
+const finishControls = async (entry: ActiveSession | null, status: string) => {
+  if (!entry) return;
+  // Stop accepting controls before waiting for those already using this conversation.
+  entry.session = null;
+  if (status !== "completed") cancelSessionControls(entry);
+  await Promise.all(Array.from(entry.controlInvocations, (control) => control.done));
+};
 
 const messagesReferenceFile = (messages: SessionMessage[], fileId: string) =>
   messages.some((message) => message.parts.some((part) => part.type === "file" && part.fileId === fileId));
@@ -83,6 +91,7 @@ export const trackHarnessSession = (
       ),
   })
     .then(async (exit) => {
+      await finishControls(entry, exit.status);
       // The run is over, so nobody can answer an open question any more. Closing the channel here
       // rather than in `store.remove` keeps a failed checkpoint from leaving an answerable ask.
       entry?.questionService.dispose();

@@ -1293,6 +1293,8 @@ type PreparedHarnessOperation = {
   execution: "control" | "exclusive";
   invoke(input: {
     events: HarnessEventSink;
+    approvals?: HarnessApprovalChannel;
+    questions?: HarnessQuestionChannel;
     signal?: AbortSignal;
   }): Promise<HarnessOperationResult>;
 };
