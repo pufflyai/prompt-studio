@@ -1,6 +1,6 @@
 import { Badge, Box, Button, HStack, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight, ListFilter, Search } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
@@ -20,6 +20,7 @@ export interface FilterMenuProps {
   onChange: (filter: ViewFilterGroup) => void;
   /** A field without options gets a new rule and opens its editor. */
   onPickField: (field: AttributeDescriptor) => void;
+  onAddAdvanced?: () => void;
 }
 
 const contentProps = { p: "2xs", display: "flex", flexDirection: "column", gap: "1px" } as const;
@@ -57,6 +58,11 @@ export const FilterMenu = (props: FilterMenuProps) => {
           onChange={(event) => setQuery(event.target.value)}
         />
       </HStack>
+      {props.onAddAdvanced ? (
+        <Button size="2xs" variant="ghost" justifyContent="start" onClick={props.onAddAdvanced}>
+          <ListFilter /> Advanced filter
+        </Button>
+      ) : null}
       <HStack alignItems="stretch" gap="0" flex="1" minH="0">
         <Stack
           data-testid="filter-property-column"
@@ -85,7 +91,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
                   role="button"
                   variant="compact"
                   isSelected={active?.id === field.id}
-                  icon={<Icon as={fieldIcon(field)} />}
+                  icon={<Icon as={fieldIcon(field)} boxSize="3" />}
                   label={
                     <HStack minW="0" width="full" gap="2xs">
                       <Text textStyle="label/S/regular" truncate>

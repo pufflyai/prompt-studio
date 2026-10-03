@@ -3,6 +3,8 @@ import { ListFilter, Plus, RotateCcw } from "lucide-react";
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { addAdvancedGroup, normalFilter, setAdvancedGroup } from "./advanced-filter";
+import { AdvancedFilterPill } from "./advanced-filter-pill";
 import { CollectionItemLabelContext } from "./collection-item-label";
 import { findField } from "./collection-view-fields";
 import { countFilterRules } from "./collection-view-filter";
@@ -70,7 +72,8 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
   const { storageKey, initialState, views, defaultViewId, viewsSource, fields, optionsFor } = props;
   const { search, onSearchChange, searchResultLabel, leading, actions, displayControl, align = "split" } = props;
   const store: CollectionViewStoreState<TSettings> = useCollectionViewStore(storageKey, initialState, (state) => state);
-  const { activeViewId, settings, filter, sorts, openMenu, openRuleIndex } = store;
+  const { activeViewId, settings, sorts, openMenu, openRuleIndex } = store;
+  const filter = normalFilter(store.filter);
   const { activateView, setFilter, setOpenMenu, setOpenRuleIndex, startRule } = store;
   const activeView = views.find((view) => view.id === activeViewId);
   const state = { settings, filter, sorts };
@@ -104,7 +107,11 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
     const field = findField(filterFields, id);
     return field ? optionsFor(field) : [];
   };
-  const showCriteria = dirty || filter.rules.length > 0;
+  const showCriteria = dirty || filter.rules.length > 0 || Boolean(filter.groups?.length);
+  const addAdvanced = () => {
+    setOpenMenu(null);
+    setFilter(addAdvancedGroup(filter));
+  };
 
   return (
     <CollectionItemLabelContext.Provider value={props.itemLabel ?? "Item"}>
@@ -157,7 +164,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
                 <Fragment key={`${index}:${rule.attributeId}`}>
                   {index > 0 ? (
                     <Text textStyle="label/XS" color="fg.muted">
-                      {filter.conjunction === "and" ? "And" : "Or"}
+                      And
                     </Text>
                   ) : null}
                   <FilterRulePill
@@ -173,6 +180,16 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
                     }}
                   />
                 </Fragment>
+              ))}
+              {filter.groups?.map((group, index) => (
+                <AdvancedFilterPill
+                  key={index}
+                  fields={filterFields}
+                  group={group}
+                  optionsFor={optionsFor}
+                  onChange={(next) => setFilter(setAdvancedGroup(filter, index, next))}
+                  onRemove={() => setFilter(setAdvancedGroup(filter, index))}
+                />
               ))}
               <Button
                 ref={addFilterRef}
@@ -234,6 +251,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             optionsFor={optionsFor}
             onChange={setFilter}
             onPickField={startRule}
+            onAddAdvanced={addAdvanced}
           />
         </ViewBarPopover>
         <ViewBarPopover
@@ -243,7 +261,13 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
           width="40rem"
           testId="view-filter-popover"
         >
-          <ViewFilterMenu fields={filterFields} filter={filter} optionsFor={optionsFor} onChange={setFilter} />
+          <ViewFilterMenu
+            fields={filterFields}
+            filter={filter}
+            optionsFor={optionsFor}
+            onChange={setFilter}
+            onAddAdvanced={addAdvanced}
+          />
         </ViewBarPopover>
       </Stack>
     </CollectionItemLabelContext.Provider>

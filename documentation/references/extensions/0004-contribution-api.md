@@ -274,7 +274,7 @@ background instead, so pressed controls stand out from the main background.
 
 Kanban and data table bodies share one view model. A view stores:
 
-- `filter`: one root group of rules. A rule is `{ attributeId, condition, value }`. A group joins its rules with one conjunction, `"and"` or `"or"`. All rules share that conjunction. Filters have one level.
+- `filter`: a rule is `{ attributeId, condition, value }`. Normal rules join with `"and"`. Optional `groups` contain one level of advanced rules, each with `conjunction: "and" | "or"` and `rules`. Normal rules and groups combine using AND. Whole-view OR filters remain supported and appear as one Advanced filter bubble in the dashboard. Groups cannot contain other groups.
 - `sorts`: zero or one field and direction pair. Display settings and table headers edit this same single sort. An empty list keeps the board's manual order, or the query's order for a table.
 - `settings`: board display settings (view mode, grouping, sub-grouping, visible properties), or table display settings (`grouping`, `rowNumbers`, `wrapRows`, `showStats`, `hiddenColumns`, `columnOrder`).
 

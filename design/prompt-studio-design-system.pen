@@ -19323,7 +19323,7 @@
                       "type": "frame",
                       "id": "sgbRV",
                       "name": "cmp/SearchableMenuItem",
-                      "context": "@pstdio/ui ListRow variant='full-width' as rendered inside SearchableMenu. h 28 (auto when Description is on, py 8), px 12, gap 8. Label label/S/regular 12/400 Onest; Description label/XS 10/400 fg.muted. Icon 14px fg.muted (16px for compact empty-state rows, which also use cornerRadius 4). Selection is a bg.active fill - there is no check mark. menu theme axis: default | hover | selected | disabled.",
+                      "context": "Shared searchable menu row uses 14px icons by default and 12px icons for compact filter dropdowns. Multi-select values show independent checkboxes.",
                       "theme": {
                         "menu": "default"
                       },
@@ -20198,7 +20198,7 @@
                       "type": "frame",
                       "id": "IZ2hX",
                       "name": "cmp/FilterPill",
-                      "context": "A flat filter clause with independent property, condition, and value buttons, then X. No leading property icon. Option condition menus contain is and is not; membership semantics follow the field and selected values. Value menus show checkboxes and the option icon/color when supplied.",
+                      "context": "Independent filter segments share 10px text; option conditions read is one of / is not one of when multiple values are selected.",
                       "reusable": true,
                       "height": 24,
                       "fill": "$ds-surface",
@@ -20231,7 +20231,7 @@
                               "fill": "$ds-fg-muted",
                               "content": "Status",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
+                              "fontSize": 10,
                               "fontWeight": "normal"
                             }
                           ]
@@ -20259,7 +20259,7 @@
                               "fill": "$ds-fg-subtle",
                               "content": "is",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
+                              "fontSize": 10,
                               "fontWeight": "normal"
                             }
                           ]
@@ -20297,8 +20297,8 @@
                               "fill": "$ds-fg",
                               "content": "In progress",
                               "fontFamily": "$font-body",
-                              "fontSize": 11,
-                              "fontWeight": "500"
+                              "fontSize": 10,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -20330,7 +20330,7 @@
                       "type": "frame",
                       "id": "FpUeP",
                       "name": "cmp/RuleSelect",
-                      "context": "Compact single choice or value checklist. Property triggers have no type icon. Option menus keep every value visible with a checkbox and supplied icon/color; independent pill segments omit the chevron.",
+                      "context": "Compact rule dropdown uses 12px icons. Multiple options show is one of / is not one of. All choices stay visible with selected checks.",
                       "reusable": true,
                       "width": 140,
                       "height": 24,
@@ -26209,7 +26209,7 @@
                       "type": "frame",
                       "id": "GzF1C",
                       "name": "cmp/ViewFilterMenu",
-                      "context": "The only filter editor. A single flat list of rules with one And or Or conjunction. Every row has a property icon and an X delete control. Add a rule or delete filters; there are no nested groups.",
+                      "context": "Normal filter rules use AND only. Add Advanced filter to create a separate bubble with an AND/OR rule group. All groups combine with normal rules using AND.",
                       "reusable": true,
                       "width": 640,
                       "fill": "$ds-bg",
@@ -26278,13 +26278,14 @@
                                   "content": "Where"
                                 },
                                 "JVfto/qARZy": {
-                                  "icon": "circle-dashed"
+                                  "icon": "circle-dashed",
+                                  "enabled": false
                                 },
                                 "JVfto/b1L0Y": {
                                   "content": "Status"
                                 },
                                 "MsUBA/b1L0Y": {
-                                  "content": "is none of"
+                                  "content": "is not"
                                 },
                                 "kYV23": {
                                   "enabled": true
@@ -26305,23 +26306,24 @@
                               "width": "fill_container",
                               "descendants": {
                                 "zG1ZH": {
-                                  "enabled": false,
-                                  "content": "And▾"
+                                  "enabled": true,
+                                  "content": "And"
                                 },
                                 "HDXGT": {
-                                  "enabled": true
+                                  "enabled": false
                                 },
                                 "HDXGT/b1L0Y": {
                                   "content": "And"
                                 },
                                 "JVfto/qARZy": {
-                                  "icon": "signal"
+                                  "icon": "signal",
+                                  "enabled": false
                                 },
                                 "JVfto/b1L0Y": {
                                   "content": "Priority"
                                 },
                                 "MsUBA/b1L0Y": {
-                                  "content": "is any of"
+                                  "content": "is one of"
                                 },
                                 "kYV23": {
                                   "enabled": true
@@ -26416,6 +26418,28 @@
                                 },
                                 "Hf4GT": {
                                   "content": "Delete filter"
+                                }
+                              }
+                            },
+                            {
+                              "id": "H0xIbb",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Add advanced filter",
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": true,
+                                  "icon": "list-filter",
+                                  "width": 12,
+                                  "height": 12
+                                },
+                                "Hf4GT": {
+                                  "content": "Advanced filter"
                                 }
                               }
                             }
@@ -33649,6 +33673,50 @@
               ]
             }
           ]
+        },
+        {
+          "id": "gJyKq",
+          "type": "ref",
+          "reusable": true,
+          "ref": "GzF1C",
+          "name": "cmp/AdvancedFilterMenu",
+          "context": "Advanced bubble edits a one-level AND/OR group. Normal filters and each advanced group combine using AND.",
+          "descendants": {
+            "vSvCP": {
+              "content": "ADVANCED FILTER"
+            },
+            "b5FzwL/zG1ZH": {
+              "enabled": false
+            },
+            "b5FzwL/HDXGT": {
+              "enabled": true
+            },
+            "H0xIbb": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "id": "we9nS",
+          "type": "ref",
+          "reusable": true,
+          "ref": "IZ2hX",
+          "name": "cmp/AdvancedFilterPill",
+          "context": "One advanced group shown as a single bubble; opens its AND/OR editor. X removes the group.",
+          "descendants": {
+            "hBbLs": {
+              "strokeWidth": 0
+            },
+            "SCREL": {
+              "content": "Advanced filter"
+            },
+            "oOchp": {
+              "enabled": false
+            },
+            "Hsj3H": {
+              "enabled": false
+            }
+          }
         }
       ]
     },

@@ -112,10 +112,16 @@ export const registerBoardViewsSmokeTests = () => {
       expect(invalidSort.stderr).toContain("one sort");
       cli("set-default", "--board", board, "--id", created.id);
       const filter = {
-        conjunction: "or",
-        rules: [
-          { attributeId: "title", condition: "contains", value: "review" },
-          { attributeId: "status", condition: "is-any-of", value: ["done"] },
+        conjunction: "and",
+        rules: [{ attributeId: "title", condition: "does-not-contain", value: "archived" }],
+        groups: [
+          {
+            conjunction: "or",
+            rules: [
+              { attributeId: "title", condition: "contains", value: "review" },
+              { attributeId: "status", condition: "is-any-of", value: ["done"] },
+            ],
+          },
         ],
       };
       const updated = cli(

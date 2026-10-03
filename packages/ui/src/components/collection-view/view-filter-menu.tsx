@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { Plus, Trash2 } from "lucide-react";
+import { ListFilter, Plus, Trash2 } from "lucide-react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { addRule, newRule, setConjunction, setRuleAt } from "./collection-view-rules";
 import { EMPTY_VIEW_FILTER } from "./collection-view-types";
@@ -13,17 +13,20 @@ export interface ViewFilterMenuProps {
   filter: ViewFilterGroup;
   optionsFor: (field: AttributeDescriptor) => RuleValueOption[];
   onChange: (filter: ViewFilterGroup) => void;
+  /** Only an advanced group offers the AND/OR choice. */
+  advanced?: boolean;
+  onAddAdvanced?: () => void;
 }
 
 /** All rules share one conjunction. */
 export const ViewFilterMenu = (props: ViewFilterMenuProps) => {
-  const { fields, filter, optionsFor, onChange } = props;
+  const { fields, filter, optionsFor, onChange, advanced = false } = props;
   const firstField = fields[0];
 
   return (
     <Stack data-testid="view-filter-menu" gap="2xs" minW="0">
       <Text paddingX="xs" paddingTop="xs" textStyle="label/XS/medium" color="fg.muted">
-        FILTER
+        {advanced ? "ADVANCED FILTER" : "FILTER"}
       </Text>
       <Stack gap="2xs" paddingX="xs">
         {filter.rules.map((rule, index) => (
@@ -31,7 +34,7 @@ export const ViewFilterMenu = (props: ViewFilterMenuProps) => {
             key={`${index}:${rule.attributeId}`}
             index={index}
             conjunction={filter.conjunction}
-            onConjunctionChange={(conjunction) => onChange(setConjunction(filter, conjunction))}
+            onConjunctionChange={advanced ? (conjunction) => onChange(setConjunction(filter, conjunction)) : undefined}
             fields={fields}
             rule={rule}
             optionsFor={optionsFor}
@@ -53,11 +56,16 @@ export const ViewFilterMenu = (props: ViewFilterMenuProps) => {
             Add filter rule
           </Button>
         ) : null}
+        {!advanced && props.onAddAdvanced ? (
+          <Button size="2xs" variant="ghost" onClick={props.onAddAdvanced}>
+            <ListFilter /> Advanced filter
+          </Button>
+        ) : null}
         <Button
           size="2xs"
           variant="ghost"
           marginLeft="auto"
-          disabled={filter.rules.length === 0}
+          disabled={filter.rules.length === 0 && !filter.groups?.length}
           onClick={() => onChange(EMPTY_VIEW_FILTER)}
         >
           <Trash2 />

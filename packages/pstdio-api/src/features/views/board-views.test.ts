@@ -249,3 +249,31 @@ test("exact scalar lists stay flat through edits and saved-view reads", async ()
   expect(edited.status).toBe(200);
   expect((await (await request(`/board-views/${view.id}`)).json()).filter).toEqual(filter);
 });
+
+test("advanced groups survive saved-view creation, edits, and field cleanup", async () => {
+  const filter = {
+    conjunction: "and",
+    rules: [{ attributeId: "title", condition: "contains", value: "task" }],
+    groups: [
+      {
+        conjunction: "or",
+        rules: [
+          { attributeId: "state", condition: "is-any-of", value: ["todo", "gone"] },
+          { attributeId: "title", condition: "contains", value: "urgent" },
+        ],
+      },
+    ],
+  };
+  const response = await request(`/boards/${boardId}/views`, "POST", { title: "Advanced", filter });
+  expect(response.status).toBe(201);
+  const view = await response.json();
+  expect(view.filter).toEqual(filter);
+  expect((await request(`/board-views/${view.id}`, "PATCH", { title: "Renamed" })).status).toBe(200);
+  expect((await (await request(`/board-views/${view.id}`)).json()).filter).toEqual(filter);
+  await command("remove");
+  const saved = await (await request(`/board-views/${view.id}`)).json();
+  expect(saved.filter.groups[0].rules[0].value).toEqual(["todo"]);
+  const invalid = structuredClone(filter);
+  invalid.groups[0]!.rules[0]!.attributeId = "missing";
+  expect((await request(`/board-views/${view.id}`, "PATCH", { filter: invalid })).status).toBe(400);
+});

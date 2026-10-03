@@ -100,6 +100,10 @@ type ViewFilterRule = {
 type ViewFilterGroup = {
   conjunction: "and" | "or";
   rules: ViewFilterRule[];
+  groups?: {
+    conjunction: "and" | "or";
+    rules: ViewFilterRule[];
+  }[];
 };
 type ViewSortDirection = "asc" | "desc";
 type ViewSort = {

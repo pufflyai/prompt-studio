@@ -33,8 +33,10 @@ export type ViewFilterRule = {
 
 export type ViewFilterGroup = {
   conjunction: "and" | "or";
-  /** All rules share one conjunction. Filters have one level. */
+  /** Normal rules share this conjunction. */
   rules: ViewFilterRule[];
+  /** Advanced groups have one level and combine with the normal rules using AND. */
+  groups?: { conjunction: "and" | "or"; rules: ViewFilterRule[] }[];
 };
 
 export type ViewSortDirection = "asc" | "desc";

@@ -26,7 +26,7 @@ export const changeCondition = (rule: ViewFilterRule, condition: ViewFilterCondi
   return { ...rule, condition };
 };
 
-export const ConditionSelect = (props: {
+interface ConditionSelectProps {
   field: AttributeDescriptor;
   rule: ViewFilterRule;
   width?: string;
@@ -34,37 +34,43 @@ export const ConditionSelect = (props: {
   variant?: "subtle" | "filter-segment";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-}) => {
+}
+
+const OptionConditionSelect = (props: ConditionSelectProps) => {
+  const { field, rule, width, onChange } = props;
+  const empty = rule.condition === "is-empty" || rule.condition === "is-not-empty";
+  const negative = ["is-none-of", "has-none-of", "is-not-empty"].includes(rule.condition);
+  const positiveCondition = field.type.kind === "enum-multi" ? "has-any-of" : "is-any-of";
+  const negativeCondition = field.type.kind === "enum-multi" ? "has-none-of" : "is-none-of";
+  const many = Array.isArray(rule.value) && rule.value.length > 1;
+  return (
+    <RuleSelect
+      aria-label="Condition"
+      width={width}
+      variant={props.variant}
+      options={[
+        { value: "is", label: many ? "is one of" : "is" },
+        { value: "is-not", label: many ? "is not one of" : "is not" },
+      ]}
+      value={negative ? "is-not" : "is"}
+      onSelect={(next) => {
+        if (next === (negative ? "is-not" : "is")) return;
+        if (empty) {
+          onChange({ attributeId: rule.attributeId, condition: next === "is" ? "is-empty" : "is-not-empty" });
+          return;
+        }
+        onChange({ ...rule, condition: next === "is" ? positiveCondition : negativeCondition });
+      }}
+    />
+  );
+};
+
+export const ConditionSelect = (props: ConditionSelectProps) => {
   const { field, rule, width, onChange } = props;
   const boolean = field.type.kind === "boolean";
   const optionField = ["enum", "enum-multi", "user"].includes(field.type.kind);
   const listRule = optionField || Array.isArray(rule.value);
-  if (listRule) {
-    const empty = rule.condition === "is-empty" || rule.condition === "is-not-empty";
-    const negative = ["is-none-of", "has-none-of", "is-not-empty"].includes(rule.condition);
-    const positiveCondition = field.type.kind === "enum-multi" ? "has-any-of" : "is-any-of";
-    const negativeCondition = field.type.kind === "enum-multi" ? "has-none-of" : "is-none-of";
-    return (
-      <RuleSelect
-        aria-label="Condition"
-        width={width}
-        variant={props.variant}
-        options={[
-          { value: "is", label: "is" },
-          { value: "is-not", label: "is not" },
-        ]}
-        value={negative ? "is-not" : "is"}
-        onSelect={(next) => {
-          if (next === (negative ? "is-not" : "is")) return;
-          if (empty) {
-            onChange({ attributeId: rule.attributeId, condition: next === "is" ? "is-empty" : "is-not-empty" });
-            return;
-          }
-          onChange({ ...rule, condition: next === "is" ? positiveCondition : negativeCondition });
-        }}
-      />
-    );
-  }
+  if (listRule) return <OptionConditionSelect {...props} />;
   let condition = rule.condition;
   if (boolean && rule.value === false) {
     if (rule.condition === "is") condition = "is-not";

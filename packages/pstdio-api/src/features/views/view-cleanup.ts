@@ -53,6 +53,7 @@ const cleanRule = (rule: ViewFilterRule, fields: BoardField[]) => {
 const cleanFilter = (filter: ViewFilterGroup, fields: BoardField[]): ViewFilterGroup => ({
   ...filter,
   rules: filter.rules.flatMap((rule) => cleanRule(rule, fields)),
+  ...(filter.groups ? { groups: filter.groups.map((group) => cleanFilter(group, fields)) } : {}),
 });
 const grouping = (value: string, fallback: string, fields: BoardField[]) => {
   const ids = ["none", ...idsFor(fields, "groupable")];

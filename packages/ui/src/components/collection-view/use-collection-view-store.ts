@@ -5,6 +5,7 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import { createBrowserStorage } from "../../utils/browser-storage";
 import { type KanbanRendererStorage, useKanbanRendererStorage } from "../kanban-renderer/kanban-renderer-storage";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { normalFilter } from "./advanced-filter";
 import { addRule, newRule } from "./collection-view-rules";
 import { type CollectionSavedView, EMPTY_VIEW_FILTER } from "./collection-view-types";
 
@@ -72,7 +73,7 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
           set(openRuleIndex === null ? { openRuleIndex } : { openRuleIndex, openMenu: null }),
         startRule: (field) =>
           set((state) => {
-            const filter = addRule(state.filter, newRule(field));
+            const filter = addRule(normalFilter(state.filter), newRule(field));
             return { filter, openMenu: null, openRuleIndex: filter.rules.length - 1 };
           }),
         setSettings: (settings) => set((state) => ({ settings: { ...state.settings, ...settings } })),

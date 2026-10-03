@@ -12,6 +12,7 @@ interface SearchableMenuRowProps {
 
 export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
   const { item, multiple } = props;
+  const iconSize = item.variant === "compact" ? "3" : "3.5";
   let endContent: ReactNode = multiple ? item.secondaryLabel : undefined;
   if (!multiple && item.isSelected) endContent = <Icon as={Check} boxSize="3.5" />;
   const content = (
@@ -42,7 +43,7 @@ export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
                 size="sm"
                 inputProps={{ tabIndex: -1, "aria-hidden": true }}
               />
-              {item.icon ? <Icon as={item.icon} color={item.iconColor ?? "fg.muted"} /> : null}
+              {item.icon ? <Icon as={item.icon} boxSize={iconSize} color={item.iconColor ?? "fg.muted"} /> : null}
               <Text textStyle="label/S/regular" truncate>
                 {item.label}
               </Text>
@@ -53,7 +54,7 @@ export const SearchableMenuRow = (props: SearchableMenuRowProps) => {
         }
         icon={
           !multiple && item.icon ? (
-            <Icon as={item.icon} boxSize="3.5" color={item.iconColor ?? "fg.muted"} />
+            <Icon as={item.icon} boxSize={iconSize} color={item.iconColor ?? "fg.muted"} />
           ) : undefined
         }
         endContent={endContent}

@@ -28,6 +28,32 @@ const filterOf = (rules: Parameters<typeof findViewFilterProblem>[0]["rules"]) =
 });
 
 describe("view filter validation", () => {
+  test("preserves and validates one level of advanced groups", () => {
+    const filter = {
+      conjunction: "and" as const,
+      rules: [],
+      groups: [
+        {
+          conjunction: "or" as const,
+          rules: [{ attributeId: "status", condition: "is-any-of" as const, value: ["todo"] }],
+        },
+      ],
+    };
+    expect(viewFilterGroupSchema.parse(filter)).toEqual(filter);
+    expect(findViewFilterProblem(filter, fields)).toBeUndefined();
+    expect(
+      findViewFilterProblem(
+        {
+          ...filter,
+          groups: [{ ...filter.groups[0]!, rules: [{ attributeId: "missing", condition: "is", value: "value" }] }],
+        },
+        fields,
+      ),
+    ).toContain("Invalid filter field");
+    expect(viewFilterGroupSchema.safeParse({ ...filter, groups: [{ ...filter.groups[0], groups: [] }] }).success).toBe(
+      false,
+    );
+  });
   test("saves excluded exact scalar selections from a value checklist", () => {
     const filter = filterOf([{ attributeId: "updated", condition: "is-none-of", value: ["2026-10-02T09:00:00Z"] }]);
     expect(findViewFilterProblem(filter, fields)).toBeUndefined();

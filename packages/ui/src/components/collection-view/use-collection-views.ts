@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useStore } from "zustand";
 import { useKanbanRendererStorage } from "../kanban-renderer/kanban-renderer-storage";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
+import { normalFilter } from "./advanced-filter";
 import {
   type CollectionSavedView,
   type CollectionViewState,
@@ -27,6 +28,7 @@ const comparableFilter = (filter: ViewFilterGroup): unknown => ({
     condition: rule.condition,
     value: Array.isArray(rule.value) ? [...rule.value].sort() : rule.value,
   })),
+  groups: filter.groups?.length ? filter.groups.map(comparableFilter) : undefined,
 });
 
 /** Search never counts: it is screen state, so it never marks a view as changed. */
@@ -36,7 +38,7 @@ export const isCollectionViewDirty = <TSettings>(
 ) => {
   if (!view) return false;
   const comparable = (value: CollectionViewState<TSettings>) =>
-    JSON.stringify([comparableSettings(value.settings), comparableFilter(value.filter), value.sorts]);
+    JSON.stringify([comparableSettings(value.settings), comparableFilter(normalFilter(value.filter)), value.sorts]);
   return comparable(view) !== comparable(state);
 };
 
