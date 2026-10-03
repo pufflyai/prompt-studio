@@ -1,5 +1,14 @@
 # pstdio-planner
 
+## 0.40.1
+
+_2026-10-03_
+
+### Patch Changes
+
+- 7b1d280: Move the Planner's implementation settings onto its extension page with a dropdown for the default target branch, list Ticket tags above Danger zone, and return `[{ branch }]` rows from `pst pstdio-planner implementation-targets`.
+- 61bfc4f: Decide whether a ticket can start from its dependencies alone, and show why Run attempt cannot start a ticket in the dialog.
+
 ## 0.40.0
 
 _2026-10-02_

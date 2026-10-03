@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.40.1
+
+_2026-10-03_
+
+### Patch Changes
+
+- 7b1d280: Document command-backed setting options in the create-pstdio-extension skill.
+
 ## 0.40.0
 
 _2026-10-02_

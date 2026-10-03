@@ -1,5 +1,14 @@
 # @pstdio/ui
 
+## 0.40.1
+
+_2026-10-03_
+
+### Patch Changes
+
+- 4b23942: Show open panel toggles and other pressed controls as selected in color themes that set a background but no selection color.
+- 51b102b: Show Codex clarification questions in the shared composer and deliver correlated answers or Skip to the live run.
+
 ## 0.40.0
 
 _2026-10-02_
