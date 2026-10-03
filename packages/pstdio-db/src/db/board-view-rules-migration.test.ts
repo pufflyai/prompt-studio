@@ -13,7 +13,7 @@ const migrationsFolder = join(import.meta.dir, "../../drizzle");
 test("saved board views keep their filters and ordering as rules and sorts", async () => {
   const root = mkdtempSync(join(tmpdir(), "board-view-upgrade-"));
   const dbPath = join(root, "database");
-  const pglite = new PGlite();
+  const pglite = new PGlite(dbPath);
   await pglite.waitReady;
   try {
     const db = drizzle(pglite, { schema });
@@ -39,11 +39,7 @@ test("saved board views keep their filters and ordering as rules and sorts", asy
     );
     await insert("manual", { ...display, ordering: { attributeId: "manual", direction: "asc" } }, {});
 
-    const image = await pglite.dumpDataDir("none");
     await pglite.close();
-    const persisted = new PGlite(dbPath, { loadDataDir: image });
-    await persisted.waitReady;
-    await persisted.close();
     const current = await createDb({ path: dbPath });
     const { rows } = await current.pglite.query("SELECT id, settings, filter, sorts FROM board_views ORDER BY id");
     await current.close();
