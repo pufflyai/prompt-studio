@@ -12,6 +12,18 @@ export const harnessCommandSchema = z.object({
   name: z.string(),
   description: z.string(),
   argumentHelp: z.string().optional(),
+  /** Selecting this command tags the draft instead of inserting command text. */
+  composer: z
+    .object({
+      label: z.string(),
+      /** Native mode that can confirm this input after submission. */
+      modeId: z.string().optional(),
+      /** Native action words that cannot be submitted as an objective through this command. */
+      reservedArguments: z.array(z.string()).optional(),
+    })
+    .optional(),
+  /** Native availability or combination limit for the current session. */
+  disabledReason: z.string().optional(),
 });
 export const harnessModeActionSchema = z.object({
   id: z.string(),
@@ -24,6 +36,10 @@ export const harnessModeSchema = z.object({
   label: z.string(),
   description: z.string(),
   state: z.string(),
+  /** Short native summary displayed in the composer tag. */
+  tagText: z.string().optional(),
+  /** An advertised native action to invoke when the person closes the tag. */
+  closeActionId: z.string().optional(),
   actions: z.array(harnessModeActionSchema),
 });
 export const harnessCommandStateSchema = z.object({
