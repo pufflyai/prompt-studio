@@ -5,6 +5,7 @@ import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { readPerformanceEndpointDescriptor, resolvePstdioPerformanceEndpoint } from "pstdio-paths";
+import { runWindowsPowerShell } from "../cli/windows-user-path";
 import { openPerformanceEndpoint } from "./performance-endpoint";
 
 const roots: string[] = [];
@@ -104,13 +105,13 @@ describe("performance endpoint", () => {
     try {
       const identity = execFileSync("whoami", ["/user", "/fo", "csv", "/nh"], { encoding: "utf8" });
       const sid = identity.match(/S-1-5-\d+(?:-\d+)+/)?.[0];
-      const script =
-        "$acl=Get-Acl -LiteralPath $env:PSTDIO_ACL_TEST_PATH; @($acl.Access | ForEach-Object {$_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value}) | ConvertTo-Json -Compress";
+      const script = `
+$acl = Get-Acl -LiteralPath $env:PSTDIO_ACL_TEST_PATH
+$sids = @($acl.Access | ForEach-Object {$_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value})
+ConvertTo-Json -Compress -InputObject $sids
+`;
       for (const target of [dirname(path), path]) {
-        const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], {
-          encoding: "utf8",
-          env: { ...process.env, PSTDIO_ACL_TEST_PATH: target },
-        });
+        const output = await runWindowsPowerShell(script, { PSTDIO_ACL_TEST_PATH: target });
         expect([JSON.parse(output)].flat()).toEqual([sid]);
       }
       expect(await read(path)).toEqual({ ok: true });
