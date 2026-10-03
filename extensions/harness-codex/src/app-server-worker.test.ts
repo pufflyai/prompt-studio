@@ -187,8 +187,8 @@ test("a lost initial turn acknowledgement retains its native thread for recovery
 });
 test("recovery does not send a new mutation while native execution is unresolved", async () => {
   const { runtime, calls } = peer({ recoveryActive: true });
-  const run = await runtime.run({ prompt: "new explicit input", agentSessionId: "existing", events: sink() });
-  expect(run.agentSessionId).toBe("existing");
-  expect(await run.done).toEqual({ status: "failed" });
+  await expect(
+    runtime.run({ prompt: "new explicit input", agentSessionId: "existing", events: sink() }),
+  ).rejects.toThrow("Native Codex execution is still in progress");
   expect(calls.filter((c) => c.method === "turn/start")).toHaveLength(0);
 });

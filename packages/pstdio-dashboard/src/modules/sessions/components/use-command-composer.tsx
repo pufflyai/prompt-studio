@@ -212,6 +212,7 @@ export const useCommandComposer = (
         }
         pending={commands.invoke.isPending}
         unavailable={Boolean(commands.error)}
+        error={commandError ? { message: commandError, onClose: () => setCommandError(null) } : undefined}
         onRefresh={commands.refresh}
         onAction={async (modeId, actionId, argument, modeSnapshot) => {
           const result = await invokeCommand({ kind: "mode-action", modeId, actionId, argument }, modeSnapshot);

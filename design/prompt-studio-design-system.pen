@@ -131436,6 +131436,112 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "WbrYo",
+      "x": 8440,
+      "y": 8001,
+      "name": "Chat Composer · Plan approval · PS-459",
+      "context": "Plan approval is an explicit decision. Provider-owned confirmation metadata opens this dialog only for a completed native proposed plan. Status tags remain compact; approval is the deliberate modal exception. Never infer readiness from prose or the word approved.",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1200,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        72
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "Njc0C",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Plan ready · approve and implement",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "a1ET5v",
+          "name": "Approval rule",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Review the native proposed plan. Approve exits Plan mode and starts implementation in the same conversation. Keep planning, Escape or Close dismisses without approval or changing the draft.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "BZJ8B",
+          "name": "Approval modal stage",
+          "width": "fill_container",
+          "height": 520,
+          "fill": "$ds-bg-subtle",
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "lNtgI",
+              "type": "ref",
+              "ref": "oEM2Q",
+              "name": "Plan approval dialog",
+              "context": "Shared Dialog md and sm buttons. Title and full scrollable markdown plan come from provider state. Primary approval invokes only the advertised action for this plan revision. Keep planning does not change the native mode. On failure retain the dialog and show the error within it; on stale plan require fresh review.",
+              "descendants": {
+                "lhmhO": {
+                  "content": "Approve plan"
+                },
+                "wvanj": {
+                  "content": "Update the release workflow\n\n1. Replace the duplicate picker with slash commands.\n2. Keep Goal and Plan tags compact.\n3. Validate native state in isolation.\n\nApproval leaves Plan mode and starts implementation."
+                },
+                "baBqG": {
+                  "name": "Keep planning",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "sm"
+                  }
+                },
+                "baBqG/Hf4GT": {
+                  "content": "Keep planning"
+                },
+                "aWg2H": {
+                  "name": "Approve and implement",
+                  "theme": {
+                    "btn": "primary",
+                    "size": "sm"
+                  }
+                },
+                "aWg2H/Hf4GT": {
+                  "content": "Approve and implement"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "nhzdT",
+          "name": "Native semantics and recovery",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Only a completed native proposed plan creates this decision. Codex approval validates its revision, leaves Plan mode and starts a normal turn. A plain approved message stays text. Other providers keep their own native approval paths. Closing preserves Plan and the unsent draft; reopen from the Plan tag. Disable approval while busy or unavailable. Reject stale revisions and keep failed approval open for recovery.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
     }
   ],
   "themes": {

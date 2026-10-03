@@ -127,6 +127,34 @@ export const SentReference: Story = {
     onRefresh: () => {},
   },
 };
+export const PlanApproval: Story = {
+  args: {
+    modes: [
+      {
+        id: "planning",
+        label: "Plan",
+        description: "# Release workflow\n\n1. Update the shared controls.\n2. Validate the native state.",
+        state: "Awaiting approval",
+        confirmation: { id: "proposal", title: "Approve plan", actionId: "implement", cancelLabel: "Keep planning" },
+        actions: [{ id: "implement", label: "Approve and implement" }],
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: "Approve plan" });
+    await expect(within(dialog).getByRole("heading", { name: "Release workflow" })).toBeVisible();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Keep planning" }));
+    await expect(within(canvasElement).getByRole("button", { name: "Plan details" })).toHaveTextContent("Plan");
+  },
+};
+export const PlanApprovalUnavailable: Story = { args: { ...PlanApproval.args, unavailable: true } };
+export const PlanApprovalError: Story = {
+  args: {
+    ...PlanApproval.args,
+    error: { message: "The plan changed. Review the current plan before approving.", onClose: () => {} },
+  },
+};
 export const NativeError: Story = {
   render: (args) => (
     <>

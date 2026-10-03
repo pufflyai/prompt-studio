@@ -15,3 +15,9 @@ test("native actions require a fresh matching objective and advertised action", 
   expect(() => assertCurrentNativeAction([mode], [{ ...mode, actions: [] }], operation)).toThrow();
   expect(() => assertCurrentNativeAction([mode], [], operation)).toThrow();
 });
+
+test("mode confirmation actions require the same native revision even when the body matches", () => {
+  const previous = { ...mode, confirmation: { id: "old", title: "Approve", actionId: "clear" } };
+  const current = { ...previous, confirmation: { ...previous.confirmation, id: "new" } };
+  expect(() => assertCurrentNativeAction([previous], [current], operation)).toThrow();
+});

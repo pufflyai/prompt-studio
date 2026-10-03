@@ -4,6 +4,7 @@ import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
 export const codexCommandState = (
   input: HarnessCommandDiscoveryContext,
   goal: ThreadGoal | null,
+  plan?: { id: string; text: string },
 ): HarnessCommandState => ({
   slashCommands: true,
   commands: [
@@ -33,10 +34,23 @@ export const codexCommandState = (
           {
             id: "planning",
             label: "Plan",
-            description: "Codex planning is selected for the next turn.",
-            state: "Next turn",
+            description: plan?.text ?? "Codex planning is selected for the next turn.",
+            state: plan ? "Awaiting approval" : "Next turn",
             closeActionId: "default",
-            actions: [{ id: "default", label: "Leave planning" }],
+            ...(plan && !goal
+              ? {
+                  confirmation: {
+                    id: plan.id,
+                    title: "Approve plan",
+                    actionId: "implement",
+                    cancelLabel: "Keep planning",
+                  },
+                }
+              : {}),
+            actions: [
+              ...(plan && !goal ? [{ id: "implement", label: "Approve and implement" }] : []),
+              { id: "default", label: "Leave planning" },
+            ],
           },
         ]
       : []),

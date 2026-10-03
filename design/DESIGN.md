@@ -46,6 +46,7 @@ Read this file before working on UI or design. Use these patterns across the app
 - Slash completion uses the shared Menu surface and full-width menu rows, with no leading icons or outer padding.
 - Composer tags show short names such as Goal and Plan. Show the objective, native status and available metrics on hover, keyboard focus and in a compact Popover with Menu styling. Show only provider-supported fields and actions; unavailable status must not appear as Active. Select these modes with slash commands rather than a duplicate Default/Plan picker.
 - Multiple composer modes require verified support from the harness. Do not concatenate native slash commands. Keep goal state, planning selection and plan progress separate. See the [composer modes PRD](../documentation/requirements/dashboard/0006-composer-modes.md).
+- A completed native plan can open the shared approval Dialog. Show the full plan, a ghost Keep planning button and a primary Approve and implement button. Dismissal retains Plan mode and the draft. Approval validates the native revision, leaves Plan mode and starts implementation in the same thread. Status and objective edits still use compact details.
 
 - The chat has no banners. A problem appears in the conversation, where the user is looking, styled like an agent error (`AlertMessage`, `status="error"`).
 - Show a problem only when the user can act on it. The product recovers from internal problems, such as saved and agent history that disagree, on its own.

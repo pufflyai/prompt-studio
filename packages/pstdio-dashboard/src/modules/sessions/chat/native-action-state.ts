@@ -10,6 +10,7 @@ export const assertCurrentNativeAction = (
     !expected ||
     !fresh ||
     expected.description !== fresh.description ||
+    expected.confirmation?.id !== fresh.confirmation?.id ||
     !fresh.actions.some((action) => action.id === operation.actionId)
   )
     throw new Error("The native mode changed. Review its current details before acting again.");

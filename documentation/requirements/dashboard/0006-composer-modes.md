@@ -18,6 +18,7 @@ The [Pencil design system](../../../design/prompt-studio-design-system.pen) defi
 - `bNCZX`: provider details and unavailable status.
 - `FxIuM`: combinations and plan progress.
 - `bMVMu`: goal lifecycle and edge cases.
+- `WbrYo`: native plan approval Dialog.
 
 Follow the [shared design rules](../../../design/DESIGN.md). Send uses the existing primary IconButton; attach and model controls use ghost styling. Goal and Plan use the same subtle pill styling as ticket tags, at a matching 28 px height. Tags follow model parameters. Slash menus use shared Menu rows without leading icons or outer padding. Do not add status cards, argument dialogs or Reset to default.
 
@@ -27,7 +28,7 @@ These findings describe native products and current adapters separately. An inst
 
 | Harness | Native information | Current adapter boundary |
 | --- | --- | --- |
-| Codex | Goal objective, status, token budget, token use and elapsed time. Goal get/set/clear and update events. Planning is a turn parameter. Separate plan events can include steps and progress. | Goal mode currently returns objective and a status/token summary. Planning mode describes the next turn. Expose the remaining structured fields before showing them. |
+| Codex | Goal objective, status, token budget, token use and elapsed time. Goal get/set/clear and update events. Planning is a turn parameter. Native proposal items are distinct from step progress. | Goal mode returns objective and a status/token summary. Planning mode exposes the latest completed proposal and a revision-bound approval action. Expose remaining structured fields before showing them. |
 | Claude Code | `/goal` status includes condition, elapsed time, evaluated turns, token spend and evaluator reason. A goal does not change permission mode. Native completion or impossibility clears the active goal. | The adapter forwards `/goal`, but its structured mode state currently reports planning only. Native CLI output is not a stable typed goal-state contract. Rich details require verified adapter readback. |
 | OpenCode | Plan is a primary agent. The server exposes agent and command discovery, task lists and command results. | The adapter currently reports no structured modes. A custom command named `/goal` does not establish a persistent native goal. Agent-selection support must be exposed before rendering a Plan mode tag. |
 
@@ -81,6 +82,18 @@ Pasted compound command text needs inline review before execution. Preserve it a
 A planning selection, generated plan content and a goal are separate facts. Show native plan steps and their progress in the assistant message. Keep the produced plan in history when planning mode ends. Do not mark steps complete from assistant prose, goal completion, or a mode tag disappearing.
 
 Expose native explanations and task lists when the adapter returns them. A task list is not automatically a planning mode or goal. No provider metadata creates an extra execution loop in the workbench.
+
+## Approving a proposed plan
+
+Codex returns completed structured `plan` items in its native thread. While Plan mode is selected, show the latest unapproved proposal in the shared Approve plan Dialog. Ordinary messages such as “approved” do not change the native collaboration mode. Do not infer readiness from assistant prose, step progress or a completed turn without a proposal.
+
+The provider advertises a mode `confirmation` with the native revision ID and an available action ID. Show the full proposal markdown. Keep planning, Close and Escape dismiss the Dialog without changing native state or the unsent draft. The Plan tag can reopen the decision. Reload reads the pending native proposal again; a new revision opens a new decision.
+
+Approve and implement passes the displayed revision to the provider. Recheck native state and reject stale revisions. Codex starts one normal turn in the same native thread with `collaboration_mode: "default"` and the explicit prompt “Implement the approved plan.” Preserve the existing unsent draft and attachments. The extension stores only the approved revision ID because native history retains proposals without recording this approval decision. It never duplicates the plan text. Re-entering Plan mode must not offer the already approved revision again.
+
+Disable approval while the provider is busy or state is unavailable. A rejected dispatch keeps the Dialog open with a closable error; refresh before trying again. After a native session starts, its failure belongs to the conversation and does not replay approval. Dismissal remains available when no dispatch is pending. Goal and plan implementation cannot be combined until the provider verifies that combination.
+
+This confirmation path applies to Codex structured proposals. Claude's live `ExitPlanMode` permission request and OpenCode's agent selection keep their native paths. Providers without verified approval metadata receive no inferred approval Dialog.
 
 ## Lifecycle and edge cases
 

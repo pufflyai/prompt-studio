@@ -19,7 +19,27 @@ for await (const line of createInterface({ input: process.stdin })) {
   }
   if (message.method === "initialize") emit({ id: message.id, result: {} });
   if (message.method === "thread/goal/get") emit({ id: message.id, result: { goal: null } });
-  if (message.method === "thread/read") emit({ id: message.id, result: { thread: { turns: [] } } });
+  if (message.method === "thread/read" && process.env.PSTDIO_TEST_MODE === "plan-approval-stalled") {
+    emit({ method: "fixture/read-blocked" });
+    continue;
+  }
+  if (message.method === "thread/read")
+    emit({
+      id: message.id,
+      result: {
+        thread: {
+          turns: process.env.PSTDIO_TEST_MODE?.startsWith("plan-approval")
+            ? [
+                {
+                  id: "plan-turn",
+                  status: "completed",
+                  items: [{ type: "plan", id: "proposal", text: "Build the agreed feature." }],
+                },
+              ]
+            : [],
+        },
+      },
+    });
   if (message.method === "thread/start" || message.method === "thread/resume") {
     emit({ id: message.id, result: { thread: { id: "thread-fixture", path: process.env.PSTDIO_TEST_TRANSCRIPT } } });
     emit({
@@ -32,6 +52,11 @@ for await (const line of createInterface({ input: process.stdin })) {
     emit({ method: "turn/completed", params: { turn: { id: "turn-1", status: "interrupted" } } });
   }
   if (message.method === "turn/start") {
+    if (process.env.PSTDIO_TEST_MODE === "plan-approval-lost-ack") process.exit(0);
+    if (process.env.PSTDIO_TEST_MODE === "plan-approval-rejected") {
+      emit({ id: message.id, error: { code: -32000, message: "Implementation was rejected" } });
+      continue;
+    }
     if (process.env.PSTDIO_TEST_MODE === "protocol-error") {
       emit({ method: "item/started", params: { item: null } });
       emit({ id: message.id, result: { turn: { id: "turn-1" } } });
@@ -46,7 +71,7 @@ for await (const line of createInterface({ input: process.stdin })) {
     if (process.env.PSTDIO_TEST_MODE === "close") {
       process.exit(0);
     }
-    if (process.env.PSTDIO_TEST_MODE === "complete") {
+    if (["complete", "plan-approval"].includes(process.env.PSTDIO_TEST_MODE ?? "")) {
       complete();
       continue;
     }

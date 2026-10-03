@@ -1,7 +1,13 @@
-import type { HarnessCommandContext, HarnessOperation, PreparedHarnessOperation } from "@pstdio/sdk/extensions";
+import type {
+  HarnessCommandContext,
+  HarnessContext,
+  HarnessOperation,
+  PreparedHarnessOperation,
+} from "@pstdio/sdk/extensions";
 import type { createCodexRuntime } from "./codex-runtime";
 import { codexCommandInput } from "./command-input";
 import { prepareGoalOperation } from "./goal-commands";
+import { prepareCodexPlanApproval } from "./plan-approval";
 
 export { codexCommandState } from "./command-state";
 
@@ -9,8 +15,13 @@ const prepareModeAction = (
   input: HarnessCommandContext,
   operation: Extract<HarnessOperation, { kind: "mode-action" }>,
   runtime: ReturnType<typeof createCodexRuntime>,
-  projectId?: string,
+  ctx?: Pick<HarnessContext, "state" | "projectId">,
 ): PreparedHarnessOperation => {
+  const projectId = ctx?.projectId;
+  if (operation.modeId === "planning" && operation.actionId === "implement") {
+    if (!ctx) throw new Error("Plan approval requires the harness context.");
+    return prepareCodexPlanApproval(input, operation.argument, runtime, ctx);
+  }
   if (operation.modeId === "planning" && operation.actionId === "default")
     return {
       execution: "control",
@@ -35,9 +46,10 @@ export const prepareCodexOperation = (
   input: HarnessCommandContext,
   operation: HarnessOperation,
   runtime: ReturnType<typeof createCodexRuntime>,
-  projectId?: string,
+  ctx?: Pick<HarnessContext, "state" | "projectId">,
 ): PreparedHarnessOperation => {
-  if (operation.kind === "mode-action") return prepareModeAction(input, operation, runtime, projectId);
+  const projectId = ctx?.projectId;
+  if (operation.kind === "mode-action") return prepareModeAction(input, operation, runtime, ctx);
   const match = /^\/(\S+)(?:\s+([\s\S]*))?$/.exec(operation.text);
   const name = match?.[1];
   const argument = match?.[2] ?? "";

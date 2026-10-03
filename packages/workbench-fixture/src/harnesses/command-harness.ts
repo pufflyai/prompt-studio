@@ -1,4 +1,5 @@
 import type { HarnessParams, HarnessProvider } from "@pstdio/sdk/extensions";
+import { fixtureCommandState } from "./command-state";
 import { createFakeHarness } from "./fake-harness";
 
 export const createCommandHarness = (modes: boolean) =>
@@ -9,62 +10,37 @@ export const createCommandHarness = (modes: boolean) =>
     params: {
       planning: { type: "boolean", label: "Planning", defaultValue: false, control: "command" },
     },
-    getCommandState: async (ctx, input) => {
-      const goal = input.sessionId ? await ctx.state.get<string>(`goal:${input.sessionId}`) : undefined;
-      return {
-        slashCommands: true,
-        commands: [
-          {
-            name: "/goal",
-            description: "Fixture native goal action",
-            composer: { label: "Goal", ...(modes ? { modeId: "goal" } : {}) },
-          },
-          {
-            name: "/plan",
-            description: "Fixture planning",
-            composer: { label: "Plan", ...(modes ? { modeId: "planning" } : {}) },
-          },
-        ],
-        modes: modes
-          ? [
-              ...(goal
-                ? [
-                    {
-                      id: "goal",
-                      label: "Goal",
-                      description: goal,
-                      state: "active",
-                      tagText: `active: ${goal}`,
-                      closeActionId: "clear",
-                      actions: [
-                        { id: "clear", label: "Clear goal" },
-                        { id: "edit", label: "Edit", argument: { label: "Objective", value: goal } },
-                      ],
-                    },
-                  ]
-                : []),
-              ...(input.params?.planning
-                ? [
-                    {
-                      id: "planning",
-                      label: "Plan",
-                      description: "Next turn selection",
-                      state: "selected",
-                      closeActionId: "leave",
-                      actions: [{ id: "leave", label: "Leave planning" }],
-                    },
-                  ]
-                : []),
-            ]
-          : [],
-      };
-    },
+    getCommandState: (ctx, input) => fixtureCommandState(ctx, input, modes),
     prepareOperation: (ctx, input, operation) => {
       if (operation.kind === "mode-action") {
+        if (operation.modeId === "planning" && operation.actionId === "implement")
+          return {
+            execution: "exclusive",
+            invoke: async ({ events }) => {
+              const plan = await ctx.state.get<{ id: string }>(`plan:${input.sessionId}`);
+              if (!plan || plan.id !== operation.argument)
+                throw new Error("The plan changed. Review the current plan before approving.");
+              await ctx.state.delete(`plan:${input.sessionId}`);
+              return {
+                kind: "started",
+                params: { planning: false },
+                session: await createFakeHarness().resume(ctx, {
+                  ...input,
+                  agentSessionId: input.agentSessionId ?? "fixture",
+                  prompt: "Implement the approved plan.",
+                  params: { ...input.params, planning: false },
+                  events,
+                }),
+              };
+            },
+          };
         return {
           execution: "control",
           invoke: async () => {
-            if (operation.modeId === "planning") return { kind: "completed", params: { planning: false } };
+            if (operation.modeId === "planning") {
+              await ctx.state.delete(`plan:${input.sessionId}`);
+              return { kind: "completed", params: { planning: false } };
+            }
             if (operation.actionId === "edit") await ctx.state.set(`goal:${input.sessionId}`, operation.argument ?? "");
             else await ctx.state.delete(`goal:${input.sessionId}`);
             return { kind: "completed" };
@@ -88,6 +64,8 @@ export const createCommandHarness = (modes: boolean) =>
         invoke: async () => {
           if (modes && command[1] === "goal")
             await ctx.state.set(`goal:${input.sessionId}`, command[2] ?? "Native fixture objective");
+          if (modes && command[1] === "plan" && command[2])
+            await ctx.state.set(`plan:${input.sessionId}`, { id: crypto.randomUUID(), text: command[2] });
           return { kind: "completed", message: modes ? undefined : "Native action completed", params };
         },
       };

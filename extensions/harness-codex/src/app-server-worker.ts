@@ -1,6 +1,6 @@
 import type { HarnessSession } from "@pstdio/sdk/extensions";
 import { createAppServerOperation, type NativeOperation } from "./app-server-operation";
-import { createAppServerRpc } from "./app-server-rpc";
+import { CodexRequestRejectedError, createAppServerRpc } from "./app-server-rpc";
 import type { SpawnDeps } from "./codex-process";
 import { nativeThreadMessages } from "./native-history";
 import type { Turn } from "./protocol/v2/Turn";
@@ -13,6 +13,8 @@ const reasoningConfig = (params: StartSpawnInput["params"]) => ({
 });
 const resumedTurns = (turns: Turn[] | undefined, snapshot: { thread: { turns: Turn[] } } | undefined) =>
   turns ?? snapshot?.thread.turns ?? [];
+const knownNotStarted = (deliveryAttempted: boolean, error: unknown) =>
+  !deliveryAttempted || error instanceof CodexRequestRejectedError;
 export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
   const child = deps.spawnProcess(
     ["app-server", "--listen", "stdio://", "--enable", "default_mode_request_user_input"],
@@ -80,6 +82,7 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
     if (runInput.questionResponse) throw questionReplyError("Codex question request is no longer pending.");
     if (active) throw new Error("Codex already has an active operation.");
     let acknowledged = false;
+    let deliveryAttempted = false;
     const abort = () => {
       if (!acknowledged || !threadId) {
         child.kill();
@@ -119,6 +122,7 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
         operation.setGoal(state.goal?.status === "active");
       }
       operation.startDelivery();
+      deliveryAttempted = true;
       const result = (await rpc.request(
         command?.method ?? "turn/start",
         command ? { ...command.params, threadId: id } : codexTurnRequest(runInput, id, model),
@@ -127,9 +131,10 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
       operation.acknowledge(result.turn?.id);
       return session(id);
     } catch (error) {
-      // Delivery may have reached Codex. Never resubmit this input.
       operation.fail(error);
       operation.finish({ status: closed ? "disconnected" : "failed" });
+      if (knownNotStarted(deliveryAttempted, error)) throw error;
+      // A lost acknowledgement may hide an accepted turn. Keep its session and never replay it.
       if (threadId) return session(threadId);
       throw error;
     }
@@ -139,9 +144,16 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
     load,
     isClosed: () => closed,
     threadId: () => threadId,
-    request: async (method: string, params: Record<string, unknown>) => {
-      await ready;
-      return rpc.request(method, params);
+    request: async (method: string, params: Record<string, unknown>, signal?: AbortSignal) => {
+      signal?.throwIfAborted();
+      const abort = () => lost();
+      signal?.addEventListener("abort", abort, { once: true });
+      try {
+        await ready;
+        return await rpc.request(method, params);
+      } finally {
+        signal?.removeEventListener("abort", abort);
+      }
     },
     readMessages: async (id: string) => {
       await ready;

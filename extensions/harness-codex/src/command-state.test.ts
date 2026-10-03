@@ -29,3 +29,16 @@ test("Codex reports planning selection separately and blocks an unverified goal 
   expect(state.modes[0]).toMatchObject({ id: "planning", label: "Plan", closeActionId: "default" });
   expect(state.commands.find((command) => command.name === "/goal")?.disabledReason).toBeTruthy();
 });
+
+test("Codex presents a native proposed plan as an explicit approval decision", () => {
+  const state = codexCommandState({ params: { collaboration_mode: "plan" } }, null, {
+    id: "turn/proposal",
+    text: "Replace the duplicated controls.",
+  });
+  expect(state.modes[0]).toMatchObject({
+    description: "Replace the duplicated controls.",
+    state: "Awaiting approval",
+    confirmation: { id: "turn/proposal", title: "Approve plan", actionId: "implement", cancelLabel: "Keep planning" },
+    actions: expect.arrayContaining([{ id: "implement", label: "Approve and implement" }]),
+  });
+});

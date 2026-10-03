@@ -4,6 +4,7 @@ import { createCodexRuntime } from "./codex-runtime";
 import { codexCommandState, prepareCodexOperation } from "./commands";
 import { discoverCodexModels } from "./models";
 import { recoverNativeHistory } from "./native-history";
+import { approvedPlanKey, readCodexProposedPlan } from "./plan-approval";
 import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
 
 const detectCodex = async (ctx: HarnessContext) => {
@@ -96,9 +97,14 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
       const result = (await worker.request("thread/goal/get", { threadId: input.agentSessionId })) as {
         goal: ThreadGoal | null;
       };
-      return codexCommandState(input, result.goal);
+      const approvedId = await ctx.state.get<string>(approvedPlanKey(input.agentSessionId));
+      const plan =
+        input.params?.collaboration_mode === "plan"
+          ? await readCodexProposedPlan(worker.request, input.agentSessionId, approvedId)
+          : undefined;
+      return codexCommandState(input, result.goal, plan);
     },
-    prepareOperation: (ctx, input, operation) => prepareCodexOperation(input, operation, deps.runtime, ctx.projectId),
+    prepareOperation: (ctx, input, operation) => prepareCodexOperation(input, operation, deps.runtime, ctx),
     // Host-managed worktrees run without provider approvals.
     capabilities: () => ["ContextUsage"],
     detect: (ctx) => deps.detect(ctx),
