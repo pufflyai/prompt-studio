@@ -56,7 +56,6 @@ Turn off the switch. Sampling, frame observers, and the `pst performance` endpoi
 - **Long tasks only:** a renderer without long-animation-frame support reports long tasks without script names.
 - **Agents cannot turn monitoring on.** The switch stays a person's choice on their own device.
 - The GPU process row shows that process's CPU and memory. GPU utilization and paint cost are not measured. The runtime is a separate program and is not listed; use your operating system's activity monitor for it.
-- On macOS and Linux the endpoint is a socket file in `PSTDIO_HOME`. A very long `PSTDIO_HOME` path (over about 100 characters) prevents it from starting; the view still works and the app log records the failure.
 
 ## Cost
 

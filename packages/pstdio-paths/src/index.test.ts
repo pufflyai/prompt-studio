@@ -64,3 +64,11 @@ test("the performance endpoint is a socket in the home, or a pipe named after it
   expect(pipe).toMatch(/^\\\\\.\\pipe\\pstdio-performance-[0-9a-f]{16}$/);
   expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: resolve("/tmp/other") } }, "win32")).not.toBe(pipe);
 });
+
+test("a home too long for a socket path keeps the endpoint in the temporary directory", () => {
+  const home = resolve(`/tmp/${"nested-folder/".repeat(8)}pstdio-home`);
+  const endpoint = resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } }, "darwin", "/tmp/user-temp");
+
+  expect(endpoint).toMatch(/^\/tmp\/user-temp\/pstdio-performance-[0-9a-f]{16}\.sock$/);
+  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } }, "darwin", "/tmp/user-temp")).toBe(endpoint);
+});

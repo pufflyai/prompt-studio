@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { homedir as osHomedir } from "node:os";
+import { homedir as osHomedir, tmpdir as osTmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 export type PstdioPathsEnv = Record<string, string | undefined> & {
@@ -45,15 +45,23 @@ export const resolvePstdioLogPath = (input: ResolvePstdioHomeInput = {}) =>
 export const resolvePstdioRuntimeDescriptorPath = (input: ResolvePstdioHomeInput = {}) =>
   join(resolvePstdioHome(input), "runtime.json");
 
+// Unix socket paths are limited to about 104 bytes, including the terminator.
+const MAX_SOCKET_PATH_BYTES = 100;
+
 // The desktop app serves its local performance snapshot here while monitoring is on.
-// Windows has no socket files, so it uses a named pipe derived from the home.
+// Windows has no socket files, so it uses a named pipe derived from the home. A home
+// too long for a socket path uses the user's temporary directory instead.
 export const resolvePstdioPerformanceEndpoint = (
   input: ResolvePstdioHomeInput = {},
   platform: NodeJS.Platform = process.platform,
+  tempDirectory = osTmpdir(),
 ) => {
   const home = resolvePstdioHome(input);
-  if (platform !== "win32") return join(home, "performance.sock");
-  return `\\\\.\\pipe\\pstdio-performance-${createHash("sha256").update(home).digest("hex").slice(0, 16)}`;
+  const id = createHash("sha256").update(home).digest("hex").slice(0, 16);
+  if (platform === "win32") return `\\\\.\\pipe\\pstdio-performance-${id}`;
+  const inHome = join(home, "performance.sock");
+  if (Buffer.byteLength(inHome) <= MAX_SOCKET_PATH_BYTES) return inHome;
+  return join(tempDirectory, `pstdio-performance-${id}.sock`);
 };
 
 export const resolvePstdioStatePath = (input: ResolvePstdioHomeInput = {}) => join(resolvePstdioHome(input), "state");
