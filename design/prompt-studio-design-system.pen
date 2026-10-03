@@ -19386,8 +19386,6 @@
                                   "name": "Description",
                                   "enabled": false,
                                   "fill": "$ds-fg-muted",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container(0)",
                                   "content": "Description",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
@@ -20200,59 +20198,116 @@
                       "type": "frame",
                       "id": "IZ2hX",
                       "name": "cmp/FilterPill",
-                      "context": "A committed filter clause. Reads 'Key op Value' then a remove affordance. h 24, radius 4, surface on a border hairline. Key/op are fg.muted, Value is fg at 500 so the clause scans as one phrase with the value emphasised. The x removes the clause, which detaches the active view and raises Save.\n\nAppears in cmp/CollectionViewBar's criteria row whenever the view has a filter, saved or not. A pill opens cmp/ViewFilterRuleEditor for its rule. Boolean rules use the resource kind label as the subject and the property as the predicate: Ticket is Archived or Ticket is not Archived.",
+                      "context": "A flat filter clause with independent property, condition, and value buttons, then X. No leading property icon. Option condition menus contain is and is not; membership semantics follow the field and selected values. Value menus show checkboxes and the option icon/color when supplied.",
                       "reusable": true,
                       "height": 24,
                       "fill": "$ds-surface",
                       "cornerRadius": 4,
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
-                      "gap": 5,
-                      "padding": [
-                        0,
-                        4,
-                        0,
-                        8
-                      ],
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "SCREL",
-                          "name": "Key",
-                          "fill": "$ds-fg-muted",
-                          "content": "Status",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
+                          "type": "frame",
+                          "id": "hBbLs",
+                          "name": "Key button",
+                          "height": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "SCREL",
+                              "name": "Key",
+                              "fill": "$ds-fg-muted",
+                              "content": "Status",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
-                          "type": "text",
-                          "id": "zwIz1",
-                          "name": "Op",
-                          "fill": "$ds-fg-subtle",
-                          "content": "is",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
+                          "type": "frame",
+                          "id": "oOchp",
+                          "name": "Op button",
+                          "height": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "zwIz1",
+                              "name": "Op",
+                              "fill": "$ds-fg-subtle",
+                              "content": "is",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
-                          "type": "text",
-                          "id": "N5wsTd",
-                          "name": "Value",
-                          "fill": "$ds-fg",
-                          "content": "In progress",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "500"
+                          "type": "frame",
+                          "id": "Hsj3H",
+                          "name": "Value button",
+                          "height": "fill_container",
+                          "stroke": "$ds-border-subtle",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "fIwTy",
+                              "name": "Selected status icon",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "circle",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "N5wsTd",
+                              "name": "Value",
+                              "fill": "$ds-fg",
+                              "content": "In progress",
+                              "fontFamily": "$font-body",
+                              "fontSize": 11,
+                              "fontWeight": "500"
+                            }
+                          ]
                         },
                         {
                           "type": "frame",
                           "id": "EJg4k",
                           "name": "Remove",
-                          "width": 16,
-                          "height": 16,
+                          "width": 24,
+                          "height": 24,
                           "cornerRadius": 3,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -20273,78 +20328,15 @@
                     },
                     {
                       "type": "frame",
-                      "id": "B9IQd",
-                      "name": "cmp/SortPill",
-                      "context": "The active sort, shown first in the criteria row. Names the first sort field and counts the rest (+1). Click opens the Sort menu. It has no remove x: removing sorts happens in the menu, so one click never silently reorders a board.",
-                      "reusable": true,
-                      "height": 24,
-                      "fill": "$ds-surface",
-                      "cornerRadius": 4,
-                      "stroke": "$ds-border",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "gap": 5,
-                      "padding": [
-                        0,
-                        6,
-                        0,
-                        8
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "G775bv",
-                          "name": "Direction",
-                          "width": 12,
-                          "height": 12,
-                          "icon": "arrow-down-wide-narrow",
-                          "library": "lucide",
-                          "fill": "$ds-fg-muted"
-                        },
-                        {
-                          "type": "text",
-                          "id": "gAEYr",
-                          "name": "Field",
-                          "fill": "$ds-fg",
-                          "content": "Priority",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "500"
-                        },
-                        {
-                          "type": "text",
-                          "id": "csBvW",
-                          "name": "More",
-                          "fill": "$ds-fg-subtle",
-                          "content": "+1",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "icon",
-                          "id": "J0MnH2",
-                          "name": "Chevron",
-                          "width": 11,
-                          "height": 11,
-                          "icon": "chevron-down",
-                          "library": "lucide",
-                          "fill": "$ds-fg-subtle"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
                       "id": "FpUeP",
                       "name": "cmp/RuleSelect",
-                      "context": "Compact select for filter and sort rules. Always show all choices, with a check on the selected value. Property choices have their type icons. Floating menus extend beyond parent popovers, sized to the viewport.",
+                      "context": "Compact single choice or value checklist. Property triggers have no type icon. Option menus keep every value visible with a checkbox and supplied icon/color; independent pill segments omit the chevron.",
                       "reusable": true,
                       "width": 140,
                       "height": 24,
                       "fill": "$ds-surface",
                       "cornerRadius": 4,
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 6,
@@ -21048,7 +21040,7 @@
                       "type": "frame",
                       "id": "XrEDw",
                       "name": "cmp/CollectionViewBar",
-                      "context": "Collection view bar with flat filter pills. All rules share one And/Or choice in the Filter menu. No filter groups or advanced mode.",
+                      "context": "Saved views, search, filters, and Display. The criteria row contains only flat filter clauses. Display owns the single sort.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "#00000000",
@@ -21250,28 +21242,6 @@
                               }
                             },
                             {
-                              "id": "vtuBl",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Sort",
-                              "height": 24,
-                              "theme": {
-                                "btn": "subtle",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": true,
-                                  "icon": "arrow-up-down",
-                                  "width": 12,
-                                  "height": 12
-                                },
-                                "Hf4GT": {
-                                  "content": "2"
-                                }
-                              }
-                            },
-                            {
                               "id": "D17OX",
                               "type": "ref",
                               "ref": "nvvgg",
@@ -21311,54 +21281,16 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "id": "zuX3p",
-                              "type": "ref",
-                              "ref": "B9IQd",
-                              "name": "Sort pill"
-                            },
-                            {
-                              "type": "rectangle",
-                              "id": "C49R4",
-                              "name": "Divider",
-                              "fill": "$ds-border",
-                              "width": 1,
-                              "height": 16
-                            },
-                            {
                               "id": "q73uD",
                               "type": "ref",
                               "ref": "IZ2hX",
-                              "name": "Filter · Status",
-                              "descendants": {
-                                "SCREL": {
-                                  "content": "Status"
-                                },
-                                "zwIz1": {
-                                  "content": "is not",
-                                  "enabled": true
-                                },
-                                "N5wsTd": {
-                                  "content": "Done"
-                                }
-                              }
+                              "name": "Filter · Status"
                             },
                             {
                               "id": "FVm2G",
                               "type": "ref",
                               "ref": "IZ2hX",
-                              "name": "Filter · Priority",
-                              "descendants": {
-                                "SCREL": {
-                                  "content": "Priority"
-                                },
-                                "zwIz1": {
-                                  "content": "is any of",
-                                  "enabled": true
-                                },
-                                "N5wsTd": {
-                                  "content": "High, Urgent"
-                                }
-                              }
+                              "name": "Filter · Priority"
                             },
                             {
                               "id": "jaLn7",
@@ -21454,26 +21386,11 @@
                             "zsbBi/Hf4GT": {
                               "content": "2"
                             },
-                            "vtuBl/Hf4GT": {
-                              "content": "1"
-                            },
                             "D17OX": {
                               "theme": {
                                 "btn": "subtle",
                                 "size": "2xs"
                               }
-                            },
-                            "zuX3p/gAEYr": {
-                              "content": "Updated"
-                            },
-                            "zuX3p/csBvW": {
-                              "enabled": false
-                            },
-                            "FVm2G/SCREL": {
-                              "content": "Team"
-                            },
-                            "FVm2G/N5wsTd": {
-                              "content": "design, platform"
                             }
                           }
                         },
@@ -22198,33 +22115,6 @@
                             },
                             "zsbBi/Hf4GT": {
                               "content": "2"
-                            },
-                            "vtuBl/Hf4GT": {
-                              "content": "1"
-                            },
-                            "zuX3p/G775bv": {
-                              "icon": "arrow-up-narrow-wide"
-                            },
-                            "zuX3p/gAEYr": {
-                              "content": "Name"
-                            },
-                            "zuX3p/csBvW": {
-                              "enabled": false
-                            },
-                            "q73uD/zwIz1": {
-                              "content": "is"
-                            },
-                            "q73uD/N5wsTd": {
-                              "content": "In review"
-                            },
-                            "FVm2G/SCREL": {
-                              "content": "Score"
-                            },
-                            "FVm2G/zwIz1": {
-                              "content": "≥"
-                            },
-                            "FVm2G/N5wsTd": {
-                              "content": "70"
                             }
                           }
                         },
@@ -24339,12 +24229,11 @@
                       "name": "cmp/KanbanRendererFilterMenu",
                       "context": "Canonical two-column renderer filter popover. When View Bar opens it, the surface sits 8px below the Filter control with their right edges aligned. Search occupies its own top row. Below it, the PROPERTY and active-property headings sit in separate column headers so they never overlap search. The property column is fixed at 188px and separated from the flexible options column by a $ds-border-subtle hairline; all row content fills the remaining container width. DataTable and Kanban share this primary menu surface and anatomy while overriding available fields.",
                       "reusable": true,
-                      "clip": true,
                       "width": 440,
                       "height": 320,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -24878,13 +24767,12 @@
                       "type": "frame",
                       "id": "s0FaJ",
                       "name": "cmp/KanbanRendererDisplayMenu",
-                      "context": "Canonical renderer display popover. When View Bar opens it, the surface sits 8px below the Display control with their right edges aligned. Renderer instances share section labels, compact setting rows, property chips, and reset action. The ticket shorthand is intrinsic to list rows: selecting ID must never create a second attribute tag beside the row. Display holds layout only. Order belongs to cmp/ViewSortMenu, so there is no Ordering row. The data table uses cmp/DataTableDisplayMenu.",
+                      "context": "Display owns layout, properties, and a single sort. Ordering selects None or one field; Direction lists both choices. Fixed nested menus remain fully visible.",
                       "reusable": true,
-                      "clip": true,
                       "width": 300,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -25104,6 +24992,121 @@
                         },
                         {
                           "type": "frame",
+                          "id": "KyGd3",
+                          "name": "Single sort",
+                          "context": "One sort only. Ordering selects None or one property. Direction lists both choices with the selected one checked.",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 1,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "ET1fj",
+                              "name": "Ordering",
+                              "width": "fill_container",
+                              "height": 28,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "bgQYb",
+                                  "name": "Ordering label",
+                                  "fill": "$ds-fg",
+                                  "content": "Ordering",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "CpPGY",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 2
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "vhpqf",
+                                  "name": "Ordering value",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Priority",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "MERdz",
+                                  "name": "Open Ordering",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "H3Ob7t",
+                              "name": "Direction",
+                              "width": "fill_container",
+                              "height": 28,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "l7MnsW",
+                                  "name": "Direction label",
+                                  "fill": "$ds-fg",
+                                  "content": "Direction",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ZDBjl",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 2
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "FgHE8",
+                                  "name": "Direction value",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Option order",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "dbvzC",
+                                  "name": "Open Direction",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
                           "id": "u0t3PS",
                           "name": "L · PROPERTIES",
                           "width": "fill_container",
@@ -25250,11 +25253,10 @@
                       "name": "cmp/DataTableDisplayMenu",
                       "context": "Display for a data table. Every setting here is saved with the view: grouping, row numbers, wrap rows, statistics, and which columns show in which order. Column width stays local. Grouping lists None plus every column marked groupable. Statistics appears only when a column declares a stat. Hidden columns stay searchable and filterable through the view's rules.",
                       "reusable": true,
-                      "clip": true,
                       "width": 300,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -25337,6 +25339,121 @@
                               "icon": "chevron-down",
                               "library": "lucide",
                               "fill": "$ds-fg-subtle"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Z8XyF",
+                          "name": "Single table sort",
+                          "context": "One sort only. Ordering selects None or one property. Direction lists both choices with the selected one checked.",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 1,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "H83V0",
+                              "name": "Ordering",
+                              "width": "fill_container",
+                              "height": 28,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "IIgNq",
+                                  "name": "Ordering label",
+                                  "fill": "$ds-fg",
+                                  "content": "Ordering",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "V26lu",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 2
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "J76FG",
+                                  "name": "Ordering value",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Priority",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "sTmJT",
+                                  "name": "Open Ordering",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "l65hPJ",
+                              "name": "Direction",
+                              "width": "fill_container",
+                              "height": 28,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rfc3b",
+                                  "name": "Direction label",
+                                  "fill": "$ds-fg",
+                                  "content": "Direction",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "BvOTl",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 2
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "NzxzN",
+                                  "name": "Direction value",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Option order",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "G1k9Ac",
+                                  "name": "Open Direction",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "chevron-down",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-subtle"
+                                }
+                              ]
                             }
                           ]
                         },
@@ -26097,7 +26214,7 @@
                       "width": 640,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -26315,7 +26432,7 @@
                       "width": 300,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -26553,186 +26670,6 @@
                                   "enabled": true,
                                   "icon": "check",
                                   "fill": "$ds-fg"
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "M8FhE",
-                      "name": "cmp/ViewSortMenu",
-                      "context": "Sort levels in priority order. Property selectors show type icons. Direction menus extend beyond the parent and show both choices with the selected one checked. Deleting the last sort closes the menu before its criteria anchor disappears.",
-                      "reusable": true,
-                      "width": 400,
-                      "fill": "$ds-bg",
-                      "cornerRadius": "$overlay-radius",
-                      "stroke": "$ds-border",
-                      "strokeWidth": 1,
-                      "strokeAlignment": "inner",
-                      "layout": "vertical",
-                      "gap": 1,
-                      "padding": 6,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "FEfxM",
-                          "name": "L · SORT",
-                          "width": "fill_container",
-                          "padding": [
-                            7,
-                            8,
-                            4,
-                            8
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "LE0ew",
-                              "name": "T",
-                              "fill": "$ds-fg-subtle",
-                              "content": "SORT",
-                              "fontFamily": "$font-heading",
-                              "fontSize": 9,
-                              "fontWeight": "600",
-                              "letterSpacing": 1
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "PsHhC",
-                          "name": "Rules",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 6,
-                          "padding": [
-                            2,
-                            8,
-                            6,
-                            8
-                          ],
-                          "children": [
-                            {
-                              "id": "Gleyz",
-                              "type": "ref",
-                              "ref": "DFfzO",
-                              "name": "Sort · Priority",
-                              "width": "fill_container",
-                              "descendants": {
-                                "nEeEK/qARZy": {
-                                  "icon": "circle-dashed"
-                                },
-                                "nEeEK/b1L0Y": {
-                                  "content": "Priority"
-                                },
-                                "rquT6/b1L0Y": {
-                                  "content": "Option order"
-                                }
-                              }
-                            },
-                            {
-                              "id": "wYKcf",
-                              "type": "ref",
-                              "ref": "DFfzO",
-                              "name": "Sort · Updated",
-                              "width": "fill_container",
-                              "descendants": {
-                                "nEeEK/qARZy": {
-                                  "icon": "calendar"
-                                },
-                                "nEeEK/b1L0Y": {
-                                  "content": "Updated"
-                                },
-                                "rquT6/b1L0Y": {
-                                  "content": "Newest first"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "D3n9B",
-                          "name": "Div",
-                          "width": "fill_container",
-                          "padding": [
-                            4,
-                            0
-                          ],
-                          "children": [
-                            {
-                              "type": "rectangle",
-                              "id": "QCIJK",
-                              "name": "R",
-                              "fill": "$ds-border-subtle",
-                              "width": "fill_container",
-                              "height": 1
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "FPO6q",
-                          "name": "Footer",
-                          "width": "fill_container",
-                          "gap": 4,
-                          "padding": [
-                            0,
-                            4
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "Ov47l",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Add sort",
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": true,
-                                  "icon": "plus",
-                                  "width": 12,
-                                  "height": 12
-                                },
-                                "Hf4GT": {
-                                  "content": "Add sort"
-                                }
-                              }
-                            },
-                            {
-                              "type": "frame",
-                              "id": "iczV4",
-                              "name": "Sp",
-                              "width": "fill_container",
-                              "height": 2
-                            },
-                            {
-                              "id": "FaoWL",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Delete sort",
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": true,
-                                  "icon": "trash-2",
-                                  "width": 12,
-                                  "height": 12
-                                },
-                                "Hf4GT": {
-                                  "content": "Delete sort"
                                 }
                               }
                             }
@@ -30989,12 +30926,12 @@
                       "type": "frame",
                       "id": "tQws6",
                       "name": "cmp/Popover",
-                      "context": "recipes/popover.ts: bg, border 1px border, radius xs, py 8, gap 8; title label/M/medium. Chakra content width 320.",
+                      "context": "Shared popover surface: bg, 1px border.subtle, radius xs, py 8, gap 8.",
                       "reusable": true,
                       "width": 320,
                       "fill": "$ds-bg",
                       "cornerRadius": 4,
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -31068,13 +31005,12 @@
                       "type": "frame",
                       "id": "rhikV",
                       "name": "cmp/Menu",
-                      "context": "recipes/menu.ts content: width 280, radius xs, bg, border 1px border, no padding. Items are cmp/SearchableMenuItem (28px, px 12). Separators border.subtle. Group label label/S/regular fg.muted.",
+                      "context": "Shared menu surface: bg, 1px border.subtle, radius xs, all choices visible, selected choice checked.",
                       "reusable": true,
-                      "clip": true,
                       "width": 280,
                       "fill": "$ds-bg",
                       "cornerRadius": 4,
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -31173,11 +31109,10 @@
                       "name": "cmp/SearchableMenu",
                       "context": "overlays/searchable-menu.tsx: menu content with a search input row on top (borderless input, 32px) and cmp/SearchableMenuItem rows.",
                       "reusable": true,
-                      "clip": true,
                       "width": 280,
                       "fill": "$ds-bg",
                       "cornerRadius": 4,
-                      "stroke": "$ds-border",
+                      "stroke": "$ds-border-subtle",
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "layout": "vertical",
@@ -35300,21 +35235,6 @@
                       "descendants": {
                         "zsbBi/Hf4GT": {
                           "content": "2"
-                        },
-                        "vtuBl/Hf4GT": {
-                          "content": "1"
-                        },
-                        "zuX3p/gAEYr": {
-                          "content": "Updated"
-                        },
-                        "zuX3p/csBvW": {
-                          "enabled": false
-                        },
-                        "FVm2G/SCREL": {
-                          "content": "Team"
-                        },
-                        "FVm2G/N5wsTd": {
-                          "content": "design, platform"
                         }
                       }
                     },
@@ -64558,21 +64478,6 @@
                   "descendants": {
                     "zsbBi/Hf4GT": {
                       "content": "2"
-                    },
-                    "vtuBl/Hf4GT": {
-                      "content": "1"
-                    },
-                    "zuX3p/gAEYr": {
-                      "content": "Updated"
-                    },
-                    "zuX3p/csBvW": {
-                      "enabled": false
-                    },
-                    "FVm2G/SCREL": {
-                      "content": "Team"
-                    },
-                    "FVm2G/N5wsTd": {
-                      "content": "design, platform"
                     }
                   }
                 },
@@ -127679,12 +127584,6 @@
                   "name": "RuleSelect"
                 },
                 {
-                  "id": "cgM0h",
-                  "type": "ref",
-                  "ref": "B9IQd",
-                  "name": "SortPill"
-                },
-                {
                   "id": "tJg6J",
                   "type": "ref",
                   "ref": "DofzK",
@@ -127774,12 +127673,6 @@
                   "type": "ref",
                   "ref": "GzF1C",
                   "name": "ViewFilterMenu"
-                },
-                {
-                  "id": "xTmud",
-                  "type": "ref",
-                  "ref": "M8FhE",
-                  "name": "ViewSortMenu"
                 },
                 {
                   "type": "frame",
@@ -127945,24 +127838,6 @@
                     },
                     "zsbBi/Hf4GT": {
                       "content": "2"
-                    },
-                    "vtuBl/Hf4GT": {
-                      "content": "1"
-                    },
-                    "zuX3p/gAEYr": {
-                      "content": "Updated"
-                    },
-                    "zuX3p/csBvW": {
-                      "enabled": false
-                    },
-                    "q73uD/SCREL": {
-                      "content": "Status"
-                    },
-                    "FVm2G/SCREL": {
-                      "content": "Team"
-                    },
-                    "FVm2G/N5wsTd": {
-                      "content": "design, platform"
                     },
                     "n267u": {
                       "enabled": false
@@ -128804,12 +128679,6 @@
                     },
                     "zsbBi/Hf4GT": {
                       "content": "1"
-                    },
-                    "vtuBl/Hf4GT": {
-                      "content": "2"
-                    },
-                    "zuX3p/gAEYr": {
-                      "content": "Priority"
                     },
                     "FVm2G": {
                       "enabled": false
@@ -130373,20 +130242,11 @@
                     "zsbBi/Hf4GT": {
                       "content": "1"
                     },
-                    "vtuBl/Hf4GT": {
-                      "content": "1"
-                    },
                     "D17OX": {
                       "theme": {
                         "btn": "subtle",
                         "size": "2xs"
                       }
-                    },
-                    "zuX3p/gAEYr": {
-                      "content": "Priority"
-                    },
-                    "zuX3p/csBvW": {
-                      "enabled": false
                     },
                     "FVm2G": {
                       "enabled": false
@@ -132534,35 +132394,13 @@
               "id": "I6TWG",
               "type": "ref",
               "ref": "IZ2hX",
-              "name": "Ticket is Archived",
-              "descendants": {
-                "SCREL": {
-                  "content": "Ticket"
-                },
-                "zwIz1": {
-                  "content": "is"
-                },
-                "N5wsTd": {
-                  "content": "Archived"
-                }
-              }
+              "name": "Ticket is Archived"
             },
             {
               "id": "W1rVL",
               "type": "ref",
               "ref": "IZ2hX",
-              "name": "Ticket is not Archived",
-              "descendants": {
-                "SCREL": {
-                  "content": "Ticket"
-                },
-                "zwIz1": {
-                  "content": "is not"
-                },
-                "N5wsTd": {
-                  "content": "Archived"
-                }
-              }
+              "name": "Ticket is not Archived"
             },
             {
               "id": "P0hqqM",

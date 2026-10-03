@@ -62,6 +62,7 @@ const buildTableSettings = (flags: ViewFlags, board: Board) => {
   return settings;
 };
 const buildSorts = (values: string[]) => {
+  if (values.length > 1) throw new Error("A view allows only one sort");
   if (values.length === 1 && values[0] === "none") return [];
   return values.map((value): ViewSort => {
     const [attributeId, direction, extra] = value.split(":");

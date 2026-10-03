@@ -7,6 +7,8 @@ export interface RuleSelectOption {
   value: string;
   label: string;
   icon?: ElementType;
+  iconColor?: string;
+  count?: number;
   disabled?: boolean;
 }
 
@@ -22,6 +24,10 @@ export interface RuleSelectProps {
   /** Rule rows pass a fixed width so the columns of a rule list line up. */
   width?: string;
   showSearch?: boolean;
+  variant?: "subtle" | "filter-segment";
+  showSelectedIcon?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const toList = (value: RuleSelectProps["value"]) => {
@@ -40,7 +46,10 @@ export const RuleSelect = (props: RuleSelectProps) => {
   return (
     <SearchableMenu
       portalled={false}
+      open={props.open}
+      onOpenChange={props.onOpenChange ? (details) => props.onOpenChange?.(details.open) : undefined}
       positioning={{ strategy: "fixed", hideWhenDetached: true }}
+      multiple={multiple}
       closeOnSelect={!multiple}
       showSearch={showSearch ?? options.length > 8}
       searchPlaceholder="Search…"
@@ -54,6 +63,8 @@ export const RuleSelect = (props: RuleSelectProps) => {
         id: option.value,
         label: option.label,
         icon: option.icon,
+        iconColor: option.iconColor,
+        secondaryLabel: option.count === undefined ? undefined : String(option.count),
         isDisabled: option.disabled,
         isSelected: selected.includes(option.value),
         onSelect: () => onSelect(option.value),
@@ -61,7 +72,7 @@ export const RuleSelect = (props: RuleSelectProps) => {
       trigger={
         <Button
           aria-label={props["aria-label"]}
-          variant="subtle"
+          variant={props.variant ?? "subtle"}
           size="2xs"
           width={width}
           minW="0"
@@ -69,11 +80,13 @@ export const RuleSelect = (props: RuleSelectProps) => {
           gap="2xs"
           flexShrink={0}
         >
-          {icon ? <Icon as={icon} color="fg.muted" /> : null}
+          {icon && props.showSelectedIcon !== false ? (
+            <Icon as={icon} color={selectedOptions[0]?.iconColor ?? "fg.muted"} />
+          ) : null}
           <Text as="span" flex="1" minW="0" textAlign="start" textStyle="label/XS" truncate>
             {props.selectedLabel ?? label}
           </Text>
-          <Icon as={ChevronDown} color="fg.subtle" />
+          {props.variant !== "filter-segment" ? <Icon as={ChevronDown} color="fg.subtle" /> : null}
         </Button>
       }
     />

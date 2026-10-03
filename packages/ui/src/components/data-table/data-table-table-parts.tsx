@@ -19,8 +19,7 @@ const utilityColumnIds = new Set(["rowIndex", "rowSelection", "rowActions"]);
 
 /** The header field menu is a shortcut into the view: it never keeps a sort or filter of its own. */
 export interface DataTableFieldMenu {
-  sortFor: (columnId: string) => { direction: ViewSortDirection; level: number } | undefined;
-  sortLevels: number;
+  sortFor: (columnId: string) => ViewSortDirection | undefined;
   onSort: (columnId: string, direction: ViewSortDirection) => void;
   onFilterBy: (columnId: string) => void;
   onHide: (columnId: string) => void;
@@ -102,16 +101,11 @@ export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
                   size="2xs"
                   minW="auto"
                   paddingX="2xs"
-                  aria-label={sort ? `Sorted ${sort.direction}` : "Column options"}
+                  aria-label={sort ? `Sorted ${sort}` : "Column options"}
                   variant="ghost"
                   color={sort ? "fg" : "fg.subtle"}
                 >
-                  <ChakraIcon as={sortIcon(sort?.direction)} boxSize="14px" />
-                  {sort && fieldMenu.sortLevels > 1 ? (
-                    <Text as="span" textStyle="label/XS" color="fg.muted">
-                      {sort.level}
-                    </Text>
-                  ) : null}
+                  <ChakraIcon as={sortIcon(sort)} boxSize="14px" />
                 </IconButton>
               </Menu.Trigger>
               <Portal>

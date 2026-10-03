@@ -1,12 +1,12 @@
 import { Box, Button, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
-import { ArrowUpDown, ListFilter, Plus, RotateCcw } from "lucide-react";
+import { ListFilter, Plus, RotateCcw } from "lucide-react";
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { CollectionItemLabelContext } from "./collection-item-label";
-import { canSortField, findField } from "./collection-view-fields";
+import { findField } from "./collection-view-fields";
 import { countFilterRules } from "./collection-view-filter";
-import { FilterRulePill, SortPill } from "./collection-view-pills";
+import { FilterRulePill } from "./collection-view-pills";
 import { setRuleAt } from "./collection-view-rules";
 import { CollectionViewTabs } from "./collection-view-tabs";
 import type { CollectionSavedView, CollectionViewsSource } from "./collection-view-types";
@@ -22,7 +22,6 @@ import { isCollectionViewDirty } from "./use-collection-views";
 import { ViewBarPopover } from "./view-bar-popover";
 import { ViewFilterMenu } from "./view-filter-menu";
 import { ViewSearchField } from "./view-search-field";
-import { ViewSortMenu } from "./view-sort-menu";
 
 export interface CollectionViewBarProps<TSettings> {
   storageKey: string;
@@ -72,22 +71,19 @@ const CountButton = (props: CountButtonProps) => {
   );
 };
 
-/** One view bar for data tables and both kanban displays: saved views, then Search, Filter, Sort, and Display. */
+/** One view bar for data tables and both kanban displays: saved views, then Search, Filter, and Display. */
 export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSettings>) => {
   const { storageKey, initialState, views, defaultViewId, viewsSource, fields, optionsFor } = props;
   const { search, onSearchChange, searchResultLabel, leading, actions, displayControl, align = "split" } = props;
   const store: CollectionViewStoreState<TSettings> = useCollectionViewStore(storageKey, initialState, (state) => state);
   const { activeViewId, settings, filter, sorts, openMenu, openRuleIndex } = store;
-  const { activateView, setFilter, setSorts, setOpenMenu, setOpenRuleIndex, startRule } = store;
+  const { activateView, setFilter, setOpenMenu, setOpenRuleIndex, startRule } = store;
   const activeView = views.find((view) => view.id === activeViewId);
   const state = { settings, filter, sorts };
   const dirty = isCollectionViewDirty(activeView, state);
   const filterFields = fields.filter((field) => field.filterable);
-  const sortFields = fields.filter(canSortField);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const addFilterRef = useRef<HTMLButtonElement>(null);
-  const sortButtonRef = useRef<HTMLButtonElement>(null);
-  const sortPillRef = useRef<HTMLButtonElement>(null);
   const [anchor, setAnchor] = useState<RefObject<HTMLButtonElement | null>>(filterButtonRef);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -114,7 +110,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
     const field = findField(filterFields, id);
     return field ? optionsFor(field) : [];
   };
-  const showCriteria = dirty || filter.rules.length > 0 || sorts.length > 0;
+  const showCriteria = dirty || filter.rules.length > 0;
 
   return (
     <CollectionItemLabelContext.Provider value={props.itemLabel ?? "Item"}>
@@ -148,13 +144,6 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             buttonRef={filterButtonRef}
             onClick={() => open("filter", filterButtonRef)}
           />
-          <CountButton
-            label="Sort"
-            icon={ArrowUpDown}
-            count={sorts.length}
-            buttonRef={sortButtonRef}
-            onClick={() => open("sort", sortButtonRef)}
-          />
           {displayControl}
           {actions}
         </HStack>
@@ -170,15 +159,6 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             borderColor="border.subtle"
           >
             <HStack minW="0" gap="2xs" overflowX="auto">
-              <SortPill
-                fields={sortFields}
-                sorts={sorts}
-                buttonRef={sortPillRef}
-                onOpen={() => open("sort", sortPillRef)}
-              />
-              {sorts.length > 0 && filter.rules.length > 0 ? (
-                <Box width="1px" height="1rem" flexShrink={0} bg="border" />
-              ) : null}
               {filter.rules.map((rule, index) => (
                 <Fragment key={`${index}:${rule.attributeId}`}>
                   {index > 0 ? (
@@ -270,26 +250,6 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
           testId="view-filter-popover"
         >
           <ViewFilterMenu fields={filterFields} filter={filter} optionsFor={optionsFor} onChange={setFilter} />
-        </ViewBarPopover>
-        <ViewBarPopover
-          open={openMenu === "sort"}
-          onOpenChange={(isOpen) => setOpenMenu(isOpen ? "sort" : null)}
-          anchorRef={anchor}
-          width="25rem"
-          testId="view-sort-popover"
-        >
-          <ViewSortMenu
-            fields={sortFields}
-            sorts={sorts}
-            onChange={(next) => {
-              if (next.length === 0) {
-                // The criteria pill disappears with the last sort. Close before removing its anchor.
-                setOpenMenu(null);
-                setAnchor(sortButtonRef);
-              }
-              setSorts(next);
-            }}
-          />
         </ViewBarPopover>
       </Stack>
     </CollectionItemLabelContext.Provider>

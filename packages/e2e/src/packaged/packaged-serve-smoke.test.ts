@@ -425,4 +425,5 @@ registerExtensionAutomationSmokeTests();
 registerHarnessCleanupSmokeTests();
 registerLiveQuestionSmokeTests();
 
+// Shared views persist flat filters and one ordering, and reject a second sort.
 registerBoardViewsSmokeTests();

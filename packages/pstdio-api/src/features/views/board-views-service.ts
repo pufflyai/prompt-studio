@@ -19,7 +19,7 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     title: row.title,
     settings: row.settings,
     filter: row.filter,
-    sorts: row.sorts,
+    sorts: row.sorts.slice(0, 1),
     builtIn: false,
   });
   const summary = async (board: ResolvedBoard) => ({
@@ -33,18 +33,17 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     let rows: (Awaited<ReturnType<typeof db.list>>[number] | null)[] = await db.list(board.scope);
     // A failed extension query, or a table that cannot describe its columns yet, is never
     // evidence that a saved field disappeared.
-    const fields = await resolveBoardFields(deps, board).catch(() => null);
-    if (fields?.length)
-      rows = await Promise.all(
-        rows.map(async (row) => {
-          if (!row) return null;
-          const cleaned = cleanBoardView(board, row, fields);
-          if (isDeepStrictEqual(cleaned, { settings: row.settings, filter: row.filter, sorts: row.sorts })) return row;
-          const updated = await db.clean(row, cleaned);
-          if (updated) emitView(updated);
-          return updated ?? (await db.get(board.scope.project_id, row.id));
-        }),
-      );
+    const fields = await resolveBoardFields(deps, board).catch(() => undefined);
+    rows = await Promise.all(
+      rows.map(async (row) => {
+        if (!row) return null;
+        const cleaned = cleanBoardView(board, row, fields);
+        if (isDeepStrictEqual(cleaned, { settings: row.settings, filter: row.filter, sorts: row.sorts })) return row;
+        const updated = await db.clean(row, cleaned);
+        if (updated) emitView(updated);
+        return updated ?? (await db.get(board.scope.project_id, row.id));
+      }),
+    );
     const views = [...board.builtIns, ...rows.filter((row) => row !== null).map((row) => savedView(board, row))];
     const chosen = (await db.getDefault(board.scope))?.default_view_id;
     const flagged = board.kind === "kanban" ? board.body.defaultViews?.find((view) => view.isDefault)?.id : undefined;
@@ -101,7 +100,7 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
             title: row.title,
             settings: row.settings,
             filter: row.filter,
-            sorts: row.sorts,
+            sorts: row.sorts.slice(0, 1),
             builtIn: false,
           },
         ];

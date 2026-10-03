@@ -50,3 +50,18 @@ export const clearQuickOptions = (filter: ViewFilterGroup, attributeId: string):
   ...filter,
   rules: filter.rules.filter((entry) => entry.attributeId !== attributeId || !isAnyOf(entry)),
 });
+
+/** Selecting a categorical value replaces an empty predicate in the same edit. */
+export const selectRuleValues = (
+  field: AttributeDescriptor,
+  rule: ViewFilterRule,
+  value: ViewFilterRule["value"],
+): ViewFilterRule => {
+  let condition = rule.condition;
+  if (Array.isArray(value) && (condition === "is-empty" || condition === "is-not-empty")) {
+    const negative = condition === "is-not-empty";
+    if (field.type.kind === "enum-multi") condition = negative ? "has-none-of" : "has-any-of";
+    else condition = negative ? "is-none-of" : "is-any-of";
+  }
+  return { ...rule, condition, value };
+};

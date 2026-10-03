@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
 import { findField } from "../collection-view/collection-view-fields";
 import { countFilterRules } from "../collection-view/collection-view-filter";
+import { DisplaySortControl } from "../collection-view/display-sort-control";
 import { buildColumns } from "./build-columns";
 import { DataTableDisplayMenu } from "./data-table-display-menu";
 import { DataTableGrid } from "./data-table-grid";
@@ -96,11 +97,10 @@ const DatasetDataTable = (props: DataTableProps) => {
 
   const fieldMenu: DataTableFieldMenu = {
     sortFor: (columnId) => {
-      const level = sorts.findIndex((sort) => sort.attributeId === columnId);
-      return level === -1 ? undefined : { direction: sorts[level]!.direction, level: level + 1 };
+      const sort = sorts[0];
+      return sort?.attributeId === columnId ? sort.direction : undefined;
     },
-    sortLevels: sorts.length,
-    // The header replaces all sorts with this column; the Sort menu builds several levels.
+    // Header and Display edit the same single ordering.
     onSort: (columnId, direction) => setSorts([{ attributeId: columnId, direction }]),
     onFilterBy: (columnId) => {
       const field = findField(view.attributes, columnId);
@@ -132,6 +132,7 @@ const DatasetDataTable = (props: DataTableProps) => {
         displayControl={
           <DataTableDisplayMenu
             columns={view.attributes}
+            sortControl={<DisplaySortControl fields={view.attributes} sorts={sorts} onSortsChange={setSorts} />}
             settings={settings}
             statsAvailable={Boolean(columnStats)}
             onSettingsChange={setSettings}

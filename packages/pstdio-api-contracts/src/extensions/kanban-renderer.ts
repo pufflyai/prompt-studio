@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { viewFilterGroupSchema, viewSortSchema } from "./collection-view";
+import { viewFilterGroupSchema, viewSortsSchema } from "./collection-view";
 import { extensionParamObjectSchema } from "./commands";
 import { localizableStringSchema } from "./common";
 import { extensionRendererRecordBaseSchema } from "./renderers";
@@ -63,7 +63,7 @@ export const kanbanRendererSavedViewSchema = z.object({
   title: localizableStringSchema,
   settings: kanbanViewSettingsSchema,
   filter: viewFilterGroupSchema,
-  sorts: z.array(viewSortSchema),
+  sorts: viewSortsSchema,
   isDefault: z.boolean().optional(),
 });
 
@@ -112,7 +112,7 @@ export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSc
   rowActivationHandlerId: z.string().optional(),
   defaultSettings: kanbanViewSettingsSchema.partial().optional(),
   defaultFilter: viewFilterGroupSchema.optional(),
-  defaultSorts: z.array(viewSortSchema).optional(),
+  defaultSorts: viewSortsSchema.optional(),
   defaultViews: z.array(kanbanRendererSavedViewSchema).optional(),
   defaultActiveViewId: z.string().optional(),
   hideToolbar: z.boolean().optional(),

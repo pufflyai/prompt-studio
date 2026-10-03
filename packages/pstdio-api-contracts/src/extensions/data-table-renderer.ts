@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { viewFilterGroupSchema, viewSortSchema } from "./collection-view";
+import { viewFilterGroupSchema, viewSortsSchema } from "./collection-view";
 import { localizableStringSchema } from "./common";
 import { extensionRendererRecordBaseSchema } from "./renderers";
 import { viewToolbarActionRecordSchema } from "./view-toolbar-action";
@@ -56,7 +56,7 @@ const dataTableRendererSavedViewSchema = z.object({
   title: localizableStringSchema,
   settings: dataTableRendererSettingsSchema.partial().optional(),
   filter: viewFilterGroupSchema.optional(),
-  sorts: z.array(viewSortSchema).optional(),
+  sorts: viewSortsSchema.optional(),
 });
 
 const rowActionSchema = z.object({
@@ -87,7 +87,7 @@ export const extensionDataTableRendererRecordSchema = extensionRendererRecordBas
   pageSizeOptions: z.array(z.number().int().positive()).optional(),
   defaultSettings: dataTableRendererSettingsSchema.partial().optional(),
   defaultFilter: viewFilterGroupSchema.optional(),
-  defaultSorts: z.array(viewSortSchema).optional(),
+  defaultSorts: viewSortsSchema.optional(),
   defaultViews: z.array(dataTableRendererSavedViewSchema).optional(),
   defaultActiveViewId: z.string().optional(),
 });

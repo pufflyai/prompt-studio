@@ -46,7 +46,7 @@ describe("collection view store", () => {
     first.setSettings({ viewMode: "list" });
     first.setSorts([{ attributeId: "title", direction: "asc" }]);
     first.setExpandedGroup("group::done", false);
-    first.setOpenMenu("sort");
+    first.setOpenMenu("filter");
 
     const restored = createCollectionViewStore(options).getState();
 
@@ -57,6 +57,38 @@ describe("collection view store", () => {
       sorts: [{ attributeId: "title", direction: "asc" }],
       expandedGroups: { "group::done": false },
       openMenu: null,
+    });
+  });
+
+  test("restores one valid sort without losing version-five unsaved edits", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      "pstdio/ui/kanban-renderer/one-sort",
+      JSON.stringify({
+        version: 5,
+        state: {
+          activeViewId: "saved",
+          settings: { ...settings, viewMode: "list" },
+          filter: done,
+          expandedGroups: { done: false },
+          sorts: [
+            { attributeId: "title", direction: "asc" },
+            { attributeId: "updated", direction: "desc" },
+          ],
+        },
+      }),
+    );
+    const restored = createCollectionViewStore({
+      storageKey: "one-sort",
+      storage,
+      initialState: { settings },
+    }).getState();
+    expect(restored).toMatchObject({
+      activeViewId: "saved",
+      settings: { ...settings, viewMode: "list" },
+      filter: done,
+      expandedGroups: { done: false },
+      sorts: [{ attributeId: "title", direction: "asc" }],
     });
   });
 

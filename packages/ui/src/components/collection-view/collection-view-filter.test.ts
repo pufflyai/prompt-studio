@@ -126,6 +126,14 @@ describe("view filters", () => {
     expect(only({ attributeId: "score", condition: "is-any-of", value: ["92", "70"] })).toEqual(["a", "c"]);
   });
 
+  test("excluded exact scalar selections preserve case and timestamps", () => {
+    expect(only({ attributeId: "title", condition: "is-none-of", value: ["Chat scroll jumps"] })).toEqual(["a", "c"]);
+    expect(only({ attributeId: "updated", condition: "is-none-of", value: ["2026-10-01T09:00:00"] })).toEqual([
+      "b",
+      "c",
+    ]);
+  });
+
   test("the built-in title field reads the row title", () => {
     expect(filterRowsByView(rows, { conjunction: "and", rules: [] }, [TITLE_FIELD])).toBe(rows);
     expect(only({ attributeId: "title", condition: "is-empty" })).toEqual([]);

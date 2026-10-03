@@ -69,5 +69,5 @@ export const validateBoardView = (
     (sent.filter === undefined ? undefined : findViewFilterProblem(view.filter, fields)) ??
     (sent.sorts === undefined ? undefined : findViewSortsProblem(view.sorts, fields));
   if (problem) throw new BoardViewError(problem);
-  return { settings, filter: view.filter, sorts: view.sorts };
+  return { settings, filter: view.filter, sorts: view.sorts.slice(0, 1) };
 };

@@ -17,7 +17,7 @@ export interface CollectionViewSnapshot<TSettings> {
   activeViewId: string;
 }
 
-export type CollectionViewMenu = "picker" | "filter" | "sort";
+export type CollectionViewMenu = "picker" | "filter";
 
 export interface CollectionViewStoreInitialState<TSettings> {
   settings: TSettings;
@@ -55,7 +55,7 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
   const snapshot: CollectionViewSnapshot<TSettings> = {
     settings: initialState.settings,
     filter: initialState.filter ?? EMPTY_VIEW_FILTER,
-    sorts: initialState.sorts ?? [],
+    sorts: (initialState.sorts ?? []).slice(0, 1),
     expandedGroups: {},
     activeViewId: "",
   };
@@ -77,14 +77,14 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
           }),
         setSettings: (settings) => set((state) => ({ settings: { ...state.settings, ...settings } })),
         setFilter: (filter) => set({ filter }),
-        setSorts: (sorts) => set({ sorts }),
+        setSorts: (sorts) => set({ sorts: sorts.slice(0, 1) }),
         setExpandedGroup: (groupId, isExpanded) =>
           set((state) => ({ expandedGroups: { ...state.expandedGroups, [groupId]: isExpanded } })),
         activateView: (view) =>
           set({
             settings: structuredClone(view.settings),
             filter: structuredClone(view.filter),
-            sorts: structuredClone(view.sorts),
+            sorts: structuredClone(view.sorts.slice(0, 1)),
             activeViewId: view.id,
             expandedGroups: {},
             openRuleIndex: null,
@@ -105,6 +105,10 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
               }
             : createBrowserStorage(),
         ),
+        merge: (persisted, current) => {
+          const restored = { ...current, ...(persisted as Partial<CollectionViewSnapshot<TSettings>>) };
+          return { ...restored, sorts: restored.sorts.slice(0, 1) };
+        },
         partialize: (state) => ({
           settings: state.settings,
           filter: state.filter,

@@ -5,7 +5,7 @@ Saved views belong to a project and a board. A board is an extension view of kin
 A view has three parts:
 
 - `filter`: one root group of rules. A group joins its rules with one conjunction, `and` or `or`. All rules share that conjunction. Filters have one level.
-- `sorts`: an ordered list of `{ attributeId, direction }`. The first sort decides first. An empty list means manual order on a board and query order on a table.
+- `sorts`: zero or one `{ attributeId, direction }` pair. Display settings own this single ordering. An empty list means manual order on a board and query order on a table.
 - `settings`: display settings for the board's kind.
 
 ```sh
@@ -14,7 +14,7 @@ pst views list --board <boardId>
 pst views create --board <boardId> --title "Open urgent" \
   --filter "status is-none-of done" \
   --filter "priority is-any-of urgent,high" \
-  --sort priority:asc --sort updated:desc
+  --sort priority:asc
 pst views update --id <viewId> --filter "title contains data table"
 pst views update --id <viewId> --filter "updated is-after today-7"
 pst views update --id <viewId> --filter none --sort none
@@ -56,7 +56,9 @@ pst views update --id <viewId> --filter-json '{
 }'
 ```
 
-`--sort <field>:asc|desc` adds one sort. Repeat it; the flag order is the sort order. `--filter none` and `--sort none` clear them. A board's card title is the built-in `string` field `title`.
+`--sort <field>:asc|desc` sets the view's single sort. A second sort is rejected. `--filter none` and `--sort none` clear them. A board's card title is the built-in `string` field `title`.
+
+Filter pills have separate property, condition, and value controls. Option menus show “is” and “is not”; the stored condition follows the field type. Each value can be checked independently and shows its supplied icon and color.
 
 ## Display settings
 

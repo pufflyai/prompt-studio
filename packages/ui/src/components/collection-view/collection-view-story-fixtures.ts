@@ -16,7 +16,7 @@ export const storyOptions = (field: AttributeDescriptor): RuleValueOption[] => {
   if (field.type.kind === "user") return people.map((name, index) => ({ value: name, label: name, count: 3 - index }));
   if (field.type.kind !== "enum" && field.type.kind !== "enum-multi") return [];
   const options = Array.isArray(field.type.options) ? field.type.options : field.type.options.getSnapshot();
-  return options.map((option, index) => ({ value: option.value, label: option.label, count: index + 1 }));
+  return options.map((option, index) => ({ ...option, count: index + 1 }));
 };
 
 export const storyFilter: ViewFilterGroup = {

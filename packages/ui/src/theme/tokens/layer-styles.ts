@@ -19,6 +19,15 @@ export const layerStyles = defineLayerStyles({
       borderRadius: "inherit",
     },
   },
+  filterPill: {
+    value: {
+      height: "filter-pill",
+      borderWidth: "1px",
+      borderColor: "border.subtle",
+      borderRadius: "xs",
+      bg: "bg.muted",
+    },
+  },
   floatingBar: {
     value: {
       paddingInline: "sm",

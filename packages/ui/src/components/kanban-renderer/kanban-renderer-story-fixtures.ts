@@ -54,7 +54,7 @@ export const attributes: AttributeDescriptor[] = [
     type: {
       kind: "enum",
       options: [
-        { value: "high", label: "High", color: "red" },
+        { value: "high", label: "High", color: "red", icon: "signal" },
         { value: "medium", label: "Medium", color: "yellow" },
         { value: "low", label: "Low", color: "green" },
       ],
