@@ -119,9 +119,13 @@ export interface HarnessSkillsLayout {
 /** A reattach error is permanent unless the provider explicitly marks it retryable. */
 export type RetryableHarnessReattachError = Error & { readonly retryable: true };
 
-export type HarnessParamDescriptor =
+export type HarnessParamDescriptor = (
   | (Omit<SelectParam, "options" | "allowCustomValues"> & { options: ParamOption[] })
-  | BooleanParam;
+  | BooleanParam
+) & {
+  /** Commands own this parameter's composer control instead of an inline parameter picker. */
+  control?: "command";
+};
 export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
 
 /**
