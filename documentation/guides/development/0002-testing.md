@@ -105,6 +105,25 @@ The Windows job tests native dependency installation, relative workspace links, 
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 
+## Desktop performance budgets
+
+`clients/desktop/src/e2e/packaged-performance.spec.ts` runs with the other packaged desktop tests in the release workflow. It is not tagged `@essential`, so Intel macOS skips it. Each test took 10–17 seconds on Apple Silicon, within the existing 30-second packaged test limit; Linux and Windows release runs have not been measured yet.
+
+The tests read Chrome DevTools Protocol `Performance.getMetrics` deltas for one renderer. `ScriptDuration` and `TaskDuration` are main-thread proxies. They are not OS CPU, GPU, or paint measurements. Each budget is the share of measured wall time the renderer may spend in scripts or tasks.
+
+| Check | Window | Budget (script / task) | Apple Silicon baseline, 3 runs |
+| --- | --- | --- | --- |
+| Idle workbench, monitoring off | 10 s after a 2 s settle | 2% / 5% | ≤ 0.04% / ≤ 0.11% |
+| Idle workbench, monitoring on | 10 s after a 2 s settle | 2% / 5% | ≤ 0.01% / ≤ 0.07% |
+| Idle extension preview (workbench and Lab frame) | 10 s after a 2 s settle | 2% / 5% each | ≤ 0.05% / ≤ 0.15% |
+| Long streaming replay | about 6 s, until the session completes | 60% / 90% | 28–38% / 51–68% |
+
+The idle budgets catch a constant render or polling loop. The streaming budget leaves room for slower hosted runners; tighten it once release runs record Linux and Windows baselines. Every test attaches its measurements with the platform, architecture, CPU model, and core count.
+
+The tests turn monitoring on and off through the Settings switch, so the dashboard's slow-frame observer runs during the monitoring-on measurements. Monitoring itself runs in Electron main, which renderer metrics cannot see. The monitoring-on test also attaches the snapshot and requires the main process to stay at or below 10% of one core; on Apple Silicon it measured 0.1–0.8% while idle with monitoring on. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. The streaming test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
+
+The fake agent replays the long conversation when a prompt contains `__fake_long_stream__`: 30 assistant turns, 8 text updates each at 25 ms intervals, and one tool result per turn.
+
 ## Live provider tests
 
 These commands opt into real agent sessions:

@@ -13,6 +13,7 @@ import {
   transitionDesktopState,
 } from "./lifecycle/lifecycle-machine";
 import { startWorkbench } from "./lifecycle/start-workbench";
+import { createDesktopPerformanceMonitor } from "./performance/create-desktop-performance-monitor";
 import { createApplicationMenuTemplate, setApplicationCommandsEnabled } from "./release/application-menu";
 import { DesktopUpdateManager } from "./release/desktop-update-manager";
 import { createDesktopUpdateNotifications } from "./release/desktop-update-notifications";
@@ -42,6 +43,15 @@ let allowQuit = false;
 let quitting = false;
 let state: DesktopState = initialDesktopState;
 let windowController: DesktopWindowController | null = null;
+const performanceMonitor = createDesktopPerformanceMonitor({
+  windows: () => windowController,
+  logEndpointFailure: (error) => {
+    logger.warn(
+      { event: "desktop.performance.endpoint.failed", message: String(error) },
+      "Performance endpoint failed",
+    );
+  },
+});
 const updateNotifications = createDesktopUpdateNotifications({
   currentVersion: app.getVersion(),
   receipt: new DesktopUpdateReceipt(join(app.getPath("userData"), "downloaded-update-version")),
@@ -133,7 +143,7 @@ const runtimeManager = new DesktopRuntimeManager({
 });
 
 const finishQuit = async () => {
-  await projectTabs.flush();
+  await Promise.all([projectTabs.flush(), performanceMonitor.stop()]);
   workbenchState.flush();
   allowQuit = true;
   app.quit();
@@ -304,7 +314,9 @@ const bootstrap = async () => {
     getProjectTabs: () => projectTabs.getProjectTabs(),
     setProjectTabs: (value) => projectTabs.setProjectTabs(value),
     setWorkbenchItem: (key, value) => workbenchState.setItem(key, value),
+    performance: performanceMonitor,
   });
+  void performanceMonitor.start();
   await startRuntime();
   void cliSetup?.onFirstLaunch();
 };

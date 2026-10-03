@@ -397,6 +397,17 @@ test("packaged CLI includes automation and machine authentication", () => {
   expect(result.status).toBe(0);
   expect(result.stdout).toContain("pstdio automation [command]");
   expect(result.stdout).toContain("pstdio auth [command]");
+
+  // Reads only this device's desktop app, so an empty home starts no runtime.
+  const home = mkdtempSync(join(tmpdir(), "packaged-performance-"));
+  const performance = spawnSync(PACKAGED_BINARY_PATH, ["performance"], {
+    encoding: "utf8",
+    env: { ...process.env, PSTDIO_HOME: home },
+  });
+  expect(performance.status).not.toBe(0);
+  expect(performance.stdout).toBe("");
+  expect(existsSync(join(home, "runtime.json"))).toBe(false);
+  rmSync(home, { recursive: true, force: true });
 });
 
 registerExtensionAutomationSmokeTests();

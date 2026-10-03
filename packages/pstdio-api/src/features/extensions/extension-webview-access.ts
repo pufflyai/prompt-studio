@@ -1,6 +1,10 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  decodeExtensionWebviewSegment,
+  EXTENSION_WEBVIEW_PATH_PREFIX,
+  parseExtensionWebviewPath,
+} from "pstdio-api-contracts/extension-webview-path";
 
-const WEBVIEW_PATH_PREFIX = "/v1/extensions/webviews/";
 const READ_ONLY_METHODS = new Set(["GET", "HEAD"]);
 const CAPABILITY_PATH = /\/v1\/extensions\/webviews\/[^/\s?#]+/g;
 
@@ -41,14 +45,6 @@ interface CreateExtensionWebviewAccessInput {
   now?: () => number;
 }
 
-const decodeRouteSegment = (segment: string) => {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return null;
-  }
-};
-
 const capabilityMatches = (candidate: string, expected: string) => {
   const candidateBytes = Buffer.from(candidate);
   const expectedBytes = Buffer.from(expected);
@@ -57,21 +53,6 @@ const capabilityMatches = (candidate: string, expected: string) => {
 
 const encodeAssetPath = (assetPath: string) =>
   assetPath.replace(/^\/+/, "").split("/").map(encodeURIComponent).join("/");
-
-const parseRequestPath = (path: string) => {
-  if (!path.startsWith(WEBVIEW_PATH_PREFIX)) return null;
-
-  const [capability, encodedInstalledExtensionId, encodedWebviewId, resource, ...rest] = path
-    .slice(WEBVIEW_PATH_PREFIX.length)
-    .split("/");
-  if (!capability || !encodedInstalledExtensionId || !encodedWebviewId || !resource) return null;
-
-  const installedExtensionId = decodeRouteSegment(encodedInstalledExtensionId);
-  const webviewId = decodeRouteSegment(encodedWebviewId);
-  if (!installedExtensionId || !webviewId) return null;
-
-  return { capability, resource, rest, scope: { installedExtensionId, webviewId } };
-};
 
 export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccessInput = {}): ExtensionWebviewAccess => {
   const signingKey = Buffer.from(input.signingKey ?? randomBytes(32));
@@ -111,7 +92,7 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
     `${encodeURIComponent(scope.installedExtensionId)}/${encodeURIComponent(scope.webviewId)}`;
 
   const basePath = (scope: ExtensionWebviewScope) =>
-    `${WEBVIEW_PATH_PREFIX}${capabilityFor(scope)}/${scopePath(scope)}`;
+    `${EXTENSION_WEBVIEW_PATH_PREFIX}${capabilityFor(scope)}/${scopePath(scope)}`;
 
   const authorizeArtifact = (
     capability: string,
@@ -124,9 +105,9 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
     const expiresAt = Number(expiresAtText);
     if (!Number.isInteger(expiresAt)) return null;
 
-    const projectId = decodeRouteSegment(encodedProjectId);
-    const mountId = decodeRouteSegment(encodedMountId);
-    const artifactPath = decodeRouteSegment(artifactPathParts.join("/"));
+    const projectId = decodeExtensionWebviewSegment(encodedProjectId);
+    const mountId = decodeExtensionWebviewSegment(encodedMountId);
+    const artifactPath = decodeExtensionWebviewSegment(artifactPathParts.join("/"));
     if (!projectId || !mountId || !artifactPath) return null;
 
     const request = { artifactPath, mountId, projectId };
@@ -149,7 +130,7 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
     }
     if (resource !== "assets" || segments.length === 0) return null;
 
-    const assetPath = decodeRouteSegment(segments.join("/"));
+    const assetPath = decodeExtensionWebviewSegment(segments.join("/"));
     if (!assetPath) return null;
     return { ...scope, assetPath, kind: "asset" as const };
   };
@@ -157,7 +138,7 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
   const authorize = (request: Request) => {
     if (!READ_ONLY_METHODS.has(request.method)) return null;
 
-    const parsed = parseRequestPath(new URL(request.url).pathname);
+    const parsed = parseExtensionWebviewPath(new URL(request.url).pathname);
     if (!parsed) return null;
 
     if (parsed.resource === "artifacts") return authorizeArtifact(parsed.capability, parsed.scope, parsed.rest);
@@ -169,7 +150,7 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
       const expiresAt = Math.floor(now() / 1000) + ARTIFACT_URL_TTL_SECONDS;
       const capability = artifactCapabilityFor(scope, request, expiresAt);
       const grantPath = `${expiresAt.toString()}/${encodeURIComponent(request.projectId)}/${encodeURIComponent(request.mountId)}`;
-      return `${WEBVIEW_PATH_PREFIX}${capability}/${scopePath(scope)}/artifacts/${grantPath}/${encodeAssetPath(request.artifactPath)}`;
+      return `${EXTENSION_WEBVIEW_PATH_PREFIX}${capability}/${scopePath(scope)}/artifacts/${grantPath}/${encodeAssetPath(request.artifactPath)}`;
     },
     assetUrl: (scope, assetPath, revision) => {
       const url = `${basePath(scope)}/assets/${encodeAssetPath(assetPath)}`;

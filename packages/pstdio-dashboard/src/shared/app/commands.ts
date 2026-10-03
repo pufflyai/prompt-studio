@@ -1,5 +1,6 @@
 export const dashboardCommandIds = {
   clearSelectedProject: "dashboard.clearSelectedProject",
+  copyPerformanceSnapshot: "dashboard.copyPerformanceSnapshot",
   createProject: "dashboard.createProject",
   createSession: "dashboard.createSession",
   archiveWorkspace: "dashboard.archiveWorkspace",
@@ -8,6 +9,7 @@ export const dashboardCommandIds = {
   renameWorkspace: "dashboard.renameWorkspace",
   openCommandPalette: "dashboard.openCommandPalette",
   openNotifications: "dashboard.openNotifications",
+  openPerformance: "dashboard.openPerformance",
   openCurrentWorkspace: "dashboard.openCurrentWorkspace",
   openDiscord: "dashboard.openDiscord",
   openDocs: "dashboard.openDocs",
