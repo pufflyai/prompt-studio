@@ -2,6 +2,7 @@ import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
 import { CollectionViewBar } from "../collection-view/collection-view-bar";
 import { withTitleField } from "../collection-view/collection-view-fields";
+import { DisplaySortControl } from "../collection-view/display-sort-control";
 import type { RuleValueOption } from "../collection-view/filter-rule-value";
 import { useCollectionViews } from "../collection-view/use-collection-views";
 import { DisplayMenu } from "./display-menu";
@@ -48,8 +49,7 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
   });
   const attributes = useResolvedAttributes(rawAttributes);
   const viewState = useCollectionViews({ ...props, initialState, fields: attributes });
-  const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
-  const setSettings = useKanbanRendererStore(storageKey, (state) => state.setSettings, initialState);
+  const { settings, setSettings, sorts, setSorts } = useKanbanRendererStore(storageKey, (state) => state, initialState);
   const categories = buildFilterCategories(attributes, rows);
   const optionsFor = (field: AttributeDescriptor): RuleValueOption[] => {
     const counts = countFilterValues(rows, field.id, attributes);
@@ -75,6 +75,9 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
       displayControl={
         <DisplayMenu
           settings={settings}
+          sortControl={
+            <DisplaySortControl fields={withTitleField(attributes)} sorts={sorts} onSortsChange={setSorts} />
+          }
           groupingOptions={buildGroupingOptions(attributes)}
           displayPropertyOptions={buildDisplayPropertyOptions(attributes)}
           onViewModeChange={(viewMode) => setSettings({ viewMode })}

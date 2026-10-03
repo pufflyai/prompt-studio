@@ -161,7 +161,7 @@ export interface FilterCategoryView {
   id: string;
   label: string;
   selectionMode: "multiple";
-  options: { value: string; label: string; color?: string }[];
+  options: { value: string; label: string; color?: string; icon?: string | null }[];
 }
 
 /**
@@ -192,7 +192,12 @@ export const buildFilterCategories = (
         label: descriptor.label,
         selectionMode: "multiple",
         options: [
-          ...declared.map((option) => ({ value: option.value, label: option.label, color: option.color })),
+          ...declared.map((option) => ({
+            value: option.value,
+            label: option.label,
+            color: option.color,
+            icon: option.icon,
+          })),
           ...undeclared,
         ],
       });

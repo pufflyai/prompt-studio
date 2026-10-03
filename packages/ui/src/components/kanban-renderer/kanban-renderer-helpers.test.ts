@@ -122,6 +122,20 @@ describe("resolveListDropTargetColumnKey", () => {
 });
 
 describe("buildFilterCategories", () => {
+  it("keeps declared value icons and colors for filter choices", () => {
+    const categories = buildFilterCategories(
+      [
+        {
+          id: "state",
+          label: "Status",
+          filterable: true,
+          type: { kind: "enum", options: [{ value: "done", label: "Done", icon: "status-done", color: "green" }] },
+        },
+      ],
+      [],
+    );
+    expect(categories[0]?.options[0]).toMatchObject({ icon: "status-done", color: "green" });
+  });
   const rows: KanbanRendererRow[] = [
     { id: "1", title: "A", attributes: { status: "todo", owner: "Alice", labels: ["bug"] } },
     { id: "2", title: "B", attributes: { status: "done", owner: "Bob", labels: ["p1"] } },

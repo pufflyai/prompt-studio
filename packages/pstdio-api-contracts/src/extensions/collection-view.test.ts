@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { boardViewCreateSchema } from "../board-views";
 import {
   findViewFilterProblem,
   findViewSortsProblem,
@@ -27,6 +28,10 @@ const filterOf = (rules: Parameters<typeof findViewFilterProblem>[0]["rules"]) =
 });
 
 describe("view filter validation", () => {
+  test("saves excluded exact scalar selections from a value checklist", () => {
+    const filter = filterOf([{ attributeId: "updated", condition: "is-none-of", value: ["2026-10-02T09:00:00Z"] }]);
+    expect(findViewFilterProblem(filter, fields)).toBeUndefined();
+  });
   test("accepts exact lists from deprecated scalar filters when saving a view", () => {
     const filter = filterOf([
       { attributeId: "title", condition: "is-any-of", value: ["Chat", "chat"] },
@@ -90,13 +95,21 @@ describe("view filter validation", () => {
 });
 
 describe("view sort validation", () => {
+  test("allows one sort in shared view input and rejects a second", () => {
+    const sorts = [
+      { attributeId: "score", direction: "asc" as const },
+      { attributeId: "title", direction: "desc" as const },
+    ];
+    expect(findViewSortsProblem(sorts, fields)).toContain("one sort");
+    expect(boardViewCreateSchema.safeParse({ title: "All", sorts }).success).toBe(false);
+  });
   test("lists the sortable fields", () => {
     expect(findViewSortsProblem([{ attributeId: "tags", direction: "asc" }], fields)).toBe(
       'Invalid sort field "tags". Valid IDs: title, score, updated, status',
     );
   });
 
-  test("refuses a field sorted twice", () => {
+  test("refuses a second sort", () => {
     expect(
       findViewSortsProblem(
         [
@@ -105,6 +118,6 @@ describe("view sort validation", () => {
         ],
         fields,
       ),
-    ).toContain("more than once");
+    ).toContain("one sort");
   });
 });

@@ -275,7 +275,7 @@ background instead, so pressed controls stand out from the main background.
 Kanban and data table bodies share one view model. A view stores:
 
 - `filter`: one root group of rules. A rule is `{ attributeId, condition, value }`. A group joins its rules with one conjunction, `"and"` or `"or"`. All rules share that conjunction. Filters have one level.
-- `sorts`: field and direction pairs, first level first. An empty list keeps the board's manual order, or the query's order for a table.
+- `sorts`: zero or one field and direction pair. Display settings and table headers edit this same single sort. An empty list keeps the board's manual order, or the query's order for a table.
 - `settings`: board display settings (view mode, grouping, sub-grouping, visible properties), or table display settings (`grouping`, `rowNumbers`, `wrapRows`, `showStats`, `hiddenColumns`, `columnOrder`).
 
 Search is screen state. It narrows what is on screen, is never saved, and is never sent to a query.

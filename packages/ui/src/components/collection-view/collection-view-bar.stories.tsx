@@ -1,12 +1,13 @@
-import { Box, Icon, IconButton } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Settings2 } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { DisplayMenu } from "../kanban-renderer/display-menu";
 import { CollectionViewBar } from "./collection-view-bar";
 import { storyFields, storyFilter, storyOptions } from "./collection-view-story-fixtures";
 import { type CollectionSavedView, EMPTY_VIEW_FILTER } from "./collection-view-types";
+import { DisplaySortControl } from "./display-sort-control";
 import { useCollectionViewStore } from "./use-collection-view-store";
 import { useCollectionViews } from "./use-collection-views";
 
@@ -22,9 +23,17 @@ type Story = StoryObj;
 
 interface StorySettings {
   displayProperties: string[];
+  viewMode: "board" | "list";
+  columnGrouping: string;
+  rowGrouping: string;
 }
 
-const settings: StorySettings = { displayProperties: [] };
+const settings: StorySettings = {
+  displayProperties: [],
+  viewMode: "board",
+  columnGrouping: "none",
+  rowGrouping: "none",
+};
 
 interface BarProps {
   storageKey: string;
@@ -58,6 +67,7 @@ const Bar = (props: BarProps) => {
   const views = useCollectionViews({ storageKey, initialState, viewsSource });
   const reset = useCollectionViewStore(storageKey, initialState, (state) => state.reset);
   const activateView = useCollectionViewStore(storageKey, initialState, (state) => state.activateView);
+  const currentSorts = useCollectionViewStore(storageKey, initialState, (state) => state.sorts);
   const setSorts = useCollectionViewStore(storageKey, initialState, (state) => state.setSorts);
   // Each story starts from its first view, then applies its edits. This runs during the first
   // render, so the bar's own effects and the play function see the story's state.
@@ -82,9 +92,16 @@ const Bar = (props: BarProps) => {
         onSearchChange={setSearch}
         searchResultLabel={search ? "4 of 10" : undefined}
         displayControl={
-          <IconButton aria-label="Display settings" variant="ghost" size="2xs">
-            <Icon as={Settings2} />
-          </IconButton>
+          <DisplayMenu
+            settings={settings}
+            groupingOptions={[]}
+            displayPropertyOptions={[]}
+            onViewModeChange={() => undefined}
+            onColumnGroupingChange={() => undefined}
+            onRowGroupingChange={() => undefined}
+            onDisplayPropertyToggle={() => undefined}
+            sortControl={<DisplaySortControl fields={storyFields} sorts={currentSorts} onSortsChange={setSorts} />}
+          />
         }
       />
     </Box>
@@ -101,16 +118,14 @@ export const RulesSaved: Story = {
     <Bar
       storageKey="storybook-collection-view-bar-saved"
       filter={storyFilter}
-      sorts={[
-        { attributeId: "priority", direction: "asc" },
-        { attributeId: "updated", direction: "desc" },
-      ]}
+      sorts={[{ attributeId: "priority", direction: "asc" }]}
     />
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "Sorted by Priority" })).toHaveTextContent("+1");
-    await expect(canvas.getByRole("button", { name: "Edit Status filter" })).toHaveTextContent("Status is notDone");
+    const filter = within(canvas.getByRole("group", { name: "Status filter" }));
+    await expect(filter.getByRole("button", { name: "Condition" })).toHaveTextContent("is not");
+    await expect(filter.getByRole("button", { name: "Values" })).toHaveTextContent("Done");
     await expect(canvas.queryByRole("button", { name: "Save view" })).not.toBeInTheDocument();
   },
 };
@@ -153,23 +168,23 @@ export const BooleanPredicate: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const pill = canvas.getByRole("button", { name: "Edit Archived filter" });
-    await expect(pill).toHaveTextContent("Ticket is notArchived");
-    await userEvent.click(pill);
+    const pill = canvas.getByRole("group", { name: "Archived filter" });
+    await expect(within(pill).getByRole("button", { name: "Field" })).toHaveTextContent("Ticket");
+    await expect(within(pill).getByRole("button", { name: "Condition" })).toHaveTextContent("is not");
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(body.getByRole("button", { name: "Condition" }));
+    await userEvent.click(within(pill).getByRole("button", { name: "Condition" }));
     await userEvent.click(body.getByRole("menuitem", { name: "is", exact: true }));
-    await expect(pill).toHaveTextContent("Ticket isArchived");
+    await expect(within(pill).getByRole("button", { name: "Condition" })).toHaveTextContent("is");
   },
 };
 
-/** Both directions remain visible and the last sort closes its disappearing pill's popover. */
+/** Both sort directions remain visible inside Display, which owns one ordering. */
 export const NestedSortChoices: Story = {
   render: () => <Bar storageKey="storybook-sort-choices" sorts={[{ attributeId: "updated", direction: "desc" }]} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Sorted by Updated" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Display settings" }));
     await userEvent.click(await body.findByRole("button", { name: "Sort direction" }));
     const menu = await body.findByRole("menu");
     const newest = within(menu).getByRole("menuitem", { name: "Newest first" });
@@ -191,9 +206,91 @@ export const NestedSortChoices: Story = {
     ).toBeInTheDocument();
     await userEvent.click(within(reopened).getByRole("menuitem", { name: "Newest first" }));
     await expect(body.getByRole("button", { name: "Sort direction" })).toHaveTextContent("Newest first");
-    await userEvent.click(body.getByRole("button", { name: "Delete sort", exact: true }));
-    await waitFor(() => expect(body.queryByTestId("view-sort-popover")).not.toBeInTheDocument());
-    await userEvent.click(canvas.getByRole("button", { name: "Sort", exact: true }));
-    await waitFor(() => expect(body.getByText("No sorts. Rows keep their own order.")).toBeVisible());
+    await userEvent.click(body.getByRole("button", { name: "Ordering" }));
+    await userEvent.click(body.getByRole("menuitem", { name: "None", exact: true }));
+    await expect(body.getByRole("button", { name: "Ordering" })).toHaveTextContent("None");
+    await expect(body.queryByRole("button", { name: "Sort direction" })).not.toBeInTheDocument();
+  },
+};
+
+/** Property, condition, and value are independent controls; values toggle without closing. */
+export const IndependentFilterChoices: Story = {
+  tags: ["!manifest"],
+  render: () => (
+    <Bar
+      storageKey="storybook-independent-filter-choices"
+      filter={{ conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["todo"] }] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const pill = within(canvas.getByRole("group", { name: "Status filter" }));
+    await expect(pill.getByRole("button", { name: "Field" }).querySelector("svg")).toBeNull();
+    await userEvent.click(pill.getByRole("button", { name: "Condition" }));
+    await expect(body.getAllByRole("menuitem")).toHaveLength(2);
+    await userEvent.click(body.getByRole("menuitem", { name: "is not", exact: true }));
+    await userEvent.click(pill.getByRole("button", { name: "Values" }));
+    const todo = body.getByRole("menuitemcheckbox", { name: /Todo/ });
+    const done = body.getByRole("menuitemcheckbox", { name: /Done/ });
+    await expect(todo).toHaveAttribute("aria-checked", "true");
+    await expect(todo.querySelector(".lucide-circle")).toBeInTheDocument();
+    await userEvent.click(done);
+    await expect(done).toHaveAttribute("aria-checked", "true");
+    await expect(todo).toBeVisible();
+    await userEvent.click(todo);
+    await expect(todo).toHaveAttribute("aria-checked", "false");
+    await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("Done");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(pill.getByRole("button", { name: "Field" }));
+    await userEvent.click(body.getByRole("menuitem", { name: "Priority", exact: true }));
+    await expect(canvas.getByRole("group", { name: "Priority filter" })).toBeVisible();
+  },
+};
+
+/** Imported empty predicates keep their meaning until a real value is chosen. */
+export const EmptyOptionPredicate: Story = {
+  render: () => (
+    <Bar
+      storageKey="storybook-empty-option-predicate"
+      filter={{ conjunction: "and", rules: [{ attributeId: "status", condition: "is-empty" }] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const pill = within(canvas.getByRole("group", { name: "Status filter" }));
+    await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("Empty");
+    await userEvent.click(pill.getByRole("button", { name: "Condition" }));
+    await userEvent.click(body.getByRole("menuitem", { name: "is not", exact: true }));
+    await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("Empty");
+    await userEvent.click(pill.getByRole("button", { name: "Values" }));
+    await userEvent.click(body.getByRole("menuitemcheckbox", { name: /Done/ }));
+    await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("Done");
+    await expect(pill.getByRole("button", { name: "Condition" })).toHaveTextContent("is not");
+    await userEvent.keyboard("{Escape}");
+  },
+};
+
+/** Incoming all-value rules stay explicit and retain their condition while values change. */
+export const AllValuesPredicate: Story = {
+  render: () => (
+    <Bar
+      storageKey="storybook-all-values-predicate"
+      filter={{ conjunction: "and", rules: [{ attributeId: "labels", condition: "has-all-of", value: ["bug"] }] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const pill = within(canvas.getByRole("group", { name: "Labels filter" }));
+    await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("all of Bug");
+    await userEvent.click(pill.getByRole("button", { name: "Condition" }));
+    await userEvent.click(body.getByRole("menuitem", { name: "is", exact: true }));
+    await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("all of Bug");
+    await userEvent.click(pill.getByRole("button", { name: "Values" }));
+    await userEvent.click(body.getByRole("menuitemcheckbox", { name: /Regression/ }));
+    await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("all of Bug, Regression");
+    await userEvent.keyboard("{Escape}");
   },
 };

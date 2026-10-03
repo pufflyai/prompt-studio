@@ -119,7 +119,12 @@ const compileRule = (rule: ViewFilterRule, fields: AttributeDescriptor[], today:
   const condition = acceptedCondition(field, rule.condition);
   // Old views picked exact values on every field. When a host cannot tell a field's kind up front,
   // they still arrive as "any of" lists, and keep their meaning.
-  if (!condition && field.type.kind !== "boolean" && rule.condition === "is-any-of" && Array.isArray(rule.value))
+  if (
+    !condition &&
+    field.type.kind !== "boolean" &&
+    ["is-any-of", "is-none-of"].includes(rule.condition) &&
+    Array.isArray(rule.value)
+  )
     return compileListRule(field, rule.condition, rule.value);
   if (!condition) return undefined;
   if (condition === "is-empty") return (row) => getAttributeStringValues(row, field).length === 0;

@@ -27,12 +27,16 @@ const fields = [
 const board = { kind: "kanban" as const, fields };
 const table = { kind: "dataTable" as const, fields };
 
+test("accepts one ordering and rejects a second", () => {
+  expect(() => buildViewInput({ sort: ["score:desc", "title:asc"] }, board)).toThrow("one sort");
+});
+
 test("turns repeated filters into rules joined with and, resolving option labels", () => {
   expect(
     buildViewInput(
       {
         filter: ["tag is-none-of Bug,b", "title contains data table", "score gte 70", "updated is-after today-7"],
-        sort: ["score:desc", "title:asc"],
+        sort: ["score:desc"],
         mode: "list",
         show: "tag",
       },
@@ -48,10 +52,7 @@ test("turns repeated filters into rules joined with and, resolving option labels
         { attributeId: "updated", condition: "is-after", value: "today-7" },
       ],
     },
-    sorts: [
-      { attributeId: "score", direction: "desc" },
-      { attributeId: "title", direction: "asc" },
-    ],
+    sorts: [{ attributeId: "score", direction: "desc" }],
     settings: { viewMode: "list", displayProperties: ["tag"] },
   });
   expect(buildViewInput({ filter: ["title is-empty"] }, board).filter?.rules).toEqual([

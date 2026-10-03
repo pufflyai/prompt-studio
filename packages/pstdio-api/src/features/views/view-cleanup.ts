@@ -79,12 +79,15 @@ const cleanDataTableSettings = (
   };
 };
 /** Drops the parts of a saved view that no longer fit its board's fields. */
-export const cleanBoardView = (board: BoardDefaults, view: SavedViewState, fields: BoardField[]) => ({
-  // A saved view always has its board's kind of settings, because the API refuses others on write.
-  settings:
-    board.kind === "kanban"
-      ? cleanKanbanSettings(view.settings as KanbanViewSettings, board.settings, fields)
-      : cleanDataTableSettings(view.settings as DataTableRendererSettings, board.settings, fields),
-  filter: cleanFilter(view.filter, fields),
-  sorts: view.sorts.filter((sort) => fields.some((field) => field.id === sort.attributeId)),
-});
+export const cleanBoardView = (board: BoardDefaults, view: SavedViewState, fields?: BoardField[]) => {
+  if (!fields?.length) return { settings: view.settings, filter: view.filter, sorts: view.sorts.slice(0, 1) };
+  return {
+    // A saved view always has its board's kind of settings, because the API refuses others on write.
+    settings:
+      board.kind === "kanban"
+        ? cleanKanbanSettings(view.settings as KanbanViewSettings, board.settings, fields)
+        : cleanDataTableSettings(view.settings as DataTableRendererSettings, board.settings, fields),
+    filter: cleanFilter(view.filter, fields),
+    sorts: view.sorts.filter((sort) => fields.some((field) => field.id === sort.attributeId)).slice(0, 1),
+  };
+};

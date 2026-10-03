@@ -1,7 +1,8 @@
-import { HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { HStack, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterRule } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { Checkbox } from "@/components/primitives/checkbox";
+import { getIconComponent } from "@/components/primitives/icon-options";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { ListRow } from "../list-row/list-row";
@@ -12,6 +13,8 @@ export interface RuleValueOption {
   value: string;
   label: string;
   count?: number;
+  icon?: string | null;
+  color?: string;
 }
 
 export interface RuleValueProps {
@@ -19,13 +22,17 @@ export interface RuleValueProps {
   rule: ViewFilterRule;
   options: RuleValueOption[];
   onChange: (value: ViewFilterRule["value"]) => void;
+  variant?: "subtle" | "filter-segment";
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const RELATIVE_DAYS = ["today", "today-1", "today-7", "today-14", "today-30", "today+1", "today+7"];
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const valueKind = (field: AttributeDescriptor, rule: ViewFilterRule) => {
-  if (rule.condition === "is-empty" || rule.condition === "is-not-empty") return "none";
+  if (rule.condition === "is-empty" || rule.condition === "is-not-empty")
+    return ["enum", "enum-multi", "user"].includes(field.type.kind) ? "options" : "none";
   if (Array.isArray(rule.value)) return "options";
   if (field.type.kind === "boolean") return "boolean";
   if (field.type.kind === "number") return "number";
@@ -114,12 +121,28 @@ export const RuleValueControl = (props: RuleValueProps) => {
   if (kind === "number") return <NumberValue {...props} width="9rem" />;
   if (kind === "text") return <TextValue {...props} width="9rem" />;
   if (kind === "day") return <DayValue {...props} />;
+  const selectedLabel = rule.condition === "is-empty" || rule.condition === "is-not-empty" ? "Empty" : undefined;
+  const allValuesLabel =
+    rule.condition === "has-all-of"
+      ? `all of ${options
+          .filter((option) => listValue(rule).includes(option.value))
+          .map((option) => option.label)
+          .join(", ")}`
+      : selectedLabel;
   return (
     <RuleSelect
       aria-label="Values"
+      selectedLabel={allValuesLabel}
       multiple
-      width="9rem"
-      options={options}
+      variant={props.variant}
+      width={props.variant === "filter-segment" ? undefined : "9rem"}
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      options={options.map((option) => ({
+        ...option,
+        icon: option.icon ? getIconComponent(option.icon) : undefined,
+        iconColor: option.color ? `${option.color}.500` : undefined,
+      }))}
       value={listValue(rule)}
       onSelect={(value) => onChange(toggle(listValue(rule), value))}
     />
@@ -166,6 +189,12 @@ const OptionChecklist = (props: RuleValueProps) => {
                     pointerEvents="none"
                     size="sm"
                   />
+                  {option.icon ? (
+                    <Icon
+                      as={getIconComponent(option.icon)}
+                      color={option.color ? `${option.color}.500` : "fg.muted"}
+                    />
+                  ) : null}
                   <Text textStyle="label/S/regular" truncate>
                     {option.label}
                   </Text>

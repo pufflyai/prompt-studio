@@ -65,9 +65,10 @@ test("shows ticket ancestry and filters by immediate parent", async ({ page, req
     .getByRole("button", { name: /^Parent/ })
     .click();
   // Parent is a text field, so the rule compares the immediate parent's short id.
-  await page.getByRole("button", { name: "Condition", exact: true }).click();
+  const parentFilter = page.getByRole("group", { name: "Parent filter", exact: true });
+  await parentFilter.getByRole("button", { name: "Condition", exact: true }).click();
   await page.getByRole("menuitem", { name: "is", exact: true }).click();
-  await page.getByRole("textbox", { name: "Value", exact: true }).fill(root.shorthand);
+  await parentFilter.getByRole("textbox", { name: "Value", exact: true }).fill(root.shorthand);
   await page.keyboard.press("Escape");
 
   await expect(page.getByText(child.title, { exact: true })).toBeVisible();

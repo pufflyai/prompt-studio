@@ -1,12 +1,13 @@
 import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Text } from "@chakra-ui/react";
 import { Check, ChevronDown, List, Settings2, SquareKanban } from "lucide-react";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { type MenuOption, resolveSubGroupingOptions } from "./kanban-renderer-helpers";
 import type { KanbanRendererSettings } from "./types";
 
 interface DisplayMenuProps {
   settings: KanbanRendererSettings;
+  sortControl?: ReactNode;
   groupingOptions: MenuOption[];
   displayPropertyOptions: MenuOption[];
   onViewModeChange: (value: KanbanRendererSettings["viewMode"]) => void;
@@ -34,7 +35,7 @@ export const DisplayMenuSelect = (props: DisplayMenuSelectProps) => {
   const hasNoneFirst = props.options[0]?.value === "none";
 
   return (
-    <Menu.Root>
+    <Menu.Root positioning={{ strategy: "fixed", hideWhenDetached: true }}>
       <Menu.Trigger asChild>
         <Button size="xs" variant="ghost" width="full" justifyContent="flex-start" gap="xs">
           <Text textStyle="label/S/regular">{props.label}</Text>
@@ -151,6 +152,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
               onSelect={onRowGroupingChange}
             />
 
+            {props.sortControl}
             <SectionLabel>PROPERTIES</SectionLabel>
             <HStack paddingX="xs" paddingBottom="xs" flexWrap="wrap" gap="2xs">
               {displayPropertyOptions.map((option) => {

@@ -46,7 +46,7 @@ const views = (origin: string, ...args: string[]) =>
     },
   );
 
-test("boards search, filter with conditions, and save sorts that agents can build too", async ({ page, request }) => {
+test("boards search, edit filter parts, and save one sort that agents can build too", async ({ page, request }) => {
   const project = await createProject(request, page, "Collection view controls");
   try {
     for (const title of ["Filter pills read as sentences", "Saved filters for views", "Chat scroll jumps"])
@@ -83,28 +83,31 @@ test("boards search, filter with conditions, and save sorts that agents can buil
       .click();
     await page.getByRole("checkbox", { name: statusLabel, exact: true }).click();
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Edit Status filter", exact: true }).click();
-    await page.getByRole("button", { name: "Condition", exact: true }).click();
-    await page.getByRole("menuitem", { name: "is none of", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Edit Status filter", exact: true })).toHaveText(
-      `Status is not${statusLabel}`,
-    );
+    const statusFilter = page.getByRole("group", { name: "Status filter", exact: true });
+    await statusFilter.getByRole("button", { name: "Condition", exact: true }).click();
+    await page.getByRole("menuitem", { name: "is not", exact: true }).click();
+    await expect(statusFilter.getByRole("button", { name: "Condition" })).toHaveText("is not");
+    await expect(statusFilter.getByRole("button", { name: "Values" })).toHaveText(statusLabel);
     await page.keyboard.press("Escape");
     await expect(page.getByText("Nothing matches this view")).toBeVisible();
     await page.getByRole("button", { name: "Reset", exact: true }).click();
     await expect(cards).toHaveCount(3);
 
-    // The Tickets board declares the deprecated `ordering: created desc`, which arrives as its first sort.
-    await expect(page.getByRole("button", { name: "Sorted by Created" })).toBeVisible();
-    // Two more sort levels saved with a new view survive a reload.
-    await page.getByRole("button", { name: "Sort", exact: true }).click();
-    await page.getByRole("button", { name: "Add sort", exact: true }).click();
-    await page.getByRole("button", { name: "Add sort", exact: true }).click();
+    // Display owns the one ordering, including the deprecated created-desc default.
+    await page.getByRole("button", { name: "Display settings" }).click();
+    await expect(page.getByRole("button", { name: "Ordering", exact: true })).toHaveText(/Created/);
+    await page.getByRole("button", { name: "Ordering", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Title", exact: true }).click();
+    await page.getByRole("button", { name: "Sort direction" }).click();
+    await page.getByRole("menuitem", { name: "A → Z", exact: true }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Save as new view", exact: true }).click();
     await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveAttribute("aria-selected", "true");
     await page.reload();
-    await expect(page.getByRole("button", { name: "Sorted by Created" })).toHaveText(/\+2/);
+    await page.getByRole("button", { name: "Display settings" }).click();
+    await expect(page.getByRole("button", { name: "Ordering" })).toHaveText(/Title/);
+    await expect(page.getByRole("button", { name: "Sort direction" })).toHaveText("A → Z");
+    await page.keyboard.press("Escape");
 
     // Agents build the same view through pst views, and invalid conditions name the valid ones.
     const statusValue = status.options![0]!.value;
@@ -128,7 +131,7 @@ test("boards search, filter with conditions, and save sorts that agents can buil
       sorts: [{ attributeId: "created", direction: "desc" }],
     });
     await page.getByRole("tab", { name: "Agent open", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Edit Status filter", exact: true })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Status filter", exact: true })).toBeVisible();
     const refused = views(
       project.origin,
       "create",
@@ -159,7 +162,7 @@ test("data tables sort from the header and share saved views", async ({ page, re
     const header = page.locator('[data-column-id="trustSignal"]').first();
     await header.getByRole("button", { name: "Column options" }).click();
     await page.getByRole("menuitem", { name: "Sort descending" }).click();
-    await expect(page.getByRole("button", { name: "Sorted by Trust signal" })).toBeVisible();
+    await expect(header.getByRole("button", { name: "Sorted desc" })).toBeVisible();
     const scores = await page.locator('td[data-column-id="trustSignal"]').allInnerTexts();
     expect(scores.map(Number)).toEqual([...scores.map(Number)].sort((left, right) => right - left));
 

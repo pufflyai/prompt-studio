@@ -5,4 +5,4 @@
 "@pstdio/workbench": minor
 ---
 
-Boards and data tables share one view bar with search, flat filters, boolean predicates, multi-level sorts, and saved views; data tables can group rows and hide row numbers; `pst views` accepts conditions and repeated sorts.
+Boards and data tables share search, flat filters with separate controls and value icons, boolean predicates, one sort in Display, and saved views; data tables can group rows and hide row numbers; popovers and menus use subtle borders.

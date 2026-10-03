@@ -72,8 +72,6 @@ export const registerBoardViewsSmokeTests = () => {
         "status is-none-of done",
         "--sort",
         "updated:desc",
-        "--sort",
-        "created:asc",
         "--mode",
         "list",
       );
@@ -87,12 +85,31 @@ export const registerBoardViewsSmokeTests = () => {
             { attributeId: "status", condition: "is-none-of", value: ["done"] },
           ],
         },
-        sorts: [
-          { attributeId: "updated", direction: "desc" },
-          { attributeId: "created", direction: "asc" },
-        ],
+        sorts: [{ attributeId: "updated", direction: "desc" }],
         settings: { viewMode: "list" },
       });
+      const invalidSort = spawnSync(
+        PACKAGED_BINARY_PATH,
+        [
+          "views",
+          "update",
+          "--id",
+          created.id,
+          "--sort",
+          "updated:desc",
+          "--sort",
+          "created:asc",
+          "--project-id",
+          projectId,
+        ],
+        {
+          cwd: folder,
+          encoding: "utf8",
+          env: { ...process.env, HOME: root, PSTDIO_HOME: root, PSTDIO_API_URL: runtime.baseUrl },
+        },
+      );
+      expect(invalidSort.status).not.toBe(0);
+      expect(invalidSort.stderr).toContain("one sort");
       cli("set-default", "--board", board, "--id", created.id);
       const filter = {
         conjunction: "or",

@@ -58,22 +58,13 @@ const compileSort = (sort: ViewSort, fields: AttributeDescriptor[]) => {
   };
 };
 
-/** The first sort decides first; ties fall to the next sort and finally keep their incoming order. */
+/** One field decides the order; ties keep their incoming order. */
 export const sortRowsByView = <TRow extends KanbanRendererRow>(
   rows: TRow[],
   sorts: ViewSort[],
   fields: AttributeDescriptor[],
 ) => {
-  const comparators = sorts.flatMap((sort) => {
-    const compare = compileSort(sort, fields);
-    return compare ? [compare] : [];
-  });
-  if (comparators.length === 0) return rows;
-  return [...rows].sort((a, b) => {
-    for (const compare of comparators) {
-      const result = compare(a, b);
-      if (result !== 0) return result;
-    }
-    return 0;
-  });
+  const sort = sorts[0];
+  const compare = sort ? compileSort(sort, fields) : undefined;
+  return compare ? [...rows].sort(compare) : rows;
 };

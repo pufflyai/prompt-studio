@@ -3,7 +3,7 @@ import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor,
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Check, GripVertical, Settings2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { SearchableMenuInput } from "@/components/overlays/searchable-menu-input";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -17,6 +17,7 @@ import type { DataTableSettings } from "./types";
 export interface DataTableDisplayMenuProps {
   /** Every column in display order, hidden ones included. */
   columns: AttributeDescriptor[];
+  sortControl?: ReactNode;
   settings: DataTableSettings;
   statsAvailable: boolean;
   onSettingsChange: (settings: Partial<DataTableSettings>) => void;
@@ -176,6 +177,7 @@ export const DataTableDisplayMenu = (props: DataTableDisplayMenuProps) => {
                 onSelect={(grouping) => onSettingsChange({ grouping })}
               />
             ) : null}
+            {props.sortControl}
             <SettingSwitch
               label="Row numbers"
               checked={settings.rowNumbers}

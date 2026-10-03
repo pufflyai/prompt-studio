@@ -66,26 +66,11 @@ const Table = (props: TableProps) => {
 export const HeaderSort: Story = {
   render: () => <Table storageKey="storybook-data-table-header-sort" />,
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
     const header = canvasElement.querySelector('[data-column-id="Score"]') as HTMLElement;
     await userEvent.click(within(header).getByRole("button", { name: "Column options" }));
     await userEvent.click(await within(document.body).findByText("Sort ascending"));
-    await expect(await canvas.findByRole("button", { name: "Sorted by Score" })).toBeVisible();
     await expect(within(header).getByRole("button", { name: "Sorted asc" })).toBeVisible();
   },
-};
-
-/** With more than one sort, sorted headers show their level. */
-export const MultiSortLevels: Story = {
-  render: () => (
-    <Table
-      storageKey="storybook-data-table-multi-sort"
-      defaultSorts={[
-        { attributeId: "Priority", direction: "asc" },
-        { attributeId: "Updated", direction: "desc" },
-      ]}
-    />
-  ),
 };
 
 export const SearchHighlights: Story = {

@@ -40,17 +40,10 @@ const rows = [
 const ids = (list: KanbanRendererRow[]) => list.map((entry) => entry.id);
 
 describe("view sorts", () => {
-  test("later sorts break ties of earlier ones", () => {
-    const sorted = sortRowsByView(
-      rows,
-      [
-        { attributeId: "priority", direction: "asc" },
-        { attributeId: "updated", direction: "desc" },
-      ],
-      fields,
-    );
+  test("ties in the selected sort keep their incoming order", () => {
+    const sorted = sortRowsByView(rows, [{ attributeId: "priority", direction: "asc" }], fields);
 
-    expect(ids(sorted)).toEqual(["d", "c", "b", "a"]);
+    expect(ids(sorted)).toEqual(["d", "b", "c", "a"]);
   });
 
   test("rows without a value stay last in both directions", () => {

@@ -124,3 +124,29 @@ test("checks data table settings against the table's columns", () => {
     "do not fit a board view",
   );
 });
+
+test("keeps one saved ordering when fields are unavailable without dropping unknown data", () => {
+  const stored = {
+    settings: board,
+    filter: and({ attributeId: "missing", condition: "is", value: "keep" }),
+    sorts: [
+      { attributeId: "missing", direction: "asc" as const },
+      { attributeId: "score", direction: "desc" as const },
+    ],
+  };
+  for (const unavailable of [undefined, []]) {
+    expect(cleanBoardView({ kind: "kanban", settings: board }, stored, unavailable)).toEqual({
+      ...stored,
+      sorts: [stored.sorts[0]],
+    });
+  }
+});
+
+test("retained saved ordering is single on unrelated edits while explicit multi-sort writes fail", () => {
+  const stored = draft(and(), [
+    { attributeId: "status", direction: "asc" },
+    { attributeId: "score", direction: "desc" },
+  ]);
+  expect(validateBoardView("kanban", stored, fields, {}).sorts).toEqual([stored.sorts[0]!]);
+  expect(() => validateBoardView("kanban", stored, fields, { sorts: stored.sorts })).toThrow("only one sort");
+});

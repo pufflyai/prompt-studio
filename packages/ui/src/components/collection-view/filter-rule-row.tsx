@@ -5,7 +5,7 @@ import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { useCollectionItemLabel } from "./collection-item-label";
 import { fieldIcon } from "./collection-view-field-icon";
 import { findField } from "./collection-view-fields";
-import { newRule } from "./collection-view-rules";
+import { newRule, selectRuleValues } from "./collection-view-rules";
 import { RuleValueControl, type RuleValueOption } from "./filter-rule-value";
 import { RuleSelect } from "./rule-select";
 import { ConditionSelect } from "./view-filter-rule-editor";
@@ -64,6 +64,7 @@ export const FilterRuleRow = (props: FilterRuleRowProps) => {
         width="8.75rem"
         showSearch
         options={fields.map((entry) => ({ value: entry.id, label: entry.label, icon: fieldIcon(entry) }))}
+        showSelectedIcon={false}
         selectedLabel={field?.type.kind === "boolean" && typeof rule.value === "boolean" ? itemLabel : undefined}
         value={rule.attributeId}
         onSelect={(id) => {
@@ -78,7 +79,7 @@ export const FilterRuleRow = (props: FilterRuleRowProps) => {
             field={field}
             rule={rule}
             options={optionsFor(field)}
-            onChange={(value) => onChange({ ...rule, value })}
+            onChange={(value) => onChange(selectRuleValues(field, rule, value))}
           />
         </>
       ) : (

@@ -1,6 +1,15 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  filterPill: {
+    value: {
+      height: "filter-pill",
+      borderWidth: "1px",
+      borderColor: "border.subtle",
+      borderRadius: "xs",
+      bg: "bg.muted",
+    },
+  },
   floatingBar: {
     value: {
       paddingInline: "sm",

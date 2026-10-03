@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { viewFilterConditionSchema, viewFilterGroupSchema, viewSortSchema } from "./extensions/collection-view";
+import { viewFilterConditionSchema, viewFilterGroupSchema, viewSortsSchema } from "./extensions/collection-view";
 import { dataTableRendererSettingsSchema } from "./extensions/data-table-renderer";
 import { kanbanViewSettingsSchema } from "./extensions/kanban-renderer";
 
@@ -30,7 +30,7 @@ export const boardViewSchema = z.object({
   title: z.string(),
   settings: boardViewSettingsSchema,
   filter: viewFilterGroupSchema,
-  sorts: z.array(viewSortSchema),
+  sorts: viewSortsSchema,
   builtIn: z.boolean(),
 });
 export const boardViewsSchema = z.object({ views: z.array(boardViewSchema), defaultViewId: z.string() });
@@ -42,7 +42,7 @@ export const boardViewUpdateSchema = z
       .union([kanbanViewSettingsSchema.partial().strict(), dataTableRendererSettingsSchema.partial().strict()])
       .optional(),
     filter: viewFilterGroupSchema.optional(),
-    sorts: z.array(viewSortSchema).optional(),
+    sorts: viewSortsSchema.optional(),
   })
   .strict();
 export const boardViewCreateSchema = boardViewUpdateSchema.extend({

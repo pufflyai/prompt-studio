@@ -15,7 +15,7 @@ interface DataTableHeaderProps {
 // Table columns have no option lists, so every rule is built in the rule editor.
 const noOptions = (_field: AttributeDescriptor) => [];
 
-/** The table uses the same view bar as boards: saved views, Search, Filter, Sort, and Display. */
+/** The table uses the same view bar as boards: saved views, Search, Filter, and Display. */
 export const DataTableHeader = (props: DataTableHeaderProps) => {
   const { view, viewsSource, displayControl, actions } = props;
   const searching = view.deferredSearch.trim() !== "";

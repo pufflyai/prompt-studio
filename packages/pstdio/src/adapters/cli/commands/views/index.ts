@@ -31,7 +31,7 @@ const edit = (yargs: Argv) =>
     .option("title", { type: "string" })
     .option("filter", { type: "array", string: true, describe: '"<field> <condition> [value]", repeat to add rules' })
     .option("filter-json", { type: "string", describe: "A full filter group as JSON" })
-    .option("sort", { type: "array", string: true, describe: "<field>:asc|desc, repeat in priority order" })
+    .option("sort", { type: "array", string: true, describe: "One <field>:asc|desc, or none" })
     .option("show", { type: "string", describe: "Card properties, or visible table columns in order" })
     .option("mode", { type: "string", choices: ["board", "list"] })
     .option("columns", { type: "string" })

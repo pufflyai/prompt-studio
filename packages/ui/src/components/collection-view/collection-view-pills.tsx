@@ -1,67 +1,14 @@
-import { Button, chakra, HStack, Icon, Popover, Portal, Text } from "@chakra-ui/react";
-import { normalizeBooleanViewRule, type ViewFilterRule, type ViewSort } from "@pstdio/sdk/extensions";
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, X } from "lucide-react";
-import type { ComponentProps, ReactNode, Ref } from "react";
+import { HStack, Icon, IconButton, Text } from "@chakra-ui/react";
+import { normalizeBooleanViewRule, type ViewFilterRule } from "@pstdio/sdk/extensions";
+import { X } from "lucide-react";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { useCollectionItemLabel } from "./collection-item-label";
+import { fieldIcon } from "./collection-view-field-icon";
 import { findField } from "./collection-view-fields";
-import { pillConditionLabel, ruleValueLabel } from "./collection-view-labels";
-import type { RuleValueOption } from "./filter-rule-value";
-import { ViewFilterRuleEditor } from "./view-filter-rule-editor";
-
-interface PillShellProps {
-  children: ReactNode;
-  removeLabel: string;
-  onRemove: () => void;
-}
-
-/** Pills share the FilterPill shape: a hairline box with a remove button at the end. */
-const PillShell = (props: PillShellProps) => {
-  const { children, removeLabel, onRemove } = props;
-  return (
-    <HStack
-      height="filter-pill"
-      gap="2xs"
-      paddingRight="2xs"
-      borderWidth="1px"
-      borderColor="border.subtle"
-      borderRadius="xs"
-      bg="bg.muted"
-      flexShrink={0}
-    >
-      {children}
-      <chakra.button
-        type="button"
-        aria-label={removeLabel}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        width="1rem"
-        height="1rem"
-        color="fg.muted"
-        borderRadius="xs"
-        _hover={{ color: "fg", bg: "bg.hover" }}
-        onClick={onRemove}
-      >
-        <Icon as={X} boxSize="0.75rem" />
-      </chakra.button>
-    </HStack>
-  );
-};
-
-const PillLabel = (props: ComponentProps<typeof chakra.button>) => (
-  <chakra.button
-    type="button"
-    display="flex"
-    alignItems="center"
-    gap="2xs"
-    height="full"
-    paddingLeft="xs"
-    minW="0"
-    borderRadius="xs"
-    {...props}
-  />
-);
+import { newRule, selectRuleValues } from "./collection-view-rules";
+import { RuleValueControl, type RuleValueOption } from "./filter-rule-value";
+import { RuleSelect } from "./rule-select";
+import { ConditionSelect } from "./view-filter-rule-editor";
 
 export interface FilterRulePillProps {
   fields: AttributeDescriptor[];
@@ -73,86 +20,58 @@ export interface FilterRulePillProps {
   onRemove: () => void;
 }
 
-/** Reads as a sentence, such as "Status is not Done", and opens the editor for its rule. */
+/** Each part of a filter can be changed without opening another editor. */
 export const FilterRulePill = (props: FilterRulePillProps) => {
   const { fields, rule: savedRule, options, open, onOpenChange, onChange, onRemove } = props;
   const field = findField(fields, savedRule.attributeId);
   const rule = field ? normalizeBooleanViewRule(savedRule, field.type) : savedRule;
   const itemLabel = useCollectionItemLabel();
   const label = field?.label ?? rule.attributeId;
-
+  const boolean = field?.type.kind === "boolean";
   return (
-    <Popover.Root
-      open={open}
-      lazyMount
-      unmountOnExit
-      positioning={{ placement: "bottom-start", offset: { mainAxis: 6 } }}
-      onOpenChange={(details) => onOpenChange(details.open)}
-    >
-      <PillShell removeLabel={`Remove ${label} filter`} onRemove={onRemove}>
-        <Popover.Trigger asChild>
-          <PillLabel aria-label={`Edit ${label} filter`}>
-            <Text textStyle="label/XS" color="fg.muted">
-              {field?.type.kind === "boolean" && typeof rule.value === "boolean" ? itemLabel : label}{" "}
-              {pillConditionLabel(rule, field)}
-            </Text>
-            <Text textStyle="label/XS/medium" maxW="12rem" truncate>
-              {ruleValueLabel(rule, field)}
-            </Text>
-          </PillLabel>
-        </Popover.Trigger>
-      </PillShell>
-      <Portal>
-        <Popover.Positioner>
-          <Popover.Content width="18.75rem" padding="2xs">
-            {field ? (
-              <ViewFilterRuleEditor
-                field={field}
-                rule={rule}
-                options={options}
-                onChange={onChange}
-                onDelete={onRemove}
-              />
-            ) : null}
-          </Popover.Content>
-        </Popover.Positioner>
-      </Portal>
-    </Popover.Root>
-  );
-};
-
-export interface SortPillProps {
-  fields: AttributeDescriptor[];
-  sorts: ViewSort[];
-  buttonRef: Ref<HTMLButtonElement>;
-  onOpen: () => void;
-}
-
-/** The first sort plus "+n" for more levels. It has no remove button, so one click never reorders a board. */
-export const SortPill = (props: SortPillProps) => {
-  const { fields, sorts, buttonRef, onOpen } = props;
-  const [first] = sorts;
-  if (!first) return null;
-  const label = findField(fields, first.attributeId)?.label ?? first.attributeId;
-  return (
-    <Button
-      ref={buttonRef}
-      aria-label={`Sorted by ${label}`}
-      variant="subtle"
-      size="2xs"
-      flexShrink={0}
-      onClick={onOpen}
-    >
-      <Icon as={first.direction === "asc" ? ArrowUpNarrowWide : ArrowDownWideNarrow} color="fg.muted" />
-      <Text as="span" textStyle="label/XS/medium">
-        {label}
-      </Text>
-      {sorts.length > 1 ? (
-        <Text as="span" textStyle="label/XS" color="fg.subtle">
-          +{sorts.length - 1}
-        </Text>
-      ) : null}
-      <Icon as={ChevronDown} color="fg.subtle" />
-    </Button>
+    <HStack role="group" aria-label={`${label} filter`} layerStyle="filterPill" gap="0" flexShrink={0}>
+      <RuleSelect
+        aria-label="Field"
+        variant="filter-segment"
+        showSelectedIcon={false}
+        showSearch
+        value={rule.attributeId}
+        selectedLabel={boolean && typeof rule.value === "boolean" ? itemLabel : undefined}
+        options={fields.map((entry) => ({ value: entry.id, label: entry.label, icon: fieldIcon(entry) }))}
+        onSelect={(id) => {
+          const next = findField(fields, id);
+          if (next && next.id !== field?.id) {
+            onChange(newRule(next));
+            onOpenChange(true);
+          }
+        }}
+      />
+      {field ? (
+        <>
+          <ConditionSelect
+            field={field}
+            rule={rule}
+            variant="filter-segment"
+            onChange={onChange}
+            open={boolean ? open : undefined}
+            onOpenChange={boolean ? onOpenChange : undefined}
+          />
+          <RuleValueControl
+            field={field}
+            rule={rule}
+            options={options}
+            variant="filter-segment"
+            open={open}
+            onOpenChange={onOpenChange}
+            onChange={(value) => onChange(selectRuleValues(field, rule, value))}
+          />
+        </>
+      ) : (
+        <Text textStyle="label/XS">Unavailable field</Text>
+      )}
+      <IconButton aria-label={`Remove ${label} filter`} variant="ghost" size="2xs" onClick={onRemove}>
+        <Icon as={X} />
+      </IconButton>
+    </HStack>
   );
 };
