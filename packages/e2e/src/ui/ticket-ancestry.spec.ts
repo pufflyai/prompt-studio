@@ -59,11 +59,16 @@ test("shows ticket ancestry and filters by immediate parent", async ({ page, req
     listEyebrows.getByText(`${root.shorthand} / ${child.shorthand} / ${grandchild.shorthand}`, { exact: true }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Filter rows" }).click();
-  await page.getByTestId("filter-property-column").getByRole("button", { name: "Parent", exact: true }).click();
-  const rootParentOption = page.getByRole("checkbox", { name: root.shorthand, exact: true });
-  await expect(rootParentOption).toContainText("1");
-  await rootParentOption.click();
+  await page.getByRole("button", { name: "Filter", exact: true }).click();
+  await page
+    .getByTestId("filter-property-column")
+    .getByRole("button", { name: /^Parent/ })
+    .click();
+  // Parent is a text field, so the rule compares the immediate parent's short id.
+  await page.getByRole("button", { name: "Condition", exact: true }).click();
+  await page.getByRole("menuitem", { name: "is", exact: true }).click();
+  await page.getByRole("textbox", { name: "Value", exact: true }).fill(root.shorthand);
+  await page.keyboard.press("Escape");
 
   await expect(page.getByText(child.title, { exact: true })).toBeVisible();
   await expect(page.getByText(root.title, { exact: true })).not.toBeVisible();

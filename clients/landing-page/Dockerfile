@@ -14,6 +14,9 @@ COPY .pstdio/extensions/font-editor/package.json .pstdio/extensions/font-editor/
 COPY .pstdio/extensions/pstdio-dev/package.json .pstdio/extensions/pstdio-dev/package.json
 COPY scripts scripts
 
+# @pstdio/ui imports @pstdio/sdk/extensions at runtime, so the SDK is built before ui.
+RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/sdk
+RUN bun run --cwd packages/sdk build:js
 RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/landing-page
 
 RUN cd packages/ui && bun run build
