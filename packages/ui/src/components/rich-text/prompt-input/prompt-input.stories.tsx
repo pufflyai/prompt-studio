@@ -28,9 +28,9 @@ export const SlashPopover: Story = {
     const page = within(canvasElement.ownerDocument.body);
     const input = canvas.getByRole("textbox");
     await userEvent.type(input, "/");
-    await expect(page.getByRole("listbox", { name: "Typeahead menu" })).toBeVisible();
+    await expect(await page.findByRole("listbox", { name: "Typeahead menu" })).toBeVisible();
     await userEvent.keyboard("{ArrowDown}{Enter}");
-    await expect(input).toHaveTextContent("/compact ");
+    await expect(input.innerText).toBe("/compact ");
     await expect(page.queryByRole("listbox", { name: "Typeahead menu" })).not.toBeInTheDocument();
   },
 };
@@ -41,9 +41,9 @@ export const FilterAndTab: Story = {
     const page = within(canvasElement.ownerDocument.body);
     const input = canvas.getByRole("textbox");
     await userEvent.type(input, "/pl");
-    await expect(page.getAllByRole("option")).toHaveLength(1);
+    await expect(await page.findAllByRole("option")).toHaveLength(1);
     await userEvent.keyboard("{Tab}");
-    await expect(input).toHaveTextContent("/plan ");
+    await expect(input.innerText).toBe("/plan ");
     await userEvent.type(input, "Keep my task text");
     await expect(input).toHaveTextContent("/plan Keep my task text");
   },

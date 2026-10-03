@@ -39,10 +39,10 @@ export const NewConversation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(canvas.getByRole("textbox"), "/");
-    const commands = within(canvasElement.ownerDocument.body).getByRole("listbox", { name: "Typeahead menu" });
+    const commands = await within(canvasElement.ownerDocument.body).findByRole("listbox", { name: "Typeahead menu" });
     await expect(commands).toBeVisible();
-    await userEvent.click(within(commands).getByRole("option", { name: "/plan" }));
-    await expect(canvas.getByRole("textbox")).toHaveTextContent("/plan ");
+    await userEvent.click(within(commands).getByRole("option", { name: /^\/plan\b/ }));
+    await expect(canvas.getByRole("textbox").innerText).toBe("/plan ");
   },
 };
 export const IndependentModes: Story = {
