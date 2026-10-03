@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ListFilter, Plus, RotateCcw } from "lucide-react";
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -57,16 +57,10 @@ const CountButton = (props: CountButtonProps) => {
   const { label, icon, count, buttonRef, onClick } = props;
   return (
     <Tooltip content={label}>
-      {count > 0 ? (
-        <Button ref={buttonRef} aria-label={label} variant="subtle" size="2xs" onClick={onClick}>
-          <Icon as={icon} />
-          {count}
-        </Button>
-      ) : (
-        <IconButton ref={buttonRef} aria-label={label} variant="ghost" size="2xs" onClick={onClick}>
-          <Icon as={icon} />
-        </IconButton>
-      )}
+      <Button ref={buttonRef} aria-label={label} variant={count > 0 ? "subtle" : "ghost"} size="2xs" onClick={onClick}>
+        <Icon as={icon} />
+        {count > 0 ? count : null}
+      </Button>
     </Tooltip>
   );
 };

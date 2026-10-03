@@ -110,6 +110,27 @@ const Bar = (props: BarProps) => {
 
 export const NoRules: Story = {
   render: () => <Bar storageKey="storybook-collection-view-bar-no-rules" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
+    const popover = await body.findByTestId("view-filter-popover");
+    const expectAnchored = async () => {
+      await waitFor(() => {
+        const trigger = canvas.getByRole("button", { name: "Filter", exact: true }).getBoundingClientRect();
+        const bounds = popover.getBoundingClientRect();
+        expect(bounds.top).toBeGreaterThanOrEqual(trigger.bottom);
+        expect(bounds.left).toBeGreaterThan(0);
+      });
+    };
+    await expectAnchored();
+    await userEvent.click(body.getByRole("button", { name: "Add filter rule" }));
+    await expect(body.getByTestId("filter-rule-row")).toBeVisible();
+    await expectAnchored();
+    await userEvent.click(within(popover).getByRole("button", { name: "Remove filter", exact: true }));
+    await expect(within(popover).queryByTestId("filter-rule-row")).not.toBeInTheDocument();
+    await expectAnchored();
+  },
 };
 
 /** Saved rules always show in the criteria row, so nothing that hides rows is invisible. */
