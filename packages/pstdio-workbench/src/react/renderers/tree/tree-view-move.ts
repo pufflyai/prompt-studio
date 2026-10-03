@@ -21,26 +21,24 @@ interface MoveTreeNodeContext {
 
 export const createMoveTreeNode = (context: MoveTreeNodeContext) =>
   context.renderer.moveNode
-    ? (sourceNodeId: string, targetNodeId?: string) => {
+    ? async (sourceNodeId: string, targetNodeId?: string) => {
         const source = findNodeInSections(context.sections, sourceNodeId, context.childrenByNodeId);
         const target = targetNodeId
           ? (findNodeInSections(context.sections, targetNodeId, context.childrenByNodeId) ?? undefined)
           : undefined;
         if (!source || (targetNodeId && !target)) return;
         const trees = getWorkbenchRenderers(context.workbench);
-        void Promise.resolve()
-          .then(() =>
-            context.renderer.moveNode?.(source, target, {
-              resource: context.resource,
-              viewId: context.viewId,
-              state: trees.getTreeState(context.renderer.id),
-              refresh: () => trees.refresh(context.renderer.id),
-              setSelectedNode: (nodeId) => trees.setSelectedNode(context.renderer.id, nodeId),
-            }),
-          )
-          .catch((error) => {
-            if (context.onError) context.onError(error);
-            else reportUserActionError(context.workbench, "Move", error);
+        try {
+          await context.renderer.moveNode?.(source, target, {
+            resource: context.resource,
+            viewId: context.viewId,
+            state: trees.getTreeState(context.renderer.id),
+            refresh: () => trees.refresh(context.renderer.id),
+            setSelectedNode: (nodeId) => trees.setSelectedNode(context.renderer.id, nodeId),
           });
+        } catch (error) {
+          if (context.onError) context.onError(error);
+          else reportUserActionError(context.workbench, "Move", error);
+        }
       }
     : undefined;
