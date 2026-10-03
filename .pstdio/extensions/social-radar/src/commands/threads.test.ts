@@ -4,6 +4,25 @@ import { commands } from ".";
 import { finish, foundThread, newPost, setup } from "./test-context";
 
 describe("social radar threads", () => {
+  test("a posted URL belongs to only one saved thread", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const first = await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
+    const second = await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
+    await commands["set-thread-status"].run(ctx, {
+      id: first.id,
+      status: "answered",
+      url: "https://x.com/prompt_studio/status/1",
+    });
+    await expect(
+      commands["set-thread-status"].run(ctx, {
+        id: second.id,
+        status: "answered",
+        url: "https://X.com/prompt_studio/status/1/",
+      }),
+    ).rejects.toThrow("This link is already saved as a thread.");
+    expect(await storage.collection<Thread>("threads").get(second.id)).toMatchObject({ status: "idea" });
+  });
   test("saves a known thread URL once across runs", async () => {
     const { ctx, sessions } = setup();
     const first = await commands["run-daily"].run(ctx, {});
