@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import { startStorybook, stopStorybook, storyUrl, waitForStoryPlayback } from "./mermaid-renderer-storybook";
 
 const storyId = "components-data-display-data-table--search-cell-values";
 let baseUrl = "";
@@ -15,6 +15,7 @@ test.afterAll(async () => {
 
 test("search matches and highlights displayed labels, relative dates, and diff counts", async ({ page }) => {
   await page.goto(storyUrl(baseUrl, storyId));
+  await waitForStoryPlayback(page);
   await expect(page.getByText("Completed", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Search this view", exact: true }).click();
   const search = page.getByRole("textbox", { name: "Search this view", exact: true });

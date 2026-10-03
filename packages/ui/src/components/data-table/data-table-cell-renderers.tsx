@@ -115,6 +115,19 @@ interface FormattedCellProps {
   search?: string;
 }
 
+const HighlightedCellContent = (props: { content: ReactNode; query: string }) => {
+  const { content, query } = props;
+  if (typeof content === "string" || typeof content === "number")
+    return <HighlightedText text={String(content)} query={query} />;
+  if (Array.isArray(content))
+    return content.map((child, index) => <HighlightedCellContent key={index} content={child} query={query} />);
+  if (isValidElement<{ children?: ReactNode }>(content) && content.props.children !== undefined)
+    return cloneElement(content, {
+      children: <HighlightedCellContent content={content.props.children} query={query} />,
+    });
+  return content;
+};
+
 const FormattedCell = (props: FormattedCellProps) => {
   const { value, wrapRows, search = "" } = props;
   const displayValue = formatDisplayValue(value);
@@ -129,7 +142,7 @@ const FormattedCell = (props: FormattedCellProps) => {
         overflowWrap={wrapRows ? "anywhere" : undefined}
         whiteSpace={wrapRows ? "normal" : "nowrap"}
       >
-        {wrapRows ? displayValue : toSingleLineElement(displayValue)}
+        <HighlightedCellContent content={wrapRows ? displayValue : toSingleLineElement(displayValue)} query={search} />
       </chakra.span>
     );
   }
@@ -143,11 +156,7 @@ const FormattedCell = (props: FormattedCellProps) => {
       textStyle="paragraph/S/regular"
       whiteSpace={wrapRows ? "normal" : "nowrap"}
     >
-      {typeof displayValue === "string" || typeof displayValue === "number" ? (
-        <HighlightedText text={String(displayValue)} query={search} />
-      ) : (
-        displayValue
-      )}
+      <HighlightedCellContent content={displayValue} query={search} />
     </Text>
   );
 };

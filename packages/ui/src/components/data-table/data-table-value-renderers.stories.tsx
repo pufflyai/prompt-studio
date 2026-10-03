@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Badge, Box } from "@chakra-ui/react";
 import { expect, userEvent, within } from "storybook/test";
 import { DataTable, type DataTableProps, type RowData } from ".";
 
@@ -122,7 +122,11 @@ export const DefaultDisplay = {
 export const SearchCellValues = {
   args: {
     data: [
-      { Name: { display: "Completed", sortValue: 1 }, Created: hoursAgo(5), Diff: { additions: 128, deletions: 14 } },
+      {
+        Name: { display: <Badge>Completed</Badge>, sortValue: 1 },
+        Created: hoursAgo(5),
+        Diff: { additions: 128, deletions: 14 },
+      },
       { Name: { display: "Pending", sortValue: 2 }, Created: hoursAgo(1), Diff: { additions: 0, deletions: 0 } },
     ],
     columnRenderers: { Created: { type: "date" }, Diff: { type: "diff" } },
