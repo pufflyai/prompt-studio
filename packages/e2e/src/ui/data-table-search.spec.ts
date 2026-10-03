@@ -19,11 +19,12 @@ test("search matches and highlights displayed labels, relative dates, and diff c
   await expect(page.getByText("Completed", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Search this view", exact: true }).click();
   const search = page.getByRole("textbox", { name: "Search this view", exact: true });
+  const rows = page.locator("tbody tr").filter({ has: page.locator('td[data-column-id="Name"]') });
   for (const text of ["Completed", "5 hours ago", "+128", "-14"]) {
     await search.fill(text);
-    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await expect(rows).toHaveCount(1);
     await expect(page.locator("mark")).toHaveText(text);
   }
   await search.press("Escape");
-  await expect(page.locator("tbody tr")).toHaveCount(2);
+  await expect(rows).toHaveCount(2);
 });
