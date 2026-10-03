@@ -89,7 +89,9 @@ test("boards search, edit filter parts, and save one sort that agents can build 
     await expect(statusFilter.getByRole("button", { name: "Condition" })).toHaveText("is not");
     await expect(statusFilter.getByRole("button", { name: "Values" })).toHaveText(statusLabel);
     await page.keyboard.press("Escape");
-    await expect(page.getByText("Nothing matches this view")).toBeVisible();
+    await expect(cards).toHaveCount(0);
+    for (const option of status.options!.slice(1))
+      await expect(page.getByText(option.label, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Reset", exact: true }).click();
     await expect(cards).toHaveCount(3);
 
