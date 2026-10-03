@@ -67,7 +67,7 @@ test("saved board views keep their filters and ordering as rules and sorts", asy
       },
     ]);
   } finally {
-    if(!pglite.closed) await pglite.close();
+    if (!pglite.closed) await pglite.close();
     rmSync(root, { recursive: true, force: true });
   }
 });
