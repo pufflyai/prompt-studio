@@ -1,6 +1,8 @@
 import type {
   ApprovalInput,
   CreateSessionInput,
+  CreateSessionResponse,
+  DraftHarnessCommandInput,
   FollowUpInput,
   FollowUpResponse,
   HarnessCommandState,
@@ -27,6 +29,10 @@ export type ListSessionsInput = {
 };
 
 export type SessionClient = {
+  getDraftHarnessCommands(
+    input: DraftHarnessCommandInput,
+    signal?: AbortSignal,
+  ): Promise<HarnessCommandState & { harnessId: string }>;
   list(projectId: string, input?: ListSessionsInput): Promise<Session[]>;
   get(sessionId: string): Promise<Session>;
   getHarnessCommands(sessionId: string, signal?: AbortSignal): Promise<HarnessCommandState & { harnessId: string }>;
@@ -40,7 +46,7 @@ export type SessionClient = {
     input: { name: string; data: Uint8Array | ArrayBuffer; mimeType?: string | null },
   ): Promise<SessionAttachment>;
   deleteAttachment(projectId: string, fileId: string): Promise<void>;
-  create(input: CreateSessionInput): Promise<Session>;
+  create(input: CreateSessionInput): Promise<CreateSessionResponse>;
   archive(sessionId: string): Promise<void>;
   followUp(sessionId: string, input: FollowUpInput): Promise<FollowUpResponse>;
   approve(sessionId: string, input: ApprovalInput): Promise<void>;
@@ -105,6 +111,8 @@ const dispatchSessionStreamEvent = (event: string, data: unknown, handlers: Sess
 export const createSessionClient = (request: RequestFn, clientOptions: ClientOptions): SessionClient => {
   const streams = createSessionStreamTransport(request, clientOptions);
   return {
+    getDraftHarnessCommands: (input, signal) =>
+      request("/v1/sessions/harness-command-state", { method: "POST", body: input, signal }),
     listActivity: (sessionId, input = {}) => {
       const params = new URLSearchParams();
       if (input.event_type) params.append("event_type", input.event_type);

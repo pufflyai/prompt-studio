@@ -1,5 +1,6 @@
 import type {
   HarnessCommandContext,
+  HarnessCommandDiscoveryContext,
   HarnessCommandState,
   HarnessOperation,
   PreparedHarnessOperation,
@@ -9,7 +10,7 @@ import { pollOpencodeUntilIdle } from "./opencode-session-poller";
 
 type Service = ReturnType<typeof createOpencodeService>;
 export const opencodeCommandState = async (
-  input: HarnessCommandContext,
+  input: HarnessCommandDiscoveryContext,
   service: Service,
 ): Promise<HarnessCommandState> => ({
   slashCommands: true,

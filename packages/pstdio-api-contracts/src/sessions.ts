@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
 import { extensionResourceRefSchema } from "./extensions";
+import { harnessOperationResponseSchema, harnessOperationSchema } from "./harness-commands";
 import { sessionMessageSchema } from "./session-messages";
 
 export const sessionStatusSchema = z.enum([
@@ -39,6 +40,10 @@ export const sessionSchema = z.object({
 export const sessionAttachmentRefSchema = z.object({
   file_id: z.string().min(1),
 });
+export const createSessionResponseSchema = sessionSchema.extend({
+  operation_result: harnessOperationResponseSchema.optional(),
+});
+export type CreateSessionResponse = z.infer<typeof createSessionResponseSchema>;
 
 export const sessionAttachmentSchema = z.object({
   file_id: z.string(),
@@ -55,6 +60,7 @@ export const createSessionInputSchema = z.object({
   project_id: z.string().min(1),
   title: z.string().min(1),
   prompt: z.string().min(1).optional(),
+  operation: harnessOperationSchema.optional(),
   agent: z.string().min(1).optional(),
   workspace_id: z.string().optional(),
   anchors: z.array(extensionResourceRefSchema).optional(),

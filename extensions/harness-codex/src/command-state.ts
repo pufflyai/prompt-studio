@@ -1,7 +1,10 @@
-import type { HarnessCommandContext, HarnessCommandState } from "@pstdio/sdk/extensions";
+import type { HarnessCommandDiscoveryContext, HarnessCommandState } from "@pstdio/sdk/extensions";
 import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
 
-export const codexCommandState = (input: HarnessCommandContext, goal: ThreadGoal | null): HarnessCommandState => ({
+export const codexCommandState = (
+  input: HarnessCommandDiscoveryContext,
+  goal: ThreadGoal | null,
+): HarnessCommandState => ({
   slashCommands: true,
   commands: [
     {

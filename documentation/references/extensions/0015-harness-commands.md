@@ -6,6 +6,8 @@ Harnesses own native command meaning. Core provides discovery, dispatch, executi
 
 The optional `HarnessProvider.getCommandState(ctx, input)` returns `commands`, `modes`, and `slashCommands`. Providers without this method continue ordinary prompting. Commands carry a name, description, and optional argument help. Discovery is help, not an invocation allowlist.
 
+Discovery runs in new conversations too. `HarnessCommandDiscoveryContext` provides the selected workspace, model, and effective parameters before a session exists. Its host and native session IDs are absent until created. Discovery must not create a native conversation or submit a prompt. Operation preparation still requires a real host session through `HarnessCommandContext`.
+
 Modes carry independent stable IDs, labels, descriptions, state text, and actions. An action can request one text argument. Mode IDs and action IDs belong to the selected qualified harness. Core does not infer modes from command text or store native mode state.
 
 `HarnessProvider.prepareOperation(ctx, input, operation)` validates and prepares an operation without performing its mutation. The operation is either `{ kind: "command", text }` or `{ kind: "mode-action", modeId, actionId, argument? }`. Preserve raw command text when the native interface accepts it.
@@ -17,6 +19,8 @@ The input provides the session and native IDs, current model and parameters, and
 ## Client tools
 
 `client.sessions.getHarnessCommands(sessionId)` reads the current selected harness's descriptors and authoritative state. `client.sessions.invokeHarnessOperation(sessionId, operation, harnessId?)` invokes the same operation used by chat. Supplying the discovered qualified harness ID rejects a stale invocation after the harness changes.
+
+`client.sessions.getDraftHarnessCommands({ project_id, agent, workspace_id?, model?, params? })` uses `POST /v1/sessions/harness-command-state` to discover commands before the first message. It resolves the same selected or default workspace and effective parameters as session creation. Starting a conversation with a native operation uses `client.sessions.create({ project_id, title, agent, operation, ... })`. Provide either `prompt` or `operation`, and do not attach files to a native operation. The host creates the session only on submission, then dispatches through the same operation owner used by existing sessions. The response includes `operation_result` for native replies. Rejected first operations return the created session as failed, so callers can show the error and retry in that conversation. A cancelled or disconnected operation keeps its authoritative status and any accepted native identity.
 
 The authenticated endpoints are `GET` and `POST /v1/sessions/:id/harness-commands`. POST accepts `{ operation, harnessId? }` and returns `status: "completed" | "started"` with an optional native message. Started operations report subsequent status and conversation changes through existing session sync and streams. Exclusive operations reject conflicts rather than creating a second queue. Controls do not reserve another slot.
 

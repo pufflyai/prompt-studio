@@ -4,6 +4,7 @@ import type { SessionsRouteDeps } from "./deps";
 import { approveSessionHandler, approveSessionRoute } from "./endpoints/approve-session";
 import { archiveSessionHandler, archiveSessionRoute } from "./endpoints/archive-session";
 import { createSessionHandler, createSessionRoute } from "./endpoints/create-session";
+import { draftHarnessCommandsHandler, draftHarnessCommandsRoute } from "./endpoints/draft-harness-commands";
 import { followUpSessionHandler, followUpSessionRoute } from "./endpoints/follow-up-session";
 import { getConversationSourcesHandler, getConversationSourcesRoute } from "./endpoints/get-conversation-sources";
 import { getQueuedMessagesHandler, getQueuedMessagesRoute } from "./endpoints/get-queued-messages";
@@ -47,6 +48,7 @@ import { createSessionStreamConnections } from "./session-stream-connections";
 export const createSessionRoutes = (deps: SessionsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
   const streamConnections = createSessionStreamConnections();
+  routes.openapi(draftHarnessCommandsRoute, draftHarnessCommandsHandler(deps));
 
   routes.openapi(getHarnessCommandsRoute, getHarnessCommandsHandler(deps));
   routes.openapi(invokeHarnessCommandRoute, invokeHarnessCommandHandler(deps));

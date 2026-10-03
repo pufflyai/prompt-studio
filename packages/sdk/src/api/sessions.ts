@@ -1,6 +1,8 @@
 export type {
   ApprovalInput,
   CreateSessionInput,
+  CreateSessionResponse,
+  DraftHarnessCommandInput,
   FollowUpDecision,
   FollowUpInput,
   FollowUpResponse,

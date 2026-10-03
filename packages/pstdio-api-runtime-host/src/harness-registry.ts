@@ -2,6 +2,7 @@ import type {
   AgentCapability,
   AgentModel,
   HarnessCommandContext,
+  HarnessCommandDiscoveryContext,
   HarnessCommandState,
   HarnessExit,
   HarnessMessagesInput,
@@ -58,7 +59,7 @@ export type HarnessHandle = {
   reattach(input: HarnessReattachInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   getMessages(input: HarnessMessagesInput, options?: HarnessCallOptions): Promise<SessionMessage[]>;
   recoverMessages(input: HarnessRecoveryInput, options?: HarnessCallOptions): Promise<HarnessRecoveryResult>;
-  getCommandState(input: HarnessCommandContext, options?: HarnessCallOptions): Promise<HarnessCommandState>;
+  getCommandState(input: HarnessCommandDiscoveryContext, options?: HarnessCallOptions): Promise<HarnessCommandState>;
   prepareOperation(
     input: HarnessCommandContext,
     operation: HarnessOperation,

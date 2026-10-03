@@ -15,6 +15,7 @@ import {
   createDashboardWorkspaceOptions,
   type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
+import { createDraftCommandSession } from "../chat/create-draft-command-session";
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
 import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import { shouldShowPendingFollowUp } from "../chat/session-chat-state";
@@ -115,6 +116,15 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     selectedModel,
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
+  const commandDraft = projectId
+    ? {
+        project_id: projectId,
+        agent: selectedAgent,
+        workspace_id: selectedWorkspaceId || undefined,
+        model: selectedModel || undefined,
+        params: nonEmptyHarnessParams(harnessParamOverrides),
+      }
+    : undefined;
   const commandComposer = useCommandComposer(
     sessionId,
     selectedAgent,
@@ -122,6 +132,11 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     reconnect,
     view.status,
     view.lastRequestStarted,
+    commandDraft,
+    (operation) => createDraftCommandSession(commandDraft, operation),
+    (sessionId, title) => {
+      if (projectId) openCreatedSessionFromDraft({ input, sessionId, prompt: title, projectId });
+    },
   );
   const { pendingFollowUp, setPendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } =
     usePendingSessionFollowUp(sessionId, messages, view.lastRequestStarted, view.status === "in_progress");

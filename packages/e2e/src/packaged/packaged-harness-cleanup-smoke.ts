@@ -73,6 +73,21 @@ export const registerHarnessCleanupSmokeTests = () => {
           version: null,
         });
         projects.push({ id: project.id, instanceId: enabled.instanceId });
+        const draftState = await request("/sessions/harness-command-state", "POST", {
+          project_id: project.id,
+          agent: "test.cleanup-smoke.harness.worker",
+        });
+        expect(draftState.commands[0].name).toBe("/goal");
+        const firstCommand = await request("/sessions", "POST", {
+          project_id: project.id,
+          title: "First native command",
+          agent: draftState.harnessId,
+          operation: { kind: "command", text: "/goal first action" },
+        });
+        expect(firstCommand).toMatchObject({
+          agent_session_id: null,
+          operation_result: { status: "completed", message: "/goal first action" },
+        });
         const session = await request("/sessions", "POST", {
           project_id: project.id,
           title: "Native commands",

@@ -1,7 +1,8 @@
 import { AlertMessage } from "@pstdio/ui";
 import { type ChatInputQuestionResponse, HarnessControls } from "@pstdio/ui/chat-ui";
-import type { SessionAttachment } from "pstdio-api-contracts";
+import type { DraftHarnessCommandInput, SessionAttachment } from "pstdio-api-contracts";
 import { useEffect, useRef, useState } from "react";
+import { handOffNativeCommand, takeNativeCommand } from "../chat/native-command-handoff";
 import { useHarnessCommands } from "../hooks/use-harness-commands";
 import type { useSessionChatDraft } from "./use-session-chat-draft";
 export const useCommandComposer = (
@@ -11,15 +12,21 @@ export const useCommandComposer = (
   reconnect: () => void,
   status: string | undefined,
   lastRequestStarted: string | null | undefined,
+  draft: DraftHarnessCommandInput | undefined,
+  createCommand: Parameters<typeof useHarnessCommands>[3],
+  onCreated: (sessionId: string, title: string) => void,
 ) => {
-  const scope = JSON.stringify([sessionId, selectedAgent]);
+  const scope = JSON.stringify([sessionId, selectedAgent, sessionId ? undefined : draft]);
   const currentScope = useRef(scope);
   currentScope.current = scope;
-  const pendingCommand = useRef<{ scope: string; text: string; previousRequest: string | null | undefined } | null>(
-    null,
-  );
+  const pendingCommand = useRef<{
+    scope: string;
+    text: string;
+    previousRequest: string | null | undefined;
+    message?: string;
+  } | null>(null);
   const draftText = useRef(chatDraft.seed);
-  const commands = useHarnessCommands(sessionId, selectedAgent);
+  const commands = useHarnessCommands(sessionId, selectedAgent, draft, createCommand);
   const [commandText, setCommandText] = useState("");
   const [literalCommand, setLiteralCommand] = useState(false);
   const [commandError, setCommandError] = useState<string | null>(null);
@@ -44,15 +51,16 @@ export const useCommandComposer = (
     setCommandText(chatDraft.seed);
     draftText.current = chatDraft.seed;
   }, [chatDraft.seed]);
-  const previousScope = useRef(scope);
+  const previousScope = useRef<string | null>(null);
   useEffect(() => {
     if (previousScope.current === scope) return;
     previousScope.current = scope;
-    pendingCommand.current = null;
+    const handedOff = takeNativeCommand(sessionId, selectedAgent);
+    pendingCommand.current = handedOff?.kind === "pending" ? { scope, ...handedOff } : null;
     setLiteralCommand(false);
     setCommandError(null);
-    setCommandOutcome(null);
-  }, [scope]);
+    setCommandOutcome(handedOff?.kind === "outcome" ? handedOff.message : null);
+  }, [scope, sessionId, selectedAgent]);
 
   useEffect(() => {
     const pending = pendingCommand.current;
@@ -61,7 +69,9 @@ export const useCommandComposer = (
     pendingCommand.current = null;
     if (status === "failed" || status === "disconnected") {
       if (!draftText.current) chatDraft.restore(pending.text);
-      setCommandError(`Native command ${pending.text} ${status}. Check the conversation before retrying.`);
+      setCommandError(
+        pending.message ?? `Native command ${pending.text} ${status}. Check the conversation before retrying.`,
+      );
     }
   }, [scope, status, lastRequestStarted, chatDraft]);
   return {
@@ -71,7 +81,7 @@ export const useCommandComposer = (
       questionResponse: ChatInputQuestionResponse | undefined,
       onSubmitted?: () => void,
     ) => {
-      if (!sessionId || literalCommand || questionResponse || !/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
+      if (literalCommand || questionResponse || !/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
       if (!commands.state) {
         const message = commands.loading
           ? "Commands are still loading. Try again when they are ready."
@@ -85,10 +95,27 @@ export const useCommandComposer = (
         return Promise.reject(new Error("Command attachments are not supported."));
       }
       return invokeCommand({ kind: "command", text }).then((result) => {
-        if (result.status === "started") pendingCommand.current = { scope, text, previousRequest: lastRequestStarted };
+        if (result.status === "started") {
+          if (result.sessionId)
+            handOffNativeCommand(result.sessionId, {
+              kind: "pending",
+              harnessId: selectedAgent,
+              text,
+              previousRequest: null,
+              message: result.message,
+            });
+          else pendingCommand.current = { scope, text, previousRequest: lastRequestStarted };
+        }
         onSubmitted?.();
+        if (result.sessionId && result.status === "completed" && result.message)
+          handOffNativeCommand(result.sessionId, {
+            kind: "outcome",
+            harnessId: selectedAgent,
+            message: result.message,
+          });
         draftText.current = "";
         setCommandText("");
+        if (result.sessionId) onCreated(result.sessionId, text);
       });
     },
     header: commands.state ? (
@@ -105,7 +132,8 @@ export const useCommandComposer = (
           setCommandText(text);
         }}
         onAction={async (modeId, actionId, argument) => {
-          await invokeCommand({ kind: "mode-action", modeId, actionId, argument });
+          const result = await invokeCommand({ kind: "mode-action", modeId, actionId, argument });
+          if (result.sessionId) onCreated(result.sessionId, "New session");
         }}
       />
     ) : undefined,

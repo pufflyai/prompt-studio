@@ -3,12 +3,7 @@ import { Check, ChevronDown, Circle } from "lucide-react";
 import type { HarnessParamsInfo } from "pstdio-api-contracts";
 import { forwardRef, type ReactNode } from "react";
 import { HarnessParamOptionIcon } from "./harness-param-option-icon";
-import {
-  type HarnessParamValues,
-  removeHarnessParamOverride,
-  resolveHarnessParamText,
-  updateHarnessParamOverride,
-} from "./harness-param-values";
+import { type HarnessParamValues, resolveHarnessParamText, updateHarnessParamOverride } from "./harness-param-values";
 
 type HarnessParamDescriptor = HarnessParamsInfo[string];
 type SelectHarnessParamDescriptor = Extract<HarnessParamDescriptor, { type: "select" }>;
@@ -136,17 +131,6 @@ const SelectParamControl = (
                 </Menu.Item>
               ))}
             </Menu.ItemGroup>
-            {isOverride ? (
-              <>
-                <Menu.Separator />
-                <Menu.Item
-                  value={`${paramKey}:reset`}
-                  onSelect={() => onOverridesChange(removeHarnessParamOverride(overrides, paramKey))}
-                >
-                  Reset to default
-                </Menu.Item>
-              </>
-            ) : null}
           </Menu.Content>
         </Menu.Positioner>
       </Portal>

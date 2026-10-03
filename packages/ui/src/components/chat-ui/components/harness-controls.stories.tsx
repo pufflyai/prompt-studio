@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { AlertMessage } from "@/components/primitives/alert";
-import { HarnessControls } from "./harness-controls";
+import { createSerializedPromptState } from "../utils/editor-state";
+import { ChatInput } from "./chat-input";
+import { HarnessControls, type HarnessControlsProps } from "./harness-controls";
 
 const meta: Meta<typeof HarnessControls> = {
   title: "Patterns/Chat/Harness Controls",
@@ -20,6 +24,39 @@ const meta: Meta<typeof HarnessControls> = {
 export default meta;
 type Story = StoryObj<typeof HarnessControls>;
 export const CommandCompletion: Story = {};
+const NewConversationComposer = (props: HarnessControlsProps) => {
+  const { commands } = props;
+  const [query, setQuery] = useState("");
+  const [seed, setSeed] = useState("");
+  return (
+    <>
+      <HarnessControls
+        {...props}
+        commands={commands}
+        modes={[]}
+        query={query}
+        onInsert={(text) => {
+          setSeed(text);
+          setQuery(text);
+        }}
+        onLiteralChange={() => {}}
+        onAction={async () => {}}
+      />
+      <ChatInput defaultState={createSerializedPromptState(seed)} onChange={setQuery} />
+    </>
+  );
+};
+export const NewConversation: Story = {
+  render: (args) => <NewConversationComposer {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("textbox"), "/");
+    const commands = canvas.getByRole("listbox", { name: "Harness commands" });
+    await expect(commands).toBeVisible();
+    await userEvent.click(within(commands).getByRole("option", { name: "/plan" }));
+    await expect(canvas.getByRole("textbox")).toHaveTextContent("/plan ");
+  },
+};
 export const IndependentModes: Story = {
   args: {
     query: "",

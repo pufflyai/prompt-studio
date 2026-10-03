@@ -58,7 +58,7 @@ export const ChangeEffort: Story = {
     await expect(canvas.getByRole("button", { name: "Reasoning effort: Extra high" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Reasoning effort: Extra high" }));
     await expect(page.getByRole("menuitemradio", { name: "Extra high" })).toHaveAttribute("aria-checked", "true");
-    await userEvent.click(page.getByRole("menuitem", { name: "Reset to default" }));
+    await userEvent.click(page.getByRole("menuitemradio", { name: "Medium" }));
     await expect(canvas.getByRole("button", { name: "Reasoning effort: Medium" })).toBeVisible();
   },
 };

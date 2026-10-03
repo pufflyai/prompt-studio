@@ -93,12 +93,18 @@ const invokeControl = async (
     control.release();
   }
 };
+const emitOperationLifecycle = async (deps: SessionsRouteDeps, id: string, lifecycle: "started" | "resumed") => {
+  const session = (await deps.sessionService.get(id))!;
+  if (lifecycle === "started") deps.sessionService.emitStartedHook?.(session);
+  else deps.sessionService.emitResumedHook?.(session);
+};
 export const invokeSessionHarnessOperation = async (
   deps: SessionsRouteDeps,
   id: string,
   operation: HarnessOperation,
   expectedHarnessId?: string,
   signal?: AbortSignal,
+  lifecycle: "started" | "resumed" = "resumed",
 ) => {
   const context = await withSchedulingLock(async () => {
     const { session, harness, input, options } = await resolve(deps, id);
@@ -133,6 +139,7 @@ export const invokeSessionHarnessOperation = async (
       throw new HarnessOperationError("All execution slots are in use. Try again when one is free.", 409);
     const resumed = await deps.sessionService.resume(id, {
       expectedStatus: session.status as "completed" | "failed" | "cancelled" | "disconnected",
+      emitResumedHook: false,
     });
     if (!resumed) throw new HarnessOperationError("Session changed before the command started.", 409);
     const entry = initializeConversation(id, deps, async () => {}, signal);
@@ -177,9 +184,10 @@ export const invokeSessionHarnessOperation = async (
       });
     }
     invocationSignal.throwIfAborted();
+    await saveParams(deps, id, result.params, harnessId);
+    await emitOperationLifecycle(deps, id, lifecycle);
     if (result.kind === "completed") {
       startup.resolve({ status: "completed" });
-      await saveParams(deps, id, result.params, harnessId);
       const run = { done: Promise.resolve({ status: "completed" as const }), stop: () => {} };
       deps.sessionService.store.setSession(id, run, entry);
       void trackHarnessSession(id, run, entry.eventStore.subscribe(), deps, undefined, entry);
@@ -187,7 +195,6 @@ export const invokeSessionHarnessOperation = async (
     }
     const run = result.session;
     void run.done.then(startup.resolve);
-    await saveParams(deps, id, result.params, harnessId);
 
     await bindSessionCancellation(signal, run, deps, id, entry);
     await rejectPersistedSessionCancellation(run, deps, id, entry);
@@ -204,5 +211,35 @@ export const invokeSessionHarnessOperation = async (
     await trackHarnessSession(id, failed, entry.eventStore.subscribe(), deps, undefined, entry);
     if (error instanceof HarnessOperationError) throw error;
     throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
+  }
+};
+
+export const createSessionHarnessOperation = async (
+  deps: SessionsRouteDeps,
+  input: Parameters<SessionsRouteDeps["sessionService"]["create"]>[0],
+  operation: HarnessOperation,
+  onCreated: (session: { id: string; title: string; status: string }) => Promise<void>,
+  signal?: AbortSignal,
+) => {
+  const session = await deps.sessionService.create({ ...input, status: "completed" }, { emitStartedHook: false });
+  await onCreated(session);
+  try {
+    const operation_result = await invokeSessionHarnessOperation(
+      deps,
+      session.id,
+      operation,
+      input.agent,
+      signal,
+      "started",
+    );
+    return { ...(await deps.sessionService.get(session.id))!, operation_result };
+  } catch (error) {
+    if (!(error instanceof HarnessOperationError)) throw error;
+    const current = (await deps.sessionService.get(session.id))!;
+    if (current.status === "completed") await deps.sessionService.transitionStatus(session.id, "failed");
+    return {
+      ...(await deps.sessionService.get(session.id))!,
+      operation_result: { status: "completed" as const, message: error.message },
+    };
   }
 };

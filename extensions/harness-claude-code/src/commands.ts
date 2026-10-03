@@ -1,12 +1,13 @@
 import type {
   HarnessCommandContext,
+  HarnessCommandDiscoveryContext,
   HarnessCommandState,
   HarnessOperation,
   PreparedHarnessOperation,
 } from "@pstdio/sdk/extensions";
 import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
 
-export const claudeCommandState = (input: HarnessCommandContext): HarnessCommandState => ({
+export const claudeCommandState = (input: HarnessCommandDiscoveryContext): HarnessCommandState => ({
   slashCommands: true,
   commands: [
     { name: "/plan", description: "Select Claude's native planning permission mode.", argumentHelp: "[task]" },

@@ -1,5 +1,6 @@
 import type {
   HarnessCommandContext,
+  HarnessCommandDiscoveryContext,
   HarnessCommandState,
   HarnessOperation,
   PreparedHarnessOperation,
@@ -7,6 +8,7 @@ import type {
 
 export type {
   HarnessCommandContext,
+  HarnessCommandDiscoveryContext,
   HarnessCommandState,
   HarnessOperation,
   HarnessOperationResult,
@@ -130,7 +132,7 @@ export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
 export interface HarnessProvider extends ContributionDefinition<"harness"> {
   label: Localizable<string>;
   /** Native commands and optional mode presentation. Older harnesses may omit both methods. */
-  getCommandState?(ctx: HarnessContext, input: HarnessCommandContext): MaybePromise<HarnessCommandState>;
+  getCommandState?(ctx: HarnessContext, input: HarnessCommandDiscoveryContext): MaybePromise<HarnessCommandState>;
   /** Validate and describe execution needs without performing a mutation. */
   prepareOperation?(
     ctx: HarnessContext,
