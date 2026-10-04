@@ -8,6 +8,11 @@ const emit = (event: unknown) => console.log(JSON.stringify(event));
 for await (const line of console) {
   const request = JSON.parse(line);
   if (request.method === "initialize") emit({ id: request.id, result: {} });
+  if (request.method === "model/list")
+    emit({
+      id: request.id,
+      result: { data: [{ id: "gpt-5.5", displayName: "Test model", isDefault: true }], nextCursor: null },
+    });
   if (request.method === "thread/start")
     emit({ id: request.id, result: { thread: { id: "codex-e2e-thread", path: null } } });
   if (request.method !== "turn/start") continue;

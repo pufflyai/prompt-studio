@@ -92,38 +92,47 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   );
 };
 
-export const WorkbenchFloatingSidePanel = (props: WorkbenchSidePanelProps) => {
-  const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen } = props;
-  const mode = workbench.sidePanel.getMode();
+interface WorkbenchFloatingSidePanelProps extends WorkbenchSidePanelProps {
+  available?: boolean;
+}
 
-  if (!workbench.sidePanel.canFloat() || mode === "attached") return null;
-
-  if (mode === "closed") {
-    return (
-      <BubbleButton
-        aria-label="Open Side Panel"
-        containerProps={{ bottom: launcherBottom(bottomOffset) }}
-        tooltip="Open Side Panel"
-        onClick={onOpen ?? (() => workbench.sidePanel.setMode("floating"))}
-      >
-        {bubbleIcon ?? <MessageCircle size={20} strokeWidth={2} />}
-      </BubbleButton>
-    );
-  }
+export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProps) => {
+  const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen, available = true } = props;
+  const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
+  const visible = available && canFloat && mode === "floating";
 
   return (
-    <BubblePanel
-      isOpen
-      aria-label="Side Panel"
-      testId="workbench-side-panel-floating"
-      closeLabel="Close Side Panel"
-      containerProps={{ bottom: floatingPanelBottom(bottomOffset), bg: workbenchBackgrounds.widget }}
-      popOutLabel="Reattach Side Panel"
-      onClose={() => workbench.sidePanel.setMode("closed")}
-      onPopOut={() => workbench.sidePanel.setMode("attached")}
-      menu={<WorkbenchSidePanelHeader header={header} />}
-    >
-      <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
-    </BubblePanel>
+    <>
+      {available && canFloat && mode === "closed" ? (
+        <BubbleButton
+          aria-label="Open Side Panel"
+          containerProps={{ bottom: launcherBottom(bottomOffset) }}
+          tooltip="Open Side Panel"
+          onClick={onOpen ?? (() => workbench.sidePanel.setMode("floating"))}
+        >
+          {bubbleIcon ?? <MessageCircle size={20} strokeWidth={2} />}
+        </BubbleButton>
+      ) : null}
+      {/* Both presentation slots stay connected so hiding cannot release a live iframe. */}
+      <BubblePanel
+        isOpen
+        aria-label="Side Panel"
+        testId="workbench-side-panel-floating"
+        closeLabel="Close Side Panel"
+        containerProps={{
+          bottom: floatingPanelBottom(bottomOffset),
+          bg: workbenchBackgrounds.widget,
+          display: visible ? "block" : "none",
+          inert: !visible,
+        }}
+        popOutLabel="Reattach Side Panel"
+        onClose={() => workbench.sidePanel.setMode("closed")}
+        onPopOut={() => workbench.sidePanel.setMode("attached")}
+        menu={<WorkbenchSidePanelHeader header={header} />}
+      >
+        <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
+      </BubblePanel>
+    </>
   );
 };

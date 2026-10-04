@@ -9,6 +9,7 @@ import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybindi
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
+import { movePanelHost } from "../region/move-panel-host";
 import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
 import { WorkbenchTabDragProvider } from "../region/tab-drag-context";
@@ -166,8 +167,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   );
   const hasSecondaryPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
   const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
-  const floatingPanelsAllowed = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
-  // The mode lives in the layout; the floating policy above re-renders when the active mode changes.
   const sidePanelMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
 
   const {
@@ -207,14 +206,15 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideHeaderWidgets || hasSidePanelHeader ? (
       <WorkbenchSidePanelRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />
     ) : undefined;
-  const activeSidePanelSlot = sidePanelMode === "floating" ? floatingSidePanelSlot : attachedSidePanelSlot;
+  let activeSidePanelSlot: HTMLElement | null = attachedSidePanelSlot;
+  if (sidePanelMode === "floating") activeSidePanelSlot = floatingSidePanelSlot;
+  else if (sidePanelMode === "closed")
+    activeSidePanelSlot = sidePanelHostRef.current?.parentElement ?? attachedSidePanelSlot;
 
   useLayoutEffect(() => {
     const host = sidePanelHostRef.current;
     if (!host) return;
-    if (activeSidePanelSlot) {
-      if (host.parentNode !== activeSidePanelSlot) activeSidePanelSlot.appendChild(host);
-    }
+    movePanelHost(host, activeSidePanelSlot);
   }, [activeSidePanelSlot]);
 
   const contentWithHeader = (
@@ -280,16 +280,15 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           />
         </Flex>
         <WorkbenchStatusBar workbench={workbench} visible={hasStatusWidgets} />
-        {hasSidePanel && floatingPanelsAllowed ? (
-          <WorkbenchFloatingSidePanel
-            workbench={workbench}
-            bubbleIcon={sidePanelBubbleIcon}
-            onOpen={onOpenSidePanel}
-            contentSlotRef={setFloatingSidePanelSlot}
-            bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
-            header={sideHeader}
-          />
-        ) : null}
+        <WorkbenchFloatingSidePanel
+          workbench={workbench}
+          available={hasSidePanel}
+          bubbleIcon={sidePanelBubbleIcon}
+          onOpen={onOpenSidePanel}
+          contentSlotRef={setFloatingSidePanelSlot}
+          bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
+          header={sideHeader}
+        />
         <WorkbenchCommandPalette
           workbench={workbench}
           open={paletteOpen}

@@ -28,7 +28,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
-// Includes the declared clipboard permission on the packaged webview fixture.
+// Includes the declared clipboard permission; packaged browser checks also retain live views across navigation.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 const BUILD_TIMEOUT = 180_000;

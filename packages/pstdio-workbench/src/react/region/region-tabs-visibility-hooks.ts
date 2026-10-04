@@ -88,11 +88,15 @@ export const useWorkbenchRegionTabsState = (
   );
   const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
   const eligibleSubPanels = panelRegion ? compositionPanels[panelRegion].addable : [];
+  const hasMovedPlacement = visiblePlacements.some(
+    (placement) => layoutState.widgets[placement.contributionId]?.region !== region,
+  );
   const showTabs =
     !suppressesSidenavTabStrip(region, visiblePlacements) &&
-    shouldShowRegionTabs(visiblePlacements, {
-      alwaysShowTabs: workbench.layout.getRegionSettings(region)?.alwaysShowTabs,
-    });
+    (hasMovedPlacement ||
+      shouldShowRegionTabs(visiblePlacements, {
+        alwaysShowTabs: workbench.layout.getRegionSettings(region)?.alwaysShowTabs,
+      }));
   const hasActions =
     leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs));
   const hasTrailingActions =

@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { workbenchPanelRegions } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { movePanelHost } from "./move-panel-host";
 import { isPlacementEligibleForRegion } from "./region-tabs-visibility-hooks";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
 import { WorkbenchWidgetHost } from "./widget-host";
@@ -38,10 +39,10 @@ const PanelViewPortal = (props: {
     return node;
   });
   useLayoutEffect(() => {
-    if (slot) slot.appendChild(host);
-    else host.remove();
-    return () => host.remove();
+    // Hidden retained views stay connected to keep their iframe browsing context.
+    movePanelHost(host, slot);
   }, [host, slot]);
+  useLayoutEffect(() => () => host.remove(), [host]);
   const activate = () => {
     if (workbench.layout.getLayout().activeWidgetId !== placement.widgetId)
       workbench.layout.activatePanel(placement.widgetId);

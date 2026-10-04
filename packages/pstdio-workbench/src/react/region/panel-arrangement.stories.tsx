@@ -122,3 +122,8 @@ const secondaryWorkbench = createArrangementWorkbench();
 const secondarySession = secondaryWorkbench.layout.getLayout().regions.side.widgets.at(-1)!;
 secondaryWorkbench.movePanel(secondarySession.widgetId, "secondary");
 export const SecondarySession: Story = { args: { workbench: secondaryWorkbench } };
+const movedPageWorkbench = createArrangementWorkbench();
+for (const session of movedPageWorkbench.layout.getLayout().regions.side.widgets)
+  movedPageWorkbench.closePlacement(session.placementIdentity!);
+movedPageWorkbench.movePanel(movedPageWorkbench.layout.getLayout().regions.main.widgets[0]!.widgetId, "side");
+export const MovedSingleView: Story = { args: { workbench: movedPageWorkbench } };

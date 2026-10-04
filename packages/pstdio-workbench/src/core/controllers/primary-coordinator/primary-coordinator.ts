@@ -46,9 +46,7 @@ export const createPrimaryCoordinator = ({ layout, isInScope }: CreatePrimaryCoo
     // callback runs; clearing the live region would delete that new content too.
     for (const action of reconcileAnchors({ layout: previous.layout, primary, isInScope })) {
       if (action.action !== "clear") continue;
-      for (const placement of previous.layout.regions[action.region].widgets) {
-        layout.removeWidgetPlacement(placement.widgetId);
-      }
+      layout.removeWidgetPlacement(action.widgetId);
     }
   });
   return createDisposable(() => {

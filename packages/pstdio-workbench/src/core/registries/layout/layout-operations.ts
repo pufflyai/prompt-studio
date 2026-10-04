@@ -168,21 +168,24 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
       : undefined;
   const nextActivePlacement =
     fallbackSubPanel ??
-    (found.placement.role === "sub-panel" && region.widgets.some((p) => p.role === "location")
-      ? getActiveLocationPlacement(layout)
-      : (widgets[found.index] ?? widgets[found.index - 1]));
+    (found.placement.role === "sub-panel" ? widgets.find(isLocationPlacement) : undefined) ??
+    widgets[found.index] ??
+    widgets[found.index - 1];
   const activeWidgetId = closingEffectiveActive ? nextActivePlacement?.widgetId : region.activeWidgetId;
   const nextRegion = { ...region, widgets, activeWidgetId };
+  let activeLocationWidgetId = layout.activeLocationWidgetId;
+  if (layout.activeWidgetId === widgetId && nextActivePlacement?.role === "location") {
+    activeLocationWidgetId = nextActivePlacement.widgetId;
+  } else if (activeLocationWidgetId === widgetId) {
+    activeLocationWidgetId = Object.values(layout.regions)
+      .flatMap((r) => r.widgets)
+      .filter((placement) => placement.widgetId !== widgetId && isLocationPlacement(placement))
+      .at(-1)?.widgetId;
+  }
   let nextLayout: WorkbenchLayout = removeLocationSubPanelSelection(
     {
       ...layout,
-      activeLocationWidgetId:
-        layout.activeLocationWidgetId === widgetId
-          ? Object.values(layout.regions)
-              .flatMap((r) => r.widgets)
-              .filter((placement) => placement.widgetId !== widgetId && isLocationPlacement(placement))
-              .at(-1)?.widgetId
-          : layout.activeLocationWidgetId,
+      activeLocationWidgetId,
       regions: {
         ...layout.regions,
         [region.id]: nextRegion,

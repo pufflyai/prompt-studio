@@ -78,7 +78,7 @@ test("keeps navigation and region controls in one stable Nav Chrome", async ({ p
   const secondary = nav.getByRole("button", { name: "Hide Secondary Panel" });
   await expect(secondary).toHaveAttribute("aria-pressed", "true");
   await expect.poll(() => backgroundColor(secondary)).not.toBe(closedPanelBackground);
-  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
   // A session can be started from any project location, so the Tickets board offers the
   // Side Panel exactly as the Workspaces view does. Its control belongs to the Nav
   // Chrome, beside the other region controls.
@@ -127,6 +127,7 @@ test("keeps navigation and region controls in one stable Nav Chrome", async ({ p
   await expect.poll(() => backgroundColor(openSide)).not.toBe(closedPanelBackground);
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
+  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
   const draft = "Keep this draft while the Side Panel moves";
   const attachedSession = page.getByTestId("workbench-side-panel-attached");
   const chatInput = attachedSession.locator("[data-testid='content-editable'][contenteditable='true']").last();
@@ -142,7 +143,7 @@ test("keeps navigation and region controls in one stable Nav Chrome", async ({ p
   await expect.poll(() => backgroundColor(closedSide)).toBe(closedPanelBackground);
   const sessionLauncher = page.getByRole("button", { name: "Open Side Panel" });
   await expect(sessionLauncher).toBeVisible();
-  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
   await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
 
   await sessionLauncher.click();

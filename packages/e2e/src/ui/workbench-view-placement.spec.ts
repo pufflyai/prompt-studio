@@ -33,7 +33,7 @@ test.describe("Workbench View placements", () => {
     await expect(beta).toHaveCSS("font-style", "italic");
 
     await beta.click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Keep Open", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
     await expect(beta).toHaveCSS("font-style", "normal");
     await page.getByRole("button", { name: "Preview Alpha" }).click();
     await expect(tabs).toHaveCount(2);

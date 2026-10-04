@@ -20,7 +20,7 @@ export const getAnchorResource = (layout: WorkbenchLayout, anchorId: AnchorId) =
 // What the coordinator should do with a secondary anchor when the primary resource
 // changes. Projections re-render off their anchor (a render concern), so the reconciler
 // only decides the lifecycle of the derived/detached anchor placements.
-export type AnchorReconcileAction = { region: WorkbenchRegion; action: "keep" | "clear" };
+export type AnchorReconcileAction = { region: WorkbenchRegion; widgetId: string; action: "keep" | "clear" };
 
 export interface ReconcileAnchorsInput {
   layout: WorkbenchLayout;
@@ -42,23 +42,15 @@ export const reconcileAnchors = ({ layout, primary, isInScope }: ReconcileAnchor
 
     // Only resource-bearing anchor placements are scoped content. A plain (resourceless)
     // widget parked in a side anchor is not a scoped resource and is left untouched.
-    const placement = getActivePlacement(layout.regions[region]);
-    if (!placement?.resource) continue;
-
-    // Sub Panels are subordinate to their Location workspace. A Location switch
-    // changes which placement is selected and rendered; it must not delete the
-    // placements retained for the Location that is leaving the foreground.
-    if (placement.role === "sub-panel" && placement.ownerResourceKey) {
-      actions.push({ region, action: "keep" });
-      continue;
+    for (const placement of layout.regions[region].widgets) {
+      if (!placement.resource) continue;
+      // A moved Location and its owned Sub Panels retain their owner lifecycle.
+      // Sharing a region with derived content cannot change that ownership.
+      const retained =
+        placement.role === "location" || (placement.role === "sub-panel" && Boolean(placement.ownerResourceKey));
+      const keep = retained || (surface.persistence !== "derived" && isInScope(placement.resource, primary));
+      actions.push({ region, widgetId: placement.widgetId, action: keep ? "keep" : "clear" });
     }
-
-    if (surface.persistence === "derived") {
-      actions.push({ region, action: "clear" });
-      continue;
-    }
-
-    actions.push({ region, action: isInScope(placement.resource, primary) ? "keep" : "clear" });
   }
 
   return actions;

@@ -5,4 +5,4 @@
 "@pstdio/ui": minor
 ---
 
-Add movable workbench tabs, grouped context actions, destination-aware Add, layout reset, and session rename.
+Add movable workbench tabs, grouped context actions, destination-aware Add, layout reset, and session rename while preserving live views and page ownership.
