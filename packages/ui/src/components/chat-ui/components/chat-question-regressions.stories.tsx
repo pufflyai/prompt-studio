@@ -18,8 +18,15 @@ const questionPrompt: ChatInputQuestionPrompt = {
   questions: [{ id: "choice", question: "Choose a greeting", options: [{ label: "Hello" }], required: true }],
 };
 
-function QuestionPanel(props: { prompt?: ChatInputQuestionPrompt; queued?: boolean; rejectFirst?: boolean }) {
-  const { prompt, queued = false, rejectFirst = false } = props;
+interface QuestionPanelProps {
+  prompt?: ChatInputQuestionPrompt;
+  queued?: boolean;
+  rejectFirst?: boolean;
+  draft?: string;
+}
+
+function QuestionPanel(props: QuestionPanelProps) {
+  const { prompt, queued = false, rejectFirst = false, draft } = props;
   const [rejectNextReply, setRejectNextReply] = useState(rejectFirst);
   const [activePrompt, setActivePrompt] = useState(prompt);
   const [response, setResponse] = useState<ChatInputQuestionResponse>();
@@ -36,6 +43,7 @@ function QuestionPanel(props: { prompt?: ChatInputQuestionPrompt; queued?: boole
           emptyStateTitle="Question replies"
           emptyStateDescription="Answer the question or skip it."
           chatInputPlaceholder="Type a message..."
+          chatInputDefaultValue={draft}
           attachmentActions={
             <IconButton size="xs" variant="ghost" aria-label="Attach files">
               <PaperclipIcon size={14} />
@@ -78,6 +86,19 @@ export const QueuedEditRejectedQuestionReply: Story = {
 
 export const AttachmentControlsDuringQuestion: Story = {
   render: () => <QuestionPanel prompt={questionPrompt} />,
+};
+
+export const DraftSelectionAfterQuestion: Story = {
+  tags: ["!manifest"],
+  render: () => <QuestionPanel queued draft="Keep my draft" />,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Select part of the draft, ask a question, answer it, then focus the draft. Its text and selection return.",
+      },
+    },
+  },
 };
 
 export const InheritedQuestionIds: Story = {

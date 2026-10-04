@@ -6,8 +6,6 @@ import {
   $isRangeSelection,
   $isTextNode,
   $setSelection,
-  COMMAND_PRIORITY_LOW,
-  FOCUS_COMMAND,
   type PointType,
   type RangeSelection,
 } from "lexical";
@@ -25,19 +23,15 @@ export const PreserveSelectionPlugin = (props: { isEditable: boolean }) => {
   const { isEditable } = props;
   const [editor] = useLexicalComposerContext();
   const selection = useRef<RangeSelection | null>(null);
-  const editing = useRef({ editable: isEditable, restoreFocus: false });
-  if (editing.current.editable && !isEditable) {
-    // Read focus before the commit hides the draft. A send-button blur already happened earlier.
-    editing.current.restoreFocus = editor.getRootElement()?.contains(document.activeElement) ?? false;
-  }
-  editing.current.editable = isEditable;
+  const editing = useRef(isEditable);
+  editing.current = isEditable;
   useLayoutEffect(
     () =>
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
           const saved = selection.current;
           if (saved && (!validPoint(saved.anchor) || !validPoint(saved.focus))) selection.current = null;
-          if (!editing.current.editable) return;
+          if (!editing.current) return;
           const current = $getSelection();
           if ($isRangeSelection(current)) selection.current = current.clone();
         });
@@ -46,21 +40,21 @@ export const PreserveSelectionPlugin = (props: { isEditable: boolean }) => {
   );
   useLayoutEffect(() => {
     if (!isEditable) return;
-    if (!editing.current.restoreFocus || editor.getRootElement()?.contains(document.activeElement)) return;
-    let unregisterFocus = () => {};
-    if (selection.current) {
-      unregisterFocus = editor.registerCommand(
-        FOCUS_COMMAND,
+    const root = editor.getRootElement();
+    if (!root || root.contains(document.activeElement) || !selection.current) return;
+    // Restore on return even when another control had focus before takeover. Flush during native focus
+    // so a later click or select-all can choose its own range without a deferred restore overwriting it.
+    const restoreSelection = () => {
+      editor.update(
         () => {
-          unregisterFocus();
-          editing.current.restoreFocus = false;
-          if (selection.current) $setSelection(selection.current.clone());
-          return false;
+          const saved = selection.current;
+          if (saved && validPoint(saved.anchor) && validPoint(saved.focus)) $setSelection(saved.clone());
         },
-        COMMAND_PRIORITY_LOW,
+        { discrete: true },
       );
-    }
-    return () => unregisterFocus();
+    };
+    root.addEventListener("focus", restoreSelection, { once: true });
+    return () => root.removeEventListener("focus", restoreSelection);
   }, [editor, isEditable]);
   return null;
 };
