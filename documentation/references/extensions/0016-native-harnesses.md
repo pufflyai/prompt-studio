@@ -12,6 +12,10 @@ The harness extensions use the public command and mode contract introduced by [S
 
 Codex requires version 0.159.3 within that minor version series. Its persistent worker is owned by project, host session, and working directory. Normal prompts and commands share that worker, native IDs, and live/history projection. Recovery reads native state before another mutation and never replays uncertain input. Native failed turns restore their errors. Saved attachment metadata and messages removed by compaction remain in the host checkpoint.
 
+Submitting `/goal <objective>` during an owned Codex operation replaces the native objective in the same thread. The current turn continues, and subsequent autonomous turns follow the new goal. Resume and Edit use the same live control path. The operation stays alive while the native mutation is pending, including when its current turn finishes before acknowledgement. If that owner finishes before invocation, no mutation is sent; submitting again uses the idle exclusive path. Explicit rejection releases the hold. Unknown delivery disconnects the worker without replay and preserves its native identity for readback.
+
+Codex reports a status dot with native state: active is green, paused/blocked/usage or budget limited is amber, and complete is blue. It supplies Pause/Resume, Edit, and Clear icons. Unavailable status is neutral. Claude and OpenCode retain their native capabilities; the host does not infer a Goal mode or live replacement from a command spelling.
+
 The checked native versions are Codex 0.159.3, Claude Code 2.1.287, and OpenCode 1.18.25. Regenerate the checked-in Codex types with `bun extensions/harness-codex/scripts/generate-protocol.ts` using the supported Codex executable.
 
 Legacy history identity migration and Claude literal slash input need isolated temporary workarounds. Their limits and removal criteria are in [ADR 0053](../../adrs/0053-temporary-codex-history-identity-migration.md) and [ADR 0054](../../adrs/0054-temporary-claude-literal-slash-input.md). Question reply confirmation retains [ADR 0052](../../adrs/0052-temporary-codex-question-delivery-confirmation.md).

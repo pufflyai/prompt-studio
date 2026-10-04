@@ -21,6 +21,12 @@ test("Codex declares tagged input and confirmed goal details with its native clo
   expect(state.modes.find((mode) => mode.id === "goal")).toMatchObject({
     tagText: "paused: Ship the release",
     closeActionId: "clear",
+    indicator: { label: "Paused", tone: "warning" },
+    actions: expect.arrayContaining([
+      expect.objectContaining({ id: "resume", icon: "play" }),
+      expect.objectContaining({ id: "edit", icon: "pencil" }),
+      expect.objectContaining({ id: "clear", icon: "trash-2" }),
+    ]),
   });
   expect(state.commands.find((command) => command.name === "/plan")?.disabledReason).toBeTruthy();
 });

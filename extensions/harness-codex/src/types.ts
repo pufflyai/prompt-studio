@@ -8,6 +8,7 @@ export type CodexUsage = {
 export type CodexThreadItem = {
   id: string;
   type: string;
+  turnId?: string;
   text?: string;
   command?: string | string[];
   aggregated_output?: string;

@@ -1,6 +1,15 @@
 import type { HarnessCommandDiscoveryContext, HarnessCommandState } from "@pstdio/sdk/extensions";
 import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
 
+const goalIndicators = {
+  active: { label: "Active", tone: "success" },
+  paused: { label: "Paused", tone: "warning" },
+  blocked: { label: "Blocked", tone: "warning" },
+  usageLimited: { label: "Usage limited", tone: "warning" },
+  budgetLimited: { label: "Budget limited", tone: "warning" },
+  complete: { label: "Complete", tone: "info" },
+} as const;
+
 export const codexCommandState = (
   input: HarnessCommandDiscoveryContext,
   goal: ThreadGoal | null,
@@ -63,12 +72,15 @@ export const codexCommandState = (
             label: "Goal",
             description: goal.objective,
             state: `${goal.status} · ${goal.tokensUsed}${goal.tokenBudget ? ` / ${goal.tokenBudget}` : ""} tokens · ${goal.timeUsedSeconds}s`,
+            indicator: goalIndicators[goal.status],
             tagText: `${goal.status}: ${goal.objective}`,
             closeActionId: "clear",
             actions: [
-              ...(goal.status === "active" ? [{ id: "pause", label: "Pause" }] : [{ id: "resume", label: "Resume" }]),
-              { id: "edit", label: "Edit", argument: { label: "Objective", value: goal.objective } },
-              { id: "clear", label: "Clear current goal" },
+              ...(goal.status === "active"
+                ? [{ id: "pause", label: "Pause", icon: "pause" }]
+                : [{ id: "resume", label: "Resume", icon: "play" }]),
+              { id: "edit", label: "Edit", icon: "pencil", argument: { label: "Objective", value: goal.objective } },
+              { id: "clear", label: "Clear current goal", icon: "trash-2" },
             ],
           },
         ]

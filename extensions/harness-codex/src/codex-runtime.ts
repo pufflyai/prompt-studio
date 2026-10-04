@@ -14,7 +14,7 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
       ...transient.map(([reader]) => reader.dispose()),
     ]);
   };
-  const keyOf = (input: StartSpawnInput & Partial<ResumeSpawnInput>) =>
+  const keyOf = (input: Pick<StartSpawnInput & Partial<ResumeSpawnInput>, "env" | "agentSessionId" | "cwd">) =>
     JSON.stringify([input.env?.PSTDIO_PROJECT_ID, input.env?.PSTDIO_SESSION_ID ?? input.agentSessionId, input.cwd]);
   const worker = (input: StartSpawnInput & Partial<ResumeSpawnInput>) => {
     input.signal?.throwIfAborted();
@@ -28,6 +28,7 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
   };
   return {
     worker,
+    prepareGoalUpdate: (input: Parameters<typeof keyOf>[0]) => workers.get(keyOf(input))?.prepareGoalUpdate(),
     readMessages: async (input: { agentSessionId: string; cwd?: string; env?: Record<string, string> }) => {
       const live = [...workers.entries()].find(
         ([key, owned]) =>

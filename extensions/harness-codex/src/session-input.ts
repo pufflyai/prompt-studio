@@ -38,7 +38,7 @@ export const promptWithAttachmentManifest = (prompt: string, attachments: Harnes
 export const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessage => {
   const createdAt = Date.now();
   return {
-    id: `user-${createdAt}`,
+    id: `user-${crypto.randomUUID()}`,
     role: "user",
     createdAt,
     parts: [

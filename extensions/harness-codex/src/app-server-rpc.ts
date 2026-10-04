@@ -11,6 +11,12 @@ export interface RpcMessage {
 
 export class CodexRequestRejectedError extends Error {}
 
+interface PendingRequest {
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+  onResult?: (result: unknown) => void;
+}
+
 const parseMessage = (line: string) => {
   try {
     const message = JSON.parse(line) as RpcMessage;
@@ -26,7 +32,7 @@ export const createAppServerRpc = (
 ) => {
   let nextId = 1;
   let closed = false;
-  const requests = new Map<string | number, ReturnType<typeof Promise.withResolvers<unknown>>>();
+  const requests = new Map<string | number, PendingRequest>();
   const close = () => {
     closed = true;
     for (const request of requests.values()) request.reject(new Error("Codex app-server connection closed."));
@@ -36,10 +42,10 @@ export const createAppServerRpc = (
     if (closed) throw new Error("Codex app-server connection closed.");
     child.stdin.write(`${JSON.stringify(message)}\n`);
   };
-  const request = (method: string, params: Record<string, unknown>) => {
+  const request = (method: string, params: Record<string, unknown>, onResult?: (result: unknown) => void) => {
     const id = nextId++;
     const pending = Promise.withResolvers<unknown>();
-    requests.set(id, pending);
+    requests.set(id, { ...pending, onResult });
     try {
       write({ id, method, params });
     } catch (error) {
@@ -47,6 +53,21 @@ export const createAppServerRpc = (
       pending.reject(error);
     }
     return pending.promise;
+  };
+  const settleResponse = (message: RpcMessage, pending: PendingRequest | undefined) => {
+    if (!pending) return;
+    if (message.error) {
+      pending.reject(new CodexRequestRejectedError(message.error.message ?? "Codex request failed."));
+      return;
+    }
+    try {
+      // Apply state at its position in the native stream, before later notifications in this chunk.
+      pending.onResult?.(message.result);
+      pending.resolve(message.result);
+    } catch (error) {
+      pending.reject(error);
+      throw error;
+    }
   };
   const reader = createInterface({ input: child.stdout, crlfDelay: Number.POSITIVE_INFINITY });
   const finished = new Promise<void>((resolve, reject) => {
@@ -71,9 +92,7 @@ export const createAppServerRpc = (
         if (!message.method && message.id !== undefined) {
           const pending = requests.get(message.id);
           requests.delete(message.id);
-          if (message.error)
-            pending?.reject(new CodexRequestRejectedError(message.error.message ?? "Codex request failed."));
-          else pending?.resolve(message.result);
+          settleResponse(message, pending);
         } else if (message.method) onMessage(message);
       } catch (error) {
         fail(error);

@@ -5,7 +5,7 @@ import type {
   PreparedHarnessOperation,
 } from "@pstdio/sdk/extensions";
 import type { createCodexRuntime } from "./codex-runtime";
-import { codexCommandInput } from "./command-input";
+import { codexCommandIdentity, codexCommandInput } from "./command-input";
 import { prepareGoalOperation } from "./goal-commands";
 import { prepareCodexPlanApproval } from "./plan-approval";
 
@@ -32,12 +32,15 @@ const prepareModeAction = (
   if (operation.actionId !== "edit")
     return prepareGoalOperation(input, operation.actionId, `/goal ${operation.actionId}`, runtime, projectId);
   if (!input.agentSessionId || !operation.argument?.trim()) throw new Error("Enter a goal objective.");
+  const update = runtime.prepareGoalUpdate(codexCommandIdentity(input, projectId));
   return {
     execution: "control",
-    invoke: async ({ events }) => {
-      await runtime
-        .worker(codexCommandInput(input, events, projectId))
-        .request("thread/goal/set", { threadId: input.agentSessionId, objective: operation.argument });
+    invoke: async ({ events, signal }) => {
+      if (update) await update({ objective: operation.argument }, signal);
+      else
+        await runtime
+          .worker(codexCommandInput(input, events, projectId))
+          .request("thread/goal/set", { threadId: input.agentSessionId, objective: operation.argument }, signal);
       return { kind: "completed" };
     },
   };

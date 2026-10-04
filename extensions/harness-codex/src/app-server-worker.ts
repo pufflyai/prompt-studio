@@ -3,6 +3,7 @@ import { createAppServerOperation, type NativeOperation } from "./app-server-ope
 import { CodexRequestRejectedError, createAppServerRpc } from "./app-server-rpc";
 import type { SpawnDeps } from "./codex-process";
 import { nativeThreadMessages } from "./native-history";
+import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
 import type { Turn } from "./protocol/v2/Turn";
 import { questionReplyError } from "./questions";
 import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
@@ -152,6 +153,38 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
     isClosed: () => closed,
     threadId: () => threadId,
     model: () => model,
+    prepareGoalUpdate: () => {
+      const owner = active;
+      const id = threadId;
+      if (!owner?.canUpdateGoal() || !id || closed) return;
+      return async (params: Record<string, unknown>, signal?: AbortSignal, prompt?: string) => {
+        signal?.throwIfAborted();
+        if (active !== owner || !owner.canUpdateGoal() || closed)
+          throw new Error("Current work finished. Send the goal again.");
+        const update = owner.beginGoalUpdate();
+        const abort = () => lost();
+        signal?.addEventListener("abort", abort, { once: true });
+        try {
+          await rpc.request("thread/goal/set", { ...params, threadId: id }, (result) => {
+            if (active !== owner || !owner.canUpdateGoal() || closed)
+              throw new Error("Current work ended while the goal was changing. Reconnect before submitting again.");
+            update.confirm((result as { goal: ThreadGoal }).goal.status);
+          });
+          if (active !== owner || !owner.canUpdateGoal() || closed) {
+            lost();
+            throw new Error("Current work ended while the goal was changing. Reconnect before submitting again.");
+          }
+          if (prompt) owner.recordGoalUpdate(prompt);
+        } catch (error) {
+          // A missing acknowledgement may hide a native mutation. Retire the owner without replaying it.
+          if (!(error instanceof CodexRequestRejectedError)) lost();
+          throw error;
+        } finally {
+          signal?.removeEventListener("abort", abort);
+          update.release();
+        }
+      };
+    },
     readModel: async (id: string) => {
       if (threadId === id && model) return model;
       await ready;
