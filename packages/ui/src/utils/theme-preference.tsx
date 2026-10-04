@@ -100,7 +100,13 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
   const resolvedThemePreference = isThemePreference(themePreference, themePreferences)
     ? themePreference
     : getDefaultThemePreference(themePreferences, getThemePreferenceMode(themePreference, themePreferences));
-  const pendingThemePreference = resolvedThemePreference === themePreference ? null : themePreference;
+  // The provider shows a fallback while a chosen extension theme registers. The choice
+  // stays in the selection on the first render and in storage after the fallback applies.
+  const pendingThemePreference =
+    [themePreference, storedPreference].find(
+      (preference) =>
+        looksLikeContributedThemePreference(preference) && !isThemePreference(preference, themePreferences),
+    ) ?? null;
 
   useEffect(() => {
     if (

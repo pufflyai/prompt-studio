@@ -7,18 +7,19 @@ import { runWindowsInstallerEvent, windowsInstallerEvent } from "./cli/windows-i
 import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
 import { registerDesktopIpc } from "./ipc/register-desktop-ipc";
 import {
-  type DesktopRecoveryError,
   type DesktopState,
   initialDesktopState,
+  type RuntimeActivity,
   transitionDesktopState,
 } from "./lifecycle/lifecycle-machine";
+import { recoveryError } from "./lifecycle/recovery-error";
 import { startWorkbench } from "./lifecycle/start-workbench";
 import { createApplicationMenuTemplate, setApplicationCommandsEnabled } from "./release/application-menu";
 import { DesktopUpdateManager } from "./release/desktop-update-manager";
 import { createDesktopUpdateNotifications } from "./release/desktop-update-notifications";
 import { DesktopUpdateReceipt } from "./release/desktop-update-receipt";
 import { DesktopRuntimeManager } from "./runtime/runtime-manager";
-import { DesktopSidecarError, validateSidecarArtifact } from "./runtime/sidecar-artifact";
+import { validateSidecarArtifact } from "./runtime/sidecar-artifact";
 import { focusPrimaryWindow } from "./security/apply-window-security";
 import { DesktopProjectTabsStore } from "./windows/desktop-project-tabs-store";
 import { LIFECYCLE_SCHEME } from "./windows/lifecycle-protocol";
@@ -67,46 +68,6 @@ const setState = (next: DesktopState) => {
   windowController?.updateState(next);
   setApplicationCommandsEnabled(Menu.getApplicationMenu(), next.kind === "workbench");
   logger.info({ event: "desktop.state.changed", state: next.kind }, "Desktop lifecycle state changed");
-};
-
-const recoveryCode = (detail: string): DesktopRecoveryError["code"] => {
-  if (detail.startsWith("port_bind_failure:")) return "port_bind_failure";
-  if (detail.startsWith("pglite_ownership_conflict:")) return "pglite_ownership_conflict";
-  if (detail.startsWith("pglite_recovery_failure:")) return "pglite_recovery_failure";
-  if (detail.includes("timed out")) return "runtime_timeout";
-  return "unexpected_exit";
-};
-
-const recoveryError = (error: unknown): DesktopRecoveryError => {
-  if (error instanceof DesktopSidecarError) {
-    return {
-      code: error.code === "missing_sidecar" ? "sidecar_missing" : error.code,
-      message: error.message.slice(error.message.indexOf(": ") + 2),
-      actions: ["open_logs", "copy_diagnostics", "quit"],
-    };
-  }
-  const detail = error instanceof Error ? error.message : String(error);
-  if (detail.includes("sidecar is missing")) {
-    return {
-      code: "sidecar_missing",
-      message: "The packaged Prompt Studio runtime could not be found.",
-      actions: ["open_logs", "copy_diagnostics", "quit"],
-    };
-  }
-  if (detail.includes("invalid_descriptor") || detail.includes("ownership is unsafe")) {
-    return {
-      code: "runtime_ownership_uncertain",
-      message: "Prompt Studio found a runtime whose ownership could not be verified safely.",
-      actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
-    };
-  }
-  return {
-    code: recoveryCode(detail),
-    message: detail.includes(": ")
-      ? detail.slice(detail.indexOf(": ") + 2)
-      : "Prompt Studio could not start its runtime.",
-    actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
-  };
 };
 
 const runtimeManager = new DesktopRuntimeManager({
@@ -162,12 +123,19 @@ const startRuntime = async () => {
       "Runtime start failed",
     );
     setState({ kind: "recovery", error: recoveryError(error) });
+    // A quit requested during startup ends here too; later quit requests must start over.
+    quitting = false;
     await windowController?.showLifecycle();
   }
 };
 
 const requestQuit = async () => {
-  if (quitting || allowQuit) return;
+  if (allowQuit) return;
+  if (state.kind === "confirming_active_work") {
+    await askToCancelActiveWork(state.activity);
+    return;
+  }
+  if (quitting) return;
   quitting = true;
   const runtime = await runtimeManager.refreshRuntime();
   if (!runtime || runtime.external || runtime.descriptor.ownerType === "persistent") {
@@ -236,6 +204,22 @@ const confirmQuit = async () => {
 
   await runtimeManager.waitForExit();
   finishQuit();
+};
+
+// The dashboard shows the quit dialog. Asking to quit again means it may not be visible,
+// for example when the dashboard failed to load, so ask with a native dialog that always shows.
+const askToCancelActiveWork = async (activity: RuntimeActivity) => {
+  const labels = [...activity.sessions, ...activity.terminals, ...activity.jobs].map((item) => item.label);
+  const { response } = await dialog.showMessageBox({
+    type: "warning",
+    message: "Active work is still running",
+    detail: `Canceling this work will stop: ${labels.join(", ")}. This cannot be undone.`,
+    buttons: ["Keep Prompt Studio open", "Cancel work and quit"],
+    defaultId: 0,
+    cancelId: 0,
+  });
+  if (response === 1) await confirmQuit();
+  else await cancelQuit();
 };
 
 const bootstrap = async () => {

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { installMockLocalStorage } from "../test-utils/local-storage";
+import { defaultThemePreferences } from "./apply-theme-preference";
 import { getInitialThemePreference, ThemePreferenceProvider, useThemePreference } from "./theme-preference";
 
 const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
@@ -162,26 +163,35 @@ describe("ThemePreferenceProvider with host storage", () => {
 });
 
 describe("ThemePreferenceProvider pending theme", () => {
-  test("names the chosen theme while it waits for its extension to register", () => {
+  test("keeps naming the chosen extension theme after showing a fallback, until it registers", async () => {
+    const { act, create } = await import("react-test-renderer");
+    (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     installWindow();
     installMockLocalStorage().setItem("theme-preference", "lab.monokai");
-    const PendingTheme = () => {
-      const { pendingThemePreference, themePreference } = useThemePreference();
-      return <span>{`${themePreference}:${pendingThemePreference}`}</span>;
+    let context: ReturnType<typeof useThemePreference> | undefined;
+    const CaptureTheme = () => {
+      context = useThemePreference();
+      return null;
     };
+    const monokai = [...defaultThemePreferences, { id: "lab.monokai", mode: "dark" as const }];
 
-    const waiting = renderToStaticMarkup(
-      <ThemePreferenceProvider>
-        <PendingTheme />
-      </ThemePreferenceProvider>,
-    );
-    const registered = renderToStaticMarkup(
-      <ThemePreferenceProvider themePreferences={[{ id: "lab.monokai", mode: "dark" }]}>
-        <PendingTheme />
-      </ThemePreferenceProvider>,
-    );
+    let renderer: ReturnType<typeof create> | undefined;
+    await act(async () => {
+      renderer = create(
+        <ThemePreferenceProvider>
+          <CaptureTheme />
+        </ThemePreferenceProvider>,
+      );
+    });
+    expect([context?.themePreference, context?.pendingThemePreference]).toEqual(["pstdio-light", "lab.monokai"]);
 
-    expect(waiting).toBe("<span>pstdio-light:lab.monokai</span>");
-    expect(registered).toBe("<span>lab.monokai:null</span>");
+    await act(async () => {
+      renderer?.update(
+        <ThemePreferenceProvider themePreferences={monokai}>
+          <CaptureTheme />
+        </ThemePreferenceProvider>,
+      );
+    });
+    expect([context?.themePreference, context?.pendingThemePreference]).toEqual(["lab.monokai", null]);
   });
 });

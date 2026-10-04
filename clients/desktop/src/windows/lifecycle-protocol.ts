@@ -32,8 +32,9 @@ const assetContentTypes: Record<string, string> = {
   ".ttf": "font/ttf",
 };
 
-// Mirrors `applyThemePreference` from @pstdio/ui, which applies the same theme again after
-// hydration. The store accepts only values that are safe inside these attributes.
+// Sets the classes, attributes, and token variables of `applyThemePreference` from @pstdio/ui,
+// so the first frame has the theme's mode and colors. Hydration then applies the full theme,
+// including tokens that function derives. The store accepts only values safe in these attributes.
 const themeDocumentAttributes = (appearance: DesktopStartupAppearance) => {
   const tokens = Object.entries(appearance.tokens).map(
     ([path, value]) => ` --chakra-${path.replaceAll(".", "-")}: ${value};`,

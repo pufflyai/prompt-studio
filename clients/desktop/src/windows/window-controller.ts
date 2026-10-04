@@ -14,6 +14,7 @@ const WORKBENCH_PARTITION = "pstdio-workbench";
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
   #workbench: WebContentsView | null = null;
+  #workbenchLoad: Promise<void> | undefined;
   readonly #shown: Promise<void>;
   readonly lifecycleUrl: string;
   readonly window: BrowserWindow;
@@ -141,7 +142,15 @@ export class DesktopWindowController {
     contents.focus();
   }
 
-  async showWorkbench(descriptor: RuntimeDescriptor) {
+  showWorkbench(descriptor: RuntimeDescriptor) {
+    // A quit during startup joins the load in progress. A second load would abort it.
+    this.#workbenchLoad ??= this.#loadWorkbench(descriptor).finally(() => {
+      this.#workbenchLoad = undefined;
+    });
+    return this.#workbenchLoad;
+  }
+
+  async #loadWorkbench(descriptor: RuntimeDescriptor) {
     this.#runtimeOrigin = descriptor.origin;
     // Creating a second renderer must not compete with showing the startup window.
     // Its remaining resources can continue loading alongside the workbench.
