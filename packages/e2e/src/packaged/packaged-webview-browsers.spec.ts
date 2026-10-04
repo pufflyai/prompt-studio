@@ -19,6 +19,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { verifyPackagedSessionMenus } from "./packaged-session-menus";
 import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
@@ -166,6 +167,12 @@ test.describe("packaged extension webviews", () => {
 
           if (browserCase.name === "Chromium") {
             await verifyPackagedTerminal(page, started.baseUrl, project.id, started.descriptor.token);
+            await verifyPackagedSessionMenus(
+              page,
+              started.baseUrl,
+              project.id,
+              runtimeAuthorization(started.descriptor),
+            );
           }
 
           expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);

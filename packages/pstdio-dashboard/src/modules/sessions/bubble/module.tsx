@@ -157,9 +157,9 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
       icon: "MessageCircle",
     },
     {
-      execute: async (args) => {
+      execute: async (args, context) => {
         const {
-          resource,
+          resource = context?.resource,
           preservePanelMode = false,
           selectWorkspaceSidenav = true,
           tabRetention,

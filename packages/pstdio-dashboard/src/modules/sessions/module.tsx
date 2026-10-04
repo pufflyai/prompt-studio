@@ -2,6 +2,7 @@ import { Spinner } from "@chakra-ui/react";
 import { resourceKey, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import {
   type ResourceRef,
+  resourceContextMenuPath,
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
   workbenchCommandPaletteMenuPath,
@@ -199,6 +200,11 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       registerSessionWidgets(ctx, input.sessionDraftPersistence);
       registerSessionsPage(ctx);
       registerSidenavSessions(ctx);
+      ctx.layout.registerMenuItem(resourceContextMenuPath("session"), {
+        commandId: dashboardCommandIds.openSessionPanel,
+        group: "kernel",
+        order: 10,
+      });
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
           commandId: dashboardCommandIds.createSession,

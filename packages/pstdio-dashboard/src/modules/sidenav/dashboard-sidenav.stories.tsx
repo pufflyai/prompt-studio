@@ -5,7 +5,7 @@ import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -330,6 +330,19 @@ export const TicketWorkspaceBackJourney: Story = {
 // Session mode: global collections stay fixed above an expanded Sessions group with inline creation.
 export const SessionMode: Story = {
   render: () => <SidenavStory open={(workbench) => void openSessionsPage(workbench)} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const document = within(canvasElement.ownerDocument.body);
+    const row = await canvas.findByRole("option", { name: "Investigate flaky test" });
+    await fireEvent.contextMenu(row);
+    await waitFor(() => expect(document.getByRole("menuitem", { name: "Open session panel" })).toBeVisible());
+    await expect(document.getAllByRole("menu")).toHaveLength(1);
+    await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
+    await fireEvent.contextMenu(canvas.getByRole("option", { name: "Search" }));
+    await waitFor(() => expect(document.getByRole("menuitem", { name: "Reset to default" })).toBeVisible());
+  },
 };
 // Workspace resource: global collections stay fixed above the expanded, workspace-scoped Sessions group.
 export const WorkspaceResource: Story = {

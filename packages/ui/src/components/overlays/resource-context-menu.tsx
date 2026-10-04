@@ -1,5 +1,5 @@
 import { chakra, Menu, Portal, useMenu } from "@chakra-ui/react";
-import { type ComponentProps, Fragment, type ReactElement, type ReactNode } from "react";
+import { type ComponentProps, Fragment, type ReactElement, type ReactNode, useRef } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
@@ -49,7 +49,7 @@ const ResourceMenuContent = (props: {
       <Menu.Positioner>
         {/* Long menus, such as Sidenav customization, scroll inside the space left in the viewport. */}
         <Menu.Content minW={contentMinWidth} bg={contentBackground} maxH="var(--available-height)">
-          <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain" }}>
+          <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain", tabIndex: -1 }}>
             {actions.map((action) => (
               <Fragment key={action.key}>
                 {action.separatorBefore ? <Menu.Separator /> : null}
@@ -103,7 +103,17 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
     closeOnSelect,
     keepMountedWhenEmpty = false,
   } = props;
-  const menu = useMenu({ positioning, closeOnSelect });
+  const keyboardTrigger = useRef<HTMLElement | null>(null);
+  const menu = useMenu({
+    positioning,
+    closeOnSelect,
+    onEscapeKeyDown: () => {
+      // Positioned context menus do not restore trigger focus themselves.
+      const trigger = keyboardTrigger.current;
+      keyboardTrigger.current = null;
+      if (trigger) requestAnimationFrame(() => trigger.focus());
+    },
+  });
   const triggerProps = menu.api.getContextTriggerProps();
 
   if (actions.length === 0 && !keepMountedWhenEmpty) {
@@ -115,8 +125,32 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
       <chakra.div
         asChild
         {...triggerProps}
+        onPointerDown={(event) => {
+          if (actions.length === 0 || event.pointerType === "mouse") return;
+          keyboardTrigger.current = null;
+          // Only the nearest populated menu starts the shared touch-hold gesture.
+          event.stopPropagation();
+          triggerProps.onPointerDown?.(event);
+        }}
+        onKeyDown={(event) => {
+          if (event.defaultPrevented || actions.length === 0) return;
+          if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const bounds = event.currentTarget.getBoundingClientRect();
+          event.currentTarget.dispatchEvent(
+            new MouseEvent("contextmenu", {
+              bubbles: true,
+              cancelable: true,
+              clientX: bounds.left,
+              clientY: bounds.bottom,
+            }),
+          );
+          keyboardTrigger.current = event.currentTarget;
+        }}
         onContextMenu={(event) => {
-          if (!event.defaultPrevented) triggerProps.onContextMenu?.(event);
+          keyboardTrigger.current = null;
+          if (actions.length > 0 && !event.defaultPrevented) triggerProps.onContextMenu?.(event);
         }}
       >
         {children}
