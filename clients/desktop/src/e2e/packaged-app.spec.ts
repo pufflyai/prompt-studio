@@ -111,6 +111,25 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
       version: 1,
       location: { page: { id: "sessions", kind: "page" } },
     });
+    // The opposite of the default proves the restored theme is the saved choice, not the system mode.
+    const chosenTheme = await test.step("Choose the theme opposite to the one shown", async () => {
+      const page = first!.page;
+      const theme =
+        (await page.locator("html").getAttribute("data-theme")) === "pstdio-dark" ? "pstdio-light" : "pstdio-dark";
+      await page.evaluate(() =>
+        (
+          window as unknown as {
+            __pstdioDashboardWorkbench: { commands: { executeCommand: (id: string) => Promise<unknown> } };
+          }
+        ).__pstdioDashboardWorkbench.commands.executeCommand("workbench.action.changeTheme"),
+      );
+      await page.getByRole("option", { name: theme }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await expect
+        .poll(() => page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
+        .toMatchObject({ values: { "theme-preference": theme } });
+      return theme;
+    });
 
     const originalPid = first.runtime.pid;
     await test.step("Promote the running sidecar through the packaged CLI", async () => {
@@ -160,6 +179,13 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
     await expect(second.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
     await expect(second.page.getByTestId("workbench-side-panel-attached")).toBeVisible();
+    await test.step("Restore the chosen theme on every desktop screen", async () => {
+      const servedLifecycle = await second!.lifecyclePage.evaluate(() =>
+        fetch("pstdio://lifecycle/index.html").then((response) => response.text()),
+      );
+      expect(servedLifecycle).toContain(`data-theme="${chosenTheme}"`);
+      await expect(second!.page.locator("html")).toHaveAttribute("data-theme", chosenTheme);
+    });
 
     await second.finishTrace();
     const close = runPackagedCli(home, ["close"]);

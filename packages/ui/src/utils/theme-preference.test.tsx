@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { installMockLocalStorage } from "../test-utils/local-storage";
+import { defaultThemePreferences } from "./apply-theme-preference";
 import { getInitialThemePreference, ThemePreferenceProvider, useThemePreference } from "./theme-preference";
 
 const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
@@ -115,5 +116,82 @@ describe("ThemePreferenceProvider", () => {
     );
 
     expect(markup).toBe("<span>Workbench</span>");
+  });
+});
+
+describe("ThemePreferenceProvider with host storage", () => {
+  test("reads and saves the theme through the supplied storage", async () => {
+    const { act, create } = await import("react-test-renderer");
+    (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    installWindow();
+    const browserStorage = installMockLocalStorage();
+    const values = new Map([["theme-preference:scribble", "ink"]]);
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+    let context: ReturnType<typeof useThemePreference> | undefined;
+    const CaptureTheme = () => {
+      context = useThemePreference();
+      return null;
+    };
+
+    await act(async () => {
+      create(
+        <ThemePreferenceProvider
+          storage={storage}
+          preferenceScope="scribble"
+          themePreferences={[
+            { id: "paper", mode: "light" },
+            { id: "ink", mode: "dark" },
+          ]}
+        >
+          <CaptureTheme />
+        </ThemePreferenceProvider>,
+      );
+    });
+    expect(context?.themePreference).toBe("ink");
+
+    await act(async () => context?.setThemePreference("paper"));
+
+    expect(context?.themePreference).toBe("paper");
+    expect(values.get("theme-preference:scribble")).toBe("paper");
+    expect(browserStorage.length).toBe(0);
+  });
+});
+
+describe("ThemePreferenceProvider pending theme", () => {
+  test("keeps naming the chosen extension theme after showing a fallback, until it registers", async () => {
+    const { act, create } = await import("react-test-renderer");
+    (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    installWindow();
+    installMockLocalStorage().setItem("theme-preference", "lab.monokai");
+    let context: ReturnType<typeof useThemePreference> | undefined;
+    const CaptureTheme = () => {
+      context = useThemePreference();
+      return null;
+    };
+    const monokai = [...defaultThemePreferences, { id: "lab.monokai", mode: "dark" as const }];
+
+    let renderer: ReturnType<typeof create> | undefined;
+    await act(async () => {
+      renderer = create(
+        <ThemePreferenceProvider>
+          <CaptureTheme />
+        </ThemePreferenceProvider>,
+      );
+    });
+    expect([context?.themePreference, context?.pendingThemePreference]).toEqual(["pstdio-light", "lab.monokai"]);
+
+    await act(async () => {
+      renderer?.update(
+        <ThemePreferenceProvider themePreferences={monokai}>
+          <CaptureTheme />
+        </ThemePreferenceProvider>,
+      );
+    });
+    expect([context?.themePreference, context?.pendingThemePreference]).toEqual(["lab.monokai", null]);
   });
 });

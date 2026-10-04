@@ -10,6 +10,18 @@ export interface DesktopWorkbenchState {
   values: Record<string, string>;
 }
 
+/**
+ * The theme the workbench last showed. Lifecycle screens use it before the runtime
+ * and its extensions start, because contributed theme colors are not available then.
+ */
+export interface DesktopStartupAppearance {
+  themeId: string;
+  mode: "light" | "dark";
+  /** Theme token overrides keyed by token path, such as `colors.bg`. */
+  tokens: Record<string, string>;
+  backgroundColor: string;
+}
+
 export interface DesktopProjectTabsState {
   projectIds: string[];
 }
@@ -18,6 +30,9 @@ export interface PromptStudioDesktopApi {
   cancelQuit: () => Promise<void>;
   confirmQuit: () => Promise<void>;
   getAppInfo: () => Promise<DesktopAppInfo>;
+  getStartupAppearance: () => Promise<DesktopStartupAppearance | null>;
+  onStartupAppearance: (listener: (appearance: DesktopStartupAppearance) => void) => () => void;
+  setStartupAppearance: (appearance: DesktopStartupAppearance) => Promise<void>;
   getStartupState: () => Promise<DesktopState>;
   onStartupState: (listener: (state: DesktopState) => void) => () => void;
   onCommand: (listener: (commandId: string) => void) => () => void;
@@ -41,6 +56,9 @@ export const DESKTOP_CHANNELS = {
   cancelQuit: "pstdio:desktop:cancel-quit",
   confirmQuit: "pstdio:desktop:confirm-quit",
   appInfo: "pstdio:desktop:app-info",
+  getStartupAppearance: "pstdio:desktop:get-startup-appearance",
+  startupAppearanceChanged: "pstdio:desktop:startup-appearance-changed",
+  setStartupAppearance: "pstdio:desktop:set-startup-appearance",
   startupState: "pstdio:desktop:startup-state",
   startupStateChanged: "pstdio:desktop:startup-state-changed",
   retryRuntime: "pstdio:desktop:retry-runtime",

@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { ResizableSplitLayout, type ResourceContextAction, Toaster } from "@pstdio/ui";
+import { ResizableSplitLayout, type ResourceContextAction, type ThemePreferenceStorage, Toaster } from "@pstdio/ui";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchShellOpenRegion } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -44,6 +44,8 @@ interface WorkbenchProps {
   sidePanelBubbleIcon?: ReactNode;
   /** Host action for opening the closed Side Panel from its bubble launcher. */
   onOpenSidePanel?: () => void;
+  /** Host storage for the chosen theme. Defaults to browser storage. */
+  themeStorage?: ThemePreferenceStorage;
 }
 
 const SIDENAV_DEFAULT_SIZE_PX = 250;
@@ -317,6 +319,7 @@ export const Workbench = (props: WorkbenchProps) => {
       fileIconThemePreferences={fileIconThemePreferences}
       defaultThemePreference={mode?.defaultTheme}
       preferenceScope={mode?.defaultTheme ? mode.id : undefined}
+      themeStorage={props.themeStorage}
     >
       <WorkbenchContent key={projectId} {...props} />
       <Toaster />

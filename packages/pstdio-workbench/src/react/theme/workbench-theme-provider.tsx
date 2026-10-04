@@ -6,6 +6,7 @@ import {
   type ThemePreference,
   type ThemePreferenceOption,
   ThemePreferenceProvider,
+  type ThemePreferenceStorage,
 } from "@pstdio/ui";
 import { createContext, type ReactNode, useContext } from "react";
 
@@ -14,6 +15,8 @@ interface WorkbenchThemeProviderProps {
   initialThemePreference?: ThemePreference;
   defaultThemePreference?: ThemePreference;
   preferenceScope?: string;
+  /** Where the chosen theme is saved. Defaults to browser storage. */
+  themeStorage?: ThemePreferenceStorage;
   themePreferences?: readonly ThemePreferenceOption[];
   fileIconThemePreferences?: readonly FileIconThemePreferenceOption[];
 }
@@ -32,6 +35,7 @@ export const WorkbenchThemeProvider = (props: WorkbenchThemeProviderProps) => {
         initialPreference={initialThemePreference}
         defaultPreference={props.defaultThemePreference}
         preferenceScope={props.preferenceScope}
+        storage={props.themeStorage}
         themePreferences={themePreferences}
       >
         <FileIconThemePreferenceProvider themePreferences={fileIconThemePreferences}>

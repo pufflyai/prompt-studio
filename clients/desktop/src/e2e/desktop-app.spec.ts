@@ -159,15 +159,18 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "copyDiagnostics",
       "getAppInfo",
       "getProjectTabs",
+      "getStartupAppearance",
       "getStartupState",
       "getWorkbenchState",
       "onCommand",
+      "onStartupAppearance",
       "onStartupState",
       "openLogs",
       "quitApp",
       "retryRuntime",
       "revealInFinder",
       "setProjectTabs",
+      "setStartupAppearance",
       "setWorkbenchItem",
     ]);
     expect(

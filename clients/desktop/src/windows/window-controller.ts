@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { BrowserWindow, type Session, session, shell, WebContentsView } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
-import { DESKTOP_CHANNELS } from "../desktop-api";
+import { DESKTOP_CHANNELS, type DesktopStartupAppearance } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { secureSession, secureWebContents } from "../security/apply-window-security";
 import { provisionRuntimeSession } from "../security/runtime-session";
@@ -14,6 +14,7 @@ const WORKBENCH_PARTITION = "pstdio-workbench";
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
   #workbench: WebContentsView | null = null;
+  #workbenchLoad: Promise<void> | undefined;
   readonly #shown: Promise<void>;
   readonly lifecycleUrl: string;
   readonly window: BrowserWindow;
@@ -21,10 +22,15 @@ export class DesktopWindowController {
   private constructor(
     private readonly preloadPath: string,
     workbenchSession: Session,
+    appearance: DesktopStartupAppearance | undefined,
   ) {
     this.lifecycleUrl = LIFECYCLE_URL;
     secureSession(workbenchSession, () => this.#runtimeOrigin);
-    this.window = new BrowserWindow(createSecureWindowOptions(preloadPath, WORKBENCH_PARTITION));
+    this.window = new BrowserWindow({
+      ...createSecureWindowOptions(preloadPath, WORKBENCH_PARTITION),
+      // Painted before the lifecycle document, so the window never flashes another theme.
+      ...(appearance ? { backgroundColor: appearance.backgroundColor } : {}),
+    });
     secureWebContents(this.window.webContents, {
       lifecycleUrl: this.lifecycleUrl,
       runtimeOrigin: () => null,
@@ -49,14 +55,14 @@ export class DesktopWindowController {
     this.window.on("closed", () => this.#workbench?.webContents.close());
   }
 
-  static async create(preloadPath: string) {
+  static async create(preloadPath: string, startupAppearance: () => DesktopStartupAppearance | undefined) {
     const rendererRoot = join(import.meta.dirname, "renderer");
     // The partition is memory-only; the lifecycle renderer stays mounted in the window.
     const workbenchSession = session.fromPartition(WORKBENCH_PARTITION, { cache: true });
     await workbenchSession.protocol.handle(LIFECYCLE_SCHEME, (request) =>
-      readLifecycleAsset(request.url, rendererRoot),
+      readLifecycleAsset(request.url, rendererRoot, startupAppearance()),
     );
-    return new DesktopWindowController(preloadPath, workbenchSession);
+    return new DesktopWindowController(preloadPath, workbenchSession, startupAppearance());
   }
 
   runtimeOrigin() {
@@ -68,7 +74,13 @@ export class DesktopWindowController {
   }
 
   updateState(state: DesktopState) {
-    this.window.webContents.send(DESKTOP_CHANNELS.startupStateChanged, state);
+    // The workbench shows the quit confirmation; the lifecycle page shows every other state.
+    for (const contents of this.webContents()) contents.send(DESKTOP_CHANNELS.startupStateChanged, state);
+  }
+
+  setStartupAppearance(appearance: DesktopStartupAppearance) {
+    this.window.setBackgroundColor(appearance.backgroundColor);
+    this.window.webContents.send(DESKTOP_CHANNELS.startupAppearanceChanged, appearance);
   }
 
   executeCommand(commandId: string) {
@@ -104,13 +116,22 @@ export class DesktopWindowController {
     return view;
   }
 
-  async showQuitConfirmation() {
-    await this.showLifecycle();
-  }
-
-  dismissQuitConfirmation() {
-    this.#workbench?.setVisible(true);
-    this.#workbench?.webContents.focus();
+  async showQuitConfirmation(descriptor: RuntimeDescriptor) {
+    // The confirmation is a dialog inside the workbench. A missing, crashed, or outdated
+    // workbench loads again and then reads the confirmation state, so quitting never
+    // waits on a dialog nobody can see.
+    const contents = this.#workbench?.webContents;
+    if (
+      !this.#workbench ||
+      !contents ||
+      contents.isCrashed() ||
+      new URL(contents.getURL() || "about:blank").origin !== descriptor.origin
+    ) {
+      await this.showWorkbench(descriptor);
+      return;
+    }
+    this.#workbench.setVisible(true);
+    this.#workbench.webContents.focus();
   }
 
   async showLifecycle() {
@@ -121,7 +142,15 @@ export class DesktopWindowController {
     contents.focus();
   }
 
-  async showWorkbench(descriptor: RuntimeDescriptor) {
+  showWorkbench(descriptor: RuntimeDescriptor) {
+    // A quit during startup joins the load in progress. A second load would abort it.
+    this.#workbenchLoad ??= this.#loadWorkbench(descriptor).finally(() => {
+      this.#workbenchLoad = undefined;
+    });
+    return this.#workbenchLoad;
+  }
+
+  async #loadWorkbench(descriptor: RuntimeDescriptor) {
     this.#runtimeOrigin = descriptor.origin;
     // Creating a second renderer must not compete with showing the startup window.
     // Its remaining resources can continue loading alongside the workbench.

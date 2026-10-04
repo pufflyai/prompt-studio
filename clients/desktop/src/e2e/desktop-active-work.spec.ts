@@ -1,15 +1,9 @@
-import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer, type ServerResponse } from "node:http";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { _electron as electron, expect, test } from "@playwright/test";
-import type { RuntimeDescriptor } from "pstdio/runtime";
-import { removeTestDirectory } from "../testing/remove-test-directory";
+import { _electron as electron, expect, type Page, test } from "@playwright/test";
+import { startActiveRuntime } from "./active-runtime-fixture";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
-import { acceptFocusedButton } from "./lifecycle-actions";
 import { expectStartupWindowVisible } from "./startup-window";
 
 const require = createRequire(import.meta.url);
@@ -25,10 +19,19 @@ const environment = (values: Record<string, string>) => {
   return result;
 };
 
-const stopProcess = async (child: ChildProcess) => {
-  if (child.exitCode !== null || child.signalCode !== null) return;
-  child.kill("SIGTERM");
-  await new Promise<void>((resolveExit) => child.once("exit", () => resolveExit()));
+const launchDesktop = async (home: string, traceName: string) => {
+  const electronApp = await electron.launch({
+    executablePath: electronPath,
+    args: [appPath, `--user-data-dir=${join(home, "electron-user-data")}`],
+    env: environment({ PSTDIO_HOME: home }),
+  });
+  const finishTrace = await startElectronTrace(electronApp.context(), traceName);
+  cleanup.push(async () => {
+    await finishTrace();
+    await electronApp.evaluate(({ app }) => app.exit(0)).catch(() => {});
+    await electronApp.close().catch(() => {});
+  });
+  return { electronApp, finishTrace };
 };
 
 test.afterEach(async () => {
@@ -36,108 +39,12 @@ test.afterEach(async () => {
   cleanup.length = 0;
 });
 
-test("recovers from refused shutdown and closes each quit confirmation", async () => {
-  const token = "desktop-active-work-secret";
-  const home = mkdtempSync(join(tmpdir(), "pstdio-desktop-active-work-"));
-  const descriptorPath = join(home, "runtime.json");
-  const runtimeProcess = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });
-  const eventResponses = new Set<ServerResponse>();
-  const shutdownForces: boolean[] = [];
-  let refuseForcedShutdown = true;
-  cleanup.push(() => removeTestDirectory(home));
-  cleanup.push(() => stopProcess(runtimeProcess));
-
-  const server = createServer(async (request, response) => {
-    if (request.headers.authorization !== `Bearer ${token}` && request.url?.startsWith("/runtime/")) {
-      response.writeHead(401).end();
-      return;
-    }
-    if (request.url === "/runtime/ready") {
-      response.setHeader("content-type", "application/json");
-      response.end(
-        JSON.stringify({ ok: true, protocolVersion: 1, instanceId: "active-runtime", ownerType: "desktop" }),
-      );
-      return;
-    }
-    if (request.url === "/runtime/browser-session") {
-      response.setHeader("set-cookie", `pstdio_runtime_session=${token}; Path=/; HttpOnly; SameSite=Strict`);
-      response.writeHead(204).end();
-      return;
-    }
-    if (request.url === "/runtime/events") {
-      response.setHeader("content-type", "text/event-stream");
-      response.write(": connected\n\n");
-      eventResponses.add(response);
-      response.on("close", () => eventResponses.delete(response));
-      return;
-    }
-    if (request.url === "/runtime/shutdown") {
-      let requestBody = "";
-      for await (const chunk of request) requestBody += String(chunk);
-      const body = JSON.parse(requestBody) as { force?: boolean };
-      const force = body.force === true;
-      shutdownForces.push(force);
-      if (!force) {
-        response.setHeader("content-type", "application/json");
-        response.writeHead(409).end(
-          JSON.stringify({
-            error: "runtime_active",
-            activity: {
-              sessions: [{ id: "session-1", label: "PS-217 implementation" }],
-              terminals: [{ id: "terminal-1", label: "Desktop tests" }],
-              jobs: [{ id: "job-1", label: "Package verification" }],
-            },
-          }),
-        );
-        return;
-      }
-      if (refuseForcedShutdown) {
-        refuseForcedShutdown = false;
-        response.writeHead(503).end();
-        return;
-      }
-      response.writeHead(202).end();
-      rmSync(descriptorPath, { force: true });
-      await stopProcess(runtimeProcess);
-      return;
-    }
-    response.setHeader("content-type", "text/html");
-    response.end(
-      '<!doctype html><html><body><main>Owned Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
-    );
+test("shows each quit confirmation over the workbench and recovers from refused shutdown", async () => {
+  const { home, descriptor, shutdownForces } = await startActiveRuntime(cleanup, {
+    refuseFirstForcedShutdown: true,
+    holdDashboard: false,
   });
-  await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
-  cleanup.push(async () => {
-    for (const response of eventResponses) response.end();
-    await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
-  });
-
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("Electron test runtime did not bind a port");
-  const descriptor: RuntimeDescriptor = {
-    schemaVersion: 1,
-    protocolVersion: 1,
-    pid: runtimeProcess.pid!,
-    instanceId: "active-runtime",
-    ownerType: "desktop",
-    origin: `http://127.0.0.1:${address.port}`,
-    token,
-    appVersion: "0.25.2",
-    startedAt: new Date().toISOString(),
-  };
-  writeFileSync(descriptorPath, JSON.stringify(descriptor));
-
-  const electronApp = await electron.launch({
-    executablePath: electronPath,
-    args: [appPath, `--user-data-dir=${join(home, "electron-user-data")}`],
-    env: environment({ PSTDIO_HOME: home }),
-  });
-  const finishTrace = await startElectronTrace(electronApp.context(), "active-work");
-  cleanup.push(async () => {
-    await finishTrace();
-    await electronApp.evaluate(({ app }) => app.exit(0)).catch(() => {});
-    await electronApp.close().catch(() => {});
-  });
+  const { electronApp, finishTrace } = await launchDesktop(home, "active-work");
 
   const lifecycle = await waitForLifecyclePage(electronApp.context());
   await expectStartupWindowVisible(electronApp, lifecycle);
@@ -150,49 +57,142 @@ test("recovers from refused shutdown and closes each quit confirmation", async (
   });
   await lifecycle.reload();
 
+  const desktopState = () =>
+    window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState());
+  const workbenchVisible = () =>
+    electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children[0].getVisible());
+  // The dashboard renders the quit dialog from the state the workbench receives.
+  const expectConfirmationInWorkbench = async () => {
+    await expect.poll(desktopState).toMatchObject({ kind: "confirming_active_work" });
+    expect(await workbenchVisible()).toBe(true);
+    await expect(lifecycle.getByRole("main")).toHaveCount(0);
+  };
+  await window.evaluate(() => {
+    const target = globalThis as unknown as Window & { receivedStates: string[] };
+    target.receivedStates = [];
+    target.promptStudioDesktop.onStartupState((state) => target.receivedStates.push(state.kind));
+  });
+
   await window.getByRole("textbox", { name: "Draft" }).fill("Unsaved work");
   await electronApp.evaluate(({ app }) => app.quit());
-  const confirmation = lifecycle;
-  await confirmation.waitForURL((url) => url.protocol === "pstdio:" && url.hostname === "lifecycle");
+  await expectConfirmationInWorkbench();
+  expect(await window.evaluate(() => (globalThis as unknown as { receivedStates: string[] }).receivedStates)).toContain(
+    "confirming_active_work",
+  );
   expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
-  expect(
-    await confirmation.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
-  ).toMatchObject({ kind: "confirming_active_work" });
-  await expect(confirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
-  await acceptFocusedButton(confirmation);
-  await expect(confirmation.getByRole("alertdialog")).toHaveCount(0);
-  await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
+  await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.cancelQuit());
+  await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
   await expect(window.getByRole("textbox", { name: "Draft" })).toHaveValue("Unsaved work");
   expect(shutdownForces).toEqual([false]);
 
   await electronApp.evaluate(({ app }) => app.quit());
-  const nextConfirmation = lifecycle;
-  await expect(nextConfirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
-  expect(
-    await nextConfirmation.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
-  ).toMatchObject({ kind: "confirming_active_work" });
-  await nextConfirmation.keyboard.press("Tab");
-  await expect(nextConfirmation.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
-  await nextConfirmation.keyboard.press("Enter").catch((error) => {
-    if (!nextConfirmation.isClosed()) throw error;
-  });
+  await expectConfirmationInWorkbench();
+  void window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.confirmQuit());
   await expect(lifecycle.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
-  expect(nextConfirmation.isClosed()).toBe(false);
+  expect(await workbenchVisible()).toBe(false);
   expect(
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length),
   ).toBe(1);
+
   await lifecycle.getByRole("button", { name: "Quit", exact: true }).click();
-  const finalConfirmation = lifecycle;
-  await expect(finalConfirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
+  await expectConfirmationInWorkbench();
+  await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.cancelQuit());
+  await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
+
+  // A crashed workbench loads again so its dialog can appear instead of stalling the quit.
+  // Playwright cannot drive a page after its renderer crashes, so read the new page from main.
+  const workbenchContents = (script: string) =>
+    electronApp.evaluate(
+      ({ webContents }, [origin, source]) => {
+        const contents = webContents.getAllWebContents().find((candidate) => candidate.getURL().startsWith(origin));
+        if (!contents || contents.isCrashed() || contents.isLoading()) return null;
+        return contents.executeJavaScript(source);
+      },
+      [descriptor.origin, script] as const,
+    );
+  await electronApp.evaluate(({ webContents }, origin) => {
+    for (const contents of webContents.getAllWebContents()) {
+      if (contents.getURL().startsWith(origin)) contents.forcefullyCrashRenderer();
+    }
+  }, descriptor.origin);
+  await electronApp.evaluate(({ app }) => app.quit());
+  await expect
+    .poll(() => workbenchContents("promptStudioDesktop.getStartupState().then((state) => state.kind)"))
+    .toBe("confirming_active_work");
+  expect(await workbenchContents("document.body.innerText")).toContain("Owned Prompt Studio dashboard");
+  expect(await workbenchVisible()).toBe(true);
+  await expect(lifecycle.getByRole("main")).toHaveCount(0);
   expect(
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length),
   ).toBe(1);
-  await finalConfirmation.keyboard.press("Tab");
-  await expect(finalConfirmation.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
+
   await finishTrace();
   const closed = electronApp.waitForEvent("close");
-  await acceptFocusedButton(finalConfirmation);
+  void workbenchContents("promptStudioDesktop.confirmQuit()").catch(() => {});
   await closed;
 
-  expect(shutdownForces).toEqual([false, false, true, false, true]);
+  expect(shutdownForces).toEqual([false, false, true, false, false, true]);
+});
+
+const startupState = (page: Page) =>
+  page.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState());
+
+test("keeps the first workbench load when a quit arrives while it loads", async () => {
+  const runtime = await startActiveRuntime(cleanup, { refuseFirstForcedShutdown: false, holdDashboard: true });
+  const { electronApp } = await launchDesktop(runtime.home, "active-work-loading");
+  const lifecycle = await waitForLifecyclePage(electronApp.context());
+  await runtime.dashboardRequested;
+
+  await electronApp.evaluate(({ app }) => app.quit());
+  await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "confirming_active_work" });
+  runtime.releaseDashboard();
+  const window = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
+
+  await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
+  await expect.poll(() => startupState(window)).toMatchObject({ kind: "confirming_active_work" });
+  expect(
+    await electronApp.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].contentView.children[0].getVisible(),
+    ),
+  ).toBe(true);
+  await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.cancelQuit());
+  await expect.poll(() => startupState(window)).toMatchObject({ kind: "workbench" });
+  expect(runtime.shutdownForces).toEqual([false]);
+});
+
+test("asks with a native dialog when the person quits again during confirmation", async () => {
+  const runtime = await startActiveRuntime(cleanup, { refuseFirstForcedShutdown: false, holdDashboard: false });
+  const { electronApp, finishTrace } = await launchDesktop(runtime.home, "active-work-native");
+  const lifecycle = await waitForLifecyclePage(electronApp.context());
+  const window = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
+  await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
+  await electronApp.evaluate(({ dialog }) => {
+    const target = globalThis as typeof globalThis & { messageBoxes: string[]; nextResponse: number };
+    target.messageBoxes = [];
+    target.nextResponse = 0;
+    dialog.showMessageBox = (async (...args: unknown[]) => {
+      target.messageBoxes.push((args.at(-1) as { message: string }).message);
+      return { response: target.nextResponse, checkboxChecked: false };
+    }) as typeof dialog.showMessageBox;
+  });
+  const messageBoxes = () =>
+    electronApp.evaluate(() => (globalThis as typeof globalThis & { messageBoxes: string[] }).messageBoxes);
+
+  // This test dashboard renders no quit dialog, like a dashboard that failed to load.
+  await electronApp.evaluate(({ app }) => app.quit());
+  await expect.poll(() => startupState(window)).toMatchObject({ kind: "confirming_active_work" });
+  await electronApp.evaluate(({ app }) => app.quit());
+  await expect.poll(() => startupState(window)).toMatchObject({ kind: "workbench" });
+  expect(await messageBoxes()).toEqual(["Active work is still running"]);
+
+  await electronApp.evaluate(({ app }) => app.quit());
+  await expect.poll(() => startupState(window)).toMatchObject({ kind: "confirming_active_work" });
+  await electronApp.evaluate(() => {
+    (globalThis as typeof globalThis & { nextResponse: number }).nextResponse = 1;
+  });
+  await finishTrace();
+  const closed = electronApp.waitForEvent("close");
+  await electronApp.evaluate(({ app }) => app.quit()).catch(() => {});
+  await closed;
+  expect(runtime.shutdownForces).toEqual([false, false, true]);
 });

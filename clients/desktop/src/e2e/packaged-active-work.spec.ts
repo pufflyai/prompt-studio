@@ -59,12 +59,17 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       expect((await runPackagedCli(home, ["close"])).exitCode).toBe(1);
       expect(app.child.exitCode).toBeNull();
       await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-      const confirmation = app.lifecyclePage;
-      const dialog = confirmation.getByRole("alertdialog", { name: "Active work is still running" });
+      const dialog = app.page.getByRole("alertdialog", { name: "Active work is still running" });
       await expect(dialog).toBeVisible();
+      await expect(dialog.getByText("Terminals")).toBeVisible();
+      // The warning opens over the workbench. The lifecycle page underneath stays empty.
+      await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
       const keepOpen = dialog.getByRole("button", { name: "Keep Prompt Studio open" });
       await expect(keepOpen).toBeFocused();
-      await acceptFocusedButton(confirmation);
+      const screenshot = test.info().outputPath("desktop-quit-confirmation.png");
+      await app.page.screenshot({ path: screenshot, animations: "disabled" });
+      await test.info().attach("desktop-quit-confirmation", { path: screenshot, contentType: "image/png" });
+      await acceptFocusedButton(app.page);
       await expect(dialog).toHaveCount(0);
       await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
       await expect(app.page.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
@@ -73,12 +78,11 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
 
       if (shutdown === "desktop confirmation") {
         await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-        const nextConfirmation = app.lifecyclePage;
-        await expect(nextConfirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
-        await nextConfirmation.keyboard.press("Tab");
-        await expect(nextConfirmation.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
+        await expect(dialog.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
+        await app.page.keyboard.press("Tab");
+        await expect(dialog.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
         await app.finishTrace();
-        await acceptFocusedButton(nextConfirmation);
+        await acceptFocusedButton(app.page);
         await waitForExit(app.child);
       } else {
         await app.finishTrace();

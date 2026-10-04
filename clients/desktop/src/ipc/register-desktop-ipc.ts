@@ -1,6 +1,6 @@
 import { isAbsolute } from "node:path";
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
-import type { DesktopProjectTabsState, DesktopWorkbenchState } from "../desktop-api";
+import type { DesktopProjectTabsState, DesktopStartupAppearance, DesktopWorkbenchState } from "../desktop-api";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { isAllowedIpcSender } from "../security/ipc-security";
@@ -15,6 +15,8 @@ type DesktopIpcOptions = {
   confirmQuit: () => Promise<void>;
   copyDiagnostics: () => void;
   getState: () => DesktopState;
+  getStartupAppearance: () => DesktopStartupAppearance | undefined;
+  setStartupAppearance: (appearance: unknown) => void;
   getWorkbenchState: () => DesktopWorkbenchState;
   getProjectTabs: () => Promise<DesktopProjectTabsState>;
   setProjectTabs: (state: unknown) => Promise<void>;
@@ -64,6 +66,8 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   handle(DESKTOP_CHANNELS.confirmQuit, options.confirmQuit);
   handle(DESKTOP_CHANNELS.appInfo, options.appInfo);
   handle(DESKTOP_CHANNELS.startupState, options.getState);
+  handle(DESKTOP_CHANNELS.getStartupAppearance, () => options.getStartupAppearance() ?? null);
+  handle(DESKTOP_CHANNELS.setStartupAppearance, options.setStartupAppearance);
   handle(DESKTOP_CHANNELS.retryRuntime, options.retryRuntime);
   handle(DESKTOP_CHANNELS.openLogs, options.openLogs);
   handle(DESKTOP_CHANNELS.revealInFinder, (path) => {
