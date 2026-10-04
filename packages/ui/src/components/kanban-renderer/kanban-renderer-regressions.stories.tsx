@@ -2,6 +2,7 @@ import { Badge, Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { AlertMessage } from "../primitives/alert";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
 import type { AttributeDescriptor } from "./types";
@@ -277,3 +278,25 @@ export const WorkspaceDisplayProperty: Story = {
     </Box>
   ),
 };
+
+const FailedActionExample = () => {
+  const [error, setError] = useState<string>();
+  return (
+    <Box p="sm" height="560px">
+      {error ? <AlertMessage status="error" title={error} onClose={() => setError(undefined)} /> : null}
+      <KanbanRenderer<StoryRow>
+        rows={initialRows}
+        attributes={attributes}
+        storageKey="storybook-kanban-failed-action"
+        defaultSettings={{ viewMode: "board", columnGrouping: "status", displayProperties: ["status"] }}
+        getBoardColumnConfig={() => ({ canDragIn: true, canDragOut: true })}
+        onAttributeChange={async () => {
+          throw new Error("Could not save the change.");
+        }}
+        onActionError={(error) => setError(error instanceof Error ? error.message : String(error))}
+      />
+    </Box>
+  );
+};
+
+export const FailedAction: Story = { render: () => <FailedActionExample /> };

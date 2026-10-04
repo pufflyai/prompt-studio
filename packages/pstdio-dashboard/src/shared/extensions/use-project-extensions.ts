@@ -1,4 +1,3 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { toaster } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -21,7 +20,6 @@ import {
   updateProjectExtensionSetting,
   upgradeProjectExtension,
 } from "./api";
-import { collectExtensionCommandNotifications } from "./command-outcome";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
 import {
   createProjectExtensionCache,
@@ -29,6 +27,7 @@ import {
   projectExtensionMetadataQueryKey,
   projectExtensionsQueryKey,
 } from "./project-extension-cache";
+import { surfaceWebviewCommandOutcome } from "./webview-command-outcome";
 
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
 
@@ -204,16 +203,6 @@ export const useUninstallProjectExtension = (projectId: string | undefined) => {
   });
 };
 
-const surfaceCommandOutcome = (response: CommandExecuteResponse) => {
-  for (const notification of collectExtensionCommandNotifications(response)) {
-    toaster.create({
-      type: notification.level,
-      title: notification.title,
-      description: notification.message,
-    });
-  }
-};
-
 export const useExecuteExtensionCommand = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
 
@@ -225,7 +214,7 @@ export const useExecuteExtensionCommand = (projectId: string | undefined) => {
       return response;
     },
     onSuccess: async (response) => {
-      surfaceCommandOutcome(response);
+      surfaceWebviewCommandOutcome(response, (notification) => toaster.create(notification));
       await queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
     },
   });

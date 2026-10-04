@@ -10,6 +10,7 @@ import type {
   WorkbenchCore,
 } from "../../../core";
 import { getAnchorResource, getWorkbenchRenderers } from "../../../core";
+import { reportUserActionError } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
@@ -88,7 +89,10 @@ const navigateTreeNode = (
     if (shouldSelectTreeNodeForNavigationTarget(target)) {
       getWorkbenchRenderers(context.workbench).setSelectedNode(context.treeViewId, nodeId);
     }
-    void context.workbench.navigation.openTarget(target).catch(context.onOpenResourceError);
+    void context.workbench.navigation.openTarget(target).catch((error) => {
+      if (context.onOpenResourceError) context.onOpenResourceError(error);
+      else reportUserActionError(context.workbench, "Open", error);
+    });
     return;
   }
 };

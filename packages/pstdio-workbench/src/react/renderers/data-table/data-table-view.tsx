@@ -16,6 +16,7 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
+import { runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
@@ -93,17 +94,20 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     destructive: action.destructive,
     onSelect: (data) => {
       const row = model.rowByData.get(data);
-      if (row) void action.run(row);
+      if (row) void runUserAction(workbench, action.label, () => action.run(row));
     },
   }));
   const selectionActions = resolveDataTableRendererSelectionActions(
-    contribution.selectionActions ?? [],
+    (contribution.selectionActions ?? []).map((action) => ({
+      ...action,
+      run: (rows) => runUserAction(workbench, action.label, () => action.run(rows)),
+    })),
     model.rowByData,
   );
   const openRow = (data: RowData) => {
     const row = model.rowByData.get(data);
     if (!row) return;
-    if (contribution.onRowActivate) void Promise.resolve(contribution.onRowActivate(row)).catch(() => undefined);
+    if (contribution.onRowActivate) void runUserAction(workbench, "Open row", () => contribution.onRowActivate!(row));
   };
   if (loading) {
     // The table chrome renders instantly: declared columns become real headers

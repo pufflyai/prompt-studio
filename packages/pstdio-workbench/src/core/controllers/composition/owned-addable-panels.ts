@@ -6,6 +6,7 @@ import { shellPlacementContributionId } from "../../registries/placements/shell-
 import type { ResourceRef } from "../../registries/resources/resource-registry";
 import { modePlacementContributionId, pagePlacementContributionId } from "../../registries/views/view-placement";
 import { contributionRefId, resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { runUserAction } from "../../shared/run-user-action";
 import type { WorkbenchCore } from "../../workbench-core";
 import type { WorkbenchCompositionAddablePanel } from "./composition-controller";
 
@@ -32,12 +33,14 @@ interface AddablePanelInput {
 type AddPanel = (panelId: string, open: WorkbenchCompositionAddablePanel["open"]) => void;
 const openPlacementAddTarget = (core: WorkbenchCore, target: NavigationTarget) => {
   if (target.kind === "command") {
-    void core.commands.executeCommand(contributionRefId(target.target.command), target.target.params, {
-      source: "panel-add",
-    });
+    void runUserAction(core, "Add panel", () =>
+      core.commands.executeCommand(contributionRefId(target.target.command), target.target.params, {
+        source: "panel-add",
+      }),
+    );
     return;
   }
-  void core.navigation.openTarget(target);
+  void runUserAction(core, "Add panel", () => core.navigation.openTarget(target));
 };
 const canAddItem = (core: WorkbenchCore, item: WorkbenchOwnedPlacementItem, resource: ResourceRef | undefined) => {
   if (item.kind !== "binding") return true;

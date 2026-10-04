@@ -23,6 +23,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
+// Native actions retain failed outcomes for the UI entry point to report.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";

@@ -12,6 +12,7 @@ import {
   type WorkbenchCore,
   type WorkbenchPanelInstance,
 } from "../../../core";
+import { runUserAction } from "../../../core/shared/run-user-action";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { useRendererRead } from "../use-renderer-read";
 
@@ -73,7 +74,10 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
     // The command runs outside the setState updater: React may invoke updaters
     // twice (StrictMode), which would double-execute the update command.
     const values = { ...state.values, [id]: value };
-    if (contribution.updateValue) void contribution.updateValue({ controlId: id, value, values, resource });
+    if (contribution.updateValue)
+      void runUserAction(workbench, "Update value", () =>
+        contribution.updateValue!({ controlId: id, value, values, resource }),
+      );
     setState((prev) => ({ ...prev, values: { ...prev.values, [id]: value } }));
   };
   return (
@@ -104,7 +108,7 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
               size="xs"
               variant="ghost"
               onClick={() => {
-                void contribution.reset?.({ resource });
+                void runUserAction(workbench, "Reset", () => contribution.reset?.({ resource }));
               }}
             >
               Reset
@@ -115,7 +119,7 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
               size="xs"
               variant="subtle"
               onClick={() => {
-                void contribution.apply?.({ values: state.values, resource });
+                void runUserAction(workbench, "Apply", () => contribution.apply?.({ values: state.values, resource }));
               }}
             >
               Apply

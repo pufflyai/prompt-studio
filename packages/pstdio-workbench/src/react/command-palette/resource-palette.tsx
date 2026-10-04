@@ -1,6 +1,7 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { PaletteEntry } from "@pstdio/ui";
 import type { ResourceBrowseEntry, WorkbenchCore } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../shared/icon";
 import { SEARCH_MODE_ID } from "./palette-view";
 export interface WorkbenchResourcePaletteEntry extends PaletteEntry {
@@ -30,7 +31,7 @@ const createResourceEntry = (input: {
     icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
     onActivate: () => {
       onClose();
-      void Promise.resolve(activate(resource)).catch(() => undefined);
+      void runUserAction(workbench, label, () => activate(resource));
     },
   };
 };
