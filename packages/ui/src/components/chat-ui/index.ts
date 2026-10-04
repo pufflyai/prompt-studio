@@ -14,7 +14,9 @@ export { ChatInput, type ChatInputProps } from "./components/chat-input";
 export type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./components/chat-input-question-prompt";
 export { ChatPanel } from "./components/chat-panel";
 export { ChatSkeleton } from "./components/chat-skeleton";
+export type { ComposerDecision } from "./components/composer-decision";
 export { ConversationBrowse, type ConversationBrowseItem } from "./components/conversation-browse";
+export { HarnessControls, type HarnessControlsProps } from "./components/harness-controls";
 export type {
   AlertPart,
   ChatMessagePart,
@@ -27,5 +29,4 @@ export type { QueuedFollowUpMoveDirection } from "./components/queued-follow-up-
 export type { SendButtonProps } from "./components/send-button";
 export { SendButton } from "./components/send-button";
 export { ChatWorkspaceHub } from "./components/workspace-hub";
-
 export { createSerializedPromptState } from "./utils/editor-state";

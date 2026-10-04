@@ -1,6 +1,6 @@
 import { Box, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import { type ChatInputQuestionResponse, ChatPanel, ChatSkeleton, ChatWorkspaceHub } from "@pstdio/ui/chat-ui";
+import { type ChatInputQuestionResponse, ChatPanel, ChatSkeleton } from "@pstdio/ui/chat-ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
@@ -15,9 +15,12 @@ import {
   createDashboardWorkspaceOptions,
   type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
+import { createDraftCommandSession } from "../chat/create-draft-command-session";
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
 import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
 import { shouldShowPendingFollowUp } from "../chat/session-chat-state";
+import { sessionDraftSubmission } from "../chat/session-draft-submission";
+import { sessionUnsentActions } from "../chat/session-unsent-actions";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
@@ -29,8 +32,9 @@ import type { HarnessParamValues } from "./harness-param-values";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionChatNotices } from "./session-chat-notices";
-import { SessionModelControls } from "./session-model-controls";
-import { SessionWorkspaceControl } from "./session-workspace-control";
+import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
+import { SessionComposerActions } from "./session-composer-actions";
+import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
 import { useSessionChatDraft } from "./use-session-chat-draft";
 import { useSessionDraftAttachments } from "./use-session-draft-attachments";
@@ -114,6 +118,28 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     selectedModel,
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
+  const commandDraft = projectId
+    ? {
+        project_id: projectId,
+        agent: selectedAgent,
+        workspace_id: selectedWorkspaceId || undefined,
+        model: selectedModel || undefined,
+        params: nonEmptyHarnessParams(harnessParamOverrides),
+      }
+    : undefined;
+  const commandComposer = useCommandComposer(
+    sessionId,
+    selectedAgent,
+    chatDraft,
+    reconnect,
+    view.status,
+    view.lastRequestStarted,
+    commandDraft,
+    (operation) => createDraftCommandSession(commandDraft, operation),
+    (sessionId, title) => {
+      if (projectId) openCreatedSessionFromDraft({ input, sessionId, prompt: title, projectId });
+    },
+  );
   const { pendingFollowUp, setPendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } =
     usePendingSessionFollowUp(sessionId, messages, view.lastRequestStarted, view.status === "in_progress");
   const pendingIdRef = useRef(0);
@@ -128,8 +154,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     attachments: SessionAttachment[],
     questionResponse: ChatInputQuestionResponse | undefined,
     onSubmitted?: () => void,
-  ) =>
-    submitSessionMessage({
+  ) => {
+    const command = commandComposer.submit(text, attachments, questionResponse, onSubmitted);
+    if (command) return command;
+    return submitSessionMessage({
       sessionId,
       lastRequestStarted: view.lastRequestStarted,
       projectId,
@@ -152,12 +180,22 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
         openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId, pending });
       },
     });
+  };
   const unsent =
     pendingFollowUp?.failure && shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null;
 
   const { handleQueuedFollowUpUpdate, handleQueuedFollowUpRemove, handleQueuedFollowUpMove } = useQueuedSessionMessages(
     { sessionId, queuedFollowUps: splitDisplay.queuedFollowUps, refreshQueue },
   );
+
+  const decision = commandComposer.decision && {
+    ...commandComposer.decision,
+    controls: commandComposer.controls,
+  };
+  const submit = sessionDraftSubmission(send, draftAttachments.attachments, () => {
+    chatDraft.clear();
+    draftAttachments.clearSubmittedAttachments();
+  });
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
@@ -171,28 +209,30 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             conversationKey={`dashboard-workbench-session:${view.id}`}
             messages={splitDisplay.messages}
             conversationNotices={
-              <SessionChatNotices
-                error={error}
-                queueError={queueError}
-                reconnect={reconnect}
-                refreshQueue={refreshQueue}
-                unsent={
-                  unsent?.failure
-                    ? {
-                        notice: unsent.failure,
-                        onRetry: () => {
-                          setPendingFollowUp(null);
-                          void send(unsent.prompt, unsent.attachments ?? [], unsent.questionResponse);
-                        },
-                        onClose: () => {
-                          setPendingFollowUp(null);
-                          chatDraft.restore(unsent.prompt);
-                          draftAttachments.restoreAttachments(unsent.attachments ?? []);
-                        },
-                      }
-                    : undefined
-                }
-              />
+              <>
+                {commandComposer.notices}
+                <SessionChatNotices
+                  error={error}
+                  queueError={queueError}
+                  reconnect={reconnect}
+                  refreshQueue={refreshQueue}
+                  unsent={
+                    unsent?.failure
+                      ? {
+                          notice: unsent.failure,
+                          ...sessionUnsentActions(unsent, {
+                            clear: () => setPendingFollowUp(null),
+                            send,
+                            restore: (text, attachments) => {
+                              chatDraft.restore(text);
+                              draftAttachments.restoreAttachments(attachments);
+                            },
+                          }),
+                        }
+                      : undefined
+                  }
+                />
+              </>
             }
             queuedFollowUps={splitDisplay.queuedFollowUps}
             onQueuedFollowUpUpdate={sessionId ? handleQueuedFollowUpUpdate : undefined}
@@ -206,26 +246,30 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             loaderComponent={<ChatSkeleton />}
             chatInputPlaceholder="Reply to the agent..."
             chatInputDefaultValue={chatDraft.seed}
-            onChatInputChange={chatDraft.change}
+            onChatInputChange={commandComposer.change}
+            chatInputCommands={commandComposer.suggestions}
+            composerDecision={decision}
             attachedResources={attachedResources}
+            attachmentActions={
+              <SessionAttachmentControls
+                projectId={projectId}
+                uploading={draftAttachments.uploading}
+                onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
+              />
+            }
             actions={
-              <>
-                <SessionAttachmentControls
-                  projectId={projectId}
-                  uploading={draftAttachments.uploading}
-                  onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
-                />
-                <SessionModelControls
-                  view={view}
-                  projectId={projectId}
-                  selectedAgent={selectedAgent}
-                  setSelectedAgent={setSelectedAgent}
-                  selectedModel={selectedModel}
-                  setSelectedModel={setSelectedModel}
-                  harnessParamOverrides={harnessParamOverrides}
-                  setHarnessParamOverrides={setHarnessParamOverrides}
-                />
-              </>
+              <SessionComposerActions
+                projectId={projectId}
+                view={view}
+                selectedAgent={selectedAgent}
+                setSelectedAgent={setSelectedAgent}
+                selectedModel={selectedModel}
+                setSelectedModel={setSelectedModel}
+                harnessParamOverrides={harnessParamOverrides}
+                setHarnessParamOverrides={setHarnessParamOverrides}
+              >
+                {commandComposer.controls}
+              </SessionComposerActions>
             }
             attachmentList={
               draftAttachments.attachments.length > 0 ? (
@@ -240,31 +284,22 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             inputDisabled={draftAttachments.uploading}
             submitDisabled={!canSubmit}
             workspaceHub={
-              <ChatWorkspaceHub
-                workspaceControl={
-                  <SessionWorkspaceControl
-                    view={view}
-                    projectId={projectId}
-                    selectedWorkspaceId={selectedWorkspaceId}
-                    setSelectedWorkspaceId={setSelectedWorkspaceId}
-                    onSelectWorkspace={
-                      openWorkspaceOnSelection
-                        ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
-                        : undefined
-                    }
-                  />
+              <SessionChatWorkspaceHub
+                view={view}
+                projectId={projectId}
+                selectedWorkspaceId={selectedWorkspaceId}
+                setSelectedWorkspaceId={setSelectedWorkspaceId}
+                onSelectWorkspace={
+                  openWorkspaceOnSelection
+                    ? (workspace) => void openSelectedWorkspace(input, workspace, projectId)
+                    : undefined
                 }
                 additions={view.additions}
                 deletions={view.deletions}
                 action={workspaceAction}
               />
             }
-            onSubmitMessage={(text, _attachments, questionResponse) =>
-              send(text, draftAttachments.attachments, questionResponse, () => {
-                chatDraft.clear();
-                draftAttachments.clearSubmittedAttachments();
-              })
-            }
+            onSubmitMessage={submit}
             onInterrupt={sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined}
           />
         </Box>

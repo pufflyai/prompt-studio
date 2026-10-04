@@ -117,6 +117,19 @@ test("an accepted question answer clears its pending submission without a new us
   expect(current()).toBeNull();
 });
 
+test("a rejected question reply preserves the form for retry", async () => {
+  pending = null;
+  let submitted = false;
+  const result = submission({
+    mutate: (_input, options) => options.onError(new Error("Native reply rejected")),
+  }, () => {
+    submitted = true;
+  }, [["Blue"]]);
+  await expect(result).rejects.toThrow("Native reply rejected");
+  expect(submitted).toBe(false);
+  expect(current()?.failure).toBeDefined();
+});
+
 test("shows an accepted follow-up once while its run timestamp is still syncing", () => {
   pending = null;
   void submission({ mutate: () => undefined }, () => undefined);

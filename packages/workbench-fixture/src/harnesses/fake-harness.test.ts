@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { HarnessContext, HarnessEventSink, JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
+import type {
+  HarnessContext,
+  HarnessEventSink,
+  HarnessSession,
+  JsonPatch,
+  SessionMessage,
+} from "@pstdio/sdk/extensions";
 import { createFakeHarness } from "./fake-harness";
 
 const ctx: HarnessContext = {
@@ -38,6 +44,20 @@ const recordingSink = (initial: SessionMessage[] = []) => {
 };
 
 describe("createFakeHarness", () => {
+  test("keeps async native questions owned until each reply is delivered", async () => {
+    const harness = createFakeHarness();
+    const { sink } = recordingSink();
+    const session: HarnessSession = await harness.start(ctx, {
+      prompt: "__fake_async_questions__",
+      sessionId: "host-1",
+      events: sink,
+    });
+    expect(typeof session.replyQuestion).toBe("function");
+    await session.replyQuestion!({ callId: "first-question", answers: [["TypeScript"]] });
+    await session.replyQuestion!({ callId: "second-question", answers: [[]] });
+    expect(await session.done).toEqual({ status: "completed" });
+    expect(sink.getMessages().filter((message) => message.role === "user")).toHaveLength(1);
+  });
   test("emits canned patches on start and completes", async () => {
     const harness = createFakeHarness();
     const { patches, sink } = recordingSink();

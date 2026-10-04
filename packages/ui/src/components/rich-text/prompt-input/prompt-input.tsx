@@ -1,4 +1,4 @@
-import { Flex, Kbd, Text } from "@chakra-ui/react";
+import { Flex, Text } from "@chakra-ui/react";
 import { MarkNode } from "@lexical/mark";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
@@ -13,22 +13,12 @@ import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
 import { CommentPlugin } from "./plugins/CommentPlugin/CommentPlugin";
 import { CommentNode } from "./plugins/CommentPlugin/nodes/CommentNode/CommentNode";
+import { CommandMenuPlugin, type PromptCommand } from "./plugins/command-menu-plugin";
 import { ImperativeAPIPlugin, type PromptEditorRef } from "./plugins/ImperativeAPIPlugin";
 import { KeyboardShortcutPlugin } from "./plugins/KeyboardShortcutPlugin";
-import { ReferenceMenuPlugin } from "./plugins/ReferenceMenuPlugin/ReferenceMenuPlugin";
-import { ReferenceNode } from "./plugins/ReferencePlugin/nodes/ReferenceNode/ReferenceNode";
-import { ReferencePlugin } from "./plugins/ReferencePlugin/ReferencePlugin";
+import { PreserveSelectionPlugin } from "./plugins/preserve-selection-plugin";
 import theme from "./theme/prompt-input-theme";
 import { $getTextContent, getTextFromSerializedEditorState } from "./utils";
-
-export type ReferenceResourceType = "table" | "connector" | "file";
-
-export type ReferenceItem = {
-  resourceId: string;
-  resourceType: ReferenceResourceType;
-  name: string;
-  description?: string;
-};
 
 export interface PromptEditorProps {
   defaultState: string;
@@ -40,25 +30,15 @@ export interface PromptEditorProps {
   onSubmit?: () => void;
   onRecallPrevious?: () => boolean;
   onRecallNext?: () => boolean;
-  /** Dynamic list of references (tables, connectors) shown when typing # */
-  references?: ReferenceItem[];
-  /** Optional app callback when a reference is inserted */
-  onAddReference?: (resourceId: string, resourceType: ReferenceResourceType) => void;
+  /** Native command suggestions shown in the slash popover. Selection inserts plain text. */
+  commands?: PromptCommand[];
 }
 
-const nodes = [CommentNode, MarkNode, ReferenceNode];
+const nodes = [CommentNode, MarkNode];
 
 export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptEditorProps> = (props, ref) => {
   const { defaultState, debug = false, isEditable = true, placeholder } = props;
-  const {
-    onChange,
-    onError = () => {},
-    onSubmit,
-    onRecallPrevious,
-    onRecallNext,
-    references = [],
-    onAddReference,
-  } = props;
+  const { onChange, onError = () => {}, onSubmit, onRecallPrevious, onRecallNext, commands = [] } = props;
 
   const initialConfig = {
     namespace: "PROMPT_EDITOR",
@@ -72,7 +52,7 @@ export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptE
   const previousTextRef = useRef<string>(getTextFromSerializedEditorState(defaultState));
   const placeholderNode: ReactElement | ((isEditable: boolean) => ReactElement | null) = placeholder ?? (
     <Text textStyle="label/M/regular" color="fg.subtle" pointerEvents="none" position="absolute" top="0">
-      Type your query here or press <Kbd color="fg.subtle">#</Kbd> to add a reference.
+      Type your message here.
     </Text>
   );
 
@@ -103,10 +83,10 @@ export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptE
         />
         <ImperativeAPIPlugin editorRef={ref} previousTextRef={previousTextRef} />
         <ToggleEditablePlugin isEditable={isEditable} />
+        <PreserveSelectionPlugin isEditable={isEditable} />
         <CommentPlugin />
         <KeyboardShortcutPlugin onSubmit={onSubmit} onRecallPrevious={onRecallPrevious} onRecallNext={onRecallNext} />
-        <ReferenceMenuPlugin items={references} />
-        <ReferencePlugin onAddReference={onAddReference} />
+        <CommandMenuPlugin key={commands.map((command) => command.name).join("\n")} commands={commands} />
         {debug ? <TreeViewPlugin /> : ""}
       </LexicalComposer>
     </Flex>
@@ -115,4 +95,5 @@ export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptE
 
 export const PromptEditor = forwardRef(BasePromptEditor);
 
+export type { PromptCommand } from "./plugins/command-menu-plugin";
 export type { PromptEditorRef } from "./plugins/ImperativeAPIPlugin";

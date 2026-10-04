@@ -35,7 +35,8 @@ export const registerHarnessCleanupSmokeTests = () => {
         export default { harnesses: [{
           id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker",
           capabilities: () => [], start: run, resume: run,
-          getCommandState: () => ({ commands: [{ name: "/goal", description: "Native fixture command" }], modes: [], slashCommands: true }),
+          params: { planning: { type: "boolean", defaultValue: false, control: "command" } },
+          getCommandState: () => ({ commands: [{ name: "/goal", description: "Native fixture command", composer: { label: "Goal", modeId: "goal", reservedArguments: ["clear"] } }], modes: [{ id: "goal", label: "Goal", description: "Native objective", state: "paused", tagText: "paused: Native objective", closeActionId: "clear", actions: [{ id: "clear", label: "Clear" }] }, { id: "planning", label: "Plan", description: "Native plan", state: "Awaiting approval", confirmation: { id: "native-revision", title: "Approve plan", actionId: "implement", cancelLabel: "Keep planning", model: "native-model" }, actions: [{ id: "implement", label: "Approve and implement" }] }], slashCommands: true }),
           prepareOperation: (_ctx, _input, operation) => ({ execution: "control", invoke: async () => ({ kind: "completed", message: operation.text }) }),
           listModels(ctx) { if (ctx.projectId) used.add(ctx.projectId); return []; },
           dispose(ctx) {
@@ -73,11 +74,22 @@ export const registerHarnessCleanupSmokeTests = () => {
           version: null,
         });
         projects.push({ id: project.id, instanceId: enabled.instanceId });
+        const agents = await request(`/agents/info?project=${project.id}`);
+        expect(agents.find((agent: { id: string }) => agent.id === "test.cleanup-smoke.harness.worker").params).toEqual(
+          {
+            planning: { type: "boolean", defaultValue: false, control: "command" },
+          },
+        );
         const draftState = await request("/sessions/harness-command-state", "POST", {
           project_id: project.id,
           agent: "test.cleanup-smoke.harness.worker",
         });
         expect(draftState.commands[0].name).toBe("/goal");
+        expect(draftState.commands[0].composer).toEqual({
+          label: "Goal",
+          modeId: "goal",
+          reservedArguments: ["clear"],
+        });
         const firstCommand = await request("/sessions", "POST", {
           project_id: project.id,
           title: "First native command",
@@ -96,6 +108,18 @@ export const registerHarnessCleanupSmokeTests = () => {
         });
         const state = await request(`/sessions/${session.id}/harness-commands`);
         expect(state.commands[0].name).toBe("/goal");
+        expect(state.modes[0]).toMatchObject({ tagText: "paused: Native objective", closeActionId: "clear" });
+        expect(state.modes[1]).toMatchObject({
+          id: "planning",
+          confirmation: {
+            id: "native-revision",
+            title: "Approve plan",
+            actionId: "implement",
+            cancelLabel: "Keep planning",
+            model: "native-model",
+          },
+          actions: [{ id: "implement", label: "Approve and implement" }],
+        });
         const outcome = await request(`/sessions/${session.id}/harness-commands`, "POST", {
           harnessId: state.harnessId,
           operation: { kind: "command", text: "/goal  exact native argument" },

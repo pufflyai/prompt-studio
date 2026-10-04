@@ -63,3 +63,20 @@ test("native command runs use the same terminal failure contract as ordinary tur
     await registry.dispose();
   }
 });
+
+test("native dispatch enforces current harness availability for every caller", async () => {
+  const native = record("availability", false);
+  native.provider.getCommandState = () => ({
+    slashCommands: true,
+    commands: [{ name: "/goal", description: "Objective", disabledReason: "Leave planning first." }],
+    modes: [],
+  });
+  const registry = createHarnessRegistry([native], () => ({}) as HarnessContext);
+  try {
+    await expect(
+      registry.list()[0].prepareOperation({ sessionId: "session" }, { kind: "command", text: "/goal Ship" }),
+    ).rejects.toThrow("Leave planning first.");
+  } finally {
+    await registry.dispose();
+  }
+});

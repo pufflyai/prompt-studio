@@ -2,7 +2,7 @@ import { Flex } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
-import type { ReferenceItem } from "@/components/rich-text";
+import type { PromptCommand } from "@/components/rich-text";
 import { resolveActiveQuestionPrompt } from "../tool-rendering/question-prompt";
 import { ChatPrimitives } from "./ai-conversation";
 import { AutoScroll } from "./auto-scroll";
@@ -10,6 +10,7 @@ import { getRecentUserPrompts } from "./chat-input-history";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import { ChatMessageList } from "./chat-message-list";
 import { ChatPanelComposer, useQueuedFollowUpComposer } from "./chat-panel-composer";
+import type { ComposerDecision } from "./composer-decision";
 import {
   groupMessagesByTurn,
   normalizeChatMessagesForDisplay,
@@ -43,8 +44,11 @@ export interface ChatPanelProps {
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
   onChatInputChange?: (text: string) => void;
-  /** Extra controls rendered in the chat input toolbar (attach, model, params). */
+  /** Controls shared by the message and question toolbars (model, params). */
   actions?: ReactNode;
+  /** Attachment controls shown only while editing a message draft. */
+  attachmentActions?: ReactNode;
+  composerHeader?: ReactNode;
   attachedResources?: string[];
   onClearAttachments?: () => void;
   attachmentList?: ReactNode;
@@ -58,13 +62,13 @@ export interface ChatPanelProps {
   /** Blocks sending while the editor stays usable, for example while no model is selected. */
   submitDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
+  composerDecision?: ComposerDecision;
   chatInputAutoFocus?: boolean;
   queuedFollowUps?: QueuedFollowUp[];
   onQueuedFollowUpUpdate?: (itemId: string, prompt: string) => void;
   onQueuedFollowUpRemove?: (itemId: string) => void;
   onQueuedFollowUpMove?: (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => void;
-  chatInputReferences?: ReferenceItem[];
-  onChatInputAddReference?: (resourceId: string, resourceType: ReferenceItem["resourceType"]) => void;
+  chatInputCommands?: PromptCommand[];
 }
 
 export const ChatPanel = (props: ChatPanelProps) => {
@@ -86,6 +90,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onAttachText,
     onChatInputChange,
     actions,
+    attachmentActions,
+    composerHeader,
     attachedResources,
     onClearAttachments,
     attachmentList,
@@ -96,13 +102,13 @@ export const ChatPanel = (props: ChatPanelProps) => {
     inputDisabled = false,
     submitDisabled = false,
     chatInputQuestionPrompt,
+    composerDecision,
     chatInputAutoFocus = false,
     queuedFollowUps = [],
     onQueuedFollowUpUpdate,
     onQueuedFollowUpRemove,
     onQueuedFollowUpMove,
-    chatInputReferences = [],
-    onChatInputAddReference,
+    chatInputCommands = [],
   } = props;
 
   const merged = normalizeChatMessagesForDisplay(messages, { streaming });
@@ -184,18 +190,20 @@ export const ChatPanel = (props: ChatPanelProps) => {
         conversationKey={conversationKey ?? messages[0]?.id}
         recentUserMessages={getRecentUserPrompts(messages)}
         actions={actions}
+        attachmentActions={attachmentActions}
+        composerHeader={composerHeader}
         attachedResources={attachedResources}
         attachmentList={attachmentList}
         chatInputAutoFocus={chatInputAutoFocus}
         chatInputPlaceholder={chatInputPlaceholder}
         chatInputQuestionPrompt={activeQuestionPrompt}
-        chatInputReferences={chatInputReferences}
+        composerDecision={composerDecision}
+        chatInputCommands={chatInputCommands}
         hasWorkspaceHub={hasWorkspaceHub}
         inputDisabled={inputDisabled}
         submitDisabled={submitDisabled}
         onAttachFiles={onAttachFiles}
         onAttachText={onAttachText}
-        onChatInputAddReference={onChatInputAddReference}
         onClearAttachments={onClearAttachments}
         onInterrupt={onInterrupt}
         onQueuedFollowUpMove={onQueuedFollowUpMove}
