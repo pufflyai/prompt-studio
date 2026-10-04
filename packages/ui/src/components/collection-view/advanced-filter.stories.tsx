@@ -102,3 +102,25 @@ export const ClearAllFilters: Story = {
     await expect(canvas.getByLabelText("Unsaved view changes")).toBeVisible();
   },
 };
+
+export const ClearAdvancedDraft: Story = {
+  render: () => (
+    <Bar
+      storageKey="storybook-clear-advanced-draft"
+      filter={{ conjunction: "and", rules: [], groups: [{ conjunction: "and", rules: [] }] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    expect(canvas.getByRole("button", { name: "Edit advanced filter" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
+    const footer = await body.findByTestId("filter-menu-footer");
+    const clear = within(footer).getByRole("button", { name: "Clear all", exact: true });
+    expect(clear).toBeEnabled();
+    await userEvent.click(clear);
+    await waitFor(() => expect(body.queryByTestId("filter-menu")).toBeNull());
+    expect(canvas.queryByRole("button", { name: "Edit advanced filter" })).toBeNull();
+    expect(canvas.getByLabelText("Unsaved view changes")).toBeVisible();
+  },
+};
