@@ -44,6 +44,7 @@ export const spacing = {
 };
 
 export const sizes = {
+  "status-dot": { value: "0.375rem" },
   "folder-picker-width": { value: "36.5rem" },
   "folder-picker-height": { value: "31rem" },
   "folder-picker-header": { value: "3.25rem" },
@@ -98,4 +99,5 @@ export const radii = {
   lg: { value: sp[200] },
   xl: { value: sp[400] },
   full: { value: "100%" },
+  pill: { value: "9999px" },
 };

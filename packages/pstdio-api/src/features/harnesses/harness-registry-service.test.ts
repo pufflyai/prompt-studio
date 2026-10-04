@@ -7,6 +7,18 @@ import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { installExtensionSource } from "../extensions/install-extension-source";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
+const fixtureAgents = [
+  { id: "pstdio.workbench-fixture.harness.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
+  ...[
+    ["native-modes", "Native modes fixture"],
+    ["native-action", "Native action fixture"],
+  ].map(([id, name]) => ({
+    id: `pstdio.workbench-fixture.harness.${id}`,
+    name,
+    availability: { type: "INSTALLED" },
+    params: { planning: { type: "boolean", label: "Planning", defaultValue: false, control: "command" } },
+  })),
+];
 
 describe("harness registry", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-harness-registry-"));
@@ -50,9 +62,7 @@ describe("harness registry", () => {
       const res = await app.request("/v1/agents/info");
       const agents = (await res.json()) as Array<{ id: string; name: string; availability: { type: string } }>;
 
-      expect(agents).toEqual([
-        { id: "pstdio.workbench-fixture.harness.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
-      ]);
+      expect(agents).toEqual(fixtureAgents);
     } finally {
       await close();
     }
@@ -74,9 +84,7 @@ describe("harness registry", () => {
       const res = await app.request("/v1/agents/info");
       const agents = (await res.json()) as Array<{ id: string; name: string; availability: { type: string } }>;
 
-      expect(agents).toEqual([
-        { id: "pstdio.workbench-fixture.harness.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
-      ]);
+      expect(agents).toEqual(fixtureAgents);
     } finally {
       await close();
     }
@@ -108,14 +116,13 @@ describe("harness registry", () => {
       const scoped = (await (await app.request(`/v1/agents/info?project=${project.id}`)).json()) as Array<{
         id: string;
       }>;
-      expect(scoped.map((agent) => agent.id)).toEqual(["pstdio.workbench-fixture.harness.fake"]);
+      expect(scoped.map((agent) => agent.id)).toEqual(fixtureAgents.map((agent) => agent.id));
 
       // Globally both harnesses stay installed and listed.
       const globalInfo = (await (await app.request("/v1/agents/info")).json()) as Array<{ id: string }>;
-      expect(globalInfo.map((agent) => agent.id).sort()).toEqual([
-        "pstdio.harness-claude-code.harness.claude-code",
-        "pstdio.workbench-fixture.harness.fake",
-      ]);
+      expect(globalInfo.map((agent) => agent.id).sort()).toEqual(
+        ["pstdio.harness-claude-code.harness.claude-code", ...fixtureAgents.map((agent) => agent.id)].sort(),
+      );
 
       // Sessions in that project cannot use the disabled harness.
       const sessionRes = await app.request("/v1/sessions", {

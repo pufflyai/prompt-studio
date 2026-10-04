@@ -1,11 +1,17 @@
 import { defineRecipe } from "@chakra-ui/react";
 
+export const ticketTagStyle = {
+  bg: { _light: "bg.muted", _dark: "bg.subtle" },
+  color: "fg.muted",
+  _hover: { bg: { _light: "bg.subtle", _dark: "bg.hover" } },
+} as const;
+
 export const badgeRecipe = defineRecipe({
   className: "chakra-badge",
   base: {
     display: "inline-flex",
     alignItems: "center",
-    borderRadius: "9999px",
+    borderRadius: "pill",
     gap: "1",
     fontWeight: "medium",
     fontVariantNumeric: "tabular-nums",
@@ -14,6 +20,7 @@ export const badgeRecipe = defineRecipe({
   },
   variants: {
     variant: {
+      ticket: ticketTagStyle,
       solid: {
         bg: "colorPalette.solid",
         color: "colorPalette.contrast",

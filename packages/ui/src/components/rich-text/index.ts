@@ -7,7 +7,7 @@ export type {
   MarkdownSectionAnchor,
   MarkdownSectionNavigation,
 } from "./markdown-editor/plugins/markdown-section-navigation";
-export type { PromptEditorProps, PromptEditorRef, ReferenceItem } from "./prompt-input/prompt-input";
+export type { PromptCommand, PromptEditorProps, PromptEditorRef } from "./prompt-input/prompt-input";
 export { PromptEditor } from "./prompt-input/prompt-input";
 export { generateEditorStateFromString, getTextFromSerializedEditorState } from "./prompt-input/utils";
 export type {

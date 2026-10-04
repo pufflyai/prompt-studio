@@ -1,2 +1,1 @@
-export const INSERT_REFERENCE = "INSERT_REFERENCE";
 export const INSERT_BLOCK = "INSERT_BLOCK";

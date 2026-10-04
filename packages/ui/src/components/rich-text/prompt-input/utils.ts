@@ -17,18 +17,11 @@ export const $getTextContent = (root: RootNode) => {
 type SerializedNode = {
   type?: string;
   text?: string;
-  name?: string;
-  referenceId?: string;
   children?: SerializedNode[];
 };
 
 type SerializedRoot = {
   root?: SerializedNode;
-};
-
-const getReferenceMarker = (node: SerializedNode) => {
-  if (node.type !== "reference") return null;
-  return `#${node.name ?? node.referenceId ?? ""}`;
 };
 
 const shouldAppendParagraphBreak = (node: SerializedNode) => {
@@ -38,11 +31,6 @@ const shouldAppendParagraphBreak = (node: SerializedNode) => {
 const traverseSerializedNode = (node: SerializedNode): string => {
   if (node.type === "comment") {
     return "";
-  }
-
-  const referenceMarker = getReferenceMarker(node);
-  if (referenceMarker !== null) {
-    return referenceMarker;
   }
 
   let text = typeof node.text === "string" ? node.text : "";

@@ -112,6 +112,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0012 — Renderer Edit and Refresh Lifecycle](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
 - [0013 — Dashboard UI contributions](../references/extensions/0013-workbench-attachments.md)
 - [0014 — Extension API versioning](../references/extensions/0014-api-versioning.md)
+- [0015 — Harness commands and chat modes](../references/extensions/0015-harness-commands.md)
 
 ### SDK
 
@@ -142,6 +143,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0003 — PRD: Dashboard browser page titles](../requirements/dashboard/0003-page-titles.md)
 - [0004 — PRD: Dashboard Sessions](../requirements/dashboard/0004-sessions.md)
 - [0005 — PRD: Dashboard settings and folder projects](../requirements/dashboard/0005-settings.md)
+- [0006 — PRD: Composer modes and provider state](../requirements/dashboard/0006-composer-modes.md)
 
 ### Extensions
 

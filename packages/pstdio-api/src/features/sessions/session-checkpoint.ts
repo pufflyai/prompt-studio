@@ -6,6 +6,7 @@ type CheckpointDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService">;
 
 export const checkpointConversation = async (sessionId: string, entry: ActiveSession, deps: CheckpointDeps) => {
   if (entry.checkpointPromise) return entry.checkpointPromise;
+  await Promise.all(Array.from(entry.controlInvocations, (control) => control.done));
   const conversation = await entry.conversationReady;
   // The snapshot is taken after the last accepted patch, with no await in between.
   conversation.close();

@@ -219,7 +219,7 @@ const submitFollowUpMessage = (input: {
   });
   input.setPendingFollowUp(pending);
 
-  return new Promise<void>((resolve) =>
+  return new Promise<void>((resolve, reject) =>
     input.followUp.mutate(
       {
         sessionId: input.sessionId,
@@ -244,6 +244,10 @@ const submitFollowUpMessage = (input: {
           input.onQuestionResponseError?.();
           const failure = toSessionNotice(error ?? new Error("Could not send the follow-up."));
           input.setPendingFollowUp((current) => failPendingFollowUp(current, pending, failure));
+          if (input.questionResponse) {
+            reject(error ?? new Error("Could not send the answer."));
+            return;
+          }
           input.onSubmitted?.();
           resolve();
         },

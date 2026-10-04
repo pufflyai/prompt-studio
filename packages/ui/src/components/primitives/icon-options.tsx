@@ -28,6 +28,8 @@ import {
   Link,
   ListChecks,
   MessageSquare,
+  Pause,
+  Pencil,
   Play,
   Puzzle,
   Rocket,
@@ -42,6 +44,7 @@ import {
   Terminal,
   Ticket,
   Timer,
+  Trash2,
   Users,
   Workflow,
   Wrench,
@@ -145,6 +148,8 @@ export const optionIcons = [
   { value: "settings", label: "settings", icon: Settings },
 ] satisfies IconColorPickerIconOption[];
 
+const actionIcons: Record<string, ComponentType> = { pause: Pause, pencil: Pencil, "trash-2": Trash2 };
+
 export const getIconComponent = (
   name: string | null | undefined,
   iconOptions: readonly IconColorPickerIconOption[] = optionIcons,
@@ -154,5 +159,5 @@ export const getIconComponent = (
     .replace(/([a-zA-Z])([0-9])/g, "$1-$2")
     .toLowerCase();
   const entry = iconOptions.find((icon) => icon.value === normalizedName);
-  return entry?.icon ?? Circle;
+  return entry?.icon ?? actionIcons[normalizedName] ?? Circle;
 };

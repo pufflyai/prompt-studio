@@ -11,6 +11,8 @@ export const registerLiveQuestionSmokeTests = () => {
   for (const scenario of [
     { name: "answer", native: [["Hi"]], host: [["Blue"]] },
     { name: "skip", native: [], host: [] },
+    { name: "command answer", native: [["Hi"]], host: [["Blue"]] },
+    { name: "command skip", native: [], host: [] },
   ]) {
     test(`packaged host delivers a correlated ${scenario.name} to the live installed harness`, async () => {
       const root = mkdtempSync(join(tmpdir(), "packaged-live-question-"));
@@ -35,7 +37,7 @@ export const registerLiveQuestionSmokeTests = () => {
           join(sourcePath, "extension.ts"),
           `
         import { writeFileSync } from "node:fs";
-        export default { harnesses: [{
+        const harness = {
           id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker", capabilities: () => [],
           start(_ctx, input) {
             let finish;
@@ -59,9 +61,12 @@ export const registerLiveQuestionSmokeTests = () => {
               }
             };
           },
+          prepareOperation(_ctx, input, operation) {
+            return { execution: "exclusive", invoke: async channels => ({ kind: "started", session: harness.start(_ctx, { ...input, ...channels, prompt: operation.text }) }) };
+          },
           resume() { throw new Error("Reply replaced the run"); }, getMessages() { return []; },
           recoverMessages(_ctx, input) { return { kind: "recovered", messages: input.knownMessages }; }
-        }] };
+        }; export default { harnesses: [harness] };
       `,
         );
         const started = await startPackagedServe(root);
@@ -93,7 +98,9 @@ export const registerLiveQuestionSmokeTests = () => {
         const session = await request("/sessions", "POST", {
           project_id: project.id,
           title: "Ask",
-          prompt: "Ask",
+          ...(scenario.name.startsWith("command")
+            ? { operation: { kind: "command", text: "/plan Ask" } }
+            : { prompt: "Ask" }),
           agent: "test.question-smoke.harness.worker",
         });
         for (let attempt = 0; attempt < 50; attempt++) {
