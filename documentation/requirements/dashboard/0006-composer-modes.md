@@ -1,8 +1,8 @@
 # PRD: Composer modes and provider state
 
-Status: Proposed. Core tags and native controls are implemented in PS-459. Rich provider readback and verified composition remain capability-dependent.
+Status: Implemented in PS-459 after design approval. Rich provider readback and verified composition remain capability-dependent.
 
-Updated: 2026-10-03
+Updated: 2026-10-04
 
 ## Purpose
 
@@ -18,7 +18,16 @@ The [Pencil design system](../../../design/prompt-studio-design-system.pen) defi
 - `bNCZX`: provider details and unavailable status.
 - `FxIuM`: combinations and plan progress.
 - `bMVMu`: goal lifecycle and edge cases.
-- `WbrYo`: native plan approval in the question composer.
+- `WbrYo`: plan takeover with three immediate actions.
+- `kxEzD`: the existing native question form takes over the composer.
+- `OGZkR`: narrow plan toolbar with controls and actions on separate rows.
+- `oBiP5`: the draft returns after all pending items are handled.
+- `M3HQE1`: plan takeover in a full conversation, with the unsent draft saved.
+- `slnPm`: question takeover in a full conversation, with the unsent draft saved.
+- `eKREh`: question takeover using the user-edited `u3K8Hd` composer shell.
+- `o3x0e`: plan takeover using the user-edited `W1aYAe` composer shell.
+- `IK1YY`: the next independent async question appears after the first answer.
+- `k8PBtH`: the saved draft and attachment return after all pending requests finish.
 
 Follow the [shared design rules](../../../design/DESIGN.md). Send uses the existing primary IconButton; attach and model controls use ghost styling. Goal and Plan use the same subtle pill styling as ticket tags, at a matching 28 px height. Tags follow model parameters. Slash menus use shared Menu rows without leading icons or outer padding. Do not add status cards, argument dialogs or Reset to default.
 
@@ -85,13 +94,21 @@ Expose native explanations and task lists when the adapter returns them. A task 
 
 ## Approving a proposed plan
 
-Codex returns completed structured `plan` items in its native thread. While Plan mode is selected, the composer shows the shared LLM question form for the latest unapproved proposal. Keep the full plan in the conversation and native details. Ordinary messages such as “approved” do not change the native collaboration mode. Do not infer readiness from assistant prose, step progress or a completed turn without a proposal.
+Codex returns completed structured `plan` items in its native thread. While Plan mode is selected, show the latest unapproved proposal as a form that takes over the composer. Preserve any unsent draft and attachments until blocking requests finish. Keep the full plan in the conversation and native details. Ordinary messages such as “approved” do not change the native collaboration mode. Do not infer readiness from assistant prose, step progress or a completed turn without a proposal.
 
-The provider advertises a mode `confirmation` with the native revision ID and an available action ID. Offer Approve and implement and Keep planning choices. Selecting a choice does not dispatch it; use the existing Send button. Keep planning or Skip restores the ordinary editor without changing native state or the unsent draft. The Plan tag can reopen the decision. Reload reads the pending native proposal again; a new revision resets the selection and opens a fresh decision. A pending native LLM question takes priority and its answer follows the native question channel. Approval choices use the provider's advertised mode action instead.
+The provider advertises a mode `confirmation` with the native revision ID and an available action ID. Match `W1aYAe`: one compact toolbar with the Plan tag, the current session model as a read-only label and three one-click actions. Read the model from the harness confirmation metadata rather than showing a generic placeholder dropdown. Omit the label when native readback is unavailable; never substitute the model selected for a future turn. Approve and implement uses primary styling, Continue planning uses subtle styling and Skip uses ghost styling. Do not add a title, subtitle or radio choice followed by Send. Continue planning keeps Plan mode and dismisses this decision. Skip dismisses it for now. Both preserve the draft and make no native mutation. The Plan tag can reopen the decision. Reload reads the pending native proposal again; a new revision replaces only that pending item. Native questions precede a waiting plan decision, without interrupting an active form. Question answers follow their native question channel. Approval uses the provider's advertised mode action instead.
+
+Every blocking question or plan decision takes over the chat input, regardless of draft content. Keep the draft under its existing owner while the form is shown. Preserve its text, attachments, cursor, selection, text composition and queued edit state. Do not copy draft text into an answer field or submit draft attachments with a response. Switching forms must not turn an in-progress draft keystroke into an answer or approval action.
+
+Reuse the implemented question form shown in `u3K8Hd`. Match its label font, small text, rounded fieldset, legend position and spacing. Keep its steps, choices, conditional custom answer field, Skip and primary answer button. Question answers and custom answer text belong to the request rather than the chat draft. Its answer button remains disabled until required answers are present. Offer Skip only when the native request supports it. Multi-step questions keep their own progress and answer state.
+
+Show independent async questions one at a time in arrival order. New arrivals queue without replacing the active form or its answers. Each request retains its native identity and response channel. Existing question steps apply only to questions within one request; do not combine independent requests into those steps. Advance after the current response succeeds or a supported Skip completes. A failed response keeps the same form and answers. If the provider withdraws a request, remove that request and advance without sending a response. Rediscover pending native requests on reconnect and ignore duplicates by request identity.
+
+While a blocking form is shown, the saved chat draft cannot be sent. The question's primary button submits only its answers; the plan uses three immediate actions. Do not add explanatory subtitles or a second draft box. After the last blocking item is answered, handled, withdrawn or skipped, restore the saved draft and normal Send or Queue behavior subject to existing runtime availability. Do not automatically submit the draft. Keep queued edits separate.
 
 Approve and implement passes the displayed revision to the provider. Recheck native state and reject stale revisions. Codex starts one normal turn in the same native thread with `collaboration_mode: "default"` and the explicit prompt “Implement the approved plan.” Preserve the existing unsent draft and attachments. The extension stores only the approved revision ID because native history retains proposals without recording this approval decision. It never duplicates the plan text. Re-entering Plan mode must not offer the already approved revision again.
 
-Disable approval while the provider is busy or state is unavailable. Keep planning and Skip remain available when no dispatch is pending. A rejected dispatch keeps the question and selected choice with a closable conversation error; refresh before trying again. Approval never sends the unsent draft or consumes its attachments. Queued message edits also stay separate. After a native session starts, its failure belongs to the conversation and does not replay approval. Goal and plan implementation cannot be combined until the provider verifies that combination.
+Disable approval while the provider is busy or state is unavailable. Continue planning and Skip remain available when no dispatch is pending. During dispatch, disable repeated actions while retaining the saved draft. A rejected dispatch retains that form with a closable conversation error; refresh before trying again. A failed question answer retains its selections and custom answer text. Approval and question answers never send the unsent draft or consume its attachments. Queued message edits also stay separate. After a native session starts, its failure belongs to the conversation and does not replay approval. Goal and plan implementation cannot be combined until the provider verifies that combination.
 
 This confirmation path applies to Codex structured proposals. Claude's live `ExitPlanMode` permission request and OpenCode's agent selection keep their native paths. Providers without verified approval metadata receive no inferred approval question.
 

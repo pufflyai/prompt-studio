@@ -138,11 +138,11 @@ export const useCommandComposer = (
     attachments: SessionAttachment[],
     questionResponse?: ChatInputQuestionResponse,
   ) => {
+    if (questionResponse) return undefined;
     if (intent) {
-      if (questionResponse) throw new Error("Remove the draft tag before answering the agent's question.");
       return taggedCommandOperation(intent, text, selectedAgent, commands.state, attachments.length);
     }
-    if (questionResponse || !/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
+    if (!/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
     if (!commands.state)
       throw new Error(
         commands.loading

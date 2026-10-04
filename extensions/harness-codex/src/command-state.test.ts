@@ -38,7 +38,12 @@ test("Codex presents a native proposed plan as an explicit approval decision", (
   expect(state.modes[0]).toMatchObject({
     description: "Replace the duplicated controls.",
     state: "Awaiting approval",
-    confirmation: { id: "turn/proposal", title: "Approve plan", actionId: "implement", cancelLabel: "Keep planning" },
+    confirmation: {
+      id: "turn/proposal",
+      title: "Approve plan",
+      actionId: "implement",
+      cancelLabel: "Continue planning",
+    },
     actions: expect.arrayContaining([{ id: "implement", label: "Approve and implement" }]),
   });
 });

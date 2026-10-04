@@ -102,7 +102,8 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
         input.params?.collaboration_mode === "plan"
           ? await readCodexProposedPlan(worker.request, input.agentSessionId, approvedId)
           : undefined;
-      return codexCommandState(input, result.goal, plan);
+      const model = plan ? await worker.readModel(input.agentSessionId) : undefined;
+      return codexCommandState(input, result.goal, plan, model);
     },
     prepareOperation: (ctx, input, operation) => prepareCodexOperation(input, operation, deps.runtime, ctx),
     // Host-managed worktrees run without provider approvals.

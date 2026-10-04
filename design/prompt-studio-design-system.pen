@@ -1,5 +1,5 @@
 {
-  "version": "2.19",
+  "version": "2.20",
   "children": [
     {
       "type": "frame",
@@ -131442,8 +131442,8 @@
       "id": "WbrYo",
       "x": 8440,
       "y": 8001,
-      "name": "Chat Composer · Inline plan approval · PS-459",
-      "context": "Plan approval uses the existing LLM question pattern in the composer. No dialog, overlay or focus trap. Full native plan remains in the conversation. Choose Approve and implement or Keep planning, then Send.",
+      "name": "Chat Composer · Plan takeover · PS-459",
+      "context": "Proposed PS-459: pending questions and plan forms always take over the composer. Preserve existing draft text, attachments, editor selection and queued edits separately. Present asynchronous questions one at a time in arrival order without replacing an active answer. Native questions precede a waiting plan decision. Restore the draft after the final blocking request; never submit it automatically.",
       "theme": {
         "mode": "dark"
       },
@@ -131464,7 +131464,7 @@
           "fill": "$ds-fg",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Plan ready · approve and implement",
+          "content": "Plan ready · composer takeover",
           "fontFamily": "$font-heading",
           "fontSize": 24,
           "fontWeight": "600"
@@ -131476,7 +131476,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Review the native proposed plan in the conversation. The composer asks for a decision using the shared question choices and Send control. The unsent draft returns after the decision.",
+          "content": "The plan form takes over the composer. The draft and attachments are saved until pending requests are handled.",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
@@ -131484,7 +131484,7 @@
         {
           "type": "frame",
           "id": "BZJ8B",
-          "name": "Conversation and inline question",
+          "name": "Conversation and pending decision",
           "width": "fill_container",
           "height": 540,
           "fill": "$ds-bg-subtle",
@@ -131506,70 +131506,87 @@
             },
             {
               "type": "frame",
-              "id": "x4xrwM",
-              "name": "Plan approval question composer",
-              "context": "ChatInput (@pstdio/ui). Editor above one toolbar row; attachments are optional. All composer controls and mode tags are 28px high. Root padding and gap are 8px. Toolbar: Attach, model parameter controls, optional closable mode tags, spacer, Send. Attach and parameter buttons use ghost styling. Send uses the implemented primary IconButton with a 16px arrow or filled pause. Mode tags use the shared subtle ticket tag pill styling at 28px. Send swaps arrow-up for pause while streaming. Preserve disabled control styling. Model selection uses the shared SelectorTrigger with ghost styling; the harness belongs in its menu header. Mode tags sit immediately right of all model parameters and use cmp/ComposerModeTag. Selecting /goal at the caret removes only the slash fragment and keeps the objective text. Close removes a draft intent or requests native clear/leave for a submitted mode. Keep the draft and retain native state until acknowledgement. Submitted goal tags keep the objective visible; details and actions depend on provider capabilities. Multiple new intents require verified composition. Use the shared Menu surface with icon-free SearchableMenuItem rows for slash completion. Do not show mode status cards or argument dialogs.",
+              "id": "QpW1O",
+              "name": "Workspace composer shell",
               "width": "fill_container",
-              "fill": "$ds-bg",
+              "fill": "$ds-bg-subtle",
               "cornerRadius": 4,
               "stroke": "$ds-border",
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 8,
-              "padding": 8,
+              "gap": 4,
+              "padding": 4,
               "children": [
                 {
                   "type": "frame",
-                  "id": "kzbBM",
-                  "name": "Approval question",
+                  "id": "wilfh",
+                  "name": "Release workflow workspace",
                   "width": "fill_container",
-                  "layout": "vertical",
-                  "gap": 12,
                   "padding": [
-                    0,
-                    0,
+                    6,
                     8,
-                    0
+                    4,
+                    8
                   ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
                   "children": [
                     {
-                      "type": "text",
-                      "id": "wSZVT",
-                      "name": "Question title",
-                      "fill": "$ds-fg",
-                      "content": "Approve plan",
-                      "fontFamily": "$font-body",
-                      "fontSize": 14,
-                      "fontWeight": "600"
-                    },
-                    {
-                      "id": "bOgMn",
-                      "type": "ref",
-                      "ref": "KPHF7",
-                      "name": "Approve and implement",
-                      "theme": {
-                        "radio": "on"
-                      },
-                      "descendants": {
-                        "aAkIM": {
-                          "content": "Approve and implement",
-                          "fontSize": 14
+                      "type": "frame",
+                      "id": "n9yOom",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "nz7E3",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "t6VbyB",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "vmXPf",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
                         }
-                      }
+                      ]
                     },
                     {
-                      "id": "vPRoK",
+                      "id": "Piuo3",
                       "type": "ref",
-                      "ref": "KPHF7",
-                      "name": "Keep planning",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
                       "theme": {
-                        "radio": "off"
+                        "btn": "ghost",
+                        "size": "2xs"
                       },
                       "descendants": {
-                        "aAkIM": {
-                          "content": "Keep planning",
-                          "fontSize": 14
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
                         }
                       }
                     }
@@ -131577,123 +131594,150 @@
                 },
                 {
                   "type": "frame",
-                  "id": "V7GeBd",
-                  "name": "Question toolbar",
+                  "id": "BYB4y",
+                  "name": "Active request occupies composer",
                   "width": "fill_container",
-                  "gap": 6,
-                  "alignItems": "center",
+                  "layout": "vertical",
+                  "gap": 8,
                   "children": [
                     {
-                      "id": "UO3c0",
-                      "type": "ref",
-                      "ref": "nvvgg",
-                      "name": "Attach",
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "xs"
-                      },
-                      "width": 28,
-                      "height": 28,
-                      "strokeWidth": 0,
-                      "fill": "$btn-fill",
-                      "descendants": {
-                        "k7mgm": {
-                          "icon": "paperclip",
-                          "height": 14,
-                          "width": 14
-                        }
-                      }
-                    },
-                    {
-                      "id": "L0LBeV",
-                      "type": "ref",
-                      "ref": "clw66",
-                      "name": "Model",
-                      "height": 28,
-                      "stroke": "$ds-border",
-                      "strokeWidth": 0,
-                      "strokeAlignment": "inner",
-                      "theme": {
-                        "trig": "default",
-                        "btn": "ghost",
-                        "size": "xs"
-                      },
-                      "fill": "$btn-fill",
-                      "descendants": {
-                        "xr1ec": {
-                          "enabled": false
-                        },
-                        "l7dix": {
-                          "padding": 0
-                        },
-                        "sefGB": {
-                          "content": "Opus 4.8",
-                          "fontSize": 12,
-                          "fill": "$btn-fg"
-                        },
-                        "Tpujq": {
-                          "fill": "$btn-fg"
-                        }
-                      }
-                    },
-                    {
-                      "id": "wORFt",
-                      "type": "ref",
-                      "ref": "aQk0l",
-                      "name": "Plan tag",
-                      "height": 28,
-                      "descendants": {
-                        "wLHjb": {
-                          "content": "Plan"
-                        }
-                      }
-                    },
-                    {
                       "type": "frame",
-                      "id": "DgDpi",
-                      "name": "Spacer",
+                      "id": "oMcvi",
+                      "name": "Active plan decision · draft preserved",
+                      "context": "Match user-edited W1aYAe: primary Approve and implement, subtle Continue planning and ghost Skip. No title or subtitle. Each action handles only this decision. Retain the saved draft until every blocking request is handled.",
                       "width": "fill_container",
-                      "height": 28
-                    },
-                    {
-                      "id": "JuKLO",
-                      "type": "ref",
-                      "ref": "c24zV7",
-                      "name": "Skip decision",
-                      "height": 28,
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "xs"
-                      },
-                      "descendants": {
-                        "DsEVd": {
-                          "enabled": false
-                        },
-                        "Hf4GT": {
-                          "content": "Skip"
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WaRkn",
+                          "name": "Message toolbar",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "TAM10",
+                              "type": "ref",
+                              "ref": "aQk0l",
+                              "name": "Plan tag",
+                              "height": 28,
+                              "descendants": {
+                                "wLHjb": {
+                                  "content": "Plan"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "BQaZx",
+                              "name": "Running model · read-only",
+                              "context": "Display the current session model from the harness, including while the plan form occupies the composer. gpt-5.5 is the example model in this conversation. This is read-only, with no dropdown or no-op click action.",
+                              "height": 28,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rXUAi",
+                                  "name": "Current model name",
+                                  "fill": "$ds-fg",
+                                  "content": "gpt-5.5",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MI6GS",
+                              "name": "Plan actions",
+                              "height": 28,
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "id": "l2nA6a",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Skip question",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "xs"
+                                  },
+                                  "x": 0,
+                                  "y": 0,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Skip"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "vMQuo",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Continue planning",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "subtle",
+                                    "size": "xs"
+                                  },
+                                  "x": 45,
+                                  "y": 0,
+                                  "layout": "horizontal",
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Continue planning"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "vlCdQ",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Approve and implement",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "primary",
+                                    "size": "xs"
+                                  },
+                                  "x": 155,
+                                  "y": 0,
+                                  "layout": "horizontal",
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Approve and implement"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
                         }
-                      }
-                    },
-                    {
-                      "id": "UInbE",
-                      "type": "ref",
-                      "ref": "nvvgg",
-                      "name": "Send decision",
-                      "theme": {
-                        "btn": "primary",
-                        "size": "xs"
-                      },
-                      "width": 28,
-                      "height": 28,
-                      "strokeWidth": 0,
-                      "fill": "$btn-fill",
-                      "descendants": {
-                        "k7mgm": {
-                          "icon": "arrow-up",
-                          "height": 16,
-                          "width": 16
-                        }
-                      }
+                      ]
                     }
                   ]
                 }
@@ -131708,10 +131752,3833 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Send validates the displayed native revision. Approval leaves Plan mode and starts one normal turn in the same thread. Keep planning or Skip restores the draft without native mutation; reopen from Plan details. Unavailable state disables approval. Dispatch failures retain the question and selection. Native LLM questions take priority. Full plan stays in history. Attachments and queued edits remain intact.",
+          "content": "Keep the unsent draft, selection, attachments and queued edits separate from pending requests. Questions appear one at a time in arrival order. New arrivals do not replace the current answer. Restore the draft after the last blocking item; never send it automatically.",
           "fontFamily": "$font-body",
           "fontSize": 14,
           "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "kxEzD",
+      "x": 9720,
+      "y": 8001,
+      "name": "Chat Composer · Question takeover · PS-459",
+      "context": "Proposed PS-459: pending questions and plan forms always take over the composer. Preserve existing draft text, attachments, editor selection and queued edits separately. Present asynchronous questions one at a time in arrival order without replacing an active answer. Native questions precede a waiting plan decision. Restore the draft after the final blocking request; never submit it automatically.",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1200,
+      "height": 980,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        72
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "BvRXO",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Agent question · composer takeover",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "u5FqW2",
+          "name": "Approval rule",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "The existing question form takes over the composer. Async questions appear one after another; the draft is preserved.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "mXzCS",
+          "name": "Conversation and pending decision",
+          "width": "fill_container",
+          "height": 540,
+          "fill": "$ds-bg-subtle",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "veBIu",
+              "name": "Native plan in conversation",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Before I finish the plan, which validation should I run?",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "gPV78",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EM3ol",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "v78lY",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LrsAb",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "M2EGTL",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "z4Krg",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "TnyEz",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iT5Hm",
+                  "name": "Active request occupies composer",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "EpZm1",
+                      "name": "Active question form · draft preserved",
+                      "context": "Use the user-edited u3K8Hd question form. This active request takes over the composer. Saved chat draft text and attachments stay separate. Async questions queue by native request identity and appear one at a time. Preserve current answer selections when another request arrives.",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "tEpZ5",
+                          "name": "QuestionPromptControls · existing layout",
+                          "context": "Measured from implementation: Onest 12px legend/choice labels, 18px line height, 20px radios with 10px label gap, choices spaced 8px, 12px field padding, 8px fieldset corners, 12px control bottom padding. Preserve native question steps and Other behavior.",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            9,
+                            0,
+                            12,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "VJWQA",
+                              "name": "Existing question fieldset",
+                              "width": "fill_container",
+                              "fill": "#00000000",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": [
+                                21,
+                                12,
+                                12,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "id": "HC1OY",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Browser checks option",
+                                  "theme": {
+                                    "radio": "on"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Browser checks",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "Gemk0",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Native tests option",
+                                  "theme": {
+                                    "radio": "off"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Native tests",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "L8rOvp",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Other option",
+                                  "theme": {
+                                    "radio": "off"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Other",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "e43Vf",
+                              "layoutPosition": "absolute",
+                              "x": 12,
+                              "y": 0,
+                              "name": "Existing fieldset legend",
+                              "fill": "$ds-bg",
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Xbq2A",
+                                  "name": "Question",
+                                  "fill": "$ds-fg",
+                                  "content": "Which validation should I run?",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "O8jp4",
+                          "name": "Message toolbar",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "A0j6V",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Attach",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "width": 28,
+                              "height": 28,
+                              "strokeWidth": 0,
+                              "fill": "$btn-fill",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "paperclip",
+                                  "height": 14,
+                                  "width": 14
+                                }
+                              }
+                            },
+                            {
+                              "id": "YhckY",
+                              "type": "ref",
+                              "ref": "clw66",
+                              "name": "Model",
+                              "height": 28,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 0,
+                              "strokeAlignment": "inner",
+                              "theme": {
+                                "trig": "default",
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "fill": "$btn-fill",
+                              "descendants": {
+                                "xr1ec": {
+                                  "enabled": false
+                                },
+                                "l7dix": {
+                                  "padding": 0
+                                },
+                                "sefGB": {
+                                  "content": "gpt-5.5",
+                                  "fontSize": 12,
+                                  "fill": "$btn-fg"
+                                },
+                                "Tpujq": {
+                                  "fill": "$btn-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "GW5eL",
+                              "type": "ref",
+                              "ref": "aQk0l",
+                              "name": "Plan tag",
+                              "height": 28,
+                              "descendants": {
+                                "wLHjb": {
+                                  "content": "Plan"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "dhoSU",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 28
+                            },
+                            {
+                              "id": "oQLsu",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Skip question",
+                              "height": 28,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Skip"
+                                }
+                              }
+                            },
+                            {
+                              "id": "cNS58",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Send answer · original primary control",
+                              "theme": {
+                                "btn": "primary",
+                                "size": "xs"
+                              },
+                              "width": 28,
+                              "height": 28,
+                              "context": "Submit only the active native question answers, retaining the saved chat draft and attachments.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "arrow-up",
+                                  "width": 16,
+                                  "height": 16
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "laGdp",
+          "name": "Native semantics and recovery",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Keep the original question form and its answer state. A completed or skipped question reveals the next queued request. Failed answers retain their selections and custom text. Restore the untouched draft and attachments after all pending items are handled.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "OGZkR",
+      "x": 11000,
+      "y": 8001,
+      "name": "Chat Composer · Narrow plan takeover · PS-459",
+      "context": "Proposed PS-459: pending questions and plan forms always take over the composer. Preserve existing draft text, attachments, editor selection and queued edits separately. Present asynchronous questions one at a time in arrival order without replacing an active answer. Native questions precede a waiting plan decision. Restore the draft after the final blocking request; never submit it automatically.",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 520,
+      "height": 960,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        32,
+        24
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "kwoAI",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Plan ready · narrow composer",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "PgMhW",
+          "name": "Approval rule",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "The plan form takes over the composer. The draft is preserved until pending requests are handled.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "fH8kH",
+          "name": "Conversation and pending decision",
+          "width": "fill_container",
+          "height": 640,
+          "fill": "$ds-bg-subtle",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "AuKSl",
+              "name": "Native plan in conversation",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Update the release workflow\n\n1. Keep tags compact.\n2. Validate in isolation.",
+              "fontFamily": "$font-body",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "r4ghB",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "k1SCHt",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "k1fApr",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "gSh9A",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "UqOeQ",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ilPyj",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "p1udbx",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "fWsTO",
+                  "name": "Active request occupies composer",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "y4XmGD",
+                      "name": "Active plan decision · draft preserved",
+                      "context": "Match user-edited W1aYAe: primary Approve and implement, subtle Continue planning and ghost Skip. No title or subtitle. Each action handles only this decision. Retain the saved draft until every blocking request is handled.",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "j8IOQ",
+                          "name": "Message toolbar",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "justifyContent": "space_between",
+                          "alignItems": "end",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "u1YSn",
+                              "name": "Plan and model controls",
+                              "width": "fill_container",
+                              "justifyContent": "space_between",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "Es6z8",
+                                  "type": "ref",
+                                  "ref": "aQk0l",
+                                  "name": "Plan tag",
+                                  "height": 28,
+                                  "descendants": {
+                                    "wLHjb": {
+                                      "content": "Plan"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "YymQQ",
+                                  "name": "Running model · read-only",
+                                  "context": "Display the current session model from the harness, including while the plan form occupies the composer. gpt-5.5 is the example model in this conversation. This is read-only, with no dropdown or no-op click action.",
+                                  "height": 28,
+                                  "padding": [
+                                    0,
+                                    8
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "k2lc4N",
+                                      "name": "Current model name",
+                                      "fill": "$ds-fg",
+                                      "content": "gpt-5.5",
+                                      "lineHeight": 1.5,
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Akg6o",
+                              "name": "Plan actions",
+                              "height": 28,
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "id": "o0RCJy",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Skip question",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "xs"
+                                  },
+                                  "x": 0,
+                                  "y": 0,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Skip"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "sVK5a",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Continue planning",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "subtle",
+                                    "size": "xs"
+                                  },
+                                  "x": 45,
+                                  "y": 0,
+                                  "layout": "horizontal",
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Continue planning"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "ZKkMJ",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Approve and implement",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "primary",
+                                    "size": "xs"
+                                  },
+                                  "x": 155,
+                                  "y": 0,
+                                  "layout": "horizontal",
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Approve and implement"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "C2dnE0",
+          "name": "Native semantics and recovery",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Keep the draft and attachments while the form occupies the composer. Use the same three direct plan actions at narrow widths. Questions appear one at a time. Restore the draft after the last pending item; never send it automatically.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "oBiP5",
+      "x": 11600,
+      "y": 8001,
+      "name": "Chat Composer · Draft after pending item · PS-459",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1200,
+      "height": 500,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        72
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "u0lJeO",
+          "name": "Resolved title",
+          "fill": "$ds-fg",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "After Continue planning · draft untouched",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "P0eXV",
+          "name": "Resolved explanation",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "All pending items are handled. Plan mode stays selected. The saved draft, cursor and attachments return.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "MSHR8",
+          "name": "Preserved draft · normal Send",
+          "context": "Draft remains mounted, visible and editable. Preserve text, selection, cursor, composition, attachments and any queued edit. This Send only sends the draft; never an answer or approval. Disable it while any unresolved question or decision exists. Never send the draft automatically when the last pending item completes.",
+          "width": "fill_container",
+          "fill": "$ds-bg",
+          "cornerRadius": 4,
+          "stroke": "$ds-border",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "ga8rI",
+              "name": "Draft attachments · preserved",
+              "width": "fill_container",
+              "gap": 4,
+              "children": [
+                {
+                  "id": "YsGEo",
+                  "type": "ref",
+                  "ref": "kNQoL",
+                  "name": "release-notes.md · draft attachment",
+                  "descendants": {
+                    "XgLPG": {
+                      "content": "release-notes.md"
+                    },
+                    "n6amuf": {
+                      "content": "4 KB"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "AJOtY",
+              "name": "Draft editor · stays editable",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                4,
+                0
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "lBCnp",
+                  "name": "Unsent message",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Also update the release notes and include the migration steps.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "hKVwN",
+                  "name": "Editing cursor",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "I am still writing this message… |",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "nkxTR",
+              "name": "Message toolbar",
+              "width": "fill_container",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "V8OYxt",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Attach",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "xs"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "strokeWidth": 0,
+                  "fill": "$btn-fill",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "paperclip",
+                      "height": 14,
+                      "width": 14
+                    }
+                  }
+                },
+                {
+                  "id": "e8Cft",
+                  "type": "ref",
+                  "ref": "clw66",
+                  "name": "Model",
+                  "height": 28,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 0,
+                  "strokeAlignment": "inner",
+                  "theme": {
+                    "trig": "default",
+                    "btn": "ghost",
+                    "size": "xs"
+                  },
+                  "fill": "$btn-fill",
+                  "descendants": {
+                    "xr1ec": {
+                      "enabled": false
+                    },
+                    "l7dix": {
+                      "padding": 0
+                    },
+                    "sefGB": {
+                      "content": "Opus 4.8",
+                      "fontSize": 12,
+                      "fill": "$btn-fg"
+                    },
+                    "Tpujq": {
+                      "fill": "$btn-fg"
+                    }
+                  }
+                },
+                {
+                  "id": "C1tnn",
+                  "type": "ref",
+                  "ref": "aQk0l",
+                  "name": "Plan tag",
+                  "height": 28,
+                  "descendants": {
+                    "wLHjb": {
+                      "content": "Plan"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "gtLYP",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": 28
+                },
+                {
+                  "id": "wtl5T",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Send draft · enabled",
+                  "theme": {
+                    "btn": "primary",
+                    "size": "xs",
+                    "btn-interaction": "default"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "strokeWidth": 0,
+                  "fill": "$btn-fill",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "arrow-up",
+                      "height": 16,
+                      "width": 16
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "B2j98P",
+          "name": "No auto submission rule",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Nothing is sent automatically. After the last pending item, restore normal Send / Queue behavior. Continue planning and Skip preserve the draft; skipped plan decisions can be reopened from the Plan tag.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "M3HQE1",
+      "x": 12880,
+      "y": 8001,
+      "name": "Conversation · Plan takeover with saved draft · PS-459",
+      "context": "Proposed PS-459: pending questions and plan forms always take over the composer. Preserve existing draft text, attachments, editor selection and queued edits separately. Present asynchronous questions one at a time in arrival order without replacing an active answer. Native questions precede a waiting plan decision. Restore the draft after the final blocking request; never submit it automatically.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "yzRPV",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "zE6aT",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "VY2wk",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "dd7QN",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "b3S5JG",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "ron3r",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "SbvTh",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "Here is the proposed plan:\n\n1. Replace the duplicate picker with slash commands.\n2. Keep Goal and Plan tags compact.\n3. Validate native state in an isolated workspace.\n\nThe plan is ready for your review."
+                    },
+                    "p3bQE": {
+                      "content": "19:42"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "G11E1Q",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "BorYf",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Qhypq",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ni5AC",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "w2qdp",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "cstkY",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "HkzkA",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "QuZ2I",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "t6RIoe",
+                  "name": "Active request occupies composer",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "O59fC",
+                      "name": "Active plan decision · draft preserved",
+                      "context": "Match user-edited W1aYAe: primary Approve and implement, subtle Continue planning and ghost Skip. No title or subtitle. Each action handles only this decision. Retain the saved draft until every blocking request is handled.",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "JMhKJ",
+                          "name": "Message toolbar",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "S0r6to",
+                              "type": "ref",
+                              "ref": "aQk0l",
+                              "name": "Plan tag",
+                              "height": 28,
+                              "descendants": {
+                                "wLHjb": {
+                                  "content": "Plan"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "w7wOK",
+                              "name": "Running model · read-only",
+                              "context": "Display the current session model from the harness, including while the plan form occupies the composer. gpt-5.5 is the example model in this conversation. This is read-only, with no dropdown or no-op click action.",
+                              "height": 28,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "UtOZb",
+                                  "name": "Current model name",
+                                  "fill": "$ds-fg",
+                                  "content": "gpt-5.5",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HvXR2",
+                              "name": "Plan actions",
+                              "height": 28,
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "id": "W78i64",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Skip question",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "xs"
+                                  },
+                                  "x": 0,
+                                  "y": 0,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Skip"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "ZfNfh",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Continue planning",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "subtle",
+                                    "size": "xs"
+                                  },
+                                  "x": 45,
+                                  "y": 0,
+                                  "layout": "horizontal",
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Continue planning"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "n3FPU",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Approve and implement",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "primary",
+                                    "size": "xs"
+                                  },
+                                  "x": 155,
+                                  "y": 0,
+                                  "layout": "horizontal",
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Approve and implement"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "slnPm",
+      "x": 13960,
+      "y": 8001,
+      "name": "Conversation · Question takeover with saved draft · PS-459",
+      "context": "Proposed PS-459: pending questions and plan forms always take over the composer. Preserve existing draft text, attachments, editor selection and queued edits separately. Present asynchronous questions one at a time in arrival order without replacing an active answer. Native questions precede a waiting plan decision. Restore the draft after the final blocking request; never submit it automatically.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "OPWiO",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "zUGeK",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "UD0fK",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "EbB9v",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "VNpQr",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "dD0l2",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "Q5YFlc",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "Before I finish the plan, which validation should I run?"
+                    },
+                    "p3bQE": {
+                      "content": "19:42"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "DgYvn",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "u0XNX",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "OksFk",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "se38U",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "uluz9",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "nN3vq",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Pz4yp",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "YZwYc",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "dyHcG",
+                  "name": "Active request occupies composer",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "M19XJ",
+                      "name": "Active question form · draft preserved",
+                      "context": "Use the user-edited u3K8Hd question form. This active request takes over the composer. Saved chat draft text and attachments stay separate. Async questions queue by native request identity and appear one at a time. Preserve current answer selections when another request arrives.",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "comxx",
+                          "name": "QuestionPromptControls · existing layout",
+                          "context": "Measured from implementation: Onest 12px legend/choice labels, 18px line height, 20px radios with 10px label gap, choices spaced 8px, 12px field padding, 8px fieldset corners, 12px control bottom padding. Preserve native question steps and Other behavior.",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            9,
+                            0,
+                            12,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "jhA7A",
+                              "name": "Existing question fieldset",
+                              "width": "fill_container",
+                              "fill": "#00000000",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": [
+                                21,
+                                12,
+                                12,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "id": "NeIgH",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Browser checks option",
+                                  "theme": {
+                                    "radio": "on"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Browser checks",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "UGdC0",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Native tests option",
+                                  "theme": {
+                                    "radio": "off"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Native tests",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "w9Xm9H",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Other option",
+                                  "theme": {
+                                    "radio": "off"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Other",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HOhYn",
+                              "layoutPosition": "absolute",
+                              "x": 12,
+                              "y": 0,
+                              "name": "Existing fieldset legend",
+                              "fill": "$ds-bg",
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "VY6HQ",
+                                  "name": "Question",
+                                  "fill": "$ds-fg",
+                                  "content": "Which validation should I run?",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "bKEEX",
+                          "name": "Message toolbar",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "R7ObMZ",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Attach",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "width": 28,
+                              "height": 28,
+                              "strokeWidth": 0,
+                              "fill": "$btn-fill",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "paperclip",
+                                  "height": 14,
+                                  "width": 14
+                                }
+                              }
+                            },
+                            {
+                              "id": "IbUQ3",
+                              "type": "ref",
+                              "ref": "clw66",
+                              "name": "Model",
+                              "height": 28,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 0,
+                              "strokeAlignment": "inner",
+                              "theme": {
+                                "trig": "default",
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "fill": "$btn-fill",
+                              "descendants": {
+                                "xr1ec": {
+                                  "enabled": false
+                                },
+                                "l7dix": {
+                                  "padding": 0
+                                },
+                                "sefGB": {
+                                  "content": "gpt-5.5",
+                                  "fontSize": 12,
+                                  "fill": "$btn-fg"
+                                },
+                                "Tpujq": {
+                                  "fill": "$btn-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "r0zey",
+                              "type": "ref",
+                              "ref": "aQk0l",
+                              "name": "Plan tag",
+                              "height": 28,
+                              "descendants": {
+                                "wLHjb": {
+                                  "content": "Plan"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "n5TRo",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 28
+                            },
+                            {
+                              "id": "fVUyI",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Skip question",
+                              "height": 28,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Skip"
+                                }
+                              }
+                            },
+                            {
+                              "id": "U4ZV1",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Send answer · original primary control",
+                              "theme": {
+                                "btn": "primary",
+                                "size": "xs"
+                              },
+                              "width": 28,
+                              "height": 28,
+                              "context": "Submit only the active native question answers, retaining the saved chat draft and attachments.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "arrow-up",
+                                  "width": 16,
+                                  "height": 16
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "eKREh",
+      "x": 15040,
+      "y": 8001,
+      "name": "Conversation · Question takeover · PS-459",
+      "context": "Proposed PS-459: pending questions and plan forms always take over the composer. Preserve existing draft text, attachments, editor selection and queued edits separately. Present asynchronous questions one at a time in arrival order without replacing an active answer. Native questions precede a waiting plan decision. Restore the draft after the final blocking request; never submit it automatically.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "Whxi9",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "rvRYf",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "TWzjt",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "C25jA",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "X4buoV",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "G9iUd1",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "g0srrN",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "Before I finish the plan, which validation should I run?"
+                    },
+                    "p3bQE": {
+                      "content": "19:42"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "zTlIK",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "u3K8Hd",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "eElCN",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "aQDPI",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "j9wWWa",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "TWATb",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "NkTbB",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "oMykj",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "D3ye7C",
+                  "name": "Active request occupies composer",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "S39px",
+                      "name": "Active question form · draft preserved",
+                      "context": "Use the user-edited u3K8Hd question form. This active request takes over the composer. Saved chat draft text and attachments stay separate. Async questions queue by native request identity and appear one at a time. Preserve current answer selections when another request arrives.",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "a1Pjzs",
+                          "name": "QuestionPromptControls · existing layout",
+                          "context": "Measured from implementation: Onest 12px legend/choice labels, 18px line height, 20px radios with 10px label gap, choices spaced 8px, 12px field padding, 8px fieldset corners, 12px control bottom padding. Preserve native question steps and Other behavior.",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            9,
+                            0,
+                            12,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "ty8DR",
+                              "name": "Existing question fieldset",
+                              "width": "fill_container",
+                              "fill": "#00000000",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": [
+                                21,
+                                12,
+                                12,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "id": "UQCaI",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Browser checks option",
+                                  "theme": {
+                                    "radio": "on"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Browser checks",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "WVp5Q",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Native tests option",
+                                  "theme": {
+                                    "radio": "off"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Native tests",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "x2IzS",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Other option",
+                                  "theme": {
+                                    "radio": "off"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Other",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Qt9Xc",
+                              "layoutPosition": "absolute",
+                              "x": 12,
+                              "y": 0,
+                              "name": "Existing fieldset legend",
+                              "fill": "$ds-bg",
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Ttoy5",
+                                  "name": "Question",
+                                  "fill": "$ds-fg",
+                                  "content": "Which validation should I run?",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l4Eyaw",
+                          "name": "Message toolbar",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "IwpD5",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Attach",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "width": 28,
+                              "height": 28,
+                              "strokeWidth": 0,
+                              "fill": "$btn-fill",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "paperclip",
+                                  "height": 14,
+                                  "width": 14
+                                }
+                              }
+                            },
+                            {
+                              "id": "J8Rwup",
+                              "type": "ref",
+                              "ref": "clw66",
+                              "name": "Model",
+                              "height": 28,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 0,
+                              "strokeAlignment": "inner",
+                              "theme": {
+                                "trig": "default",
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "fill": "$btn-fill",
+                              "descendants": {
+                                "xr1ec": {
+                                  "enabled": false
+                                },
+                                "l7dix": {
+                                  "padding": 0
+                                },
+                                "sefGB": {
+                                  "content": "gpt-5.5",
+                                  "fontSize": 12,
+                                  "fill": "$btn-fg"
+                                },
+                                "Tpujq": {
+                                  "fill": "$btn-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "y8Moo",
+                              "type": "ref",
+                              "ref": "aQk0l",
+                              "name": "Plan tag",
+                              "height": 28,
+                              "descendants": {
+                                "wLHjb": {
+                                  "content": "Plan"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Y3kymC",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 28
+                            },
+                            {
+                              "id": "rMpTY",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Skip question",
+                              "height": 28,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Skip"
+                                }
+                              }
+                            },
+                            {
+                              "id": "KwZEp",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Send answer · original primary control",
+                              "theme": {
+                                "btn": "primary",
+                                "size": "xs"
+                              },
+                              "width": 28,
+                              "height": 28,
+                              "context": "Submit only the active native question answers, retaining the saved chat draft and attachments.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "arrow-up",
+                                  "width": 16,
+                                  "height": 16
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "o3x0e",
+      "x": 16120,
+      "y": 8001,
+      "name": "Conversation · Plan takeover · PS-459",
+      "context": "Proposed PS-459: pending questions and plan forms always take over the composer. Preserve existing draft text, attachments, editor selection and queued edits separately. Present asynchronous questions one at a time in arrival order without replacing an active answer. Native questions precede a waiting plan decision. Restore the draft after the final blocking request; never submit it automatically.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "nfeEF",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "Dd4bJ",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "QPkiA",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "tOGBc",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "D3pdgR",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "rn6qT",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "yA6ch",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "Here is the proposed plan:\n\n1. Replace the duplicate picker with slash commands.\n2. Keep Goal and Plan tags compact.\n3. Validate native state in an isolated workspace.\n\nThe plan is ready for your review."
+                    },
+                    "p3bQE": {
+                      "content": "19:42"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "o9LvF",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "cdz1l",
+              "name": "Immediate plan actions",
+              "width": "fill_container",
+              "height": "fit_content(28)",
+              "gap": 4,
+              "alignItems": "center"
+            },
+            {
+              "type": "frame",
+              "id": "bwyNR",
+              "name": "Frame 1",
+              "width": "fit_content(295)",
+              "height": "fit_content(81)",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "group",
+                  "id": "m6EGU",
+                  "x": 10,
+                  "y": 10
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "W1aYAe",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uAot5",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "X0AGfj",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "XEQBE",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "apBKN",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "SjzIs",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "vdpEN",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "H55kZX",
+                  "name": "Active request occupies composer",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "l1XGo7",
+                      "name": "Active plan decision · draft preserved",
+                      "context": "Match user-edited W1aYAe: primary Approve and implement, subtle Continue planning and ghost Skip. No title or subtitle. Each action handles only this decision. Retain the saved draft until every blocking request is handled.",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ecavl",
+                          "name": "Message toolbar",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "eT42u",
+                              "type": "ref",
+                              "ref": "aQk0l",
+                              "name": "Plan tag",
+                              "height": 28,
+                              "descendants": {
+                                "wLHjb": {
+                                  "content": "Plan"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "zqMIM",
+                              "name": "Running model · read-only",
+                              "context": "Display the current session model from the harness, including while the plan form occupies the composer. gpt-5.5 is the example model in this conversation. This is read-only, with no dropdown or no-op click action.",
+                              "height": 28,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "GV83d",
+                                  "name": "Current model name",
+                                  "fill": "$ds-fg",
+                                  "content": "gpt-5.5",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "gxo32",
+                              "name": "Plan actions",
+                              "height": 28,
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "id": "Csq19",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Skip question",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "xs"
+                                  },
+                                  "x": 0,
+                                  "y": 0,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Skip"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "VRRFN",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Continue planning",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "subtle",
+                                    "size": "xs"
+                                  },
+                                  "x": 45,
+                                  "y": 0,
+                                  "layout": "horizontal",
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Continue planning"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "B6AA9R",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Approve and implement",
+                                  "height": 28,
+                                  "theme": {
+                                    "btn": "primary",
+                                    "size": "xs"
+                                  },
+                                  "x": 155,
+                                  "y": 0,
+                                  "layout": "horizontal",
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Approve and implement"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "IK1YY",
+      "x": 17200,
+      "y": 8001,
+      "name": "Conversation · Next async question · PS-459",
+      "context": "The first request has been answered. The next independent asynchronous question now occupies the composer. New arrivals queue without changing current selections. Each request uses its own native identity and response channel. The same saved draft stays intact until all blocking requests finish.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "SUx1S",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "c0VVKs",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Wxduh",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "j3xR2",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "MIKTl",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "FmYVn",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "N4ebRc",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "Before I finish the plan, which validation should I run?"
+                    },
+                    "p3bQE": {
+                      "content": "19:42"
+                    }
+                  }
+                },
+                {
+                  "id": "FzPlM",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "Answer to first async question",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Browser checks"
+                    },
+                    "b60X5h": {
+                      "content": "19:43"
+                    }
+                  }
+                },
+                {
+                  "id": "fYenL",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Next async question in conversation",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "Which files should I include?"
+                    },
+                    "p3bQE": {
+                      "content": "19:44"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "K8Ipa",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LCKNl",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "UCsq5",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DEVNT",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "eMh3y",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "Os6BO",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "PcU5U",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "FoqIu",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nATBJ",
+                  "name": "Active request occupies composer",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "qToJl",
+                      "name": "Active question form · draft preserved",
+                      "context": "Use the user-edited u3K8Hd question form. This active request takes over the composer. Saved chat draft text and attachments stay separate. Async questions queue by native request identity and appear one at a time. Preserve current answer selections when another request arrives.",
+                      "width": "fill_container",
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "UDJgN",
+                          "name": "QuestionPromptControls · existing layout",
+                          "context": "Measured from implementation: Onest 12px legend/choice labels, 18px line height, 20px radios with 10px label gap, choices spaced 8px, 12px field padding, 8px fieldset corners, 12px control bottom padding. Preserve native question steps and Other behavior.",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "padding": [
+                            9,
+                            0,
+                            12,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "q4YLDO",
+                              "name": "Existing question fieldset",
+                              "width": "fill_container",
+                              "fill": "#00000000",
+                              "cornerRadius": 8,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "padding": [
+                                21,
+                                12,
+                                12,
+                                12
+                              ],
+                              "children": [
+                                {
+                                  "id": "IFNtF",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Browser checks option",
+                                  "theme": {
+                                    "radio": "on"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Release notes only",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "Ttx4I",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Native tests option",
+                                  "theme": {
+                                    "radio": "off"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Release notes and migration guide",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "ncv02",
+                                  "type": "ref",
+                                  "ref": "KPHF7",
+                                  "name": "Other option",
+                                  "theme": {
+                                    "radio": "off"
+                                  },
+                                  "descendants": {
+                                    "aAkIM": {
+                                      "content": "Other",
+                                      "fontSize": 12,
+                                      "fontFamily": "$font-label",
+                                      "fontWeight": "normal",
+                                      "lineHeight": 1.5
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "H6izBK",
+                              "layoutPosition": "absolute",
+                              "x": 12,
+                              "y": 0,
+                              "name": "Existing fieldset legend",
+                              "fill": "$ds-bg",
+                              "padding": [
+                                0,
+                                4
+                              ],
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "fpAzo",
+                                  "name": "Question",
+                                  "fill": "$ds-fg",
+                                  "content": "Which files should I include?",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ABoI6",
+                          "name": "Message toolbar",
+                          "width": "fill_container",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "QcKBl",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Attach",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "width": 28,
+                              "height": 28,
+                              "strokeWidth": 0,
+                              "fill": "$btn-fill",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "paperclip",
+                                  "height": 14,
+                                  "width": 14
+                                }
+                              }
+                            },
+                            {
+                              "id": "bMM42",
+                              "type": "ref",
+                              "ref": "clw66",
+                              "name": "Model",
+                              "height": 28,
+                              "stroke": "$ds-border",
+                              "strokeWidth": 0,
+                              "strokeAlignment": "inner",
+                              "theme": {
+                                "trig": "default",
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "fill": "$btn-fill",
+                              "descendants": {
+                                "xr1ec": {
+                                  "enabled": false
+                                },
+                                "l7dix": {
+                                  "padding": 0
+                                },
+                                "sefGB": {
+                                  "content": "gpt-5.5",
+                                  "fontSize": 12,
+                                  "fill": "$btn-fg"
+                                },
+                                "Tpujq": {
+                                  "fill": "$btn-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "cXZoM",
+                              "type": "ref",
+                              "ref": "aQk0l",
+                              "name": "Plan tag",
+                              "height": 28,
+                              "descendants": {
+                                "wLHjb": {
+                                  "content": "Plan"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "y39zKo",
+                              "name": "Spacer",
+                              "width": "fill_container",
+                              "height": 28
+                            },
+                            {
+                              "id": "ueU6T",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Skip question",
+                              "height": 28,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Skip"
+                                }
+                              }
+                            },
+                            {
+                              "id": "XgVXC",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Send answer · original primary control",
+                              "theme": {
+                                "btn": "primary",
+                                "size": "xs"
+                              },
+                              "width": 28,
+                              "height": 28,
+                              "context": "Submit only the active native question answers, retaining the saved chat draft and attachments.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "arrow-up",
+                                  "width": 16,
+                                  "height": 16
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "k8PBtH",
+      "x": 18280,
+      "y": 8001,
+      "name": "Conversation · Draft restored after requests · PS-459",
+      "context": "All blocking requests are answered or skipped. Restore the same unsent draft text, attachments, selection and queued edit state. Nothing sends automatically. Send or Queue follows the current provider availability.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "iaUy1",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "VCzrt",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "Z3tU3E",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "NSWHG",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "x5Bkww",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "yzp8S",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "AkRd4",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "Before I finish the plan, which validation should I run?"
+                    },
+                    "p3bQE": {
+                      "content": "19:42"
+                    }
+                  }
+                },
+                {
+                  "id": "vx0qc",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "Answer to first async question",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Browser checks"
+                    },
+                    "b60X5h": {
+                      "content": "19:43"
+                    }
+                  }
+                },
+                {
+                  "id": "w8tRu",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Next async question in conversation",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "Which files should I include?"
+                    },
+                    "p3bQE": {
+                      "content": "19:44"
+                    }
+                  }
+                },
+                {
+                  "id": "U2BE4N",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "Answer to second async question",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Release notes and migration guide"
+                    },
+                    "b60X5h": {
+                      "content": "19:45"
+                    }
+                  }
+                },
+                {
+                  "id": "cQNf0",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Questions complete",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I’ll run the browser checks and include both files."
+                    },
+                    "p3bQE": {
+                      "content": "19:46"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "DgVH0",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "T2n06Y",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "aFl3i",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nNyrv",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ZP7i7",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "ElHbO",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "x3l02",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "F6OvAf",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "atexD",
+                  "name": "Restored original draft and attachments",
+                  "context": "Draft remains mounted, visible and editable. Preserve text, selection, cursor, composition, attachments and any queued edit. This Send only sends the draft; never an answer or approval. Disable it while any unresolved question or decision exists. Never send the draft automatically when the last pending item completes.",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "PBUPe",
+                      "name": "Draft attachments · preserved",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "CheRF",
+                          "type": "ref",
+                          "ref": "kNQoL",
+                          "name": "release-notes.md · draft attachment",
+                          "descendants": {
+                            "XgLPG": {
+                              "content": "release-notes.md"
+                            },
+                            "n6amuf": {
+                              "content": "4 KB"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pNzpp",
+                      "name": "Draft editor · stays editable",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FGiQA",
+                          "name": "Unsent message",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Also update the release notes and include the migration steps.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "aVB7d",
+                          "name": "Editing cursor",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "I am still writing this message… |",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V75vc8",
+                      "name": "Message toolbar",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "iH7eB",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Attach",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "strokeWidth": 0,
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "paperclip",
+                              "height": 14,
+                              "width": 14
+                            }
+                          }
+                        },
+                        {
+                          "id": "z0Uud",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Model",
+                          "height": 28,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 0,
+                          "strokeAlignment": "inner",
+                          "theme": {
+                            "trig": "default",
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "xr1ec": {
+                              "enabled": false
+                            },
+                            "l7dix": {
+                              "padding": 0
+                            },
+                            "sefGB": {
+                              "content": "gpt-5.5",
+                              "fontSize": 12,
+                              "fill": "$btn-fg"
+                            },
+                            "Tpujq": {
+                              "fill": "$btn-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "fyvAb",
+                          "type": "ref",
+                          "ref": "aQk0l",
+                          "name": "Plan tag",
+                          "height": 28,
+                          "descendants": {
+                            "wLHjb": {
+                              "content": "Plan"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "QNRA9",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 28
+                        },
+                        {
+                          "id": "P0aiIK",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Send draft · enabled",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs",
+                            "btn-interaction": "default"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "strokeWidth": 0,
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up",
+                              "height": 16,
+                              "width": 16
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     }

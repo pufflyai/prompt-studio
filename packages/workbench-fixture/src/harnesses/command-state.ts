@@ -6,7 +6,15 @@ const planningMode = (plan?: { id: string; text: string }) => ({
   description: plan?.text ?? "Next turn selection",
   state: plan ? "Awaiting approval" : "selected",
   ...(plan
-    ? { confirmation: { id: plan.id, title: "Approve plan", actionId: "implement", cancelLabel: "Keep planning" } }
+    ? {
+        confirmation: {
+          id: plan.id,
+          title: "Approve plan",
+          actionId: "implement",
+          cancelLabel: "Continue planning",
+          model: "fake",
+        },
+      }
     : {}),
   closeActionId: "leave",
   actions: [

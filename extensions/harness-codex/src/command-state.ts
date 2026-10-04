@@ -5,6 +5,7 @@ export const codexCommandState = (
   input: HarnessCommandDiscoveryContext,
   goal: ThreadGoal | null,
   plan?: { id: string; text: string },
+  model?: string,
 ): HarnessCommandState => ({
   slashCommands: true,
   commands: [
@@ -43,7 +44,8 @@ export const codexCommandState = (
                     id: plan.id,
                     title: "Approve plan",
                     actionId: "implement",
-                    cancelLabel: "Keep planning",
+                    cancelLabel: "Continue planning",
+                    ...(model ? { model } : {}),
                   },
                 }
               : {}),

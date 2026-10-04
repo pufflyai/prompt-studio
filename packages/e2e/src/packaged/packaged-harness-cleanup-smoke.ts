@@ -36,7 +36,7 @@ export const registerHarnessCleanupSmokeTests = () => {
           id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker",
           capabilities: () => [], start: run, resume: run,
           params: { planning: { type: "boolean", defaultValue: false, control: "command" } },
-          getCommandState: () => ({ commands: [{ name: "/goal", description: "Native fixture command", composer: { label: "Goal", modeId: "goal", reservedArguments: ["clear"] } }], modes: [{ id: "goal", label: "Goal", description: "Native objective", state: "paused", tagText: "paused: Native objective", closeActionId: "clear", actions: [{ id: "clear", label: "Clear" }] }, { id: "planning", label: "Plan", description: "Native plan", state: "Awaiting approval", confirmation: { id: "native-revision", title: "Approve plan", actionId: "implement", cancelLabel: "Keep planning" }, actions: [{ id: "implement", label: "Approve and implement" }] }], slashCommands: true }),
+          getCommandState: () => ({ commands: [{ name: "/goal", description: "Native fixture command", composer: { label: "Goal", modeId: "goal", reservedArguments: ["clear"] } }], modes: [{ id: "goal", label: "Goal", description: "Native objective", state: "paused", tagText: "paused: Native objective", closeActionId: "clear", actions: [{ id: "clear", label: "Clear" }] }, { id: "planning", label: "Plan", description: "Native plan", state: "Awaiting approval", confirmation: { id: "native-revision", title: "Approve plan", actionId: "implement", cancelLabel: "Keep planning", model: "native-model" }, actions: [{ id: "implement", label: "Approve and implement" }] }], slashCommands: true }),
           prepareOperation: (_ctx, _input, operation) => ({ execution: "control", invoke: async () => ({ kind: "completed", message: operation.text }) }),
           listModels(ctx) { if (ctx.projectId) used.add(ctx.projectId); return []; },
           dispose(ctx) {
@@ -116,6 +116,7 @@ export const registerHarnessCleanupSmokeTests = () => {
             title: "Approve plan",
             actionId: "implement",
             cancelLabel: "Keep planning",
+            model: "native-model",
           },
           actions: [{ id: "implement", label: "Approve and implement" }],
         });

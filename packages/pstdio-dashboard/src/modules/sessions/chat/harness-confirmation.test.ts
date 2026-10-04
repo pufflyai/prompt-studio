@@ -11,7 +11,13 @@ const mode: HarnessCommandState["modes"][number] = {
   label: "Plan",
   description: "The native plan",
   state: "Awaiting approval",
-  confirmation: { id: "revision", title: "Approve plan", actionId: "implement", cancelLabel: "Keep planning" },
+  confirmation: {
+    id: "revision",
+    title: "Approve plan",
+    actionId: "implement",
+    cancelLabel: "Keep planning",
+    model: "native-model",
+  },
   actions: [{ id: "implement", label: "Approve and implement" }],
 };
 test("each mode stays dismissed until its revision changes or that mode is reopened", () => {
@@ -19,9 +25,9 @@ test("each mode stays dismissed until its revision changes or that mode is reope
   const modes = [mode, other];
   const first = createHarnessConfirmation(mode, { scope: "session", onAction: async () => {}, onDismiss: () => {} })!;
   const second = createHarnessConfirmation(other, { scope: "session", onAction: async () => {}, onDismiss: () => {} })!;
-  let dismissed = updateDismissedConfirmations(undefined, "session", mode.id, first.prompt.callId);
+  let dismissed = updateDismissedConfirmations(undefined, "session", mode.id, first.id);
   expect(nextHarnessConfirmation(modes, "session", dismissed)).toBe(other);
-  dismissed = updateDismissedConfirmations(dismissed, "session", other.id, second.prompt.callId);
+  dismissed = updateDismissedConfirmations(dismissed, "session", other.id, second.id);
   expect(nextHarnessConfirmation(modes, "session", dismissed)).toBeUndefined();
   const reopened = updateDismissedConfirmations(dismissed, "session", mode.id);
   expect(nextHarnessConfirmation(modes, "session", reopened)).toBe(mode);
@@ -41,9 +47,10 @@ test("composer approval dispatches the displayed revision and preserves the nati
     onDismiss: (id) => dismissed.push(id),
   });
   expect(decision).toBeDefined();
-  await decision!.onRespond({ callId: decision!.prompt.callId, answers: [["Approve and implement"]] });
+  expect(decision!.model).toBe("native-model");
+  await decision!.onAction("approve");
   expect(actions).toEqual([["planning", "implement", "revision", mode]]);
-  expect(dismissed).toEqual([decision!.prompt.callId]);
+  expect(dismissed).toEqual([decision!.id]);
 });
 test("keeping planning and skipping restore the composer without a native mutation", async () => {
   const actions: unknown[] = [];
@@ -55,12 +62,12 @@ test("keeping planning and skipping restore the composer without a native mutati
     },
     onDismiss: (id) => dismissed.push(id),
   });
-  await decision!.onRespond({ callId: decision!.prompt.callId, answers: [["Keep planning"]] });
-  await decision!.onRespond({ callId: decision!.prompt.callId, answers: [] });
+  await decision!.onAction("continue");
+  await decision!.onAction("skip");
   expect(actions).toEqual([]);
   expect(dismissed).toHaveLength(2);
 });
-test("an old decision cannot approve a changed plan and unavailable state permits only dismissal", async () => {
+test("unavailable state permits dismissal but blocks native approval", async () => {
   const decision = createHarnessConfirmation(mode, {
     scope: "session",
     unavailable: true,
@@ -69,7 +76,7 @@ test("an old decision cannot approve a changed plan and unavailable state permit
     },
     onDismiss: () => {},
   });
-  expect(decision!.canRespond!({ answers: [["Approve and implement"]] })).toBe(false);
-  expect(decision!.canRespond!({ answers: [["Keep planning"]] })).toBe(true);
-  await expect(decision!.onRespond({ callId: "old", answers: [["Approve and implement"]] })).rejects.toThrow("changed");
+  expect(decision!.actions.find((action) => action.id === "approve")?.disabled).toBe(true);
+  await expect(decision!.onAction("approve")).rejects.toThrow("unavailable");
+  await decision!.onAction("continue");
 });

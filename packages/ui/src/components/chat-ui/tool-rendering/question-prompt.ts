@@ -113,21 +113,25 @@ export const parseQuestionPrompt = (input: unknown) => {
 
 const isQuestionTool = (part: ToolPart) => part.tool.toLowerCase() === "question";
 
-export const resolveActiveQuestionPrompt = (messages: SessionMessage[]) => {
-  for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
-    const message = messages[messageIndex];
+const orderedQuestionRequests = (messages: SessionMessage[]) => {
+  // Map preserves arrival order while later snapshots replace native request state.
+  const requests = new Map<string | ToolPart, ToolPart>();
+  for (const message of messages) {
     if (message.role !== "assistant") continue;
-
-    for (let partIndex = message.parts.length - 1; partIndex >= 0; partIndex -= 1) {
-      const part = message.parts[partIndex];
+    for (const part of message.parts) {
       if (part.type !== "tool" || !isQuestionTool(part)) continue;
-
-      if (hasQuestionResponse(part.state?.output) || hasQuestionResponse(part.state?.metadata)) return undefined;
-
-      const prompt = parseQuestionPrompt(part.state?.input);
-      return prompt ? { ...prompt, ...(part.callId ? { callId: part.callId } : {}) } : undefined;
+      requests.set(part.callId ?? part, part);
     }
   }
+  return requests.values();
+};
 
+export const resolveActiveQuestionPrompt = (messages: SessionMessage[]) => {
+  for (const part of orderedQuestionRequests(messages)) {
+    if (part.status === "failed" || part.status === "denied") continue;
+    if (hasQuestionResponse(part.state?.output) || hasQuestionResponse(part.state?.metadata)) continue;
+    const prompt = parseQuestionPrompt(part.state?.input);
+    if (prompt) return { ...prompt, ...(part.callId ? { callId: part.callId } : {}) };
+  }
   return undefined;
 };

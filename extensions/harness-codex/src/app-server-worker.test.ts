@@ -40,7 +40,10 @@ const peer = (options: { loseTurnAck?: boolean; recoveryActive?: boolean } = {})
           {
             let result: unknown = {};
             if (m.method === "thread/start" || m.method === "thread/resume")
-              result = { thread: { id: m.params.threadId ?? `thread-${children.length}`, path: null } };
+              result = {
+                thread: { id: m.params.threadId ?? `thread-${children.length}`, path: null },
+                model: "native-default",
+              };
             if (m.method === "turn/start") {
               turn++;
               result = { turn: { id: `turn-${turn}`, status: "inProgress" } };
@@ -78,6 +81,34 @@ const sink = () => {
     },
   };
 };
+test("rediscovers a thread's native default without passing host model or parameter overrides", async () => {
+  const { runtime, calls } = peer();
+  const worker = runtime.worker({
+    prompt: "",
+    events: sink(),
+    model: "next-selection",
+    params: { model_reasoning_effort: "high" },
+  });
+  expect(await worker.readModel("existing-thread")).toBe("native-default");
+  expect(calls.find((call) => call.method === "thread/resume")?.params).toEqual({ threadId: "existing-thread" });
+  expect(calls.some((call) => call.method === "turn/start")).toBe(false);
+});
+test("reads the native model without applying the next-turn selection and tracks acknowledged turns", async () => {
+  const { runtime, children, calls } = peer();
+  const input = { prompt: "hello", events: sink(), env: { PSTDIO_SESSION_ID: "model-readback" } };
+  const session = await runtime.run(input);
+  const worker = runtime.worker({ ...input, model: "next-model" });
+  expect(worker.model()).toBe("native-default");
+  children[0].emit({
+    method: "turn/completed",
+    params: { threadId: session.agentSessionId, turn: { id: "turn-1", status: "completed" } },
+  });
+  await session.done;
+  const next = await runtime.run({ ...input, model: "next-model", agentSessionId: session.agentSessionId });
+  expect(worker.model()).toBe("next-model");
+  expect(calls.filter((call) => call.method === "thread/start")).toHaveLength(1);
+  await next.stop();
+});
 test("reuses the session worker across completed turns and interrupts only the active turn", async () => {
   const { runtime, calls, children } = peer();
   const events = sink();

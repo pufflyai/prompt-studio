@@ -15,6 +15,11 @@ const resumedTurns = (turns: Turn[] | undefined, snapshot: { thread: { turns: Tu
   turns ?? snapshot?.thread.turns ?? [];
 const knownNotStarted = (deliveryAttempted: boolean, error: unknown) =>
   !deliveryAttempted || error instanceof CodexRequestRejectedError;
+const acknowledgedModel = (
+  current: string | undefined,
+  next: string | undefined,
+  command: NativeOperation | undefined,
+) => (command ? current : (next ?? current));
 export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
   const child = deps.spawnProcess(
     ["app-server", "--listen", "stdio://", "--enable", "default_mode_request_user_input"],
@@ -74,7 +79,7 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
     })) as { thread: { id: string; path: string | null; turns?: Turn[] }; model?: string };
     threadId = result.thread.id;
     transcriptPath = result.thread.path;
-    model = run.model ?? result.model;
+    model = result.model ?? run.model ?? undefined;
     requireTerminalState(resumedTurns(result.thread.turns, snapshot));
     return threadId;
   };
@@ -123,10 +128,12 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
       }
       operation.startDelivery();
       deliveryAttempted = true;
+      const turnInput = codexTurnRequest(runInput, id, model);
       const result = (await rpc.request(
         command?.method ?? "turn/start",
-        command ? { ...command.params, threadId: id } : codexTurnRequest(runInput, id, model),
+        command ? { ...command.params, threadId: id } : turnInput,
       )) as { turn?: { id: string } };
+      model = acknowledgedModel(model, turnInput.model, command);
       acknowledged = true;
       operation.acknowledge(result.turn?.id);
       return session(id);
@@ -144,6 +151,14 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
     load,
     isClosed: () => closed,
     threadId: () => threadId,
+    model: () => model,
+    readModel: async (id: string) => {
+      if (threadId === id && model) return model;
+      await ready;
+      // Resume exposes native configuration; omit overrides so discovery cannot apply next-turn settings.
+      const result = (await rpc.request("thread/resume", { threadId: id })) as { model?: string };
+      return result.model;
+    },
     request: async (method: string, params: Record<string, unknown>, signal?: AbortSignal) => {
       signal?.throwIfAborted();
       const abort = () => lost();

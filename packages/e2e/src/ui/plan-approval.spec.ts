@@ -2,10 +2,7 @@ import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
-test("inline plan choices preserve the draft and attachments while implementation leaves planning", async ({
-  page,
-  request,
-}) => {
+test("plan actions take over the composer and restore its draft without sending it", async ({ page, request }) => {
   const project = process.env.E2E_COMMAND_PROJECT_ID
     ? { id: process.env.E2E_COMMAND_PROJECT_ID }
     : await (
@@ -39,28 +36,27 @@ test("inline plan choices preserve the draft and attachments while implementatio
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
   const resource = encodeURIComponent(`pstdio://extension-resource/session/${session.id}`);
   await page.goto(`/projects/${project.id}/session?resource=${resource}`);
-  const approve = page.getByRole("radio", { name: "Approve and implement", exact: true });
-  const send = page.locator('[data-testid="send-message-button"]:visible').last();
+  const decision = page.getByLabel("Plan decision", { exact: true });
   const editor = page.locator('[data-testid="content-editable"][contenteditable="true"]:visible').last();
   const controls = page.getByLabel("Harness controls", { exact: true });
   const reopen = async () => {
     await controls.getByRole("button", { name: "Plan details" }).click();
     await page.getByRole("button", { name: "Approve and implement", exact: true }).click();
-    await expect(approve).toBeVisible();
+    await expect(decision).toBeVisible();
   };
-  await expect(approve).toBeVisible();
-  await expect(send).toBeDisabled();
-  await page.getByText("Keep planning", { exact: true }).click();
-  await send.click();
+  await expect(decision).toBeVisible();
+  await expect(decision.getByText("fake", { exact: true })).toBeVisible();
+  await decision.getByRole("button", { name: "Continue planning", exact: true }).click();
   await expect(editor).toBeVisible();
   expect((await state()).params_json?.planning).toBe(true);
   await editor.fill("Keep this unsent draft");
   await reopen();
-  await page.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(editor).toBeHidden();
+  await decision.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(editor).toHaveText("Keep this unsent draft");
   await page.reload();
-  await expect(approve).toBeVisible();
-  await page.getByRole("button", { name: "Skip", exact: true }).click();
+  await expect(decision).toBeVisible();
+  await decision.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(editor).toHaveText("Keep this unsent draft");
   await page
     .locator('input[type="file"]')
@@ -82,11 +78,9 @@ test("inline plan choices preserve the draft and attachments while implementatio
     else await route.continue();
   };
   await page.route("**/harness-commands", failApproval);
-  await page.getByLabel("Question form").getByText("Approve and implement", { exact: true }).click();
-  await send.click();
+  await decision.getByRole("button", { name: "Approve and implement", exact: true }).click();
   await expect(page.getByText("Command failed", { exact: true })).toBeVisible();
-  await expect(approve).toBeChecked();
-  await expect(page.getByText("draft-context.txt", { exact: true })).toBeVisible();
+  await expect(decision).toBeVisible();
   await page.getByRole("button", { name: "Dismiss", exact: true }).click();
   await page.unroute("**/harness-commands", failApproval);
   await propose("# Revised workflow\n\nUse the revised native plan.");
@@ -94,13 +88,11 @@ test("inline plan choices preserve the draft and attachments while implementatio
   await expect(page.getByRole("tooltip")).toContainText("Revised workflow");
   await page.mouse.move(0, 0);
   await expect(page.getByRole("tooltip")).toBeHidden();
-  await expect(send).toBeDisabled();
-  await page.getByText("Keep planning", { exact: true }).click();
-  await send.click();
+  await decision.getByRole("button", { name: "Continue planning", exact: true }).click();
   await expect(editor).toHaveText("Keep this unsent draft");
+  await expect(page.getByText("draft-context.txt", { exact: true })).toBeVisible();
   await reopen();
-  await page.getByLabel("Question form").getByText("Approve and implement", { exact: true }).click();
-  await send.click();
+  await decision.getByRole("button", { name: "Approve and implement", exact: true }).click();
   await expect(controls.getByRole("button", { name: "Plan details" })).toHaveCount(0);
   await expect.poll(async () => (await state()).status).toBe("completed");
   const implemented = await state();
@@ -108,4 +100,5 @@ test("inline plan choices preserve the draft and attachments while implementatio
   expect(implemented.params_json?.planning).toBe(false);
   await expect(editor).toHaveText("Keep this unsent draft");
   await expect(page.getByText("draft-context.txt", { exact: true })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("draft-restored.png") });
 });

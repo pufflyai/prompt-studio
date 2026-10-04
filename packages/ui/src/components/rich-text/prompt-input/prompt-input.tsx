@@ -16,6 +16,7 @@ import { CommentNode } from "./plugins/CommentPlugin/nodes/CommentNode/CommentNo
 import { CommandMenuPlugin, type PromptCommand } from "./plugins/command-menu-plugin";
 import { ImperativeAPIPlugin, type PromptEditorRef } from "./plugins/ImperativeAPIPlugin";
 import { KeyboardShortcutPlugin } from "./plugins/KeyboardShortcutPlugin";
+import { PreserveSelectionPlugin } from "./plugins/preserve-selection-plugin";
 import theme from "./theme/prompt-input-theme";
 import { $getTextContent, getTextFromSerializedEditorState } from "./utils";
 
@@ -82,6 +83,7 @@ export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptE
         />
         <ImperativeAPIPlugin editorRef={ref} previousTextRef={previousTextRef} />
         <ToggleEditablePlugin isEditable={isEditable} />
+        <PreserveSelectionPlugin isEditable={isEditable} />
         <CommentPlugin />
         <KeyboardShortcutPlugin onSubmit={onSubmit} onRecallPrevious={onRecallPrevious} onRecallNext={onRecallNext} />
         <CommandMenuPlugin key={commands.map((command) => command.name).join("\n")} commands={commands} />
