@@ -87,3 +87,21 @@ test("a cleanup from an older read cannot replace a newer user edit", async () =
   expect(await service.clean(original, { settings, ...unfiltered })).toBeNull();
   expect((await service.get(scope.project_id, original.id))?.filter).toEqual(statusIs("new").filter);
 });
+
+test("native views keep one default and survive extension data deletion", async () => {
+  const native = { ...scope, extension_instance_id: null, board_id: "dashboard-workbench.workspaces" };
+  const first = await service.create({ ...native, title: "Workspaces", settings, ...unfiltered });
+  const second = await service.create({ ...native, title: "Release", settings, ...unfiltered });
+  await service.setDefault(native, first.id);
+  await service.setDefault(native, second.id);
+  expect((await service.getDefault(native))?.default_view_id).toBe(second.id);
+  await service.create({ ...scope, title: "Extension tasks", settings, ...unfiltered });
+  await service.setDefault(scope, "builtin");
+  await createExtensionUserDataDBService(connection.db).deleteForInstance(scope.extension_instance_id);
+  expect(await service.list(scope)).toEqual([]);
+  expect((await service.list(native)).map((view) => view.id)).toEqual([first.id, second.id]);
+  expect((await service.getDefault(native))?.default_view_id).toBe(second.id);
+  await connection.db.delete(projects).where(eq(projects.id, native.project_id));
+  expect(await service.list(native)).toEqual([]);
+  expect(await service.getDefault(native)).toBeNull();
+});

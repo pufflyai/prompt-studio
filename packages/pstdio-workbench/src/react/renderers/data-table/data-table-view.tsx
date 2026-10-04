@@ -46,7 +46,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const storageKey = resolveDataTableRendererStorageKey(contribution.id, placement);
+  const storageKey = resolveDataTableRendererStorageKey(contribution, placement, contextValues);
   const provider = contribution.viewsProvider;
   const viewsSource = useSyncExternalStore(
     provider?.subscribe ?? noopSubscribe,

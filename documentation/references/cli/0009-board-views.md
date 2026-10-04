@@ -1,6 +1,6 @@
 # Shared board views
 
-Saved views belong to a project and a board. A board is an extension view of kind `kanban` (a board or list) or `dataTable`. Everyone sees the same saved views and board default. Local storage keeps only the active selection, unsaved edits, and expanded or collapsed groups.
+Saved views belong to a project and a collection. The boards API includes extension views of kind `kanban` (a board or list) or `dataTable`, and the built-in Workspaces table. Workspaces uses the stable board ID `dashboard-workbench.workspaces` and has `extensionId: null`. Everyone sees the same saved views and collection default. Local storage keeps only the active selection, unsaved edits, and expanded or collapsed groups, scoped to the collection's context such as its project.
 
 A view has three parts:
 
@@ -10,6 +10,8 @@ A view has three parts:
 
 ```sh
 pst views boards
+pst views create --board dashboard-workbench.workspaces --title "Release workspaces" \
+  --filter "name contains release" --sort created:desc --group type
 pst views list --board <boardId>
 pst views create --board <boardId> --title "Open urgent" \
   --filter "status is-none-of done" \
@@ -76,7 +78,7 @@ Board views take `--mode board|list`, `--columns <field>`, `--rows <field|none>`
 
 ## Defaults and cleanup
 
-Built-in extension views are read-only. Duplicate a built-in to change it. Any saved or built-in view can become the project default. Change the shared default only when requested. Deleting its saved view clears that default choice.
+Built-in views are read-only. Duplicate a built-in to change it. Any saved or built-in view can become the project default. Change the shared default only when requested. Deleting its saved view clears that default choice. Native Workspaces views belong directly to the project and are unaffected by extension disable or uninstall.
 
 The default order is the chosen project default, then the extension's `defaultActiveViewId`, then a built-in with the deprecated `isDefault` flag, then the first available view. Built-ins appear first; saved views follow their stored order.
 

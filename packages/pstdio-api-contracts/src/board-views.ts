@@ -20,7 +20,7 @@ export const boardSummarySchema = z.object({
   id: z.string(),
   title: z.string(),
   kind: z.enum(["kanban", "dataTable"]),
-  extensionId: z.string(),
+  extensionId: z.string().nullable(),
   fields: z.array(boardFieldSchema),
 });
 export const boardViewSettingsSchema = z.union([kanbanViewSettingsSchema, dataTableRendererSettingsSchema]);
@@ -57,7 +57,9 @@ export type BoardViewSettings = z.infer<typeof boardViewSettingsSchema>;
 export type BoardViewCreate = z.infer<typeof boardViewCreateSchema>;
 export type BoardViewUpdate = z.infer<typeof boardViewUpdateSchema>;
 
-// The sync key is derived from the database's composite primary key, never stored twice.
-export const boardDefaultSyncRow = <T extends { project_id: string; extension_instance_id: string; board_id: string }>(
+// The sync key is derived from the database's unique collection scope, never stored twice.
+export const boardDefaultSyncRow = <
+  T extends { project_id: string; extension_instance_id: string | null; board_id: string },
+>(
   row: T,
 ) => ({ ...row, id: JSON.stringify([row.project_id, row.extension_instance_id, row.board_id]) });

@@ -61,7 +61,10 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
       throw new BoardViewError("View not found", 404);
     }
     const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-    if (!snapshot.enabledSources.some((source) => source.instance.id === row.extension_instance_id))
+    if (
+      row.extension_instance_id !== null &&
+      !snapshot.enabledSources.some((source) => source.instance.id === row.extension_instance_id)
+    )
       throw new BoardViewError("board is not enabled", 404);
     const board = boards.find(
       (board) =>

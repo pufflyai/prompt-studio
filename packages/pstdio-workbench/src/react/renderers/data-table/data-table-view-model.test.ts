@@ -100,17 +100,29 @@ describe("data table renderer view model", () => {
     rowActions[0]?.onSelect(model.data[0]!);
     expect(calls).toEqual(["pstdio://service/one", "pstdio://service/one"]);
   });
+  test("keeps different project collections in separate view state", () => {
+    const renderer = { id: "workspaces", contextKeys: ["project"] };
+    const placement = { instanceId: "workspaces:1", panelId: "workspaces", closable: false };
+    const key = (project: string, unrelated = "initial") =>
+      resolveDataTableRendererStorageKey(renderer, placement, { project, unrelated });
+    expect(key("one")).not.toBe(key("two"));
+    expect(key("one", "changed")).toBe(key("one"));
+  });
   test("scopes persisted controls to the renderer, placement, and resource", () => {
     expect(
-      resolveDataTableRendererStorageKey("health", {
-        instanceId: "health:1",
-        panelId: "health.view",
-        closable: false,
-        resource: {
-          type: "project",
-          id: "one",
+      resolveDataTableRendererStorageKey(
+        { id: "health" },
+        {
+          instanceId: "health:1",
+          panelId: "health.view",
+          closable: false,
+          resource: {
+            type: "project",
+            id: "one",
+          },
         },
-      }),
+        {},
+      ),
     ).toBe(`pstdio:workbench:dataTableRenderer:health:health:1:${resourceKey({ type: "project", id: "one" })}`);
   });
 });

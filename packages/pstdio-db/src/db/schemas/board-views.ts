@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, unique } from "drizzle-orm/pg-core";
 import type { BoardViewSettings } from "pstdio-api-contracts";
 import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
 import { extension_instances } from "./extensions";
@@ -8,9 +8,9 @@ const boardScope = () => ({
   project_id: text("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
-  extension_instance_id: text("extension_instance_id")
-    .notNull()
-    .references(() => extension_instances.id, { onDelete: "restrict" }),
+  extension_instance_id: text("extension_instance_id").references(() => extension_instances.id, {
+    onDelete: "restrict",
+  }),
   board_id: text("board_id").notNull(),
 });
 
@@ -44,5 +44,9 @@ export const board_default_views = pgTable(
     default_view_id: text("default_view_id").notNull(),
     updated_at: text("updated_at").notNull(),
   },
-  (table) => [primaryKey({ columns: [table.project_id, table.extension_instance_id, table.board_id] })],
+  (table) => [
+    unique("board_default_views_scope_unique")
+      .on(table.project_id, table.extension_instance_id, table.board_id)
+      .nullsNotDistinct(),
+  ],
 );

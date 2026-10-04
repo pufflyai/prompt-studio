@@ -3,6 +3,7 @@ import { type ChildProcess, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -32,7 +33,7 @@ const readSnapshot = async (baseUrl: string, headers: Record<string, string>) =>
 };
 
 export const registerBoardViewsSmokeTests = () => {
-  test("packaged board views support CLI edits and survive a runtime restart", async () => {
+  test("packaged collection views include native Workspaces and survive a runtime restart", async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-board-views-"));
     let child: ChildProcess | undefined;
     const env = { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner") };
@@ -60,6 +61,23 @@ export const registerBoardViewsSmokeTests = () => {
       };
       const boards = cli("boards");
       expect(boards).toContainEqual(expect.objectContaining({ id: board, kind: "kanban" }));
+      expect(boards).toContainEqual(expect.objectContaining({ id: WORKSPACES_COLLECTION_ID, extensionId: null }));
+      const workspaces = cli(
+        "create",
+        "--board",
+        WORKSPACES_COLLECTION_ID,
+        "--title",
+        "Workspace view",
+        "--filter",
+        "name contains release",
+        "--sort",
+        "created:desc",
+        "--group",
+        "type",
+        "--stats",
+        "on",
+      );
+      cli("set-default", "--board", WORKSPACES_COLLECTION_ID, "--id", workspaces.id);
       const created = cli(
         "create",
         "--board",
@@ -148,6 +166,21 @@ export const registerBoardViewsSmokeTests = () => {
         }),
       );
       const snapshot = await readSnapshot(runtime.baseUrl, runtimeAuthorization(runtime.descriptor));
+      expect(cli("list", "--board", WORKSPACES_COLLECTION_ID)).toMatchObject({ defaultViewId: workspaces.id });
+      expect(snapshot.board_views).toContainEqual(
+        expect.objectContaining({
+          id: workspaces.id,
+          board_id: WORKSPACES_COLLECTION_ID,
+          extension_instance_id: null,
+          settings: expect.objectContaining({ grouping: "type", showStats: true }),
+        }),
+      );
+      expect(snapshot.board_default_views).toContainEqual(
+        expect.objectContaining({
+          id: JSON.stringify([projectId, null, WORKSPACES_COLLECTION_ID]),
+          default_view_id: workspaces.id,
+        }),
+      );
       expect(snapshot.board_views).toContainEqual(
         expect.objectContaining({
           id: created.id,

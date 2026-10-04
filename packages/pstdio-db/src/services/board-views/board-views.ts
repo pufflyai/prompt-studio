@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { board_default_views, board_views } from "../../db/schemas.pg";
 
@@ -7,7 +7,9 @@ type ViewInput = Pick<typeof board_views.$inferSelect, "title" | "settings" | "f
 const scopeWhere = (table: typeof board_views | typeof board_default_views, scope: BoardScope) =>
   and(
     eq(table.project_id, scope.project_id),
-    eq(table.extension_instance_id, scope.extension_instance_id),
+    scope.extension_instance_id === null
+      ? isNull(table.extension_instance_id)
+      : eq(table.extension_instance_id, scope.extension_instance_id),
     eq(table.board_id, scope.board_id),
   );
 const viewWhere = (projectId: string, id: string) => and(eq(board_views.project_id, projectId), eq(board_views.id, id));

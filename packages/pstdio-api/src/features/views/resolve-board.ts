@@ -22,6 +22,7 @@ import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
 import { resolveEnabledSourceForRecord } from "../extensions/project-extension-runtime-snapshot";
+import { nativeWorkspaceBoard, nativeWorkspaceFields } from "./native-boards";
 import { BoardViewError } from "./view-rules";
 
 export type BoardViewsDeps = ExtensionsRouteDeps & Pick<RouteDeps, "boardViewsService">;
@@ -30,7 +31,7 @@ type DeclaredView = Omit<BoardView, "boardId" | "title" | "builtIn"> & { title: 
 export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   const metadata = createWorkbenchExtensionMetadata({ runtime: snapshot.runtime });
-  return metadata.views.flatMap((view) => {
+  const extensions = metadata.views.flatMap((view) => {
     const body = view.body;
     if (body.kind !== "kanban" && body.kind !== "dataTable") return [];
     const record = snapshot.runtime.views.find((record) => record.id === view.id)!;
@@ -61,6 +62,7 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
         : { kind: body.kind, body, ...localized(dataTableBuiltInViews(body)) };
     return [{ ...common, ...board }];
   });
+  return [...extensions, nativeWorkspaceBoard(projectId)];
 };
 export type ResolvedBoard = Awaited<ReturnType<typeof getBoards>>[number];
 export const requireBoard = async (deps: BoardViewsDeps, projectId: string, boardId: string) => {
@@ -155,7 +157,10 @@ const dataTableResultSchema = z.object({
   columns: extensionDataTableRendererRecordSchema.shape.columns,
 });
 type DataTableColumn = NonNullable<z.infer<typeof dataTableResultSchema>["columns"]>[number];
-const resolveDataTableFields = async (deps: BoardViewsDeps, board: Extract<ResolvedBoard, { kind: "dataTable" }>) => {
+const resolveDataTableFields = async (
+  deps: BoardViewsDeps,
+  board: Extract<ResolvedBoard, { kind: "dataTable"; extensionId: string }>,
+) => {
   const parsed = dataTableResultSchema.safeParse(
     await runQuery(deps, board, board.body.queryHandlerId, {
       renderer: rendererOf(board),
@@ -187,5 +192,7 @@ const resolveDataTableFields = async (deps: BoardViewsDeps, board: Extract<Resol
     } satisfies BoardField;
   });
 };
-export const resolveBoardFields = (deps: BoardViewsDeps, board: ResolvedBoard) =>
-  board.kind === "kanban" ? resolveKanbanFields(deps, board) : resolveDataTableFields(deps, board);
+export const resolveBoardFields = async (deps: BoardViewsDeps, board: ResolvedBoard) => {
+  if (board.extensionId === null) return nativeWorkspaceFields();
+  return board.kind === "kanban" ? resolveKanbanFields(deps, board) : resolveDataTableFields(deps, board);
+};
