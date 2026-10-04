@@ -1,5 +1,6 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, IconButton, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { PaperclipIcon } from "lucide-react";
 import { useState } from "react";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
@@ -35,6 +36,16 @@ function QuestionPanel(props: { prompt?: ChatInputQuestionPrompt; queued?: boole
           emptyStateTitle="Question replies"
           emptyStateDescription="Answer the question or skip it."
           chatInputPlaceholder="Type a message..."
+          attachmentActions={
+            <IconButton size="xs" variant="ghost" aria-label="Attach files">
+              <PaperclipIcon size={14} />
+            </IconButton>
+          }
+          actions={
+            <Button size="xs" variant="ghost">
+              gpt-6.1-sol
+            </Button>
+          }
           queuedFollowUps={items}
           onQueuedFollowUpUpdate={(id, text) => {
             setItems((current) => current.map((item) => (item.id === id ? { ...item, prompt: text } : item)));
@@ -63,6 +74,10 @@ export const QueuedEditInterruptedByQuestion: Story = {
 
 export const QueuedEditRejectedQuestionReply: Story = {
   render: () => <QuestionPanel queued rejectFirst />,
+};
+
+export const AttachmentControlsDuringQuestion: Story = {
+  render: () => <QuestionPanel prompt={questionPrompt} />,
 };
 
 export const InheritedQuestionIds: Story = {

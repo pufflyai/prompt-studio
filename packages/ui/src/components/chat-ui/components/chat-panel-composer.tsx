@@ -25,6 +25,8 @@ interface ChatPanelComposerProps {
   conversationKey?: string;
   recentUserMessages: string[];
   actions?: ReactNode;
+  /** Attachment controls shown only while editing a message draft. */
+  attachmentActions?: ReactNode;
   composerHeader?: ReactNode;
   attachedResources?: string[];
   attachmentList?: ReactNode;
@@ -95,6 +97,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     conversationKey,
     recentUserMessages,
     actions,
+    attachmentActions,
     composerHeader,
     attachedResources,
     attachmentList,
@@ -153,6 +156,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           onAttachText={onAttachText}
           onChange={queuedComposer.change}
           actions={actions}
+          attachmentActions={attachmentActions}
           attachedResources={attachedResources}
           onClearAttachments={onClearAttachments}
           attachmentList={attachmentList}

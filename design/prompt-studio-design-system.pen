@@ -131945,7 +131945,7 @@
                           "width": "fill_container",
                           "layout": "vertical",
                           "padding": [
-                            9,
+                            17,
                             0,
                             12,
                             0
@@ -132062,27 +132062,6 @@
                           "gap": 6,
                           "alignItems": "center",
                           "children": [
-                            {
-                              "id": "A0j6V",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Attach",
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs"
-                              },
-                              "width": 28,
-                              "height": 28,
-                              "strokeWidth": 0,
-                              "fill": "$btn-fill",
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "paperclip",
-                                  "height": 14,
-                                  "width": 14
-                                }
-                              }
-                            },
                             {
                               "id": "YhckY",
                               "type": "ref",
@@ -133418,7 +133397,7 @@
                           "width": "fill_container",
                           "layout": "vertical",
                           "padding": [
-                            9,
+                            17,
                             0,
                             12,
                             0
@@ -133535,27 +133514,6 @@
                           "gap": 6,
                           "alignItems": "center",
                           "children": [
-                            {
-                              "id": "R7ObMZ",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Attach",
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs"
-                              },
-                              "width": 28,
-                              "height": 28,
-                              "strokeWidth": 0,
-                              "fill": "$btn-fill",
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "paperclip",
-                                  "height": 14,
-                                  "width": 14
-                                }
-                              }
-                            },
                             {
                               "id": "IbUQ3",
                               "type": "ref",
@@ -133920,7 +133878,7 @@
                           "width": "fill_container",
                           "layout": "vertical",
                           "padding": [
-                            9,
+                            17,
                             0,
                             12,
                             0
@@ -134037,27 +133995,6 @@
                           "gap": 6,
                           "alignItems": "center",
                           "children": [
-                            {
-                              "id": "IwpD5",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Attach",
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs"
-                              },
-                              "width": 28,
-                              "height": 28,
-                              "strokeWidth": 0,
-                              "fill": "$btn-fill",
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "paperclip",
-                                  "height": 14,
-                                  "width": 14
-                                }
-                              }
-                            },
                             {
                               "id": "J8Rwup",
                               "type": "ref",
@@ -134863,7 +134800,7 @@
                           "width": "fill_container",
                           "layout": "vertical",
                           "padding": [
-                            9,
+                            17,
                             0,
                             12,
                             0
@@ -134980,27 +134917,6 @@
                           "gap": 6,
                           "alignItems": "center",
                           "children": [
-                            {
-                              "id": "QcKBl",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Attach",
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "xs"
-                              },
-                              "width": 28,
-                              "height": 28,
-                              "strokeWidth": 0,
-                              "fill": "$btn-fill",
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "paperclip",
-                                  "height": 14,
-                                  "width": 14
-                                }
-                              }
-                            },
                             {
                               "id": "bMM42",
                               "type": "ref",

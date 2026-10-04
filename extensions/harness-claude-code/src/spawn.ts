@@ -196,6 +196,7 @@ export type StartSpawnInput = {
   env?: Record<string, string>;
   events: HarnessEventSink;
   questions?: HarnessQuestionChannel;
+  approvals?: HarnessApprovalChannel;
 };
 
 export const startClaudeCodeSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
@@ -213,7 +214,10 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
     promptWithAttachmentManifest(claudePrompt(input.prompt, input.nativeCommand), input.attachments),
   );
 
-  const events = createRawEventStream(child.stdout, child.stdin, { questions: input.questions });
+  const events = createRawEventStream(child.stdout, child.stdin, {
+    questions: input.questions,
+    approvals: input.approvals,
+  });
   let extracted: Awaited<ReturnType<typeof extractSessionId>>;
   try {
     extracted = await extractSessionId(events);
@@ -250,7 +254,6 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
 export type ResumeSpawnInput = StartSpawnInput & {
   agentSessionId: string;
   messageOffset?: number;
-  approvals?: HarnessApprovalChannel;
 };
 
 export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps = defaultDeps) => {

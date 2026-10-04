@@ -44,8 +44,10 @@ export interface ChatPanelProps {
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
   onChatInputChange?: (text: string) => void;
-  /** Extra controls rendered in the chat input toolbar (attach, model, params). */
+  /** Controls shared by the message and question toolbars (model, params). */
   actions?: ReactNode;
+  /** Attachment controls shown only while editing a message draft. */
+  attachmentActions?: ReactNode;
   composerHeader?: ReactNode;
   attachedResources?: string[];
   onClearAttachments?: () => void;
@@ -88,6 +90,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onAttachText,
     onChatInputChange,
     actions,
+    attachmentActions,
     composerHeader,
     attachedResources,
     onClearAttachments,
@@ -187,6 +190,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
         conversationKey={conversationKey ?? messages[0]?.id}
         recentUserMessages={getRecentUserPrompts(messages)}
         actions={actions}
+        attachmentActions={attachmentActions}
         composerHeader={composerHeader}
         attachedResources={attachedResources}
         attachmentList={attachmentList}

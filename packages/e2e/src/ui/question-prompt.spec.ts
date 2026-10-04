@@ -118,6 +118,7 @@ test("async question replies preserve the draft and files until every request is
   const first = page.getByRole("radio", { name: "TypeScript", exact: true });
   await expect(first).toBeVisible();
   await expect(editor).toBeHidden();
+  await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeHidden();
   await expect(page.getByTestId("send-message-button")).toBeDisabled();
   await page.getByText("TypeScript", { exact: true }).click();
   await expect
@@ -152,9 +153,11 @@ test("async question replies preserve the draft and files until every request is
   expect((await reply).postDataJSON().attachments ?? []).toEqual([]);
   await expect(page.getByRole("radio", { name: "Browser", exact: true })).toBeVisible();
   await expect(editor).toBeHidden();
+  await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeHidden();
   await expect(page.getByTestId("send-message-button")).toBeDisabled();
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(editor).toHaveText("Keep my draft");
+  await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeVisible();
   await expect(page.getByText("draft.txt", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Remove Goal", exact: true })).toBeVisible();
   await editor.focus();

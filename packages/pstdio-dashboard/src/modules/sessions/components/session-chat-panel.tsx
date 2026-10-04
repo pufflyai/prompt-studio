@@ -29,6 +29,7 @@ import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { useStopSession } from "../hooks/use-stop-session";
 import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
 import type { HarnessParamValues } from "./harness-param-values";
+import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
@@ -249,11 +250,16 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             chatInputCommands={commandComposer.suggestions}
             composerDecision={decision}
             attachedResources={attachedResources}
-            actions={
-              <SessionComposerActions
+            attachmentActions={
+              <SessionAttachmentControls
                 projectId={projectId}
                 uploading={draftAttachments.uploading}
                 onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
+              />
+            }
+            actions={
+              <SessionComposerActions
+                projectId={projectId}
                 view={view}
                 selectedAgent={selectedAgent}
                 setSelectedAgent={setSelectedAgent}

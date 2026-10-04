@@ -5,7 +5,7 @@ import type {
   HarnessOperation,
   PreparedHarnessOperation,
 } from "@pstdio/sdk/extensions";
-import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
+import { resumeClaudeCodeSession, type SpawnDeps, startClaudeCodeSession } from "./spawn";
 
 export const claudeCommandState = (input: HarnessCommandDiscoveryContext): HarnessCommandState => ({
   slashCommands: true,
@@ -45,6 +45,7 @@ export const prepareClaudeOperation = (
   input: HarnessCommandContext,
   operation: HarnessOperation,
   projectId?: string,
+  spawnDeps?: SpawnDeps,
 ): PreparedHarnessOperation => {
   if (operation.kind === "mode-action") {
     if (operation.modeId !== "planning" || operation.actionId !== "default")
@@ -59,7 +60,7 @@ export const prepareClaudeOperation = (
     return { execution: "control", invoke: async () => ({ kind: "completed", params: { permission_mode: "plan" } }) };
   return {
     execution: "exclusive",
-    invoke: async ({ events, signal }) => {
+    invoke: async ({ events, questions, approvals, signal }) => {
       const params = plan ? { ...input.params, permission_mode: "plan" } : input.params;
       const run = {
         nativeCommand: !plan,
@@ -68,15 +69,20 @@ export const prepareClaudeOperation = (
         params,
         prompt: plan?.[1] ?? operation.text,
         events,
+        questions,
+        approvals,
         env: { PSTDIO_SESSION_ID: input.sessionId, ...(projectId ? { PSTDIO_PROJECT_ID: projectId } : {}) },
       };
       const session = input.agentSessionId
-        ? resumeClaudeCodeSession({
-            ...run,
-            agentSessionId: input.agentSessionId,
-            messageOffset: events.getMessages().length,
-          })
-        : await startClaudeCodeSession(run);
+        ? resumeClaudeCodeSession(
+            {
+              ...run,
+              agentSessionId: input.agentSessionId,
+              messageOffset: events.getMessages().length,
+            },
+            spawnDeps,
+          )
+        : await startClaudeCodeSession(run, spawnDeps);
       return { kind: "started", session, ...(plan ? { params: { permission_mode: "plan" } } : {}) };
     },
   };

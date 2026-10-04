@@ -46,7 +46,7 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
   const hasMultipleQuestions = questions.length > 1;
 
   return (
-    <Stack gap="xs" pb="sm">
+    <Stack gap="xs" pb="sm" pt={hasMultipleQuestions ? "0" : "xs"}>
       {hasMultipleQuestions ? (
         <HStack role="tablist" aria-label="Question steps" gap="1" minWidth="0">
           {questions.map((question, questionIndex) => (

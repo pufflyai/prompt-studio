@@ -39,6 +39,8 @@ export interface ChatInputProps {
   onChange?: (text: string) => void;
   attachmentList?: ReactNode;
   actions?: ReactNode;
+  /** Attachment controls shown only while editing a message draft. */
+  attachmentActions?: ReactNode;
   attachedToTop?: boolean;
   /** Recede the resting border to border.subtle when nested inside a stronger shell (the workspace hub). */
   recessed?: boolean;
@@ -111,6 +113,7 @@ export const ChatInput = (props: ChatInputProps) => {
     placeholder,
     attachmentList,
     actions,
+    attachmentActions,
     attachedToTop = false,
     recessed = false,
     questionPrompt,
@@ -290,7 +293,12 @@ export const ChatInput = (props: ChatInputProps) => {
         </Box>
         {!occupied ? (
           <ChatInputToolbar
-            actions={actions}
+            actions={
+              <>
+                {attachmentActions}
+                {actions}
+              </>
+            }
             questionPrompt={false}
             skipDisabled={false}
             skipTitle=""
