@@ -51,6 +51,7 @@ test("preserves a provider-owned mode confirmation and its native revision", () 
           title: "Approve plan",
           actionId: "implement",
           cancelLabel: "Keep planning",
+          model: "native-model",
         },
         actions: [{ id: "implement", label: "Approve and implement" }],
       },
