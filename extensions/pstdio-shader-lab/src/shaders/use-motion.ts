@@ -23,14 +23,30 @@ export const useMotion = (
     previous.current = next;
     revision.current += 1;
     // New animation names restart the CSS timelines at their preserved negative delays.
-    style.current.textContent = next
+    const animation = (item: Motion) => {
+      const name = `${id}-${item.name}-${revision.current}`;
+      return `${name} ${item.durationSeconds || 1}s ${item.timing} ${item.delaySeconds}s infinite ${item.direction} both`;
+    };
+    const keyframes = next
       .map((item) => {
         const name = `${id}-${item.name}-${revision.current}`;
         const { x, y } = item.distance;
-        return `@keyframes ${name} { from { transform: translate(0, 0); } to { transform: translate(${x}px, ${y}px); } }
-        #${id} [data-motion="${item.name}"] { animation: ${name} ${item.durationSeconds || 1}s ${item.timing} ${item.delaySeconds}s infinite ${item.direction} both; animation-play-state: ${item.durationSeconds ? "var(--shader-play-state)" : "paused"}; }`;
+        // Independent properties let inverse mask motion share a content layer with pattern motion.
+        if (item.name.endsWith("-counter"))
+          return `@keyframes ${name} { from { translate: 0px 0px; } to { translate: ${x}px ${y}px; } }`;
+        return `@keyframes ${name} { from { transform: translate(0, 0); } to { transform: translate(${x}px, ${y}px); } }`;
       })
       .join("\n");
+    const layers = Array.from(style.current.parentElement!.querySelectorAll<HTMLElement>("[data-motion]"))
+      .map((element) => {
+        const names = element.dataset.motion!.split(" ");
+        const parts = next.filter((item) => names.includes(item.name));
+        if (!parts.length) return "";
+        const playback = parts.map((item) => (item.durationSeconds ? "var(--shader-play-state)" : "paused"));
+        return `#${id} [data-motion="${element.dataset.motion}"] { animation: ${parts.map(animation).join(", ")}; animation-play-state: ${playback.join(", ")}; }`;
+      })
+      .join("\n");
+    style.current.textContent = `${keyframes}\n${layers}`;
   }, [id, shader, values, box, clock]);
   return style;
 };

@@ -15,28 +15,26 @@ const SectionHatch = (props: PatternProps) => {
   const { id, values, width, height } = props;
   const { spacing, angle, lineWidth } = values;
   return (
-    <div data-motion="hatch">
-      <svg aria-hidden="true" width={width + spacing * 2} height={height + spacing * 2}>
-        <defs>
-          <pattern
-            id={`${id}-hatch`}
-            width={spacing}
-            height={spacing}
-            patternUnits="userSpaceOnUse"
-            patternTransform={`rotate(${angle})`}
-          >
-            <path d={`M ${lineWidth / 2} 0 V ${spacing}`} stroke="currentColor" strokeWidth={lineWidth} />
-          </pattern>
-        </defs>
-        <rect
-          x={-spacing}
-          y={-spacing}
-          width={width + spacing * 2}
-          height={height + spacing * 2}
-          fill={`url(#${id}-hatch)`}
-        />
-      </svg>
-    </div>
+    <svg aria-hidden="true" width={width + spacing * 2} height={height + spacing * 2}>
+      <defs>
+        <pattern
+          id={`${id}-hatch`}
+          width={spacing}
+          height={spacing}
+          patternUnits="userSpaceOnUse"
+          patternTransform={`rotate(${angle})`}
+        >
+          <path d={`M ${lineWidth / 2} 0 V ${spacing}`} stroke="currentColor" strokeWidth={lineWidth} />
+        </pattern>
+      </defs>
+      <rect
+        x={-spacing}
+        y={-spacing}
+        width={width + spacing * 2}
+        height={height + spacing * 2}
+        fill={`url(#${id}-hatch)`}
+      />
+    </svg>
   );
 };
 
@@ -120,11 +118,9 @@ const RulerTicks = (props: PatternProps) => {
     return `M ${x} 0 V ${size} M ${x} ${height} V ${height - size}`;
   });
   return (
-    <div data-motion="ticks">
-      <svg aria-hidden="true" width={width + period} height={height}>
-        <path d={ticks.join(" ")} fill="none" stroke="currentColor" />
-      </svg>
-    </div>
+    <svg aria-hidden="true" width={width + period} height={height}>
+      <path d={ticks.join(" ")} fill="none" stroke="currentColor" />
+    </svg>
   );
 };
 
@@ -148,10 +144,15 @@ const DashedOutline = (props: PatternProps) => {
   );
 };
 
-export const patterns: Record<string, ComponentType<PatternProps>> = {
-  "section-hatch": SectionHatch,
-  "dots-to-grid": DotsToGrid,
-  "plotter-crosshair": PlotterCrosshair,
-  "ruler-ticks": RulerTicks,
-  "dashed-outline": DashedOutline,
+interface Pattern {
+  component: ComponentType<PatternProps>;
+  motion: string;
+}
+
+export const patterns: Record<string, Pattern> = {
+  "section-hatch": { component: SectionHatch, motion: "noise-counter hatch" },
+  "dots-to-grid": { component: DotsToGrid, motion: "noise-counter" },
+  "plotter-crosshair": { component: PlotterCrosshair, motion: "noise-counter" },
+  "ruler-ticks": { component: RulerTicks, motion: "noise-counter ticks" },
+  "dashed-outline": { component: DashedOutline, motion: "noise-counter" },
 };
