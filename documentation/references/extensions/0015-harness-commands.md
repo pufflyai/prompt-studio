@@ -12,6 +12,8 @@ Discovery runs in new conversations too. `HarnessCommandDiscoveryContext` provid
 
 Modes carry independent stable IDs, labels, descriptions, state text, and actions. An action can request one text argument. Mode IDs and action IDs belong to the selected qualified harness. Core does not infer modes from command text or store native mode state.
 
+A mode may declare `indicator: { label, tone }` for a small status dot. Tone is `neutral`, `info`, `success`, `warning`, or `error`; the provider selects it from confirmed native state. The label makes the status accessible. The UI keeps the last confirmed dot during readback and uses neutral when status is unavailable. Actions may declare an `icon` from the shared UI icon registry. Neither icons nor tones imply behavior. Status refresh is automatic and has no menu action.
+
 A command can declare `composer: { label, modeId?, reservedArguments? }` to tag an existing draft. Selecting it removes only the completion query. Submission sends the native command with that draft as its argument. `modeId` identifies native state that can confirm submission; without it, the UI must not invent a persistent mode. `reservedArguments` lists native action words that cannot represent a draft objective through this text command. `disabledReason` explains a current native restriction, including unsupported mode combinations.
 
 Modes can declare `tagText` for a short native summary and `closeActionId` to select one of their advertised actions when the tag is closed. Without a declared close action, the UI only exposes the advertised controls in details. It must not choose an action by its spelling, label or position. Native mutations and inline argument edits preserve the unrelated composer draft.

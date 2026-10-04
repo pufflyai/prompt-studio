@@ -63,9 +63,9 @@ The label opens a compact Popover with shared Menu styling. This supports focus 
 
 The menu contains the full objective, native status, available metrics, freshness and provider detail such as an evaluator reason. Omit absent metrics. Do not synthesize elapsed time, token budgets, step counts or progress percentages. A provider can expose additional labeled read-only information through the same detail surface.
 
-Show only native actions that the harness advertises for the current state. Codex actions do not establish equivalent Claude or OpenCode actions. Status queries use explicit Check status actions and return their native result in the conversation when structured readback is unavailable.
+Show only native actions that the harness advertises for the current state. Codex actions do not establish equivalent Claude or OpenCode actions. Refresh status automatically. Native status dots use provider-supplied labels and semantic tones, and action rows use provider-supplied icons. Slash completion stays icon-free.
 
-An unverified submitted reference exposes Check status, not Clear against its old objective. Its close action is labeled Hide submitted goal and only dismisses that reference. A native mutation requires current verified state and supported action semantics. Refresh before acting; if the objective changed, update details and require a new explicit action. An action that targets the current session goal must be named Clear current goal rather than promising to clear an old objective.
+An unverified submitted reference has no native actions. Its close action is labeled Hide submitted goal and only dismisses that reference. A native mutation requires current verified state and supported action semantics. Refresh before acting; if the objective changed, update details and require a new explicit action. An action that targets the current session goal must be named Clear current goal rather than promising to clear an old objective.
 
 Successful dispatch can show `Sent`; it cannot by itself show `Active`. Show `Starting` while a request is pending, `Checking` during state refresh, and `Status unavailable` when current status cannot be read. Retain the submitted objective from its existing message; do not introduce a second persisted goal record in the workbench.
 
@@ -135,7 +135,7 @@ This confirmation path applies to Codex structured proposals. Claude's live `Exi
 | Attachments with goal input | Use only a native operation that supports them. If unavailable, explain before Send and retain them. Do not discard attachments or send a second implicit prompt. |
 | Queued prompt or busy provider | Respect native availability. Keep draft intent and text when an operation cannot run while busy. Revalidate capability and state before dispatch. |
 | Narrow toolbar | Keep one 28 px row and short Goal/Plan labels. Keep full objectives in tooltips and details. Scroll remaining controls when needed. |
-| Status read | Check status is separate from setting a goal. Preserve the draft while reading. Report unavailable status plainly. |
+| Status read | Refresh automatically without a menu item. Preserve the draft while reading. Report unavailable status plainly and use a neutral dot. |
 
 ## Acceptance for implementation
 

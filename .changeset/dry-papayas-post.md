@@ -4,4 +4,4 @@
 "@pstdio/ui": minor
 ---
 
-Expose native harness commands through public session APIs and slash popovers with provider-owned composer modes.
+Expose native harness commands, slash completion, and provider-owned composer tags with status indicators and actions.

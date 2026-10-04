@@ -1,11 +1,27 @@
-import { Button, Field, HStack, Input, Menu, Popover, Portal, Stack, Tag, Text, useSlotRecipe } from "@chakra-ui/react";
+import {
+  Button,
+  chakra,
+  Field,
+  HStack,
+  Icon,
+  Input,
+  Menu,
+  Popover,
+  Portal,
+  Stack,
+  Tag,
+  Text,
+  useSlotRecipe,
+} from "@chakra-ui/react";
 import { useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
+import { getIconComponent } from "@/components/primitives/icon-options";
 import { Tooltip } from "@/components/primitives/tooltip";
 
 interface HarnessAction {
   id: string;
   label: string;
+  icon?: string;
   argument?: { label: string; value?: string };
 }
 interface HarnessMode {
@@ -13,6 +29,7 @@ interface HarnessMode {
   label: string;
   description: string;
   state: string;
+  indicator?: { label: string; tone: "neutral" | "info" | "success" | "warning" | "error" };
   tagText?: string;
   closeActionId?: string;
   confirmation?: { id: string; title: string; actionId: string; cancelLabel?: string };
@@ -31,12 +48,11 @@ export interface HarnessControlsProps {
   pending?: boolean;
   unavailable?: boolean;
   onRequestConfirmation?: (modeId: string) => void;
-  onRefresh?: () => void;
   onAction: (modeId: string, actionId: string, argument?: string, modeSnapshot?: HarnessMode) => Promise<void>;
 }
 
-const LocalModeTag = (props: { tag: LocalTag; onRefresh?: () => void }) => {
-  const { tag, onRefresh } = props;
+const LocalModeTag = (props: { tag: LocalTag }) => {
+  const { tag } = props;
   return (
     <Menu.Root>
       <Tooltip content={tag.description} openDelay={300} closeDelay={150}>
@@ -57,11 +73,6 @@ const LocalModeTag = (props: { tag: LocalTag; onRefresh?: () => void }) => {
             <Text p="sm" textStyle="label/S/regular" overflowWrap="anywhere">
               {tag.description}
             </Text>
-            {onRefresh ? (
-              <Menu.Item value="refresh" onClick={onRefresh}>
-                Check status
-              </Menu.Item>
-            ) : null}
           </Menu.Content>
         </Menu.Positioner>
       </Portal>
@@ -74,10 +85,9 @@ const NativeModeTag = (props: {
   pending?: boolean;
   unavailable?: boolean;
   onRequestConfirmation?: HarnessControlsProps["onRequestConfirmation"];
-  onRefresh?: () => void;
   onAction: HarnessControlsProps["onAction"];
 }) => {
-  const { mode, pending, unavailable, onRequestConfirmation, onRefresh, onAction } = props;
+  const { mode, pending, unavailable, onRequestConfirmation, onAction } = props;
   const styles = useSlotRecipe({ key: "menu" })();
   const [editing, setEditing] = useState<{ action: HarnessAction; mode: HarnessMode } | null>(null);
   const [argument, setArgument] = useState("");
@@ -108,6 +118,16 @@ const NativeModeTag = (props: {
     >
       <Tooltip content={`${mode.label}: ${mode.description} · ${status}`} openDelay={300} closeDelay={150}>
         <Tag.Root variant="ticket" size="composer">
+          {mode.indicator ? (
+            <Tag.StartElement>
+              <chakra.span
+                role="img"
+                aria-label={unavailable ? "Status unavailable" : mode.indicator.label}
+                data-status-dot=""
+                data-tone={unavailable ? "neutral" : mode.indicator.tone}
+              />
+            </Tag.StartElement>
+          ) : null}
           <Popover.Trigger asChild>
             <Tag.Label asChild>
               <button type="button" aria-label={`${mode.label} details`}>
@@ -162,6 +182,7 @@ const NativeModeTag = (props: {
                     role="button"
                     variant="full-width"
                     label={action.label}
+                    icon={action.icon ? <Icon as={getIconComponent(action.icon)} boxSize="icon-xs" /> : undefined}
                     disabled={
                       pending || unavailable || (action.id === mode.confirmation?.actionId && !onRequestConfirmation)
                     }
@@ -177,9 +198,6 @@ const NativeModeTag = (props: {
                   />
                 ))
               : null}
-            {onRefresh ? (
-              <ListRow role="button" variant="full-width" label="Check status" onActivate={onRefresh} />
-            ) : null}
           </Popover.Content>
         </Popover.Positioner>
       </Portal>
@@ -188,7 +206,7 @@ const NativeModeTag = (props: {
 };
 
 export const HarnessControls = (props: HarnessControlsProps) => {
-  const { modes, draftTag, sentTag, pending, unavailable, onRequestConfirmation, onRefresh, onAction } = props;
+  const { modes, draftTag, sentTag, pending, unavailable, onRequestConfirmation, onAction } = props;
   return (
     <HStack gap="2xs" minW="0" aria-label="Harness controls">
       {modes.map((mode) => (
@@ -198,12 +216,11 @@ export const HarnessControls = (props: HarnessControlsProps) => {
           pending={pending}
           unavailable={unavailable}
           onRequestConfirmation={onRequestConfirmation}
-          onRefresh={onRefresh}
           onAction={onAction}
         />
       ))}
       {draftTag ? <LocalModeTag tag={draftTag} /> : null}
-      {sentTag ? <LocalModeTag tag={sentTag} onRefresh={onRefresh} /> : null}
+      {sentTag ? <LocalModeTag tag={sentTag} /> : null}
     </HStack>
   );
 };

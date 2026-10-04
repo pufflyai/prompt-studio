@@ -22,6 +22,13 @@ export const tagSlotRecipe = defineSlotRecipe({
       cursor: "pointer",
       _focusVisible: { outline: "2px solid", outlineColor: "border", outlineOffset: "2px" },
     },
+    startElement: {
+      "& [data-status-dot]": { display: "block", boxSize: "status-dot", borderRadius: "full", bg: "fg.muted" },
+      "& [data-tone=success]": { bg: "fg.success" },
+      "& [data-tone=info]": { bg: "fg.info" },
+      "& [data-tone=warning]": { bg: "fg.warning" },
+      "& [data-tone=error]": { bg: "fg.error" },
+    },
     closeTrigger: {
       display: "inline-flex",
       alignItems: "center",

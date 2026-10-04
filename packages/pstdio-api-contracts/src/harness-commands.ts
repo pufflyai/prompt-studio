@@ -28,6 +28,8 @@ export const harnessCommandSchema = z.object({
 export const harnessModeActionSchema = z.object({
   id: z.string(),
   label: z.string(),
+  /** Shared UI icon name. Omit when no icon represents the native action. */
+  icon: z.string().optional(),
   /** A single native text argument. This is not a general form language. */
   argument: z.object({ label: z.string(), value: z.string().optional() }).optional(),
 });
@@ -36,6 +38,10 @@ export const harnessModeSchema = z.object({
   label: z.string(),
   description: z.string(),
   state: z.string(),
+  /** Provider-owned status presentation; the host must not infer it from command names or prose. */
+  indicator: z
+    .object({ label: z.string(), tone: z.enum(["neutral", "info", "success", "warning", "error"]) })
+    .optional(),
   /** Short native summary displayed in the composer tag. */
   tagText: z.string().optional(),
   /** An advertised native action to invoke when the person closes the tag. */
