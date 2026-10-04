@@ -66,12 +66,12 @@ export const ShaderSurface = (props: ShaderSurfaceProps) => {
       aria-hidden
     >
       <style>{`
-        #${id} { --shader-play-state: paused; opacity: ${theme === "dark" ? values.darkOpacity : values.lightOpacity}; }
+        #${id} { --shader-play-state: paused; }
         #${id}[data-playing="true"] { --shader-play-state: running; }
         #${id} :where([data-motion]:not([data-motion="outline"])) { position: absolute; top: 0; left: 0; width: ${box.width}px; height: ${box.height}px; }
         #${id} svg { display: block; }
         #${id} [data-motion~="hatch"] svg { overflow: visible; }
-        #${id} [data-motion="noise"] { width: ${box.width + tile}px; mask-image: url("${image}"); mask-repeat: repeat-x; }
+        #${id} [data-motion="noise"] { width: ${box.width + tile}px; mask-image: url("${image}"); mask-repeat: repeat-x; opacity: ${theme === "dark" ? values.darkOpacity : values.lightOpacity}; }
         #${id} [data-motion="band"] { left: ${-band}px; width: ${band}px; mask-image: linear-gradient(to right, transparent, black 85%, transparent); mask-repeat: no-repeat; }
         #${id} [data-motion="band-counter"] { left: ${band}px; }
       `}</style>
