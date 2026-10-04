@@ -12,6 +12,7 @@ export const agentSkillsLayoutSchema = z.object({
 const localizableSchema = z.union([z.string(), z.object({ $l10n: z.string(), default: z.string().optional() })]);
 
 const harnessParamBaseSchema = z.object({
+  control: z.literal("command").optional(),
   label: localizableSchema.optional(),
   description: localizableSchema.optional(),
   required: z.boolean().optional(),

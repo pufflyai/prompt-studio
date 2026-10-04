@@ -16,6 +16,7 @@ import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
+// Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.

@@ -29,10 +29,9 @@ export const initializeConversation = (
       if (previous) {
         await previous.session?.stop();
         await previous.checkpointPromise?.catch(() => undefined);
-        const old = await previous.conversationReady;
-        old.close();
-        retained = old.getMessages();
         await checkpointConversation(sessionId, previous, deps);
+        const old = await previous.conversationReady;
+        retained = old.getMessages();
         previous.approvalService.dispose();
         previous.questionService.dispose();
       }

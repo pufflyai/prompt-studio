@@ -7,6 +7,7 @@ export * from "./extensions";
 export * from "./extensions.terminal";
 export * from "./files";
 export * from "./harness";
+export * from "./harness-commands";
 export * from "./history-reconciliation";
 export * from "./notifications/types";
 export * from "./projects";

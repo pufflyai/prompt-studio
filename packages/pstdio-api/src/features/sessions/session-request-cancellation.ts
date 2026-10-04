@@ -2,12 +2,13 @@ import type { HarnessSession } from "pstdio-api-contracts";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { checkpointConversation } from "./session-checkpoint";
-import type { ActiveSession } from "./session-store";
+import { type ActiveSession, cancelSessionControls } from "./session-store";
 
 type CancellationDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService">;
 
 const finalizeCancellation = async (sessionId: string, entry: ActiveSession | null, deps: CancellationDeps) => {
   if (!entry || deps.sessionService.store.get(sessionId) !== entry) return;
+  cancelSessionControls(entry);
   await checkpointConversation(sessionId, entry, deps);
   deps.sessionService.store.remove(sessionId, entry);
 };
@@ -29,6 +30,9 @@ export const bindSessionCancellation = async (
   let cancelling: Promise<void> | undefined;
   const cancel = () => {
     cancelling ??= Promise.resolve().then(async () => {
+      if (deps.sessionService.store.get(sessionId) === entry)
+        deps.sessionService.store.markCancellationRequested(sessionId);
+      else cancelSessionControls(entry);
       try {
         await session.stop();
       } catch (error) {
