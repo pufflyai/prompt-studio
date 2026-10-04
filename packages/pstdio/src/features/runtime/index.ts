@@ -1,3 +1,5 @@
+// Extension webviews run on their own `<extension>.localhost` origins at the runtime port.
+export { webviewHostLabel, webviewOriginLabel } from "pstdio-api/extensions/webview-origin";
 export {
   observeRuntimeShutdown,
   promoteRuntime,

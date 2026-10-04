@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { loadExtensionSources } from "pstdio-extensions";
+import { webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import { createExtensionWebviewAccess } from "../extension-webview-access";
 import { createExtensionWebviewAssetRoutes } from "../extension-webview-asset-routes";
 import { createProjectExtensionRuntimeCatalog } from "../project-extension-runtime-catalog";
@@ -12,6 +13,8 @@ export const webviewAccess = createExtensionWebviewAccess({
 });
 export const webviewScope = { installedExtensionId: "installed-lab", webviewId: "pstdio.lab.view.labPage" };
 export const webviewBasePath = webviewAccess.runtimeUrl(webviewScope).replace(/\/runtime$/, "");
+/** The webview origin of the test extension; requests go there unless a test names another URL. */
+export const webviewOrigin = `http://${webviewOriginLabel(webviewScope.installedExtensionId)}.localhost:19840`;
 
 export const writeExtension = (root: string, entry: string) => {
   mkdirSync(root, { recursive: true });
@@ -91,5 +94,8 @@ export const createApp = (input: {
     } as never),
   );
   app.all("*", (c) => c.text("session realm", 401));
-  return app;
+  return {
+    request: (url: string, init?: RequestInit) =>
+      app.request(url.startsWith("http") ? url : `${webviewOrigin}${url}`, init),
+  };
 };

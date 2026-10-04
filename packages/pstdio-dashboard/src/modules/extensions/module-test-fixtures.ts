@@ -1,4 +1,16 @@
+import { afterEach, beforeEach } from "bun:test";
 import type { CommandExecuteResponse, WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
+
+/** Gives a test file the runtime config a served dashboard always has, including the webview origin. */
+export const withServedDashboardConfig = () => {
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { webviewOrigin?: string } };
+  beforeEach(() => {
+    runtime.__PSTDIO_CONFIG__ = { webviewOrigin: "http://*.localhost:19840" };
+  });
+  afterEach(() => {
+    delete runtime.__PSTDIO_CONFIG__;
+  });
+};
 
 const labExtensionId = "pstdio.extension-lab";
 const issuesExtensionId = "acme.issue-tracker";
@@ -7,6 +19,7 @@ const webview = (path: string, id: string) => ({
   entry: { kind: "package-asset" as const, path, baseUrl: "file:///extension/extension.ts" },
   runtimeUrl: "/v1/extensions/runtime",
   moduleUrl: `/v1/extensions/installed/extension-lab/webviews/${id}/module.js`,
+  originLabel: "ext-0123456789abcdef01234567",
 });
 export const emptyAppearance = { themes: [], fileIconThemes: [], translations: [], diagnostics: [] };
 export const metadata = {

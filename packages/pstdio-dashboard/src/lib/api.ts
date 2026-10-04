@@ -13,6 +13,8 @@ export type PstdioConfig = {
   apiBaseUrl?: string;
   terminalWebSocketUrl?: string;
   version?: string;
+  /** Origin pattern for extension webviews; `*` stands for the extension's host label. */
+  webviewOrigin?: string;
 };
 
 export const readRuntimeConfig = (): PstdioConfig | null => {
@@ -77,6 +79,13 @@ export const buildAbsoluteApiUrl = (path: string, baseHref = globalThis.location
   }
 
   return apiUrl;
+};
+
+/** Places a webview resource on its extension's own origin, which the server names in the config. */
+export const buildWebviewUrl = (originLabel: string, path: string) => {
+  const webviewOrigin = readRuntimeConfig()?.webviewOrigin;
+  if (!webviewOrigin) throw new Error("The server did not name an origin for extension webviews.");
+  return `${webviewOrigin.replace("*", originLabel)}${path}`;
 };
 
 let apiClientInstance: PstdioClient | null = null;

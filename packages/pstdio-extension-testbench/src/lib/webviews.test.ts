@@ -3,10 +3,11 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { packageAsset } from "@pstdio/sdk/extensions";
+import { webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import { createPreviewWebviewHost } from "./webviews";
 
 describe("createPreviewWebviewHost", () => {
-  test("resolves webview assets against the current app origin", async () => {
+  test("places each extension's webviews on that extension's own origin", async () => {
     const root = join(tmpdir(), `pstdio-extension-testbench-${crypto.randomUUID()}`);
     const sourcePath = join(root, "extension.ts");
     const viewPath = join(root, "view.ts");
@@ -17,13 +18,7 @@ describe("createPreviewWebviewHost", () => {
     writeFileSync(viewPath, "export default {};\n");
 
     try {
-      let origin = "http://localhost:6173";
-      const host = createPreviewWebviewHost({
-        apiOrigin: () => origin,
-        apiPrefix: "/__extension-testbench",
-        cacheRoot,
-      });
-
+      const host = createPreviewWebviewHost({ apiPrefix: "/__extension-testbench", cacheRoot, port: 6174 });
       const input = {
         extensionId: "pstdio.lab",
         extensionName: "lab",
@@ -33,11 +28,20 @@ describe("createPreviewWebviewHost", () => {
       };
       await host.prepareWebviews([input]);
       const webview = host.resolveWebview(input);
+      const origin = `http://${webviewOriginLabel("pstdio.lab")}.localhost:6174`;
 
-      origin = "http://127.0.0.1:6174";
-
-      expect(webview?.runtimeUrl).toBe("http://localhost:6173/__extension-testbench/runtime.html");
-      expect(webview?.moduleUrl).toBe("http://localhost:6173/__extension-testbench/webviews/lab.panel/module.js");
+      expect(webview?.originLabel).toBe(webviewOriginLabel("pstdio.lab"));
+      expect(webview?.runtimeUrl).toBe(`${origin}/__extension-testbench/runtime.html`);
+      expect(webview?.moduleUrl).toBe(`${origin}/__extension-testbench/webviews/lab.panel/module.js`);
+      expect(host.handleRequest(new URL(`${origin}/__extension-testbench/runtime.html`))?.status).toBe(200);
+      expect(host.handleRequest(new URL("http://localhost:6174/__extension-testbench/runtime.html"))).toBeUndefined();
+      expect(
+        host.handleRequest(
+          new URL(
+            `http://${webviewOriginLabel("acme.other")}.localhost:6174/__extension-testbench/webviews/lab.panel/module.js`,
+          ),
+        )?.status,
+      ).toBe(404);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -62,6 +66,7 @@ describe("createPreviewWebviewHost", () => {
       const host = createPreviewWebviewHost({
         apiPrefix: "/__extension-testbench",
         cacheRoot,
+        port: 6174,
         buildWebview: async ({ distDir }) => {
           startedBuilds += 1;
           await buildsReleased;
@@ -86,8 +91,13 @@ describe("createPreviewWebviewHost", () => {
       }
       await preparing;
 
-      expect(host.resolveWebview(inputs[0]!)?.moduleUrl).toBe("/__extension-testbench/webviews/lab.first/module.js");
-      expect(host.resolveWebview(inputs[1]!)?.moduleUrl).toBe("/__extension-testbench/webviews/lab.second/module.js");
+      const origin = `http://${webviewOriginLabel("pstdio.lab")}.localhost:6174`;
+      expect(host.resolveWebview(inputs[0]!)?.moduleUrl).toBe(
+        `${origin}/__extension-testbench/webviews/lab.first/module.js`,
+      );
+      expect(host.resolveWebview(inputs[1]!)?.moduleUrl).toBe(
+        `${origin}/__extension-testbench/webviews/lab.second/module.js`,
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

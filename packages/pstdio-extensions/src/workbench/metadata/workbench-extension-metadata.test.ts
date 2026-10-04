@@ -157,6 +157,7 @@ describe("createWorkbenchExtensionMetadata", () => {
         ...webview,
         runtimeUrl: "/extension-assets/runtime.js",
         moduleUrl: "/extension-assets/tickets.js",
+        originLabel: "ext-0123456789abcdef01234567",
       }),
     });
     expect(metadata.views[0]).toMatchObject({

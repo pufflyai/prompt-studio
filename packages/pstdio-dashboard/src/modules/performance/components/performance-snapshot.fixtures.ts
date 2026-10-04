@@ -13,7 +13,7 @@ const process = (
   ...input,
 });
 
-// One process per extension, so the stories show one row each.
+// One process per extension, as Chromium runs them with one origin each.
 const extension = (pid: number, installedExtensionId: string, cpu: number, views = 1, workingSet = 80_000) =>
   process({
     pid,

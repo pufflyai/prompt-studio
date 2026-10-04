@@ -13,7 +13,7 @@ const json = (body: unknown, status = 200) =>
     status,
   });
 
-const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+const api = createExtensionTestbenchApi({ apiPrefix, port, repoRoot });
 const server = Bun.serve({
   fetch: async (request) =>
     (await api.handleRequest(request)) ?? json({ error: "Unknown extension testbench endpoint." }, 404),

@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { getExtensionRuntimeScript, renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime";
+import { webviewHostLabel, webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import { apiLogger } from "../../lib/logger";
 import { ProjectNotFoundError } from "../../services/extension-service";
 import type { AppBindings } from "../../types";
@@ -66,7 +67,9 @@ const serveArtifact = async (
 
 const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAssetRouteDeps) => {
   const authorized = deps.extensionWebviewAccess.authorize(c.req.raw);
-  if (!authorized) return notFound(c);
+  // An extension's webview resources exist only on that extension's own origin.
+  const hostLabel = webviewHostLabel(new URL(c.req.url).host);
+  if (!authorized || hostLabel !== webviewOriginLabel(authorized.installedExtensionId)) return notFound(c);
 
   if (authorized.kind === "runtime") {
     return new Response(renderInlineExtensionRuntimeHtml(getExtensionRuntimeScript()), {
@@ -96,12 +99,8 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
   });
 };
 
-const applyAssetHeaders = (c: Context<AppBindings>, response: Response) => {
+const applyAssetHeaders = (response: Response) => {
   response.headers.set("referrer-policy", "no-referrer");
-  if (c.req.header("origin") === "null") {
-    response.headers.set("access-control-allow-origin", "null");
-    response.headers.set("vary", "Origin");
-  }
   return response;
 };
 
@@ -119,15 +118,7 @@ const assetRealmHandler = (deps: WebviewAssetRouteDeps) => async (c: Context<App
   let status = 500;
 
   try {
-    const origin = c.req.header("origin");
-    let response: Response;
-    if (origin && origin !== "null") {
-      response = c.json({ error: "Forbidden" }, 403);
-    } else {
-      response = await serveAuthorizedRequest(c, deps);
-    }
-
-    response = withoutHeadBody(c.req.raw, applyAssetHeaders(c, response));
+    const response = withoutHeadBody(c.req.raw, applyAssetHeaders(await serveAuthorizedRequest(c, deps)));
     status = response.status;
     return response;
   } catch (error) {
@@ -149,7 +140,7 @@ const assetRealmHandler = (deps: WebviewAssetRouteDeps) => async (c: Context<App
     );
     return withoutHeadBody(
       c.req.raw,
-      applyAssetHeaders(c, c.json({ code: "internal_server_error", error: message }, 500)),
+      applyAssetHeaders(c.json({ code: "internal_server_error", error: message }, 500)),
     );
   } finally {
     apiLogger.info(

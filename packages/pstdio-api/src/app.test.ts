@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, spyOn, test } from "bun:test";
+import { webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import { createTestApp } from "./test-utils/create-test-app";
 
 setDefaultTimeout(10_000);
@@ -51,17 +52,21 @@ describe("onError handler", () => {
 });
 
 describe("unsecured extension assets", () => {
-  test("allows signed opaque-origin extension assets without runtime transport security", async () => {
+  const webviewOrigin = `http://${webviewOriginLabel("missing")}.localhost:43123`;
+
+  test("serves signed extension assets on their webview origin without runtime transport security", async () => {
     const basePath = handle.deps.extensionWebviewAccess
       .runtimeUrl({ installedExtensionId: "missing", webviewId: "missing" })
       .replace(/\/runtime$/, "");
-    const res = await handle.app.request(`http://127.0.0.1:43123${basePath}/runtime`, {
-      headers: { origin: "null" },
-    });
+    const res = await handle.app.request(`${webviewOrigin}${basePath}/runtime`, { headers: { origin: webviewOrigin } });
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("access-control-allow-origin")).toBe("null");
-    expect(res.headers.get("access-control-allow-credentials")).toBeNull();
-    expect(res.headers.get("vary")).toContain("Origin");
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  test("keeps the API out of reach of webview origins even without runtime transport security", async () => {
+    const res = await handle.app.request(`${webviewOrigin}/v1/projects`, { headers: { origin: webviewOrigin } });
+
+    expect(res.status).toBe(404);
   });
 });

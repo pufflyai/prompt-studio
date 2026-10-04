@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { webviewUrl } from "../helpers/webview-origin";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { expectPlannerCommands } from "./packaged-planner-commands-smoke";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
@@ -266,9 +267,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
           const webview = settingsView?.body.kind === "webview" ? settingsView.body.webview : undefined;
           expect(webview?.runtimeUrl).toBeTruthy();
 
-          const runtimeRes = await fetch(`${started.baseUrl}${webview!.runtimeUrl}`, {
-            headers: runtimeAuthorization(started.descriptor),
-          });
+          const runtimeRes = await fetch(webviewUrl(started.baseUrl, webview!.originLabel, webview!.runtimeUrl));
           expect(runtimeRes.status).toBe(200);
 
           const runtimeScript = await runtimeRes.text();

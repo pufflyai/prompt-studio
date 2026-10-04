@@ -30,6 +30,8 @@ type ExtensionBench = Awaited<ReturnType<typeof loadExtensionBench>>;
 
 interface ExtensionTestbenchApiInput {
   apiPrefix: string;
+  /** Port the browser reaches this API on; extension webviews load from it directly. */
+  port: number;
   repoRoot: string;
 }
 
@@ -246,11 +248,10 @@ const toLoadResponse = (benchId: string, sourcePath: string, bench: ExtensionBen
 export const createExtensionTestbenchApi = (input: ExtensionTestbenchApiInput) => {
   const benches = new Map<string, ExtensionBench>();
   const cleanupHome = createApiHome();
-  let apiOrigin: string | undefined;
   const webviewHost = createPreviewWebviewHost({
-    apiOrigin: () => apiOrigin,
     apiPrefix: input.apiPrefix,
     cacheRoot: mkdtempSync(join(tmpdir(), "pstdio-extension-testbench-webviews-")),
+    port: input.port,
   });
   let benchCounter = 0;
 
@@ -282,7 +283,6 @@ export const createExtensionTestbenchApi = (input: ExtensionTestbenchApiInput) =
   const handleRequest = async (request: Request) => {
     try {
       const url = new URL(request.url);
-      apiOrigin = request.headers.get("x-pstdio-testbench-origin") ?? apiOrigin;
       const webviewResponse = webviewHost.handleRequest(url);
       if (webviewResponse) return webviewResponse;
 

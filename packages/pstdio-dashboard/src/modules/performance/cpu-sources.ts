@@ -2,9 +2,9 @@ import type { PerformanceProcess, PerformanceSnapshot } from "pstdio-api-contrac
 
 export const SHOWN_EXTENSIONS = 5;
 
-// One row in the popover's CPU list: the workbench window, or a process that
-// runs extension views. Chromium may run several extensions in one process,
-// so a row lists every extension that its process hosts.
+// One row in the popover's CPU list: the workbench window, or the process that
+// runs one extension's views. Each extension has its own origin, so Chromium
+// gives it its own process; an old shared process lists every extension it hosts.
 export interface CpuSource {
   // The extension ids, so a row keeps its identity while it runs, waits, or pauses.
   key: string;

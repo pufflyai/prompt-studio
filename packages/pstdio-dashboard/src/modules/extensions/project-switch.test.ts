@@ -11,7 +11,14 @@ import {
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "./module-test-fixtures";
+import {
+  emptyAppearance,
+  flushMicrotasks,
+  metadataWithResourceExtension,
+  withServedDashboardConfig,
+} from "./module-test-fixtures";
+
+withServedDashboardConfig();
 
 interface Deferred<TValue> {
   promise: Promise<TValue>;

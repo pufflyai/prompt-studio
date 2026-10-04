@@ -30,23 +30,24 @@ describe("desktop clipboard permissions", () => {
     expect(canGrantSessionPermission({ ...request, requestingUrl })).toBe(false);
   });
 
-  test("allows only runtime extension webview subframes to write", () => {
+  test("allows only extension webview subframes on their webview origin to write", () => {
+    const webviewOrigin = "http://ext-0123456789abcdef01234567.localhost:43127";
     const subframe = {
       ...request,
       isMainFrame: false,
-      requestingUrl: `${runtimeOrigin}/v1/extensions/webviews/token/social-radar/digest/runtime`,
+      requestingUrl: `${webviewOrigin}/v1/extensions/webviews/token/social-radar/digest/runtime`,
     };
     expect(canGrantSessionPermission(subframe)).toBe(true);
     expect(canGrantSessionPermission({ ...subframe, permission: "clipboard-read" })).toBe(false);
-    expect(
-      canGrantSessionPermission({
-        ...subframe,
-        requestingUrl: "https://example.com/v1/extensions/webviews/token/radar/digest/runtime",
-      }),
-    ).toBe(false);
-    expect(canGrantSessionPermission({ ...subframe, requestingUrl: `${runtimeOrigin}/v1/extensions/webviews/` })).toBe(
-      false,
-    );
+    for (const requestingUrl of [
+      "https://example.com/v1/extensions/webviews/token/radar/digest/runtime",
+      `${runtimeOrigin}/v1/extensions/webviews/token/radar/digest/runtime`,
+      "http://ext-0123456789abcdef01234567.localhost:43128/v1/extensions/webviews/token/radar/digest/runtime",
+      "http://app.localhost:43127/v1/extensions/webviews/token/radar/digest/runtime",
+      `${webviewOrigin}/v1/extensions/webviews/`,
+    ]) {
+      expect(canGrantSessionPermission({ ...subframe, requestingUrl })).toBe(false);
+    }
   });
 
   test("denies subframes and requests without an active runtime", () => {

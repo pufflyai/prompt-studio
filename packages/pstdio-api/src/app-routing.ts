@@ -1,6 +1,7 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, Next } from "hono";
 import { cors } from "hono/cors";
+import { isWebviewPath, webviewHostLabel } from "pstdio-extensions/webview-origin";
 import { redactSensitiveText } from "pstdio-logging";
 import { createAgentRoutes } from "./features/agents/routes";
 import { bearerTokenFrom, MAX_INPUT_BYTES } from "./features/automation/automation-policy";
@@ -190,6 +191,13 @@ export const registerApi = (
   deps: RouteDeps,
   input: { security: RuntimeSecurity | undefined; terminalOrigins: string[] },
 ) => {
+  // Extension webviews run on their own origins. Those origins reach only webview assets,
+  // and the dashboard origin never serves them, so extension code cannot touch the API.
+  app.use("*", async (c, next) => {
+    const onWebviewOrigin = webviewHostLabel(new URL(c.req.url).host) !== null;
+    if (onWebviewOrigin !== isWebviewPath(c.req.path)) return c.json({ error: "Not found" }, 404);
+    await next();
+  });
   app.route("/v1", createExtensionWebviewAssetRoutes(deps));
   registerApiMiddleware(app, deps, input.security);
   registerApiRoutes(app, deps, input.terminalOrigins);

@@ -28,7 +28,7 @@ test("shows the frame-rate meter and pauses an extension from the performance po
   await page.keyboard.press("Escape");
   await expect(meter).toBeVisible();
 
-  // The fixture's Lab view counts as an open extension view.
+  // The fixture's Lab view runs on its own origin and counts as an open extension view.
   await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
   const lab = page.locator('iframe[title="Lab"]');
   await expect(lab).toHaveCount(1);

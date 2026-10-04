@@ -5,7 +5,9 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadata } from "./module-test-fixtures";
+import { emptyAppearance, flushMicrotasks, metadata, withServedDashboardConfig } from "./module-test-fixtures";
+
+withServedDashboardConfig();
 
 test("restores an open extension page after a transient metadata gap", async () => {
   const projectId = "extension-page-refresh";

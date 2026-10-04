@@ -1,5 +1,6 @@
 import { apiWebSocket, createApp, resolveAppConfig } from "pstdio-api/app";
 import { disableExtensionMutationTimeout } from "pstdio-api/extensions/extension-request-timeout";
+import { webviewHostLabel } from "pstdio-api/extensions/webview-origin";
 import { type RuntimeHost, type RuntimeOwnerType, runtimeSessionCookie } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
@@ -98,6 +99,9 @@ const defaultDeps: ServeAppDeps = {
 const isApiPath = (pathname: string) =>
   pathname.startsWith("/v1") || pathname.startsWith("/runtime/") || pathname === "/healthz" || pathname === "/readyz";
 
+// Extension webviews are served on `<extension>.localhost` at the port the browser already reaches.
+const webviewOriginFor = (url: URL) => `${url.protocol}//*.localhost${url.port ? `:${url.port}` : ""}`;
+
 const createRequestHandler = (
   appReady: Promise<AppHandle>,
   assets: Map<string, Blob>,
@@ -106,7 +110,10 @@ const createRequestHandler = (
 ) => {
   const serveHtml = (request: Request, blob: Blob) =>
     blob.text().then((html) => {
-      const injected = deps.injectConfig(html, { version: CLI_VERSION });
+      const injected = deps.injectConfig(html, {
+        version: CLI_VERSION,
+        webviewOrigin: webviewOriginFor(new URL(request.url)),
+      });
       const headers = new Headers({ "Content-Type": "text/html" });
       if (runtimeHost?.origin() === new URL(request.url).origin) {
         headers.append("set-cookie", runtimeSessionCookie(runtimeHost.token));
@@ -122,14 +129,15 @@ const createRequestHandler = (
   };
 
   return async (request: Request, server: object) => {
-    const pathname = new URL(request.url).pathname;
-    if (isApiPath(pathname)) {
+    const url = new URL(request.url);
+    // A webview origin never serves the dashboard; the API answers only its webview assets.
+    if (isApiPath(url.pathname) || webviewHostLabel(url.host)) {
       disableExtensionMutationTimeout(request, server);
       return (await appReady).app.fetch(request, server);
     }
 
     // Mapping root to index.html prevents browsers downloading it as application/octet-stream.
-    const assetPath = pathname === "/" ? "index.html" : pathname.slice(1);
+    const assetPath = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
     const asset = assets.get(assetPath);
     if (asset) return serveAsset(request, assetPath, asset);
 
@@ -158,6 +166,8 @@ const logServeUrls = (host: string, baseUrl: string, log: ServeAppDeps["log"]) =
   if (host === "0.0.0.0" || host === "::") {
     log("  LAN clients should connect with this machine's LAN IP address.\n");
   }
+  // Webview hosts are `*.localhost`, which a remote client resolves to itself.
+  log("  Extension views load only on this machine; LAN clients cannot open them.\n");
 };
 
 export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {

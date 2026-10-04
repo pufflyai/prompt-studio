@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { webviewOriginLabel } from "pstdio/runtime";
 import { attributeProcess, type OwnedFrame } from "./process-attribution";
 
 const origin = "http://127.0.0.1:43123";
-const webview = (installedExtensionId: string, webviewId: string) =>
-  `${origin}/v1/extensions/webviews/secret-capability/${installedExtensionId}/${webviewId}/runtime`;
+// Each extension's webviews run on their own `<label>.localhost` host at the runtime port.
+const webview = (installedExtensionId: string, webviewId: string, host = webviewOriginLabel(installedExtensionId)) =>
+  `http://${host}.localhost:43123/v1/extensions/webviews/secret-capability/${installedExtensionId}/${webviewId}/runtime`;
 
 const frames: OwnedFrame[] = [
   { owner: "startup", isMainFrame: true, osProcessId: 10, url: "pstdio://lifecycle/index.html" },
@@ -65,5 +67,36 @@ describe("process attribution", () => {
       extensionFrames: [],
     });
     expect(attributeProcess({ pid: 12, type: "Tab" }, frames, null).role).toBe("renderer");
+  });
+
+  test("ignores a frame whose host does not belong to the extension named in its path", () => {
+    const spoofed: OwnedFrame[] = [
+      { owner: "workbench", isMainFrame: false, osProcessId: 20, url: webview("shader", "main") },
+      // Shader Lab's page loads a decoy frame on its own host that names another extension.
+      {
+        owner: "workbench",
+        isMainFrame: false,
+        osProcessId: 20,
+        url: webview("decoy", "main", webviewOriginLabel("shader")),
+      },
+      {
+        owner: "workbench",
+        isMainFrame: false,
+        osProcessId: 21,
+        url: `${origin}/v1/extensions/webviews/c/notes/main/runtime`,
+      },
+      {
+        owner: "workbench",
+        isMainFrame: false,
+        osProcessId: 22,
+        url: webview("notes", "main").replace(":43123/", ":9999/"),
+      },
+    ];
+
+    expect(attributeProcess({ pid: 20, type: "Tab" }, spoofed, origin).extensionFrames).toEqual([
+      { installedExtensionId: "shader", webviewId: "main" },
+    ]);
+    expect(attributeProcess({ pid: 21, type: "Tab" }, spoofed, origin).extensionFrames).toEqual([]);
+    expect(attributeProcess({ pid: 22, type: "Tab" }, spoofed, origin).extensionFrames).toEqual([]);
   });
 });

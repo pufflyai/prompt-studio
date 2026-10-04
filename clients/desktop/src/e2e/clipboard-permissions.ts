@@ -31,9 +31,10 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
     await window.evaluate(() => {
       const frame = document.createElement("iframe");
       frame.title = "Extension draft";
-      frame.sandbox.add("allow-scripts");
+      frame.sandbox.add("allow-scripts", "allow-same-origin");
       frame.allow = "fullscreen; clipboard-write";
-      frame.src = "/v1/extensions/webviews/token/radar/digest/runtime";
+      // Extension webviews run on their own `<extension>.localhost` origin at the runtime port.
+      frame.src = `http://ext-0123456789abcdef01234567.localhost:${location.port}/v1/extensions/webviews/token/radar/digest/runtime`;
       document.body.append(frame);
     });
     const extensionCopy = window.frameLocator('iframe[title="Extension draft"]').getByRole("button");

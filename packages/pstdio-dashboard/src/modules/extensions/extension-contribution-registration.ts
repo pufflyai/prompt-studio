@@ -5,7 +5,7 @@ import {
   toWorkbenchWhenExpression,
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
-import { buildAbsoluteApiUrl } from "@/lib/api";
+import { buildWebviewUrl } from "@/lib/api";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import {
@@ -53,15 +53,16 @@ export const withDashboardWebviewUrls = (
   ...metadata,
   views: metadata.views.map((view) => {
     if (view.body.kind !== "webview") return view;
+    const { webview } = view.body;
     return {
       ...view,
       body: {
         ...view.body,
         webview: {
-          ...view.body.webview,
-          runtimeUrl: buildAbsoluteApiUrl(view.body.webview.runtimeUrl),
-          moduleUrl: buildAbsoluteApiUrl(view.body.webview.moduleUrl),
-          styles: view.body.webview.styles?.map((url) => buildAbsoluteApiUrl(url)),
+          ...webview,
+          runtimeUrl: buildWebviewUrl(webview.originLabel, webview.runtimeUrl),
+          moduleUrl: buildWebviewUrl(webview.originLabel, webview.moduleUrl),
+          styles: webview.styles?.map((url) => buildWebviewUrl(webview.originLabel, url)),
         },
       },
     };

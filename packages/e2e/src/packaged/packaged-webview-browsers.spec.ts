@@ -16,6 +16,7 @@ import {
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { webviewUrl } from "../helpers/webview-origin";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -32,6 +33,9 @@ const webviewBrowsers: { launchOptions?: LaunchOptions; name: string; type: Brow
   },
   { name: "WebKit (Safari engine)", type: webkit },
 ];
+
+const frameOrigin = async (frame: { getAttribute: (name: string) => Promise<string | null> }) =>
+  new URL((await frame.getAttribute("src")) ?? "").origin;
 
 const findLabWebview = (metadata: WorkbenchExtensionMetadata) => {
   const labPage = metadata.pages.find((page) => page.path === "lab");
@@ -51,7 +55,7 @@ test.describe("packaged extension webviews", () => {
     const browserTest = browserAvailable || REQUIRE_WEBVIEW_BROWSERS ? test : test.skip;
 
     browserTest(
-      `persists commands and settings through authenticated opaque webviews in ${browserCase.name}`,
+      `persists commands and settings through authenticated extension-origin webviews in ${browserCase.name}`,
       async () => {
         const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-"));
         let child: ChildProcess | null = null;
@@ -85,9 +89,8 @@ test.describe("packaged extension webviews", () => {
             const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
             labWebview = findLabWebview(metadata);
             if (labWebview?.webview.moduleUrl) {
-              const moduleRes = await fetch(`${started.baseUrl}${labWebview.webview.moduleUrl}`, {
-                headers: runtimeAuthorization(started.descriptor),
-              });
+              const { originLabel, moduleUrl } = labWebview.webview;
+              const moduleRes = await fetch(webviewUrl(started.baseUrl, originLabel, moduleUrl));
               if (moduleRes.ok) break;
             }
             await sleep(250);
@@ -122,7 +125,10 @@ test.describe("packaged extension webviews", () => {
           });
           const iframe = page.locator('iframe[title="Lab"]');
           await iframe.waitFor({ state: "visible", timeout: 30_000 });
-          expect(await iframe.getAttribute("sandbox")).not.toContain("allow-same-origin");
+          // The webview runs on its extension's own origin, never the dashboard's.
+          const labOrigin = new URL(webviewUrl(started.baseUrl, labWebview!.webview.originLabel, "/")).origin;
+          expect(await frameOrigin(iframe)).toBe(labOrigin);
+          expect(await iframe.getAttribute("sandbox")).toContain("allow-same-origin");
 
           const frame = page.frameLocator('iframe[title="Lab"]');
           await frame.getByRole("heading", { name: "Sandbox webview" }).waitFor({ timeout: 30_000 });
@@ -145,9 +151,7 @@ test.describe("packaged extension webviews", () => {
           await page.getByText("Settings", { exact: true }).last().click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
           const settingsFrame = page.frameLocator('iframe[title="Lab (project)"]');
-          expect(await page.locator('iframe[title="Lab (project)"]').getAttribute("sandbox")).not.toContain(
-            "allow-same-origin",
-          );
+          expect(await frameOrigin(page.locator('iframe[title="Lab (project)"]'))).toBe(labOrigin);
           await settingsFrame.getByRole("spinbutton").fill("7");
           await settingsFrame.getByRole("button", { name: "Save", exact: true }).click();
           await expect(settingsFrame.getByText("Saved", { exact: true })).toBeVisible();

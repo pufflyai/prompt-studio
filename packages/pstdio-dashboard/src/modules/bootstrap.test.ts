@@ -6,8 +6,15 @@ import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extensio
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
-import { emptyAppearance, flushMicrotasks, metadata } from "./extensions/module-test-fixtures";
+import {
+  emptyAppearance,
+  flushMicrotasks,
+  metadata,
+  withServedDashboardConfig,
+} from "./extensions/module-test-fixtures";
 import { createStartModule } from "./start/module";
+
+withServedDashboardConfig();
 
 const activeViewId = (workbench: ReturnType<typeof createWorkbench>) => {
   const region = workbench.layout.getLayout().regions.main;

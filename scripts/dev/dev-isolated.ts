@@ -76,6 +76,8 @@ export const resolveIsolatedHome = (repoRoot: string, projectName: string) => {
 export const resolveIsolatedBrowserTransport = (hostPorts?: HostPorts) => ({
   PSTDIO_TERMINAL_ORIGINS: `http://${ISOLATED_BROWSER_HOST}:${hostPorts?.dashboard ?? CONTAINER_DASHBOARD_PORT}`,
   PSTDIO_TERMINAL_WEBSOCKET_URL: `ws://${ISOLATED_BROWSER_HOST}:${hostPorts?.api ?? CONTAINER_API_PORT}/v1/terminal`,
+  // Extension webviews load straight from the published API port, on `<extension>.localhost`.
+  PSTDIO_WEBVIEW_ORIGIN: `http://*.localhost:${hostPorts?.api ?? CONTAINER_API_PORT}`,
 });
 
 export const resolveIsolatedDashboardUrl = (port: number) => `http://${ISOLATED_BROWSER_HOST}:${port}/`;

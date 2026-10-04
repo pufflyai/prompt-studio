@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
@@ -187,13 +188,17 @@ describe("extension artifact endpoints", () => {
     const { url } = (await response.json()) as { url: string };
     expect(url).toMatch(/^\/v1\/extensions\/webviews\/.+\/artifacts\/\d+\/.+\/runs\/a\/chart\.png$/);
 
-    const image = await app.request(url);
+    // The webview resolves the relative URL on its extension's own origin, the only host serving it.
+    const installedExtensionId = decodeURIComponent(url.split("/")[5]!);
+    const webviewOrigin = `http://${webviewOriginLabel(installedExtensionId)}.localhost`;
+    const image = await app.request(`${webviewOrigin}${url}`);
     expect(image.status).toBe(200);
     expect(image.headers.get("content-type")).toBe("image/png");
     expect(Buffer.from(await image.arrayBuffer())).toEqual(pngBytes);
+    expect((await app.request(url)).status).toBe(404);
 
     // The signature binds the mount: pointing the same URL at another mount fails.
-    const tampered = await app.request(url.replace("/runs/", "/secrets/"));
+    const tampered = await app.request(`${webviewOrigin}${url.replace("/runs/", "/secrets/")}`);
     expect(tampered.status).toBe(404);
   });
 

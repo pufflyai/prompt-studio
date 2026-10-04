@@ -7,7 +7,7 @@ import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webvie
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
-import { apiRequest, buildAbsoluteApiUrl } from "@/lib/api";
+import { apiRequest, buildWebviewUrl } from "@/lib/api";
 import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
   deleteGlobalExtensionSetting,
@@ -26,7 +26,7 @@ import { openExtensionViews } from "../open-extension-views";
 import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
 import { executeWebviewCommand } from "./extension-webview-command";
-import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
+import { BridgedWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { notificationStatusRouteVerb } from "./notification-transition-route";
 import { PausedExtensionView } from "./paused-extension-view";
 
@@ -63,7 +63,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const [locale, setLocale] = useState(currentLocale);
   const paused = usePausedExtensions();
   const projectExtensions = useProjectExtensions(projectId);
-  const installedExtensionId = webview?.runtimeUrl
+  const installedExtensionId = webview
     ? parseExtensionWebviewPath(webview.runtimeUrl)?.scope.installedExtensionId
     : undefined;
   const isPaused = installedExtensionId ? paused.has(installedExtensionId) : false;
@@ -232,15 +232,11 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   });
 
   if (!webview.runtimeUrl || !webview.moduleUrl) {
-    if (!webview.assetUrl) {
-      return (
-        <Center px="md" color="fg.muted">
-          <Text textStyle="paragraph/S/regular">Extension view is still building...</Text>
-        </Center>
-      );
-    }
-
-    return <StaticWebviewSurface key={webviewId} colorScheme={colorScheme} title={frameTitle} webview={webview} />;
+    return (
+      <Center px="md" color="fg.muted">
+        <Text textStyle="paragraph/S/regular">Extension view is still building...</Text>
+      </Center>
+    );
   }
 
   // A paused extension's frames unmount, so Chromium ends its renderer process.
@@ -256,10 +252,10 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     extensionId,
     label: frameTitle,
     webview: {
-      moduleUrl: buildAbsoluteApiUrl(webview.moduleUrl),
+      moduleUrl: buildWebviewUrl(webview.originLabel, webview.moduleUrl),
       capabilities: webview.capabilities,
-      styles: (webview.styles ?? []).map((styleUrl) => buildAbsoluteApiUrl(styleUrl)),
-      runtimeUrl: buildAbsoluteApiUrl(webview.runtimeUrl),
+      styles: (webview.styles ?? []).map((styleUrl) => buildWebviewUrl(webview.originLabel, styleUrl)),
+      runtimeUrl: buildWebviewUrl(webview.originLabel, webview.runtimeUrl),
     },
   };
 

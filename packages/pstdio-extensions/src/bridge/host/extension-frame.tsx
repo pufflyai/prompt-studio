@@ -71,7 +71,20 @@ const errorOverlayStyle: CSSProperties = {
   zIndex: 1,
 };
 
-export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
+// Webview runtimes are served from a per-extension origin, never the host page's origin,
+// so same-origin access only reaches the extension's own storage and assets.
+const BASE_SANDBOX = "allow-scripts allow-forms allow-popups";
+
+// A runtime on its own http(s) origin, such as an extension's `*.localhost` webview
+// host, may keep that origin for real storage. A runtime that would share the host
+// page's origin (same URL origin, `blob:`, `data:`) stays opaque, because
+// `allow-same-origin` there would let extension code reach the host page.
+export const extensionIframeSandbox = (runtimeUrl: string, hostOrigin: string) => {
+  const url = URL.parse(runtimeUrl);
+  const ownOrigin =
+    url !== null && (url.protocol === "http:" || url.protocol === "https:") && url.origin !== hostOrigin;
+  return ownOrigin ? `${BASE_SANDBOX} allow-same-origin` : BASE_SANDBOX;
+};
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const {
@@ -122,9 +135,8 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     if (!iframe) return;
 
     // Moving the iframe in the DOM (e.g. the Side Panel switching between attached and
-    // floating hosts) reloads it to about:blank because the src attribute is empty. A
-    // second load means the runtime document is gone, even if guest initialization
-    // has not finished. Remount a fresh iframe and connection. The listener
+    // floating hosts) reloads its document. A second load means the runtime document
+    // and its bridge state are gone, even if guest initialization has not finished. Remount a fresh iframe and connection. The listener
     // attaches before the connected guard so StrictMode's dev-only remount cannot
     // leave the iframe without one.
     const onFrameLoad = () => {
@@ -174,10 +186,9 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       remoteRef.current = null;
 
       const connection = host.connect(iframe, hostApi);
-      // A sandboxed iframe without allow-same-origin posts messages with origin "null".
-      // Leaving the iframe src attribute empty lets rimless validate the guest by
-      // contentWindow identity while still loading the API-owned runtime document.
-      iframe.contentWindow?.location.replace(view.webview.runtimeUrl);
+      // The runtime runs on its extension's own origin. Setting src only after connecting
+      // means rimless accepts the handshake only from this iframe's window on that origin.
+      iframe.src = view.webview.runtimeUrl;
 
       connection
         .then(async (conn) => {
@@ -283,7 +294,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         title={title ?? view.label}
         allow={extensionIframeAllow(view.webview.capabilities)}
         allowFullScreen
-        sandbox={EXTENSION_IFRAME_SANDBOX}
+        sandbox={extensionIframeSandbox(view.webview.runtimeUrl, window.location.origin)}
         // Match the host theme so the empty/loading iframe paints the right canvas
         // instead of flashing the default light background while the guest connects.
         style={{ ...iframeStyle, colorScheme: theme }}

@@ -212,6 +212,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
 - [0052 — Temporary Codex question delivery confirmation](../adrs/0052-temporary-codex-question-delivery-confirmation.md)
+- [0053 — Serve extension webviews from per-extension origins](../adrs/0053-per-extension-webview-origins.md)
 
 ## Lessons learned
 

@@ -10,7 +10,8 @@
     "./extensions/extension-request-timeout": "./src/features/extensions/extension-request-timeout.ts",
     "./pglite-recovery-hint": "./src/lib/pglite-recovery-hint.ts",
     "./runtime": "./src/features/runtime/routes.ts",
-    "./extensions/host-diagnostics": "./src/features/extensions/host-diagnostics.ts"
+    "./extensions/host-diagnostics": "./src/features/extensions/host-diagnostics.ts",
+    "./extensions/webview-origin": "./src/features/extensions/webview-origin.ts"
   },
   "scripts": {
     "start": "bun --conditions=source run src/server.ts",

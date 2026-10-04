@@ -2,7 +2,14 @@ import { describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createApp, webviewAccess, webviewBasePath, writeExtension } from "./test-utils/webview-asset-app";
+import { webviewOriginLabel } from "pstdio-extensions/webview-origin";
+import {
+  createApp,
+  webviewAccess,
+  webviewBasePath,
+  webviewOrigin,
+  writeExtension,
+} from "./test-utils/webview-asset-app";
 
 describe("extension webview asset routes", () => {
   test("serves the extension-owned bridge runtime script", async () => {
@@ -90,7 +97,7 @@ describe("extension webview asset routes", () => {
         { installedExtensionId: "project-copy", webviewId: "pstdio.lab.view.labPage" },
         "module.js",
       );
-      const res = await app.request(moduleUrl);
+      const res = await app.request(`http://${webviewOriginLabel("project-copy")}.localhost:19840${moduleUrl}`);
 
       expect(res.status).toBe(200);
       expect(await res.text()).toBe("console.log('project-copy');");
@@ -173,50 +180,56 @@ describe("extension webview asset routes", () => {
 
     try {
       const app = createApp({ cacheRoot, sourcePath });
-      const invalidCapability = await app.request(`${webviewBasePath}x/runtime`, {
-        headers: { origin: "null" },
-      });
-      const mutation = await app.request(`${webviewBasePath}/runtime`, {
-        headers: { origin: "null" },
-        method: "POST",
-      });
-      const foreignOrigin = await app.request(`${webviewBasePath}/runtime`, {
-        headers: { origin: "https://attacker.example" },
-      });
+      const invalidCapability = await app.request(`${webviewBasePath}x/runtime`);
+      const mutation = await app.request(`${webviewBasePath}/runtime`, { method: "POST" });
 
       expect(invalidCapability.status).toBe(404);
       expect(await invalidCapability.text()).not.toContain("session realm");
       expect(mutation.status).toBe(404);
       expect(await mutation.text()).not.toContain("session realm");
-      expect(foreignOrigin.status).toBe(403);
-      expect(await foreignOrigin.text()).not.toContain("session realm");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  test("serves opaque-origin GET and HEAD without cookies", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-opaque-"));
+  test("serves an extension's webview only on that extension's own origin", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-origin-"));
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, "./src/main.tsx");
 
     try {
       const app = createApp({ cacheRoot, sourcePath });
-      const get = await app.request(`${webviewBasePath}/runtime`, {
-        headers: { origin: "null" },
-      });
-      const head = await app.request(`${webviewBasePath}/runtime`, {
-        headers: { origin: "null" },
-        method: "HEAD",
-      });
+      const ownOrigin = await app.request(`${webviewOrigin}${webviewBasePath}/runtime`);
+      const dashboardOrigin = await app.request(`http://127.0.0.1:19840${webviewBasePath}/runtime`);
+      const otherExtension = await app.request(
+        `http://${webviewOriginLabel("installed-other")}.localhost:19840${webviewBasePath}/runtime`,
+      );
+
+      expect(ownOrigin.status).toBe(200);
+      expect(dashboardOrigin.status).toBe(404);
+      expect(otherExtension.status).toBe(404);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("serves GET and HEAD same-origin without cookies or CORS grants", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-same-origin-"));
+    const sourcePath = join(root, "extension");
+    const cacheRoot = join(root, "cache");
+    writeExtension(sourcePath, "./src/main.tsx");
+
+    try {
+      const app = createApp({ cacheRoot, sourcePath });
+      const get = await app.request(`${webviewBasePath}/runtime`, { headers: { origin: webviewOrigin } });
+      const head = await app.request(`${webviewBasePath}/runtime`, { method: "HEAD" });
 
       expect(get.status).toBe(200);
-      expect(get.headers.get("access-control-allow-origin")).toBe("null");
-      expect(get.headers.get("access-control-allow-credentials")).toBeNull();
+      expect(get.headers.get("access-control-allow-origin")).toBeNull();
+      expect(get.headers.get("set-cookie")).toBeNull();
       expect(head.status).toBe(200);
       expect(await head.text()).toBe("");
-      expect(head.headers.get("access-control-allow-origin")).toBe("null");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -233,9 +246,7 @@ describe("extension webview asset routes", () => {
 
     try {
       const app = createApp({ cacheRoot, failure, sourcePath });
-      const response = await app.request(`${webviewBasePath}/assets/module.js`, {
-        headers: { origin: "null" },
-      });
+      const response = await app.request(`${webviewBasePath}/assets/module.js`);
       const body = await response.text();
       const logs = stdout.mock.calls.map((call) => String(call[0])).join("\n");
 

@@ -4,7 +4,7 @@ Proposed: 2026-08-16
 
 ## Status
 
-Accepted.
+Accepted. The opaque webview origin, its `null`-origin CORS, and the rejection of a custom webview origin are superseded by [ADR 0053](0053-per-extension-webview-origins.md). Signed capability URLs remain.
 
 ## Context
 

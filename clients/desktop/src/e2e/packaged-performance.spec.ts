@@ -1,4 +1,4 @@
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
@@ -20,6 +20,8 @@ import {
 } from "./performance-budget";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
+// A second extension with webviews, from this repository's extensions.
+const extensionLabPath = resolve(import.meta.dirname, "../../../../extensions/extension-lab");
 
 // Apple Silicon baselines over five runs: idle work stays below 0.2% of wall time
 // and the streaming replay uses 28-38% script and 51-68% task time. Idle budgets
@@ -41,11 +43,14 @@ type Snapshot = {
 };
 type MonitoringBridge = { promptStudioDesktop: { getPerformanceSnapshot: () => Promise<Snapshot | null> } };
 
-const launchProject = async (name: string) => {
+const launchProject = async (name: string, extraExtensions: Array<{ source: string; installName: string }> = []) => {
   const home = createPackagedHome();
   const app = await launchPackagedApp(home, {
     PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-      defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
+      defaultExtensions: [
+        { source: fixturePath, installName: "workbench-fixture", skipInstall: true },
+        ...extraExtensions.map((extension) => ({ ...extension, skipInstall: true })),
+      ],
     }),
   });
   const project = await createPackagedProject(app, name);
@@ -147,10 +152,12 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
   }
 });
 
-test("names the process that hosts an extension and ends its frames when paused", async () => {
+test("runs each extension in its own process and ends that process when paused", async () => {
   let app: PackagedApp | null = null;
   try {
-    ({ app } = await launchProject("Extension processes"));
+    ({ app } = await launchProject("Extension processes", [
+      { source: extensionLabPath, installName: "extension-lab" },
+    ]));
     await setMonitoring(app.page, true);
     const processes = async () => (await readSnapshot(app!.page))?.processes ?? [];
     const extensionProcesses = async () =>
@@ -168,6 +175,19 @@ test("names the process that hosts an extension and ends its frames when paused"
     const workbench = (await processes()).find((process) => process.role === "workbench");
     expect(fixtureProcess.pid).not.toBe(workbench?.pid);
 
+    // A second extension gets its own origin, so Chromium gives it its own renderer.
+    // Going back keeps the visited Lab view loaded while Kiln opens.
+    await app.page.goBack();
+    await app.page.getByRole("option", { name: "Kiln", exact: true }).click();
+    const otherProcess = async () => (await extensionProcesses()).find((process) => !hostedIds(process).has(fixtureId));
+    await expect.poll(async () => (await otherProcess())?.pid ?? null).not.toBeNull();
+    const extensionLabProcess = (await otherProcess())!;
+    expect(extensionLabProcess.pid).not.toBe(fixtureProcess.pid);
+    for (const process of await extensionProcesses()) expect(hostedIds(process).size).toBe(1);
+
+    // Kiln draws its own status bar, so the meter shows only back in the project view.
+    await app.page.goBack();
+    await app.page.getByRole("option", { name: "Lab", exact: true }).click();
     await expect(app.page.locator('iframe[title="Lab"]')).toHaveCount(1);
     await app.page.getByTestId("performance-status-item").click();
     const row = app.page.getByTestId("performance-cpu-row").filter({ hasText: "Workbench fixture" });

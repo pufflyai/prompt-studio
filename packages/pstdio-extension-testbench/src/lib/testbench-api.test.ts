@@ -22,7 +22,7 @@ const jsonRequest = (url: string, body: unknown) =>
 describe("createExtensionTestbenchApi", () => {
   test("passes renderer context while collecting testbench resources", async () => {
     const previousHome = process.env.PSTDIO_HOME;
-    const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+    const api = createExtensionTestbenchApi({ apiPrefix, port: 6174, repoRoot });
 
     try {
       const bench = await readJson<ExtensionBenchLoadResponse>(
@@ -51,7 +51,7 @@ describe("createExtensionTestbenchApi", () => {
 
   test("loads planner ticket rows as testbench resources", async () => {
     const previousHome = process.env.PSTDIO_HOME;
-    const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+    const api = createExtensionTestbenchApi({ apiPrefix, port: 6174, repoRoot });
 
     try {
       const bench = await readJson<ExtensionBenchLoadResponse>(
@@ -94,7 +94,7 @@ describe("createExtensionTestbenchApi", () => {
 
   test("renders ticket-linked workspaces in the files tree", async () => {
     const previousHome = process.env.PSTDIO_HOME;
-    const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+    const api = createExtensionTestbenchApi({ apiPrefix, port: 6174, repoRoot });
 
     try {
       const bench = await readJson<ExtensionBenchLoadResponse>(
@@ -132,7 +132,7 @@ describe("createExtensionTestbenchApi", () => {
 
   test("runs extension middleware before commands and stops rejected requests", async () => {
     const previousHome = process.env.PSTDIO_HOME;
-    const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+    const api = createExtensionTestbenchApi({ apiPrefix, port: 6174, repoRoot });
 
     try {
       const bench = await readJson<ExtensionBenchLoadResponse>(
@@ -182,7 +182,7 @@ describe("createExtensionTestbenchApi", () => {
 
   test("loads extension appearance contributions into the inventory", async () => {
     const previousHome = process.env.PSTDIO_HOME;
-    const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
+    const api = createExtensionTestbenchApi({ apiPrefix, port: 6174, repoRoot });
 
     try {
       const bench = await readJson<ExtensionBenchLoadResponse>(

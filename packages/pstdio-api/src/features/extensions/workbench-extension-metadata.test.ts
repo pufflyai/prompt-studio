@@ -5,6 +5,7 @@ import type {
   WebviewCapabilityDeclaration,
 } from "pstdio-api-contracts/extension-kernel";
 import { type LoadedExtensionSource, normalizeExtensionSources } from "pstdio-extensions";
+import { webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import { createExtensionWebviewAccess } from "./extension-webview-access";
 import {
   type BuildWorkbenchExtensionMetadataInput,
@@ -133,6 +134,7 @@ describe("buildWorkbenchExtensionMetadata", () => {
       .replace(/\/runtime$/, "");
     expect(view.body.webview.runtimeUrl).toBe(`${basePath}/runtime`);
     expect(view.body.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-2`);
+    expect(view.body.webview.originLabel).toBe(webviewOriginLabel("installed-lab"));
     expect(view.body.webview.capabilities).toEqual(["commands.execute", "preferences.set@1"]);
   });
 
@@ -144,7 +146,10 @@ describe("buildWorkbenchExtensionMetadata", () => {
     });
 
     expect(metadata.views[0]).toMatchObject({ id: "pstdio.lab.view.page" });
-    expect(metadata.views[0]?.body).toMatchObject({ kind: "webview", webview: { runtimeUrl: "", moduleUrl: "" } });
+    expect(metadata.views[0]?.body).toMatchObject({
+      kind: "webview",
+      webview: { runtimeUrl: "", moduleUrl: "", originLabel: "" },
+    });
   });
 
   test("keeps native callback and typed command metadata on the view body", () => {

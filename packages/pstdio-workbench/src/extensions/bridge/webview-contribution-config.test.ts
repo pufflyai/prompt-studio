@@ -7,6 +7,7 @@ describe("toBridgeWebviewConfig", () => {
       entry: { kind: "package-asset", path: "./view.tsx", baseUrl: "file:///extension/" },
       runtimeUrl: "https://host/runtime.html",
       moduleUrl: "https://host/module.js",
+      originLabel: "ext-0123456789abcdef01234567",
     });
 
     expect(config.title).toBeUndefined();
@@ -18,6 +19,7 @@ describe("toBridgeWebviewConfig", () => {
       title: "",
       runtimeUrl: "https://host/runtime.html",
       moduleUrl: "https://host/module.js",
+      originLabel: "ext-0123456789abcdef01234567",
     });
 
     expect(config.title).toBeUndefined();

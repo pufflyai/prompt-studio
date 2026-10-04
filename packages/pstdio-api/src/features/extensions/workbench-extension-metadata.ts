@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "pstdio-extensions";
+import { webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import { createWorkbenchExtensionMetadata, type ResolveWorkbenchExtensionWebview } from "pstdio-extensions/workbench";
 import type { ExtensionWebviewUrlIssuer } from "./extension-webview-access";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
@@ -35,7 +36,9 @@ const createResolveWebview = (assets: WebviewAssets): ResolveWorkbenchExtensionW
     // Assets are built and served per installed source. An extension that is not installed
     // yet (a marketplace preview) still lists its views, but has nothing to serve.
     const installedExtensionId = assets.installedExtensionIdsByExtensionId?.get(extensionId);
-    if (!installedExtensionId) return { ...webview, runtimeUrl: "", moduleUrl: "" } as ExtensionWebviewRecord;
+    if (!installedExtensionId) {
+      return { ...webview, runtimeUrl: "", moduleUrl: "", originLabel: "" } as ExtensionWebviewRecord;
+    }
 
     const assetRevision = assets.assetRevisionsByExtensionId?.get(extensionId);
     const cssFiles = listDistCssFiles(installedExtensionId, id, assets.webviewCacheRoot);
@@ -45,6 +48,7 @@ const createResolveWebview = (assets: WebviewAssets): ResolveWorkbenchExtensionW
       runtimeUrl: assets.urlIssuer.runtimeUrl(scope),
       moduleUrl: assets.urlIssuer.assetUrl(scope, "module.js", assetRevision),
       styles: cssFiles.map((file) => assets.urlIssuer.assetUrl(scope, file, assetRevision)),
+      originLabel: webviewOriginLabel(installedExtensionId),
     } as ExtensionWebviewRecord;
   };
 };

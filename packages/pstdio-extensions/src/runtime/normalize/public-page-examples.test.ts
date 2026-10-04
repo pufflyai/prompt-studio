@@ -35,6 +35,7 @@ for (const name of ["scribble", "boombox", "zipline", "pigeon", "kiln"]) {
         capabilities: [],
         runtimeUrl: "/runtime.js",
         moduleUrl: "/view.js",
+        originLabel: "ext-0123456789abcdef01234567",
       }),
     });
     expect(metadata.modes[0].defaultTheme).toMatchObject({

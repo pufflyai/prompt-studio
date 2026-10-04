@@ -183,6 +183,22 @@ const saveStatus = useCommandMutation({
 });
 ```
 
+### Browser storage
+
+Each installed extension's webviews run on their own origin, `http://ext-<24 hex characters>.localhost:<port>`.
+The label comes from a hash of the installed extension id. Webviews therefore have real
+`localStorage`, `sessionStorage`, and IndexedDB. They cannot reach the dashboard's storage,
+the API session, or another extension's storage.
+
+- **Shared by the whole extension.** All webviews of one installed extension share this
+  storage, in every project. Key project data by project id, or one project will read
+  another project's values.
+- **Resets when the port changes.** An origin includes its port. The runtime port can change
+  between starts, and the browser then treats the webview as a new origin with empty storage.
+  Keep data that must last in extension storage through commands, not in browser storage.
+
+The decision is recorded in [ADR 0053](../../adrs/0053-per-extension-webview-origins.md).
+
 ## Terminal Sessions
 
 On Linux and macOS, supported interactive Bash and Zsh shells report activity while

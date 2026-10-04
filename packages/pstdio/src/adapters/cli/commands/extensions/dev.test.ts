@@ -51,6 +51,7 @@ const makeCheck = (errorCount = 0): ExtensionsCheckResponse => ({
           entry: { kind: "package-asset", path: "./src/overview.tsx", baseUrl: "file:///repo/" },
           runtimeUrl: "/runtime",
           moduleUrl: "/module.js",
+          originLabel: "ext-0123456789abcdef01234567",
         },
       },
     },

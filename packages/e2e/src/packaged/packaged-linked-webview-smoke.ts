@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { webviewUrl } from "../helpers/webview-origin";
 import { writeExtensionWithDependency } from "./extension-fixtures";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -51,7 +52,8 @@ export const registerLinkedWebviewSmokeTests = () => {
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
       const view = metadata.views.find((view) => view.localId === "linked");
       if (view?.body.kind !== "webview") throw new Error(JSON.stringify(metadata));
-      const moduleResponse = await fetch(`${started.baseUrl}${view.body.webview.moduleUrl}`, { headers });
+      const { originLabel } = view.body.webview;
+      const moduleResponse = await fetch(webviewUrl(started.baseUrl, originLabel, view.body.webview.moduleUrl));
       const extensions = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, { headers });
       expect(moduleResponse.status, await extensions.text()).toBe(200);
       const code = await moduleResponse.text();
@@ -79,7 +81,7 @@ export const registerLinkedWebviewSmokeTests = () => {
       const reopenedMetadata = (await reopened.json()) as WorkbenchExtensionMetadata;
       const reopenedView = reopenedMetadata.views.find((view) => view.localId === "linked");
       if (reopenedView?.body.kind !== "webview") throw new Error("Missing linked webview after restart");
-      const reused = await fetch(`${restarted.baseUrl}${reopenedView.body.webview.moduleUrl}`);
+      const reused = await fetch(webviewUrl(restarted.baseUrl, originLabel, reopenedView.body.webview.moduleUrl));
       expect(reused.status).toBe(200);
       expect(await reused.text()).toBe(code);
       expect(statSync(bundle).mtimeMs).toBe(published);

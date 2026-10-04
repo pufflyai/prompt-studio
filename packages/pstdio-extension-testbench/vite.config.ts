@@ -53,13 +53,9 @@ const startApiServer = async () => {
 };
 
 const proxyApiRequest = (port: number, request: IncomingMessage, reply: ServerResponse) => {
-  const host = request.headers.host;
   const proxied = proxyRequest(
     {
-      headers: {
-        ...request.headers,
-        ...(host ? { "x-pstdio-testbench-origin": `http://${host}` } : {}),
-      },
+      headers: request.headers,
       hostname: "127.0.0.1",
       method: request.method,
       path: request.url,

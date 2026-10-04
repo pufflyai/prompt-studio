@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { buildAbsoluteApiUrl, buildApiUrl, readRuntimeConfig } from "./api";
+import { buildAbsoluteApiUrl, buildApiUrl, buildWebviewUrl, readRuntimeConfig } from "./api";
 
 const RUNTIME_CONFIG_KEY = "__PSTDIO_CONFIG__";
 
 type RuntimeConfigWindow = {
   [RUNTIME_CONFIG_KEY]?: {
     apiBaseUrl?: string;
+    webviewOrigin?: string;
   };
 };
 
@@ -68,5 +69,25 @@ describe("buildAbsoluteApiUrl", () => {
     (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "/" };
 
     expect(buildAbsoluteApiUrl("/v1/extensions/runtime", "about:blank")).toBe("http://localhost/v1/extensions/runtime");
+  });
+});
+
+describe("buildWebviewUrl", () => {
+  afterEach(() => {
+    delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
+  });
+
+  it("places webview resources on the extension's own origin", () => {
+    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { webviewOrigin: "http://*.localhost:19840" };
+
+    expect(buildWebviewUrl("ext-abc", "/v1/extensions/webviews/cap/install/view/runtime")).toBe(
+      "http://ext-abc.localhost:19840/v1/extensions/webviews/cap/install/view/runtime",
+    );
+  });
+
+  it("refuses to place a webview when the server names no webview origin", () => {
+    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = {};
+
+    expect(() => buildWebviewUrl("ext-abc", "/v1/extensions/webviews/cap/install/view/runtime")).toThrow();
   });
 });

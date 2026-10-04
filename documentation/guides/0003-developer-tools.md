@@ -33,17 +33,17 @@ Select the meter to open the popover. It has these parts, from top to bottom:
 
 - **Frame rate**: the current value, the 30-second average and minimum, and one bar for each of the last 30 seconds.
 - **Sustained high CPU**: a warning that names the busy process. It appears only while the warning above is active.
-- **CPU**: the Workbench row first, then one row for each process that runs extension views.
+- **CPU**: the Workbench row first, then one row for each extension with an open view.
 
 ### The CPU list
 
-Each number is the 30-second average CPU of that row's process, as a share of one core. One busy core shows about 100%, so a process that uses two cores shows about 200%. A new process shows its latest sample until it has 30 seconds of history. A row turns amber at 25% or more.
+Each number is the 30-second average CPU of that row's own process, as a share of one core. One busy core shows about 100%, so a process that uses two cores shows about 200%. A new process shows its latest sample until it has 30 seconds of history. A row turns amber at 25% or more.
 
 The detail line under each name shows how many views are open and the process's working set. The working set is the RAM the process uses now. It includes memory shared with other processes, so the values do not add up to the app's total.
 
 **Workbench** is the window you work in. It is listed because the workbench itself can be the busy part, for example while a long chat streams. Extensions are sorted by CPU, busiest first.
 
-Chromium usually runs all extension views in one process. That row names every extension it hosts and shows the process total once, because the CPU of one process cannot be split between extensions.
+Each installed extension's views run on their own web origin, so Chromium runs each extension in its own process. That is why every extension gets its own number. See [ADR 0053](../adrs/0053-per-extension-webview-origins.md).
 
 Only the 5 busiest extensions are shown. The rest fold into one row, **N more extensions**, with their combined CPU. Select it to show every extension, and select it again to fold them.
 
@@ -53,11 +53,11 @@ The popover does not list Electron's main process, the GPU process, or other hel
 
 ## Pause an extension
 
-A row with exactly one extension has a **Pause** button. Pausing an extension:
+Each extension row has a **Pause** button. Pausing an extension:
 
 - unloads every webview of that extension in this window;
 - shows **<Extension> is paused** with a **Resume** button in each place where a view was open. In a view less than 160 px tall, this is one line;
-- lets Chromium end the extension's process soon after, when no other extension view uses it.
+- lets Chromium end the extension's process soon after, because no frame uses it anymore.
 
 The paused row stays in the CPU list with a **Resume** button.
 
@@ -85,7 +85,7 @@ Turn off the switch. The meter and its popover disappear. Sampling, the frame co
 
 - **Browser tabs** cannot read process CPU or memory. The popover shows **CPU is measured in the desktop app**, lists open extensions without numbers, and still shows frame rate. Pause still works. `pst performance` reads only the desktop app.
 - **GPU work** stays in Chromium's shared GPU process. An extension's number does not include the drawing work it causes there. GPU utilization and paint cost are not measured.
-- **Shared processes:** when several extensions share one process, their row names all of them and shows the process total once. That row has no Pause button, and its number cannot tell which extension is busy.
+- **Shared processes:** if Chromium places several extensions in one process, their row names all of them and shows the process total once. That row has no Pause button.
 - **Frame names are not proof.** Extension names come from the addresses of the frames each process hosts. An extension that navigates its own frame can change the name shown for it.
 - **Windows** reports no idle wakeups; the snapshot marks them unavailable. Private memory is reported only on Windows.
 - **Long tasks only:** a renderer without long-animation-frame support reports long tasks without script names.
@@ -96,4 +96,4 @@ Turn off the switch. The meter and its popover disappear. Sampling, the frame co
 
 Monitoring samples Electron's process metrics every 2 seconds. It keeps at most 30 seconds of CPU history per live process and the latest 50 slow frames. The workbench counts frames with `requestAnimationFrame` and reports its frame rate and paused extensions to the desktop app about once per second. Renderers send slow frames at most once per second. The meter reads a new snapshot every 2 seconds.
 
-The packaged desktop tests measure the idle workbench with monitoring off and on; see [Tests](development/0002-testing.md#desktop-performance-budgets).
+Each extension with an open view runs its own process, whether or not monitoring is on. Pause an extension to free its process. The packaged desktop tests measure the idle workbench with monitoring off and on; see [Tests](development/0002-testing.md#desktop-performance-budgets).

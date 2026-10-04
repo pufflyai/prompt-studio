@@ -7,7 +7,9 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadata } from "./module-test-fixtures";
+import { emptyAppearance, flushMicrotasks, metadata, withServedDashboardConfig } from "./module-test-fixtures";
+
+withServedDashboardConfig();
 
 test("keeps a Start terminal alive while an open Lab page receives fresh webview metadata", async () => {
   const layouts = new Map<string | undefined, WorkbenchLayout>();

@@ -16,7 +16,8 @@
     "./bridge/webview-runtime-html": "./src/bridge/webview-runtime/runtime-html.ts",
     "./bridge/webview-runtime.bundle.js": "./src/bridge/webview-runtime/runtime.bundle.js",
     "./workbench": "./src/workbench/index.ts",
-    "./bridge/diagnostics": "./src/bridge/host/host-diagnostics.ts"
+    "./bridge/diagnostics": "./src/bridge/host/host-diagnostics.ts",
+    "./webview-origin": "./src/webview-origin/webview-origin.ts"
   },
   "scripts": {
     "build": "bun run build:runtime",

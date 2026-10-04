@@ -1,4 +1,5 @@
 import type { ProcessMetric } from "electron";
+import { webviewHostLabel, webviewOriginLabel } from "pstdio/runtime";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
 import type { PerformanceExtensionFrame, PerformanceProcessRole } from "pstdio-api-contracts/performance-diagnostics";
 
@@ -12,14 +13,18 @@ export interface OwnedFrame {
 type ProcessIdentity = Pick<ProcessMetric, "pid" | "type" | "name" | "serviceName">;
 
 // Names come from the runtime's webview URLs, which only the main process can read.
-// Extension webviews load from the runtime origin, and their path names the extension
-// and webview that its signed capability covers. Extension frames share renderers, so
-// a process lists every extension it hosts rather than naming one owner.
+// Each extension's webviews run on their own `<label>.localhost` host at the runtime
+// port. A frame counts only when its host label matches the extension id in its
+// path, so a page cannot load a decoy frame to blame or hide behind another one.
 const extensionFrameFor = (frame: OwnedFrame, runtimeOrigin: string | null) => {
   if (frame.isMainFrame || !runtimeOrigin) return null;
   const url = URL.parse(frame.url);
-  if (!url || url.origin !== runtimeOrigin) return null;
-  return parseExtensionWebviewPath(url.pathname)?.scope ?? null;
+  const runtime = URL.parse(runtimeOrigin);
+  if (!url || !runtime || url.port !== runtime.port) return null;
+  const label = webviewHostLabel(url.host);
+  const scope = parseExtensionWebviewPath(url.pathname)?.scope;
+  if (!label || !scope || webviewOriginLabel(scope.installedExtensionId) !== label) return null;
+  return scope;
 };
 
 const uniqueExtensionFrames = (frames: OwnedFrame[], runtimeOrigin: string | null) => {

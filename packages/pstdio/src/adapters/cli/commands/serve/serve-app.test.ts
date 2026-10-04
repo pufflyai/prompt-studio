@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { apiWebSocket } from "pstdio-api/app";
+import { webviewOriginLabel } from "pstdio-api/extensions/webview-origin";
 import type { RuntimeHost } from "pstdio-api/runtime";
 import packageData from "../../../../../package.json";
 
@@ -615,6 +616,57 @@ describe("serveApp dashboard config", () => {
     }
 
     expect(injectedVersion).toBe(packageData.version);
+  });
+});
+
+describe("serveApp extension webview origins", () => {
+  const startServe = async (injected: { config?: { webviewOrigin?: string } }) => {
+    let capturedFetch: NonNullable<Parameters<typeof Bun.serve>[0]["fetch"]> | undefined;
+    const serveApp = createServeApp({
+      createApp: async () => ({
+        app: { fetch: () => new Response("api") },
+        close: async () => {},
+      }),
+      injectConfig: (_html, config) => {
+        injected.config = config;
+        return "<html>dashboard</html>";
+      },
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map(),
+      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
+      resolveMimeType: () => "text/html",
+      serve: (options) => {
+        capturedFetch = options.fetch;
+        return {} as ReturnType<typeof Bun.serve>;
+      },
+      onSignal: () => {},
+      offSignal: () => {},
+      log: () => {},
+    });
+    await serveApp({ port: 19840, host: "127.0.0.1" });
+    return (url: string) =>
+      capturedFetch?.call(
+        {} as Bun.Server<undefined>,
+        new Request(url),
+        {} as Bun.Server<undefined>,
+      ) as Promise<Response>;
+  };
+
+  it("tells the dashboard where extension webviews are served", async () => {
+    const injected: { config?: { webviewOrigin?: string } } = {};
+    const request = await startServe(injected);
+
+    await request("http://127.0.0.1:19840/");
+
+    expect(injected.config?.webviewOrigin).toBe("http://*.localhost:19840");
+  });
+
+  it("never serves the dashboard on an extension webview origin", async () => {
+    const request = await startServe({});
+
+    const response = await request(`http://${webviewOriginLabel("installed-lab")}.localhost:19840/`);
+
+    expect(await response.text()).toBe("api");
   });
 });
 

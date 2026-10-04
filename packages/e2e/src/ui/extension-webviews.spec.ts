@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { expect } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
-import { uiOrigin as apiBase } from "../ui-server";
+import { uiOrigin as apiBase, uiWebviewUrl } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
 test.use({ notificationsEnabled: true });
@@ -162,7 +162,7 @@ test.describe("Extension webviews", () => {
 
     await expect
       .poll(async () => {
-        const response = await request.get(`${apiBase}${labWebview.moduleUrl}`);
+        const response = await request.get(uiWebviewUrl(labWebview.originLabel, labWebview.moduleUrl));
         return response.status();
       })
       .toBe(200);
@@ -175,8 +175,19 @@ test.describe("Extension webviews", () => {
     const labIframe = page.locator('iframe[title="Lab"]');
     const labFrame = page.frameLocator('iframe[title="Lab"]');
     await expect(labIframe).toBeVisible();
-    await expect(labIframe).not.toHaveAttribute("sandbox", /allow-same-origin/);
+    // The webview runs on its extension's own origin: real storage, no reach into the dashboard.
+    await expect(labIframe).toHaveAttribute("src", uiWebviewUrl(labWebview.originLabel, labWebview.runtimeUrl));
+    await expect(labIframe).toHaveAttribute("sandbox", /allow-same-origin/);
     await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+    const isolation = await labFrame.locator("body").evaluate(() => {
+      localStorage.setItem("pstdio-e2e-probe", "kept");
+      let dashboard = "blocked";
+      try {
+        dashboard = window.parent.document.title;
+      } catch {}
+      return { stored: localStorage.getItem("pstdio-e2e-probe"), dashboard };
+    });
+    expect(isolation).toEqual({ stored: "kept", dashboard: "blocked" });
 
     const labBody = labFrame.locator("body");
     const scrollMetrics = await labBody.evaluate((body) => {

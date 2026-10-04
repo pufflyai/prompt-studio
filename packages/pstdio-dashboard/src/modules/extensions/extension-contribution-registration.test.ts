@@ -7,23 +7,20 @@ import {
   registerExtensionContributions,
   withDashboardWebviewUrls,
 } from "./extension-contribution-registration";
-import { metadata, metadataWithLabMode, response } from "./module-test-fixtures";
+import { metadata, metadataWithLabMode, response, withServedDashboardConfig } from "./module-test-fixtures";
+
+withServedDashboardConfig();
 
 describe("withDashboardWebviewUrls", () => {
-  test("points extension webviews at the configured API origin", () => {
-    const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
-    runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: "http://localhost:19840" };
+  test("points extension webviews at their extension's own origin", () => {
+    const resolved = withDashboardWebviewUrls(metadataWithLabMode);
+    const view = resolved.views.find((candidate) => candidate.localId === "labPage");
+    const webview = view?.body.kind === "webview" ? view.body.webview : undefined;
 
-    try {
-      const resolved = withDashboardWebviewUrls(metadataWithLabMode);
-      const view = resolved.views.find((candidate) => candidate.localId === "labPage");
-
-      expect(view?.body.kind === "webview" ? view.body.webview.runtimeUrl : undefined).toBe(
-        "http://localhost:19840/v1/extensions/runtime",
-      );
-    } finally {
-      delete runtime.__PSTDIO_CONFIG__;
-    }
+    expect(webview?.runtimeUrl).toBe("http://ext-0123456789abcdef01234567.localhost:19840/v1/extensions/runtime");
+    expect(webview?.moduleUrl).toBe(
+      "http://ext-0123456789abcdef01234567.localhost:19840/v1/extensions/installed/extension-lab/webviews/labPage/module.js",
+    );
   });
 });
 
@@ -88,6 +85,7 @@ describe("registerExtensionContributions", () => {
               entry: { kind: "package-asset" as const, path: "./src/settings.tsx", baseUrl: "file:///extension/" },
               runtimeUrl: "/v1/extensions/runtime",
               moduleUrl: "/v1/extensions/installed/extension-lab/webviews/settings/module.js",
+              originLabel: "ext-0123456789abcdef01234567",
               capabilities: ["files.upload", "files.list", "files.delete"],
             },
           },

@@ -1,5 +1,7 @@
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
+  // Extension webviews load from their own `<extension>.localhost` origins.
+  "frame-src 'self' http://*.localhost:*",
   "base-uri 'none'",
   "object-src 'none'",
   "frame-ancestors 'none'",

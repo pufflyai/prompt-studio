@@ -43,6 +43,7 @@ describe("createPreviewResource", () => {
               entry: { kind: "package-asset", baseUrl: "file:///extension.ts", path: "./lab.tsx" },
               moduleUrl: "/lab.js",
               runtimeUrl: "/runtime.html",
+              originLabel: "ext-0123456789abcdef01234567",
             },
           },
         },

@@ -1,13 +1,18 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { createDashboardRuntimeConfigPlugin, resolveTerminalWebSocketUrl } from "./vite-runtime-config.ts";
+import {
+  createDashboardRuntimeConfigPlugin,
+  resolveTerminalWebSocketUrl,
+  resolveWebviewOrigin,
+} from "./vite-runtime-config.ts";
 
 const apiProxyTarget = process.env.PSTDIO_API_URL ?? "http://localhost:19841";
 const terminalWebSocketUrl = resolveTerminalWebSocketUrl({
   apiProxyTarget,
   terminalWebSocketUrl: process.env.PSTDIO_TERMINAL_WEBSOCKET_URL,
 });
+const webviewOrigin = resolveWebviewOrigin({ apiProxyTarget, webviewOrigin: process.env.PSTDIO_WEBVIEW_ORIGIN });
 const apiProxy = {
   "/v1": apiProxyTarget,
   "/healthz": apiProxyTarget,
@@ -37,7 +42,7 @@ export default defineConfig({
     },
   },
   plugins: [
-    createDashboardRuntimeConfigPlugin({ terminalWebSocketUrl }),
+    createDashboardRuntimeConfigPlugin({ terminalWebSocketUrl, webviewOrigin }),
     react({
       // Workspace dist entries have already passed through the React compiler.
       exclude: ["**/node_modules/**", "**/dist/**"],

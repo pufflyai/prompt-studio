@@ -3,6 +3,7 @@ import { extname, resolve, sep } from "node:path";
 import { resolvePackageAssetPath } from "pstdio-extensions";
 import { getExtensionRuntimeScript } from "pstdio-extensions/bridge/webview-runtime";
 import { renderExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime-html";
+import { webviewHostLabel, webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import type {
   ResolveWorkbenchExtensionWebview,
   ResolveWorkbenchExtensionWebviewInput,
@@ -22,15 +23,17 @@ const mimeTypes: Record<string, string> = {
 };
 
 interface PreviewWebviewHostInput {
-  apiOrigin?: string | (() => string | undefined);
   apiPrefix: string;
   buildWebview?: (input: { distDir: string; entryPath: string }) => Promise<string | undefined>;
   cacheRoot: string;
+  /** Port of the testbench API server; webviews load from it on their extension's own origin. */
+  port: number;
 }
 
 type WebviewBuildRecord = {
   distDir: string;
   error?: string;
+  originLabel: string;
 };
 
 const safeResolve = (root: string, requestedPath: string) => {
@@ -63,43 +66,51 @@ const buildWebview = async (input: { distDir: string; entryPath: string }) => {
   }
 };
 
-const webviewHeaders = (contentType: string) => ({
-  "access-control-allow-origin": "*",
-  "content-type": contentType,
-});
-
 const response = (body: BodyInit, contentType: string, status = 200) =>
-  new Response(body, { headers: webviewHeaders(contentType), status });
+  new Response(body, { headers: { "content-type": contentType }, status });
 
-const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
+const notFound = () => response("Not found", "text/plain", 404);
 
+const serveBuildAsset = (build: WebviewBuildRecord, assetPath: string) => {
+  if (build.error && assetPath === "module.js") {
+    return response(`throw new Error(${JSON.stringify(build.error)});\n`, "application/javascript", 200);
+  }
+  if (build.error) return response(build.error, "text/plain", 500);
+
+  const filePath = safeResolve(build.distDir, assetPath);
+  if (!filePath || !existsSync(filePath)) return notFound();
+
+  return new Response(Bun.file(filePath), {
+    headers: { "content-type": mimeTypes[extname(filePath)] ?? "application/octet-stream" },
+  });
+};
+
+// Like the Prompt Studio API, the testbench serves each extension's webviews on that
+// extension's own `<label>.localhost` origin and nothing else on those origins.
 export const createPreviewWebviewHost = (input: PreviewWebviewHostInput) => {
   const builds = new Map<string, WebviewBuildRecord>();
   const runBuild = input.buildWebview ?? buildWebview;
-  const apiOrigin = () => {
-    const value = typeof input.apiOrigin === "function" ? input.apiOrigin() : input.apiOrigin;
-    return value ? trimTrailingSlash(value) : undefined;
-  };
-  const assetUrl = (path: string) => {
-    const origin = apiOrigin();
-    return origin ? `${origin}${path}` : path;
-  };
+  const assetUrl = (originLabel: string, path: string) => `http://${originLabel}.localhost:${input.port}${path}`;
 
   const resolveWebview: ResolveWorkbenchExtensionWebview = ({ id, webview }) => {
     const build = builds.get(id);
     if (!build) return null;
 
+    const { originLabel } = build;
     const styles = build.error
       ? []
       : readdirSync(build.distDir)
           .filter((file) => file.endsWith(".css"))
-          .map((file) => assetUrl(`${input.apiPrefix}/webviews/${encodeURIComponent(id)}/${encodeURIComponent(file)}`));
+          .map((file) =>
+            assetUrl(originLabel, `${input.apiPrefix}/webviews/${encodeURIComponent(id)}/${encodeURIComponent(file)}`),
+          );
 
     return {
       ...webview,
-      runtimeUrl: assetUrl(`${input.apiPrefix}/runtime.html`),
-      moduleUrl: assetUrl(`${input.apiPrefix}/webviews/${encodeURIComponent(id)}/module.js`),
+      runtimeUrl: assetUrl(originLabel, `${input.apiPrefix}/runtime.html`),
+      moduleUrl: assetUrl(originLabel, `${input.apiPrefix}/webviews/${encodeURIComponent(id)}/module.js`),
       styles,
+      originLabel,
     };
   };
 
@@ -114,6 +125,7 @@ export const createPreviewWebviewHost = (input: PreviewWebviewHostInput) => {
           pendingBuild = runBuild({ distDir, entryPath }).then((error) => ({
             distDir,
             error: error || undefined,
+            originLabel: webviewOriginLabel(webview.extensionId),
           }));
           buildsByEntryPath.set(entryPath, pendingBuild);
         }
@@ -125,32 +137,26 @@ export const createPreviewWebviewHost = (input: PreviewWebviewHostInput) => {
     for (const { id, build } of prepared) builds.set(id, build);
   };
 
+  /** Answers every request on a webview origin; returns undefined for testbench app requests. */
   const handleRequest = (url: URL) => {
+    const hostLabel = webviewHostLabel(url.host);
+    if (!hostLabel) return undefined;
+
     if (url.pathname === `${input.apiPrefix}/runtime.html`) {
-      return response(renderExtensionRuntimeHtml(assetUrl(`${input.apiPrefix}/runtime.bundle.js`)), "text/html");
+      return response(renderExtensionRuntimeHtml(`${input.apiPrefix}/runtime.bundle.js`), "text/html");
     }
     if (url.pathname === `${input.apiPrefix}/runtime.bundle.js`) {
       return response(getExtensionRuntimeScript(), "application/javascript");
     }
 
     const match = url.pathname.match(new RegExp(`^${input.apiPrefix}/webviews/([^/]+)/(.*)$`));
-    if (!match) return undefined;
+    if (!match) return notFound();
 
     const webviewId = decodeURIComponent(match[1]!);
     const assetPath = decodeURIComponent(match[2] || "module.js");
     const build = builds.get(webviewId);
-    if (!build) return response(`Unknown webview: ${webviewId}`, "text/plain", 404);
-    if (build.error && assetPath === "module.js") {
-      return response(`throw new Error(${JSON.stringify(build.error)});\n`, "application/javascript", 200);
-    }
-    if (build.error) return response(build.error, "text/plain", 500);
-
-    const filePath = safeResolve(build.distDir, assetPath);
-    if (!filePath || !existsSync(filePath)) return response("Not found", "text/plain", 404);
-
-    return new Response(Bun.file(filePath), {
-      headers: webviewHeaders(mimeTypes[extname(filePath)] ?? "application/octet-stream"),
-    });
+    if (!build || build.originLabel !== hostLabel) return notFound();
+    return serveBuildAsset(build, assetPath);
   };
 
   return {

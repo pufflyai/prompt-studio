@@ -1,4 +1,3 @@
-import { buildAbsoluteApiUrl } from "@/lib/api";
 import { getExtensionArtifactImageUrl, listExtensionArtifacts, readExtensionArtifactText } from "./api";
 
 type ArtifactsReadRequest =
@@ -47,7 +46,8 @@ export const createArtifactsReadCapability = (input: CreateArtifactsReadCapabili
         request.path,
         input.webviewId,
       );
-      return buildAbsoluteApiUrl(url);
+      // Relative, so the webview resolves it on its own origin, the only host that serves it.
+      return url;
     }
 
     throw new Error("Unsupported artifacts.read operation.");

@@ -174,7 +174,7 @@ const populateCheckFromRuntime = (
 ) => {
   const { diagnostics: _runtimeDiagnostics, ...metadata } = createWorkbenchExtensionMetadata({
     runtime,
-    resolveWebview: ({ webview }) => ({ ...webview, runtimeUrl: "", moduleUrl: "" }),
+    resolveWebview: ({ webview }) => ({ ...webview, runtimeUrl: "", moduleUrl: "", originLabel: "" }),
   });
   Object.assign(check, metadata);
   check.middlewares.push(...toCheckMiddlewares(runtime.middlewares));

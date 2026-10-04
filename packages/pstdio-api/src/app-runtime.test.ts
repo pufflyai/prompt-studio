@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { webviewOriginLabel } from "pstdio-extensions/webview-origin";
 import type { RuntimeHost } from "./features/runtime/routes";
 import { createTestApp } from "./test-utils/create-test-app";
 
 const runtimeOrigin = "http://127.0.0.1:43123";
+const webviewOrigin = `http://${webviewOriginLabel("missing")}.localhost:43123`;
 const runtimeHost: RuntimeHost = {
   announceShutdown: () => {},
   instanceId: "runtime-one",
@@ -69,65 +71,56 @@ describe("runtime authentication", () => {
     await sse.body?.cancel();
   });
 
-  test("allows signed read-only webview assets from opaque origins without cookies", async () => {
+  test("serves signed read-only webview assets only on the extension's webview origin", async () => {
     const basePath = handle.deps.extensionWebviewAccess
       .runtimeUrl({ installedExtensionId: "missing", webviewId: "missing" })
       .replace(/\/runtime$/, "");
 
     for (const path of [`${basePath}/runtime`, `${basePath}/assets/module.js`]) {
-      const response = await handle.app.request(`${runtimeOrigin}${path}`, {
-        headers: { origin: "null" },
-      });
+      const response = await handle.app.request(`${webviewOrigin}${path}`, { headers: { origin: webviewOrigin } });
 
       expect(response.status).not.toBe(401);
       expect(response.status).not.toBe(403);
-      expect(response.headers.get("access-control-allow-origin")).toBe("null");
-      expect(response.headers.get("access-control-allow-credentials")).toBeNull();
-      expect(response.headers.get("vary")).toContain("Origin");
+      expect(response.headers.get("access-control-allow-origin")).toBeNull();
     }
 
-    const head = await handle.app.request(`${runtimeOrigin}${basePath}/runtime`, {
-      method: "HEAD",
-      headers: { origin: "null" },
-    });
-    expect(head.status).not.toBe(401);
-    expect(head.status).not.toBe(403);
-    expect(head.headers.get("access-control-allow-origin")).toBe("null");
-
-    const navigation = await handle.app.request(`${runtimeOrigin}${basePath}/runtime`);
+    const navigation = await handle.app.request(`${webviewOrigin}${basePath}/runtime`);
     expect(navigation.status).toBe(200);
 
-    const invalidCapability = await handle.app.request(`${runtimeOrigin}${basePath}x/runtime`, {
-      headers: { origin: "null" },
-    });
+    const head = await handle.app.request(`${webviewOrigin}${basePath}/runtime`, { method: "HEAD" });
+    expect(head.status).toBe(200);
+
+    const onDashboardOrigin = await handle.app.request(`${runtimeOrigin}${basePath}/runtime`);
+    expect(onDashboardOrigin.status).toBe(404);
+
+    const invalidCapability = await handle.app.request(`${webviewOrigin}${basePath}x/runtime`);
     expect(invalidCapability.status).toBe(404);
 
-    const oldAssetPath = await handle.app.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
-      headers: { origin: "null" },
-    });
-    expect(oldAssetPath.status).toBe(403);
-
-    const nonAsset = await handle.app.request(`${runtimeOrigin}/v1/projects`, {
-      headers: { origin: "null" },
-    });
-    expect(nonAsset.status).toBe(403);
-
-    const mutation = await handle.app.request(`${runtimeOrigin}${basePath}/runtime`, {
-      method: "POST",
-      headers: { origin: "null" },
-    });
+    const mutation = await handle.app.request(`${webviewOrigin}${basePath}/runtime`, { method: "POST" });
     expect(mutation.status).toBe(404);
 
-    const preflight = await handle.app.request(`${runtimeOrigin}${basePath}/runtime`, {
+    const preflight = await handle.app.request(`${webviewOrigin}${basePath}/runtime`, {
       method: "OPTIONS",
-      headers: { origin: "null", "access-control-request-method": "GET" },
+      headers: { origin: webviewOrigin, "access-control-request-method": "GET" },
     });
     expect(preflight.status).toBe(404);
+  });
 
-    const foreign = await handle.app.request(`${runtimeOrigin}${basePath}/runtime`, {
-      headers: { origin: "http://attacker.example" },
+  test("webview origins reach nothing but webview assets", async () => {
+    for (const path of ["/v1/projects", "/healthz", "/v1/extensions/runtime.js", "/"]) {
+      const response = await handle.app.request(`${webviewOrigin}${path}`, { headers: { origin: webviewOrigin } });
+      expect(response.status).toBe(404);
+    }
+
+    const terminal = await handle.app.request(`${webviewOrigin}/v1/terminal`, {
+      headers: { connection: "Upgrade", origin: webviewOrigin, upgrade: "websocket" },
     });
-    expect(foreign.status).toBe(403);
+    expect(terminal.status).toBe(404);
+
+    const crossOrigin = await handle.app.request(`${runtimeOrigin}/v1/projects`, {
+      headers: { origin: webviewOrigin },
+    });
+    expect(crossOrigin.status).toBe(403);
   });
 
   test("invalidates webview capabilities when the runtime is replaced", async () => {
@@ -141,9 +134,7 @@ describe("runtime authentication", () => {
     } finally {
       await previous.close();
     }
-    const response = await handle.app.request(`${runtimeOrigin}${staleRuntimeUrl}`, {
-      headers: { origin: "null" },
-    });
+    const response = await handle.app.request(`${webviewOrigin}${staleRuntimeUrl}`);
 
     expect(response.status).toBe(404);
   });

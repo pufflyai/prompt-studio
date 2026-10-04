@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { webviewUrl } from "../helpers/webview-origin";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -104,10 +105,11 @@ describe("extension webview setup", () => {
         new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/assets/module\\.js\\?h=.+$`),
       );
 
-      const module = await waitForOk(`${api.url}${labView.body.webview.moduleUrl}`);
+      const { originLabel } = labView.body.webview;
+      const module = await waitForOk(webviewUrl(api.url, originLabel, labView.body.webview.moduleUrl));
       expect(module.headers.get("content-type")).toContain("application/javascript");
 
-      const runtimeHtml = await waitForOk(`${api.url}${labView.body.webview.runtimeUrl}`);
+      const runtimeHtml = await waitForOk(webviewUrl(api.url, originLabel, labView.body.webview.runtimeUrl));
       const runtimeContent = await runtimeHtml.text();
       expectNoExternalExecutableSource(runtimeContent);
       expect(runtimeContent).toContain("notification.action");

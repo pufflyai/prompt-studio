@@ -5,34 +5,6 @@ import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./d
 
 const MOUNT_ID = "pstdio-extension-mount";
 
-const createMemoryStorage = (): Storage => {
-  const values = new Map<string, string>();
-
-  return {
-    get length() {
-      return values.size;
-    },
-    clear: () => values.clear(),
-    getItem: (key: string) => values.get(key) ?? null,
-    key: (index: number) => Array.from(values.keys())[index] ?? null,
-    removeItem: (key: string) => values.delete(key),
-    setItem: (key: string, value: string) => values.set(key, value),
-  };
-};
-
-const installOpaqueOriginStorageFallbacks = () => {
-  for (const storageName of ["localStorage", "sessionStorage"] as const) {
-    try {
-      void window[storageName];
-    } catch {
-      Object.defineProperty(window, storageName, {
-        configurable: true,
-        value: createMemoryStorage(),
-      });
-    }
-  }
-};
-
 const applyTheme = (theme: string, variables: Record<string, string>) => {
   const docEl = document.documentElement;
   const opposite = theme === "dark" ? "light" : "dark";
@@ -74,8 +46,6 @@ const isEditableTarget = (target: EventTarget | null) =>
   (target instanceof HTMLElement && target.isContentEditable);
 
 const start = async () => {
-  installOpaqueOriginStorageFallbacks();
-
   const propsStore = createPropsStore<unknown>(undefined);
   const hostEventListeners = new Map<string, Set<(payload: unknown) => void>>();
   const subscribeHostEvent = (scope: string, handler: (payload: unknown) => void) => {

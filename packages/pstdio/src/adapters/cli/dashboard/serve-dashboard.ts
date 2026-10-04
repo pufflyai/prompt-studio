@@ -2,6 +2,8 @@ export type DashboardConfig = {
   apiBaseUrl?: string;
   terminalWebSocketUrl?: string;
   version?: string;
+  /** Origin pattern for extension webviews, with `*` standing for the extension's host label. */
+  webviewOrigin?: string;
 };
 
 export const injectConfig = (html: string, config: DashboardConfig) => {

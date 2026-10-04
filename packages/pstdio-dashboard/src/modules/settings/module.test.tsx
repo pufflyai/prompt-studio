@@ -97,6 +97,7 @@ describe("createSettingsModule", () => {
               entry: { kind: "package-asset", path: "./src/tags.tsx", baseUrl: "file:///extension/" },
               runtimeUrl: "/v1/extensions/runtime",
               moduleUrl: "/v1/extensions/installed/pstdio-planner/webviews/ticket-tags-settings/module.js",
+              originLabel: "ext-0123456789abcdef01234567",
             },
           },
         },

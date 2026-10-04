@@ -4,11 +4,18 @@ import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collec
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "../bootstrap";
 import { createExtensionsModule } from "../extensions/module";
-import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "../extensions/module-test-fixtures";
+import {
+  emptyAppearance,
+  flushMicrotasks,
+  metadataWithResourceExtension,
+  withServedDashboardConfig,
+} from "../extensions/module-test-fixtures";
 import { createSessionsModule } from "../sessions/module";
 import { createStartModule } from "../start/module";
 import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import { createProjectsModule } from "./module";
+
+withServedDashboardConfig();
 
 test("project tabs preserve each extension page when switching, closing, and reopening projects", async () => {
   const workbench = createWorkbench();

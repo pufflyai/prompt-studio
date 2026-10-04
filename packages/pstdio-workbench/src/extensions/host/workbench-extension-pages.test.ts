@@ -40,6 +40,7 @@ const metadata = {
           entry: { kind: "package-asset", path: "./outline.tsx", baseUrl: "file:///extensions/lab/" },
           runtimeUrl: "/runtime.html",
           moduleUrl: "/outline.js",
+          originLabel: "ext-0123456789abcdef01234567",
         },
       },
     },

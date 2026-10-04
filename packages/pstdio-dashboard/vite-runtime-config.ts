@@ -4,6 +4,7 @@ import type { Plugin } from "vite";
 
 export type DashboardRuntimeConfig = {
   terminalWebSocketUrl: string;
+  webviewOrigin: string;
 };
 
 const parseExplicitTerminalUrl = (value: string) => {
@@ -38,6 +39,14 @@ export const resolveTerminalWebSocketUrl = (input: { apiProxyTarget: string; ter
   input.terminalWebSocketUrl
     ? parseExplicitTerminalUrl(input.terminalWebSocketUrl)
     : deriveTerminalUrl(input.apiProxyTarget);
+
+// Webviews load straight from the API, like the terminal: Vite would rewrite the Host header that
+// names the extension, and would serve dashboard source on every `*.localhost` host.
+export const resolveWebviewOrigin = (input: { apiProxyTarget: string; webviewOrigin?: string }) => {
+  if (input.webviewOrigin) return input.webviewOrigin;
+  const target = new URL(input.apiProxyTarget);
+  return `${target.protocol}//*.localhost${target.port ? `:${target.port}` : ""}`;
+};
 
 export const injectDashboardRuntimeConfig = (html: string, config: DashboardRuntimeConfig) => {
   const metadata = `<meta name="pstdio-config" content="${encodeURIComponent(JSON.stringify(config))}">`;

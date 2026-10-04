@@ -30,4 +30,4 @@ Choose option 3.
 
 - An extension that declares `clipboard.write` can replace the clipboard contents while its view has focus. Browsers already limit this to documents with focus, which keeps abuse visible to the user.
 - `pst extensions check` validates the new capability name like the others.
-- The [desktop permission handler](../../clients/desktop/src/security/session-permissions.ts) grants `clipboard-sanitized-write` to permitted extension webview frames on the runtime origin. Other subframes and clipboard reads remain denied.
+- The [desktop permission handler](../../clients/desktop/src/security/session-permissions.ts) grants `clipboard-sanitized-write` to permitted extension webview frames on their webview origin at the runtime port (see [ADR 0053](0053-per-extension-webview-origins.md)). Other subframes and clipboard reads remain denied.

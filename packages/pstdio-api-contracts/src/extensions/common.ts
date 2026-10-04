@@ -85,6 +85,8 @@ export const workbenchExtensionWebviewSchema = extensionWebviewContributionSchem
   moduleUrl: z.string(),
   /** API-served URLs of CSS files the bridge runtime should inject before mounting the module. */
   styles: z.array(z.string()).optional(),
+  /** Host label of the extension's own webview origin; the URLs above are served only there. */
+  originLabel: z.string(),
 });
 
 export type ExtensionDiagnostic = z.infer<typeof extensionDiagnosticSchema>;
