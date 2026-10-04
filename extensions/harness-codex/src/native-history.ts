@@ -68,9 +68,9 @@ export const createNativeProjection = (events: HarnessEventSink, prompt?: Sessio
   const messages = [...events.getMessages()];
   if (offset && offset > messages.length) messages.length = offset;
   let pendingUserIndex: number | undefined;
-  const publish = (message: SessionMessage) => {
+  const publish = (message: SessionMessage, nativeUser = false) => {
     let index = messages.findIndex((known) => known?.id === message.id);
-    if (message.role === "user" && pendingUserIndex !== undefined) {
+    if (nativeUser && pendingUserIndex !== undefined) {
       index = pendingUserIndex;
       pendingUserIndex = undefined;
     }
@@ -95,7 +95,7 @@ export const createNativeProjection = (events: HarnessEventSink, prompt?: Sessio
     publish,
     receive: (item: ThreadItem, turnId: string) => {
       const message = nativeItemMessage(item, turnId);
-      if (message) publish(message);
+      if (message) publish(message, item.type === "userMessage");
     },
   };
 };

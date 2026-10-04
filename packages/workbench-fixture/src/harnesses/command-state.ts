@@ -28,11 +28,12 @@ const goalMode = (goal: string) => ({
   label: "Goal",
   description: goal,
   state: "active",
+  indicator: { label: "Active", tone: "success" as const },
   tagText: `active: ${goal}`,
   closeActionId: "clear",
   actions: [
-    { id: "clear", label: "Clear goal" },
-    { id: "edit", label: "Edit", argument: { label: "Objective", value: goal } },
+    { id: "clear", label: "Clear goal", icon: "trash-2" },
+    { id: "edit", label: "Edit", icon: "pencil", argument: { label: "Objective", value: goal } },
   ],
 });
 

@@ -37,9 +37,11 @@ export const createAppServerOperation = (
   let acknowledged = false;
   let finished = false;
   let stopping = false;
+  let goalUpdates = 0;
+  let idleExit: HarnessExit | undefined;
   const earlyEvents: RpcMessage[] = [];
   const publish = (item: import("./types").CodexThreadItem) => {
-    const message = itemToMessage(item, `codex-${turnId}`);
+    const message = itemToMessage(item, `codex-${item.turnId ?? turnId}`);
     if (message) projection.publish(message);
   };
   const items = createAppServerItems(publish);
@@ -52,11 +54,18 @@ export const createAppServerOperation = (
     options.onFinish();
     void questions.close().finally(() => completion.resolve(exit));
   };
+  const finishIfIdle = () => {
+    if (!turnId && !goalActive && !goalUpdates && (ownsGoal || idleExit))
+      finish(stopping ? { status: "cancelled" } : (idleExit ?? { status: "completed" }));
+  };
+  const applyGoal = (status: string | undefined) => {
+    goalActive = status === "active";
+    if (goalActive) ownsGoal = true;
+    finishIfIdle();
+  };
   const goalEvent = (message: RpcMessage) => {
-    if (message.method === "thread/goal/updated")
-      goalActive = (message.params?.goal as { status: string }).status === "active";
-    if (message.method === "thread/goal/cleared") goalActive = false;
-    if (ownsGoal && !goalActive && !turnId) finish({ status: stopping ? "cancelled" : "completed" });
+    if (message.method === "thread/goal/updated") applyGoal((message.params?.goal as { status: string }).status);
+    if (message.method === "thread/goal/cleared") applyGoal(undefined);
   };
   const completeTurn = (turn: { id: string; status: string; error?: { message?: string } }) => {
     if (turnId !== turn.id) return;
@@ -71,8 +80,12 @@ export const createAppServerOperation = (
       });
     const statuses = { interrupted: "cancelled", completed: "completed" } as const;
     const status = statuses[turn.status as keyof typeof statuses] ?? "failed";
-    if (goalActive && status === "completed") turnId = undefined;
-    else finish({ status });
+    if (status !== "completed" || (!goalActive && !goalUpdates)) finish({ status });
+    else {
+      turnId = undefined;
+      idleExit = { status };
+      finishIfIdle();
+    }
   };
   const receiveItems = (message: RpcMessage) => {
     const params = message.params ?? {};
@@ -94,7 +107,10 @@ export const createAppServerOperation = (
     if (finished) return;
     const params = message.params ?? {};
     const turn = params.turn as { id: string; status: string; error?: { message?: string } } | undefined;
-    if (message.method === "turn/started" && turn && !turnId) turnId = turn.id;
+    if (message.method === "turn/started" && turn && !turnId) {
+      turnId = turn.id;
+      idleExit = undefined;
+    }
     if (!turnId) return;
     if (params.turnId && params.turnId !== turnId) return;
     if (message.method === "turn/completed" && turn) {
@@ -124,6 +140,7 @@ export const createAppServerOperation = (
     finish,
     receive,
     replyQuestion: questions.replyQuestion,
+    canUpdateGoal: () => sent && acknowledged && !finished && !stopping,
     startDelivery: () => {
       sent = true;
     },
@@ -137,6 +154,24 @@ export const createAppServerOperation = (
       goalActive = active;
       ownsGoal = active;
     },
+    beginGoalUpdate: () => {
+      if (finished) throw new Error("Current work finished. Send the goal again.");
+      // A goal mutation can outlive the current turn. Keep its existing owner until the native outcome arrives.
+      goalUpdates++;
+      let released = false;
+      return {
+        confirm: (status: string) => {
+          applyGoal(status);
+        },
+        release: () => {
+          if (released) return;
+          released = true;
+          goalUpdates--;
+          finishIfIdle();
+        },
+      };
+    },
+    recordGoalUpdate: (prompt: string) => projection.publish(userMessageFor(prompt)),
     stop: async (request: (method: string, params: Record<string, unknown>) => Promise<unknown>, threadId: string) => {
       if (finished) return;
       stopping = true;

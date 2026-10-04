@@ -89,12 +89,18 @@ export const IndependentModes: Story = {
         label: "Goal",
         description: "Finish the migration and verify the result.",
         state: "active · 1200 / 40000 tokens",
+        indicator: { label: "Active", tone: "success" },
         tagText: "active: Finish the migration and verify the result.",
         closeActionId: "clear",
         actions: [
-          { id: "pause", label: "Pause" },
-          { id: "edit", label: "Edit", argument: { label: "Objective", value: "Finish the migration" } },
-          { id: "clear", label: "Clear" },
+          { id: "pause", label: "Pause", icon: "pause" },
+          {
+            id: "edit",
+            label: "Edit",
+            icon: "pencil",
+            argument: { label: "Objective", value: "Finish the migration" },
+          },
+          { id: "clear", label: "Clear", icon: "trash-2" },
         ],
       },
     ],
@@ -116,7 +122,32 @@ export const IndependentModes: Story = {
   },
 };
 export const Pending: Story = { args: { ...IndependentModes.args, pending: true } };
-export const StatusUnavailable: Story = { args: { ...IndependentModes.args, unavailable: true, onRefresh: () => {} } };
+const goalMode = IndependentModes.args?.modes?.find((mode) => mode.id === "goal");
+export const PausedGoal: Story = {
+  args: {
+    modes: goalMode
+      ? [
+          {
+            ...goalMode,
+            state: "paused · 1200 / 40000 tokens",
+            indicator: { label: "Paused", tone: "warning" },
+            actions: [
+              { id: "resume", label: "Resume", icon: "play" },
+              ...goalMode.actions.filter((action) => action.id !== "pause"),
+            ],
+          },
+        ]
+      : [],
+  },
+};
+export const CompletedGoal: Story = {
+  args: {
+    modes: goalMode
+      ? [{ ...goalMode, state: "complete · 1200 / 40000 tokens", indicator: { label: "Complete", tone: "info" } }]
+      : [],
+  },
+};
+export const StatusUnavailable: Story = { args: { ...IndependentModes.args, unavailable: true } };
 export const SentReference: Story = {
   args: {
     sentTag: {
@@ -124,7 +155,6 @@ export const SentReference: Story = {
       description: "Finish the release notes · Native status is not confirmed. Closing hides this reference only.",
       onClose: () => {},
     },
-    onRefresh: () => {},
   },
 };
 export const NativeError: Story = {

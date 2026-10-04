@@ -18,9 +18,10 @@ test("preserves harness-owned tagged input and native tag actions", () => {
         label: "Objective",
         description: "Finish the migration.",
         state: "Active",
+        indicator: { label: "Active", tone: "success" as const },
         tagText: "Active: Finish the migration.",
         closeActionId: "remove-objective",
-        actions: [{ id: "remove-objective", label: "Clear current objective" }],
+        actions: [{ id: "remove-objective", label: "Clear current objective", icon: "trash-2" }],
       },
     ],
   };

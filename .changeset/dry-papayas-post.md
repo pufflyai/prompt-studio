@@ -4,4 +4,4 @@
 "@pstdio/ui": minor
 ---
 
-Expose native harness commands in slash popovers and retire hash-reference completion.
+Expose native harness commands, slash completion, and provider-owned composer tags with status indicators and actions.

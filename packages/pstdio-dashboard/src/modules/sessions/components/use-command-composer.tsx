@@ -221,7 +221,6 @@ export const useCommandComposer = (
         pending={commands.invoke.isPending}
         unavailable={Boolean(commands.error)}
         onRequestConfirmation={confirmation.reopen}
-        onRefresh={commands.refresh}
         onAction={invokeModeAction}
       />
     ),

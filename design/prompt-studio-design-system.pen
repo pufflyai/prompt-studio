@@ -126341,6 +126341,17 @@
               "alignItems": "center",
               "children": [
                 {
+                  "type": "ellipse",
+                  "id": "bbQGp",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Native status dot",
+                  "enabled": false,
+                  "fill": "$ds-fg-muted",
+                  "width": 6,
+                  "height": 6
+                },
+                {
                   "type": "text",
                   "id": "wLHjb",
                   "name": "Label",
@@ -127059,8 +127070,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-success"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -127278,8 +127293,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-success"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -127306,6 +127325,7 @@
                       "x": 300,
                       "y": 8,
                       "width": 280,
+                      "context": "Shared compact Menu surface. Native action rows have 14px icons (pause/resume, edit, clear). No Check status item; provider readback remains automatic.",
                       "descendants": {
                         "Ktsh0": {
                           "type": "frame",
@@ -127378,7 +127398,8 @@
                           "height": "fit_content"
                         },
                         "Q6G8L/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "pause"
                         },
                         "Q6G8L/UTbhN": {
                           "content": "Pause goal"
@@ -127399,7 +127420,8 @@
                           "height": "fit_content"
                         },
                         "x4Jxq3/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "pencil"
                         },
                         "x4Jxq3/UTbhN": {
                           "content": "Edit objective"
@@ -127423,7 +127445,8 @@
                           "height": "fit_content"
                         },
                         "OKKAb/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "trash-2"
                         },
                         "OKKAb/UTbhN": {
                           "content": "Clear current goal"
@@ -127578,8 +127601,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-success"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -127606,6 +127633,7 @@
                       "x": 300,
                       "y": 8,
                       "width": 280,
+                      "context": "Shared compact Menu surface. Native action rows have 14px icons (pause/resume, edit, clear). No Check status item; provider readback remains automatic.",
                       "descendants": {
                         "Ktsh0": {
                           "type": "frame",
@@ -127678,7 +127706,8 @@
                           "height": "fit_content"
                         },
                         "Q6G8L/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "play"
                         },
                         "Q6G8L/UTbhN": {
                           "content": "Check status"
@@ -127699,7 +127728,8 @@
                           "height": "fit_content"
                         },
                         "x4Jxq3/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "pencil"
                         },
                         "x4Jxq3/UTbhN": {
                           "content": "Clear current goal"
@@ -127723,7 +127753,8 @@
                           "height": "fit_content"
                         },
                         "OKKAb/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "trash-2"
                         },
                         "OKKAb/UTbhN": {
                           "content": ""
@@ -127915,6 +127946,7 @@
                       "x": 300,
                       "y": 8,
                       "width": 280,
+                      "context": "Shared compact Menu surface. Native action rows have 14px icons (pause/resume, edit, clear). No Check status item; provider readback remains automatic.",
                       "descendants": {
                         "Ktsh0": {
                           "type": "frame",
@@ -127987,7 +128019,8 @@
                           "height": "fit_content"
                         },
                         "Q6G8L/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "play"
                         },
                         "Q6G8L/UTbhN": {
                           "content": "Check status"
@@ -128009,7 +128042,8 @@
                           "width": 0
                         },
                         "x4Jxq3/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "pencil"
                         },
                         "x4Jxq3/UTbhN": {
                           "content": "Clear goal"
@@ -128033,7 +128067,8 @@
                           "height": "fit_content"
                         },
                         "OKKAb/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "trash-2"
                         },
                         "OKKAb/UTbhN": {
                           "content": ""
@@ -128216,6 +128251,7 @@
                       "x": 300,
                       "y": 8,
                       "width": 280,
+                      "context": "Shared compact Menu surface. Native action rows have 14px icons (pause/resume, edit, clear). No Check status item; provider readback remains automatic.",
                       "descendants": {
                         "Ktsh0": {
                           "type": "frame",
@@ -128288,7 +128324,8 @@
                           "height": "fit_content"
                         },
                         "Q6G8L/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "pause"
                         },
                         "Q6G8L/UTbhN": {
                           "content": "Leave planning"
@@ -128309,7 +128346,8 @@
                           "height": "fit_content"
                         },
                         "x4Jxq3/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "pencil"
                         },
                         "x4Jxq3/UTbhN": {
                           "content": ""
@@ -128333,7 +128371,8 @@
                           "height": "fit_content"
                         },
                         "OKKAb/UEgTp": {
-                          "enabled": false
+                          "enabled": true,
+                          "icon": "trash-2"
                         },
                         "OKKAb/UTbhN": {
                           "content": ""
@@ -128790,8 +128829,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-fg-muted"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -128986,8 +129029,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-success"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -129160,8 +129207,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-success"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -129391,8 +129442,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-fg-muted"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -129554,8 +129609,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-warning"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -129741,8 +129800,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-info"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -129904,8 +129967,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-fg-muted"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -130100,8 +130167,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-success"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -130409,7 +130480,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Edit stays inside this compact menu. Apply requests a native edit; Cancel discards only the edit. The unsent follow-up, selection and attachments remain intact through either action or failure. A new Goal chosen from the draft instead stages an explicit Replace intent for Send.",
+                  "content": "Edit stays inside this compact menu. Apply updates the native objective. A submitted Goal during active work replaces the objective in the same native thread while the current turn continues; it does not start a second operation. Keep the draft on failure. Native state confirms the status dot.",
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -130553,8 +130624,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-fg-muted"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -130716,8 +130791,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-fg-muted"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -130888,8 +130967,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-fg-muted"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -131051,8 +131134,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-fg-muted"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -131223,8 +131310,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-success"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }
@@ -131386,8 +131477,12 @@
                                 0,
                                 "$badge-px"
                               ],
-                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions.",
+                              "context": "Composer tags use the same subtle pill shape, muted foreground and medium label as ticket attribute tags. Use a 28px lg badge to align with parameter controls. Label opens native details; close uses the harness-declared action, or removes a draft intent locally. Keep native state and local draft separate. Send is the primary IconButton, not ghost. Unsupported combinations remain disabled. Unverified submitted references close locally with Hide submitted goal. Show only Goal in the tag. Tooltip on hover and keyboard focus shows the full objective, native state, metrics, pending or unavailable state. Click opens compact details and supported actions. Status dot is 6px: active green, paused/blocked/budget limit amber, complete blue, failure red, unavailable neutral. Tooltip names the status. Pending keeps last confirmed status; unavailable becomes neutral. No Check status item; readback stays automatic.",
                               "descendants": {
+                                "bbQGp": {
+                                  "enabled": true,
+                                  "fill": "$ds-success"
+                                },
                                 "wLHjb": {
                                   "content": "Goal"
                                 }

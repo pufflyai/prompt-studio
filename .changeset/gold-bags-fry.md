@@ -4,4 +4,4 @@
 "harness-codex": minor
 ---
 
-Support native commands and planning controls while retaining Codex app-server sessions.
+Support native commands, planning controls, and live Codex goal updates while retaining app-server sessions.

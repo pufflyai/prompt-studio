@@ -1258,6 +1258,16 @@ declare const harnessCommandStateSchema: z.ZodObject<{
     label: z.ZodString;
     description: z.ZodString;
     state: z.ZodString;
+    indicator: z.ZodOptional<z.ZodObject<{
+      label: z.ZodString;
+      tone: z.ZodEnum<{
+        success: "success";
+        error: "error";
+        info: "info";
+        warning: "warning";
+        neutral: "neutral";
+      }>;
+    }, z.core.$strip>>;
     tagText: z.ZodOptional<z.ZodString>;
     closeActionId: z.ZodOptional<z.ZodString>;
     confirmation: z.ZodOptional<z.ZodObject<{
@@ -1270,6 +1280,7 @@ declare const harnessCommandStateSchema: z.ZodObject<{
     actions: z.ZodArray<z.ZodObject<{
       id: z.ZodString;
       label: z.ZodString;
+      icon: z.ZodOptional<z.ZodString>;
       argument: z.ZodOptional<z.ZodObject<{
         label: z.ZodString;
         value: z.ZodOptional<z.ZodString>;

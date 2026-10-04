@@ -48,8 +48,14 @@ export const createQuestionChannel = (
   };
   const receive = (message: RpcMessage) => {
     if (message.method === "item/tool/requestUserInput" && message.id !== undefined) {
-      const params = message.params as { itemId: string; questions: CodexQuestion[] };
-      const item = { id: params.itemId, type: "question", status: "pending", input: questionInput(params.questions) };
+      const params = message.params as { itemId: string; turnId?: string; questions: CodexQuestion[] };
+      const item = {
+        id: params.itemId,
+        turnId: params.turnId,
+        type: "question",
+        status: "pending",
+        input: questionInput(params.questions),
+      };
       pending.set(params.itemId, { requestId: message.id, item, questions: params.questions });
       publish(item);
     }

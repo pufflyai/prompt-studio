@@ -44,6 +44,7 @@ export const spacing = {
 };
 
 export const sizes = {
+  "status-dot": { value: "0.375rem" },
   "folder-picker-width": { value: "36.5rem" },
   "folder-picker-height": { value: "31rem" },
   "folder-picker-header": { value: "3.25rem" },

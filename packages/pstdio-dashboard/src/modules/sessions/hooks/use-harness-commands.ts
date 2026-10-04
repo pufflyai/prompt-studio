@@ -31,7 +31,7 @@ export const useHarnessCommands = (
       if (operation.kind === "mode-action") {
         const fresh = await state.refetch();
         if (fresh.error || fresh.data?.harnessId !== harnessId)
-          throw new Error("Native status is unavailable. Check status before trying again.");
+          throw new Error("Native status is unavailable. Wait for it to reconnect before trying again.");
         assertCurrentNativeAction(
           modeSnapshot ? [modeSnapshot] : (state.data?.modes ?? []),
           fresh.data.modes,
@@ -57,6 +57,5 @@ export const useHarnessCommands = (
     invoke,
     loading: state.isLoading,
     error: state.error,
-    refresh: () => void state.refetch(),
   };
 };

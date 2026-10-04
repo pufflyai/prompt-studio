@@ -1,6 +1,6 @@
 import type { HarnessCommandContext, HarnessEventSink, PreparedHarnessOperation } from "@pstdio/sdk/extensions";
 import type { createCodexRuntime } from "./codex-runtime";
-import { codexCommandInput } from "./command-input";
+import { codexCommandIdentity, codexCommandInput } from "./command-input";
 import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
 export const prepareGoalOperation = (
   input: HarnessCommandContext,
@@ -37,6 +37,16 @@ export const prepareGoalOperation = (
       },
     };
   }
+  const update = runtime.prepareGoalUpdate(codexCommandIdentity(input, projectId));
+  const params = argument === "resume" ? { status: "active" } : { objective: argument, status: "active" };
+  if (update)
+    return {
+      execution: "control",
+      invoke: async ({ signal }) => {
+        await update(params, signal, text);
+        return { kind: "completed" };
+      },
+    };
   return {
     execution: "exclusive",
     invoke: async ({ events, signal }) => ({
@@ -45,7 +55,7 @@ export const prepareGoalOperation = (
         { ...codexCommandInput(input, events, projectId, signal), prompt: text },
         {
           method: "thread/goal/set",
-          params: argument === "resume" ? { status: "active" } : { objective: argument, status: "active" },
+          params,
           goal: true,
         },
       ),
