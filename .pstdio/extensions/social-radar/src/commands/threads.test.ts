@@ -36,6 +36,18 @@ describe("social radar threads", () => {
     expect(again).toEqual({ id: saved.id, created: false });
   });
 
+  test("keeps the topic each snapshot comment talks about", async () => {
+    const { ctx, storage } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const input = foundThread(run.runId);
+    const comment = { id: "c1", author: "u/agent_wrangler", body: "Setup took an hour.", topic: "Windows setup" };
+    const saved = await commands["save-thread"].run(ctx, {
+      input: { ...input, snapshot: { ...input.snapshot, comments: [comment] } },
+    });
+    const thread = await storage.collection<Thread>("threads").get(saved.id);
+    expect(thread?.snapshot?.comments).toEqual([comment]);
+  });
+
   test("an answered thread keeps its answer and cannot move back", async () => {
     const { ctx, storage } = setup();
     const run = await commands["run-daily"].run(ctx, {});

@@ -4,11 +4,9 @@ import { AlertMessage, EmptyState, ScrollArea } from "@pstdio/ui";
 import { Ellipsis, ExternalLink } from "lucide-react";
 import { type Idea, isNewPost, type Thread } from "../schemas";
 import { siteLabels } from "../sites";
-import { threadResource } from "../store";
 import { plural } from "../text";
-import { useOpenThread, useRadar, useRadarRefresh, useRadarResource } from "../webview/client";
+import { useRadar, useRadarRefresh, useRadarResource } from "../webview/client";
 import { Conversation } from "./conversation";
-import { PostInsights, ThreadInsights } from "./insights";
 import { NewPostDraft } from "./new-post";
 
 const statusPalette: Record<Thread["status"], string> = {
@@ -57,7 +55,6 @@ export const ThreadPage = () => {
 const ThreadView = (props: { id: string }) => {
   const { id } = props;
   const { client } = useRadar();
-  const openThread = useOpenThread();
   useRadarRefresh();
   const data = useCommandQuery({ queryKey: ["thread", id], command: () => client.commands["get-thread"]({ id }) });
   const invalidate = [["thread", id]];
@@ -81,7 +78,7 @@ const ThreadView = (props: { id: string }) => {
   });
   const error = data.error ?? status.error ?? updateThread.error ?? updateIdea.error ?? ideaStatus.error;
   if (!data.data) return error ? <AlertMessage status="error" title={error.message} /> : null;
-  const { thread, ideas, mediaRule, sourceTitles } = data.data;
+  const { thread, ideas, mediaRule } = data.data;
   const draft = isNewPost(thread) && thread.status !== "answered";
   const actions = statusActions(thread);
   return (
@@ -123,43 +120,26 @@ const ThreadView = (props: { id: string }) => {
         ) : null}
       </HStack>
       {error ? <AlertMessage status="error" title={error.message} /> : null}
-      <Flex flex="1" minH="0">
-        <ScrollArea flex="1" minW="0">
-          <Box maxW="3xl" mx="auto" p="lg">
-            {draft ? (
-              <NewPostDraft
-                post={thread}
-                mediaRule={mediaRule}
-                onEdit={(text) => updateThread.mutate({ draft: text })}
-                onDismiss={() => status.mutate({ status: "skipped" })}
-                onPosted={(url) => status.mutate({ status: "answered", url })}
-              />
-            ) : (
-              <Conversation
-                thread={thread}
-                ideas={ideas}
-                onEditIdea={(ideaId, body) => updateIdea.mutate({ id: ideaId, body })}
-                onIdeaStatus={(ideaId, value) => ideaStatus.mutate({ id: ideaId, status: value })}
-              />
-            )}
-          </Box>
-        </ScrollArea>
-        <ScrollArea w="sm" flexShrink={0} borderStartWidth="1px" borderColor="border.subtle">
-          <Box p="lg">
-            {isNewPost(thread) ? (
-              <PostInsights
-                post={thread}
-                sourceTitles={sourceTitles}
-                onOpenSource={(source) =>
-                  openThread({ type: threadResource.id, id: source, label: sourceTitles[source] })
-                }
-              />
-            ) : (
-              <ThreadInsights thread={thread} />
-            )}
-          </Box>
-        </ScrollArea>
-      </Flex>
+      <ScrollArea flex="1" minH="0">
+        <Box maxW="3xl" mx="auto" p="lg">
+          {draft ? (
+            <NewPostDraft
+              post={thread}
+              mediaRule={mediaRule}
+              onEdit={(text) => updateThread.mutate({ draft: text })}
+              onDismiss={() => status.mutate({ status: "skipped" })}
+              onPosted={(url) => status.mutate({ status: "answered", url })}
+            />
+          ) : (
+            <Conversation
+              thread={thread}
+              ideas={ideas}
+              onEditIdea={(ideaId, body) => updateIdea.mutate({ id: ideaId, body })}
+              onIdeaStatus={(ideaId, value) => ideaStatus.mutate({ id: ideaId, status: value })}
+            />
+          )}
+        </Box>
+      </ScrollArea>
     </Flex>
   );
 };

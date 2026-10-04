@@ -22,3 +22,14 @@ export const threadView = defineView({
     capabilities: ["commands.execute", "navigation.open", "clipboard.write", artifactsRead(postMedia)],
   },
 });
+
+export const threadSummaryView = defineView({
+  id: "thread-summary",
+  title: "Summary",
+  icon: "chart-no-axes-column",
+  body: {
+    kind: "webview",
+    entry: packageAsset("../thread/summary-main.tsx", import.meta.url),
+    capabilities: ["commands.execute", "navigation.open"],
+  },
+});

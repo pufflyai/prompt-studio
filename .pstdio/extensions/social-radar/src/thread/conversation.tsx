@@ -1,5 +1,5 @@
 import { Badge, Box, Heading, HStack, Icon, Separator, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { Chip, EmptyState, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { ArrowBigUp } from "lucide-react";
 import type { FoundThread, Idea, NewPost, SnapshotComment } from "../schemas";
 import { ReplyIdea } from "./reply-idea";
@@ -27,9 +27,10 @@ const CommentBody = (props: CommentBodyProps) => {
             Your reply
           </Badge>
         ) : null}
-        <Text textStyle="label/XS" color="fg.muted">
+        <Text textStyle="label/XS" color="fg.muted" flex="1">
           {ago(comment.publishedAt)}
         </Text>
+        {comment.topic ? <Chip>{comment.topic}</Chip> : null}
       </HStack>
       <Text textStyle="paragraph/S/regular" whiteSpace="pre-wrap">
         {comment.body}

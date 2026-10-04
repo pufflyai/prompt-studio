@@ -4,6 +4,7 @@ import { isNewPost, type Run, type Thread } from "../schemas";
 import { siteLabels } from "../sites";
 import { newest, pageRef, radarChanged, runLabel, runRef, runsOf, threadsOf } from "../store";
 import { plural } from "../text";
+import { sectionTarget } from "./settings-menu";
 
 const runIcon = (run: Run) => {
   if (run.status === "running") return { icon: "LoaderCircle", iconColor: "fg.info" };
@@ -69,7 +70,7 @@ export const radarTree = defineView({
               id: "settings",
               label: "Settings",
               icon: "Settings",
-              target: { kind: "page", page: pageRef("settings") },
+              target: sectionTarget(),
             },
           ],
         },

@@ -104,7 +104,8 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await page.getByText("Tried Prompt Studio for reviews", { exact: true }).click();
     // The host keeps visited thread pages mounted, so target the visible one.
     const thread = page.locator('iframe[title="Thread"]:visible').contentFrame();
-    await expect(thread.getByText("How does it compare to Cursor?").first()).toBeVisible();
+    const summary = page.locator('iframe[title="Summary"]:visible').contentFrame();
+    await expect(summary.getByText("How does it compare to Cursor?")).toBeVisible();
     await shot(page, "03-thread");
     await thread.getByRole("button", { name: "Copy reply" }).click();
     await page.bringToFront();
@@ -134,9 +135,12 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await expect(page.getByText("Skipped: Browser unavailable")).toBeVisible();
     await shot(page, "05-digest");
 
-    // 06: settings are a page of their own in the Sidenav level.
+    // 06: settings are a page of their own; a section menu opens one section at a time.
     await page.getByRole("option", { name: "Settings", exact: true }).first().click();
     await expect(page.getByText("Brand terms", { exact: true })).toBeVisible();
+    await page.getByRole("option", { name: "Voice", exact: true }).click();
+    await expect(page.getByText("Writing voice", { exact: true })).toBeVisible();
+    await expect(page.getByText("Brand terms", { exact: true })).toBeHidden();
     await shot(page, "06-settings");
   } finally {
     if (projectId) await request.delete(`/v1/projects/${projectId}`);

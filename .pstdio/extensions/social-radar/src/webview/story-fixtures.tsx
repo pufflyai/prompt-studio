@@ -41,6 +41,7 @@ export const storyThread: FoundThread = {
         publishedAt: hoursAgo(20),
         body: "Setup on Windows took me an hour.",
         votes: 41,
+        topic: "Windows setup",
       },
       {
         id: "c2",
@@ -65,6 +66,7 @@ export const storyThread: FoundThread = {
         publishedAt: hoursAgo(16),
         body: "How does this compare to Cursor's background agents?",
         votes: 9,
+        topic: "comparisons to Cursor",
       },
     ],
   },

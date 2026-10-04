@@ -21,6 +21,8 @@ const snapshotComment = z.object({
   body: text,
   votes: z.number().int().optional(),
   mine: z.boolean().optional(),
+  // One of the thread's analysis topics, so a reader can see which comment raised it.
+  topic: text.optional(),
 });
 export const snapshotSchema = z.object({
   takenAt: timestamp,

@@ -1,10 +1,17 @@
-import { defineNavigationItem, defineNavigationTree, definePage, workbenchModes } from "@pstdio/sdk/extensions";
-import { runResource, threadResource } from "./store";
+import {
+  defineNavigationItem,
+  defineNavigationTree,
+  definePage,
+  defineViewMenu,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
+import { runResource, settingsSection, threadResource } from "./store";
 import { digestView } from "./views/digest";
 import { radarTree } from "./views/navigation";
+import { settingsMenu } from "./views/settings-menu";
 import { settingsView } from "./views/settings-view";
 import { threadsBoard } from "./views/threads-board";
-import { analysisView, threadView } from "./views/webviews";
+import { analysisView, threadSummaryView, threadView } from "./views/webviews";
 
 // The radar page owns the navigation tree, so it and its child pages share one Sidenav level.
 const radarPage = definePage({
@@ -54,12 +61,27 @@ const settingsPage = definePage({
   path: "social-radar/settings",
   mode: workbenchModes.project,
   parent: radarPage.ref,
+  resource: { kinds: [settingsSection.ref] },
   main: { kind: "view", view: settingsView.ref, cardinality: "one" },
   slots: [],
 });
 
 export const pages = [radarPage, threadsPage, threadPage, runPage, settingsPage];
-export const views = [analysisView, threadsBoard, threadView, digestView, settingsView, radarTree];
+export const views = [
+  analysisView,
+  threadsBoard,
+  threadView,
+  threadSummaryView,
+  digestView,
+  settingsView,
+  settingsMenu,
+  radarTree,
+];
+// Attached menus give the summary and the section list the host's resizable, closable layout.
+export const viewMenus = [
+  defineViewMenu({ id: "thread-summary", owner: threadView.ref, view: threadSummaryView.ref, side: "right" }),
+  defineViewMenu({ id: "settings-sections", owner: settingsView.ref, view: settingsMenu.ref, side: "left" }),
+];
 export const navigationItems = [
   defineNavigationItem({
     id: "radar",
