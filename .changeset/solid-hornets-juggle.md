@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Hide attachment controls during question takeover and preserve Claude native command interactions.
+Hide attachments during question takeover, advance first radio answers, and preserve Claude native command interactions.

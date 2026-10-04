@@ -1,13 +1,15 @@
 import { HStack, Stack } from "@chakra-ui/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   type ChatInputQuestion,
   type ChatInputQuestionCustomAnswers,
   type ChatInputQuestionPrompt,
   getQuestionPromptSignature,
   getQuestionSelectionKey,
+  isQuestionOtherSelected,
 } from "./chat-input-question-answers";
 import { QuestionStepTab } from "./chat-input-question-step-tab";
+import { getOwnQuestionValue } from "./question-choices";
 import { QuestionFormBlockView } from "./timeline-tool-blocks";
 
 export * from "./chat-input-question-answers";
@@ -41,6 +43,7 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
   const { onToggleOther } = props;
   const { questions } = props;
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const questionPanelRef = useRef<HTMLDivElement>(null);
   const renderQuestionIndex = Math.min(activeQuestionIndex, questions.length - 1);
   const activeQuestion = questions[renderQuestionIndex];
   const hasMultipleQuestions = questions.length > 1;
@@ -63,6 +66,8 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
         </HStack>
       ) : null}
       <Stack
+        ref={questionPanelRef}
+        tabIndex={-1}
         id={`question-step-panel-${activeQuestion.id}`}
         role={hasMultipleQuestions ? "tabpanel" : undefined}
         aria-labelledby={hasMultipleQuestions ? `question-step-tab-${activeQuestion.id}` : undefined}
@@ -74,7 +79,20 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
           selectedOptionsByQuestion={selectedOptionsByQuestion}
           customAnswersByQuestion={customAnswersByQuestion}
           onToggleOption={(_question, _questionIndex, optionLabel) => {
-            onToggleOption(questionPrompt.questions[renderQuestionIndex], renderQuestionIndex, optionLabel);
+            const question = questionPrompt.questions[renderQuestionIndex];
+            const selectedOptions = getOwnQuestionValue(selectedOptionsByQuestion, activeQuestion.id) ?? [];
+            const hadSelection =
+              selectedOptions.length > 0 ||
+              isQuestionOtherSelected(customAnswersByQuestion, question, renderQuestionIndex);
+
+            onToggleOption(question, renderQuestionIndex, optionLabel);
+            // Advance after the first listed radio choice. Stay when editing an answer or choosing Other
+            // so the person can finish their answer; checkboxes and the last step never advance automatically.
+            if (!question.multiple && !hadSelection && renderQuestionIndex < questions.length - 1) {
+              // Keep keyboard focus in the panel while the previous question's controls are removed.
+              questionPanelRef.current?.focus();
+              setActiveQuestionIndex(renderQuestionIndex + 1);
+            }
           }}
           onToggleOther={() => {
             onToggleOther(questionPrompt.questions[renderQuestionIndex], renderQuestionIndex);
