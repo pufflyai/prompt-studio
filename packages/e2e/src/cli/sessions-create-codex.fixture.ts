@@ -10,6 +10,8 @@ for await (const line of console) {
   if (request.method === "initialize") emit({ id: request.id, result: {} });
   if (request.method === "thread/start")
     emit({ id: request.id, result: { thread: { id: "codex-e2e-thread", path: null } } });
+  // Session creation reads the model list to resolve harness parameters.
+  if (request.method === "model/list") emit({ id: request.id, result: { data: [{ id: "gpt-5.5", isDefault: true }] } });
   if (request.method !== "turn/start") continue;
   appendFileSync(
     process.env.CODEX_E2E_PROMPTS!,
