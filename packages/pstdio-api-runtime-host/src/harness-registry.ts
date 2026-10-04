@@ -1,8 +1,12 @@
 import type {
   AgentCapability,
   AgentModel,
+  HarnessCommandContext,
+  HarnessCommandDiscoveryContext,
+  HarnessCommandState,
   HarnessExit,
   HarnessMessagesInput,
+  HarnessOperation,
   HarnessParams,
   HarnessReattachInput,
   HarnessRecoveryInput,
@@ -10,6 +14,7 @@ import type {
   HarnessResumeInput,
   HarnessSession,
   HarnessStartInput,
+  PreparedHarnessOperation,
   SessionMessage,
 } from "pstdio-api-contracts";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
@@ -54,6 +59,12 @@ export type HarnessHandle = {
   reattach(input: HarnessReattachInput, options?: HarnessCallOptions): Promise<HarnessSession>;
   getMessages(input: HarnessMessagesInput, options?: HarnessCallOptions): Promise<SessionMessage[]>;
   recoverMessages(input: HarnessRecoveryInput, options?: HarnessCallOptions): Promise<HarnessRecoveryResult>;
+  getCommandState(input: HarnessCommandDiscoveryContext, options?: HarnessCallOptions): Promise<HarnessCommandState>;
+  prepareOperation(
+    input: HarnessCommandContext,
+    operation: HarnessOperation,
+    options?: HarnessCallOptions,
+  ): Promise<PreparedHarnessOperation>;
   dispose(): Promise<void>;
 };
 
@@ -208,6 +219,37 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
       provider.recoverMessages
         ? provider.recoverMessages(await ctx(options), input)
         : { kind: "recovered", messages: [...input.knownMessages] },
+    getCommandState: async (input, options) =>
+      provider.getCommandState
+        ? provider.getCommandState(await ctx(options), input)
+        : { commands: [], modes: [], slashCommands: false },
+    prepareOperation: async (input, operation, options) => {
+      if (!provider.prepareOperation) throw new Error("This harness does not support native commands.");
+      const context = await ctx(options);
+      if (operation.kind === "command" && provider.getCommandState) {
+        const state = await provider.getCommandState(context, input);
+        const name = /^\/\S+/.exec(operation.text)?.[0];
+        const command = state.commands.find((entry) => entry.name === name);
+        if (command?.disabledReason) throw new Error(command.disabledReason);
+      }
+      const prepared = await provider.prepareOperation(context, input, operation);
+      ensureActive();
+      return {
+        execution: prepared.execution,
+        invoke: async (invocation) => {
+          ensureActive();
+          const result = await prepared.invoke(invocation);
+          if (result.kind === "started") {
+            if (disposed) {
+              await result.session.stop();
+              throw new Error(`Harness has been disposed: ${record.id}`);
+            }
+            return { ...result, session: adaptSession(result.session) };
+          }
+          return result;
+        },
+      };
+    },
     dispose: () => {
       disposed = true;
       closing ??= (async () => {

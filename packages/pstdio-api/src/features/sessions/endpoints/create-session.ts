@@ -1,12 +1,13 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import type { HarnessAttachment, HarnessParams } from "pstdio-api-contracts";
+import { createSessionResponseSchema, type HarnessAttachment, type HarnessParams } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
-import { createSessionBodySchema, sessionResponseSchema } from "../dto";
+import { createSessionBodySchema } from "../dto";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
+import { createSessionHarnessOperation, HarnessOperationError } from "../session-harness-commands";
 import { createSessionScheduler } from "../session-scheduler";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-create-session";
 import { resolveCreateWorkspace } from "./resolve-create-workspace";
@@ -25,7 +26,7 @@ export const createSessionRoute = createRoute({
   responses: {
     201: {
       description: "Session created.",
-      content: { "application/json": { schema: sessionResponseSchema } },
+      content: { "application/json": { schema: createSessionResponseSchema } },
     },
     400: {
       description: "No default agent is configured.",
@@ -33,6 +34,10 @@ export const createSessionRoute = createRoute({
     },
     404: {
       description: "Project or workspace not found.",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
+    409: {
+      description: "Conflicting native work.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
     },
   },
@@ -49,6 +54,11 @@ const resolveCreateSessionParams = async (
     if (error instanceof HarnessParamError) return { type: "error" as const, error: error.message };
     throw error;
   }
+};
+const creationFailure = (error: unknown) => {
+  if (error instanceof HarnessOperationError) return { error: error.message, status: error.status };
+  if (error instanceof SessionAttachmentError) return { error: error.message, status: 400 as const };
+  throw error;
 };
 
 export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<typeof createSessionRoute> => {
@@ -90,7 +100,38 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
     const prompt = input.prompt ?? "";
     const scheduler = createSessionScheduler(deps);
 
+    const onCreated = async (session: { id: string; title: string; status: string }) => {
+      await deps.workspaceSessionService.link(resolvedWorkspaceId, session.id);
+      await emitActivityEvent(deps, {
+        projectId: input.project_id,
+        resourceType: "session",
+        resourceId: session.id,
+        eventType: "session_created",
+        summary: `Created session ${session.title}`,
+        payload: { status: session.status, workspace_id: resolvedWorkspaceId },
+      });
+    };
+
     try {
+      if (input.operation) {
+        const session = await createSessionHarnessOperation(
+          deps,
+          {
+            project_id: input.project_id,
+            title: input.title,
+            agent: agentId,
+            last_selected_model: resolvedModel,
+            params_json: resolvedParams.params,
+            original_session_id: input.original_session_id,
+            cwd,
+            anchors: input.anchors,
+          },
+          input.operation,
+          onCreated,
+          c.req.raw.signal,
+        );
+        return c.json(session, 201);
+      }
       const session = await withResolvedSubmittingSessionAttachments(
         deps,
         input.project_id,
@@ -108,31 +149,13 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
             originalSessionId: input.original_session_id,
             cwd: cwd ?? undefined,
             anchors: input.anchors,
-            onBeforeStartedHook: async (createdSession) => {
-              if (resolvedWorkspaceId) {
-                await deps.workspaceSessionService.link(resolvedWorkspaceId, createdSession.id);
-              }
-
-              await emitActivityEvent(deps, {
-                projectId: input.project_id,
-                resourceType: "session",
-                resourceId: createdSession.id,
-                eventType: "session_created",
-                summary: `Created session ${createdSession.title}`,
-                payload: {
-                  status: createdSession.status,
-                  workspace_id: resolvedWorkspaceId ?? null,
-                },
-              });
-            },
+            onBeforeStartedHook: onCreated,
           }),
       );
       return c.json(session, 201);
     } catch (error) {
-      if (error instanceof SessionAttachmentError) {
-        return c.json({ error: error.message }, 400);
-      }
-      throw error;
+      const failure = creationFailure(error);
+      return c.json({ error: failure.error }, failure.status);
     }
   };
 };

@@ -19,12 +19,6 @@ const getSelectedValues = (badge: AttributeBadge) => {
 const toggleMultiValue = (values: string[], optionValue: string) =>
   values.includes(optionValue) ? values.filter((value) => value !== optionValue) : [...values, optionValue];
 
-const badgeStyleProps = {
-  bg: { _light: "bg.muted", _dark: "bg.subtle" },
-  color: "fg.muted",
-  _hover: { bg: { _light: "bg.subtle", _dark: "bg.hover" } },
-} as const;
-
 const getBadgeIconColor = (badge: AttributeBadge) => (badge.color ? `${badge.color}.fg` : "fg.muted");
 
 const selectionIcon = (input: { isMultiValue: boolean; isSelected: boolean }) => {
@@ -61,7 +55,7 @@ export const KanbanRendererAttributeBadge = (props: KanbanRendererAttributeBadge
 
   if (!canEdit) {
     return (
-      <Badge variant="subtle" gap="2xs" textStyle="label/XS/medium" {...badgeStyleProps}>
+      <Badge variant="ticket" gap="2xs" textStyle="label/XS/medium">
         {badgeContent}
       </Badge>
     );
@@ -74,11 +68,10 @@ export const KanbanRendererAttributeBadge = (props: KanbanRendererAttributeBadge
           as="span"
           role="button"
           tabIndex={0}
-          variant="subtle"
+          variant="ticket"
           gap="2xs"
           textStyle="label/XS/medium"
           cursor="pointer"
-          {...badgeStyleProps}
           onClick={stopRowActivation}
           onPointerDown={stopRowActivation}
           onKeyDown={stopRowActivation}

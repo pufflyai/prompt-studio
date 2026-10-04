@@ -10,6 +10,7 @@ import type {
   SessionMessagePart,
 } from "@pstdio/sdk/extensions";
 import { l10n, reconcileMessageHistory } from "@pstdio/sdk/extensions";
+import { createAsyncQuestionSession } from "./async-question-session";
 
 const EXIT_DELAY_MS = 50;
 const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
@@ -172,6 +173,8 @@ export const createFakeHarness = () => {
       sessions.set(agentSessionId, messages);
       pushMessages(input.events, 0, messages);
 
+      if (input.prompt.includes("__fake_async_questions__"))
+        return createAsyncQuestionSession(agentSessionId, input, messages);
       return createSession(agentSessionId);
     },
 
@@ -188,6 +191,8 @@ export const createFakeHarness = () => {
       sessions.set(input.agentSessionId, nextMessages);
       pushMessages(input.events, startIndex, newMessages);
 
+      if (input.prompt.includes("__fake_async_questions__"))
+        return createAsyncQuestionSession(input.agentSessionId, input, nextMessages);
       return createSession(input.agentSessionId);
     },
 

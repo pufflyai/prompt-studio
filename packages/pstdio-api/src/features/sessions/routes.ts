@@ -4,11 +4,18 @@ import type { SessionsRouteDeps } from "./deps";
 import { approveSessionHandler, approveSessionRoute } from "./endpoints/approve-session";
 import { archiveSessionHandler, archiveSessionRoute } from "./endpoints/archive-session";
 import { createSessionHandler, createSessionRoute } from "./endpoints/create-session";
+import { draftHarnessCommandsHandler, draftHarnessCommandsRoute } from "./endpoints/draft-harness-commands";
 import { followUpSessionHandler, followUpSessionRoute } from "./endpoints/follow-up-session";
 import { getConversationSourcesHandler, getConversationSourcesRoute } from "./endpoints/get-conversation-sources";
 import { getQueuedMessagesHandler, getQueuedMessagesRoute } from "./endpoints/get-queued-messages";
 import { getSessionHandler, getSessionRoute } from "./endpoints/get-session";
 import { getSessionConversationHandler, getSessionConversationRoute } from "./endpoints/get-session-conversation";
+import {
+  getHarnessCommandsHandler,
+  getHarnessCommandsRoute,
+  invokeHarnessCommandHandler,
+  invokeHarnessCommandRoute,
+} from "./endpoints/harness-commands";
 import { listSessionActivityHandler, listSessionActivityRoute } from "./endpoints/list-session-activity";
 import { listSessionsHandler, listSessionsRoute } from "./endpoints/list-sessions";
 import {
@@ -41,7 +48,10 @@ import { createSessionStreamConnections } from "./session-stream-connections";
 export const createSessionRoutes = (deps: SessionsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
   const streamConnections = createSessionStreamConnections();
+  routes.openapi(draftHarnessCommandsRoute, draftHarnessCommandsHandler(deps));
 
+  routes.openapi(getHarnessCommandsRoute, getHarnessCommandsHandler(deps));
+  routes.openapi(invokeHarnessCommandRoute, invokeHarnessCommandHandler(deps));
   routes.openapi(createSessionRoute, createSessionHandler(deps));
   routes.openapi(uploadSessionAttachmentRoute, uploadSessionAttachmentHandler(deps));
   routes.openapi(getSessionAttachmentContentRoute, getSessionAttachmentContentHandler(deps));

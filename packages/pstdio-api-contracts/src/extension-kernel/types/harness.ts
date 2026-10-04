@@ -1,3 +1,20 @@
+import type {
+  HarnessCommandContext,
+  HarnessCommandDiscoveryContext,
+  HarnessCommandState,
+  HarnessOperation,
+  PreparedHarnessOperation,
+} from "../../harness-commands";
+
+export type {
+  HarnessCommandContext,
+  HarnessCommandDiscoveryContext,
+  HarnessCommandState,
+  HarnessOperation,
+  HarnessOperationResult,
+  PreparedHarnessOperation,
+} from "../../harness-commands";
+
 import type { AgentModel } from "../../agents";
 import type {
   AgentCapability,
@@ -102,9 +119,13 @@ export interface HarnessSkillsLayout {
 /** A reattach error is permanent unless the provider explicitly marks it retryable. */
 export type RetryableHarnessReattachError = Error & { readonly retryable: true };
 
-export type HarnessParamDescriptor =
+export type HarnessParamDescriptor = (
   | (Omit<SelectParam, "options" | "allowCustomValues"> & { options: ParamOption[] })
-  | BooleanParam;
+  | BooleanParam
+) & {
+  /** Commands own this parameter's composer control instead of an inline parameter picker. */
+  control?: "command";
+};
 export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
 
 /**
@@ -114,6 +135,14 @@ export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
  */
 export interface HarnessProvider extends ContributionDefinition<"harness"> {
   label: Localizable<string>;
+  /** Native commands and optional mode presentation. Older harnesses may omit both methods. */
+  getCommandState?(ctx: HarnessContext, input: HarnessCommandDiscoveryContext): MaybePromise<HarnessCommandState>;
+  /** Validate and describe execution needs without performing a mutation. */
+  prepareOperation?(
+    ctx: HarnessContext,
+    input: HarnessCommandContext,
+    operation: HarnessOperation,
+  ): MaybePromise<PreparedHarnessOperation>;
   /** Declares skill directories so the host installs project skills for this agent. Absent = no skill setup. */
   skills?: HarnessSkillsLayout;
   /** Discrete run params the host can render, persist as defaults, validate, and pass to start/resume. */

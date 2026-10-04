@@ -1,4 +1,20 @@
-import type { HarnessAttachment, SessionMessage } from "@pstdio/sdk/extensions";
+export interface StartSpawnInput {
+  prompt: string;
+  attachments?: HarnessAttachment[];
+  model?: string | null;
+  params?: Record<string, string | boolean>;
+  cwd?: string;
+  env?: Record<string, string>;
+  events: HarnessEventSink;
+  signal?: AbortSignal;
+}
+export interface ResumeSpawnInput extends StartSpawnInput {
+  agentSessionId: string;
+  messageOffset?: number;
+  questionResponse?: QuestionResponse;
+}
+
+import type { HarnessAttachment, HarnessEventSink, QuestionResponse, SessionMessage } from "@pstdio/sdk/extensions";
 
 export const promptWithAttachmentManifest = (prompt: string, attachments: HarnessAttachment[] = []) => {
   if (attachments.length === 0) return prompt;

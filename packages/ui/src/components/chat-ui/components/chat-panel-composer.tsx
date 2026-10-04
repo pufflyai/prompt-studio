@@ -1,9 +1,10 @@
 import { Stack } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useState } from "react";
-import type { ReferenceItem } from "@/components/rich-text";
+import type { PromptCommand } from "@/components/rich-text";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
+import type { ComposerDecision } from "./composer-decision";
 import type { QueuedFollowUp } from "./message-types";
 import { QueuedFollowUpList } from "./queued-follow-up-list";
 import type { QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
@@ -24,18 +25,19 @@ interface ChatPanelComposerProps {
   conversationKey?: string;
   recentUserMessages: string[];
   actions?: ReactNode;
+  composerHeader?: ReactNode;
   attachedResources?: string[];
   attachmentList?: ReactNode;
   chatInputAutoFocus: boolean;
   chatInputPlaceholder: string;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
-  chatInputReferences: ReferenceItem[];
+  composerDecision?: ComposerDecision;
+  chatInputCommands: PromptCommand[];
   hasWorkspaceHub: boolean;
   inputDisabled: boolean;
   submitDisabled: boolean;
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
-  onChatInputAddReference?: (resourceId: string, resourceType: ReferenceItem["resourceType"]) => void;
   onClearAttachments?: () => void;
   onInterrupt?: () => void;
   onQueuedFollowUpMove?: (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => void;
@@ -93,18 +95,19 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     conversationKey,
     recentUserMessages,
     actions,
+    composerHeader,
     attachedResources,
     attachmentList,
     chatInputAutoFocus,
     chatInputPlaceholder,
     chatInputQuestionPrompt,
-    chatInputReferences,
+    composerDecision,
+    chatInputCommands,
     hasWorkspaceHub,
     inputDisabled,
     submitDisabled,
     onAttachFiles,
     onAttachText,
-    onChatInputAddReference,
     onClearAttachments,
     onInterrupt,
     onQueuedFollowUpMove,
@@ -130,6 +133,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
         bg={hasWorkspaceHub ? "bg.subtle" : undefined}
       >
         {workspaceHub}
+        {composerHeader}
         <QueuedFollowUpList
           items={queuedFollowUps}
           editingItemId={queuedComposer.editingItemId}
@@ -157,11 +161,15 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           attachedToTop={hasQueuedFollowUps}
           recessed={hasWorkspaceHub}
           questionPrompt={chatInputQuestionPrompt}
+          decision={composerDecision}
           autoFocus={chatInputAutoFocus}
           focusSignal={queuedComposer.focusSignal}
-          submitTitle={queuedComposer.isEditing && !chatInputQuestionPrompt ? "Save queued follow-up" : undefined}
-          references={chatInputReferences}
-          onAddReference={onChatInputAddReference}
+          submitTitle={
+            queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision
+              ? "Save queued follow-up"
+              : undefined
+          }
+          commands={chatInputCommands}
         />
       </Stack>
     </Stack>

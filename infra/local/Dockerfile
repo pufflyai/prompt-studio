@@ -9,7 +9,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends bash ca-certificates curl git ripgrep unzip \
   && rm -rf /var/lib/apt/lists/*
 
-RUN BUN_INSTALL=/opt/bun bun add -g opencode-ai@1.15.5 @openai/codex@0.139.0
+RUN BUN_INSTALL=/opt/bun bun add -g opencode-ai@1.15.5 @openai/codex@0.159.3
 RUN ln -sf /opt/bun/install/global/node_modules/opencode-ai/bin/opencode.exe /usr/local/bin/opencode
 RUN ln -sf /opt/bun/install/global/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex
 

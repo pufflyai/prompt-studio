@@ -1,26 +1,20 @@
-import { Box, Button, Flex, HStack, Spacer, Text } from "@chakra-ui/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Box, Flex, Text } from "@chakra-ui/react";
+import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
-import { getTextFromSerializedEditorState, PromptEditor, type ReferenceItem } from "../../rich-text";
+import { getTextFromSerializedEditorState, type PromptCommand, PromptEditor } from "../../rich-text";
 import {
   type ChatInputAction,
   resolveChatInputButtonAction,
   resolveChatInputKeyboardAction,
 } from "./chat-input-actions";
 import { createAttachmentEventHandlers, DEFAULT_TEXT_ATTACHMENT_PASTE_LINE_THRESHOLD } from "./chat-input-attachments";
-import {
-  buildSkippedQuestionResponse,
-  type ChatInputQuestionPrompt,
-  type ChatInputQuestionResponse,
-  QuestionPromptControls,
-  SKIPPED_QUESTION_TEXT,
-  toQuestionResponse,
-} from "./chat-input-question-prompt";
+import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
+import { ChatInputToolbar } from "./chat-input-toolbar";
 import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
-import { SendButton } from "./send-button";
-
+import { type ComposerDecision, submitComposerResponse } from "./composer-decision";
+import { ComposerTakeover } from "./composer-takeover";
 import { useChatInputHistory } from "./use-chat-input-history";
-import { useQuestionPromptState } from "./use-question-prompt-state";
+import { useComposerRequest } from "./use-composer-request";
 
 export interface ChatInputProps {
   defaultState: string;
@@ -49,11 +43,11 @@ export interface ChatInputProps {
   /** Recede the resting border to border.subtle when nested inside a stronger shell (the workspace hub). */
   recessed?: boolean;
   questionPrompt?: ChatInputQuestionPrompt;
+  decision?: ComposerDecision;
   autoFocus?: boolean;
   focusSignal?: number;
   submitTitle?: string;
-  references?: ReferenceItem[];
-  onAddReference?: (resourceId: string, resourceType: ReferenceItem["resourceType"]) => void;
+  commands?: PromptCommand[];
 }
 
 const ChatInputPlaceholder = (props: { placeholder?: string }) => {
@@ -120,12 +114,15 @@ export const ChatInput = (props: ChatInputProps) => {
     attachedToTop = false,
     recessed = false,
     questionPrompt,
+    decision,
     autoFocus = false,
     focusSignal = 0,
     submitTitle,
-    references = [],
-    onAddReference,
+    commands = [],
   } = props;
+
+  const request = useComposerRequest(questionPrompt, decision);
+  const occupied = Boolean(request);
 
   const restingBorderColor = recessed ? "border.subtle" : "border";
   const [submitting, setSubmitting] = useState(false);
@@ -133,7 +130,6 @@ export const ChatInput = (props: ChatInputProps) => {
   const [editorState, setEditorState] = useState(defaultState);
   const [editorKey, setEditorKey] = useState(0);
   const [text, setText] = useState(() => getTextFromSerializedEditorState(defaultState));
-  const question = useQuestionPromptState(questionPrompt, defaultState);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const onChangeRef = useRef(onChange);
 
@@ -154,28 +150,29 @@ export const ChatInput = (props: ChatInputProps) => {
   const history = useChatInputHistory({
     recentUserMessages,
     text,
-    blocked: isDisabled || submitting || Boolean(questionPrompt),
-    resetKey: JSON.stringify([defaultState, editorKey, question.signature]),
+    blocked: isDisabled || submitting || occupied,
+    resetKey: JSON.stringify([defaultState, editorKey]),
     onChange: (value) => {
       setText(value);
       onChange?.(value);
     },
   });
 
-  const handleContainerClick = () => {
+  const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target;
+    // Portaled controls bubble through React, but own their focus outside this box.
+    if (!(target instanceof Element) || !event.currentTarget.contains(target)) return;
+    if (target.closest("button, input, textarea, select, a, label, [role=button], [role=combobox]")) return;
+    if (occupied) return;
     setIsSelected(true);
     focusPromptEditor(containerRef.current);
   };
 
   const resetEditor = (shouldFocus = false) => {
-    question.reset();
     history.reset();
-    // Answering a question leaves the message draft ready for the person to keep editing.
-    if (!questionPrompt) {
-      setEditorKey((key) => key + 1);
-      setEditorState(defaultState);
-      history.change(getTextFromSerializedEditorState(defaultState));
-    }
+    setEditorKey((key) => key + 1);
+    setEditorState(defaultState);
+    history.change(getTextFromSerializedEditorState(defaultState));
 
     if (shouldFocus) {
       requestAnimationFrame(() => {
@@ -184,29 +181,24 @@ export const ChatInput = (props: ChatInputProps) => {
     }
   };
 
-  const responseText = questionPrompt ? question.responseText : text.trim();
-  const hasMissingRequiredSelection = question.hasMissingRequiredAnswer;
+  const canSubmit = !isDisabled && !submitting && !submitDisabled && !occupied;
   const actionState = {
-    canInterrupt: streaming && !questionPrompt && Boolean(onInterrupt),
-    canSubmit: !submitDisabled,
-    hasQuestionPrompt: Boolean(questionPrompt),
-    isDisabled: isDisabled || submitting || hasMissingRequiredSelection,
+    canInterrupt: !occupied && Boolean(onInterrupt),
+    canSubmit: !submitDisabled && !occupied,
+    hasQuestionPrompt: occupied,
+    isDisabled: isDisabled || submitting,
     streaming,
-    text: responseText,
+    text,
   };
   const buttonAction = resolveChatInputButtonAction(actionState);
-  const messageTitle = streaming && !questionPrompt ? "Queue message" : "Send message";
+  const messageTitle = streaming ? "Queue message" : "Send message";
   const submitMessage = async () => {
-    if (!responseText) return;
-
-    const questionResponse = questionPrompt ? toQuestionResponse(questionPrompt, question.buildAnswers()) : undefined;
-
+    if (!canSubmit || !text.trim()) return;
     history.reset();
     setSubmitting(true);
     try {
-      await onSubmit(responseText, attachedResources, questionResponse);
+      await submitComposerResponse({ text: text.trim(), attachments: attachedResources, onSubmit, onClearAttachments });
       resetEditor(true);
-      onClearAttachments?.();
     } catch {
       // Keep the composer intact so failed submissions can be retried.
     } finally {
@@ -224,19 +216,6 @@ export const ChatInput = (props: ChatInputProps) => {
     onAttachText,
     textAttachmentPasteLineThreshold,
   });
-
-  const skipQuestion = async (skippedPrompt: ChatInputQuestionPrompt) => {
-    setSubmitting(true);
-    try {
-      await onSubmit(SKIPPED_QUESTION_TEXT, attachedResources, buildSkippedQuestionResponse(skippedPrompt));
-      resetEditor(true);
-      onClearAttachments?.();
-    } catch {
-      // Keep the form intact so a failed skip can be retried.
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <Box
@@ -262,27 +241,33 @@ export const ChatInput = (props: ChatInputProps) => {
         borderColor: selectedChatInputBorderColor,
         zIndex: 1,
       }}
-      onPasteCapture={attachmentEventHandlers.onPasteCapture}
-      onDropCapture={attachmentEventHandlers.onDropCapture}
-      onDragOver={attachmentEventHandlers.onDragOver}
+      onPasteCapture={occupied ? undefined : attachmentEventHandlers.onPasteCapture}
+      onDropCapture={occupied ? undefined : attachmentEventHandlers.onDropCapture}
+      onDragOver={occupied ? undefined : attachmentEventHandlers.onDragOver}
       onClick={handleContainerClick}
       onBlur={() => setIsSelected(false)}
     >
       <Flex direction="column" color="fg" gap="xs">
-        {attachmentList ? <Box>{attachmentList}</Box> : null}
-        {questionPrompt ? (
-          <QuestionPromptControls
-            questionPrompt={questionPrompt}
-            selectedOptionsByQuestion={question.selectedOptionsByQuestion}
-            customAnswersByQuestion={question.customAnswersByQuestion}
-            onToggleOption={question.toggleOption}
-            onToggleOther={question.toggleOther}
-            onCustomAnswerChange={question.setCustomAnswer}
-          />
-        ) : (
-          // The editor is its own composer row: it centres a single line at the shared
-          // control height and grows with content, never shrinking below it, so the row
-          // aligns with the toolbar beneath it.
+        <ComposerTakeover
+          request={request}
+          question={questionPrompt}
+          decision={decision}
+          actions={actions}
+          disabled={isDisabled}
+          submitDisabled={submitDisabled}
+          onSubmit={(answer, response) =>
+            submitComposerResponse({
+              text: answer,
+              response,
+              attachments: attachedResources,
+              onSubmit,
+              onClearAttachments,
+            })
+          }
+        />
+        {/* Keep the editor mounted so a takeover preserves selection, composition and undo history. */}
+        <Box display={occupied ? "none" : undefined}>
+          {attachmentList ? <Box mb="xs">{attachmentList}</Box> : null}
           <ScrollArea maxH="10rem" showHorizontalScrollbar={false} contentProps={{ pr: "2xs" }}>
             <Flex minH={COMPOSER_CONTROL_HEIGHT} align="center">
               <PromptEditor
@@ -291,41 +276,31 @@ export const ChatInput = (props: ChatInputProps) => {
                 onRecallPrevious={history.recallPrevious}
                 onRecallNext={history.recallNext}
                 defaultState={editorState}
-                isEditable={!isDisabled && !submitting}
+                isEditable={!isDisabled && !submitting && !occupied}
                 placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
                 onChange={(nextText, state) => {
                   setEditorState(JSON.stringify(state));
                   history.change(nextText);
                 }}
                 onSubmit={() => runAction(resolveChatInputKeyboardAction(actionState))}
-                references={references}
-                onAddReference={onAddReference}
+                commands={commands}
               />
             </Flex>
           </ScrollArea>
-        )}
-        <HStack gap="1" minH={COMPOSER_CONTROL_HEIGHT} align="center">
-          {actions}
-          <Spacer />
-          {questionPrompt ? (
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={isDisabled || submitting || submitDisabled}
-              title="Skip this question and let the agent continue"
-              onClick={() => void skipQuestion(questionPrompt)}
-            >
-              Skip
-            </Button>
-          ) : null}
-          <SendButton
-            canInterrupt={buttonAction === "interrupt"}
-            title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? messageTitle)}
-            shortcut={buttonAction === "submit" ? "Enter" : undefined}
-            onClick={() => runAction(buttonAction)}
-            disabled={buttonAction === "none"}
+        </Box>
+        {!occupied ? (
+          <ChatInputToolbar
+            actions={actions}
+            questionPrompt={false}
+            skipDisabled={false}
+            skipTitle=""
+            onSkip={() => {}}
+            buttonAction={buttonAction}
+            submitTitle={submitTitle}
+            messageTitle={messageTitle}
+            runAction={runAction}
           />
-        </HStack>
+        ) : null}
       </Flex>
     </Box>
   );

@@ -98,4 +98,5 @@ export const radii = {
   lg: { value: sp[200] },
   xl: { value: sp[400] },
   full: { value: "100%" },
+  pill: { value: "9999px" },
 };

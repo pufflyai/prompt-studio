@@ -28,7 +28,7 @@ const openCodeQuestionMessages = (questionState: Record<string, unknown>): Sessi
 ];
 
 describe("resolveActiveQuestionPrompt", () => {
-  it("promotes the latest unanswered OpenCode question into the chat input", () => {
+  it("promotes an unanswered OpenCode question into the chat input", () => {
     const prompt = resolveActiveQuestionPrompt(
       openCodeQuestionMessages({
         status: "running",
@@ -67,6 +67,71 @@ describe("resolveActiveQuestionPrompt", () => {
         },
       ],
     });
+  });
+
+  it("keeps the first async question active when another request arrives", () => {
+    const first = openCodeQuestionMessages({ input: { questions: [{ question: "First?", options: ["Yes"] }] } });
+    first[1].parts[0] = { ...first[1].parts[0], callId: "first" };
+    const second: SessionMessage = {
+      id: "second",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool",
+          tool: "question",
+          callId: "second",
+          status: "running",
+          state: { input: { questions: [{ question: "Second?", options: ["No"] }] } },
+        },
+      ],
+    };
+    expect(resolveActiveQuestionPrompt([...first, second])?.callId).toBe("first");
+    first[1].parts[0] = { ...first[1].parts[0], state: { metadata: { answers: [["Yes"]] } } };
+    expect(resolveActiveQuestionPrompt([...first, second])?.callId).toBe("second");
+  });
+
+  it("does not let a later answered question hide an earlier pending request", () => {
+    const first = openCodeQuestionMessages({ input: { questions: [{ question: "First?", options: ["Yes"] }] } });
+    expect(
+      resolveActiveQuestionPrompt([...first, ...openCodeQuestionMessages({ metadata: { answers: [["No"]] } })])
+        ?.questions[0].question,
+    ).toBe("First?");
+  });
+
+  it("advances past a withdrawn question", () => {
+    const messages = openCodeQuestionMessages({ input: { questions: [{ question: "Withdrawn?", options: [] }] } });
+    messages[1].parts[0] = { ...messages[1].parts[0], status: "denied" };
+    expect(resolveActiveQuestionPrompt(messages)).toBeUndefined();
+  });
+
+  it("uses the latest native state for repeated request identities", () => {
+    const request: SessionMessage = {
+      id: "first",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool",
+          tool: "question",
+          callId: "same-request",
+          status: "running",
+          state: { input: { questions: [{ question: "First?", options: ["Yes"] }] } },
+        },
+      ],
+    };
+    const answered: SessionMessage = {
+      id: "updated",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool",
+          tool: "question",
+          callId: "same-request",
+          status: "completed",
+          state: { metadata: { answers: [["Yes"]] } },
+        },
+      ],
+    };
+    expect(resolveActiveQuestionPrompt([request, answered])).toBeUndefined();
   });
 
   it("does not promote a question after OpenCode stores submitted answers", () => {

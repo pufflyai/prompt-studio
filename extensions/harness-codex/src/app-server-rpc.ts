@@ -9,6 +9,8 @@ export interface RpcMessage {
   error?: { message?: string };
 }
 
+export class CodexRequestRejectedError extends Error {}
+
 const parseMessage = (line: string) => {
   try {
     const message = JSON.parse(line) as RpcMessage;
@@ -69,7 +71,8 @@ export const createAppServerRpc = (
         if (!message.method && message.id !== undefined) {
           const pending = requests.get(message.id);
           requests.delete(message.id);
-          if (message.error) pending?.reject(new Error(message.error.message ?? "Codex request failed."));
+          if (message.error)
+            pending?.reject(new CodexRequestRejectedError(message.error.message ?? "Codex request failed."));
           else pending?.resolve(message.result);
         } else if (message.method) onMessage(message);
       } catch (error) {
