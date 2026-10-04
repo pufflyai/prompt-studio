@@ -24,8 +24,6 @@ import { PaginationFooter } from "./pagination-footer";
 import type { DataTableProps } from "./types";
 import { useDataTableView } from "./use-data-table-view";
 
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
-
 const DatasetDataTable = (props: DataTableProps) => {
   const {
     noBorder,
@@ -110,15 +108,6 @@ const DatasetDataTable = (props: DataTableProps) => {
   };
 
   const total = view.rows.length;
-  const hiddenByFilter = total - view.filteredRows.length;
-  const summary = [
-    page.shownCount === total ? plural(total, "row") : `${page.shownCount} of ${plural(total, "row")}`,
-    groups ? plural(groups.length, "group") : undefined,
-    hiddenByFilter > 0 ? `${hiddenByFilter} hidden by the view's filter` : undefined,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const showFooter = page.pageCount > 1 || page.shownCount !== total || Boolean(groups);
   const nothingShown = total > 0 && view.shownRows.length === 0 && Boolean(view.deferredSearch.trim());
 
   return (
@@ -177,13 +166,12 @@ const DatasetDataTable = (props: DataTableProps) => {
             getCellContextMenuActions={getCellContextMenuActions}
           />
         ))}
-      {showFooter ? (
+      {page.pageCount > 1 ? (
         <PaginationFooter
           pageCount={page.pageCount}
           pageIndex={page.page}
           pageSize={pageSize}
           pageSizeOptions={pageSizeOptions}
-          summary={summary}
           onPageChange={setPageIndex}
           onPageSizeChange={(size) => {
             setPageSize(size);

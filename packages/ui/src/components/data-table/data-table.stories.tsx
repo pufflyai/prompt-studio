@@ -1,24 +1,16 @@
-import { Box, Icon as ChakraIcon } from "@chakra-ui/react";
-import {
-  Archive,
-  Building2,
-  CalendarClock,
-  CheckCircle2,
-  CreditCard,
-  DollarSign,
-  Factory,
-  FileText,
-  Flame,
-  Globe2,
-  Info,
-  Trash2,
-} from "lucide-react";
-import { type ReactNode, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-
 import { DataTable, type DataTableProps, type RowData } from ".";
 import { columnDescriptions } from "./data-table.story-descriptions";
 import { columnManagementRows, generateTableRows, tableRows, thousandTableRows } from "./data-table.story-fixtures";
+import {
+  columnIcons,
+  compactHeaders,
+  DataTableStoryContainer,
+  rowActions,
+  selectionActions,
+  singleValueRows,
+  withStoryPage,
+} from "./data-table-story";
 import {
   EditableSelectableRowsStory,
   EditableWithViewsStory,
@@ -27,115 +19,9 @@ import {
   RichTextEditModeStory,
 } from "./edit-mode-story";
 
-type StoryFn = () => ReactNode;
-
-interface StoryContext {
-  parameters?: {
-    pageHeight?: string;
-    pagePadding?: string | number;
-  };
-}
-
 interface PlayContext {
   canvasElement: HTMLElement;
 }
-
-interface DataTableStoryContainerProps {
-  args: DataTableProps;
-  height?: string;
-  marginX?: string;
-  maxWidth?: string;
-}
-
-const columnIconProps = {
-  boxSize: "14px",
-};
-
-const columnIcons: DataTableProps["columnIcons"] = {
-  Invoice: <ChakraIcon as={FileText} {...columnIconProps} />,
-  Vendor: <ChakraIcon as={Factory} {...columnIconProps} />,
-  "Due Date": <ChakraIcon as={CalendarClock} {...columnIconProps} />,
-  Amount: <ChakraIcon as={DollarSign} {...columnIconProps} />,
-  Approved: <ChakraIcon as={CheckCircle2} {...columnIconProps} />,
-  Status: <ChakraIcon as={Info} {...columnIconProps} />,
-  Region: <ChakraIcon as={Globe2} {...columnIconProps} />,
-  Department: <ChakraIcon as={Building2} {...columnIconProps} />,
-  Priority: <ChakraIcon as={Flame} {...columnIconProps} />,
-  "Payment Method": <ChakraIcon as={CreditCard} {...columnIconProps} />,
-};
-
-const compactHeaders: DataTableProps["compactHeaders"] = {
-  Invoice: "Inv",
-  Vendor: "Vendor",
-  "Due Date": "Due",
-  "Payment Method": "Pay",
-};
-
-const selectionActions: DataTableProps["selectionActions"] = [
-  {
-    label: "Archive",
-    icon: <ChakraIcon as={Archive} boxSize="16px" />,
-    onSelect: (rows) => console.log("Archive rows", rows),
-  },
-  {
-    label: "Delete",
-    destructive: true,
-    icon: <ChakraIcon as={Trash2} boxSize="16px" />,
-    onSelect: (rows) => console.log("Delete rows", rows),
-  },
-];
-
-const rowActions: DataTableProps["rowActions"] = [
-  {
-    label: "Archive invoice",
-    icon: <ChakraIcon as={Archive} boxSize="16px" />,
-    onSelect: (row) => console.log("Archive invoice", row),
-  },
-  {
-    label: "Delete invoice",
-    destructive: true,
-    icon: <ChakraIcon as={Trash2} boxSize="16px" />,
-    onSelect: (row) => console.log("Delete invoice", row),
-  },
-];
-
-const singleValueRows = generateTableRows(24).map((row) => ({
-  ...row,
-  Amount: 1_200,
-  Status: tableRows[0]!.Status,
-}));
-
-const withStoryPage = (Story: StoryFn, context: StoryContext) => {
-  const pagePadding = context.parameters?.pagePadding ?? "sm";
-  const pageHeight = context.parameters?.pageHeight;
-
-  return (
-    <Box padding={pagePadding} background="bg" height={pageHeight}>
-      <Story />
-    </Box>
-  );
-};
-
-const DataTableStoryContainer = (props: DataTableStoryContainerProps) => {
-  const { args, maxWidth, height, marginX } = props;
-  const [activeRowId, setActiveRowId] = useState<string | null>(null);
-
-  const handleRowClick = (row: RowData) => {
-    if (!args.enableRowActivation) return;
-
-    const rowId = row.id;
-
-    if (typeof rowId !== "string") return;
-
-    setActiveRowId(rowId);
-  };
-
-  return (
-    <Box width="100%" maxWidth={maxWidth} height={height} marginX={marginX}>
-      <DataTable {...args} activeRowId={activeRowId} onRowClick={handleRowClick} />
-    </Box>
-  );
-};
 
 const meta = {
   title: "Components/Data Display/Data Table",
@@ -190,11 +76,11 @@ export const ColumnStats = {
     const displayMenu = within(document.body);
     const columnMenu = within(displayMenu.getByRole("dialog"));
     const invoiceCheckbox = columnMenu.getByRole("checkbox", { name: "Invoice" });
-    await userEvent.click(columnMenu.getByText("Invoice", { exact: true }));
+    await userEvent.click(invoiceCheckbox);
     await expect(invoiceCheckbox).not.toBeChecked();
     await expect(canvas.queryByRole("columnheader", { name: "Invoice" })).not.toBeInTheDocument();
 
-    await userEvent.click(columnMenu.getByText("Invoice", { exact: true }));
+    await userEvent.click(invoiceCheckbox);
     await expect(columnMenu.getByRole("checkbox", { name: "Invoice" })).toBeChecked();
     await expect(canvas.getByRole("columnheader", { name: "Invoice" })).toBeInTheDocument();
 
@@ -331,7 +217,7 @@ export const DynamicRowActions = {
     const rows = canvas.getAllByRole("row").slice(1);
 
     await userEvent.click(within(rows[0]!).getByRole("button", { name: "Row actions" }));
-    await expect(await within(document.body).findByRole("menuitem", { name: "Archive invoice" })).toBeVisible();
+    await waitFor(() => expect(within(document.body).getByRole("menuitem", { name: "Archive invoice" })).toBeVisible());
     await userEvent.keyboard("{Escape}");
     await expect(within(rows[1]!).queryByRole("button", { name: "Row actions" })).not.toBeInTheDocument();
   },

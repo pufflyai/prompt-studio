@@ -243,7 +243,6 @@ export const EditModeDataTable = (props: DataTableProps) => {
           pageIndex={pageIndex}
           pageSize={pageSize}
           pageSizeOptions={cappedPageSizeOptions}
-          summary={`${filteredData.length} rows`}
           onPageChange={setPageIndex}
           onPageSizeChange={changePageSize}
         />

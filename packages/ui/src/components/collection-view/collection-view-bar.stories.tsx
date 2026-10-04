@@ -14,6 +14,33 @@ export default meta;
 
 type Story = StoryObj;
 
+/** Text editing stays centered in the bubble, including characters with descenders. */
+export const TextFilterEditing: Story = {
+  render: () => <Bar storageKey="storybook-text-filter-editing" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
+    const picker = within(await body.findByTestId("filter-menu"));
+    await userEvent.click(picker.getByRole("button", { name: "Title", exact: true }));
+    await userEvent.click(picker.getByRole("button", { name: "Filter by text", exact: true }));
+    const bubble = canvas.getByRole("group", { name: "Title filter" });
+    const input = within(bubble).getByRole("textbox", { name: "Value", exact: true });
+    await userEvent.type(input, "gypq");
+    const bounds = bubble.getBoundingClientRect();
+    const inputBounds = input.getBoundingClientRect();
+    expect(inputBounds.height).toBeGreaterThan(Number.parseFloat(getComputedStyle(input).lineHeight));
+    expect(Math.abs(inputBounds.top + inputBounds.height / 2 - bounds.top - bounds.height / 2)).toBeLessThanOrEqual(1);
+    await userEvent.keyboard("{Enter}");
+    await expect(within(bubble).getByText("gypq", { exact: true })).toBeVisible();
+    await userEvent.click(within(bubble).getByText("gypq", { exact: true }));
+    await userEvent.clear(within(bubble).getByRole("textbox", { name: "Value", exact: true }));
+    await userEvent.type(within(bubble).getByRole("textbox", { name: "Value", exact: true }), "updated");
+    await userEvent.keyboard("{Enter}");
+    await expect(within(bubble).getByText("updated", { exact: true })).toBeVisible();
+  },
+};
+
 export const NoRules: Story = {
   render: () => <Bar storageKey="storybook-collection-view-bar-no-rules" />,
   play: async ({ canvasElement }) => {
