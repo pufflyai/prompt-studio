@@ -36,7 +36,7 @@ export const pageGroupedRows = <TRow extends KanbanRendererRow>(
     for (let index = Math.max(groupStart, start); index < Math.min(position, end); index += 1)
       entries.push({ kind: "row", row: rows[index - groupStart]! });
   }
-  return { entries, pageCount, page, shownCount };
+  return { entries, pageCount, page };
 };
 
 export const pageRows = <TRow extends KanbanRendererRow>(rows: TRow[], pageIndex: number, pageSize: number) => {
@@ -45,5 +45,5 @@ export const pageRows = <TRow extends KanbanRendererRow>(rows: TRow[], pageIndex
   const entries: DataTablePageEntry<TRow>[] = rows
     .slice(page * pageSize, (page + 1) * pageSize)
     .map((row) => ({ kind: "row", row }));
-  return { entries, pageCount, page, shownCount: rows.length };
+  return { entries, pageCount, page };
 };

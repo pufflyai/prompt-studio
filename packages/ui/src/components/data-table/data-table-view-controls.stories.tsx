@@ -147,7 +147,6 @@ export const GroupedByStatus: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getAllByTestId("data-table-group-row")).toHaveLength(5);
-    await expect(canvas.getByText("8 rows · 5 groups")).toBeVisible();
   },
 };
 
