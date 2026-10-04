@@ -151,16 +151,20 @@ export const updateResourcePlacementInstance = (input: {
   const instances = state.resourceInstances.get(id) ?? [];
   state.resourceInstances.set(
     id,
-    instances.map((instance) =>
-      instance.instanceKey === input.instanceKey
-        ? {
-            ...instance,
-            ...(input.open ? { open: input.open } : {}),
-            ...(input.resource ? { resource: input.resource } : {}),
-            ...(input.title === undefined ? {} : { title: input.title }),
-          }
-        : instance,
-    ),
+    instances
+      .filter(
+        (instance) => input.open !== "preview" || instance.open === "pin" || instance.instanceKey === input.instanceKey,
+      )
+      .map((instance) =>
+        instance.instanceKey === input.instanceKey
+          ? {
+              ...instance,
+              ...(input.open ? { open: input.open } : {}),
+              ...(input.resource ? { resource: input.resource } : {}),
+              ...(input.title === undefined ? {} : { title: input.title }),
+            }
+          : instance,
+      ),
   );
 };
 export const clearOwnedPlacementState = (state: OwnedPlacementState, id: string) => {

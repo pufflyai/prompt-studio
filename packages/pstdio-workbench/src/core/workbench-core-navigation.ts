@@ -42,7 +42,15 @@ const openPageSlotTarget = (core: WorkbenchCore, target: NavigationTargetPanel, 
     ...(target.resource ? { resource: target.resource } : {}),
     ...(target.open ? { open: target.open } : {}),
   });
-  revealPanelRegion(core, slot.region);
+  revealActivePanelRegion(core, slot.region);
+};
+
+const revealActivePanelRegion = (core: WorkbenchCore, fallback: WorkbenchRegion) => {
+  const layout = core.layout.getLayout();
+  const actual = Object.values(layout.regions).find((region) =>
+    region.widgets.some((widget) => widget.widgetId === layout.activeWidgetId),
+  );
+  revealPanelRegion(core, actual?.id ?? fallback);
 };
 
 const openModePlacementTarget = (core: WorkbenchCore, target: NavigationTargetPanel) => {
@@ -57,8 +65,8 @@ const openModePlacementTarget = (core: WorkbenchCore, target: NavigationTargetPa
     ...(target.resource ? { resource: target.resource } : {}),
     ...(target.open ? { open: target.open } : {}),
   });
-  revealPanelRegion(core, placement.region);
   activateModePlacementInstance(core, identity);
+  revealActivePanelRegion(core, placement.region);
 };
 
 const openShellPlacementTarget = (core: WorkbenchCore, target: NavigationTargetShellPanel) => {
@@ -70,8 +78,8 @@ const openShellPlacementTarget = (core: WorkbenchCore, target: NavigationTargetS
     ...(target.open ? { open: target.open } : {}),
     ...(target.title ? { title: target.title } : {}),
   });
-  revealPanelRegion(core, placement.region);
   activateModePlacementInstance(core, identity);
+  revealActivePanelRegion(core, placement.region);
 };
 
 const openCorePanelTarget = (core: WorkbenchCore, target: NavigationTargetPanel) => {

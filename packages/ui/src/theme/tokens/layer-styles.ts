@@ -1,6 +1,18 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  dropIndicator: {
+    value: {
+      position: "absolute",
+      zIndex: "1",
+      borderRadius: "2xs",
+      bg: "bg.accent-primary.default",
+      pointerEvents: "none",
+    },
+  },
+  tabDropZone: {
+    value: { bg: "bg.accent-subtle", color: "fg.muted" },
+  },
   floatingBar: {
     value: {
       paddingInline: "sm",

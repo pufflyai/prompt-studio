@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { useWorkbenchRegionTabsVisible } from "../region/region-tabs";
+import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -45,6 +47,8 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
   const settings = useWorkbenchModeRegionSettings(workbench, "side");
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
+  const hasTabs = useWorkbenchRegionTabsVisible(workbench, "side");
+  const showHeader = (settings?.showHeader !== false || hasTabs) && Boolean(header || canFloat);
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
@@ -57,7 +61,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         bg={workbenchBackgrounds.widget}
         layerStyle="panel"
         header={
-          settings?.showHeader !== false && (header || canFloat) ? (
+          showHeader ? (
             <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
               <WorkbenchSidePanelHeader header={header} />
               <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
@@ -78,7 +82,10 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         }
       >
         <WorkbenchPanelMenuLayout workbench={workbench} panel="side">
-          <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
+          <Flex position="relative" flex="1" minH={0} direction="column">
+            {!showHeader ? <WorkbenchTabDropTarget region="side" headerless /> : null}
+            <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
+          </Flex>
         </WorkbenchPanelMenuLayout>
       </AttachedPanel>
     </WorkbenchFocusRegion>

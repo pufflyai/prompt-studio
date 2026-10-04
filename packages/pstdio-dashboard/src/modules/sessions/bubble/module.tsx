@@ -18,6 +18,7 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
+import { registerSessionRenameCommand } from "./session-rename-command";
 import { createSessionTabPresentation } from "./session-tab-presentation";
 
 const SessionWidget = lazy(() =>
@@ -127,9 +128,9 @@ const openNewSessionDraft = (
   }
   const identity = input.replacePanel;
   if (identity?.kind === "mode") {
-    const origin = ctx.layout
-      .getLayout()
-      .regions.side.widgets.find(
+    const origin = Object.values(ctx.layout.getLayout().regions)
+      .flatMap((region) => region.widgets)
+      .find(
         (placement) =>
           placement.viewId === dashboardWidgetIds.sessionBubble &&
           placement.placementIdentity?.kind === "mode" &&
@@ -219,5 +220,6 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
     activate(ctx) {
       registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
+      registerSessionRenameCommand(ctx);
     },
   }) satisfies WorkbenchModuleContribution;

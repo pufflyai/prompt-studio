@@ -1,5 +1,5 @@
 import type { ResourceRef } from "../resources/resource-registry";
-import { getActivePlacement } from "./layout-operations";
+import { getActiveLocationPlacement, getActivePlacement } from "./layout-operations";
 import type { WorkbenchLayout, WorkbenchRegion } from "./layout-types";
 import { type AnchorId, getSurface, listAnchorRegions, resolveAnchorRegion } from "./surface-map";
 
@@ -7,8 +7,15 @@ import { type AnchorId, getSurface, listAnchorRegions, resolveAnchorRegion } fro
 // is the primary-scoped signal the coordinator keys off — `getAnchorResource(layout,
 // "primary")` is the main resource, free of the global active-resource pollution that
 // any side-region activation otherwise introduces.
-export const getAnchorResource = (layout: WorkbenchLayout, anchorId: AnchorId) =>
-  getActivePlacement(layout.regions[resolveAnchorRegion(anchorId)])?.resource;
+export const getAnchorResource = (layout: WorkbenchLayout, anchorId: AnchorId) => {
+  const active = getActivePlacement(layout.regions[resolveAnchorRegion(anchorId)]);
+  if (anchorId !== "primary") return active?.resource;
+  const location = getActiveLocationPlacement(layout);
+  if (location) return location.resource;
+  // Low-level host panels can establish a primary without an explicit role.
+  // An auxiliary panel moved into Main cannot become that primary.
+  return active?.role === "sub-panel" ? undefined : active?.resource;
+};
 
 // What the coordinator should do with a secondary anchor when the primary resource
 // changes. Projections re-render off their anchor (a render concern), so the reconciler

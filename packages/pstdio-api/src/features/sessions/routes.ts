@@ -26,6 +26,7 @@ import {
   updateQueuedFollowUpHandler,
   updateQueuedFollowUpRoute,
 } from "./endpoints/queued-follow-ups";
+import { renameSessionHandler, renameSessionRoute } from "./endpoints/rename-session";
 import { resolveSessionIdHandler, resolveSessionIdRoute } from "./endpoints/resolve-session-id";
 import {
   deleteSessionAttachmentHandler,
@@ -64,6 +65,7 @@ export const createSessionRoutes = (deps: SessionsRouteDeps) => {
   routes.openapi(getConversationSourcesRoute, getConversationSourcesHandler(deps));
   routes.openapi(getQueuedMessagesRoute, getQueuedMessagesHandler(deps));
   routes.openapi(updateSessionStatusRoute, updateSessionStatusHandler(deps));
+  routes.openapi(renameSessionRoute, renameSessionHandler(deps));
   routes.openapi(archiveSessionRoute, archiveSessionHandler(deps));
   routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));
   routes.openapi(updateQueuedFollowUpRoute, updateQueuedFollowUpHandler(deps));

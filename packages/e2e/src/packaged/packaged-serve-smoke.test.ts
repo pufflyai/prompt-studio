@@ -116,6 +116,12 @@ test(
       });
       expect(projectsRes.status).toBe(200);
       expect(await projectsRes.json()).toEqual([]);
+      const renameRes = await fetch(`${started.baseUrl}/v1/sessions/missing/title`, {
+        method: "PATCH",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ title: " " }),
+      });
+      expect(renameRes.status).toBe(400);
     } finally {
       if (child) {
         await stopProcess(child);

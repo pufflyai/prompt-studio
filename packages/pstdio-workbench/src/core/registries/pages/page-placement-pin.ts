@@ -6,6 +6,7 @@ export const pinPagePlacement = <Value>(
   state: WorkbenchPageRegistryStoreState<Value>,
   identity: PlacementIdentity,
   resources: WorkbenchPageResourceCodec,
+  open: "pin" | "preview" = "pin",
 ) => {
   if (identity.kind !== "page" || state.activePageId !== identity.pageId)
     throw new Error("Only an active page placement can be pinned");
@@ -23,9 +24,12 @@ export const pinPagePlacement = <Value>(
         ...current,
         resourceInstances: {
           ...current.resourceInstances,
-          [identity.slotId]: instances.map((instance) =>
-            instance.instanceKey === identity.instanceKey ? { ...instance, open: "pin" as const } : instance,
-          ),
+          [identity.slotId]: instances
+            .filter(
+              (instance) =>
+                open !== "preview" || instance.open === "pin" || instance.instanceKey === identity.instanceKey,
+            )
+            .map((instance) => (instance.instanceKey === identity.instanceKey ? { ...instance, open } : instance)),
         },
       },
     },

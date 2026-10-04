@@ -9,12 +9,23 @@ import { contributionRefId, resourceMatchesConstraint } from "../../shared/contr
 import { runUserAction } from "../../shared/run-user-action";
 import type { WorkbenchCore } from "../../workbench-core";
 import type { WorkbenchCompositionAddablePanel } from "./composition-controller";
+import { panelDestinations } from "./panel-arrangement";
 
-const ownsPlacement = (layout: WorkbenchLayout, matches: (identity: PlacementIdentity) => boolean) =>
-  Object.values(layout.regions).some((region) =>
-    region.widgets.some((placement) => placement.placementIdentity && matches(placement.placementIdentity)),
-  );
-export const activateModePlacementInstance = (core: WorkbenchCore, identity: PlacementIdentity) => {
+const ownsPlacement = (
+  layout: WorkbenchLayout,
+  target: WorkbenchPanelRegion,
+  matches: (identity: PlacementIdentity) => boolean,
+) =>
+  Object.values(layout.regions)
+    .filter((region) => region.id === target)
+    .some((region) =>
+      region.widgets.some((placement) => placement.placementIdentity && matches(placement.placementIdentity)),
+    );
+export const activateModePlacementInstance = (
+  core: WorkbenchCore,
+  identity: PlacementIdentity,
+  region?: WorkbenchPanelRegion,
+) => {
   const instance = Object.values(core.layout.getLayout().regions)
     .flatMap((region) => region.widgets)
     .find(
@@ -22,7 +33,10 @@ export const activateModePlacementInstance = (core: WorkbenchCore, identity: Pla
         candidate.placementIdentity &&
         placementIdentityKey(candidate.placementIdentity) === placementIdentityKey(identity),
     );
-  if (instance) core.layout.activatePanel(instance.widgetId);
+  if (instance) {
+    if (region) core.movePanel(instance.widgetId, region);
+    else core.layout.activatePanel(instance.widgetId);
+  }
 };
 interface AddablePanelInput {
   layout: WorkbenchLayout;
@@ -31,17 +45,23 @@ interface AddablePanelInput {
   resource?: ResourceRef;
 }
 type AddPanel = (panelId: string, open: WorkbenchCompositionAddablePanel["open"]) => void;
-const openPlacementAddTarget = (core: WorkbenchCore, target: NavigationTarget) => {
-  if (target.kind === "command") {
-    void runUserAction(core, "Add panel", () =>
-      core.commands.executeCommand(contributionRefId(target.target.command), target.target.params, {
+const openPlacementAddTarget = (
+  core: WorkbenchCore,
+  target: NavigationTarget,
+  panelId: string,
+  region: WorkbenchPanelRegion,
+) =>
+  runUserAction(core, "Add panel", async () => {
+    if (target.kind === "command") {
+      await core.commands.executeCommand(contributionRefId(target.target.command), target.target.params, {
         source: "panel-add",
-      }),
-    );
-    return;
-  }
-  void runUserAction(core, "Add panel", () => core.navigation.openTarget(target));
-};
+      });
+    } else {
+      await core.navigation.openTarget(target);
+    }
+    const active = core.layout.getActivePanel();
+    if (active?.panelId === panelId) core.movePanel(active.instanceId, region);
+  });
 const canAddItem = (core: WorkbenchCore, item: WorkbenchOwnedPlacementItem, resource: ResourceRef | undefined) => {
   if (item.kind !== "binding") return true;
   const target = item.binding.add;
@@ -56,46 +76,57 @@ const canAddItem = (core: WorkbenchCore, item: WorkbenchOwnedPlacementItem, reso
 };
 const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
   for (const placement of core.shellPlacements.listPlacements()) {
-    if (placement.region !== input.region) continue;
+    if (!panelDestinations(core, shellPlacementContributionId(placement.id)).includes(input.region)) continue;
     if (placement.item.kind === "view" && placement.item.presence === "fixed") continue;
     const multiple = placement.item.kind === "binding" && placement.item.binding.cardinality === "many";
     const isOpen = ownsPlacement(
       input.layout,
+      input.region,
       (identity) => identity.kind === "shell" && identity.placementId === placement.id,
     );
     if ((!multiple && isOpen) || !canAddItem(core, placement.item, input.resource)) continue;
     add(shellPlacementContributionId(placement.id), (resource) => {
       if (placement.item.kind === "binding" && placement.item.binding.add) {
-        openPlacementAddTarget(core, placement.item.binding.add);
-        return;
+        return openPlacementAddTarget(
+          core,
+          placement.item.binding.add,
+          shellPlacementContributionId(placement.id),
+          input.region,
+        );
       }
-      core.shellPlacements.openPlacement({
+      const identity = core.shellPlacements.openPlacement({
         placementId: placement.id,
         ...(placement.item.kind === "binding" && resource ? { resource, open: "pin" } : {}),
       });
+      activateModePlacementInstance(core, identity, input.region);
     });
   }
 };
 const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
   for (const placement of core.modePlacements.listPlacements(input.modeId)) {
-    if (placement.region !== input.region) continue;
+    if (!panelDestinations(core, modePlacementContributionId(placement.id)).includes(input.region)) continue;
     if (placement.item.kind === "view" && placement.item.presence === "fixed") continue;
     const multiple = placement.item.kind === "binding" && placement.item.binding.cardinality === "many";
     const isOpen = ownsPlacement(
       input.layout,
+      input.region,
       (identity) => identity.kind === "mode" && identity.placementId === placement.id,
     );
     if ((!multiple && isOpen) || !canAddItem(core, placement.item, input.resource)) continue;
     add(modePlacementContributionId(placement.id), (resource) => {
       if (placement.item.kind === "binding" && placement.item.binding.add) {
-        openPlacementAddTarget(core, placement.item.binding.add);
-        return;
+        return openPlacementAddTarget(
+          core,
+          placement.item.binding.add,
+          modePlacementContributionId(placement.id),
+          input.region,
+        );
       }
       const identity = core.modePlacements.openPlacement({
         panel: placement.ref,
         ...(placement.item.kind === "binding" && resource ? { resource, open: "pin" } : {}),
       });
-      activateModePlacementInstance(core, identity);
+      activateModePlacementInstance(core, identity, input.region);
     });
   }
 };
@@ -105,18 +136,23 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
   if (!page) return;
   for (const slot of page.slots) {
     if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
-    if (slot.region !== input.region) continue;
+    if (!panelDestinations(core, pagePlacementContributionId(page.id, slot.id)).includes(input.region)) continue;
     if (slot.item.kind === "view" && slot.item.presence === "fixed") continue;
     const multiple = slot.item.kind === "binding" && slot.item.binding.cardinality === "many";
     const isOpen = ownsPlacement(
       input.layout,
+      input.region,
       (identity) => identity.kind === "page" && identity.pageId === page.id && identity.slotId === slot.id,
     );
     if ((!multiple && isOpen) || !canAddItem(core, slot.item, input.resource)) continue;
     add(pagePlacementContributionId(page.id, slot.id), (resource) => {
       if (slot.item.kind === "binding" && slot.item.binding.add) {
-        openPlacementAddTarget(core, slot.item.binding.add);
-        return;
+        return openPlacementAddTarget(
+          core,
+          slot.item.binding.add,
+          pagePlacementContributionId(page.id, slot.id),
+          input.region,
+        );
       }
       core.pages.openSlot({
         pageId: page.id,
@@ -124,6 +160,14 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
         ...(resource ? { resource: resource } : {}),
         ...(multiple ? { open: "pin" } : {}),
       });
+      const opened = Object.values(core.layout.getLayout().regions)
+        .flatMap((region) => region.widgets)
+        .find(
+          (p) =>
+            p.widgetId === core.layout.getLayout().activeWidgetId &&
+            p.contributionId === pagePlacementContributionId(page.id, slot.id),
+        );
+      if (opened) core.movePanel(opened.widgetId, input.region);
     });
   }
 };

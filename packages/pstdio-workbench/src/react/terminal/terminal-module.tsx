@@ -1,4 +1,10 @@
-import type { ResourceRef, WorkbenchCoreContributionContext, WorkbenchModuleContribution } from "../../core";
+import {
+  type ResourceRef,
+  type WorkbenchCoreContributionContext,
+  type WorkbenchLayout,
+  type WorkbenchModuleContribution,
+  workbenchPanelRegions,
+} from "../../core";
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
 import { terminalPlacementBindingId } from "./terminal-placement-binding";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
@@ -15,13 +21,12 @@ interface OpenWorkbenchTerminalOptions {
   reveal?: boolean;
 }
 type TerminalResource = OpenWorkbenchTerminalOptions["resource"];
+const terminalPlacements = (layout: WorkbenchLayout) =>
+  workbenchPanelRegions
+    .flatMap((region) => layout.regions[region].widgets)
+    .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID);
 const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
-  new Set(
-    ctx.layout
-      .listPanelInstances("secondary")
-      .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
-      .map((placement) => placement.instanceId),
-  );
+  new Set(terminalPlacements(ctx.layout.getLayout()).map((placement) => placement.widgetId));
 const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) => {
   // A scope rotation temporarily removes every placement. Only an explicit tab
   // close should end the PTY bound to that placement.
@@ -34,14 +39,8 @@ const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) =>
   });
   const unsubscribeLayout = ctx.layout.store.subscribe((state, previousState) => {
     if (changingScope) return;
-    const currentIds = new Set(
-      state.layout.regions.secondary.widgets
-        .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
-        .map((placement) => placement.widgetId),
-    );
-    const previousIds = previousState.layout.regions.secondary.widgets
-      .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
-      .map((placement) => placement.widgetId);
+    const currentIds = new Set(terminalPlacements(state.layout).map((placement) => placement.widgetId));
+    const previousIds = terminalPlacements(previousState.layout).map((placement) => placement.widgetId);
     const scope = ctx.layout.getPersistenceScope();
     for (const instanceId of previousIds) {
       if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
@@ -62,14 +61,12 @@ const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) =>
 const terminalTitlePattern = /^Terminal (\d+)$/;
 const nextTerminalIndexes = new WeakMap<WorkbenchCoreContributionContext["layout"]["store"], number>();
 const getInitialTerminalIndex = (ctx: WorkbenchCoreContributionContext) => {
-  const terminalPlacements = ctx.layout
-    .getLayout()
-    .regions.secondary.widgets.filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID);
-  const titleIndexes = terminalPlacements
+  const placements = terminalPlacements(ctx.layout.getLayout());
+  const titleIndexes = placements
     .map((placement) => terminalTitlePattern.exec(placement.title ?? "")?.[1])
     .filter((index): index is string => index !== undefined)
     .map((index) => Number.parseInt(index, 10));
-  return Math.max(terminalPlacements.length, ...titleIndexes) + 1;
+  return Math.max(placements.length, ...titleIndexes) + 1;
 };
 const getNextTerminalTitle = (ctx: WorkbenchCoreContributionContext) => {
   const nextIndex = Math.max(nextTerminalIndexes.get(ctx.layout.store) ?? 1, getInitialTerminalIndex(ctx));

@@ -14,12 +14,15 @@ import {
   isWorkbenchPanelPlacementVisible,
   matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
+  type WorkbenchPanelRegion,
   workbenchPanelMenuRegions,
+  workbenchPanelRegions,
 } from "../../core";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
 import { ModeChromeView, useModeChrome } from "./mode-chrome";
+import { usePanelViewSlot } from "./panel-view-hosts";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
 import { WorkbenchWidgetHost } from "./widget-host";
 
@@ -147,6 +150,11 @@ const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
 
 export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const { workbench, region, title, pointerEvents = "auto", transparent = false } = props;
+  const panelRegion = workbenchPanelRegions.includes(region as WorkbenchPanelRegion)
+    ? (region as WorkbenchPanelRegion)
+    : undefined;
+  const panelSlot = usePanelViewSlot(panelRegion);
+  const sharedViews = panelSlot.enabled;
   const chrome = useModeChrome(workbench, region);
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
@@ -187,7 +195,10 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     ? resolveRenderedRegionPlacements(regionState.widgets, activePlacement.widgetId, region)
     : [];
 
-  const retainedPlacements = useRetainedViewPlacements(workbench, chrome !== undefined ? [] : renderedPlacements);
+  const retainedPlacements = useRetainedViewPlacements(
+    workbench,
+    chrome !== undefined || sharedViews ? [] : renderedPlacements,
+  );
   const visibleIds = new Set(renderedPlacements.map((entry) => entry.widgetId));
 
   const scrollsHorizontally = horizontalScrollRegions.has(region);
@@ -240,6 +251,9 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
       >
         {placeholder && placement ? (
           <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
+        ) : null}
+        {sharedViews ? (
+          <Box ref={panelSlot.ref} display="flex" flexDirection="column" minH="full" w="full" minW="0" />
         ) : null}
         {retainedPlacements.map((renderedPlacement) => (
           <WorkbenchRegionPlacement

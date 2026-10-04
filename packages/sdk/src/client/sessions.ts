@@ -55,6 +55,7 @@ export type SessionClient = {
   getQueuedMessages(sessionId: string, options?: { signal?: AbortSignal }): Promise<SessionQueuedMessagesResponse>;
   resolveSessionId(input: ResolveSessionIdInput): Promise<ResolveSessionIdResponse>;
   updateStatus(sessionId: string, status: string): Promise<Session>;
+  rename(sessionId: string, title: string): Promise<Session>;
   listActivity(sessionId: string, input?: ListSessionActivityInput): Promise<ListSessionActivityResponse>;
   stream(sessionId: string, onEvent: (event: SseEvent) => void, options?: { signal?: AbortSignal }): Promise<void>;
   connectStream(sessionId: string, handlers: SessionStreamHandlers): SessionStreamConnection;
@@ -152,6 +153,7 @@ export const createSessionClient = (request: RequestFn, clientOptions: ClientOpt
     resolveSessionId: (input) => request("/v1/sessions/resolve-session-id", { method: "POST", body: input }),
     updateStatus: (sessionId, status) =>
       request(`/v1/sessions/${sessionId}/status`, { method: "PATCH", body: { status } }),
+    rename: (sessionId, title) => request(`/v1/sessions/${sessionId}/title`, { method: "PATCH", body: { title } }),
     stream: (sessionId, onEvent, options = {}) =>
       new Promise<void>((resolve, reject) => {
         const subscription = streams.subscribe(sessionId, {

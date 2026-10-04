@@ -16,6 +16,8 @@ Navigation validates the complete target before changing state. An unresolved pa
 
 Browser Back and Forward replay canonical `PageLocation` values. Replay replaces the active owner set and does not push another history entry.
 
-Visited registered views remain mounted in their regions when navigation hides them. Returning to a page or mode reuses its live view, including its iframe and local state. Hidden views do not take layout space or accept user input. Region containers remain in the same DOM position when optional panels or mode chrome change.
+Visited registered views remain mounted when navigation hides them. Returning to a page or mode reuses its live view, including its iframe and local state. Docked views have stable portal hosts owned by the workbench. Moving a tab changes the host's DOM parent without remounting its React content. Hidden views do not take layout space or accept user input.
+
+The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, region, position?)`, and `resetLayout()`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the current page route and the primary resource anchor. The `workbench.movePanel` and `workbench.resetLayout` commands expose the same operations to commands and agents. `onDidResetLayout` lets host UI clear its active layout preferences after the reset.
 
 Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.

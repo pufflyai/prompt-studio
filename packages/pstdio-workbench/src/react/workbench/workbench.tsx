@@ -9,7 +9,9 @@ import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybindi
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
+import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
+import { WorkbenchTabDragProvider } from "../region/tab-drag-context";
 import { installWorkbenchControlsRenderer } from "../renderers/controls/install-controls-renderer";
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
@@ -318,7 +320,11 @@ export const Workbench = (props: WorkbenchProps) => {
       defaultThemePreference={mode?.defaultTheme}
       preferenceScope={mode?.defaultTheme ? mode.id : undefined}
     >
-      <WorkbenchContent key={projectId} {...props} />
+      <WorkbenchTabDragProvider workbench={props.workbench}>
+        <WorkbenchPanelViewHosts key={projectId} workbench={props.workbench}>
+          <WorkbenchContent {...props} />
+        </WorkbenchPanelViewHosts>
+      </WorkbenchTabDragProvider>
       <Toaster />
     </WorkbenchThemeProvider>
   );

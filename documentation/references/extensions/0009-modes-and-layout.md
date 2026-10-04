@@ -40,7 +40,17 @@ const mode = defineMode({
 
 `regionSettings.sidenav` controls a custom sidebar even without a placement. Page-owned content still belongs in `slots`. Region settings inherit the host defaults per property. For example, setting `alwaysShowTabs` preserves the host's size unless the mode supplies its own `size`.
 
-Set `regionSettings.secondary.showHeader: false` for a player or timeline that supplies its own controls. This removes the docked panel's tab and Add header without changing its content. Main and attached Side panels support the same setting. Floating panels retain their window controls.
+Set `regionSettings.secondary.showHeader: false` for a player or timeline that supplies its own controls. A panel without tabs stays headerless. During a tab drag it shows a temporary drop band at the top without shifting its content. Dropping another tab there reveals the shared tray. Main and attached Side panels use the same rule. Floating panels retain their window controls.
+
+## User arrangement
+
+A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or the tab context menu. Explicit `movableTo` restrictions and the mode's supported panels remain hard limits. Navigation chrome and the Sidenav do not become tabs.
+
+The + control follows the scrolling tab group. Its choices include active panels from other regions that are allowed in this destination. A single-instance panel is reused. Resource bindings retain their declared Add action. Panel menu openers stay at the far right.
+
+Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
+
+Placement identity and ownership stay the same when a tab moves. Mode arrangements persist within the project and mode; page arrangements persist within the page location. Reset layout restores the active page and shared mode defaults without deleting session or terminal data or clearing other page locations.
 
 ## Panel policy
 

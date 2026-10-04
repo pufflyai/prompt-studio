@@ -1,4 +1,5 @@
-import { filterVisibleTabs, useTabVisibilityStore } from "@pstdio/ui";
+import { filterVisibleTabs, getTabVisibilityStore, useTabVisibilityStore } from "@pstdio/ui";
+import { useEffect } from "react";
 import {
   getActiveWorkbenchLocationPanel,
   getAnchorResource,
@@ -63,7 +64,12 @@ export const useWorkbenchRegionTabsState = (
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const compositionPanels = useWorkbenchCompositionPanels(workbench);
-  const tabStore = useTabVisibilityStore(visibilityStorageKey ?? region, (state) => state);
+  const storageKey = visibilityStorageKey ?? `${workbench.layout.getPersistenceScope() ?? "unscoped"}/${region}`;
+  const tabStore = useTabVisibilityStore(storageKey, (state) => state);
+  useEffect(() => {
+    const subscription = workbench.onDidResetLayout(() => getTabVisibilityStore(storageKey).getState().reset());
+    return () => subscription.dispose();
+  }, [workbench, storageKey]);
   const regionState = layoutState.layout.regions[region];
   const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
@@ -74,7 +80,7 @@ export const useWorkbenchRegionTabsState = (
   );
   const visibleSubPanelIds = new Set(visibleSubPanels.map((placement) => placement.widgetId));
   const visiblePlacements = regionState.widgets.filter(
-    (placement) => visibleSubPanelIds.has(placement.widgetId) || (region === "main" && placement.role === "location"),
+    (placement) => visibleSubPanelIds.has(placement.widgetId) || placement.role === "location",
   );
   const leadingItems = listWorkbenchMenuItemsFromState(
     { itemsByPath, commands, contextValues },
@@ -87,7 +93,8 @@ export const useWorkbenchRegionTabsState = (
     shouldShowRegionTabs(visiblePlacements, {
       alwaysShowTabs: workbench.layout.getRegionSettings(region)?.alwaysShowTabs,
     });
-  const hasActions = leadingItems.length > 0 || eligibleSubPanels.length > 0;
+  const hasActions =
+    leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs));
   const hasTrailingActions =
     region === "main" &&
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, headerTrailingMenuPath(region), {

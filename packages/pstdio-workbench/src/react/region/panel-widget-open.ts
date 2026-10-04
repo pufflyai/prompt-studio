@@ -22,18 +22,20 @@ export const getPanelLabel = (region: WorkbenchPanelRegion) => {
   return "Main";
 };
 
-export const openPanelWidget = (input: OpenPanelWidgetInput) => {
+export const openPanelWidget = async (input: OpenPanelWidgetInput) => {
   const { open, pinned, region, resource, widget, workbench } = input;
 
   if (open) {
-    open(resource);
+    await open(resource);
   } else if (widget.openCommand) {
-    void runUserAction(workbench, widget.title, () =>
-      workbench.commands.executeCommand(widget.openCommand!.commandId, widget.openCommand!.args, {
+    await runUserAction(workbench, widget.title, async () => {
+      await workbench.commands.executeCommand(widget.openCommand!.commandId, widget.openCommand!.args, {
         source: "panel-add",
         ...(resource ? { resource } : {}),
-      }),
-    );
+      });
+      const active = workbench.layout.getActivePanel();
+      if (active?.panelId === widget.id) workbench.movePanel(active.instanceId, region);
+    });
   } else {
     const widgetResource = widget.resourceKinds?.length || widget.canOpen ? resource : undefined;
     // Adding a tab from the region's "+" tray is the user asking for a tab that stays.

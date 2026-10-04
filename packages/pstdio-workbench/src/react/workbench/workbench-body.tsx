@@ -10,6 +10,7 @@ import {
   useWorkbenchRegionTabsVisible,
   WorkbenchRegionTabs,
 } from "../region/region-tabs";
+import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -46,7 +47,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
   const settings = useWorkbenchModeRegionSettings(workbench, "main");
 
-  const visible = settings?.showHeader !== false && (hasMainHeader || hasPanelHeader);
+  const visible = (settings?.showHeader !== false || hasMainContentTabs) && (hasMainHeader || hasPanelHeader);
 
   return (
     <Header
@@ -79,6 +80,9 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
+  const hasTabs = useWorkbenchRegionTabsVisible(workbench, "main");
+  const hasHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
+  const mainSettings = useWorkbenchModeRegionSettings(workbench, "main");
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
@@ -126,8 +130,12 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       w="full"
       bg={workbenchBackgrounds.main}
       layerStyle="panel"
+      position="relative"
     >
       <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+      {(!hasMainHeader && !hasHeader) || (mainSettings?.showHeader === false && !hasTabs) ? (
+        <WorkbenchTabDropTarget region="main" headerless />
+      ) : null}
       <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
         {mainPanelWithMenus}
       </Box>
