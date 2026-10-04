@@ -93,7 +93,10 @@ test("async question replies preserve the draft and files until every request is
   const session = await created.json();
   const url = `${apiBase}/v1/sessions/${session.id}`;
   await expect.poll(async () => (await (await request.get(url)).json()).status).toBe("completed");
-  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+  }, project.id);
   await page.goto(
     `/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${session.id}`)}`,
   );

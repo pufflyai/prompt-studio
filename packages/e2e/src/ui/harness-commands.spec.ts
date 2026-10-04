@@ -25,7 +25,10 @@ for (const [harness, modes] of [
     const session = await created.json();
     const url = `${uiOrigin}/v1/sessions/${session.id}`;
     await expect.poll(async () => (await (await request.get(url)).json()).status).toBe("completed");
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.addInitScript((projectId: string) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+    }, project.id);
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${session.id}`);
     await page.goto(`/projects/${project.id}/session?resource=${resource}`);
     const editor = page.locator('[data-testid="content-editable"][contenteditable="true"]').last();
