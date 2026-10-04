@@ -14,7 +14,7 @@ export const digestView = defineView({
       const id = renderer.resource?.id;
       const run = id ? await runsOf(ctx).get(id) : null;
       if (!run) return { emptyState: { title: "Run not found", description: "Pick a run under Runs." } };
-      const threads = (await threadsOf(ctx).list()).filter((thread) => thread.runId === run.id);
+      const threads = await threadsOf(ctx).list();
       const ideas = (await ideasOf(ctx).list()).filter((idea) => idea.runId === run.id);
       const { budgets } = await readSettings(ctx.settings);
       return {

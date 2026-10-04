@@ -6,7 +6,8 @@ const time = (value: string) => new Date(value).toLocaleTimeString("en-GB", { ho
 const statusLabel = { running: "Running", done: "Done", failed: "Failed" };
 const ideaCount = (thread: Thread, ideas: Idea[]) => ideas.filter((idea) => idea.threadId === thread.id).length;
 // Titles and reasons come from scraped sites, so Markdown syntax in them is escaped.
-const escapeMarkdown = (value: string) => value.replace(/\s+/g, " ").replace(/([\\`*_[\]()|#<>])/g, "\\$1");
+// Parentheses stay plain: escaped brackets already stop links, and the file view reads \( ... \) as math.
+const escapeMarkdown = (value: string) => value.replace(/\s+/g, " ").replace(/([\\`*_[\]|#<>])/g, "\\$1");
 const link = (thread: Thread) =>
   thread.url ? `[${escapeMarkdown(thread.title)}](<${thread.url}>)` : escapeMarkdown(thread.title);
 const foundLine = (thread: FoundThread, ideas: Idea[]) => {
@@ -14,8 +15,11 @@ const foundLine = (thread: FoundThread, ideas: Idea[]) => {
   const details = [siteLabels[thread.site], thread.analysis?.sentiment, count ? plural(count, "idea") : ""];
   return `- ${link(thread)} · ${details.filter(Boolean).join(" · ")}`;
 };
-const postLine = (post: NewPost) => {
-  const sources = post.basedOn?.length ? ` · ${post.basedOn.join(", ")}` : "";
+// basedOn mixes thread ids with commit SHAs and changeset names; only saved threads have titles.
+const postLine = (post: NewPost, titles: Map<string, string>) => {
+  const sources = post.basedOn?.length
+    ? ` · ${post.basedOn.map((source) => titles.get(source) ?? source).join(", ")}`
+    : "";
   return `- ${escapeMarkdown(post.title)} · ${siteLabels[post.site]} · ${post.kind}${escapeMarkdown(sources)}`;
 };
 const section = (title: string, lines: string[], empty: string) => [
@@ -30,10 +34,15 @@ const coverageResult = (run: Run, site: (typeof sites)[number]) => {
   return run.searches?.[site] ? "Read" : "Not searched";
 };
 
-/** The run's read-only digest: meta line, summary, mentions, answer today, new posts, and coverage. */
+/**
+ * The run's read-only digest: meta line, summary, mentions, answer today, new posts, and coverage.
+ * `threads` holds every saved thread, so new-post sources from earlier runs keep their titles.
+ */
 export const buildDigestMarkdown = (run: Run, threads: Thread[], ideas: Idea[], budgets: Record<string, number>) => {
-  const found = threads.filter((thread): thread is FoundThread => !isNewPost(thread));
-  const posts = threads.filter(isNewPost);
+  const runThreads = threads.filter((thread) => thread.runId === run.id);
+  const titles = new Map(threads.map((thread) => [thread.id, thread.title]));
+  const found = runThreads.filter((thread): thread is FoundThread => !isNewPost(thread));
+  const posts = runThreads.filter(isNewPost);
   const mentions = found.filter((thread) => thread.mention);
   const answerToday = found.filter((thread) => !thread.mention && thread.relevance === 3);
   const searches = Object.values(run.searches ?? {}).reduce((total, count) => total + count, 0);
@@ -64,7 +73,11 @@ export const buildDigestMarkdown = (run: Run, threads: Thread[], ideas: Idea[], 
       answerToday.map((thread) => foundLine(thread, ideas)),
       "Nothing to answer today.",
     ),
-    ...section("New posts", posts.map(postLine), "No new posts in this run."),
+    ...section(
+      "New posts",
+      posts.map((post) => postLine(post, titles)),
+      "No new posts in this run.",
+    ),
     "## Coverage",
     "",
     "| Site | Searches | Result |",

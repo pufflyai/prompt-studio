@@ -57,7 +57,7 @@ Save the snapshot with the thread: the post and about 20 top comments, text only
 pst social-radar save-thread --input '{"runId":"<runId>","site":"hn","url":"https://news.ycombinator.com/item?id=<id>","title":"<title>","excerpt":"<short excerpt>","publishedAt":"<ISO time>","topic":"<matched term>","mention":false,"intent":"asking-for-tool","relevance":3,"reason":"<why it matters>","snapshot":{"takenAt":"<ISO time>","post":{"author":"<name>","body":"<post text>","score":12,"commentCount":8},"comments":[{"id":"c1","author":"<name>","body":"<comment>","votes":4}]},"analysis":{"summary":"<two sentences>","sentiment":"neutral","replySentiment":{"negative":1,"neutral":4,"positive":3},"topics":[{"label":"review flow","count":3}],"questions":["<question>"]}}'
 ```
 
-`intent` is `asking-for-tool`, `problem`, `comparison`, `launch`, `mention`, or `discussion`. Optional fields: `author`, `community`, `publishedAt`, `snapshot`, `analysis`.
+`intent` is `asking-for-tool`, `problem`, `comparison`, `launch`, `mention`, or `discussion`. Optional fields: `author`, `community`, `publishedAt`, `snapshot`, `analysis`. `community` is the place inside the site, such as `r/ClaudeAI` or a DEV tag. Leave it out when the site has none, as on Hacker News.
 
 ## Reply ideas
 

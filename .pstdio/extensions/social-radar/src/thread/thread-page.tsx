@@ -5,6 +5,7 @@ import { Ellipsis, ExternalLink } from "lucide-react";
 import { type Idea, isNewPost, type Thread } from "../schemas";
 import { siteLabels } from "../sites";
 import { threadResource } from "../store";
+import { plural } from "../text";
 import { useOpenThread, useRadar, useRadarRefresh, useRadarResource } from "../webview/client";
 import { Conversation } from "./conversation";
 import { PostInsights, ThreadInsights } from "./insights";
@@ -40,8 +41,8 @@ const metaLine = (thread: Thread) => {
   return [
     siteLabels[thread.site],
     thread.community,
-    post?.score === undefined ? "" : `${post.score} upvotes`,
-    post?.commentCount === undefined ? "" : `${post.commentCount} comments`,
+    post?.score === undefined ? "" : plural(post.score, "upvote"),
+    post?.commentCount === undefined ? "" : plural(post.commentCount, "comment"),
   ]
     .filter(Boolean)
     .join(" · ");
