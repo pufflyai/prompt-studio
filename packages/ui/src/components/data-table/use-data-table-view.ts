@@ -36,7 +36,16 @@ export const useDataTableViewStore = <T>(
  * typed on screen. Order is decided here, so the table itself never sorts.
  */
 export const useDataTableView = (props: DataTableProps) => {
-  const { data, hiddenColumns, getRowId, compactHeaders, columnRenderers, columnTypes, groupableColumns } = props;
+  const {
+    data,
+    hiddenColumns,
+    getRowId,
+    compactHeaders,
+    columnRenderers,
+    columnTypes,
+    groupableColumns,
+    filterableColumns,
+  } = props;
   const permanentlyHidden = new Set(hiddenColumns ?? []);
   const baseColumnKeys = Object.keys(data[0] || {}).filter((key) => !permanentlyHidden.has(key));
   const storageKey = resolveDataTableToolbarStorageKey({
@@ -64,6 +73,7 @@ export const useDataTableView = (props: DataTableProps) => {
     columnRenderers,
     columnTypes,
     groupableColumns,
+    filterableColumns,
   });
   const rows = buildDataTableRendererRows(data, orderedColumnKeys, getRowId, columnRenderers);
   const filteredRows = filterRowsByView(rows, filter, attributes);

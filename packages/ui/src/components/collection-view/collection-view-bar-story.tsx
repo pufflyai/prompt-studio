@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DisplayMenu } from "../kanban-renderer/display-menu";
 import { CollectionViewBar } from "./collection-view-bar";
 import { storyFields, storyOptions } from "./collection-view-story-fixtures";
@@ -57,13 +57,14 @@ export const Bar = (props: BarProps) => {
   const activateView = useCollectionViewStore(storageKey, initialState, (state) => state.activateView);
   const currentSorts = useCollectionViewStore(storageKey, initialState, (state) => state.sorts);
   const setSorts = useCollectionViewStore(storageKey, initialState, (state) => state.setSorts);
-  // Each story starts from its first view, then applies its edits. This runs during the first
-  // render, so the bar's own effects and the play function see the story's state.
+  // Start each story from its first view. Apply edits after the view's mount effect selects it.
   useState(() => {
     reset();
     if (savedViews[0]) activateView(savedViews[0]);
-    if (editedSorts) setSorts(editedSorts);
   });
+  useEffect(() => {
+    if (editedSorts) setSorts(editedSorts);
+  }, [editedSorts, setSorts]);
 
   return (
     <Box bg="bg">
@@ -72,7 +73,6 @@ export const Bar = (props: BarProps) => {
         storageKey={storageKey}
         initialState={initialState}
         views={views.views}
-        defaultViewId={views.defaultId}
         viewsSource={viewsSource}
         fields={storyFields}
         optionsFor={storyOptions}

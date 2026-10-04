@@ -1,5 +1,5 @@
 import { Box, Button, Dialog, Icon, IconButton, Input, Tabs, Text } from "@chakra-ui/react";
-import { Copy, LayersPlus, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
+import { Copy, LayersPlus, Pencil, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -63,7 +63,6 @@ const nextViewTitle = (views: { title: string }[]) => {
 export interface CollectionViewTabsProps<TSettings> {
   views: (CollectionSavedView<TSettings> & { builtIn: boolean })[];
   activeViewId: string;
-  defaultViewId?: string;
   viewsSource?: CollectionViewsSource<TSettings>;
   dirty: boolean;
   busy: boolean;
@@ -75,7 +74,7 @@ export interface CollectionViewTabsProps<TSettings> {
 }
 
 export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TSettings>) => {
-  const { views, activeViewId, defaultViewId, viewsSource, dirty, busy, state, onActivate, run, createView } = props;
+  const { views, activeViewId, viewsSource, dirty, busy, state, onActivate, run, createView } = props;
   const [renameTarget, setRenameTarget] = useState<CollectionSavedView<TSettings>>();
 
   const actionsFor = (view: CollectionSavedView<TSettings> & { builtIn: boolean }): ResourceContextAction[] =>
@@ -103,14 +102,6 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
                   copyFrom: view.id,
                 }),
               ),
-          },
-          {
-            key: "default",
-            label: view.id === defaultViewId ? "Clear default" : "Set as default",
-            icon: <Icon as={view.id === defaultViewId ? PinOff : Pin} boxSize="3" />,
-            separatorBefore: true,
-            isDisabled: busy,
-            onClick: () => run(() => viewsSource.onSetDefaultView(view.id === defaultViewId ? null : view.id)),
           },
           {
             key: "delete",

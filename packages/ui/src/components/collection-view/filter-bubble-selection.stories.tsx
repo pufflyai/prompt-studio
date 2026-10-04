@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { Bar } from "./collection-view-bar-story";
 
 const meta: Meta = { title: "Patterns/Collection View/Filter Bubble Selection", parameters: { layout: "fullscreen" } };
@@ -14,11 +14,13 @@ export const CompleteNumberEntry: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const picker = await body.findByTestId("filter-menu");
     await userEvent.click(within(picker).getByRole("button", { name: "Score", exact: true }));
-    await userEvent.type(within(picker).getByRole("spinbutton", { name: "Value" }), "70");
+    const valueInput = within(picker).getByRole("spinbutton", { name: "Value" });
+    await userEvent.type(valueInput, "-12.5", { delay: 20 });
+    await expect(valueInput).toHaveValue("-12.5");
     expect(canvas.queryByRole("group", { name: "Score filter" })).toBeNull();
     await userEvent.click(within(picker).getByRole("button", { name: "Apply filter" }));
     const pill = within(canvas.getByRole("group", { name: "Score filter" }));
-    await expect(pill.getByRole("spinbutton", { name: "Value" })).toHaveValue(70);
+    await expect(pill.getByRole("spinbutton", { name: "Value" })).toHaveValue(-12.5);
     await waitFor(() => expect(picker).not.toBeVisible());
   },
 };
@@ -62,6 +64,7 @@ export const TextEntry: Story = {
     await userEvent.click(within(picker).getByRole("button", { name: "Filter by text", exact: true }));
     const pill = within(canvas.getByRole("group", { name: "Title filter" }));
     const input = await pill.findByRole("textbox", { name: "Value" });
+    expect(getComputedStyle(input).outlineStyle).toBe("none");
     await userEvent.type(input, "review");
     await userEvent.keyboard("{Enter}");
     await expect(pill.getByText("review", { exact: true })).toBeVisible();
@@ -70,5 +73,26 @@ export const TextEntry: Story = {
     await userEvent.type(pill.getByRole("textbox", { name: "Value" }), "urgent");
     await userEvent.keyboard("{Enter}");
     await expect(pill.getByText("urgent", { exact: true })).toBeVisible();
+  },
+};
+
+export const DateParameterFields: Story = {
+  render: () => <Bar storageKey="storybook-date-parameter-fields" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
+    const picker = await body.findByTestId("filter-menu");
+    await userEvent.click(within(picker).getByRole("button", { name: "Updated", exact: true }));
+    const relative = within(picker).getByRole("button", { name: "Relative day" });
+    const exact = within(picker).getByLabelText("Exact day");
+    await waitFor(() => expect(exact.getBoundingClientRect().height).toBe(32));
+    expect(relative.getBoundingClientRect().width).toBe(exact.getBoundingClientRect().width);
+    expect(exact.getBoundingClientRect().top).toBeGreaterThan(relative.getBoundingClientRect().bottom);
+    const column = picker.querySelector('[data-testid="filter-value-column"]')!;
+    expect(exact.getBoundingClientRect().right).toBeLessThanOrEqual(column.getBoundingClientRect().right);
+    fireEvent.change(exact, { target: { value: "2026-10-04" } });
+    await userEvent.click(within(picker).getByRole("button", { name: "Apply filter" }));
+    await expect(canvas.getByRole("group", { name: "Updated filter" })).toBeVisible();
   },
 };

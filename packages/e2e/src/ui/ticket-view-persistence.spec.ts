@@ -36,10 +36,10 @@ test("shares saved ticket views while keeping active views local", async ({
     await page.getByRole("textbox", { name: "View name" }).fill("Shared default");
     await page.getByRole("button", { name: "Rename", exact: true }).click();
     await expect(second.getByRole("tab", { name: "Shared default", exact: true })).toBeVisible();
-    await page.getByRole("tab", { name: "Shared default", exact: true }).click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Set as default", exact: true }).click();
     const listed = await (await request.get(boardPath)).json();
     const saved = listed.views.find((view: { builtIn: boolean }) => !view.builtIn);
+    const defaultResponse = await request.put(`${boardPath}/default`, { data: { viewId: saved.id } });
+    expect(defaultResponse.ok(), await defaultResponse.text()).toBe(true);
     await expect.poll(async () => (await (await request.get(boardPath)).json()).defaultViewId).toBe(saved.id);
     await page.reload();
     await expect(page.getByRole("tab", { name: "Shared default", exact: true })).toHaveAttribute(

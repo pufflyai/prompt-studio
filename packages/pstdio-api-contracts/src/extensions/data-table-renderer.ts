@@ -35,6 +35,7 @@ export const dataTableRendererColumnSchema = z.object({
   label: localizableStringSchema.optional(),
   type: z.enum(["string", "number", "boolean", "date"]).optional(),
   groupable: z.boolean().optional(),
+  filterable: z.boolean().optional(),
   description: localizableStringSchema.optional(),
   icon: z.string().optional(),
   hidden: z.boolean().optional(),

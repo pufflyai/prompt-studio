@@ -53,7 +53,7 @@ const settings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",displ
 const filter={conjunction:"and",rules:[]};
 export default {
 commands:[{id:"remove",ref:{kind:"command",id:"remove"},title:"Remove",params:{},run:()=>{values=values.slice(0,1);return null;}},{id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{fail=true;return null;}},{id:"empty",ref:{kind:"command",id:"empty"},title:"Empty",params:{},run:()=>{inbox=[];return null;}}],
-views:[...["legacy","explicit"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",defaultActiveViewId:id==="explicit"?"first":undefined,defaultViews:[{id:"first",title:"First",settings:legacySettings,filters:{}},{id:"flagged",title:"Flagged",settings:legacySettings,filters:{},isDefault:true}],query:()=>({rows:[]})}})),{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true},{id:"score",label:"Score"},{id:"updated",label:"Updated",renderer:{type:"date"}}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80,updated:"2026-10-01"}},{id:"b",values:{name:"Docs",status:null,score:40,updated:"2026-10-02"}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
+views:[...["legacy","explicit"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",defaultActiveViewId:id==="explicit"?"first":undefined,defaultViews:[{id:"first",title:"First",settings:legacySettings,filters:{}},{id:"flagged",title:"Flagged",settings:legacySettings,filters:{},isDefault:true}],query:()=>({rows:[]})}})),{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true,filterable:false},{id:"score",label:"Score"},{id:"updated",label:"Updated",renderer:{type:"date"}}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80,updated:"2026-10-01"}},{id:"b",values:{name:"Docs",status:null,score:40,updated:"2026-10-02"}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
 };`,
   );
   handle = await createTestApp();
@@ -171,7 +171,7 @@ test("data table views resolve fields from columns and save shared views", async
     kind: "dataTable",
     fields: [
       { id: "name", kind: "string", groupable: false },
-      { id: "status", kind: "string", groupable: true },
+      { id: "status", kind: "string", groupable: true, filterable: false },
       {
         id: "score",
         kind: "number",
@@ -180,6 +180,14 @@ test("data table views resolve fields from columns and save shared views", async
       { id: "updated", kind: "date" },
     ],
   });
+  expect(
+    (
+      await request(`/boards/${tableId}/views`, "POST", {
+        title: "Status",
+        filter: { conjunction: "and", rules: [{ attributeId: "status", condition: "is", value: "open" }] },
+      })
+    ).status,
+  ).toBe(400);
   const builtIns = await (await request(`/boards/${tableId}/views`)).json();
   expect(builtIns.views).toMatchObject([
     { id: "default", builtIn: true, settings: { grouping: "none" }, sorts: [{ attributeId: "score" }] },

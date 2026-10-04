@@ -59,7 +59,10 @@ const toAttributeValue = (value: unknown, renderer?: NonNullable<ColumnRenderers
   return raw;
 };
 
-type ColumnOptions = Pick<DataTableProps, "compactHeaders" | "columnRenderers" | "columnTypes" | "groupableColumns">;
+type ColumnOptions = Pick<
+  DataTableProps,
+  "compactHeaders" | "columnRenderers" | "columnTypes" | "groupableColumns" | "filterableColumns"
+>;
 
 const resolveAttributeType = (
   rows: RowData[],
@@ -84,7 +87,7 @@ export const buildDataTableRendererAttributes = (
     id: columnKey,
     label: options.compactHeaders?.[columnKey] ?? columnKey,
     type: resolveAttributeType(rows, columnKey, options),
-    filterable: true,
+    filterable: options.filterableColumns?.includes(columnKey) ?? true,
     sortable: true,
     groupable: options.groupableColumns?.includes(columnKey) ?? false,
     displayable: true,

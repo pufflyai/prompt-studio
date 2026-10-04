@@ -175,6 +175,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         defaultViews={contribution.defaultViews}
         defaultActiveViewId={contribution.defaultActiveViewId}
         columnTypes={Object.fromEntries(columns.flatMap((column) => (column.type ? [[column.id, column.type]] : [])))}
+        filterableColumns={columns.filter((column) => column.filterable !== false).map((column) => column.id)}
         groupableColumns={columns.filter((column) => column.groupable).map((column) => column.id)}
         compactHeaders={labels}
         columnDescriptions={descriptions}

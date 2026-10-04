@@ -15,6 +15,17 @@ import {
 import type { DataTableSelectionAction, RowData } from "./types";
 
 describe("data table state helpers", () => {
+  test("column filtering can be disabled without changing display or sorting", () => {
+    const attributes = buildDataTableRendererAttributes([{ Name: "Main", Diff: 12 }], ["Name", "Diff"], {
+      filterableColumns: ["Name"],
+    });
+    expect(attributes).toEqual([
+      expect.objectContaining({ id: "Name", filterable: true }),
+      expect.objectContaining({ id: "Diff", filterable: false, sortable: true, displayable: true }),
+    ]);
+    expect(buildDataTableRendererAttributes([], ["Name"], {})[0]?.filterable).toBe(true);
+    expect(buildDataTableRendererAttributes([], ["Name"], { filterableColumns: [] })[0]?.filterable).toBe(false);
+  });
   test("resolves row ids from row.id or caller override", () => {
     expect(resolveDataTableRowId({ id: "row-1" }, 0)).toBe("row-1");
     expect(resolveDataTableRowId({ key: "custom" }, 2, (row) => String(row.key))).toBe("custom");

@@ -5,8 +5,8 @@ import { getIconComponent } from "@/components/primitives/icon-options";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { ListRow } from "../list-row/list-row";
-import { dayLabel } from "./collection-view-labels";
 import { RuleSelect } from "./rule-select";
+import { DateBubbleValue, ScalarValueEditor } from "./scalar-filter-value";
 
 export interface RuleValueOption {
   value: string;
@@ -25,9 +25,6 @@ export interface RuleValueProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
-
-const RELATIVE_DAYS = ["today", "today-1", "today-7", "today-14", "today-30", "today+1", "today+7"];
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const valueKind = (field: AttributeDescriptor, rule: ViewFilterRule) => {
   if (rule.condition === "is-empty" || rule.condition === "is-not-empty")
@@ -58,6 +55,7 @@ const NumberValue = (props: RuleValueProps & { width?: string }) => {
     <Input
       aria-label="Value"
       type="number"
+      variant={props.variant === "filter-segment" ? "borderless" : "outline"}
       size="2xs"
       width={width}
       value={typeof rule.value === "number" ? String(rule.value) : ""}
@@ -84,6 +82,7 @@ const TextBubbleValue = (props: RuleValueProps) => {
   return (
     <Editable.Root
       size="xs"
+      variant="filter-segment"
       value={typeof rule.value === "string" ? rule.value : ""}
       placeholder="Value…"
       edit={open}
@@ -96,32 +95,6 @@ const TextBubbleValue = (props: RuleValueProps) => {
       <Editable.Preview />
       <Editable.Input aria-label="Value" />
     </Editable.Root>
-  );
-};
-
-/** A day relative to today stays current; an exact day stays fixed. */
-const DayValue = (props: RuleValueProps) => {
-  const { rule, onChange } = props;
-  const value = typeof rule.value === "string" ? rule.value : undefined;
-  return (
-    <HStack gap="2xs" minW="0">
-      <RuleSelect
-        aria-label="Relative day"
-        width="7.5rem"
-        placeholder="Relative…"
-        options={RELATIVE_DAYS.map((day) => ({ value: day, label: dayLabel(day) }))}
-        value={value && !ISO_DAY.test(value) ? value : undefined}
-        onSelect={onChange}
-      />
-      <Input
-        aria-label="Exact day"
-        type="date"
-        size="2xs"
-        width="8.5rem"
-        value={value && ISO_DAY.test(value) ? value : ""}
-        onChange={(event) => onChange(event.target.value || undefined)}
-      />
-    </HStack>
   );
 };
 
@@ -140,7 +113,7 @@ export const RuleValueControl = (props: RuleValueProps) => {
   if (kind === "number") return <NumberValue {...props} width="9rem" />;
   if (kind === "text")
     return props.variant === "filter-segment" ? <TextBubbleValue {...props} /> : <TextValue {...props} width="9rem" />;
-  if (kind === "day") return <DayValue {...props} />;
+  if (kind === "day") return <DateBubbleValue {...props} />;
   const selectedLabel = rule.condition === "is-empty" || rule.condition === "is-not-empty" ? "Empty" : undefined;
   const allValuesLabel =
     rule.condition === "has-all-of"
@@ -175,7 +148,7 @@ const OptionChecklist = (props: RuleValueProps) => {
   const selected = listValue(rule);
 
   return (
-    <Stack gap="0" minH="0">
+    <Stack gap="0" minH="0" paddingX="2xs">
       <ScrollArea maxH="15rem" viewportProps={{ overscrollBehavior: "contain" }}>
         {options.map((option) => {
           const checked = selected.includes(option.value);
@@ -239,7 +212,5 @@ export const RuleValueEditor = (props: RuleValueProps) => {
       </Text>
     );
   if (kind === "options") return <OptionChecklist {...props} />;
-  if (kind === "day") return <DayValue {...props} />;
-  if (kind === "number") return <NumberValue {...props} />;
-  return <TextValue {...props} />;
+  return <ScalarValueEditor {...props} />;
 };

@@ -76,7 +76,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
         </Stack>
         <Stack flex="1" minW="0" minH="0" gap="0">
           {active ? (
-            <Box data-testid="filter-value-column" flex="1" minH="0" paddingX="2xs">
+            <Box data-testid="filter-value-column" flex="1" minH="0">
               <FilterPickerValues
                 field={active}
                 rule={filter.rules.find((rule) => rule.attributeId === active.id)}

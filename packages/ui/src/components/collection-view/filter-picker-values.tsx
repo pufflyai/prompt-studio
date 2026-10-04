@@ -17,7 +17,8 @@ interface FilterPickerValuesProps {
 const ScalarPickerValue = (props: FilterPickerValuesProps & { rule: ViewFilterRule }) => {
   const { field, rule, options, onSelectRule } = props;
   const [value, setValue] = useState(rule.value);
-  const complete = value !== undefined && value !== "";
+  const text = field.type.kind === "string";
+  const complete = text || (value !== undefined && value !== "");
   const submit = () => {
     if (complete) onSelectRule(selectRuleValues(field, rule, value));
   };
@@ -33,10 +34,11 @@ const ScalarPickerValue = (props: FilterPickerValuesProps & { rule: ViewFilterRu
     >
       <RuleValueEditor field={field} rule={{ ...rule, value }} options={options} onChange={setValue} />
       <ListRow
-        id="apply-filter"
+        id={text ? "filter-by-text" : "apply-filter"}
         role="button"
         variant="compact"
-        label="Apply filter"
+        label={text ? "Filter by text" : "Apply filter"}
+        icon={text ? <Icon as={Type} boxSize="3" /> : undefined}
         disabled={!complete}
         onActivate={submit}
       />
@@ -50,17 +52,6 @@ export const FilterPickerValues = (props: FilterPickerValuesProps) => {
   const source = normalizeBooleanViewRule(props.rule ?? newRule(field), field.type);
   const scalar = ["string", "number", "date"].includes(field.type.kind);
   const rule = scalar && ["is-empty", "is-not-empty"].includes(source.condition) ? newRule(field) : source;
-  if (field.type.kind === "string")
-    return (
-      <ListRow
-        id="filter-by-text"
-        role="button"
-        variant="compact"
-        label="Filter by text"
-        icon={<Icon as={Type} boxSize="3" />}
-        onActivate={() => onSelectRule(rule)}
-      />
-    );
   if (field.type.kind === "boolean")
     return (
       <Stack gap="0">
@@ -77,8 +68,7 @@ export const FilterPickerValues = (props: FilterPickerValuesProps) => {
         ))}
       </Stack>
     );
-  if (field.type.kind === "number" || field.type.kind === "date")
-    return <ScalarPickerValue key={field.id} {...props} rule={rule} />;
+  if (scalar) return <ScalarPickerValue key={field.id} {...props} rule={rule} />;
   return (
     <RuleValueEditor
       field={field}

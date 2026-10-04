@@ -170,4 +170,6 @@ export interface DataTableProps {
   columnTypes?: Partial<Record<string, DataTableColumnType>>;
   /** Columns offered under Grouping in the Display menu. */
   groupableColumns?: string[];
+  /** Columns offered in Filter. Omit to allow every column; an empty list disables column filters. */
+  filterableColumns?: string[];
 }

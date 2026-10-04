@@ -40,6 +40,11 @@ export const editableSlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
+    variant: {
+      "filter-segment": {
+        input: { bg: "transparent", _focusVisible: { outline: "none" } },
+      },
+    },
     size: {
       xs: {
         root: { display: "inline-flex", alignItems: "center" },

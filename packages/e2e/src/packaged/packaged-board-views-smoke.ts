@@ -62,6 +62,24 @@ export const registerBoardViewsSmokeTests = () => {
       const boards = cli("boards");
       expect(boards).toContainEqual(expect.objectContaining({ id: board, kind: "kanban" }));
       expect(boards).toContainEqual(expect.objectContaining({ id: WORKSPACES_COLLECTION_ID, extensionId: null }));
+      const nativeFields = boards.find((entry: { id: string }) => entry.id === WORKSPACES_COLLECTION_ID).fields;
+      expect(nativeFields).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: "diff", filterable: false, sortable: true, displayable: true }),
+        ]),
+      );
+      const refusedDiff = await fetch(
+        `${runtime.baseUrl}/v1/projects/${projectId}/boards/${WORKSPACES_COLLECTION_ID}/views`,
+        {
+          method: "POST",
+          headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
+          body: JSON.stringify({
+            title: "Diff filter",
+            filter: { conjunction: "and", rules: [{ attributeId: "diff", condition: "gt", value: 5 }] },
+          }),
+        },
+      );
+      expect(refusedDiff.status).toBe(400);
       const workspaces = cli(
         "create",
         "--board",

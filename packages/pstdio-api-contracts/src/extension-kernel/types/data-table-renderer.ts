@@ -77,6 +77,8 @@ export interface DataTableRendererColumn {
   type?: "string" | "number" | "boolean" | "date";
   /** Offers the column under Grouping in the table's Display menu. */
   groupable?: boolean;
+  /** Whether this column can be filtered. Defaults to true. */
+  filterable?: boolean;
   description?: Localizable<string>;
   icon?: string;
   hidden?: boolean;

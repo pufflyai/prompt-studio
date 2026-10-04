@@ -32,9 +32,6 @@ test("native Workspaces saves shared views and isolates each project's selection
     await page.getByRole("button", { name: "Save view", exact: true }).click();
     await expect(page.getByLabel("Unsaved view changes")).toHaveCount(0);
     const releaseTab = page.getByRole("tab", { name: "Release workspaces", exact: true });
-    await releaseTab.click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Set as default", exact: true }).click();
-    await expect.poll(async () => (await (await request.get(path)).json()).defaultViewId).not.toBe("default");
     const saved = await (await request.get(path)).json();
     expect(saved.views.find((view: { title: string }) => view.title === "Release workspaces")).toMatchObject({
       settings: { rowNumbers: false },
@@ -43,7 +40,7 @@ test("native Workspaces saves shared views and isolates each project's selection
     await expect(releaseTab).toHaveAttribute("aria-selected", "true");
     await expect(page.locator('[data-column-id="rowIndex"]')).toHaveCount(0);
 
-    // A second client follows the shared project default without local view state.
+    // A second client can open the shared view without local view state.
     const otherClient = await page
       .context()
       .browser()!
@@ -55,6 +52,7 @@ test("native Workspaces saves shared views and isolates each project's selection
       }, first!.id);
       const otherPage = await otherClient.newPage();
       await otherPage.goto(`/projects/${first!.id}/workspaces`);
+      await otherPage.getByRole("tab", { name: "Release workspaces", exact: true }).click();
       await expect(otherPage.getByRole("tab", { name: "Release workspaces", exact: true })).toHaveAttribute(
         "aria-selected",
         "true",

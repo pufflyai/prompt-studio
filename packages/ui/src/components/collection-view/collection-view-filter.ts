@@ -114,7 +114,7 @@ const compileValueRule = (
 /** Returns undefined for a rule that is still being built or no longer fits its field. */
 const compileRule = (rule: ViewFilterRule, fields: AttributeDescriptor[], today: Date): RowTest | undefined => {
   const field = findField(fields, rule.attributeId);
-  if (!field) return undefined;
+  if (!field || field.filterable === false) return undefined;
   rule = normalizeBooleanViewRule(rule, field.type);
   const condition = acceptedCondition(field, rule.condition);
   // Old views picked exact values on every field. When a host cannot tell a field's kind up front,

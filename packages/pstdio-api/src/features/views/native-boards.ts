@@ -37,7 +37,7 @@ export const nativeWorkspaceFields = () =>
         label: column.label,
         kind: column.type,
         conditions: [...VIEW_FILTER_CONDITIONS[column.type]],
-        filterable: true,
+        filterable: column.filterable ?? true,
         sortable: true,
         displayable: true,
         groupable: column.groupable ?? false,

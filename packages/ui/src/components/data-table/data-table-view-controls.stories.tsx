@@ -129,9 +129,8 @@ export const SavedViews: Story = {
     await waitFor(() => expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.clientWidth));
     expect(viewport.scrollHeight).toBeLessThanOrEqual(viewport.clientHeight);
     const items = within(menu).getAllByRole("menuitem");
-    expect(items.map((item) => item.textContent)).toEqual(["Rename", "Duplicate", "Set as default", "Delete view"]);
-    expect(within(menu).getByRole("menuitem", { name: "Set as default" }).querySelector("svg")).not.toBeNull();
-    expect(menu.querySelectorAll('[data-part="separator"]')).toHaveLength(2);
+    expect(items.map((item) => item.textContent)).toEqual(["Rename", "Duplicate", "Delete view"]);
+    expect(menu.querySelectorAll('[data-part="separator"]')).toHaveLength(1);
   },
 };
 

@@ -24,7 +24,8 @@ export interface RuleSelectProps {
   /** Rule rows pass a fixed width so the columns of a rule list line up. */
   width?: string;
   showSearch?: boolean;
-  variant?: "subtle" | "filter-segment" | "filter-condition";
+  variant?: "subtle" | "filter-segment" | "filter-condition" | "outline";
+  size?: "2xs" | "sm";
   showSelectedIcon?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -74,7 +75,7 @@ export const RuleSelect = (props: RuleSelectProps) => {
         <Button
           aria-label={props["aria-label"]}
           variant={props.variant ?? "subtle"}
-          size="2xs"
+          size={props.size ?? "2xs"}
           width={width}
           minW="0"
           justifyContent="flex-start"
@@ -84,7 +85,14 @@ export const RuleSelect = (props: RuleSelectProps) => {
           {icon && props.showSelectedIcon !== false ? (
             <Icon as={icon} color={selectedOptions[0]?.iconColor ?? "fg.muted"} />
           ) : null}
-          <Text as="span" flex="1" minW="0" textAlign="start" textStyle="label/XS" truncate>
+          <Text
+            as="span"
+            flex="1"
+            minW="0"
+            textAlign="start"
+            textStyle={props.size === "sm" ? "label/S/regular" : "label/XS"}
+            truncate
+          >
             {props.selectedLabel ?? label}
           </Text>
           {props.variant !== "filter-segment" && props.variant !== "filter-condition" ? (

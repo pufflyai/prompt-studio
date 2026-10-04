@@ -23,6 +23,21 @@ const fields: AttributeDescriptor[] = withTitleField([
   { id: "owner", label: "Owner", type: { kind: "user" }, filterable: true },
 ]);
 
+test("saved filters stop narrowing rows when their field disables filtering", () => {
+  const rows = [
+    { id: "a", title: "Small", attributes: { diff: 5 } },
+    { id: "b", title: "Large", attributes: { diff: 20 } },
+  ];
+  const fields: AttributeDescriptor[] = [{ id: "diff", label: "Diff", type: { kind: "number" }, filterable: false }];
+  expect(
+    filterRowsByView(
+      rows,
+      { conjunction: "and", rules: [{ attributeId: "diff", condition: "gt", value: 10 }] },
+      fields,
+    ),
+  ).toEqual(rows);
+});
+
 const row = (id: string, title: string, attributes: Record<string, unknown>): KanbanRendererRow => ({
   id,
   title,

@@ -26,7 +26,6 @@ export const DataTableHeader = (props: DataTableHeaderProps) => {
       storageKey={view.storageKey}
       initialState={view.initialState}
       views={view.views.views}
-      defaultViewId={view.views.defaultId}
       viewsSource={viewsSource}
       fields={view.attributes}
       optionsFor={noOptions}

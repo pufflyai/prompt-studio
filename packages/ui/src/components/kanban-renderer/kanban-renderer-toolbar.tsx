@@ -63,7 +63,6 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
       storageKey={storageKey}
       initialState={initialState}
       views={viewState.views}
-      defaultViewId={viewState.defaultId}
       viewsSource={props.viewsSource}
       fields={withTitleField(attributes)}
       optionsFor={optionsFor}

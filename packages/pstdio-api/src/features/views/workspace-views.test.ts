@@ -48,10 +48,28 @@ test("native Workspaces exposes stable fields without extensions or data rows", 
       expect.objectContaining({ id: "name", kind: "string", filterable: true }),
       expect.objectContaining({ id: "type", kind: "string", groupable: true }),
       expect.objectContaining({ id: "created", kind: "date" }),
-      expect.objectContaining({ id: "diff", kind: "number" }),
+      expect.objectContaining({ id: "diff", kind: "number", filterable: false, sortable: true, displayable: true }),
     ]),
   );
   expect(await (await request(id, "/boards")).json()).toEqual(expect.arrayContaining([board]));
+});
+
+test("workspace views reject Diff filters while retaining Diff sorting", async () => {
+  const id = await project("Workspace diff capabilities");
+  const path = `/boards/${boardId}/views`;
+  const response = await request(id, path, "POST", {
+    title: "Changed workspaces",
+    filter: { conjunction: "and", rules: [{ attributeId: "diff", condition: "gt", value: 10 }] },
+  });
+  expect(response.status).toBe(400);
+  expect(
+    (
+      await request(id, path, "POST", {
+        title: "Most changes",
+        sorts: [{ attributeId: "diff", direction: "desc" }],
+      })
+    ).status,
+  ).toBe(201);
 });
 
 test("workspace views share create edit default reorder and delete within their project", async () => {

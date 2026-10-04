@@ -29,7 +29,6 @@ export interface CollectionViewBarProps<TSettings> {
   itemLabel?: string;
   initialState: CollectionViewStoreInitialState<TSettings>;
   views: (CollectionSavedView<TSettings> & { builtIn: boolean })[];
-  defaultViewId?: string;
   viewsSource?: CollectionViewsSource<TSettings>;
   /** Every field of the view. Filter offers the filterable ones and Sort the sortable ones. */
   fields: AttributeDescriptor[];
@@ -67,7 +66,7 @@ const CountButton = (props: CountButtonProps) => {
 
 /** One view bar for data tables and both kanban displays: saved views, then Search, Filter, and Display. */
 export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSettings>) => {
-  const { storageKey, initialState, views, defaultViewId, viewsSource, fields, optionsFor } = props;
+  const { storageKey, initialState, views, viewsSource, fields, optionsFor } = props;
   const { search, onSearchChange, searchResultLabel, leading, actions, displayControl, align = "split" } = props;
   const store: CollectionViewStoreState<TSettings> = useCollectionViewStore(storageKey, initialState, (state) => state);
   const { activeViewId, settings, sorts, openMenu, openRuleIndex } = store;
@@ -120,7 +119,6 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
           <CollectionViewTabs
             views={views}
             activeViewId={activeViewId}
-            defaultViewId={defaultViewId}
             viewsSource={viewsSource}
             dirty={dirty}
             busy={busy}

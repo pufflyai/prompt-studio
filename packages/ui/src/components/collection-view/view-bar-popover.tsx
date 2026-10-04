@@ -1,5 +1,7 @@
 import { Popover, Portal } from "@chakra-ui/react";
-import { type ReactNode, type RefObject, useEffect, useRef } from "react";
+import { createContext, type ReactNode, type RefObject, useContext, useEffect, useRef } from "react";
+
+const ViewBarPopoverContext = createContext(false);
 
 export interface ViewBarPopoverProps {
   open: boolean;
@@ -17,6 +19,7 @@ export interface ViewBarPopoverProps {
 export const ViewBarPopover = (props: ViewBarPopoverProps) => {
   const { open, onOpenChange, anchorRef, width, padding = "2xs", testId, children } = props;
   const contentRef = useRef<HTMLDivElement>(null);
+  const nested = useContext(ViewBarPopoverContext);
 
   useEffect(() => {
     if (!open) return;
@@ -38,13 +41,14 @@ export const ViewBarPopover = (props: ViewBarPopoverProps) => {
       closeOnInteractOutside={false}
       positioning={{
         placement: "bottom-start",
+        strategy: "fixed",
         hideWhenDetached: true,
         offset: { mainAxis: 8 },
         getAnchorElement: () => anchorRef.current,
       }}
       onOpenChange={(details) => onOpenChange(details.open)}
     >
-      <Portal>
+      <Portal disabled={nested}>
         <Popover.Positioner>
           <Popover.Content
             ref={contentRef}
@@ -55,7 +59,7 @@ export const ViewBarPopover = (props: ViewBarPopoverProps) => {
             gap="0"
             overflow="visible"
           >
-            {children}
+            <ViewBarPopoverContext value>{children}</ViewBarPopoverContext>
           </Popover.Content>
         </Popover.Positioner>
       </Portal>

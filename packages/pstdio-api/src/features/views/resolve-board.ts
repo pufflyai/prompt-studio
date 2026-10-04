@@ -185,7 +185,7 @@ const resolveDataTableFields = async (
       label: text(column.label, column.id),
       kind,
       conditions: conditionsOf(kind),
-      filterable: true,
+      filterable: column.filterable ?? true,
       groupable: column.groupable ?? false,
       sortable: true,
       displayable: true,
