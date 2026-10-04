@@ -31,6 +31,7 @@ import { queryTicketsCommand } from "./query-tickets";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 import { readTicketsCommand } from "./read-tickets";
 import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
+import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
 import { runAttemptCommand } from "./run-attempt";
 import { runReviewCommand } from "./run-review";
@@ -102,6 +103,7 @@ export const plannerCommands = [
   applyTicketTemplateCommand,
   automationPolicyCommand,
   implementationPolicyCommand,
+  refinementPolicyCommand,
   implementationTargetsCommand,
   setImplementationTargetCommand,
   attemptReadinessCommand,

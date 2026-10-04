@@ -4,6 +4,14 @@ The Planner extension provides tickets, managed attempts, reviews, and ticket wo
 
 Use **Open tickets** in the dashboard command palette to open the current project's Tickets board.
 
+## Refinement options
+
+Open Settings → Project → Extensions → Prompt Studio Planner, then the Settings tab. **Generate an artifact prototype for UX features** is enabled by default. It applies when refining a new feature with UX changes and Artifacts is installed and enabled for the project.
+
+The refine-ticket skill reads the project option with `pst pstdio-planner refinement-policy`. The result contains `generateArtifactPrototype`. When enabled, the agent publishes an interactive prototype and links it in the ticket before completing refinement. If the option is off or Artifacts is unavailable, the agent records why it skipped the prototype. Tickets without a new UX feature do not require one.
+
+Install the optional **Artifacts** extension from Extensions to use prototypes. Its package name is `pstdio-artifacts`. Refinement does not install it automatically. Shared ticket workflow options belong to Planner alongside its refinement and implementation skills.
+
 ## Implementation options
 
 Open Settings → Project → Extensions → Prompt Studio Planner, then the Settings tab, to configure the `implement-ticket` workflow:

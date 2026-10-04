@@ -15,7 +15,6 @@
   },
   "include": [
     "extension.ts",
-    "refinement-policy*.ts",
     "skills/create-pstdio-extension/references/examples/**/*.ts",
     "skills/create-pstdio-extension/references/examples/**/*.tsx"
   ]

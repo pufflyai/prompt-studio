@@ -25,6 +25,7 @@ import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
@@ -335,7 +336,7 @@ test(
           "workbench-fixture",
           "extension-lab",
           "pstdio-artifacts",
-          "pstdio-skills",
+          "pstdio-planner",
         ),
         // This check exercises metadata and commands; browser suites cover webview builds.
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
@@ -363,6 +364,11 @@ test(
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),
         metadata,
+      });
+      await expectPackagedRefinement({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
       });
       const counter = await fetch(
         `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.workbench-fixture.command.counter.bump/execute`,

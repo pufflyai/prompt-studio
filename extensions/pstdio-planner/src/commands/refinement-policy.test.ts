@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import extension from "./extension";
+import extension from "../../extension";
 import { refinementPolicyCommand } from "./refinement-policy";
 
 describe("ticket refinement policy", () => {
