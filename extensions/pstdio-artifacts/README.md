@@ -2,6 +2,8 @@
 
 A global Prompt Studio extension for publishing self-contained HTML pages. Install it explicitly once in user scope; it is not installed by default. Each project has its own library and immutable revision history.
 
+Install **Artifacts** from the dashboard's **Extensions** catalog, or run `pst extensions add pstdio-artifacts`. The public package is named `pstdio-artifacts`; installing it does not make published pages public.
+
 ## Agent API
 
 ```sh
@@ -21,7 +23,7 @@ With `--json`, the CLI returns that result under `outcome.value`. The packaged `
 
 ## Dashboard
 
-Open **Artifacts** in the project navigation. The library shows a responsive grid of page thumbnails, artifact names, and edited dates. Each whole card opens its artifact and supports keyboard navigation. Use the search field to filter the library; there are no ownership or sharing tabs.
+Open **Artifacts** in the project navigation. The library shows a responsive grid of page thumbnails, artifact names, and edited dates. Each whole card opens its artifact and supports keyboard navigation. Use the search field in the library header to filter the library. The header stays visible while cards scroll; there are no ownership or sharing tabs.
 
 The library stays open as an **Artifacts** tab beside each opened artifact. Switching tabs preserves the search and interactive previews. The breadcrumb stays at **Artifacts**. Published URLs open the matching artifact tab in this page.
 
@@ -49,7 +51,7 @@ The root `data-theme` is `light` or `dark`. Standard `prefers-color-scheme` quer
 
 ## Local development
 
-Start an isolated Prompt Studio instance with `bun run dev:isolated`, then run `pst extensions dev <absolute-path>/extensions/pstdio-artifacts` from a linked project using that instance's API URL. This prototype depends on the separate platform change for SDK page URLs and webview event subscriptions (PS-58 and PS-59). Until that SDK release is available, link its locally built package with `bun link` from `packages/sdk`, then `bun link @pstdio/sdk` from this extension. For an installed smoke test outside the monorepo, use the packed SDK through the local workspace registry. The preview and theme handling are owned by this extension.
+Start an isolated Prompt Studio instance with `bun run dev:isolated`, then run `pst extensions dev <absolute-path>/extensions/pstdio-artifacts` from a linked project using that instance's API URL. The extension's declared SDK and UI dependencies support installation outside the monorepo. The preview and theme handling are owned by this extension.
 
 The last valid development snapshot remains installed after the watcher stops. Nothing is installed into `.pstdio/extensions` in the project.
 

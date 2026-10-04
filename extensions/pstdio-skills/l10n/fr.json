@@ -1,0 +1,5 @@
+{
+  "commands.refinementPolicy.title": "Lire les options de précision des tickets",
+  "settings.uxPrototype.title": "Créer un prototype d’artefact pour les fonctionnalités UX",
+  "settings.uxPrototype.description": "Exiger un prototype interactif lors de la précision d’une nouvelle fonctionnalité UX si Artifacts est disponible."
+}

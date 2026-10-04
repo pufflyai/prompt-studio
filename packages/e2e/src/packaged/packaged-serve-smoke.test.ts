@@ -170,6 +170,19 @@ test(
       };
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
+          installName: "pstdio-artifacts",
+          installed: false,
+          origin: {
+            kind: "git",
+            path: "extensions/pstdio-artifacts",
+            ref: "{hostRelease}",
+            url: "https://github.com/pufflyai/prompt-studio",
+          },
+          publisher: "pstdio",
+        }),
+      );
+      expect(extensionCatalog.marketplace).toContainEqual(
+        expect.objectContaining({
           installName: "pstdio-notes",
           origin: {
             kind: "git",
@@ -318,7 +331,12 @@ test(
 
     try {
       const started = await startPackagedServe(tempRoot, {
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "extension-lab", "pstdio-artifacts"),
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+          "workbench-fixture",
+          "extension-lab",
+          "pstdio-artifacts",
+          "pstdio-skills",
+        ),
         // This check exercises metadata and commands; browser suites cover webview builds.
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
       });

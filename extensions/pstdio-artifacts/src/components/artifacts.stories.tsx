@@ -38,6 +38,31 @@ export const ManyArtifacts: Story = {
     ].map((title, index) => ({ ...item, artifactId: `artifact-${index}`, title })),
   },
 };
+export const ScrollableLibrary: Story = {
+  args: {
+    items: Array.from({ length: 30 }, (_, index) => ({
+      ...item,
+      artifactId: `artifact-${index}`,
+      title: `Prototype ${index + 1}`,
+    })),
+  },
+  decorators: [
+    (Story) => (
+      <Stack height="lg">
+        <Story />
+      </Stack>
+    ),
+  ],
+};
+export const NarrowLibrary: Story = {
+  decorators: [
+    (Story) => (
+      <Stack width="xs" height="lg">
+        <Story />
+      </Stack>
+    ),
+  ],
+};
 export const UnavailablePreview: Story = {
   args: {
     loadPreview: async () => {

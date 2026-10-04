@@ -17,9 +17,15 @@ Refine a Planner ticket by adding researched detail and applying a template when
    - Implementation steps in the order to do them.
    - Acceptance criteria and the commands that validate them when tests exist.
    - `depends_on` in frontmatter. Priority and type stay in tags.
-5. Save the ticket with `pst tickets save --id <shorthand>`.
-6. Mark a proposal ready for review with `pst tickets proposal-refined --id <shorthand>`.
-7. Stop after refinement. Do not implement code unless the user asked for it.
+5. Read the project workflow options with `pst pstdio-skills refinement-policy`. People can toggle **Generate an artifact prototype for UX features** in the Prompt Studio Skills extension settings. Check `pst --help` for the `pstdio-artifacts` commands. For a new feature with UX changes, when `generateArtifactPrototype` is enabled and Artifacts is installed and enabled for this project:
+   - Create an interactive HTML prototype of the proposed user flow with the publish-artifact skill. Use sample data and cover the main interactions and relevant empty or error states.
+   - Publish it with `pst pstdio-artifacts publish --file_path <file> --label "UX prototype"` and add the returned dashboard URL and a short walkthrough to the ticket.
+   - Update an existing ticket prototype with its saved `--url` so its revision history stays together.
+   - Do not finish refinement or mark the proposal ready until the prototype is published and linked.
+   If the option is off or Artifacts is unavailable, record the reason in the ticket. Do not install it automatically. If the policy cannot be read, resolve or report the failure before completing refinement. Tickets without a new UX feature do not require a prototype.
+6. Save the ticket with `pst tickets save --id <shorthand>`.
+7. Mark a proposal ready for review with `pst tickets proposal-refined --id <shorthand>`.
+8. Stop after refinement. Do not implement code unless the user asked for it.
 
 ## Status
 
