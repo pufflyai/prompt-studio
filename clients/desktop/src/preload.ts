@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer, webFrame } from "electron";
-import { DESKTOP_CHANNELS, type DesktopProjectTabsState, type PromptStudioDesktopApi } from "./desktop-api";
+import {
+  DESKTOP_CHANNELS,
+  type DesktopProjectTabsState,
+  type DesktopStartupAppearance,
+  type PromptStudioDesktopApi,
+} from "./desktop-api";
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
 import { observeTitleBarAppearance } from "./windows/observe-title-bar-appearance";
 
@@ -37,6 +42,16 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   cancelQuit: () => ipcRenderer.invoke(DESKTOP_CHANNELS.cancelQuit),
   confirmQuit: () => ipcRenderer.invoke(DESKTOP_CHANNELS.confirmQuit),
   getAppInfo: () => ipcRenderer.invoke(DESKTOP_CHANNELS.appInfo),
+  getStartupAppearance: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getStartupAppearance),
+  onStartupAppearance: (listener: (appearance: DesktopStartupAppearance) => void) => {
+    const receive = (_event: Electron.IpcRendererEvent, appearance: DesktopStartupAppearance) => listener(appearance);
+    ipcRenderer.on(DESKTOP_CHANNELS.startupAppearanceChanged, receive);
+    return () => {
+      ipcRenderer.removeListener(DESKTOP_CHANNELS.startupAppearanceChanged, receive);
+    };
+  },
+  setStartupAppearance: (appearance: DesktopStartupAppearance) =>
+    ipcRenderer.invoke(DESKTOP_CHANNELS.setStartupAppearance, appearance),
   getStartupState: () => ipcRenderer.invoke(DESKTOP_CHANNELS.startupState),
   onStartupState: (listener: (state: DesktopState) => void) => {
     const receive = (_event: Electron.IpcRendererEvent, state: DesktopState) => listener(state);

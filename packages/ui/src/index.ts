@@ -119,4 +119,9 @@ export { FileIconThemePreferenceProvider, useFileIconThemePreference } from "@/u
 export { getFileTypeIcon } from "@/utils/get-file-type-icon";
 export { installPrismGlobal } from "@/utils/prism";
 export { resolveFileIconElement } from "@/utils/resolve-file-icon-element";
-export { getInitialThemePreference, ThemePreferenceProvider, useThemePreference } from "@/utils/theme-preference";
+export {
+  getInitialThemePreference,
+  ThemePreferenceProvider,
+  type ThemePreferenceStorage,
+  useThemePreference,
+} from "@/utils/theme-preference";

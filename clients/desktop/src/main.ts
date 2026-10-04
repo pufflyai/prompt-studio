@@ -127,6 +127,8 @@ const runtimeManager = new DesktopRuntimeManager({
     void runtimeManager.waitForExit().then(() => finishQuit());
   },
   onUnexpectedExit: (detail) => {
+    // A crash also ends a pending quit confirmation; later quit requests must start over.
+    quitting = false;
     setState({ kind: "recovery", error: recoveryError(new Error(detail)) });
     void windowController?.showLifecycle();
   },
@@ -189,7 +191,13 @@ const requestQuit = async () => {
         { type: "quit_requested", activity: result.activity },
       ),
     );
-    await windowController?.showQuitConfirmation();
+    try {
+      await windowController?.showQuitConfirmation(runtime.descriptor);
+    } catch (error) {
+      setState({ kind: "recovery", error: recoveryError(error) });
+      await windowController?.showLifecycle();
+      quitting = false;
+    }
     return;
   }
   if (result.state === "accepted") {
@@ -212,17 +220,16 @@ const cancelQuit = async () => {
   if (state.kind !== "confirming_active_work") return;
   setState(transitionDesktopState(state, { type: "quit_cancelled" }));
   quitting = false;
-  windowController?.dismissQuitConfirmation();
 };
 
 const confirmQuit = async () => {
   if (state.kind !== "confirming_active_work") return;
   setState(transitionDesktopState(state, { type: "quit_confirmed" }));
+  await windowController?.showLifecycle();
 
   const result = await runtimeManager.requestShutdown(true);
   if (result.state !== "accepted") {
     setState({ kind: "recovery", error: recoveryError(new Error("Runtime refused graceful shutdown")) });
-    await windowController?.showLifecycle();
     quitting = false;
     return;
   }
@@ -250,7 +257,7 @@ const bootstrap = async () => {
     ),
   );
   const preloadPath = join(import.meta.dirname, "preload.cjs");
-  windowController = await DesktopWindowController.create(preloadPath);
+  windowController = await DesktopWindowController.create(preloadPath, () => workbenchState.getStartupAppearance());
   const { window } = windowController;
   window.once("show", () => {
     logger.info({ event: "desktop.window.ready", visible: window.isVisible() }, "Desktop startup window is ready");
@@ -273,6 +280,8 @@ const bootstrap = async () => {
     cancelQuit,
     confirmQuit,
     getState: () => state,
+    getStartupAppearance: () => workbenchState.getStartupAppearance(),
+    setStartupAppearance: (value) => windowController?.setStartupAppearance(workbenchState.setStartupAppearance(value)),
     retryRuntime: startRuntime,
     openLogs: () => shell.showItemInFolder(resolveDefaultLogPath()),
     revealInFinder: (path) => {
