@@ -7,7 +7,6 @@ import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { ListRow } from "../list-row/list-row";
 import { fieldIcon } from "./collection-view-field-icon";
 import { isOptionField } from "./collection-view-fields";
-import { countFilterRules } from "./collection-view-filter";
 import { FilterPickerValues } from "./filter-picker-values";
 import type { RuleValueOption } from "./filter-rule-value";
 
@@ -112,7 +111,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
               flex="1"
               label=""
               endContent={<Text textStyle="label/S/regular">Clear all</Text>}
-              disabled={countFilterRules(filter) === 0}
+              disabled={filter.rules.length === 0 && !filter.groups?.length}
               onActivate={props.onClear}
             />
           ) : null}
