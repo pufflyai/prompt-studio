@@ -44,6 +44,12 @@ export const resolvePstdioLogPath = (input: ResolvePstdioHomeInput = {}) =>
 export const resolvePstdioRuntimeDescriptorPath = (input: ResolvePstdioHomeInput = {}) =>
   join(resolvePstdioHome(input), "runtime.json");
 
+export { readPerformanceEndpointDescriptor } from "./performance-endpoint";
+
+// This private descriptor exists only while desktop monitoring is enabled.
+export const resolvePstdioPerformanceEndpoint = (input: ResolvePstdioHomeInput = {}) =>
+  join(resolvePstdioHome(input), "performance", "endpoint.json");
+
 export const resolvePstdioStatePath = (input: ResolvePstdioHomeInput = {}) => join(resolvePstdioHome(input), "state");
 
 export const resolvePstdioStoragePath = (input: ResolvePstdioHomeInput = {}) =>

@@ -3,6 +3,7 @@ import { BrowserWindow, type Session, session, shell, WebContentsView } from "el
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { DESKTOP_CHANNELS, type DesktopStartupAppearance } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
+import type { OwnedFrame } from "../performance/process-attribution";
 import { secureSession, secureWebContents } from "../security/apply-window-security";
 import { provisionRuntimeSession } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
@@ -71,6 +72,29 @@ export class DesktopWindowController {
 
   webContents() {
     return [this.window.webContents, ...(this.#workbench ? [this.#workbench.webContents] : [])];
+  }
+
+  // Every frame in the windows this controller owns, with the process that hosts it.
+  ownedFrames() {
+    const owners = [
+      { owner: "startup" as const, contents: this.window.webContents },
+      ...(this.#workbench ? [{ owner: "workbench" as const, contents: this.#workbench.webContents }] : []),
+    ];
+    return owners.flatMap(({ owner, contents }) => {
+      if (contents.isDestroyed()) return [];
+      const mainFrame = contents.mainFrame;
+      // Frames replaced by a navigation stay in the tree until their unload ends.
+      return mainFrame.framesInSubtree
+        .filter((frame) => !frame.detached)
+        .map(
+          (frame): OwnedFrame => ({
+            owner,
+            isMainFrame: frame === mainFrame,
+            osProcessId: frame.osProcessId,
+            url: frame.url,
+          }),
+        );
+    });
   }
 
   updateState(state: DesktopState) {

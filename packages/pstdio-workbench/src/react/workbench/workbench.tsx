@@ -266,7 +266,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           minH="0"
           minW="0"
           overflow="hidden"
-          py="panel-gap"
+          pt="panel-gap"
+          // The status bar owns the space under the panels, so its items center in it.
+          pb={hasStatusWidgets ? "0" : "panel-gap"}
           pr="panel-gap"
           pl={hasActivityBarWidgets ? "0" : "panel-gap"}
         >

@@ -6,6 +6,7 @@ import {
   resolvePstdioDbPath,
   resolvePstdioHome,
   resolvePstdioLogPath,
+  resolvePstdioPerformanceEndpoint,
   resolvePstdioRuntimeDescriptorPath,
   resolvePstdioStatePath,
   resolvePstdioStoragePath,
@@ -53,4 +54,18 @@ test("default state paths derive from pstdio home", () => {
 
 test("expandHomePath expands tilde paths", () => {
   expect(expandHomePath("~/project", resolve("/home/user"))).toBe(resolve("/home/user/project"));
+});
+
+test("the performance endpoint descriptor belongs to its home", () => {
+  const home = resolve("/tmp/pstdio-home");
+  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } })).toBe(
+    resolve(home, "performance/endpoint.json"),
+  );
+});
+
+test("a long home does not limit the performance endpoint", () => {
+  const home = resolve(`/tmp/${"nested-folder/".repeat(8)}pstdio-home`);
+  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } })).toBe(
+    resolve(home, "performance/endpoint.json"),
+  );
 });

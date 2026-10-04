@@ -59,6 +59,9 @@ interface WorkbenchStatusBarItemsProps {
 
 const WorkbenchStatusBarItems = (props: WorkbenchStatusBarItemsProps) => {
   const { slot, workbench } = props;
+  // Read the items here, not in the parent: the compiler keeps this element when
+  // only the parent re-renders, so items registered later would never show.
+  useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
   const activeModeId = useWorkbenchActiveModeId(workbench);
   const items = activeModeId === workbench.modes.getActiveModeId() ? workbench.statusBar.listVisibleItems(slot) : [];
 
@@ -113,7 +116,6 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
 
 export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
-  useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
   const chrome = useModeChrome(workbench, "status");
 
   return (

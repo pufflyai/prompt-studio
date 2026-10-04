@@ -19,6 +19,10 @@ describe("shouldEnsureApiForCommand", () => {
     expect(shouldEnsureApiForCommand({ _: ["logs"] })).toBe(false);
   });
 
+  test("reads local performance diagnostics without starting or calling a runtime", () => {
+    expect(shouldEnsureApiForCommand({ _: ["performance"] })).toBe(false);
+  });
+
   test("keeps API startup for regular API-backed commands", () => {
     expect(shouldEnsureApiForCommand({ _: ["projects", "list"] })).toBe(true);
     expect(shouldEnsureApiForCommand({ _: ["extensions", "update"] })).toBe(true);

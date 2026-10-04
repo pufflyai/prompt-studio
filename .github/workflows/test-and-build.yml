@@ -142,8 +142,8 @@ jobs:
       - name: Warm up Windows PowerShell
         run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
 
-      - name: Test Windows desktop command setup
-        run: bun test --timeout 15000 clients/desktop/src/cli
+      - name: Test Windows desktop platform integrations
+        run: bun test --timeout 15000 clients/desktop/src/cli clients/desktop/src/performance/performance-endpoint.test.ts
 
       - name: Check formatting
         run: bun run format:check

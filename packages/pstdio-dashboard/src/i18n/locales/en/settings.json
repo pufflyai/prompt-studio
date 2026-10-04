@@ -491,5 +491,58 @@
     "description": "Try beta features. This setting applies to every project and dashboard connected to this installation.",
     "notifications": "Notifications",
     "loading": "Loading settings…"
+  },
+  "performance": {
+    "settings": {
+      "title": "Performance monitoring",
+      "description": "Measure frame rate, CPU, and slow frames in this app. Nothing is measured while this is off. Measurements stay on this device and are never uploaded.",
+      "enable": "Enable performance monitoring",
+      "helperOff": "Saved on this device only. Other devices and remote runtimes keep their own setting.",
+      "helperDesktopOn": "On for this device. Shows frame rate in the status bar. Samples every 2 seconds and keeps the last 30 seconds.",
+      "helperBrowserOn": "On for this browser. Shows frame rate in the status bar and records slow frames while this tab is open.",
+      "saveError": "Could not change performance monitoring."
+    },
+    "popover": {
+      "title": "Performance",
+      "statusLabel": "Frame rate {{fps}} fps. Show performance details.",
+      "avgMin": "avg {{avg}} · min {{min}}",
+      "ago": "30 s ago",
+      "now": "now",
+      "cpu": "CPU",
+      "window": "last 30 s",
+      "workbench": "Workbench",
+      "workbenchDetail": "This window",
+      "views_one": "{{count}} view",
+      "views_other": "{{count}} views",
+      "paused": "Paused · views unloaded",
+      "pause": "Pause {{name}}",
+      "pauseTooltip": "Pause {{name}} · unloads its views",
+      "resume": "Resume",
+      "resumeLabel": "Resume {{name}}",
+      "more_one": "{{count}} more extension",
+      "more_other": "{{count}} more extensions",
+      "fewer": "Show the {{count}} busiest",
+      "cpuUnavailableTitle": "Could not read CPU.",
+      "cpuUnavailableBody": "Frame rate still updates. Pause still works.",
+      "browserTitle": "CPU is measured in the desktop app",
+      "browserBody": "A browser tab cannot read CPU. Pause still works.",
+      "sustainedTitle": "Sustained high CPU",
+      "sustainedBody": "{{process}} averaged {{cpu}} CPU over the last {{seconds}} seconds.",
+      "unknownExtension": "Unknown extension",
+      "roles": {
+        "main": "App",
+        "gpu": "GPU",
+        "utility": "Utility process",
+        "startup": "Startup window",
+        "renderer": "Renderer",
+        "other": "Other process",
+        "extension-frames": "Extension frames",
+        "workbench": "Workbench"
+      }
+    },
+    "paused": {
+      "title": "{{name}} is paused",
+      "body": "Paused from the performance monitor. Its views stay unloaded until you resume."
+    }
   }
 }

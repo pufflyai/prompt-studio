@@ -231,6 +231,15 @@ export const textStyles = defineTextStyles({
       lineHeight: "150%",
     },
   },
+  // Large readouts, such as the frame rate in the performance popover.
+  "mono/3XL/semibold": {
+    value: {
+      fontFamily: "mono",
+      fontSize: "3xl",
+      fontWeight: "600",
+      lineHeight: "100%",
+    },
+  },
   "paragraph/S/regular": {
     value: {
       fontFamily: "body",

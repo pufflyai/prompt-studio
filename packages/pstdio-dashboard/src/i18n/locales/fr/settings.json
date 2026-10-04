@@ -475,5 +475,58 @@
     "description": "Essayez les fonctionnalités bêta. Ce réglage s’applique à tous les projets et tableaux de bord connectés à cette installation.",
     "notifications": "Notifications",
     "loading": "Chargement des paramètres…"
+  },
+  "performance": {
+    "settings": {
+      "title": "Surveillance des performances",
+      "description": "Mesure la fréquence d'images, le CPU et les images lentes dans cette application. Rien n'est mesuré quand cette option est désactivée. Les mesures restent sur cet appareil et ne sont jamais envoyées.",
+      "enable": "Activer la surveillance des performances",
+      "helperOff": "Enregistré sur cet appareil uniquement. Les autres appareils et les environnements d'exécution distants gardent leur propre réglage.",
+      "helperDesktopOn": "Activée sur cet appareil. Affiche la fréquence d'images dans la barre d'état. Mesure toutes les 2 secondes et garde les 30 dernières secondes.",
+      "helperBrowserOn": "Activée dans ce navigateur. Affiche la fréquence d'images dans la barre d'état et enregistre les images lentes tant que cet onglet est ouvert.",
+      "saveError": "Impossible de modifier la surveillance des performances."
+    },
+    "popover": {
+      "title": "Performances",
+      "statusLabel": "Fréquence d'images {{fps}} fps. Afficher les détails des performances.",
+      "avgMin": "moy. {{avg}} · min {{min}}",
+      "ago": "il y a 30 s",
+      "now": "maintenant",
+      "cpu": "CPU",
+      "window": "30 dernières s",
+      "workbench": "Workbench",
+      "workbenchDetail": "Cette fenêtre",
+      "views_one": "{{count}} vue",
+      "views_other": "{{count}} vues",
+      "paused": "En pause · vues déchargées",
+      "pause": "Mettre en pause {{name}}",
+      "pauseTooltip": "Mettre en pause {{name}} · décharge ses vues",
+      "resume": "Reprendre",
+      "resumeLabel": "Reprendre {{name}}",
+      "more_one": "{{count}} extension de plus",
+      "more_other": "{{count}} extensions de plus",
+      "fewer": "Afficher les {{count}} plus actives",
+      "cpuUnavailableTitle": "Impossible de lire le CPU.",
+      "cpuUnavailableBody": "La fréquence d'images continue de se mettre à jour. La mise en pause fonctionne toujours.",
+      "browserTitle": "Le CPU est mesuré dans l'application de bureau",
+      "browserBody": "Un onglet de navigateur ne peut pas lire le CPU. La mise en pause fonctionne toujours.",
+      "sustainedTitle": "CPU élevé prolongé",
+      "sustainedBody": "{{process}} a utilisé en moyenne {{cpu}} de CPU au cours des {{seconds}} dernières secondes.",
+      "unknownExtension": "Extension inconnue",
+      "roles": {
+        "main": "Application",
+        "gpu": "GPU",
+        "utility": "Processus utilitaire",
+        "startup": "Fenêtre de démarrage",
+        "renderer": "Moteur de rendu",
+        "other": "Autre processus",
+        "extension-frames": "Cadres d'extensions",
+        "workbench": "Workbench"
+      }
+    },
+    "paused": {
+      "title": "{{name}} est en pause",
+      "body": "Mise en pause depuis le moniteur de performances. Ses vues restent déchargées jusqu'à ce que vous la repreniez."
+    }
   }
 }
