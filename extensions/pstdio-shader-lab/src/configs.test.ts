@@ -92,3 +92,12 @@ describe("shader versions", () => {
     expect(await listShaders(mount)).toEqual([]);
   });
 });
+
+test("shader values follow declared field steps while keeping fractional fields", () => {
+  const ruler = normalizeValues(findShader("ruler-ticks"), { tickSpacing: 4.5, majorEvery: 5.2 });
+  expect(ruler.tickSpacing).toBe(5);
+  expect(ruler.majorEvery).toBe(5);
+  const hatchValues = normalizeValues(hatch, { lineWidth: 1.25, lineDrift: 3.5 });
+  expect(hatchValues.lineWidth).toBe(1.25);
+  expect(hatchValues.lineDrift).toBe(3.5);
+});

@@ -1,5 +1,5 @@
 {
-  "name": "shader-lab",
+  "name": "pstdio-shader-lab",
   "version": "0.0.0",
   "displayName": "Shader Lab",
   "description": "Tune surface shaders that mark active work, with a live preview in both themes.",
@@ -11,7 +11,7 @@
     "pstdio": "^0.1.0"
   },
   "pstdio": {
-    "scope": "repo"
+    "scope": "user"
   },
   "scripts": {
     "test": "bun test src",
@@ -31,5 +31,6 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "6.0.2"
-  }
+  },
+  "packageManager": "bun@1.4.2"
 }

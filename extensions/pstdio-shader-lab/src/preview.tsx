@@ -1,7 +1,7 @@
 import { Box, Flex, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import type { GuestHost } from "@pstdio/sdk/extensions";
 import { Pause, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ShaderConfig } from "./configs";
 import { ShaderSurface } from "./shader-surface";
 import { findShader } from "./shaders/definitions";
@@ -69,19 +69,27 @@ export const ShaderPreview = (props: { host: GuestHost; versionId?: string }) =>
   const { versions, error } = useVersions(host, versionId);
   const [playing, setPlaying] = useState(true);
   const [clock] = useState(createClock);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!playing) return;
-    const update = () => (document.hidden ? clock.pause() : clock.play());
-    update();
+    const element = ref.current;
+    if (!playing || !element) return;
+    let visible = false;
+    const update = () => (document.hidden || !visible ? clock.pause() : clock.play());
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry?.isIntersecting ?? false;
+      update();
+    });
+    observer.observe(element);
     document.addEventListener("visibilitychange", update);
     return () => {
+      observer.disconnect();
       document.removeEventListener("visibilitychange", update);
       clock.pause();
     };
   }, [clock, playing]);
   const shader = versions?.[0] ? findShader(versions[0].shader) : undefined;
   return (
-    <Flex direction="column" h="full" w="full" minH="0" minW="0" overflow="hidden" bg="bg" color="fg">
+    <Flex ref={ref} direction="column" h="full" w="full" minH="0" minW="0" overflow="hidden" bg="bg" color="fg">
       <HStack flexShrink="0" px="sm" py="2xs" gap="xs" borderBottomWidth="1px" borderColor="border">
         <IconButton
           size="2xs"

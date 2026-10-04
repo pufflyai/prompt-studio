@@ -207,6 +207,19 @@ test(
         }),
       );
 
+      expect(extensionCatalog.marketplace).toContainEqual(
+        expect.objectContaining({
+          installName: "pstdio-shader-lab",
+          origin: {
+            kind: "git",
+            path: "extensions/pstdio-shader-lab",
+            ref: "{hostRelease}",
+            url: "https://github.com/pufflyai/prompt-studio",
+          },
+          publisher: "pstdio",
+        }),
+      );
+
       const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
         headers: runtimeAuthorization(started.descriptor),
       });

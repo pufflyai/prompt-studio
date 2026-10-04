@@ -166,7 +166,9 @@ export const normalizeValues = (shader: ShaderDefinition, value: unknown) => {
     shaderFields(shader).map((item) => {
       const raw = input[item.id];
       const number = typeof raw === "number" && Number.isFinite(raw) ? raw : item.defaultValue;
-      return [item.id, Math.min(item.max, Math.max(item.min, number))];
+      const stepped = item.min + Math.round((number - item.min) / item.step) * item.step;
+      // Decimal steps should not save floating-point padding into version files.
+      return [item.id, Number(Math.min(item.max, Math.max(item.min, stepped)).toPrecision(12))];
     }),
   ) as ShaderValues;
 };

@@ -1,6 +1,10 @@
-import { defineResourceKind, type NavigationTarget, type ResourceRef } from "@pstdio/sdk/extensions";
+import { defineResourceKind, l10n, type NavigationTarget, type ResourceRef } from "@pstdio/sdk/extensions";
 
-export const shaderVersion = defineResourceKind({ id: "shader-lab.version", label: "Shader version", icon: "blend" });
+export const shaderVersion = defineResourceKind({
+  id: "shader-lab.version",
+  label: l10n("version.label", "Shader version"),
+  icon: "blend",
+});
 
 /** A version resource id is `<shader>/<version>`. */
 export const versionId = (shader: string, version: string) => `${shader}/${version}`;
@@ -10,7 +14,7 @@ export const parseVersionId = (id: string) => {
 };
 
 export const resource = (id: string, projectId?: string, label?: string) =>
-  ({ type: shaderVersion.ref.id, id, label, extensionId: "pstdio.shader-lab", projectId }) satisfies ResourceRef;
+  ({ type: shaderVersion.ref.id, id, label, extensionId: "pstdio.pstdio-shader-lab", projectId }) satisfies ResourceRef;
 export const target = (id: string, projectId?: string, label?: string) =>
   ({
     kind: "page",

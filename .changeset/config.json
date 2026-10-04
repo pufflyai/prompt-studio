@@ -19,7 +19,8 @@
       "pstdio-planner",
       "pstdio-reports",
       "pstdio-skills",
-      "remote-workspaces"
+      "remote-workspaces",
+      "pstdio-shader-lab"
     ]
   ],
   "linked": [],

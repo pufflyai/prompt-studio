@@ -16,7 +16,7 @@ import { versionsTree } from "./src/tree";
 
 const preview = defineView({
   id: "preview",
-  title: "Preview",
+  title: l10n("preview.title", "Preview"),
   icon: "blend",
   body: {
     kind: "webview",
@@ -27,7 +27,7 @@ const preview = defineView({
 
 const home = definePage({
   id: "shader-lab",
-  title: "Shader Lab",
+  title: l10n("shaderLab.title", "Shader Lab"),
   path: "shader-lab",
   mode: workbenchModes.project,
   main: { kind: "view", view: preview.ref, cardinality: "one" },
@@ -36,7 +36,7 @@ const home = definePage({
 
 const version = definePage({
   id: "version",
-  title: "Shader Lab",
+  title: l10n("shaderLab.title", "Shader Lab"),
   path: "shader-lab/version",
   mode: workbenchModes.project,
   parent: home.ref,
@@ -57,7 +57,7 @@ export default defineExtension({
   skills: [
     defineSkill({
       id: "shader-lab",
-      title: "Shader Lab",
+      title: l10n("shaderLab.title", "Shader Lab"),
       source: packageAsset("./skills/shader-lab", import.meta.url),
     }),
   ],
