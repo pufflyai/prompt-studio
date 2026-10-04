@@ -3,8 +3,8 @@ import type { ResourceContextAction } from "@/components/overlays/resource-conte
 import { getIconComponent } from "@/components/primitives/icon-options";
 import { withTitleField } from "../collection-view/collection-view-fields";
 import { sortRowsByView } from "../collection-view/collection-view-sort";
-import type { KanbanRendererColumnGroup } from "./kanban-renderer-grouping";
 import { type KanbanActionErrorHandler, runKanbanAction } from "./kanban-renderer-action";
+import type { KanbanRendererColumnGroup } from "./kanban-renderer-grouping";
 import {
   collectDisplayBadges,
   collectDisplayCustomSlots,

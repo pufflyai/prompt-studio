@@ -296,4 +296,16 @@ const FailedActionExample = () => {
   );
 };
 
-export const FailedAction: Story = { render: () => <FailedActionExample /> };
+export const FailedAction: Story = {
+  render: () => <FailedActionExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const column = canvas.getByTestId("board-column-todo");
+    const card = within(column).getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
+    if (!card) throw new Error("Expected the ticket card");
+    await userEvent.click(within(card as HTMLElement).getByText("Todo"));
+    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: "Done" }));
+    await expect(canvas.getByText("Could not save the change.")).toBeVisible();
+    await expect(within(column).getByText("Set up API authentication")).toBeVisible();
+  },
+};

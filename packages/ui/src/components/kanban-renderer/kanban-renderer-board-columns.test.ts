@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { withTitleField } from "../collection-view/collection-view-fields";
-import { narrowKanbanRows } from "./kanban-renderer-board-columns";
+import { buildKanbanBoardColumns, narrowKanbanRows } from "./kanban-renderer-board-columns";
 import { DEFAULT_KANBAN_RENDERER_SETTINGS, type KanbanRendererRow } from "./types";
 
 const rows: KanbanRendererRow[] = [
@@ -29,4 +29,23 @@ describe("narrowing board rows", () => {
     expect(visibleRows).toHaveLength(2);
     expect([...columnTotals.values()]).toEqual([3]);
   });
+});
+
+test("a failed board badge edit reports once and consumes the rejection", async () => {
+  const error = new Error("Cannot update status");
+  const reports: unknown[] = [];
+  const columns = buildKanbanBoardColumns({
+    grouped: [{ key: "todo", label: "Todo", rows, subgroups: [] }],
+    settings: DEFAULT_KANBAN_RENDERER_SETTINGS,
+    sorts: [],
+    fields: withTitleField([]),
+    attributes: [],
+    search: "",
+    onAttributeChange: async () => {
+      throw error;
+    },
+    onActionError: (error, action) => reports.push({ error, action }),
+  });
+  await columns[0]!.items[0]!.cardProps.onBadgeChange!("status", "done");
+  expect(reports).toEqual([{ error, action: "Update attribute" }]);
 });

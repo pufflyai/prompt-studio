@@ -5,6 +5,7 @@ import { filterRowsByView } from "../collection-view/collection-view-filter";
 import { searchRows } from "../collection-view/collection-view-search";
 import { sortRowsByView } from "../collection-view/collection-view-sort";
 import type { BoardColumnConfig } from "./kanban-renderer";
+import { type KanbanActionErrorHandler, runKanbanAction } from "./kanban-renderer-action";
 import type { KanbanRendererBoardColumn, KanbanRendererBoardGroup } from "./kanban-renderer-board";
 import { groupRows, type KanbanRendererColumnGroup } from "./kanban-renderer-grouping";
 import { collectDisplayBadges, collectDisplayCustomSlots, findEnumOption } from "./kanban-renderer-helpers";
@@ -72,13 +73,14 @@ interface BuildKanbanBoardColumnsInput<TRow extends KanbanRendererRow> {
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
   getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
+  onActionError?: KanbanActionErrorHandler;
   onRowClick?: (row: TRow) => void;
 }
 
 /** Sorts order cards inside each column; columns keep the grouping field's order. */
 export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: BuildKanbanBoardColumnsInput<TRow>) => {
   const { grouped, settings, sorts, fields, attributes, search, columnTotals } = input;
-  const { getBoardColumnConfig, getRowContextMenuActions, onAttributeChange, onRowClick } = input;
+  const { getBoardColumnConfig, getRowContextMenuActions, onAttributeChange, onActionError, onRowClick } = input;
   const displayProperties = settings.displayProperties.filter((property) => property !== "id");
   const showsId = settings.displayProperties.includes("id");
   const columnField = findAttribute(attributes, settings.columnGrouping);
@@ -93,7 +95,8 @@ export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: B
         badges: collectDisplayBadges(row, attributes, displayProperties),
         customSlots: collectDisplayCustomSlots(row, attributes, displayProperties),
         onBadgeChange: onAttributeChange
-          ? (attributeId: string, value: unknown) => onAttributeChange(row.id, attributeId, value)
+          ? (attributeId: string, value: unknown) =>
+              runKanbanAction("Update attribute", () => onAttributeChange(row.id, attributeId, value), onActionError)
           : undefined,
         onClick: () => onRowClick?.(row as TRow),
       },

@@ -5,9 +5,9 @@ import type { ResourceContextAction } from "@/components/overlays/resource-conte
 import { withTitleField } from "../collection-view/collection-view-fields";
 import { countFilterRules } from "../collection-view/collection-view-filter";
 import { useCollectionViews } from "../collection-view/use-collection-views";
+import { type KanbanActionErrorHandler, runKanbanAction } from "./kanban-renderer-action";
 import type { KanbanRendererBoardColumnAction } from "./kanban-renderer-board";
 import { buildKanbanBoardColumns, narrowKanbanRows } from "./kanban-renderer-board-columns";
-import { type KanbanActionErrorHandler, runKanbanAction } from "./kanban-renderer-action";
 import { applyBoardMoveItem, applyBoardMoveToGroup } from "./kanban-renderer-board-move";
 import { KanbanRendererContent } from "./kanban-renderer-content";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
