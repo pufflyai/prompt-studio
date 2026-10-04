@@ -76,7 +76,7 @@ test("boards search, edit filter parts, and save one sort that agents can build 
 
     // A quick rule, then its condition changed from its pill.
     const statusLabel = status.options![0]!.label;
-    await page.getByRole("button", { name: "Add filter", exact: true }).click();
+    await page.getByRole("button", { name: "Filter", exact: true }).click();
     await page
       .getByTestId("filter-property-column")
       .getByRole("button", { name: /Status/ })

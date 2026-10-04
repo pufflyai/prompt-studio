@@ -1,18 +1,11 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Plus } from "lucide-react";
-import type { ReactNode } from "react";
-import { useState } from "react";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
-import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
-import type {
-  KanbanRendererCreateSubmission,
-  KanbanRendererSavedView,
-  KanbanRendererViewsSource,
-  ViewMode,
-} from "./types";
-import { useKanbanRendererStore } from "./use-kanban-renderer-store";
+import { initialRows } from "./kanban-renderer-story-fixtures";
+import { CreateFormWrapper, Wrapper } from "./kanban-renderer-story-wrappers";
+import type { KanbanRendererSavedView, ViewMode } from "./types";
 
 const meta: Meta<typeof KanbanRenderer> = {
   title: "Patterns/Kanban Renderer/Kanban Renderer",
@@ -24,143 +17,15 @@ export default meta;
 
 type Story = StoryObj;
 
-const STORYBOOK_STORAGE_KEY = "storybook-kanban-renderer";
 const CHROME_UUID = "550e8400-e29b-41d4-a716-446655440000";
-const chromeRows = initialRows.map((row, index) =>
-  index === 0
-    ? {
-        ...row,
-        id: CHROME_UUID,
-        attributes: { ...row.attributes, id: "PS-1" },
-      }
-    : index === 1
-      ? {
-          ...row,
-          title: "PRA-1_A1",
-          attributes: { ...row.attributes, id: "PRA-1_A1" },
-        }
-      : row,
-);
+const chromeRows = initialRows.map((row, index) => {
+  if (index === 0) return { ...row, id: CHROME_UUID, attributes: { ...row.attributes, id: "PS-1" } };
+  if (index === 1) return { ...row, title: "PRA-1_A1", attributes: { ...row.attributes, id: "PRA-1_A1" } };
+  return row;
+});
 
 const getLucideIconName = (element: HTMLElement) =>
   Array.from(element.classList).find((className) => className !== "lucide" && className.startsWith("lucide-"));
-
-const reorderRows = (items: StoryRow[], rowId: string, beforeRowId?: string) => {
-  const currentIndex = items.findIndex((row) => row.id === rowId);
-  if (currentIndex === -1) return items;
-
-  const next = [...items];
-  const [moved] = next.splice(currentIndex, 1);
-  if (!moved) return items;
-
-  if (!beforeRowId) {
-    next.push(moved);
-    return next;
-  }
-
-  const beforeIndex = next.findIndex((row) => row.id === beforeRowId);
-  if (beforeIndex === -1) {
-    next.push(moved);
-    return next;
-  }
-
-  next.splice(beforeIndex, 0, moved);
-  return next;
-};
-
-const Wrapper = (props: {
-  emptyState?: ReactNode;
-  showEmptyState?: boolean;
-  columnGrouping?: string;
-  rowGrouping?: string;
-  viewMode?: ViewMode;
-  displayProperties?: string[];
-  storageKey?: string;
-  defaultViews?: KanbanRendererSavedView[];
-  defaultActiveViewId?: string;
-  withTicketMenu?: boolean;
-  rows?: StoryRow[];
-}) => {
-  const [views, setViews] = useState(() =>
-    (props.defaultViews ?? []).map((view, index) => ({ ...view, builtIn: index === 0 })),
-  );
-  const [defaultViewId, setDefaultViewId] = useState(props.defaultActiveViewId ?? views[0]?.id ?? "default");
-  const viewsSource: KanbanRendererViewsSource | undefined = props.defaultViews
-    ? {
-        views,
-        defaultViewId,
-        onCreateView: async (input) => {
-          const created = { ...input, id: crypto.randomUUID(), builtIn: false };
-          setViews((current) => [...current, created]);
-          return created;
-        },
-        onUpdateView: async (id, input) => {
-          setViews((current) => current.map((view) => (view.id === id ? { ...view, ...input } : view)));
-        },
-        onDeleteView: async (id) => {
-          setViews((current) => current.filter((view) => view.id !== id));
-        },
-        onSetDefaultView: async (id) => {
-          setDefaultViewId(id ?? views[0].id);
-        },
-      }
-    : undefined;
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
-  const [rows, setRows] = useState<StoryRow[]>(props.rows ?? initialRows);
-  const storageKey = props.storageKey ?? STORYBOOK_STORAGE_KEY;
-  const defaultSettings = {
-    viewMode: props.viewMode ?? "board",
-    columnGrouping: props.columnGrouping ?? "status",
-    rowGrouping: props.rowGrouping ?? "none",
-    displayProperties: props.displayProperties ?? [],
-  };
-  const initialState = {
-    settings: defaultSettings,
-  };
-  const reset = useKanbanRendererStore(storageKey, (state) => state.reset, initialState);
-
-  // Reset during the first render, before the renderer picks its first view in an effect.
-  useState(reset);
-
-  const handleAttributeChange = (rowId: string, attributeId: string, value: unknown) => {
-    setRows((current) =>
-      current.map((row) =>
-        row.id === rowId ? { ...row, attributes: { ...row.attributes, [attributeId]: value } } : row,
-      ),
-    );
-  };
-
-  const handleReorder = (rowId: string, beforeRowId?: string) =>
-    setRows((current) => reorderRows(current, rowId, beforeRowId) as StoryRow[]);
-
-  return (
-    <Box p="sm" height="560px">
-      <KanbanRenderer<StoryRow>
-        viewsSource={viewsSource}
-        rows={props.showEmptyState ? [] : rows}
-        storageKey={storageKey}
-        attributes={attributes}
-        defaultSettings={defaultSettings}
-        defaultViews={props.defaultViews}
-        defaultActiveViewId={props.defaultActiveViewId}
-        selectedRowId={selectedRowId}
-        emptyState={props.emptyState}
-        onRowClick={(row) => setSelectedRowId(row.id)}
-        onAttributeChange={handleAttributeChange}
-        onReorder={handleReorder}
-        getBoardColumnConfig={(groupKey) => ({
-          color: groupKey === "done" ? "green" : groupKey === "in_progress" ? "blue" : "gray",
-          canDragIn: true,
-          canDragOut: true,
-          canCreate: false,
-        })}
-        getRowContextMenuActions={
-          props.withTicketMenu ? () => [{ key: "open", label: "Open ticket", onClick: () => undefined }] : undefined
-        }
-      />
-    </Box>
-  );
-};
 
 export const BoardView: Story = {
   render: () => <Wrapper />,
@@ -205,7 +70,7 @@ export const RendererChromeAndTicketMenu: Story = {
     fireEvent.contextMenu(firstCard);
     const menu = await body.findByRole("menu");
     await expect(menu.getBoundingClientRect().width).toBe(280);
-    await userEvent.keyboard("{Escape}");
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "Open ticket" }));
     await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
 
     await userEvent.click(filterButton);
@@ -222,9 +87,11 @@ export const RendererChromeAndTicketMenu: Story = {
     await userEvent.click(displayButton);
     const displayDialog = await body.findByRole("dialog");
     const displayButtonBounds = displayButton.getBoundingClientRect();
-    const displayDialogBounds = displayDialog.getBoundingClientRect();
-    await expect(Math.abs(displayDialogBounds.right - displayButtonBounds.right)).toBeLessThanOrEqual(1);
-    await expect(displayDialogBounds.top).toBeGreaterThanOrEqual(displayButtonBounds.bottom);
+    await waitFor(() => {
+      const bounds = displayDialog.getBoundingClientRect();
+      expect(Math.abs(bounds.right - displayButtonBounds.right)).toBeLessThanOrEqual(1);
+      expect(bounds.top).toBeGreaterThanOrEqual(displayButtonBounds.bottom);
+    });
     await userEvent.click(within(displayDialog).getByRole("button", { name: "List" }));
 
     const ticketRow = await canvas.findByRole("option", { name: "Set up API authentication" });
@@ -323,72 +190,10 @@ export const SavedFilteredView: Story = {
     const filterPill = (await canvas.findByRole("button", { name: "Remove Assignee filter" })).parentElement;
     if (!filterPill) throw new Error("Expected the saved filter pill to render");
 
-    await expect(within(filterPill).getByText("Assignee is")).toBeVisible();
-    await expect(within(filterPill).getByText("Alex")).toBeVisible();
+    await expect(within(filterPill).getByText("Assignee", { exact: true })).toBeVisible();
+    await expect(within(filterPill).getByRole("button", { name: "Condition" })).toHaveTextContent("is");
+    await expect(within(filterPill).getByRole("button", { name: "Values" })).toHaveTextContent("Alex");
   },
-};
-
-const CreateFormWrapper = () => {
-  const [rows, setRows] = useState<StoryRow[]>(initialRows);
-  const createAttributes = attributes.map((attribute) =>
-    ["status", "component", "priority", "labels"].includes(attribute.id) ? { ...attribute, editable: true } : attribute,
-  );
-  const createRow = (submission: KanbanRendererCreateSubmission) => {
-    const content = String(submission.values.content);
-    setRows((current) => [
-      ...current,
-      {
-        id: `created-${current.length.toString()}`,
-        title: content.split("\n")[0] || "Untitled",
-        attributes: {
-          status: submission.columnId,
-          assignee: "",
-          component: String(submission.attributeValues.component ?? ""),
-          priority: String(submission.attributeValues.priority ?? ""),
-          labels: submission.attributeValues.labels as string[],
-          updated: new Date().toISOString(),
-        },
-      },
-    ]);
-  };
-
-  return (
-    <Box p="sm" height="560px">
-      <KanbanRenderer<StoryRow>
-        rows={rows}
-        storageKey="storybook-kanban-renderer-create-form"
-        attributes={createAttributes}
-        defaultSettings={{
-          viewMode: "board",
-          columnGrouping: "status",
-          rowGrouping: "none",
-          displayProperties: ["priority", "labels"],
-        }}
-        createRow={{
-          title: "New ticket",
-          submitLabel: "Create ticket",
-          fields: [
-            {
-              id: "content",
-              label: "Description",
-              placeholder: "Describe the ticket...",
-              type: "markdown",
-              required: true,
-            },
-            { id: "files", label: "Attach files", type: "files", multiple: true },
-          ],
-          labels: {
-            cancel: "Cancel",
-            properties: "Properties",
-            submitError: "Could not create ticket",
-            removeFile: "Remove file",
-          },
-        }}
-        onCreateRow={createRow}
-        getBoardColumnConfig={() => ({ canCreate: true })}
-      />
-    </Box>
-  );
 };
 
 export const RendererOwnedCreateForm: Story = {
@@ -398,7 +203,7 @@ export const RendererOwnedCreateForm: Story = {
     await userEvent.click(within(canvas.getByTestId("board-column-todo")).getByRole("button", { name: "Create row" }));
     const dialog = within(await within(document.body).findByRole("dialog"));
     await expect(dialog.getByText("Todo")).toBeInTheDocument();
-    await userEvent.type(dialog.getByLabelText("Description"), "Restore ticket creation");
+    await userEvent.type(await dialog.findByRole("textbox"), "Restore ticket creation");
     await userEvent.click(dialog.getByRole("button", { name: "Create ticket" }));
     await expect(
       await within(canvas.getByTestId("board-column-todo")).findByText("Restore ticket creation"),

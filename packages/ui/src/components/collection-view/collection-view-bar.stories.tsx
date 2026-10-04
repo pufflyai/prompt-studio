@@ -60,7 +60,7 @@ export const NoRules: Story = {
       expect(menu.getBoundingClientRect().left).toBeGreaterThan(0);
     });
     await userEvent.keyboard("{Escape}");
-    await userEvent.click(canvas.getByRole("button", { name: "Add filter", exact: true }));
+    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const footer = await body.findByTestId("filter-menu-footer");
     await userEvent.click(within(footer).getByRole("button", { name: "Clear all", exact: true }));
     await waitFor(() => expect(popover).not.toBeVisible());
@@ -86,7 +86,7 @@ export const RulesSaved: Story = {
   },
 };
 
-/** Both normal filter entry points open the same picker and reflect existing exclusions. */
+/** The toolbar picker reflects existing exclusions. */
 export const SharedPropertyPicker: Story = {
   render: () => <Bar storageKey="storybook-shared-property-picker" filter={storyFilter} />,
   play: async ({ canvasElement }) => {
@@ -96,8 +96,8 @@ export const SharedPropertyPicker: Story = {
     expect(getComputedStyle(pill.getByRole("button", { name: "Condition" })).color).not.toBe(
       getComputedStyle(pill.getByText("Status", { exact: true })).color,
     );
-    for (const name of ["Filter", "Add filter"]) {
-      await userEvent.click(canvas.getByRole("button", { name, exact: true }));
+    {
+      await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
       const picker = await body.findByTestId("filter-menu");
       await waitFor(() => expect(within(picker).getByRole("textbox", { name: "Filter properties" })).toBeVisible());
       await expect(within(picker).getByRole("checkbox", { name: "Done", exact: true })).toHaveAttribute(
@@ -109,13 +109,13 @@ export const SharedPropertyPicker: Story = {
   },
 };
 
-/** Selecting from the moving lower trigger continues on the stable bubble instead. */
-export const LowerPickerHandoff: Story = {
-  render: () => <Bar storageKey="storybook-lower-picker-handoff" filter={storyFilter} />,
+/** Selecting a value closes the toolbar picker and continues on the bubble. */
+export const PickerHandoff: Story = {
+  render: () => <Bar storageKey="storybook-picker-handoff" filter={storyFilter} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "Add filter", exact: true }));
+    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const picker = await body.findByTestId("filter-menu");
     await userEvent.click(within(picker).getByRole("button", { name: "Labels", exact: true }));
     await userEvent.click(within(picker).getByRole("checkbox", { name: "Bug", exact: true }));

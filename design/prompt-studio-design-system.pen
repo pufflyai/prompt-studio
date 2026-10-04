@@ -18553,6 +18553,85 @@
                           }
                         }
                       ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NZqtY",
+                      "name": "cmp/CollectionFilterEmptyState",
+                      "context": "Shown only when existing rows are hidden by filters. Retains group and subgroup structure below. Edit filter opens the single toolbar picker.",
+                      "reusable": true,
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": [
+                        24,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "lc51x",
+                          "name": "Filter icon",
+                          "width": 24,
+                          "height": 24,
+                          "icon": "list-filter",
+                          "library": "lucide",
+                          "fill": "$ds-fg-subtle"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "H2Zii",
+                          "name": "Text",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "n2O53o",
+                              "name": "Title",
+                              "fill": "$ds-fg",
+                              "content": "Nothing matches this view",
+                              "fontFamily": "$font-body",
+                              "fontSize": 16,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "cmxe7",
+                              "name": "Description",
+                              "fill": "$ds-fg-muted",
+                              "content": "1 filter rule hides all 3 items.",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "p1HHB",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Edit filter",
+                          "height": 24,
+                          "theme": {
+                            "btn": "outline",
+                            "size": "2xs"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": true,
+                              "icon": "list-filter",
+                              "width": 12,
+                              "height": 12
+                            },
+                            "Hf4GT": {
+                              "content": "Edit filter"
+                            }
+                          }
+                        }
+                      ]
                     }
                   ]
                 }
@@ -21040,7 +21119,7 @@
                       "type": "frame",
                       "id": "XrEDw",
                       "name": "cmp/CollectionViewBar",
-                      "context": "Views use layers-plus. Filter commits by selecting a value and transfers to its bubble. Clear all is only in the picker footer, at the right. Field labels stay fixed.",
+                      "context": "Views use layers-plus. The top Filter button is the only normal filter entry point. Field labels stay fixed; values commit and continue in their bubble.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "#00000000",
@@ -21291,28 +21370,6 @@
                               "type": "ref",
                               "ref": "IZ2hX",
                               "name": "Filter · Priority"
-                            },
-                            {
-                              "id": "jaLn7",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Add filter",
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": true,
-                                  "icon": "plus",
-                                  "width": 12,
-                                  "height": 12
-                                },
-                                "Hf4GT": {
-                                  "content": "Filter"
-                                }
-                              }
                             },
                             {
                               "type": "frame",

@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
-import { ListFilter, Plus, RotateCcw } from "lucide-react";
+import { ListFilter, RotateCcw } from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
@@ -78,15 +78,10 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
   const dirty = isCollectionViewDirty(activeView, state);
   const filterFields = fields.filter((field) => field.filterable);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
-  const addFilterRef = useRef<HTMLButtonElement>(null);
-  const [anchor, setAnchor] = useState<RefObject<HTMLButtonElement | null>>(filterButtonRef);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 
-  const open = (from: RefObject<HTMLButtonElement | null>) => {
-    setAnchor(from);
-    setOpenMenu(openMenu === "filter" && anchor === from ? null : "filter");
-  };
+  const open = () => setOpenMenu(openMenu === "filter" ? null : "filter");
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
     setError(undefined);
@@ -141,7 +136,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             icon={ListFilter}
             count={countFilterRules(filter)}
             buttonRef={filterButtonRef}
-            onClick={() => open(filterButtonRef)}
+            onClick={open}
           />
           {displayControl}
           {actions}
@@ -183,17 +178,6 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
                   onRemove={() => setFilter(setAdvancedGroup(filter, index))}
                 />
               ))}
-              <Button
-                ref={addFilterRef}
-                aria-label="Add filter"
-                size="2xs"
-                variant="ghost"
-                flexShrink={0}
-                onClick={() => open(addFilterRef)}
-              >
-                <Plus />
-                Filter
-              </Button>
             </HStack>
             <Box flex="1" />
             {dirty ? (
@@ -232,7 +216,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
         <ViewBarPopover
           open={openMenu === "filter"}
           onOpenChange={(isOpen) => setOpenMenu(isOpen ? "filter" : null)}
-          anchorRef={anchor}
+          anchorRef={filterButtonRef}
           width="min(440px, calc(100vw - 32px))"
           padding="0"
           testId="filter-menu-popover"

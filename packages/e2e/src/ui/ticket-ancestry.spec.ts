@@ -59,7 +59,7 @@ test("shows ticket ancestry and filters by immediate parent", async ({ page, req
     listEyebrows.getByText(`${root.shorthand} / ${child.shorthand} / ${grandchild.shorthand}`, { exact: true }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Add filter", exact: true }).click();
+  await page.getByRole("button", { name: "Filter", exact: true }).click();
   await page
     .getByTestId("filter-property-column")
     .getByRole("button", { name: /^Parent/ })
