@@ -107,18 +107,23 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   );
   const initialState = {
     settings: contribution.defaultSettings,
-    filters: contribution.defaultFilters,
+    filter: contribution.defaultFilter,
+    sorts: contribution.defaultSorts,
   };
 
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
-  const filters = useKanbanRendererStore(storageKey, (state) => state.filters, initialState);
+  const filter = useKanbanRendererStore(storageKey, (state) => state.filter, initialState);
+  const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
 
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
-    queryKey: JSON.stringify([contribution.id, settings, filters]),
+    queryKey: contribution.id,
+    // The view can narrow what the query returns, so it loads again while the board stays on
+    // screen. Search is not part of it, so typing a search never runs the query.
+    refreshKey: JSON.stringify([settings, filter, sorts]),
 
-    load: (signal) => contribution.executeQuery({ settings, filters }, signal),
+    load: (signal) => contribution.executeQuery({ settings, filter, sorts }, signal),
     subscribe: (refresh) => {
       const subscription = contribution.subscribe?.(refresh);
       const events = getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {
@@ -162,13 +167,17 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
       {readNotice}
       <KanbanRenderer
+        itemLabel={
+          contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
+        }
         viewsSource={viewsSource}
         rows={rows}
         contentPlaceholder={read.value ? undefined : contentPlaceholder}
         storageKey={storageKey}
         attributes={attributes}
         defaultSettings={contribution.defaultSettings}
-        defaultFilters={contribution.defaultFilters}
+        defaultFilter={contribution.defaultFilter}
+        defaultSorts={contribution.defaultSorts}
         defaultViews={contribution.defaultViews}
         defaultActiveViewId={contribution.defaultActiveViewId}
         emptyTitle={contribution.emptyTitle}

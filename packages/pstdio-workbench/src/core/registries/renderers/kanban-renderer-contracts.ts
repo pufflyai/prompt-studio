@@ -1,4 +1,4 @@
-import type { KanbanRendererAttributeDisplay } from "@pstdio/sdk/extensions";
+import type { KanbanRendererAttributeDisplay, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 
 /**
  * Core-owned contracts for kanban renderer contributions. @pstdio/ui's
@@ -9,10 +9,7 @@ import type { KanbanRendererAttributeDisplay } from "@pstdio/sdk/extensions";
 
 export type ViewMode = "board" | "list";
 
-export type SortDirection = "asc" | "desc";
-
 export const NO_GROUPING = "none";
-export const MANUAL_ORDERING = "manual";
 
 export interface EnumOption {
   value: string;
@@ -36,6 +33,7 @@ export type EnumOptions = EnumOption[] | EnumOptionsSource;
 export type AttributeType =
   | { kind: "enum"; options: EnumOptions }
   | { kind: "enum-multi"; options: EnumOptions }
+  | { kind: "boolean"; legacyValues?: Record<string, boolean> }
   | { kind: "string" }
   | { kind: "date" }
   | { kind: "number" }
@@ -80,27 +78,24 @@ export interface KanbanRendererRow {
   attributes: Record<string, unknown>;
 }
 
-export interface KanbanRendererOrdering {
-  attributeId: string | typeof MANUAL_ORDERING;
-  direction: SortDirection;
-}
-
+/** Board display settings. Order lives in the view's sorts. */
 export interface KanbanRendererSettings {
   viewMode: ViewMode;
   columnGrouping: string | typeof NO_GROUPING;
   rowGrouping: string | typeof NO_GROUPING;
-  ordering: KanbanRendererOrdering;
   displayProperties: string[];
 }
 
-export type KanbanRendererFilterState = Record<string, string[]>;
-
-export interface KanbanRendererSavedView {
+/** A view stores display settings, one filter, and its sorts. Search is screen state and never saved. */
+export interface CollectionSavedView<TSettings> {
   id: string;
   title: string;
-  settings: KanbanRendererSettings;
-  filters: KanbanRendererFilterState;
+  settings: TSettings;
+  filter: ViewFilterGroup;
+  sorts: ViewSort[];
 }
+
+export type KanbanRendererSavedView = CollectionSavedView<KanbanRendererSettings>;
 
 export type KanbanRendererCreateFieldType =
   | "text"
@@ -178,24 +173,28 @@ export interface ResourceContextAction<TNode = unknown> {
   separatorBefore?: boolean;
 }
 
-export interface KanbanRendererViewsSource {
-  views: (KanbanRendererSavedView & { builtIn: boolean })[];
+export interface CollectionViewsSource<TSettings> {
+  views: (CollectionSavedView<TSettings> & { builtIn: boolean })[];
   defaultViewId: string;
   onCreateView: (input: {
     title: string;
-    settings: KanbanRendererSettings;
-    filters: KanbanRendererFilterState;
+    settings: TSettings;
+    filter: ViewFilterGroup;
+    sorts: ViewSort[];
     copyFrom?: string;
-  }) => Promise<KanbanRendererSavedView>;
+  }) => Promise<CollectionSavedView<TSettings>>;
   onUpdateView: (
     id: string,
-    input: { title?: string; settings?: KanbanRendererSettings; filters?: KanbanRendererFilterState },
+    input: { title?: string; settings?: TSettings; filter?: ViewFilterGroup; sorts?: ViewSort[] },
   ) => Promise<void>;
   onDeleteView: (id: string) => Promise<void>;
   onSetDefaultView: (id: string | null) => Promise<void>;
 }
 
-export interface KanbanRendererViewsProvider {
-  getSnapshot: () => KanbanRendererViewsSource | undefined;
+export interface CollectionViewsProvider<TSettings> {
+  getSnapshot: () => CollectionViewsSource<TSettings> | undefined;
   subscribe: (listener: () => void) => () => void;
 }
+
+export type KanbanRendererViewsSource = CollectionViewsSource<KanbanRendererSettings>;
+export type KanbanRendererViewsProvider = CollectionViewsProvider<KanbanRendererSettings>;

@@ -3,10 +3,9 @@ import { applyBoardMoveItem, applyBoardMoveToGroup } from "./kanban-renderer-boa
 import type { KanbanRendererSettings } from "./types";
 import { NO_GROUPING } from "./types";
 
-const baseSettings: Pick<KanbanRendererSettings, "columnGrouping" | "ordering" | "rowGrouping"> = {
+const baseSettings: Pick<KanbanRendererSettings, "columnGrouping" | "rowGrouping"> = {
   columnGrouping: "status",
   rowGrouping: NO_GROUPING,
-  ordering: { attributeId: "manual", direction: "asc" },
 };
 
 describe("applyBoardMoveItem", () => {
@@ -15,6 +14,7 @@ describe("applyBoardMoveItem", () => {
 
     await applyBoardMoveItem({
       settings: baseSettings,
+      sorts: [],
       rowId: "ticket-3",
       targetColumnId: "done",
       beforeItemId: "ticket-1",
@@ -34,6 +34,7 @@ describe("applyBoardMoveItem", () => {
 
     const move = applyBoardMoveItem({
       settings: baseSettings,
+      sorts: [],
       rowId: "ticket-3",
       targetColumnId: "done",
       beforeItemId: "ticket-1",
@@ -62,6 +63,7 @@ describe("applyBoardMoveItem", () => {
 
     const move = applyBoardMoveItem({
       settings: { ...baseSettings, rowGrouping: "priority" },
+      sorts: [],
       rowId: "ticket-3",
       targetColumnId: "done",
       targetGroupKey: "high",
@@ -86,11 +88,12 @@ describe("applyBoardMoveItem", () => {
     expect(calls).toEqual(["status:start", "priority:start", "priority:end", "reorder"]);
   });
 
-  test("skips reordering when board ordering is not manual", async () => {
+  test("still changes the column but keeps the sorted order when the view has sorts", async () => {
     const calls: unknown[] = [];
 
     await applyBoardMoveItem({
-      settings: { ...baseSettings, ordering: { attributeId: "created", direction: "desc" } },
+      settings: baseSettings,
+      sorts: [{ attributeId: "created", direction: "desc" }],
       rowId: "ticket-3",
       targetColumnId: "done",
       beforeItemId: "ticket-1",
@@ -108,6 +111,7 @@ describe("applyBoardMoveToGroup", () => {
 
     await applyBoardMoveToGroup({
       settings: { ...baseSettings, rowGrouping: "priority" },
+      sorts: [],
       rowId: "ticket-3",
       targetGroupKey: "high",
       beforeItemId: "ticket-1",

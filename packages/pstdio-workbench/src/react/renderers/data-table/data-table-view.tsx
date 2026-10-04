@@ -7,8 +7,9 @@ import {
   type DataTableRowAction,
   DataTableSkeleton,
   type RowData,
+  useDataTableViewStore,
 } from "@pstdio/ui/data-table";
-import type { ReactNode } from "react";
+import { type ReactNode, useSyncExternalStore } from "react";
 import type {
   DataTableRendererQueryResult,
   RegisteredDataTableRendererContribution,
@@ -38,10 +39,22 @@ interface WorkbenchDataTableViewProps {
   placement: WorkbenchPanelInstance;
 }
 const initialResult: DataTableRendererQueryResult = { rows: [] };
+const noopSubscribe = () => () => {};
+
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
+  const storageKey = resolveDataTableRendererStorageKey(contribution.id, placement);
+  const provider = contribution.viewsProvider;
+  const viewsSource = useSyncExternalStore(
+    provider?.subscribe ?? noopSubscribe,
+    provider?.getSnapshot ?? (() => undefined),
+    provider?.getSnapshot ?? (() => undefined),
+  );
+  const filter = useDataTableViewStore(storageKey, (state) => state.filter, contribution);
+  const sorts = useDataTableViewStore(storageKey, (state) => state.sorts, contribution);
+  const settings = useDataTableViewStore(storageKey, (state) => state.settings, contribution);
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
@@ -51,9 +64,13 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       workbench.modes.getActiveModeId(),
       contextValues,
     ),
-
+    // Filter and sorts can narrow what the query returns. Display settings and search never run it again.
+    refreshKey: JSON.stringify([filter, sorts]),
     load: (signal) =>
-      contribution.executeQuery({ resource: placement.resource, modeId: workbench.modes.getActiveModeId() }, signal),
+      contribution.executeQuery(
+        { resource: placement.resource, modeId: workbench.modes.getActiveModeId(), filter, sorts, settings },
+        signal,
+      ),
     subscribe: (refresh) => {
       const subscription = contribution.subscribe?.(refresh);
       const events = getWorkbenchRenderers(workbench).onDidRefreshDataTableRenderer((event) => {
@@ -109,7 +126,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     // The table chrome renders instantly: declared columns become real headers
     // and only the row values shimmer until the first query resolves.
     const skeletonColumns = (contribution.columns ?? [])
-      .filter((column) => !column.hidden && !column.defaultHidden)
+      .filter((column) => !column.hidden && !settings.hiddenColumns.includes(column.id))
       .map((column) => ({ id: column.id, label: column.label ?? column.id }));
     return (
       <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
@@ -118,11 +135,15 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     );
   }
   if (!read.value && read.error) return <RendererReadNotice error={read.error} retry={read.retry} />;
+  if (provider && !viewsSource) return <DataTableSkeleton />;
 
   return (
     <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       <DataTable
+        itemLabel={
+          contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
+        }
         toolbarActions={
           <ViewToolbarActions
             workbench={workbench}
@@ -142,13 +163,19 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         }
         data={model.data}
         getRowId={(data) => model.rowByData.get(data)?.id ?? ""}
-        toolbarStorageKey={resolveDataTableRendererStorageKey(contribution.id, placement)}
+        toolbarStorageKey={storageKey}
+        viewsSource={viewsSource}
+        defaultSettings={contribution.defaultSettings}
+        defaultFilter={contribution.defaultFilter}
+        defaultSorts={contribution.defaultSorts}
+        defaultViews={contribution.defaultViews}
+        defaultActiveViewId={contribution.defaultActiveViewId}
+        columnTypes={Object.fromEntries(columns.flatMap((column) => (column.type ? [[column.id, column.type]] : [])))}
+        groupableColumns={columns.filter((column) => column.groupable).map((column) => column.id)}
         compactHeaders={labels}
         columnDescriptions={descriptions}
         columnIcons={icons}
         hiddenColumns={columns.filter((column) => column.hidden).map((column) => column.id)}
-        defaultHiddenColumns={columns.filter((column) => column.defaultHidden).map((column) => column.id)}
-        defaultShowStats={contribution.defaultShowStats}
         columnStats={stats}
         columnRenderers={renderers}
         initialPageSize={contribution.initialPageSize}

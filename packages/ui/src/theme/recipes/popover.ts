@@ -22,7 +22,8 @@ export const popoverRecipe = defineSlotRecipe({
       bg: "bg",
       borderWidth: "1px",
       borderStyle: "solid",
-      borderColor: "border",
+      borderColor: "border.subtle",
+      overflow: "visible",
       _focus: { outline: "none" },
     },
     title: {

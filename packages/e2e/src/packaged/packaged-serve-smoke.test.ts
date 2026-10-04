@@ -9,6 +9,7 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
+// Includes flat And/Or filters surviving CLI edits and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Core extension checks include Notes page ownership and Planner's Open tickets command.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -21,6 +22,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
+// Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
@@ -403,4 +405,5 @@ registerExtensionAutomationSmokeTests();
 registerHarnessCleanupSmokeTests();
 registerLiveQuestionSmokeTests();
 
+// Shared views persist flat filters and one ordering, and reject a second sort.
 registerBoardViewsSmokeTests();

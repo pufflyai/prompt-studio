@@ -1,5 +1,6 @@
 import { index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
-import type { KanbanRendererSettings } from "pstdio-api-contracts/extension-kernel";
+import type { BoardViewSettings } from "pstdio-api-contracts";
+import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
 import { extension_instances } from "./extensions";
 import { projects } from "./projects";
 
@@ -19,8 +20,9 @@ export const board_views = pgTable(
     id: text("id").primaryKey(),
     ...boardScope(),
     title: text("title").notNull(),
-    settings: jsonb("settings").$type<KanbanRendererSettings>().notNull(),
-    filters: jsonb("filters").$type<Record<string, string[]>>().notNull(),
+    settings: jsonb("settings").$type<BoardViewSettings>().notNull(),
+    filter: jsonb("filter").$type<ViewFilterGroup>().notNull(),
+    sorts: jsonb("sorts").$type<ViewSort[]>().notNull().default([]),
     sort_order: integer("sort_order").notNull(),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),

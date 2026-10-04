@@ -1,88 +1,35 @@
 import "./data-table.css";
 
-import { Box, Flex, Table } from "@chakra-ui/react";
-import {
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  type PaginationState,
-  type RowSelectionState,
-  type SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
-import { Fragment, lazy, Suspense, useEffect, useState } from "react";
-import { ScrollArea } from "@/components/primitives/scroll-area";
-import { useKanbanRendererStore } from "../kanban-renderer/use-kanban-renderer-store";
+import { Flex } from "@chakra-ui/react";
+import { getCoreRowModel, type RowSelectionState, useReactTable } from "@tanstack/react-table";
+import { useState } from "react";
+import { CollectionViewEmptyState } from "../collection-view/collection-view-empty-state";
+import { findField } from "../collection-view/collection-view-fields";
+import { DisplaySortControl } from "../collection-view/display-sort-control";
 import { buildColumns } from "./build-columns";
-import { DataTableColumnMenu } from "./data-table-column-menu";
+import { DataTableDisplayMenu } from "./data-table-display-menu";
+import { DataTableGrid } from "./data-table-grid";
+import { pageGroupedRows, pageRows } from "./data-table-grouping";
 import { DataTableHeader } from "./data-table-header";
 import {
-  buildDataTableRendererAttributes,
-  buildDataTableRendererRows,
-  filterDataTableRows,
-  getSelectedOriginalRows,
   reorderDataTableColumns,
-  resolveDataTableColumnOrder,
-  resolveDataTableRowId,
-  resolveDataTableToolbarStorageKey,
   resolveInitialPageSize,
   resolveSelectionActions,
   shouldEnableSelection,
-  shouldHighlightActiveRow,
   toggleHiddenDataTableColumn,
 } from "./data-table-state";
-import { DataTableBodyRow, DataTableColumnHeader } from "./data-table-table-parts";
+import type { DataTableFieldMenu } from "./data-table-table-parts";
 import { EditModeDataTable } from "./edit-mode-data-table";
 import { PaginationFooter } from "./pagination-footer";
-import { SelectionToolbar } from "./selection-toolbar";
-import type { DataTableProps, RowData } from "./types";
+import type { DataTableProps } from "./types";
+import { useDataTableView } from "./use-data-table-view";
 
-const DataTableStatsRow = lazy(() =>
-  import("./data-table-stats-row").then((module) => ({ default: module.DataTableStatsRow })),
-);
-
-interface DatasetPaginationProps {
-  table: ReturnType<typeof useReactTable<RowData>>;
-  pagination: PaginationState;
-  pageSizeOptions: number[];
-}
-
-const buildColumnMenuColumns = (columnKeys: string[], compactHeaders?: Partial<Record<string, string>>) =>
-  columnKeys.map((columnId) => ({ id: columnId, label: compactHeaders?.[columnId] ?? columnId }));
-
-const resolveColumnSizeVars = (table: ReturnType<typeof useReactTable<RowData>>) => {
-  const colSizes: Record<string, number> = {};
-  for (const header of table.getFlatHeaders()) {
-    colSizes[`--header-${header.id}-size`] = header.getSize();
-    colSizes[`--col-${header.column.id}-size`] = header.column.getSize();
-  }
-  return colSizes;
-};
-
-const DatasetPagination = (props: DatasetPaginationProps) => {
-  const { table, pagination, pageSizeOptions } = props;
-
-  return (
-    <PaginationFooter
-      pageCount={table.getPageCount()}
-      pageIndex={pagination.pageIndex}
-      pageSize={pagination.pageSize}
-      pageSizeOptions={pageSizeOptions}
-      totalRows={table.getCoreRowModel().rows.length}
-      onPageChange={table.setPageIndex}
-      onPageSizeChange={table.setPageSize}
-    />
-  );
-};
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
 const DatasetDataTable = (props: DataTableProps) => {
   const {
-    data,
     noBorder,
     fullWidth,
-    hiddenColumns,
-    defaultHiddenColumns,
-    defaultShowStats = true,
     onRowClick,
     isRowInteractive,
     activeRowId,
@@ -95,48 +42,30 @@ const DatasetDataTable = (props: DataTableProps) => {
     pageSizeOptions = [10, 20, 30, 50, 100],
     rowActions = [],
     getRowActions,
-    getRowId,
-    toolbarStorageKey,
     enableRowActivation = false,
     getCellContextMenuActions,
   } = props;
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [pagination, setPagination] = useState<PaginationState>(() => ({
-    pageIndex: 0,
-    pageSize: resolveInitialPageSize({ initialPageSize }),
-  }));
+  const view = useDataTableView(props);
+  const { settings, setSettings, sorts, setSorts, filter, startRule } = view;
+  // A different filter, sort, grouping, or search starts again on the first page.
+  const pageKey = JSON.stringify([filter, sorts, settings.grouping, view.deferredSearch]);
+  const [pagePosition, setPagePosition] = useState({ key: pageKey, index: 0 });
+  const pageIndex = pagePosition.key === pageKey ? pagePosition.index : 0;
+  const setPageIndex = (index: number) => setPagePosition({ key: pageKey, index });
+  const [pageSize, setPageSize] = useState(() => resolveInitialPageSize({ initialPageSize }));
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [showStats, setShowStats] = useState(defaultShowStats);
-  const [wrapRows, setWrapRows] = useState(false);
-  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
-    const propHiddenColumnsSet = new Set(hiddenColumns ?? []);
-    return Object.keys(data[0] || {}).filter((key) => !propHiddenColumnsSet.has(key));
-  });
-  const [hiddenColumnMenuIds, setHiddenColumnMenuIds] = useState<Set<string>>(() => new Set(defaultHiddenColumns));
-  const hiddenColumnsSet = new Set(hiddenColumns ?? []);
-  const baseColumnKeys = Object.keys(data[0] || {}).filter((key) => !hiddenColumnsSet.has(key));
-  const orderedBaseColumnKeys = resolveDataTableColumnOrder(baseColumnKeys, columnOrder);
-  const visibleColumnIds = new Set(orderedBaseColumnKeys.filter((key) => !hiddenColumnMenuIds.has(key)));
-  const columnKeys = orderedBaseColumnKeys.filter((key) => visibleColumnIds.has(key));
   const enableSelection = shouldEnableSelection(props);
   const selectionActions = resolveSelectionActions(props);
-  const rendererAttributes = buildDataTableRendererAttributes(
-    data,
-    orderedBaseColumnKeys,
-    compactHeaders,
-    columnRenderers,
-  );
-  const rendererRows = buildDataTableRendererRows(data, orderedBaseColumnKeys, getRowId, columnRenderers);
-  const resolvedToolbarStorageKey = resolveDataTableToolbarStorageKey({
-    toolbarStorageKey,
-    columnKeys: baseColumnKeys,
-  });
-  const filters = useKanbanRendererStore(resolvedToolbarStorageKey, (state) => state.filters, {
-    settings: { viewMode: "list" },
-  });
-  const filteredRendererRows = filterDataTableRows(rendererRows, filters, rendererAttributes);
-  const filteredData = filteredRendererRows.map((row) => row.sourceRow);
-  const columns = buildColumns(data, columnKeys, {
+  const { groups } = view;
+  // Rows in collapsed groups leave the pages but still count for statistics, selection, and row numbers.
+  const shownRows = groups ? groups.flatMap((group) => group.rows) : view.shownRows;
+  const page = groups
+    ? pageGroupedRows(groups, collapsed, pageIndex, pageSize)
+    : pageRows(shownRows, pageIndex, pageSize);
+  const data = shownRows.map((row) => row.sourceRow);
+  const idBySource = new Map(shownRows.map((row) => [row.sourceRow, row.id]));
+  const columns = buildColumns(data, view.visibleColumnKeys, {
     columnIcons,
     columnDescriptions,
     compactHeaders,
@@ -145,152 +74,123 @@ const DatasetDataTable = (props: DataTableProps) => {
     getRowActions,
     selectedRowIds: rowSelection,
     columnRenderers,
-    wrapRows,
+    wrapRows: settings.wrapRows,
+    rowNumbers: settings.rowNumbers,
+    search: view.deferredSearch,
   });
 
   const table = useReactTable({
-    data: filteredData,
+    data,
     columns,
     defaultColumn: { size: 150, minSize: 40, maxSize: 800 },
-    state: { sorting, pagination, rowSelection },
-    getRowId: (row, index) => resolveDataTableRowId(row, index, getRowId),
+    state: { rowSelection },
+    getRowId: (row) => idBySource.get(row) ?? "",
     columnResizeMode: "onChange",
     columnResizeDirection: "ltr",
-    onSortingChange: setSorting,
-    onPaginationChange: setPagination,
     onRowSelectionChange: setRowSelection,
-    getSortedRowModel: getSortedRowModel(),
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     enableMultiRowSelection: enableSelection,
     enableRowSelection: enableSelection,
     autoResetAll: false,
   });
 
-  useEffect(() => {
-    const pageCount = table.getPageCount();
-    if (pageCount === 0 || pagination.pageIndex < pageCount) return;
+  const fieldMenu: DataTableFieldMenu = {
+    sortFor: (columnId) => {
+      const sort = sorts[0];
+      return sort?.attributeId === columnId ? sort.direction : undefined;
+    },
+    // Header and Display edit the same single ordering.
+    onSort: (columnId, direction) => setSorts([{ attributeId: columnId, direction }]),
+    onFilterBy: (columnId) => {
+      const field = findField(view.attributes, columnId);
+      if (field) startRule(field);
+    },
+    onHide: (columnId) =>
+      setSettings({ hiddenColumns: toggleHiddenDataTableColumn(settings.hiddenColumns, columnId, false) }),
+  };
 
-    setPagination((current) => ({
-      ...current,
-      pageIndex: Math.max(pageCount - 1, 0),
-    }));
-  }, [pagination.pageIndex, table]);
-
-  const columnSizeVars = resolveColumnSizeVars(table);
-
-  const selectedRows = table.getSelectedRowModel().rows;
-  const allRows = table.getCoreRowModel().rows;
-  const selectedOriginalRows = getSelectedOriginalRows(selectedRows);
-  const columnControl = (
-    <DataTableColumnMenu
-      columns={buildColumnMenuColumns(orderedBaseColumnKeys, compactHeaders)}
-      visibleColumnIds={visibleColumnIds}
-      wrapRows={wrapRows}
-      showStats={showStats}
-      statsAvailable={Boolean(columnStats)}
-      onColumnVisibilityChange={(columnId, visible) =>
-        setHiddenColumnMenuIds((current) => toggleHiddenDataTableColumn(current, columnId, visible))
-      }
-      onColumnReorder={(activeColumnId, overColumnId) =>
-        setColumnOrder((current) =>
-          reorderDataTableColumns(resolveDataTableColumnOrder(baseColumnKeys, current), activeColumnId, overColumnId),
-        )
-      }
-      onWrapRowsChange={setWrapRows}
-      onStatsVisibilityChange={setShowStats}
-    />
-  );
+  const total = view.rows.length;
+  const hiddenByFilter = total - view.filteredRows.length;
+  const summary = [
+    page.shownCount === total ? plural(total, "row") : `${page.shownCount} of ${plural(total, "row")}`,
+    groups ? plural(groups.length, "group") : undefined,
+    hiddenByFilter > 0 ? `${hiddenByFilter} hidden by the view's filter` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const showFooter = page.pageCount > 1 || page.shownCount !== total || Boolean(groups);
+  const nothingShown = total > 0 && view.shownRows.length === 0 && Boolean(view.deferredSearch.trim());
 
   return (
     <Flex direction="column" height="100%" width="100%">
       <DataTableHeader
-        rows={rendererRows}
-        storageKey={resolvedToolbarStorageKey}
-        attributes={rendererAttributes}
-        columnControl={columnControl}
+        itemLabel={props.itemLabel}
+        view={view}
+        viewsSource={props.viewsSource}
         actions={props.toolbarActions}
-        defaultViews={props.defaultViews}
-        defaultActiveViewId={props.defaultActiveViewId}
+        displayControl={
+          <DataTableDisplayMenu
+            columns={view.attributes}
+            sortControl={<DisplaySortControl fields={view.attributes} sorts={sorts} onSortsChange={setSorts} />}
+            settings={settings}
+            statsAvailable={Boolean(columnStats)}
+            onSettingsChange={setSettings}
+            onColumnVisibilityChange={(columnId, visible) =>
+              setSettings({ hiddenColumns: toggleHiddenDataTableColumn(settings.hiddenColumns, columnId, visible) })
+            }
+            onColumnReorder={(activeColumnId, overColumnId) =>
+              setSettings({
+                columnOrder: reorderDataTableColumns(view.orderedColumnKeys, activeColumnId, overColumnId),
+              })
+            }
+          />
+        }
       />
-      {props.contentPlaceholder ?? (
-        <Box position="relative" flex="1" minHeight="0">
-          <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
-            <Table.Root
-              className={`data-table${fullWidth ? " full-width" : ""}`}
-              style={{ ...columnSizeVars, width: fullWidth ? "100%" : table.getTotalSize() }}
-            >
-              <Table.Header>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <Fragment key={headerGroup.id}>
-                    <Table.Row
-                      className="data-table-column-header-row"
-                      borderRight={noBorder ? "none" : "1px solid"}
-                      borderColor="border.subtle"
-                    >
-                      {headerGroup.headers.map((header) => (
-                        <DataTableColumnHeader
-                          key={header.id}
-                          header={header}
-                          headerGroup={headerGroup}
-                          table={table}
-                          fullWidth={fullWidth}
-                          hasDescription={Boolean(columnDescriptions?.[header.column.id])}
-                        />
-                      ))}
-                    </Table.Row>
-                    {columnStats && showStats ? (
-                      <Suspense fallback={null}>
-                        <DataTableStatsRow
-                          headerGroup={headerGroup}
-                          rows={filteredData}
-                          columnStats={columnStats}
-                          noBorder={noBorder}
-                          fullWidth={fullWidth}
-                        />
-                      </Suspense>
-                    ) : null}
-                  </Fragment>
-                ))}
-              </Table.Header>
-              <Table.Body>
-                {table.getRowModel().rows.map((row) => {
-                  const rowIsInteractive = onRowClick ? (isRowInteractive?.(row.original) ?? true) : false;
-                  const rowIsActive = shouldHighlightActiveRow({ enableRowActivation, activeRowId, rowId: row.id });
-                  const rowIsSelected = row.getIsSelected();
-
-                  return (
-                    <DataTableBodyRow
-                      key={row.id}
-                      row={row}
-                      noBorder={noBorder}
-                      rowIsInteractive={rowIsInteractive}
-                      rowIsActive={rowIsActive}
-                      rowIsSelected={rowIsSelected}
-                      wrapRows={wrapRows}
-                      onRowClick={onRowClick}
-                      getCellContextMenuActions={getCellContextMenuActions}
-                    />
-                  );
-                })}
-              </Table.Body>
-            </Table.Root>
-          </ScrollArea>
-          {enableSelection && selectedRows.length > 0 ? (
-            <SelectionToolbar
-              selectedCount={selectedRows.length}
-              totalCount={allRows.length}
-              onClearSelection={() => table.toggleAllRowsSelected(false)}
-              onSelectAll={() => table.toggleAllRowsSelected(true)}
-              actions={selectionActions}
-              selectedRows={selectedOriginalRows}
-            />
-          ) : null}
-        </Box>
-      )}
-      {table.getPageCount() > 1 && (
-        <DatasetPagination table={table} pagination={pagination} pageSizeOptions={pageSizeOptions} />
-      )}
+      {props.contentPlaceholder ??
+        (nothingShown ? (
+          <CollectionViewEmptyState search={view.deferredSearch} onClearSearch={() => view.setSearch("")} />
+        ) : (
+          <DataTableGrid
+            table={table}
+            entries={page.entries}
+            collapsed={collapsed}
+            onToggleGroup={(key) =>
+              setCollapsed((current) => {
+                const next = new Set(current);
+                if (next.has(key)) next.delete(key);
+                else next.add(key);
+                return next;
+              })
+            }
+            settings={settings}
+            data={data}
+            fieldMenu={fieldMenu}
+            selectionActions={enableSelection ? selectionActions : undefined}
+            noBorder={noBorder}
+            fullWidth={fullWidth}
+            onRowClick={onRowClick}
+            isRowInteractive={isRowInteractive}
+            activeRowId={activeRowId}
+            columnDescriptions={columnDescriptions}
+            columnStats={columnStats}
+            enableRowActivation={enableRowActivation}
+            getCellContextMenuActions={getCellContextMenuActions}
+          />
+        ))}
+      {showFooter ? (
+        <PaginationFooter
+          pageCount={page.pageCount}
+          pageIndex={page.page}
+          pageSize={pageSize}
+          pageSizeOptions={pageSizeOptions}
+          summary={summary}
+          onPageChange={setPageIndex}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPageIndex(0);
+          }}
+        />
+      ) : null}
     </Flex>
   );
 };

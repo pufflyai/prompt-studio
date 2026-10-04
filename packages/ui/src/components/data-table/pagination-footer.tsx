@@ -9,13 +9,14 @@ interface PaginationFooterProps {
   pageIndex: number;
   pageSize: number;
   pageSizeOptions: number[];
-  totalRows: number;
+  /** What the table shows, such as "6 of 24 rows · 18 hidden by the view's filter". */
+  summary: string;
   onPageChange: (pageIndex: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }
 
 export function PaginationFooter(props: PaginationFooterProps) {
-  const { pageCount, pageIndex, pageSize, pageSizeOptions, totalRows, onPageChange, onPageSizeChange } = props;
+  const { pageCount, pageIndex, pageSize, pageSizeOptions, summary, onPageChange, onPageSizeChange } = props;
   const totalPages = Math.max(pageCount, 1);
   const canGoBack = pageIndex > 0;
   const canGoForward = pageIndex < totalPages - 1;
@@ -28,8 +29,16 @@ export function PaginationFooter(props: PaginationFooterProps) {
       borderColor={"border.subtle"}
       paddingX="xs"
     >
-      <Text textStyle="label/S/regular">{totalRows} rows</Text>
-      <Stack alignItems="center" direction="row" justifyContent="flex-end" paddingY="xs">
+      <Text textStyle="label/S/regular" paddingY="xs">
+        {summary}
+      </Text>
+      <Stack
+        display={pageCount > 1 ? "flex" : "none"}
+        alignItems="center"
+        direction="row"
+        justifyContent="flex-end"
+        paddingY="xs"
+      >
         <Flex alignItems="center" gap="xs" marginRight="sm">
           <Text textStyle="label/S/regular">Rows per page</Text>
           <Menu.Root>

@@ -17,7 +17,6 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(functi
       <ChakraCheckbox.Control
         bg="bg"
         borderColor="border"
-        borderRadius="xs"
         color="fg.button.primary.default"
         cursor={interactiveCursor}
         transition="border-color 0.2s ease-in-out"

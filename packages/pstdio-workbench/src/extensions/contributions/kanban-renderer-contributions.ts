@@ -1,15 +1,20 @@
 import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
-import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
+import {
+  kanbanBuiltInViews,
+  legacyFiltersFromViewFilter,
+  legacyOrderingFromSorts,
+  type WorkbenchExtensionKanbanRendererRecord,
+} from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
 import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQueryState, ResourceRef } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
+import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
 import {
   createStatusOptionsResolver,
-  initialColumnGrouping,
   statusColorConfig,
   toWorkbenchBoardColumnConfig,
 } from "./kanban-renderer-board-config";
@@ -22,7 +27,6 @@ import {
   type KanbanRendererRow,
   type Localizer,
   mergeParams,
-  type RowAction,
   registerRowActionCommands,
   runDefaultRowAction,
   toCreateFields,
@@ -31,70 +35,6 @@ import {
 import { mapViewToolbarActions } from "./view-toolbar-actions";
 
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
-
-export interface WorkbenchExtensionKanbanRendererAdapter {
-  createViewsProvider?: (
-    record: WorkbenchExtensionKanbanRendererRecord,
-  ) => import("../../core").KanbanRendererViewsProvider;
-  /** Override label resolution. Defaults to workbench's `text(value, fallback)`. */
-  resolveLabel?: Localizer;
-  /** Post-process an attribute descriptor (after localization). Defaults to identity. */
-  decorateAttribute?: (
-    record: WorkbenchExtensionKanbanRendererRecord,
-    attribute: AttributeDescriptor,
-  ) => AttributeDescriptor;
-  /**
-   * Translate a row's transport-shaped resource (`{ type, id }`) into a workbench
-   * `ResourceRef`. Defaults to the workbench `pstdio://extension-resource/...`
-   * scheme — dashboard supplies its own. Returns `undefined` for rows that do not
-   * carry an explicit resource.
-   */
-  resolveRowResource?: (
-    record: WorkbenchExtensionKanbanRendererRecord,
-    row: KanbanRendererRow,
-  ) => ResourceRef | undefined;
-  /**
-   * Synthesize a `ResourceRef` for row-action execution context when the row does
-   * not carry an explicit resource. Defaults to a `pstdio://extension-resource/`
-   * fallback built from `record.resourceKind` and `row.id`.
-   */
-  resolveRowActionResource?: (
-    record: WorkbenchExtensionKanbanRendererRecord,
-    row: KanbanRendererRow,
-  ) => ResourceRef | undefined;
-  /**
-   * Override the row-action runner. `runDefault` performs the workbench's standard
-   * flow (look up the row-action command, request params if needed, execute it).
-   */
-  executeRowAction?: (input: {
-    record: WorkbenchExtensionKanbanRendererRecord;
-    action: RowAction;
-    row: KanbanRendererRow;
-    resource: ResourceRef | undefined;
-    runDefault: () => Promise<void>;
-  }) => void | Promise<void>;
-  /**
-   * Handle a row click when the renderer has no declared activation handler.
-   */
-  onRowClick?: (input: {
-    record: WorkbenchExtensionKanbanRendererRecord;
-    row: KanbanRendererRow;
-    resource: ResourceRef | undefined;
-  }) => void;
-  /** Called after a successful renderer-owned create form submission. */
-  onAfterCreate?: (input: {
-    record: WorkbenchExtensionKanbanRendererRecord;
-    created: unknown;
-    submission: KanbanRendererCreateSubmission;
-  }) => void | Promise<void>;
-  /**
-   * Called after any mutation (attribute change, reorder, column action, default
-   * create) resolves successfully. Hosts that drive refresh via the outer command
-   * pipeline (testbench / workbench) leave this unset; dashboard supplies
-   * `ctx.views.refreshView(id)`.
-   */
-  onAfterMutation?: (record: WorkbenchExtensionKanbanRendererRecord) => void;
-}
 
 const createRowActionIcon = (icon: string | undefined) =>
   icon ? createElement(WorkbenchIcon, { name: icon, size: 16 }) : undefined;
@@ -246,7 +186,8 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       reportUnknownDisplay,
     );
     let wireAttributes = record.attributes;
-    let columnGrouping = initialColumnGrouping(record);
+    const builtIns = kanbanBuiltInViews(record);
+    let columnGrouping = builtIns.settings.columnGrouping;
     const originalRows = new WeakMap<KanbanRendererRow, KanbanRendererRow>();
     let columnConfigs: ColumnConfigRecord | undefined;
     let latestQueryId = 0;
@@ -266,13 +207,11 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           toolbarActions: mapViewToolbarActions(record),
           storageScope: context.projectId,
           attributes: attributes.source,
-          defaultSettings: record.defaultSettings,
-          defaultFilters: record.defaultFilters,
+          defaultSettings: builtIns.settings,
+          defaultFilter: record.defaultFilter,
+          defaultSorts: record.defaultSorts,
           viewsProvider: adapter.createViewsProvider?.(record),
-          defaultViews: record.defaultViews?.map((view) => ({
-            ...view,
-            title: localize(view.title, view.id),
-          })),
+          defaultViews: builtIns.views.map((view) => ({ ...view, title: localize(view.title, view.id) })),
           defaultActiveViewId: record.defaultActiveViewId,
           emptyTitle: localize(record.emptyTitle, ""),
           emptyDescription: localize(record.emptyDescription, ""),
@@ -292,8 +231,11 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               record,
               record.queryHandlerId,
               {
-                settings: state.settings,
-                filters: state.filters,
+                // Old extensions still read `filters` and `settings.ordering`; both are derived from the view.
+                settings: { ...state.settings, ordering: legacyOrderingFromSorts(state.sorts) },
+                filter: state.filter,
+                sorts: state.sorts,
+                filters: legacyFiltersFromViewFilter(state.filter),
               },
               undefined,
               signal,

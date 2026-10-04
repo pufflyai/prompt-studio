@@ -1,6 +1,9 @@
+import type { ViewSort } from "@pstdio/sdk/extensions";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { getIconComponent } from "@/components/primitives/icon-options";
-import { type KanbanRendererColumnGroup, orderRows } from "./kanban-renderer-grouping";
+import { withTitleField } from "../collection-view/collection-view-fields";
+import { sortRowsByView } from "../collection-view/collection-view-sort";
+import type { KanbanRendererColumnGroup } from "./kanban-renderer-grouping";
 import {
   collectDisplayBadges,
   collectDisplayCustomSlots,
@@ -9,10 +12,13 @@ import {
 } from "./kanban-renderer-helpers";
 import type { KanbanRendererListItem } from "./kanban-renderer-list";
 import type { AttributeDescriptor, KanbanRendererRow, KanbanRendererSettings } from "./types";
-import { findAttribute, MANUAL_ORDERING, NO_GROUPING } from "./types";
+import { findAttribute, NO_GROUPING } from "./types";
 
 interface BuildKanbanRendererListItemsInput<TRow extends KanbanRendererRow> {
   settings: KanbanRendererSettings;
+  sorts: ViewSort[];
+  /** The view's search text, marked in each row title. */
+  search: string;
   visibleRows: TRow[];
   grouped: KanbanRendererColumnGroup[];
   attributes: AttributeDescriptor[];
@@ -27,6 +33,8 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
 ) => {
   const {
     settings,
+    sorts,
+    search,
     visibleRows,
     grouped,
     attributes,
@@ -35,7 +43,10 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
     onReorder,
     getRowContextMenuActions,
   } = input;
-  const supportsManualReorder = settings.ordering.attributeId === MANUAL_ORDERING;
+  // A sorted view decides its own order, so rows only accept drops that keep a manual order.
+  const supportsManualReorder = sorts.length === 0;
+  const sortFields = withTitleField(attributes);
+  const sorted = (rows: KanbanRendererRow[]) => sortRowsByView(rows, sorts, sortFields);
   const listDisplayProperties = settings.displayProperties.filter((property) => property !== "id");
   const getStatusPresentation = (attributeId: string, key: string) => {
     const descriptor = findAttribute(attributes, attributeId);
@@ -58,6 +69,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
       id: row.id,
       eyebrow: shorthand && shorthand !== row.title ? shorthand : undefined,
       title: row.title,
+      highlight: search,
       ...getRowStatusPresentation(row),
       badges: collectDisplayBadges(row, attributes, listDisplayProperties),
       customSlots: collectDisplayCustomSlots(row, attributes, listDisplayProperties),
@@ -104,7 +116,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
               }
             }
           : undefined,
-      children: orderRows(group.rows, settings.ordering, attributes).map((row) =>
+      children: sorted(group.rows).map((row) =>
         toListItem(row as TRow, {
           columnKey: parent?.columnKey ?? group.key,
           rowKey: parent ? group.key : undefined,
@@ -114,7 +126,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
   };
 
   if (settings.columnGrouping === NO_GROUPING) {
-    return orderRows(visibleRows, settings.ordering, attributes).map((row) => toListItem(row as TRow));
+    return sorted(visibleRows).map((row) => toListItem(row as TRow));
   }
 
   return grouped.map((column) =>

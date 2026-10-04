@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { viewFilterGroupSchema, viewSortsSchema } from "./collection-view";
 import { extensionParamObjectSchema } from "./commands";
 import { localizableStringSchema } from "./common";
 import { extensionRendererRecordBaseSchema } from "./renderers";
@@ -22,6 +23,7 @@ const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
       id: z.string(),
     }),
   }),
+  z.object({ kind: z.literal("boolean"), legacyValues: z.record(z.string(), z.boolean()).optional() }),
   z.object({ kind: z.literal("string") }),
   z.object({ kind: z.literal("date") }),
   z.object({ kind: z.literal("number") }),
@@ -48,22 +50,20 @@ const kanbanRendererAttributeSchema = z.object({
   display: kanbanRendererAttributeDisplaySchema.optional(),
 });
 
-export const kanbanRendererSettingsSchema = z.object({
+/** Board display settings stored in a view. Order lives in the view's sorts. */
+export const kanbanViewSettingsSchema = z.object({
   viewMode: z.enum(["board", "list"]),
   columnGrouping: z.string(),
   rowGrouping: z.string(),
-  ordering: z.object({
-    attributeId: z.string(),
-    direction: z.enum(["asc", "desc"]),
-  }),
   displayProperties: z.array(z.string()),
 });
 
 export const kanbanRendererSavedViewSchema = z.object({
   id: z.string(),
   title: localizableStringSchema,
-  settings: kanbanRendererSettingsSchema,
-  filters: z.record(z.string(), z.array(z.string())),
+  settings: kanbanViewSettingsSchema,
+  filter: viewFilterGroupSchema,
+  sorts: viewSortsSchema,
   isDefault: z.boolean().optional(),
 });
 
@@ -110,8 +110,9 @@ export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSc
   createRow: extensionKanbanRendererCreateRowSchema.optional(),
   rowActions: z.array(extensionKanbanRendererRowActionSchema).optional(),
   rowActivationHandlerId: z.string().optional(),
-  defaultSettings: kanbanRendererSettingsSchema.partial().optional(),
-  defaultFilters: z.record(z.string(), z.array(z.string())).optional(),
+  defaultSettings: kanbanViewSettingsSchema.partial().optional(),
+  defaultFilter: viewFilterGroupSchema.optional(),
+  defaultSorts: viewSortsSchema.optional(),
   defaultViews: z.array(kanbanRendererSavedViewSchema).optional(),
   defaultActiveViewId: z.string().optional(),
   hideToolbar: z.boolean().optional(),

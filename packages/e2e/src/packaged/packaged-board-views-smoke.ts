@@ -59,7 +59,7 @@ export const registerBoardViewsSmokeTests = () => {
         return JSON.parse(result.stdout);
       };
       const boards = cli("boards");
-      expect(boards).toContainEqual(expect.objectContaining({ id: board }));
+      expect(boards).toContainEqual(expect.objectContaining({ id: board, kind: "kanban" }));
       const created = cli(
         "create",
         "--board",
@@ -67,18 +67,73 @@ export const registerBoardViewsSmokeTests = () => {
         "--title",
         "Agent view",
         "--filter",
-        "archived=Active",
+        "archived is-any-of Active",
+        "--filter",
+        "status is-none-of done",
+        "--sort",
+        "updated:desc",
         "--mode",
         "list",
       );
       expect(created).toMatchObject({
         title: "Agent view",
         builtIn: false,
-        filters: { archived: ["active"] },
+        filter: {
+          conjunction: "and",
+          rules: [
+            { attributeId: "archived", condition: "is-any-of", value: ["active"] },
+            { attributeId: "status", condition: "is-none-of", value: ["done"] },
+          ],
+        },
+        sorts: [{ attributeId: "updated", direction: "desc" }],
         settings: { viewMode: "list" },
       });
+      const invalidSort = spawnSync(
+        PACKAGED_BINARY_PATH,
+        [
+          "views",
+          "update",
+          "--id",
+          created.id,
+          "--sort",
+          "updated:desc",
+          "--sort",
+          "created:asc",
+          "--project-id",
+          projectId,
+        ],
+        {
+          cwd: folder,
+          encoding: "utf8",
+          env: { ...process.env, HOME: root, PSTDIO_HOME: root, PSTDIO_API_URL: runtime.baseUrl },
+        },
+      );
+      expect(invalidSort.status).not.toBe(0);
+      expect(invalidSort.stderr).toContain("one sort");
       cli("set-default", "--board", board, "--id", created.id);
-      cli("update", "--id", created.id, "--title", "Shared default");
+      const filter = {
+        conjunction: "and",
+        rules: [{ attributeId: "title", condition: "does-not-contain", value: "archived" }],
+        groups: [
+          {
+            conjunction: "or",
+            rules: [
+              { attributeId: "title", condition: "contains", value: "review" },
+              { attributeId: "status", condition: "is-any-of", value: ["done"] },
+            ],
+          },
+        ],
+      };
+      const updated = cli(
+        "update",
+        "--id",
+        created.id,
+        "--title",
+        "Shared default",
+        "--filter-json",
+        JSON.stringify(filter),
+      );
+      expect(updated.filter).toEqual(filter);
       await stopProcess(child);
       runtime = await startPackagedServe(root, env);
       child = runtime.child;
@@ -88,16 +143,24 @@ export const registerBoardViewsSmokeTests = () => {
         expect.objectContaining({
           id: created.id,
           title: "Shared default",
+          filter,
           settings: expect.objectContaining({ viewMode: "list" }),
         }),
       );
       const snapshot = await readSnapshot(runtime.baseUrl, runtimeAuthorization(runtime.descriptor));
-      expect(snapshot.board_views).toContainEqual(expect.objectContaining({ id: created.id, title: "Shared default" }));
+      expect(snapshot.board_views).toContainEqual(
+        expect.objectContaining({
+          id: created.id,
+          title: "Shared default",
+          filter,
+          sorts: created.sorts,
+        }),
+      );
       expect(snapshot.board_default_views).toContainEqual(
         expect.objectContaining({ id: expect.any(String), default_view_id: created.id }),
       );
       const copy = cli("create", "--board", board, "--title", "Copy", "--copy-from", created.id);
-      expect(copy.filters).toEqual(created.filters);
+      expect(copy).toMatchObject({ filter, sorts: created.sorts });
       const ordered = cli("reorder", "--board", board, "--ids", `${copy.id},${created.id}`);
       expect(
         ordered.views.filter((view: { builtIn: boolean }) => !view.builtIn).map((view: { id: string }) => view.id),

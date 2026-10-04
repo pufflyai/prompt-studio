@@ -1,4 +1,4 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Box, Stack, Text } from "@chakra-ui/react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
@@ -36,6 +36,8 @@ export interface KanbanRendererBoardColumn {
   icon?: string | null;
   items: KanbanRendererBoardItem[];
   groups?: KanbanRendererBoardGroup[];
+  /** Cards in the column before search narrowed it. Set only while a search is active. */
+  totalCount?: number;
   canDragIn: boolean;
   canDragOut: boolean;
   canCreate: boolean;
@@ -131,6 +133,16 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
               spaceY: "xs",
             }}
           >
+            {column.items.length === 0 && column.totalCount ? (
+              <Stack alignItems="center" gap="2xs" paddingY="xl" textAlign="center">
+                <Text textStyle="label/S/regular" color="fg.muted">
+                  No matching cards
+                </Text>
+                <Text textStyle="label/XS" color="fg.subtle">
+                  {column.totalCount} {column.totalCount === 1 ? "card" : "cards"} hidden by search
+                </Text>
+              </Stack>
+            ) : null}
             {column.groups && column.groups.length > 0
               ? column.groups.map((group) => {
                   const groupId = `${column.id}::${group.key}`;

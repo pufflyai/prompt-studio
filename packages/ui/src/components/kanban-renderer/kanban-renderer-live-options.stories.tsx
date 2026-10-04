@@ -142,12 +142,9 @@ const LiveWrapper = () => {
   const [rows, setRows] = useState<StoryRow[]>(LIVE_INITIAL_ROWS);
   const nextRowId = useRef(LIVE_INITIAL_ROWS.length + 1);
   const reset = useKanbanRendererStore(LIVE_STORAGE_KEY, (state) => state.reset);
-  const setColumnGrouping = useKanbanRendererStore(LIVE_STORAGE_KEY, (state) => state.setColumnGrouping);
 
-  useEffect(() => {
-    reset();
-    setColumnGrouping("status");
-  }, [reset, setColumnGrouping]);
+  // Reset during the first render, before the renderer picks its first view in an effect.
+  useState(reset);
 
   useEffect(() => store.source.subscribe(() => setStatuses([...store.getOptions()])), [store]);
 
@@ -244,6 +241,7 @@ const LiveWrapper = () => {
           rows={rows}
           storageKey={LIVE_STORAGE_KEY}
           attributes={liveAttributes}
+          defaultSettings={{ columnGrouping: "status" }}
           onAttributeChange={handleAttributeChange}
           getBoardColumnConfig={(groupKey) => {
             const option = statuses.find((entry) => entry.value === groupKey);

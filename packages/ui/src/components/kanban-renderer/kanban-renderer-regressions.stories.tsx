@@ -36,7 +36,6 @@ const EditableBadgeWrapper = () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "manual", direction: "asc" },
           displayProperties: ["status"],
         }}
         onAttributeChange={handleAttributeChange}
@@ -63,7 +62,7 @@ export const EditableDisplayBadge: Story = {
     if (!card) throw new Error("Expected the ticket card to render in the Todo column");
 
     await userEvent.click(within(card as HTMLElement).getByText("Todo"));
-    await userEvent.click(within(document.body).getByRole("menuitem", { name: "Done" }));
+    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: "Done" }));
 
     await expect(within(doneColumn).getByText("Set up API authentication")).toBeInTheDocument();
     await expect(within(todoColumn).queryByText("Set up API authentication")).not.toBeInTheDocument();
@@ -86,7 +85,6 @@ const ClearableSingleSelectBadgeWrapper = () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "manual", direction: "asc" },
           displayProperties: ["priority"],
         }}
         onAttributeChange={(rowId, attributeId, value) =>
@@ -139,7 +137,6 @@ const EditableMultiSelectBadgeWrapper = () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "manual", direction: "asc" },
           displayProperties: ["labels"],
         }}
         onAttributeChange={handleAttributeChange}
@@ -218,9 +215,9 @@ export const CustomAttributeRenderer: Story = {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "updated", direction: "desc" },
           displayProperties: ["diffOverview", "status"],
         }}
+        defaultSorts={[{ attributeId: "updated", direction: "desc" }]}
       />
     </Box>
   ),
@@ -270,9 +267,9 @@ export const WorkspaceDisplayProperty: Story = {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "updated", direction: "desc" },
           displayProperties: ["workspace", "priority"],
         }}
+        defaultSorts={[{ attributeId: "updated", direction: "desc" }]}
       />
     </Box>
   ),

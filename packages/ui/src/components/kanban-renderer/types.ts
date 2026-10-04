@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
+import type { CollectionSavedView, CollectionViewsSource } from "../collection-view/collection-view-types";
 
 export type ViewMode = "board" | "list";
 
-export type SortDirection = "asc" | "desc";
-
 export const NO_GROUPING = "none";
-export const MANUAL_ORDERING = "manual";
 
 export interface EnumOption {
   value: string;
@@ -30,6 +28,7 @@ export type EnumOptions = EnumOption[] | EnumOptionsSource;
 export type AttributeType =
   | { kind: "enum"; options: EnumOptions }
   | { kind: "enum-multi"; options: EnumOptions }
+  | { kind: "boolean"; legacyValues?: Record<string, boolean> }
   | { kind: "string" }
   | { kind: "date" }
   | { kind: "number" }
@@ -114,29 +113,15 @@ export interface KanbanRendererRow {
   attributes: Record<string, unknown>;
 }
 
-export interface KanbanRendererOrdering {
-  attributeId: string | typeof MANUAL_ORDERING;
-  direction: SortDirection;
-}
-
+/** Board display settings. Order lives in the view's sorts. */
 export interface KanbanRendererSettings {
   viewMode: ViewMode;
   columnGrouping: string | typeof NO_GROUPING;
   rowGrouping: string | typeof NO_GROUPING;
-  ordering: KanbanRendererOrdering;
   displayProperties: string[];
 }
 
-export type KanbanRendererFilterState = Record<string, string[]>;
-
-export interface KanbanRendererSavedView {
-  id: string;
-  title: string;
-  settings: KanbanRendererSettings;
-  filters: KanbanRendererFilterState;
-  /** @deprecated Use defaultActiveViewId instead. */
-  isDefault?: boolean;
-}
+export type KanbanRendererSavedView = CollectionSavedView<KanbanRendererSettings>;
 
 export type KanbanRendererCreateFieldType =
   | "text"
@@ -191,32 +176,16 @@ export const DEFAULT_KANBAN_RENDERER_SETTINGS: KanbanRendererSettings = {
   viewMode: "board",
   columnGrouping: NO_GROUPING,
   rowGrouping: NO_GROUPING,
-  ordering: { attributeId: MANUAL_ORDERING, direction: "asc" },
   displayProperties: [],
 };
 
 /**
  * Look up an attribute by id from a contribution-provided descriptor list.
- * Returns undefined for sentinels ("none", "manual") or unknown ids.
+ * Returns undefined for the "none" grouping or unknown ids.
  */
 export const findAttribute = (attributes: AttributeDescriptor[], id: string | undefined) => {
-  if (!id || id === NO_GROUPING || id === MANUAL_ORDERING) return undefined;
+  if (!id || id === NO_GROUPING) return undefined;
   return attributes.find((attribute) => attribute.id === id);
 };
 
-export interface KanbanRendererViewsSource {
-  views: (KanbanRendererSavedView & { builtIn: boolean })[];
-  defaultViewId: string;
-  onCreateView: (input: {
-    title: string;
-    settings: KanbanRendererSettings;
-    filters: KanbanRendererFilterState;
-    copyFrom?: string;
-  }) => Promise<KanbanRendererSavedView>;
-  onUpdateView: (
-    id: string,
-    input: { title?: string; settings?: KanbanRendererSettings; filters?: KanbanRendererFilterState },
-  ) => Promise<void>;
-  onDeleteView: (id: string) => Promise<void>;
-  onSetDefaultView: (id: string | null) => Promise<void>;
-}
+export type KanbanRendererViewsSource = CollectionViewsSource<KanbanRendererSettings>;

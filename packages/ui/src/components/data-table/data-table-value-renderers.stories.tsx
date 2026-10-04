@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Badge, Box } from "@chakra-ui/react";
 import { expect, userEvent, within } from "storybook/test";
 import { DataTable, type DataTableProps, type RowData } from ".";
 
@@ -101,8 +101,7 @@ export const DefaultDisplay = {
     fullWidth: true,
     columnRenderers: valueRenderers,
     columnStats: { Type: { type: "top-values", limit: 3 }, Provider: { type: "top-values", limit: 3 } },
-    defaultShowStats: false,
-    defaultHiddenColumns: ["Provider"],
+    defaultSettings: { showStats: false, hiddenColumns: ["Provider"] },
     toolbarStorageKey: "storybook-data-table-default-display",
   },
   render: StoryFrame,
@@ -114,7 +113,26 @@ export const DefaultDisplay = {
     const menu = within(await within(document.body).findByRole("dialog"));
     await userEvent.click(menu.getByText("Statistics"));
     await userEvent.click(menu.getByText("Provider"));
-    await expect(await canvas.findByText("pstdio.root")).toBeVisible();
+    // The value shows in its cell and, once statistics load, in the column's top values.
+    await expect((await canvas.findAllByText("pstdio.root"))[0]).toBeVisible();
     await expect((await canvas.findAllByText("50%")).length).toBeGreaterThan(0);
   },
+};
+
+export const SearchCellValues = {
+  args: {
+    data: [
+      {
+        Name: { display: <Badge>Completed</Badge>, sortValue: 1 },
+        Created: hoursAgo(5),
+        Diff: { additions: 128, deletions: 14 },
+      },
+      { Name: { display: "Pending", sortValue: 2 }, Created: hoursAgo(1), Diff: { additions: 0, deletions: 0 } },
+    ],
+    columnRenderers: { Created: { type: "date" }, Diff: { type: "diff" } },
+    fullWidth: true,
+    toolbarStorageKey: "storybook-data-table-search-cell-values",
+    defaultSettings: { showStats: false },
+  },
+  render: StoryFrame,
 };

@@ -1,8 +1,7 @@
 import { describe, expect, it } from "bun:test";
-
-import { countFilterValues, filterRows, groupRows, orderRows } from "./kanban-renderer-grouping";
+import { countFilterValues, groupRows } from "./kanban-renderer-grouping";
+import { resolveKnownColumnKeys } from "./kanban-renderer-helpers";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
-import { MANUAL_ORDERING } from "./types";
 
 const attributes: AttributeDescriptor[] = [
   {
@@ -179,72 +178,6 @@ describe("groupRows", () => {
   });
 });
 
-describe("orderRows", () => {
-  it("orders by title in ascending direction", () => {
-    const ordered = orderRows(rows, { attributeId: "title", direction: "asc" }, attributes);
-    expect(ordered.map((row) => row.id)).toEqual(["1", "2", "3"]);
-  });
-
-  it("orders by date in descending direction", () => {
-    const ordered = orderRows(rows, { attributeId: "updated", direction: "desc" }, attributes);
-    expect(ordered.map((row) => row.id)).toEqual(["3", "2", "1"]);
-  });
-
-  it("orders by enum attribute using declared option index", () => {
-    const priorityRows: KanbanRendererRow[] = [
-      { id: "a", title: "A", attributes: { priority: "low" } },
-      { id: "b", title: "B", attributes: { priority: "high" } },
-      { id: "c", title: "C", attributes: { priority: "medium" } },
-      { id: "d", title: "D", attributes: {} },
-    ];
-
-    const ordered = orderRows(priorityRows, { attributeId: "priority", direction: "asc" }, attributes);
-
-    expect(ordered.map((row) => row.id)).toEqual(["b", "c", "a", "d"]);
-  });
-
-  it("returns rows unchanged when ordering is manual", () => {
-    const ordered = orderRows(rows, { attributeId: MANUAL_ORDERING, direction: "asc" }, attributes);
-    expect(ordered.map((row) => row.id)).toEqual(["1", "2", "3"]);
-  });
-
-  it("returns rows unchanged when ordering references an unknown attribute", () => {
-    const ordered = orderRows(rows, { attributeId: "nonexistent", direction: "asc" }, attributes);
-    expect(ordered.map((row) => row.id)).toEqual(["1", "2", "3"]);
-  });
-});
-
-describe("filterRows", () => {
-  it("returns all rows when no filters are active", () => {
-    expect(filterRows(rows, {}, attributes)).toEqual(rows);
-  });
-
-  it("applies a single enum filter", () => {
-    const filtered = filterRows(rows, { status: ["todo"] }, attributes);
-    expect(filtered.map((row) => row.id)).toEqual(["1", "3"]);
-  });
-
-  it("applies selected enum filter values", () => {
-    const filtered = filterRows(rows, { status: ["todo", "in_progress"] }, attributes);
-    expect(filtered.map((row) => row.id)).toEqual(["1", "2", "3"]);
-  });
-
-  it("applies multiple filters", () => {
-    const filtered = filterRows(rows, { status: ["todo"], component: ["frontend"] }, attributes);
-    expect(filtered.map((row) => row.id)).toEqual(["1"]);
-  });
-
-  it("filters by enum-multi with 'has any of' semantics", () => {
-    const filtered = filterRows(rows, { labels: ["bug"] }, attributes);
-    expect(filtered.map((row) => row.id)).toEqual(["2"]);
-  });
-
-  it("ignores filters referencing unknown attribute ids", () => {
-    const filtered = filterRows(rows, { unknown: ["x"] }, attributes);
-    expect(filtered).toEqual(rows);
-  });
-});
-
 describe("countFilterValues", () => {
   it("counts values for a known attribute", () => {
     const counts = countFilterValues(rows, "status", attributes);
@@ -260,5 +193,52 @@ describe("countFilterValues", () => {
 
   it("returns empty for unknown attribute id", () => {
     expect(countFilterValues(rows, "unknown", attributes)).toEqual({});
+  });
+});
+
+describe("filtering grouped views", () => {
+  it("keeps columns and their subgroups when all cards are filtered out", () => {
+    const groups = groupRows([], {
+      attributes,
+      columnGrouping: "status",
+      rowGrouping: "assignee",
+      structureRows: rows,
+    });
+    expect(groups.map((group) => group.key)).toEqual(["todo", "in_progress"]);
+    expect(groups[0]?.subgroups.map((group) => group.key)).toEqual(["Alice", "No assignee"]);
+    expect(groups[1]?.subgroups.map((group) => group.key)).toEqual(["Bob"]);
+    expect(groups.flatMap((group) => group.rows)).toEqual([]);
+    expect(groups.flatMap((group) => group.subgroups.flatMap((subgroup) => subgroup.rows))).toEqual([]);
+  });
+});
+
+describe("unassigned group structure", () => {
+  it("retains the source unassigned column when another property hides all rows", () => {
+    const source = [{ id: "missing", title: "Unassigned", attributes: { assignee: "Alice" } }];
+    const keys = resolveKnownColumnKeys(
+      "status",
+      attributes,
+      { conjunction: "and", rules: [{ attributeId: "priority", condition: "is-any-of", value: ["high"] }] },
+      source,
+    );
+    const groups = groupRows([], {
+      attributes,
+      columnGrouping: "status",
+      rowGrouping: "assignee",
+      knownColumnKeys: keys,
+      structureRows: source,
+    });
+    expect(groups.map((group) => group.key)).toEqual(["todo", "in_progress", "done", "No status"]);
+    expect(groups[3]?.subgroups.map((group) => group.key)).toEqual(["Alice"]);
+  });
+  it("respects a grouping predicate that excludes unassigned rows", () => {
+    const source = [{ id: "missing", title: "Unassigned", attributes: {} }];
+    const keys = resolveKnownColumnKeys(
+      "status",
+      attributes,
+      { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["todo"] }] },
+      source,
+    );
+    expect(keys).toEqual(["todo"]);
   });
 });

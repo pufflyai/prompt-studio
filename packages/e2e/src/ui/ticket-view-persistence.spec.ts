@@ -93,7 +93,7 @@ test("shares saved ticket views while keeping active views local", async ({
         "--title",
         "Agent created",
         "--filter",
-        "archived=Active",
+        "archived is-any-of Active",
       ],
       {
         encoding: "utf8",
@@ -107,7 +107,10 @@ test("shares saved ticket views while keeping active views local", async ({
     );
     expect(cli.status, cli.stderr).toBe(0);
     const agentView = JSON.parse(cli.stdout);
-    expect(agentView.filters).toEqual({ archived: ["active"] });
+    expect(agentView.filter).toEqual({
+      conjunction: "and",
+      rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }],
+    });
     await expect(page.getByRole("tab", { name: "Agent created", exact: true })).toBeVisible();
     await expect(second.getByRole("tab", { name: "Agent created", exact: true })).toBeVisible();
     const execute = async (name: string, params: Record<string, unknown>) => {
@@ -122,7 +125,10 @@ test("shares saved ticket views while keeping active views local", async ({
     };
     const status = await execute("ticket-status.create", { label: "Temporary" });
     const filtered = await request.post(boardPath, {
-      data: { title: "Temporary status", filters: { status: [status.id] } },
+      data: {
+        title: "Temporary status",
+        filter: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: [status.id] }] },
+      },
     });
     expect(filtered.ok(), await filtered.text()).toBe(true);
     for (const client of [page, second]) {

@@ -1,11 +1,11 @@
-import { Box, Icon, Menu, Portal } from "@chakra-ui/react";
-import { Check, ChevronDown } from "lucide-react";
+import { Icon, Menu, Portal } from "@chakra-ui/react";
+import { ChevronDown } from "lucide-react";
 import { type ElementType, type ReactNode, useEffect, useRef, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { ListRow } from "@/components/list-row/list-row";
-import type { ListRowItem } from "@/components/list-row/list-row.types";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SearchableMenuInput } from "./searchable-menu-input";
+import { SearchableMenuRow } from "./searchable-menu-row";
 
 type MenuRootProps = React.ComponentProps<typeof Menu.Root>;
 type MenuContentProps = React.ComponentProps<typeof Menu.Content>;
@@ -17,6 +17,7 @@ export interface SearchableMenuItem {
   secondaryLabel?: string;
   tooltipLabel?: ReactNode;
   icon?: ElementType;
+  iconColor?: string;
   variant?: "default" | "compact" | "full-width";
   isDisabled?: boolean;
   isSelected?: boolean;
@@ -68,6 +69,7 @@ interface SearchableMenuProps<T extends SearchableMenuItem> {
   contentTestId?: string;
   portalled?: boolean;
   parentList?: SearchableMenuParentList<T>;
+  multiple?: boolean;
 }
 
 export const filterSearchableMenuItems = <T extends SearchableMenuItem>(items: T[], query: string) => {
@@ -133,6 +135,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
     contentTestId,
     portalled = true,
     parentList,
+    multiple = false,
   } = props;
   const hasParentList = Boolean(parentList);
   const [internalOpen, setInternalOpen] = useState(false);
@@ -205,15 +208,6 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
 
   const renderIcon = (icon: ElementType | undefined) => (icon ? <Icon as={icon} boxSize="14px" /> : undefined);
 
-  const buildRowItem = (item: T): ListRowItem => ({
-    id: item.id,
-    label: item.label,
-    description: item.secondaryLabel,
-    icon: renderIcon(item.icon),
-    disabled: item.isDisabled,
-    tooltip: item.tooltipLabel,
-  });
-
   const parentListHeader = parentList ? (
     <Header
       as="div"
@@ -273,25 +267,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
         >
           {filteredItems.length > 0
             ? filteredItems.map((item) => (
-                <Menu.Item key={item.id} value={item.id} disabled={item.isDisabled} onClick={item.onSelect} asChild>
-                  <Box
-                    bg="transparent"
-                    h="auto"
-                    p="0"
-                    _hover={{ bg: "transparent" }}
-                    _focus={{ bg: "transparent" }}
-                    _active={{ bg: "transparent" }}
-                  >
-                    <ListRow
-                      asChild
-                      {...buildRowItem(item)}
-                      role="presentation"
-                      variant={item.variant ?? "full-width"}
-                      isSelected={item.isSelected}
-                      endContent={item.isSelected ? <Icon as={Check} boxSize="3.5" /> : undefined}
-                    />
-                  </Box>
-                </Menu.Item>
+                <SearchableMenuRow key={item.id} item={item} multiple={multiple && !isShowingParent} />
               ))
             : config.emptyState}
         </ScrollArea>

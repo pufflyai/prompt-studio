@@ -5,6 +5,7 @@ import { type CSSProperties, cloneElement, isValidElement, type ReactNode } from
 
 import { Checkbox } from "@/components/primitives/checkbox";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { HighlightedText } from "../collection-view/highlighted-text";
 import { ListRow } from "../list-row/list-row";
 import { CategoricalColorCell, resolveCategoricalColor } from "./categorical-color-cell";
 import { ColorScaleCell, resolveColorScaleValue } from "./color-scale-cell";
@@ -111,10 +112,24 @@ export const RowActionsCell = (props: CellContext<RowData, unknown>) => {
 interface FormattedCellProps {
   value: unknown;
   wrapRows: boolean;
+  search?: string;
 }
 
+const HighlightedCellContent = (props: { content: ReactNode; query: string }) => {
+  const { content, query } = props;
+  if (typeof content === "string" || typeof content === "number")
+    return <HighlightedText text={String(content)} query={query} />;
+  if (Array.isArray(content))
+    return content.map((child, index) => <HighlightedCellContent key={index} content={child} query={query} />);
+  if (isValidElement<{ children?: ReactNode }>(content) && content.props.children !== undefined)
+    return cloneElement(content, {
+      children: <HighlightedCellContent content={content.props.children} query={query} />,
+    });
+  return content;
+};
+
 const FormattedCell = (props: FormattedCellProps) => {
-  const { value, wrapRows } = props;
+  const { value, wrapRows, search = "" } = props;
   const displayValue = formatDisplayValue(value);
 
   if (isValidElement(displayValue)) {
@@ -127,7 +142,7 @@ const FormattedCell = (props: FormattedCellProps) => {
         overflowWrap={wrapRows ? "anywhere" : undefined}
         whiteSpace={wrapRows ? "normal" : "nowrap"}
       >
-        {wrapRows ? displayValue : toSingleLineElement(displayValue)}
+        <HighlightedCellContent content={wrapRows ? displayValue : toSingleLineElement(displayValue)} query={search} />
       </chakra.span>
     );
   }
@@ -141,7 +156,7 @@ const FormattedCell = (props: FormattedCellProps) => {
       textStyle="paragraph/S/regular"
       whiteSpace={wrapRows ? "normal" : "nowrap"}
     >
-      {displayValue}
+      <HighlightedCellContent content={displayValue} query={search} />
     </Text>
   );
 };
@@ -151,28 +166,33 @@ interface DataCellProps {
   renderer?: DataTableColumnRenderer;
   value: unknown;
   wrapRows: boolean;
+  search?: string;
 }
 
 const DataCell = (props: DataCellProps) => {
-  const { columnLabel, renderer, value, wrapRows } = props;
+  const { columnLabel, renderer, value, wrapRows, search } = props;
 
-  if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} />;
+  if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} search={search} />;
 
   if (renderer?.type === "badge" && ["string", "number", "boolean"].includes(typeof value)) {
-    return <DataTableBadgeCell value={value as string | number | boolean} categories={renderer.categories} />;
+    return (
+      <DataTableBadgeCell value={value as string | number | boolean} search={search} categories={renderer.categories} />
+    );
   }
 
-  if (renderer?.type === "diff" && isDataTableDiffValue(value)) return <DataTableDiffCell value={value} />;
+  if (renderer?.type === "diff" && isDataTableDiffValue(value))
+    return <DataTableDiffCell value={value} search={search} />;
 
-  if (renderer?.type === "path" && typeof value === "string" && !wrapRows) return <DataTablePathCell value={value} />;
+  if (renderer?.type === "path" && typeof value === "string" && !wrapRows)
+    return <DataTablePathCell value={value} search={search} />;
 
   if (renderer?.type === "date") {
-    if (formatDataTableRelativeDate(value)) return <DataTableDateCell value={value as string} />;
+    if (formatDataTableRelativeDate(value)) return <DataTableDateCell value={value as string} search={search} />;
   }
 
   if (renderer?.type === "color-scale") {
     const color = resolveColorScaleValue(value, renderer.stops);
-    if (color && typeof value === "number") return <ColorScaleCell value={value} />;
+    if (color && typeof value === "number") return <ColorScaleCell value={value} search={search} />;
   }
 
   if (renderer?.type === "categorical-color") {
@@ -180,13 +200,13 @@ const DataCell = (props: DataCellProps) => {
     if (color) {
       return (
         <CategoricalColorCell>
-          <FormattedCell value={value} wrapRows={wrapRows} />
+          <FormattedCell value={value} wrapRows={wrapRows} search={search} />
         </CategoricalColorCell>
       );
     }
   }
 
-  return <FormattedCell value={value} wrapRows={wrapRows} />;
+  return <FormattedCell value={value} wrapRows={wrapRows} search={search} />;
 };
 
 export const RowIndexCell = (props: CellContext<RowData, number>) => {
@@ -200,8 +220,10 @@ export const RowIndexCell = (props: CellContext<RowData, number>) => {
 
 export const ColumnDataCell = (props: CellContext<RowData, unknown>) => {
   const { column, getValue } = props;
-  const { renderer, wrapRows = false } = column.columnDef.meta as DataTableColumnMeta;
-  return <DataCell columnLabel={column.id} renderer={renderer} value={getValue()} wrapRows={wrapRows} />;
+  const { renderer, wrapRows = false, search } = column.columnDef.meta as DataTableColumnMeta;
+  return (
+    <DataCell columnLabel={column.id} renderer={renderer} value={getValue()} wrapRows={wrapRows} search={search} />
+  );
 };
 
 export const ColumnHeader = (props: HeaderContext<RowData, unknown>) => {

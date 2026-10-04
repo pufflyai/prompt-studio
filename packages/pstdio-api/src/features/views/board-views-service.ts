@@ -1,6 +1,13 @@
-import { type BoardViewCreate, type BoardViewUpdate, boardDefaultSyncRow } from "pstdio-api-contracts";
+import { isDeepStrictEqual } from "node:util";
+import {
+  type BoardViewCreate,
+  type BoardViewUpdate,
+  boardDefaultSyncRow,
+  EMPTY_VIEW_FILTER,
+} from "pstdio-api-contracts";
 import { type BoardViewsDeps, getBoards, type ResolvedBoard, requireBoard, resolveBoardFields } from "./resolve-board";
-import { BoardViewError, cleanBoardView, validateBoardView } from "./view-rules";
+import { cleanBoardView } from "./view-cleanup";
+import { BoardViewError, validateBoardView } from "./view-rules";
 
 export const createBoardViewsService = (deps: BoardViewsDeps) => {
   const db = deps.boardViewsService;
@@ -11,36 +18,38 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     boardId: board.id,
     title: row.title,
     settings: row.settings,
-    filters: row.filters,
+    filter: row.filter,
+    sorts: row.sorts.slice(0, 1),
     builtIn: false,
+  });
+  const summary = async (board: ResolvedBoard) => ({
+    id: board.id,
+    title: board.title,
+    kind: board.kind,
+    extensionId: board.extensionId,
+    fields: await resolveBoardFields(deps, board),
   });
   const listResolved = async (board: ResolvedBoard) => {
     let rows: (Awaited<ReturnType<typeof db.list>>[number] | null)[] = await db.list(board.scope);
-    // A failed extension query is never evidence that a saved field disappeared.
-    const fields = await resolveBoardFields(deps, board).catch(() => null);
-    if (fields)
-      rows = await Promise.all(
-        rows.map(async (row) => {
-          if (!row) return null;
-          const cleaned = cleanBoardView(row, fields, board.settings);
-          if (
-            JSON.stringify(cleaned.settings) === JSON.stringify(row.settings) &&
-            JSON.stringify(cleaned.filters) === JSON.stringify(row.filters)
-          )
-            return row;
-          const updated = await db.clean(row, cleaned);
-          if (updated) emitView(updated);
-          return updated ?? (await db.get(board.scope.project_id, row.id));
-        }),
-      );
+    // A failed extension query, or a table that cannot describe its columns yet, is never
+    // evidence that a saved field disappeared.
+    const fields = await resolveBoardFields(deps, board).catch(() => undefined);
+    rows = await Promise.all(
+      rows.map(async (row) => {
+        if (!row) return null;
+        const cleaned = cleanBoardView(board, row, fields);
+        if (isDeepStrictEqual(cleaned, { settings: row.settings, filter: row.filter, sorts: row.sorts })) return row;
+        const updated = await db.clean(row, cleaned);
+        if (updated) emitView(updated);
+        return updated ?? (await db.get(board.scope.project_id, row.id));
+      }),
+    );
     const views = [...board.builtIns, ...rows.filter((row) => row !== null).map((row) => savedView(board, row))];
     const chosen = (await db.getDefault(board.scope))?.default_view_id;
-    const defaultViewId = [
-      chosen,
-      board.body.defaultActiveViewId,
-      board.body.defaultViews?.find((view) => view.isDefault)?.id,
-      views[0].id,
-    ].find((id) => views.some((view) => view.id === id))!;
+    const flagged = board.kind === "kanban" ? board.body.defaultViews?.find((view) => view.isDefault)?.id : undefined;
+    const defaultViewId = [chosen, board.body.defaultActiveViewId, flagged, views[0].id].find((id) =>
+      views.some((view) => view.id === id),
+    )!;
     return { views, defaultViewId };
   };
   const getSaved = async (projectId: string, id: string, allowOrphan = false) => {
@@ -62,30 +71,14 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     return { row, board };
   };
   return {
-    board: async (projectId: string, boardId: string) => {
-      const board = await requireBoard(deps, projectId, boardId);
-      return {
-        id: board.id,
-        title: board.title,
-        extensionId: board.extensionId,
-        fields: await resolveBoardFields(deps, board),
-      };
-    },
+    board: async (projectId: string, boardId: string) => summary(await requireBoard(deps, projectId, boardId)),
     get: async (projectId: string, id: string) => {
       const { row, board } = await getSaved(projectId, id);
       const view = (await listResolved(board!)).views.find((view) => view.id === row.id);
       if (!view) throw new BoardViewError("View not found", 404);
       return view;
     },
-    boards: async (projectId: string) =>
-      Promise.all(
-        (await getBoards(deps, projectId)).map(async (board) => ({
-          id: board.id,
-          title: board.title,
-          extensionId: board.extensionId,
-          fields: await resolveBoardFields(deps, board),
-        })),
-      ),
+    boards: async (projectId: string) => Promise.all((await getBoards(deps, projectId)).map(summary)),
     list: async (projectId: string, boardId: string) => listResolved(await requireBoard(deps, projectId, boardId)),
     orphaned: async (projectId: string) => {
       const boards = await getBoards(deps, projectId);
@@ -106,7 +99,8 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
             boardId: `${source.installedSource.extension_id}.view.${row.board_id}`,
             title: row.title,
             settings: row.settings,
-            filters: row.filters,
+            filter: row.filter,
+            sorts: row.sorts.slice(0, 1),
             builtIn: false,
           },
         ];
@@ -118,19 +112,24 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
         ? (await listResolved(board)).views.find((view) => view.id === input.copyFrom)
         : undefined;
       if (input.copyFrom && !source) throw new BoardViewError("View to copy was not found", 404);
-      const state = {
+      const draft = {
         settings: { ...(source?.settings ?? board.settings), ...input.settings },
-        filters: input.filters ?? source?.filters ?? board.body.defaultFilters ?? {},
+        filter: input.filter ?? source?.filter ?? board.body.defaultFilter ?? EMPTY_VIEW_FILTER,
+        sorts: input.sorts ?? source?.sorts ?? board.body.defaultSorts ?? [],
       };
-      validateBoardView(state, await resolveBoardFields(deps, board));
+      const state = validateBoardView(board.kind, draft, await resolveBoardFields(deps, board), input);
       const row = await db.create({ ...board.scope, title: input.title, ...state });
       emitView(row);
       return savedView(board, row);
     },
     update: async (projectId: string, id: string, input: BoardViewUpdate) => {
       const { row, board } = await getSaved(projectId, id);
-      const state = { settings: { ...row.settings, ...input.settings }, filters: input.filters ?? row.filters };
-      validateBoardView(state, await resolveBoardFields(deps, board!));
+      const draft = {
+        settings: { ...row.settings, ...input.settings },
+        filter: input.filter ?? row.filter,
+        sorts: input.sorts ?? row.sorts,
+      };
+      const state = validateBoardView(board!.kind, draft, await resolveBoardFields(deps, board!), input);
       const updated = await db.update(projectId, id, {
         ...state,
         ...(input.title === undefined ? {} : { title: input.title }),

@@ -1,6 +1,22 @@
 import { z } from "@hono/zod-openapi";
-import { type BoardField, extensionKanbanRendererRecordSchema } from "pstdio-api-contracts";
-import type { KanbanRendererSettings } from "pstdio-api-contracts/extension-kernel";
+import {
+  type BoardField,
+  type BoardView,
+  dataTableBuiltInViews,
+  EMPTY_VIEW_FILTER,
+  extensionDataTableRendererRecordSchema,
+  extensionKanbanRendererRecordSchema,
+  kanbanBuiltInViews,
+  legacyOrderingFromSorts,
+} from "pstdio-api-contracts";
+import {
+  type DataTableRendererQueryParams,
+  type KanbanRendererQueryParams,
+  type Localizable,
+  resolveDataTableFieldKind,
+  VIEW_FILTER_CONDITIONS,
+  type ViewFieldKind,
+} from "pstdio-api-contracts/extension-kernel";
 import { createWorkbenchExtensionMetadata, text } from "pstdio-extensions/workbench";
 import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
@@ -9,45 +25,41 @@ import { resolveEnabledSourceForRecord } from "../extensions/project-extension-r
 import { BoardViewError } from "./view-rules";
 
 export type BoardViewsDeps = ExtensionsRouteDeps & Pick<RouteDeps, "boardViewsService">;
-export const defaultBoardSettings: KanbanRendererSettings = {
-  viewMode: "board",
-  columnGrouping: "none",
-  rowGrouping: "none",
-  ordering: { attributeId: "manual", direction: "asc" },
-  displayProperties: [],
-};
+type DeclaredView = Omit<BoardView, "boardId" | "title" | "builtIn"> & { title: Localizable<string> };
+
 export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   const metadata = createWorkbenchExtensionMetadata({ runtime: snapshot.runtime });
   return metadata.views.flatMap((view) => {
-    if (view.body.kind !== "kanban") return [];
+    const body = view.body;
+    if (body.kind !== "kanban" && body.kind !== "dataTable") return [];
     const record = snapshot.runtime.views.find((record) => record.id === view.id)!;
     const source = resolveEnabledSourceForRecord(record.sourcePath, snapshot.enabledSources);
     if (!source) return [];
-    const body = view.body;
-    const statuses = body.attributes?.filter((field) => field.type.kind === "status") ?? [];
-    const settings = {
-      ...defaultBoardSettings,
-      ...(statuses.length === 1 ? { columnGrouping: statuses[0].id } : {}),
-      ...body.defaultSettings,
+    const common = {
+      id: view.id,
+      title: text(view.title, view.localId),
+      extensionId: view.extensionId,
+      statuses: metadata.statuses,
+      scope: { project_id: projectId, extension_instance_id: source.instance.id, board_id: view.localId },
     };
-    const builtIns = (
-      body.defaultViews?.length
-        ? body.defaultViews
-        : [{ id: "default", title: "All", settings, filters: body.defaultFilters ?? {} }]
-    ).map((saved) => ({ ...saved, title: text(saved.title, saved.id), boardId: view.id, builtIn: true }));
-    return [
-      {
-        id: view.id,
-        title: text(view.title, view.localId),
-        extensionId: view.extensionId,
-        body,
+    const localized = <TSettings>(declared: { settings: TSettings; views: DeclaredView[] }) => ({
+      settings: declared.settings,
+      builtIns: declared.views.map(({ id, title, settings, filter, sorts }) => ({
+        id,
+        boardId: view.id,
+        title: text(title, id),
         settings,
-        builtIns,
-        statuses: metadata.statuses,
-        scope: { project_id: projectId, extension_instance_id: source.instance.id, board_id: view.localId },
-      },
-    ];
+        filter,
+        sorts,
+        builtIn: true,
+      })),
+    });
+    const board =
+      body.kind === "kanban"
+        ? { kind: body.kind, body, ...localized(kanbanBuiltInViews(body)) }
+        : { kind: body.kind, body, ...localized(dataTableBuiltInViews(body)) };
+    return [{ ...common, ...board }];
   });
 };
 export type ResolvedBoard = Awaited<ReturnType<typeof getBoards>>[number];
@@ -70,19 +82,38 @@ const runQuery = async (
   if (result.outcome.status !== "success") throw new BoardViewError("Board fields could not be resolved", 503);
   return result.outcome.value;
 };
+const rendererOf = (board: ResolvedBoard) => ({
+  rendererId: board.id,
+  projectId: board.scope.project_id,
+  invocation: { placement: "visible" as const },
+});
+const conditionsOf = (kind: ViewFieldKind) => [...VIEW_FILTER_CONDITIONS[kind]];
+// The card title is a field of every board, so views can filter and sort by it.
+const titleField: BoardField = {
+  id: "title",
+  label: "Title",
+  kind: "string",
+  conditions: conditionsOf("string"),
+  filterable: true,
+  groupable: false,
+  sortable: true,
+  displayable: false,
+};
 const statusesSchema = z.object({ statuses: z.array(z.object({ id: z.string(), label: z.string() })) });
-export const resolveBoardFields = async (deps: BoardViewsDeps, board: ResolvedBoard) => {
+const resolveKanbanFields = async (deps: BoardViewsDeps, board: Extract<ResolvedBoard, { kind: "kanban" }>) => {
   const result = await runQuery(deps, board, board.body.queryHandlerId, {
-    renderer: { rendererId: board.id, projectId: board.scope.project_id, invocation: { placement: "visible" } },
-    settings: board.settings,
+    renderer: rendererOf(board),
+    settings: { ...board.settings, ordering: legacyOrderingFromSorts([]) },
+    filter: EMPTY_VIEW_FILTER,
+    sorts: [],
     filters: {},
-  });
+  } satisfies KanbanRendererQueryParams);
   const rawAttributes = result && typeof result === "object" && "attributes" in result ? result.attributes : undefined;
   const attributes =
     rawAttributes === undefined
       ? (board.body.attributes ?? [])
       : (extensionKanbanRendererRecordSchema.shape.attributes.parse(rawAttributes) ?? []);
-  return Promise.all(
+  const fields = await Promise.all(
     attributes.map(async (attribute) => {
       const kind = attribute.type.kind;
       let options: BoardField["options"];
@@ -105,12 +136,56 @@ export const resolveBoardFields = async (deps: BoardViewsDeps, board: ResolvedBo
         id: attribute.id,
         label: text(attribute.label, attribute.id),
         kind,
+        conditions: conditionsOf(kind),
         filterable: attribute.filterable ?? false,
         groupable: attribute.groupable ?? false,
         sortable: attribute.sortable ?? false,
         displayable: attribute.displayable ?? false,
         ...(options ? { options } : {}),
+        ...(attribute.type.kind === "boolean" && attribute.type.legacyValues
+          ? { legacyValues: attribute.type.legacyValues }
+          : {}),
       } satisfies BoardField;
     }),
   );
+  return fields.some((field) => field.id === titleField.id) ? fields : [titleField, ...fields];
 };
+const dataTableResultSchema = z.object({
+  rows: z.array(z.object({ values: z.record(z.string(), z.unknown()) })),
+  columns: extensionDataTableRendererRecordSchema.shape.columns,
+});
+type DataTableColumn = NonNullable<z.infer<typeof dataTableResultSchema>["columns"]>[number];
+const resolveDataTableFields = async (deps: BoardViewsDeps, board: Extract<ResolvedBoard, { kind: "dataTable" }>) => {
+  const parsed = dataTableResultSchema.safeParse(
+    await runQuery(deps, board, board.body.queryHandlerId, {
+      renderer: rendererOf(board),
+      filter: EMPTY_VIEW_FILTER,
+      sorts: [],
+      settings: board.settings,
+    } satisfies DataTableRendererQueryParams),
+  );
+  if (!parsed.success) throw new BoardViewError("Table fields could not be resolved", 503);
+  const result = parsed.data;
+  // The same order the table uses to choose its columns.
+  const firstRow = result.rows[0];
+  const columns: DataTableColumn[] =
+    result.columns ?? board.body.columns ?? (firstRow ? Object.keys(firstRow.values).map((id) => ({ id })) : []);
+  return columns.map((column) => {
+    const kind = resolveDataTableFieldKind(
+      result.rows.map((row) => row.values[column.id]),
+      column,
+    );
+    return {
+      id: column.id,
+      label: text(column.label, column.id),
+      kind,
+      conditions: conditionsOf(kind),
+      filterable: true,
+      groupable: column.groupable ?? false,
+      sortable: true,
+      displayable: true,
+    } satisfies BoardField;
+  });
+};
+export const resolveBoardFields = (deps: BoardViewsDeps, board: ResolvedBoard) =>
+  board.kind === "kanban" ? resolveKanbanFields(deps, board) : resolveDataTableFields(deps, board);

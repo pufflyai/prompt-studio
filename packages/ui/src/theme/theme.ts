@@ -6,6 +6,7 @@ import { borderWidths, radii, sizes, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
 import { buttonRecipe } from "./recipes/button";
+import { checkboxSlotRecipe } from "./recipes/checkbox";
 import { colorPickerSlotRecipe } from "./recipes/color-picker";
 import { dialogSlotRecipe } from "./recipes/dialog";
 import { dividerRecipe } from "./recipes/divider";
@@ -72,6 +73,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      checkbox: checkboxSlotRecipe,
       windowTitleBar: windowTitleBarRecipe,
       windowTabs: windowTabsRecipe,
       resizableSplitLayout: resizableSplitLayoutSlotRecipe,

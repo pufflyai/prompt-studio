@@ -1,5 +1,13 @@
+import type { DataTableRendererSettings, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
-import type { KanbanRendererSavedView } from "../kanban-renderer/types";
+import type { CollectionSavedView, CollectionViewsSource } from "../collection-view/collection-view-types";
+
+/** Display settings saved with a table view: grouping, row numbers, wrapping, statistics, and columns. */
+export type DataTableSettings = DataTableRendererSettings;
+export type DataTableSavedView = CollectionSavedView<DataTableSettings>;
+export type DataTableViewsSource = CollectionViewsSource<DataTableSettings>;
+/** How filters and sorts compare a column. Without it the type is inferred from the values. */
+export type DataTableColumnType = "string" | "number" | "boolean" | "date";
 
 export type ColumnType = "boolean" | "date" | "number" | "string" | "unknown";
 
@@ -136,19 +144,22 @@ export interface DataTableProps {
   compactHeaders?: Partial<Record<string, string>>;
   getRowId?: (row: RowData, index: number) => string;
   toolbarStorageKey?: string;
+  itemLabel?: string;
   toolbarActions?: ReactNode;
   contentPlaceholder?: ReactNode;
-  defaultViews?: KanbanRendererSavedView[];
+  defaultSettings?: Partial<DataTableSettings>;
+  defaultFilter?: ViewFilterGroup;
+  defaultSorts?: ViewSort[];
+  /** Shared saved views. Without it the table offers its default views only. */
+  viewsSource?: DataTableViewsSource;
+  defaultViews?: DataTableSavedView[];
   defaultActiveViewId?: string;
   enableRowActivation?: boolean;
   getCellContextMenuActions?: (context: DataTableCellContext) => DataTableCellContextAction[];
   onCSVUpload?: (csv: string) => Promise<void>;
   onCSVDownload?: (scenarios: string[]) => void;
+  /** Columns that never show. Use `defaultSettings.hiddenColumns` for columns viewers can turn on. */
   hiddenColumns?: string[];
-  /** Columns that start unchecked in the column menu. Viewers can still show them. */
-  defaultHiddenColumns?: string[];
-  /** Whether the statistics row starts visible when `columnStats` are set. Defaults to `true`. */
-  defaultShowStats?: boolean;
   onRowClick?: (row: RowData) => void;
   isRowInteractive?: (row: RowData) => boolean;
   activeRowId?: string | null;
@@ -156,4 +167,7 @@ export interface DataTableProps {
   columnDescriptions?: Partial<Record<string, string>>;
   columnStats?: Partial<Record<string, DataTableColumnStat>>;
   columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
+  columnTypes?: Partial<Record<string, DataTableColumnType>>;
+  /** Columns offered under Grouping in the Display menu. */
+  groupableColumns?: string[];
 }

@@ -314,7 +314,9 @@ test.describe("Workspace table", () => {
     await expect(workspaceRow).toBeVisible();
     // State is a diagnostic column: hidden by default and available from the display menu.
     await page.getByRole("button", { name: "Display settings" }).click();
-    await page.getByRole("dialog").getByText("State", { exact: true }).click();
+    const display = page.getByTestId("data-table-display-menu");
+    const stateColumn = page.getByRole("checkbox", { name: "State", exact: true });
+    await display.locator("label").filter({ has: stateColumn }).click();
     await page.keyboard.press("Escape");
     await expect(workspaceRow.getByText("Archived", { exact: true })).toBeVisible();
   });

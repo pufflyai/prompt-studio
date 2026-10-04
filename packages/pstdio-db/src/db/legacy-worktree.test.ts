@@ -21,12 +21,11 @@ test("recovers the actual managed Git worktree source among multiple linked fold
       const repo = join(root, name);
       await mkdir(repo);
       git(repo, ["init", "-b", "main"]);
-      git(repo, ["config", "user.name", "Test"]);
-      git(repo, ["config", "user.email", "test@example.com"]);
-      await writeFile(join(repo, "file.txt"), name);
-      git(repo, ["add", "."]);
-      git(repo, ["commit", "-m", "Base"]);
     }
+    const actual = join(root, "actual");
+    await writeFile(join(actual, "file.txt"), "actual");
+    git(actual, ["add", "."]);
+    git(actual, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "Base"]);
     const worktree = join(root, "home", "workspaces", "WS-1");
     git(join(root, "actual"), ["worktree", "add", "-b", "workspace/WS-1", worktree]);
     const workspace = {

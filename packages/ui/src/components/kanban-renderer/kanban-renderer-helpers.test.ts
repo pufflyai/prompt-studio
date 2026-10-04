@@ -4,17 +4,14 @@ import {
   buildDisplayPropertyOptions,
   buildFilterCategories,
   buildGroupingOptions,
-  buildOrderingOptions,
   getEnumOptions,
   renderAttributeBadge,
   resolveKnownColumnKeys,
   resolveListDropTargetColumnKey,
   resolveSubGroupingOptions,
-  sanitizeFilters,
-  sanitizeSettings,
 } from "./kanban-renderer-helpers";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
-import { MANUAL_ORDERING, NO_GROUPING } from "./types";
+import { NO_GROUPING } from "./types";
 
 const attributes: AttributeDescriptor[] = [
   {
@@ -67,13 +64,6 @@ describe("buildGroupingOptions", () => {
   });
 });
 
-describe("buildOrderingOptions", () => {
-  it("starts with manual + title and lists sortable attributes", () => {
-    const options = buildOrderingOptions(attributes);
-    expect(options.map((option) => option.value)).toEqual(["manual", "title", "updated"]);
-  });
-});
-
 describe("buildDisplayPropertyOptions", () => {
   it("lists displayable attributes only", () => {
     const options = buildDisplayPropertyOptions(attributes);
@@ -87,14 +77,19 @@ describe("resolveKnownColumnKeys", () => {
     expect(result).toEqual(["todo", "done"]);
   });
 
-  it("returns active filter values when present", () => {
-    const result = resolveKnownColumnKeys("status", attributes, { status: ["done"] });
-    expect(result).toEqual(["done"]);
-  });
+  it("keeps the columns a root rule on the grouping field can still show", () => {
+    const anyOf = {
+      conjunction: "and" as const,
+      rules: [{ attributeId: "status", condition: "is-any-of" as const, value: ["done"] }],
+    };
+    const noneOf = {
+      conjunction: "and" as const,
+      rules: [{ attributeId: "status", condition: "is-none-of" as const, value: ["done"] }],
+    };
 
-  it("returns all active enum filter values for grouped columns", () => {
-    const result = resolveKnownColumnKeys("status", attributes, { status: ["todo", "done"] });
-    expect(result).toEqual(["todo", "done"]);
+    expect(resolveKnownColumnKeys("status", attributes, anyOf)).toEqual(["done"]);
+    expect(resolveKnownColumnKeys("status", attributes, noneOf)).toEqual(["todo"]);
+    expect(resolveKnownColumnKeys("status", attributes, { ...anyOf, conjunction: "or" })).toEqual(["todo", "done"]);
   });
 
   it("returns undefined when grouping is none", () => {
@@ -127,6 +122,20 @@ describe("resolveListDropTargetColumnKey", () => {
 });
 
 describe("buildFilterCategories", () => {
+  it("keeps declared value icons and colors for filter choices", () => {
+    const categories = buildFilterCategories(
+      [
+        {
+          id: "state",
+          label: "Status",
+          filterable: true,
+          type: { kind: "enum", options: [{ value: "done", label: "Done", icon: "status-done", color: "green" }] },
+        },
+      ],
+      [],
+    );
+    expect(categories[0]?.options[0]).toMatchObject({ icon: "status-done", color: "green" });
+  });
   const rows: KanbanRendererRow[] = [
     { id: "1", title: "A", attributes: { status: "todo", owner: "Alice", labels: ["bug"] } },
     { id: "2", title: "B", attributes: { status: "done", owner: "Bob", labels: ["p1"] } },
@@ -177,15 +186,6 @@ describe("buildFilterCategories", () => {
     const categories = buildFilterCategories(sourcedAttributes, []);
     const status = categories.find((category) => category.id === "status");
     expect(status?.options.map((option) => option.value)).toEqual(["running", "merged"]);
-  });
-});
-
-describe("sanitizeFilters", () => {
-  it("preserves selected enum filter values", () => {
-    expect(sanitizeFilters({ status: ["todo", "done"], labels: ["bug", "p1"] }, attributes)).toEqual({
-      status: ["todo", "done"],
-      labels: ["bug", "p1"],
-    });
   });
 });
 
@@ -297,33 +297,5 @@ describe("renderAttributeBadge", () => {
     const row: KanbanRendererRow = { id: "1", title: "A", attributes: {} };
 
     expect(renderAttributeBadge(descriptor, row)).toBeNull();
-  });
-});
-
-describe("sanitizeSettings", () => {
-  it("drops unknown grouping / ordering / displayProperty ids", () => {
-    const sanitized = sanitizeSettings(
-      {
-        viewMode: "board",
-        columnGrouping: "ghost",
-        rowGrouping: "status",
-        ordering: { attributeId: "alsoGhost", direction: "asc" },
-        displayProperties: ["status", "ghost"],
-      },
-      attributes,
-    );
-
-    expect(sanitized.columnGrouping).toBe(NO_GROUPING);
-    expect(sanitized.rowGrouping).toBe("status");
-    expect(sanitized.ordering.attributeId).toBe(MANUAL_ORDERING);
-    expect(sanitized.displayProperties).toEqual(["status"]);
-  });
-});
-
-describe("sanitizeFilters", () => {
-  it("drops unknown attribute ids and empty value lists", () => {
-    const sanitized = sanitizeFilters({ status: ["todo"], ghost: ["x"], owner: [] }, attributes);
-
-    expect(sanitized).toEqual({ status: ["todo"] });
   });
 });
