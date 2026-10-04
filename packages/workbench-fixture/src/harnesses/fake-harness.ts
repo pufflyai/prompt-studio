@@ -11,6 +11,12 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { l10n, reconcileMessageHistory } from "@pstdio/sdk/extensions";
 import { createAsyncQuestionSession } from "./async-question-session";
+import {
+  DEFAULT_LONG_STREAM,
+  LONG_STREAM_PROMPT_TRIGGER,
+  type LongStreamShape,
+  replayLongStream,
+} from "./long-stream-replay";
 
 const EXIT_DELAY_MS = 50;
 const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
@@ -128,26 +134,28 @@ const pushMessages = (events: HarnessEventSink, startIndex: number, messages: Se
   }
 };
 
-const createSession = (agentSessionId: string) => {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  let settled = false;
-  let resolveDone!: (value: { status: "completed" | "cancelled" }) => void;
+const delay = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
+// The session runs until its work finishes, or until it is stopped.
+const createSession = (
+  agentSessionId: string,
+  run: (signal: AbortSignal) => Promise<unknown> = () => delay(EXIT_DELAY_MS),
+) => {
+  const controller = new AbortController();
+  let resolveDone!: (value: { status: "completed" | "cancelled" }) => void;
   const done = new Promise<{ status: "completed" | "cancelled" }>((resolve) => {
     resolveDone = resolve;
-    timeout = setTimeout(() => {
-      settled = true;
-      resolve({ status: "completed" });
-    }, EXIT_DELAY_MS);
+  });
+  void run(controller.signal).then(() => {
+    if (!controller.signal.aborted) resolveDone({ status: "completed" });
   });
 
   const session = {
     agentSessionId,
     done,
     stop: () => {
-      if (settled) return;
-      settled = true;
-      if (timeout) clearTimeout(timeout);
+      if (controller.signal.aborted) return;
+      controller.abort();
       resolveDone({ status: "cancelled" });
     },
     timeoutStrategy: "activity",
@@ -156,7 +164,7 @@ const createSession = (agentSessionId: string) => {
   return session;
 };
 
-export const createFakeHarness = () => {
+export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STREAM) => {
   const sessions = new Map<string, SessionMessage[]>();
 
   const provider = {
@@ -168,6 +176,23 @@ export const createFakeHarness = () => {
 
     start: (_ctx, input) => {
       const agentSessionId = `fake-${randomUUID()}`;
+      if (input.prompt.includes(LONG_STREAM_PROMPT_TRIGGER)) {
+        const messages: SessionMessage[] = buildStartMessages(agentSessionId, input).slice(0, 1);
+        sessions.set(agentSessionId, messages);
+        pushMessages(input.events, 0, messages);
+        return createSession(agentSessionId, (signal) =>
+          replayLongStream({
+            agentSessionId,
+            startIndex: 1,
+            shape: longStream,
+            signal,
+            push: (patch) => {
+              messages[Number(patch.path.slice("/messages/".length))] = patch.value as SessionMessage;
+              input.events.push(patch);
+            },
+          }),
+        );
+      }
       const messages = buildStartMessages(agentSessionId, input);
 
       sessions.set(agentSessionId, messages);

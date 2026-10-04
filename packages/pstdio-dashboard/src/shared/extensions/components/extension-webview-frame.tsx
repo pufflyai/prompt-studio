@@ -3,6 +3,7 @@ import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, toaster, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
 import { createTerminalSessionCapability, createWorkbenchWebviewHostCapabilities } from "@pstdio/workbench/extensions";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
@@ -21,10 +22,13 @@ import {
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { createDashboardExtensionWebviewCapabilities } from "../extension-webview-capabilities";
 import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
-import { useExecuteExtensionCommand } from "../use-project-extensions";
+import { openExtensionViews } from "../open-extension-views";
+import { usePausedExtensions } from "../paused-extensions";
+import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
 import { executeWebviewCommand } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { notificationStatusRouteVerb } from "./notification-transition-route";
+import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
   extensionId: string;
@@ -57,6 +61,18 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   }, [props.workbench]);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
+  const paused = usePausedExtensions();
+  const projectExtensions = useProjectExtensions(projectId);
+  const installedExtensionId = webview?.runtimeUrl
+    ? parseExtensionWebviewPath(webview.runtimeUrl)?.scope.installedExtensionId
+    : undefined;
+  const isPaused = installedExtensionId ? paused.has(installedExtensionId) : false;
+  const loads = Boolean(webview?.runtimeUrl && webview.moduleUrl);
+  // The performance popover lists every extension with a loaded view.
+  useEffect(() => {
+    if (!installedExtensionId || isPaused || !loads) return;
+    return openExtensionViews.open(installedExtensionId, webviewId);
+  }, [installedExtensionId, webviewId, isPaused, loads]);
 
   useEffect(() => subscribeToExtensionCommandFeed((event) => setLastCommand(event)), []);
   useEffect(() => subscribeWebviewExtensionEvents(hostEvents, projectId), [hostEvents, projectId]);
@@ -225,6 +241,14 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     }
 
     return <StaticWebviewSurface key={webviewId} colorScheme={colorScheme} title={frameTitle} webview={webview} />;
+  }
+
+  // A paused extension's frames unmount, so Chromium ends its renderer process.
+  if (installedExtensionId && isPaused) {
+    const extensionName =
+      projectExtensions.data?.extensions.find((extension) => extension.installedExtensionId === installedExtensionId)
+        ?.displayName ?? frameTitle;
+    return <PausedExtensionView installedExtensionId={installedExtensionId} name={extensionName} />;
   }
 
   const view = {

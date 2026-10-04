@@ -475,5 +475,58 @@
     "description": "试用测试版功能。此设置适用于连接到此安装实例的所有项目和仪表板。",
     "notifications": "通知",
     "loading": "正在加载设置…"
+  },
+  "performance": {
+    "settings": {
+      "title": "性能监控",
+      "description": "测量此应用的帧率、CPU 和慢帧。关闭时不会测量任何内容。测量数据仅保存在此设备上，绝不会上传。",
+      "enable": "启用性能监控",
+      "helperOff": "仅保存在此设备上。其他设备和远程运行时保留各自的设置。",
+      "helperDesktopOn": "已在此设备上开启。在状态栏中显示帧率。每 2 秒采样一次，保留最近 30 秒的数据。",
+      "helperBrowserOn": "已在此浏览器中开启。在状态栏中显示帧率，并在此标签页打开期间记录慢帧。",
+      "saveError": "无法更改性能监控。"
+    },
+    "popover": {
+      "title": "性能",
+      "statusLabel": "帧率 {{fps}} fps。显示性能详情。",
+      "avgMin": "平均 {{avg}} · 最低 {{min}}",
+      "ago": "30 秒前",
+      "now": "现在",
+      "cpu": "CPU",
+      "window": "最近 30 秒",
+      "workbench": "Workbench",
+      "workbenchDetail": "此窗口",
+      "views_one": "{{count}} 个视图",
+      "views_other": "{{count}} 个视图",
+      "paused": "已暂停 · 视图已卸载",
+      "pause": "暂停 {{name}}",
+      "pauseTooltip": "暂停 {{name}} · 卸载其视图",
+      "resume": "恢复",
+      "resumeLabel": "恢复 {{name}}",
+      "more_one": "另外 {{count}} 个扩展",
+      "more_other": "另外 {{count}} 个扩展",
+      "fewer": "仅显示占用最高的 {{count}} 个",
+      "cpuUnavailableTitle": "无法读取 CPU。",
+      "cpuUnavailableBody": "帧率仍在更新。暂停功能仍可使用。",
+      "browserTitle": "CPU 在桌面应用中测量",
+      "browserBody": "浏览器标签页无法读取 CPU。暂停功能仍可使用。",
+      "sustainedTitle": "CPU 持续偏高",
+      "sustainedBody": "{{process}} 在最近 {{seconds}} 秒内平均占用 {{cpu}} CPU。",
+      "unknownExtension": "未知扩展",
+      "roles": {
+        "main": "应用",
+        "gpu": "GPU",
+        "utility": "实用工具进程",
+        "startup": "启动窗口",
+        "renderer": "渲染器",
+        "other": "其他进程",
+        "extension-frames": "扩展框架",
+        "workbench": "Workbench"
+      }
+    },
+    "paused": {
+      "title": "{{name}} 已暂停",
+      "body": "已从性能监视器暂停。在恢复之前，其视图将保持卸载状态。"
+    }
   }
 }

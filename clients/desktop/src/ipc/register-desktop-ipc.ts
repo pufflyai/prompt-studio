@@ -29,6 +29,13 @@ type DesktopIpcOptions = {
   runtimeOrigin: () => string | null;
   setWorkbenchItem: (key: string, value: string | null) => void;
   webContents: () => WebContents[];
+  performance: {
+    readonly enabled: boolean;
+    setEnabled: (enabled: boolean) => Promise<void>;
+    snapshot: () => unknown;
+    reportFrames: (report: unknown) => void;
+    reportRendererState: (report: unknown) => void;
+  };
 };
 
 const assertSender = (event: IpcMainInvokeEvent, options: DesktopIpcOptions) => {
@@ -86,6 +93,14 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
     }
     options.setWorkbenchItem(key, value);
   });
+  handle(DESKTOP_CHANNELS.getPerformanceMonitoring, () => options.performance.enabled);
+  handle(DESKTOP_CHANNELS.setPerformanceMonitoring, (enabled) => {
+    if (typeof enabled !== "boolean") throw new Error("Invalid performance monitoring update");
+    return options.performance.setEnabled(enabled);
+  });
+  handle(DESKTOP_CHANNELS.getPerformanceSnapshot, () => options.performance.snapshot());
+  handle(DESKTOP_CHANNELS.reportSlowFrames, (report) => options.performance.reportFrames(report));
+  handle(DESKTOP_CHANNELS.reportRendererState, (report) => options.performance.reportRendererState(report));
 
   return () => {
     for (const channel of Object.values(DESKTOP_CHANNELS)) options.ipcMain.removeHandler(channel);

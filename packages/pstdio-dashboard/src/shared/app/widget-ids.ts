@@ -20,4 +20,5 @@ export const dashboardWidgetIds = {
   projectPicker: "dashboard-workbench.project-picker",
   createProject: "dashboard-workbench.create-project",
   sessionBubble: "dashboard-workbench.session-bubble",
+  performance: "dashboard-workbench.performance",
 } as const;

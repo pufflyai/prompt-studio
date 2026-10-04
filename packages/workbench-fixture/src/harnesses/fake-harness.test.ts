@@ -118,6 +118,23 @@ describe("createFakeHarness", () => {
     expect(sink.getMessages()).toEqual(messages);
   });
 
+  test("streams a long tool-heavy replay and completes when it ends", async () => {
+    const harness = createFakeHarness({ turns: 2, chunksPerTurn: 3, chunkDelayMs: 1 });
+    const { patches, sink } = recordingSink();
+
+    const session = await harness.start(ctx, {
+      prompt: "Replay __fake_long_stream__",
+      sessionId: "host-1",
+      events: sink,
+    });
+
+    expect(await session.done).toEqual({ status: "completed" });
+    expect(patches).toHaveLength(7);
+    const messages = await harness.getMessages!(ctx, { agentSessionId: session.agentSessionId! });
+    expect(messages.map((message) => message.role)).toEqual(["user", "assistant", "assistant"]);
+    expect(messages[2]?.parts.at(-1)).toMatchObject({ type: "tool", tool: "bash", status: "completed" });
+  });
+
   test("emits a question tool part for the question trigger prompt", async () => {
     const harness = createFakeHarness();
 

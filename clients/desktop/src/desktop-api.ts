@@ -1,3 +1,4 @@
+import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
 
 export interface DesktopAppInfo {
@@ -46,6 +47,11 @@ export interface PromptStudioDesktopApi {
   getProjectTabs: () => Promise<DesktopProjectTabsState>;
   setProjectTabs: (state: DesktopProjectTabsState) => Promise<void>;
   setWorkbenchItem: (key: string, value: string | null) => Promise<void>;
+  getPerformanceMonitoring: () => Promise<boolean>;
+  setPerformanceMonitoring: (enabled: boolean) => Promise<void>;
+  getPerformanceSnapshot: () => Promise<PerformanceSnapshot | null>;
+  reportSlowFrames: (report: unknown) => Promise<void>;
+  reportRendererState: (report: unknown) => Promise<void>;
 }
 
 export const DESKTOP_CHANNELS = {
@@ -71,4 +77,9 @@ export const DESKTOP_CHANNELS = {
   getProjectTabs: "pstdio:desktop:get-project-tabs",
   setProjectTabs: "pstdio:desktop:set-project-tabs",
   setWorkbenchItem: "pstdio:desktop:set-workbench-item",
+  getPerformanceMonitoring: "pstdio:desktop:get-performance-monitoring",
+  setPerformanceMonitoring: "pstdio:desktop:set-performance-monitoring",
+  getPerformanceSnapshot: "pstdio:desktop:get-performance-snapshot",
+  reportSlowFrames: "pstdio:desktop:report-slow-frames",
+  reportRendererState: "pstdio:desktop:report-renderer-state",
 } as const;

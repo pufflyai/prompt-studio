@@ -475,5 +475,58 @@
     "description": "ベータ機能を試せます。この設定は、このインストールに接続するすべてのプロジェクトとダッシュボードに適用されます。",
     "notifications": "通知",
     "loading": "設定を読み込み中…"
+  },
+  "performance": {
+    "settings": {
+      "title": "パフォーマンス監視",
+      "description": "このアプリのフレームレート、CPU、遅いフレームを計測します。オフの間は何も計測しません。計測データはこのデバイスにのみ保存され、アップロードされることはありません。",
+      "enable": "パフォーマンス監視を有効にする",
+      "helperOff": "このデバイスにのみ保存されます。他のデバイスやリモートランタイムはそれぞれの設定を使います。",
+      "helperDesktopOn": "このデバイスでオンです。ステータスバーにフレームレートを表示します。2秒ごとに計測し、直近30秒分を保持します。",
+      "helperBrowserOn": "このブラウザでオンです。ステータスバーにフレームレートを表示し、このタブが開いている間は遅いフレームを記録します。",
+      "saveError": "パフォーマンス監視を変更できませんでした。"
+    },
+    "popover": {
+      "title": "パフォーマンス",
+      "statusLabel": "フレームレート {{fps}} fps。パフォーマンスの詳細を表示します。",
+      "avgMin": "平均 {{avg}} · 最小 {{min}}",
+      "ago": "30 秒前",
+      "now": "現在",
+      "cpu": "CPU",
+      "window": "直近 30 秒",
+      "workbench": "Workbench",
+      "workbenchDetail": "このウィンドウ",
+      "views_one": "{{count}} 個のビュー",
+      "views_other": "{{count}} 個のビュー",
+      "paused": "一時停止中 · ビューはアンロード済み",
+      "pause": "{{name}} を一時停止",
+      "pauseTooltip": "{{name}} を一時停止 · ビューをアンロードします",
+      "resume": "再開",
+      "resumeLabel": "{{name}} を再開",
+      "more_one": "ほか {{count}} 個の拡張機能",
+      "more_other": "ほか {{count}} 個の拡張機能",
+      "fewer": "負荷の高い上位 {{count}} 個を表示",
+      "cpuUnavailableTitle": "CPU を読み取れませんでした。",
+      "cpuUnavailableBody": "フレームレートは引き続き更新されます。一時停止も使えます。",
+      "browserTitle": "CPU はデスクトップアプリで計測されます",
+      "browserBody": "ブラウザのタブでは CPU を読み取れません。一時停止は使えます。",
+      "sustainedTitle": "CPU 高負荷が継続",
+      "sustainedBody": "{{process}} は直近 {{seconds}} 秒間、平均 {{cpu}} の CPU を使用しました。",
+      "unknownExtension": "不明な拡張機能",
+      "roles": {
+        "main": "アプリ",
+        "gpu": "GPU",
+        "utility": "ユーティリティプロセス",
+        "startup": "起動ウィンドウ",
+        "renderer": "レンダラー",
+        "other": "その他のプロセス",
+        "extension-frames": "拡張機能のフレーム",
+        "workbench": "Workbench"
+      }
+    },
+    "paused": {
+      "title": "{{name}} は一時停止中です",
+      "body": "パフォーマンスモニターから一時停止されました。再開するまでビューはアンロードされたままです。"
+    }
   }
 }

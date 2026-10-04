@@ -17,6 +17,12 @@ Use these general UX and UI patterns across the app and its extensions.
 - Show tooltips on keyboard focus too. Use the same tooltip text for pointer and keyboard users.
 - Position tooltips outside their trigger so they do not cover it.
 
+## Status bar
+
+- Use color only when something needs attention. Normal states use muted text.
+- Put app-wide indicators at the trailing end.
+- Center status items vertically in the bar.
+
 ## Form controls
 
 - Use small inputs and buttons in dialogs and settings.

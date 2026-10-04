@@ -41,10 +41,16 @@ export const spacing = {
   "4.5xl": { value: sp[900] },
   "5xl": { value: sp[1600] },
   "panel-gap": { value: sp[50] },
+  // Performance meter: frame-rate bars sit 1px apart.
+  "performance-bar-gap": { value: "1px" },
 };
 
 export const sizes = {
   "status-dot": { value: "0.375rem" },
+  "performance-bar": { value: sp[25] },
+  "performance-meter": { value: "0.625rem" },
+  "performance-chart": { value: "2.25rem" },
+  "performance-popover": { value: "23.75rem" },
   "folder-picker-width": { value: "36.5rem" },
   "folder-picker-height": { value: "31rem" },
   "folder-picker-header": { value: "3.25rem" },

@@ -23,6 +23,7 @@ import { createHeadersModule } from "./modules/headers/module";
 import { createHelpModule } from "./modules/help/module";
 import { createKeyboardShortcutsModule } from "./modules/keyboard-shortcuts/module";
 import { createNotificationsModule } from "./modules/notifications/module";
+import { createPerformanceModule } from "./modules/performance/module";
 import type { DesktopProjectTabsController } from "./modules/projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "./modules/projects/module";
 import { createSessionBubbleModule } from "./modules/sessions/bubble/module";
@@ -70,6 +71,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   }),
   createNotificationsModule(),
   createSettingsModule(),
+  createPerformanceModule(),
   createStartModule(),
   createWorkbenchTerminalModule(),
   createTerminalModule(),
