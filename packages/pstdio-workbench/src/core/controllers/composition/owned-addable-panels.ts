@@ -9,7 +9,7 @@ import { contributionRefId, resourceMatchesConstraint } from "../../shared/contr
 import { runUserAction } from "../../shared/run-user-action";
 import type { WorkbenchCore } from "../../workbench-core";
 import type { WorkbenchCompositionAddablePanel } from "./composition-controller";
-import { panelDestinations } from "./panel-arrangement";
+import { panelDestinations } from "./panel-destinations";
 
 const ownsPlacement = (
   layout: WorkbenchLayout,

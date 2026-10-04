@@ -42,6 +42,10 @@ const PanelViewPortal = (props: {
     else host.remove();
     return () => host.remove();
   }, [host, slot]);
+  const activate = () => {
+    if (workbench.layout.getLayout().activeWidgetId !== placement.widgetId)
+      workbench.layout.activatePanel(placement.widgetId);
+  };
   return createPortal(
     <Box
       data-workbench-instance={placement.widgetId}
@@ -52,6 +56,12 @@ const PanelViewPortal = (props: {
       minH="0"
       w="full"
       overflow="hidden"
+      onPointerDown={activate}
+      onFocusCapture={(event) => {
+        if (!event.currentTarget.contains(event.target)) return;
+        activate();
+        if (region) workbench.focus.setActiveRegion(region);
+      }}
     >
       <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} />
     </Box>,

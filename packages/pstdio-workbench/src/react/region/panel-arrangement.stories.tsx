@@ -118,3 +118,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const HeaderlessMain: Story = { args: { workbench: createArrangementWorkbench() } };
 export const Crowded: Story = { args: { workbench: createArrangementWorkbench(true) } };
+const secondaryWorkbench = createArrangementWorkbench();
+const secondarySession = secondaryWorkbench.layout.getLayout().regions.side.widgets.at(-1)!;
+secondaryWorkbench.movePanel(secondarySession.widgetId, "secondary");
+export const SecondarySession: Story = { args: { workbench: secondaryWorkbench } };

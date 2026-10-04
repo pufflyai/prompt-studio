@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { getActiveLocationPlacement } from "../../registries/layout/layout-operations";
+import { createWorkbench } from "../../workbench-core";
 import { harness, navigate, openFile, panel, resource } from "./placement-lifecycle-test-support";
 
 test("mixed page and mode order survives navigation and a fresh workbench", async () => {
@@ -99,6 +100,44 @@ test("moving the page view keeps its primary anchor and selection in Side", asyn
   expect(w.getPrimaryResource()?.id).toBe("alpha");
   w.layout.setRegionActiveWidget("side", original.widgetId);
   expect(w.layout.getLayout().activeLocationWidgetId).toBe(original.widgetId);
+});
+
+test("moving a page selects it over its remembered auxiliary tab", async () => {
+  const w = harness();
+  const pageRef = { kind: "page", extensionId: "test", id: "page-view" } as const;
+  w.pages.registerPage({
+    id: "page-view",
+    ref: pageRef,
+    parentId: "workspace",
+    path: "page-view",
+    modeId: "edit",
+    resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] },
+    main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: "one" },
+    slots: [],
+  });
+  await w.navigation.openTarget({ kind: "page", page: pageRef, resource: { type: "workspace", id: "alpha" } });
+  const pageView = w.layout.getLayout().regions.main.widgets[0]!;
+  await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
+  const session = w.layout.getLayout().regions.side.widgets[0]!;
+  w.movePanel(session.widgetId, "main");
+  w.movePanel(pageView.widgetId, "side");
+  w.movePanel(pageView.widgetId, "main");
+  expect(w.layout.getLayout().regions.main.activeWidgetId).toBe(pageView.widgetId);
+  expect(w.layout.getLayout().activeWidgetId).toBe(pageView.widgetId);
+});
+
+test("moving a location keeps the source's next tab selected", () => {
+  const w = createWorkbench();
+  for (const id of ["one", "two"]) {
+    w.layout.registerPanel({ id, title: id, rendererId: id, region: "main" });
+    w.layout.openWidget(id, { role: "location", resource: resource(id) });
+  }
+  const [first, second] = w.layout.getLayout().regions.main.widgets;
+  expect(first).toBeDefined();
+  expect(second).toBeDefined();
+  w.movePanel(second!.widgetId, "secondary");
+  expect(w.layout.getLayout().regions.main.activeWidgetId).toBe(first!.widgetId);
+  expect(w.layout.getLayout().regions.secondary.activeWidgetId).toBe(second!.widgetId);
 });
 
 test("Add reuses a single panel from another region and follows move restrictions", async () => {

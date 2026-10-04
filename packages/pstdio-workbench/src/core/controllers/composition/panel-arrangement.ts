@@ -2,34 +2,15 @@ import {
   activateInLayout,
   findPlacementByWidgetId,
   removeLocationSubPanelSelection,
+  selectRegionActiveWidget,
 } from "../../registries/layout/layout-operations";
 import { insertAtPosition } from "../../registries/layout/layout-tab-lifecycle";
 import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registries/layout/layout-types";
 import { workbenchPanelRegions } from "../../registries/layout/layout-types";
-import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
-import { modePlacementContributionId } from "../../registries/views/view-placement";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
-
-export const panelDestinations = (core: WorkbenchCore, contributionId: string) => {
-  const widget = core.layout.getWidget(contributionId);
-  if (!widget || !workbenchPanelRegions.some((region) => region === widget.region)) return [];
-  const mode = core.modes.getActiveModeId();
-  const activeMode = mode ? core.modes.getMode(mode) : undefined;
-  const declaration = core.modePlacements
-    .listPlacements(mode)
-    .find((p) => modePlacementContributionId(p.id) === contributionId);
-  const legacyPanel = activeMode
-    ?.listAddablePanels?.({ layout: core.layout.getLayout(), resource: core.getPrimaryResource() })
-    .find((p) => p.panelId === contributionId);
-  return workbenchPanelRegions.filter(
-    (region) =>
-      isWorkbenchModePanelAvailable(activeMode, region) &&
-      (!declaration?.movableTo || declaration.movableTo.includes(region)) &&
-      (!legacyPanel?.allowedRegions || legacyPanel.allowedRegions.includes(region)),
-  );
-};
+import { panelDestinations } from "./panel-destinations";
 
 export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
   getPanelDestinations(instanceId: string) {
@@ -74,7 +55,17 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
       },
     };
     batchWorkbenchChanges(() => {
-      core.layout.restoreLayout(activateInLayout(next, destination, found.placement));
+      // Moving selects the instance directly; navigation owns auxiliary-selection restoration.
+      const selected =
+        found.placement.role === "location"
+          ? (selectRegionActiveWidget(next, destination, instanceId) ?? next)
+          : activateInLayout(next, destination, found.placement);
+      core.layout.restoreLayout({
+        ...selected,
+        activeWidgetId: instanceId,
+        activeResourceKey: found.placement.resourceKey,
+        activeLocationWidgetId: found.placement.role === "location" ? instanceId : layout.activeLocationWidgetId,
+      });
       core.layout.reconcilePanelMenus();
       revealPanelRegion(core, destination);
     });

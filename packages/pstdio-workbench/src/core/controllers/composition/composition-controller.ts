@@ -13,6 +13,7 @@ import {
   type WorkbenchModeContribution,
 } from "../../registries/modes/mode-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
+import { allowedPanelDestinations } from "./panel-destinations";
 export interface WorkbenchCompositionAddablePanel extends WorkbenchModeAddablePanel {
   contribution: RegisteredWidgetContribution;
   open?(resource?: ResourceRef): void | Promise<void>;
@@ -52,15 +53,17 @@ const isOpenSingleton = (
 const addModePanels = (input: {
   addable: Map<string, WorkbenchCompositionAddablePanel>;
   mode: WorkbenchModeContribution | undefined;
+  modePanels: readonly WorkbenchModeAddablePanel[];
   layout: WorkbenchLayout;
   placements: readonly WorkbenchWidgetPlacement[];
   region: WorkbenchPanelRegion;
   resource: ResourceRef | undefined;
   widgets: readonly RegisteredWidgetContribution[];
 }) => {
-  for (const panel of input.mode?.listAddablePanels?.({ layout: input.layout, resource: input.resource }) ?? []) {
+  for (const panel of input.modePanels) {
     if (!["main", "side", "secondary"].includes(panel.region)) continue;
-    if (panel.allowedRegions && !panel.allowedRegions.includes(input.region)) continue;
+    if (!allowedPanelDestinations({ mode: input.mode, allowedRegions: panel.allowedRegions }).includes(input.region))
+      continue;
     const contribution = input.widgets.find((widget) => widget.id === panel.panelId);
     if (!contribution || isOpenSingleton(contribution, input.placements, input.resource)) continue;
     input.addable.set(panel.panelId, { ...panel, region: input.region, contribution });
@@ -68,7 +71,8 @@ const addModePanels = (input: {
 };
 const addRegisteredPanels = (input: {
   addable: Map<string, WorkbenchCompositionAddablePanel>;
-  modeId: string | undefined;
+  mode: WorkbenchModeContribution | undefined;
+  modePanels: readonly WorkbenchModeAddablePanel[];
   location: WorkbenchWidgetPlacement | undefined;
   placements: readonly WorkbenchWidgetPlacement[];
   region: WorkbenchPanelRegion;
@@ -78,9 +82,12 @@ const addRegisteredPanels = (input: {
   for (const contribution of input.widgets) {
     if (!contribution.eligibleLocations) continue;
     if (!["main", "side", "secondary"].includes(contribution.region)) continue;
+    const policy = input.modePanels.find((panel) => panel.panelId === contribution.id);
+    if (!allowedPanelDestinations({ mode: input.mode, allowedRegions: policy?.allowedRegions }).includes(input.region))
+      continue;
     if (input.addable.has(contribution.id) || isOpenSingleton(contribution, input.placements, input.resource)) continue;
     if (
-      !isWorkbenchPanelPlacementVisible(contribution, input.resource, input.modeId, undefined, {
+      !isWorkbenchPanelPlacementVisible(contribution, input.resource, input.mode?.id, undefined, {
         location: input.location,
       })
     )
@@ -100,12 +107,13 @@ export const createWorkbenchCompositionController = (
     if (!isWorkbenchModePanelAvailable(mode, region)) return { open, addable: [], closable: [] };
     const placements = open;
     const widgets = input.listWidgets();
+    const modePanels = mode?.listAddablePanels?.({ layout, resource }) ?? [];
     const addable = new Map<string, WorkbenchCompositionAddablePanel>();
     for (const panel of input.listOwnedAddablePanels?.({ layout, mode, region, resource }) ?? []) {
       addable.set(panel.panelId, panel);
     }
-    addModePanels({ addable, layout, mode, placements, region, resource, widgets });
-    addRegisteredPanels({ addable, location, modeId: mode?.id, placements, region, resource, widgets });
+    addModePanels({ addable, layout, mode, modePanels, placements, region, resource, widgets });
+    addRegisteredPanels({ addable, location, mode, modePanels, placements, region, resource, widgets });
     return {
       open,
       addable: [...addable.values()],
