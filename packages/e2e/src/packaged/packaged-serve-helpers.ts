@@ -17,6 +17,20 @@ export const runtimeAuthorization = (descriptor: RuntimeDescriptor) => ({
   authorization: `Bearer ${descriptor.token}`,
 });
 
+// Page loads never sign a browser in (ADR 0054). Sign in the way `pst` does: open a single-use
+// login link that a bearer holder created.
+export const signInBrowser = async (
+  page: { goto: (url: string) => Promise<unknown> },
+  descriptor: RuntimeDescriptor,
+) => {
+  const response = await fetch(`${descriptor.origin}/runtime/browser-login`, {
+    method: "POST",
+    headers: runtimeAuthorization(descriptor),
+  });
+  if (!response.ok) throw new Error(`Browser login failed with HTTP ${response.status}`);
+  await page.goto(((await response.json()) as { url: string }).url);
+};
+
 const waitForReady = async (descriptorPath: string, child: ChildProcess, timeoutMs = 10_000) => {
   const deadline = Date.now() + timeoutMs;
 

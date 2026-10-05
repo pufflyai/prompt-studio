@@ -97,6 +97,8 @@ export class DesktopRuntimeManager {
   #eventAbort: AbortController | null = null;
   #intentional = false;
   #readOutput = () => "";
+  // The most recent runtime, kept after it exits so diagnostics can name it and redact its token.
+  #lastDescriptor: RuntimeDescriptor | null = null;
   #runtime: ManagedRuntime | null = null;
   readonly #deps: RuntimeManagerDeps;
   readonly #options: RuntimeManagerOptions;
@@ -110,19 +112,28 @@ export class DesktopRuntimeManager {
     return this.#runtime;
   }
 
+  get lastDescriptor() {
+    return this.#lastDescriptor;
+  }
+
   async refreshRuntime() {
     if (!this.#runtime) return null;
     if (this.#runtime.external) return this.#runtime;
     const discovery = await this.#deps.discoverRuntime(this.#options.descriptorPath);
+    if (discovery.state === "missing") {
+      this.#forgetRuntime();
+      return null;
+    }
     this.#runtime = {
       ...this.#runtime,
       descriptor: reconcileRuntimeOwnership(this.#runtime.descriptor, discovery),
     };
+    this.#lastDescriptor = this.#runtime.descriptor;
     return this.#runtime;
   }
 
   diagnosticsDetail() {
-    const token = this.#runtime?.descriptor.token;
+    const token = this.#lastDescriptor?.token;
     return redactSensitiveText(this.#readOutput(), token ? [token] : []);
   }
 
@@ -180,7 +191,10 @@ export class DesktopRuntimeManager {
         if (!ready) reject(new Error(detail));
         // A clean owned-process exit can arrive before its HTTP shutdown event.
         else if (code === 0) this.#handleIntentionalShutdown();
-        else if (!this.#intentional) this.#options.onUnexpectedExit(detail);
+        else if (!this.#intentional) {
+          this.#forgetRuntime();
+          this.#options.onUnexpectedExit(detail);
+        }
       });
       child.once("close", markChildTerminated);
       child.once("error", reject);
@@ -226,6 +240,12 @@ export class DesktopRuntimeManager {
     this.#eventAbort?.abort();
   }
 
+  // A runtime that is gone has nothing left to shut down, so quitting must not wait for it.
+  #forgetRuntime() {
+    this.#eventAbort?.abort();
+    this.#runtime = null;
+  }
+
   #handleIntentionalShutdown() {
     if (this.#intentional) return;
     this.#intentional = true;
@@ -234,6 +254,7 @@ export class DesktopRuntimeManager {
 
   #attach(descriptor: RuntimeDescriptor, external: boolean) {
     this.#runtime = { descriptor, external };
+    this.#lastDescriptor = descriptor;
     this.#eventAbort = new AbortController();
     void this.#deps
       .observeRuntimeShutdown(descriptor, () => this.#handleIntentionalShutdown(), fetch, this.#eventAbort.signal)

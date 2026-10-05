@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { provisionRuntimeSession } from "./runtime-session";
 
 describe("runtime browser session", () => {
-  test("clears the ephemeral session and provisions the HttpOnly cookie through the runtime", async () => {
+  test("clears the ephemeral session and provisions the runtime's own HttpOnly browser cookie", async () => {
     const calls: string[] = [];
     const session = {
       clearStorageData: async (options: { storages: Array<"cookies"> }) => {
@@ -13,7 +13,7 @@ describe("runtime browser session", () => {
         return new Response(null, { status: 204 });
       },
       cookies: {
-        get: async () => [{ httpOnly: true, sameSite: "strict", secure: false, value: "runtime-secret" }],
+        get: async () => [{ httpOnly: true, sameSite: "strict", secure: false, value: "browser-session-secret" }],
       },
     };
 
@@ -32,7 +32,9 @@ describe("runtime browser session", () => {
     const session = {
       clearStorageData: async () => {},
       fetch: async () => new Response(null, { status: 204 }),
-      cookies: { get: async () => [{ httpOnly: false, sameSite: "lax", secure: false, value: "runtime-secret" }] },
+      cookies: {
+        get: async () => [{ httpOnly: false, sameSite: "lax", secure: false, value: "browser-session-secret" }],
+      },
     };
 
     await expect(

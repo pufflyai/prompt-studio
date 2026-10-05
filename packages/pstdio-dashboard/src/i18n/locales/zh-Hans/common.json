@@ -364,5 +364,9 @@
   },
   "workspace": {
     "title": "工作区"
+  },
+  "browserSignIn": {
+    "title": "请从终端打开 Prompt Studio",
+    "description": "此浏览器尚未登录。在终端中运行此命令，即可打开已登录的仪表板。"
   }
 }

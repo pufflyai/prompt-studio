@@ -41,6 +41,7 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
         .locator('[data-workbench-panel-header="secondary"]')
         .getByRole("button", { name: "Add panel" })
         .click();
+      await app.page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
       const socket = await socketOpened;
       expect(new URL(socket.url()).origin).toBe(app.runtime.origin.replace(/^http/, "ws"));
       const readTerminals = async () => (await readRuntimeActivity(app!.runtime)).terminals;

@@ -18,7 +18,7 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
-import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
 import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
 
@@ -119,6 +119,7 @@ test.describe("packaged extension webviews", () => {
             { projectId: project.id },
           );
 
+          await signInBrowser(page, started.descriptor);
           await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`, {
             waitUntil: "domcontentloaded",
           });

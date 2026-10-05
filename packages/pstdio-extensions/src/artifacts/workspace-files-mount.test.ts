@@ -37,6 +37,18 @@ describe("createWorkspaceFilesMount.syncDir", () => {
     expect(existsSync(join(root, ".claude/skills/b/SKILL.md"))).toBe(false);
   });
 
+  test("two syncs of the same dir at once both create the new folders", async () => {
+    const root = createTempDir();
+    const files = Array.from({ length: 20 }, (_, index) => ({ path: `skill-${index}/SKILL.md`, content: `${index}` }));
+
+    await Promise.all([
+      createSyncMount(root).syncDir(".claude/skills", files),
+      createSyncMount(root).syncDir(".claude/skills", files),
+    ]);
+
+    expect(readFileSync(join(root, ".claude/skills/skill-19/SKILL.md"), "utf8")).toBe("19");
+  });
+
   test("preserves repository files that were not installed by Prompt Studio", async () => {
     const root = createTempDir();
     mkdirSync(join(root, ".claude/skills/local-skill"), { recursive: true });

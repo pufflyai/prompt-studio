@@ -192,7 +192,13 @@ describe("pstdio close", () => {
       const streamConnected = page.waitForResponse(
         (response) => new URL(response.url()).pathname === "/v1/sync/stream" && response.status() === 200,
       );
-      await page.goto(url, { waitUntil: "domcontentloaded" });
+      // Page loads never sign a browser in (ADR 0054); open a login link like `pst` does.
+      const { token } = JSON.parse(readFileSync(join(homePath, "runtime.json"), "utf8")) as { token: string };
+      const login = await fetch(`${url}/runtime/browser-login`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      await page.goto(((await login.json()) as { url: string }).url, { waitUntil: "domcontentloaded" });
       await streamConnected;
 
       const output = await runClose(homePath, 5_000);

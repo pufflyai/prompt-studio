@@ -42,6 +42,7 @@ test(
         .locator('[data-workbench-panel-header="secondary"]')
         .getByRole("button", { name: "Add panel" })
         .click();
+      await app.page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
       const input = app.page.getByRole("textbox", { name: "Terminal input" });
       await expect(input).toBeVisible();
       if (process.platform !== "win32") {

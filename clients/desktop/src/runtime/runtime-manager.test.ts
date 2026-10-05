@@ -234,3 +234,71 @@ describe("DesktopRuntimeManager", () => {
     expect(selectedSidecar).toBe(false);
   });
 });
+
+describe("DesktopRuntimeManager after the runtime stops", () => {
+  test("has no runtime to shut down after the spawned runtime crashes", async () => {
+    const child = new RuntimeChild();
+    const discoveries = [{ state: "missing" as const }, { state: "healthy" as const, descriptor }];
+    const shutdownRequests: string[] = [];
+    let stoppedObserving = false;
+    const manager = new DesktopRuntimeManager(
+      {
+        descriptorPath: "/tmp/runtime.json",
+        resolveSidecarPath: () => "/app/pstdio",
+        onIntentionalShutdown: () => {},
+        onUnexpectedExit: () => {},
+        onPhase: () => {},
+      },
+      {
+        resolveEnvironment: async () => ({ ...process.env }),
+        createInstanceId: () => descriptor.instanceId,
+        discoverRuntime: async () => discoveries.shift() ?? { state: "missing" as const },
+        existsSync: () => true,
+        observeRuntimeShutdown: async (_runtime, _listener, _fetch, signal) => {
+          signal?.addEventListener("abort", () => {
+            stoppedObserving = true;
+          });
+        },
+        requestRuntimeShutdown: async (runtime) => {
+          shutdownRequests.push(runtime.instanceId);
+          return { state: "failed" as const };
+        },
+        sleep: async () => {},
+        spawn: () => child,
+      },
+    );
+
+    await manager.start();
+    child.output = `runtime crashed with ${descriptor.token}`;
+    child.emit("exit", 1, null);
+
+    expect(manager.runtime).toBeNull();
+    expect(stoppedObserving).toBe(true);
+    expect(await manager.refreshRuntime()).toBeNull();
+    expect(shutdownRequests).toEqual([]);
+    expect(manager.lastDescriptor).toEqual(descriptor);
+    expect(manager.diagnosticsDetail()).not.toContain(descriptor.token);
+  });
+
+  test("forgets an attached runtime once discovery no longer finds it", async () => {
+    const discoveries = [{ state: "healthy" as const, descriptor }, { state: "missing" as const }];
+    const manager = new DesktopRuntimeManager(
+      {
+        descriptorPath: "/tmp/runtime.json",
+        resolveSidecarPath: () => "/app/pstdio",
+        onIntentionalShutdown: () => {},
+        onUnexpectedExit: () => {},
+        onPhase: () => {},
+      },
+      {
+        discoverRuntime: async () => discoveries.shift()!,
+        observeRuntimeShutdown: async () => {},
+      },
+    );
+
+    await expect(manager.start()).resolves.toMatchObject({ descriptor });
+
+    expect(await manager.refreshRuntime()).toBeNull();
+    expect(manager.runtime).toBeNull();
+  });
+});

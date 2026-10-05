@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { mkdir, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, posix, relative, resolve } from "node:path";
 
@@ -64,7 +63,11 @@ export const createSafeFileRoot = (mountRoot: string) => {
     let current = root;
     for (const segment of relativePath.split("/").filter(Boolean)) {
       current = join(current, segment);
-      if (!existsSync(current)) await mkdir(current);
+      // Another writer can create the same folder at the same time. The checks below still
+      // reject a folder that resolves outside the root or is not a folder.
+      await mkdir(current).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== "EEXIST") throw error;
+      });
       const currentRealPath = await realpath(current);
       assertContained(root, currentRealPath);
       if (!(await stat(currentRealPath)).isDirectory()) {

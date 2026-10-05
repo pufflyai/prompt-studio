@@ -213,6 +213,8 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
 - [0052 — Temporary Codex question delivery confirmation](../adrs/0052-temporary-codex-question-delivery-confirmation.md)
 - [0053 — Temporary webview move fallback](../adrs/0053-temporary-webview-move-fallback.md)
+- [0054 — Browser sessions for the local runtime](../adrs/0054-browser-sessions-for-the-local-runtime.md)
+- [0055 — Temporary webview guest message filter](../adrs/0055-temporary-webview-guest-message-filter.md)
 
 ## Lessons learned
 
@@ -229,3 +231,4 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0011 — `bun --watch` Corrupts the Dev Database](../lessons-learned/0011-bun-watch-corrupts-dev-db.md)
 - [0012 — Recursive `fs.watch` on Linux crawls node_modules symlinks and hangs CI](../lessons-learned/0012-linux-recursive-fs-watch-crawls-node-modules.md)
 - [0013 — Manually check installed user flows with an agent](../lessons-learned/0013-manually-check-installed-user-flows.md)
+- [0014 — Fatal exit skips async cleanup](../lessons-learned/0014-fatal-exit-skips-async-cleanup.md)

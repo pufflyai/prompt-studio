@@ -12,6 +12,7 @@ import {
   type RuntimeActivity,
   transitionDesktopState,
 } from "./lifecycle/lifecycle-machine";
+import { createQuitFlow } from "./lifecycle/quit-flow";
 import { recoveryError } from "./lifecycle/recovery-error";
 import { startWorkbench } from "./lifecycle/start-workbench";
 import { createDesktopPerformanceMonitor } from "./performance/create-desktop-performance-monitor";
@@ -40,8 +41,6 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-let allowQuit = false;
-let quitting = false;
 let state: DesktopState = initialDesktopState;
 let windowController: DesktopWindowController | null = null;
 const performanceMonitor = createDesktopPerformanceMonitor({
@@ -95,22 +94,51 @@ const runtimeManager = new DesktopRuntimeManager({
   onIntentionalShutdown: () => {
     setState({ kind: "closing" });
     void windowController?.showLifecycle();
-    void runtimeManager.waitForExit().then(() => finishQuit());
+    void runtimeManager.waitForExit().then(() => quitFlow.finishQuit());
   },
   onUnexpectedExit: (detail) => {
-    // A crash also ends a pending quit confirmation; later quit requests must start over.
-    quitting = false;
     setState({ kind: "recovery", error: recoveryError(new Error(detail)) });
     void windowController?.showLifecycle();
   },
 });
 
-const finishQuit = async () => {
-  await Promise.all([projectTabs.flush(), performanceMonitor.stop()]);
-  workbenchState.flush();
-  allowQuit = true;
-  app.quit();
+// The dashboard shows the quit dialog. Asking to quit again means it may not be visible,
+// for example when the dashboard failed to load, so ask with a native dialog that always shows.
+const askToCancelActiveWork = async (activity: RuntimeActivity) => {
+  const labels = [...activity.sessions, ...activity.terminals, ...activity.jobs].map((item) => item.label);
+  const { response } = await dialog.showMessageBox({
+    type: "warning",
+    message: "Active work is still running",
+    detail: `Canceling this work will stop: ${labels.join(", ")}. This cannot be undone.`,
+    buttons: ["Keep Prompt Studio open", "Cancel work and quit"],
+    defaultId: 0,
+    cancelId: 0,
+  });
+  return response === 1;
 };
+
+const quitFlow = createQuitFlow({
+  runtimeManager,
+  getState: () => state,
+  setState,
+  showLifecycle: async () => {
+    await windowController?.showLifecycle();
+  },
+  showQuitConfirmation: async (descriptor) => {
+    await windowController?.showQuitConfirmation(descriptor);
+  },
+  askToCancelActiveWork,
+  flushBeforeQuit: async () => {
+    await Promise.all([projectTabs.flush(), performanceMonitor.stop()]);
+    workbenchState.flush();
+  },
+  quitApp: () => app.quit(),
+  recoveryError,
+  logError: (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error({ event: "desktop.quit.failed", message }, "Desktop quit failed");
+  },
+});
 
 const startRuntime = async () => {
   setState(initialDesktopState);
@@ -133,103 +161,8 @@ const startRuntime = async () => {
       "Runtime start failed",
     );
     setState({ kind: "recovery", error: recoveryError(error) });
-    // A quit requested during startup ends here too; later quit requests must start over.
-    quitting = false;
     await windowController?.showLifecycle();
   }
-};
-
-const requestQuit = async () => {
-  if (allowQuit) return;
-  if (state.kind === "confirming_active_work") {
-    await askToCancelActiveWork(state.activity);
-    return;
-  }
-  if (quitting) return;
-  quitting = true;
-  const runtime = await runtimeManager.refreshRuntime();
-  if (!runtime || runtime.external || runtime.descriptor.ownerType === "persistent") {
-    runtimeManager.detach();
-    finishQuit();
-    return;
-  }
-
-  const result = await runtimeManager.requestShutdown(false);
-  if (result.state === "active") {
-    setState(
-      transitionDesktopState(
-        {
-          kind: "workbench",
-          runtime: {
-            instanceId: runtime.descriptor.instanceId,
-            origin: runtime.descriptor.origin,
-            ownerType: runtime.descriptor.ownerType,
-          },
-        },
-        { type: "quit_requested", activity: result.activity },
-      ),
-    );
-    try {
-      await windowController?.showQuitConfirmation(runtime.descriptor);
-    } catch (error) {
-      setState({ kind: "recovery", error: recoveryError(error) });
-      await windowController?.showLifecycle();
-      quitting = false;
-    }
-    return;
-  }
-  if (result.state === "accepted") {
-    setState({ kind: "closing" });
-  }
-
-  if (result.state !== "accepted") {
-    setState({ kind: "recovery", error: recoveryError(new Error("Runtime refused graceful shutdown")) });
-    await windowController?.showLifecycle();
-    quitting = false;
-    return;
-  }
-
-  await windowController?.showLifecycle();
-  await runtimeManager.waitForExit();
-  finishQuit();
-};
-
-const cancelQuit = async () => {
-  if (state.kind !== "confirming_active_work") return;
-  setState(transitionDesktopState(state, { type: "quit_cancelled" }));
-  quitting = false;
-};
-
-const confirmQuit = async () => {
-  if (state.kind !== "confirming_active_work") return;
-  setState(transitionDesktopState(state, { type: "quit_confirmed" }));
-  await windowController?.showLifecycle();
-
-  const result = await runtimeManager.requestShutdown(true);
-  if (result.state !== "accepted") {
-    setState({ kind: "recovery", error: recoveryError(new Error("Runtime refused graceful shutdown")) });
-    quitting = false;
-    return;
-  }
-
-  await runtimeManager.waitForExit();
-  finishQuit();
-};
-
-// The dashboard shows the quit dialog. Asking to quit again means it may not be visible,
-// for example when the dashboard failed to load, so ask with a native dialog that always shows.
-const askToCancelActiveWork = async (activity: RuntimeActivity) => {
-  const labels = [...activity.sessions, ...activity.terminals, ...activity.jobs].map((item) => item.label);
-  const { response } = await dialog.showMessageBox({
-    type: "warning",
-    message: "Active work is still running",
-    detail: `Canceling this work will stop: ${labels.join(", ")}. This cannot be undone.`,
-    buttons: ["Keep Prompt Studio open", "Cancel work and quit"],
-    defaultId: 0,
-    cancelId: 0,
-  });
-  if (response === 1) await confirmQuit();
-  else await cancelQuit();
 };
 
 const bootstrap = async () => {
@@ -257,9 +190,9 @@ const bootstrap = async () => {
     logger.info({ event: "desktop.window.ready", visible: window.isVisible() }, "Desktop startup window is ready");
   });
   windowController.window.on("close", (event) => {
-    if (allowQuit) return;
+    if (quitFlow.isQuitAllowed()) return;
     event.preventDefault();
-    void requestQuit();
+    void quitFlow.requestQuit();
   });
   registerDesktopIpc({
     isFullScreen: () => window.isFullScreen(),
@@ -271,8 +204,8 @@ const bootstrap = async () => {
     lifecycleUrl: windowController.lifecycleUrl,
     runtimeOrigin: () => windowController?.runtimeOrigin() ?? null,
     appInfo: () => ({ platform: process.platform, version: app.getVersion() }),
-    cancelQuit,
-    confirmQuit,
+    cancelQuit: quitFlow.cancelQuit,
+    confirmQuit: quitFlow.confirmQuit,
     getState: () => state,
     getStartupAppearance: () => workbenchState.getStartupAppearance(),
     setStartupAppearance: (value) => windowController?.setStartupAppearance(workbenchState.setStartupAppearance(value)),
@@ -283,7 +216,7 @@ const bootstrap = async () => {
       shell.showItemInFolder(path);
     },
     copyDiagnostics: () => {
-      const runtime = runtimeManager.runtime?.descriptor;
+      const runtime = runtimeManager.lastDescriptor;
       clipboard.writeText(
         formatDesktopDiagnostics(
           {
@@ -302,7 +235,7 @@ const bootstrap = async () => {
       );
     },
     checkForUpdates: () => updateManager.checkForUpdates(),
-    quitApp: requestQuit,
+    quitApp: quitFlow.requestQuit,
     getWorkbenchState: () => workbenchState.getState(),
     getProjectTabs: () => projectTabs.getProjectTabs(),
     setProjectTabs: (value) => projectTabs.setProjectTabs(value),
@@ -331,9 +264,9 @@ if (installerEvent) {
   // Closing the window flushes the renderer's last layout writes after finishQuit.
   app.on("will-quit", () => workbenchState.flush());
   app.on("before-quit", (event) => {
-    if (allowQuit) return;
+    if (quitFlow.isQuitAllowed()) return;
     event.preventDefault();
-    void requestQuit();
+    void quitFlow.requestQuit();
   });
   app.on("activate", () => focusPrimaryWindow(windowController?.window ?? null));
   void app.whenReady().then(bootstrap);

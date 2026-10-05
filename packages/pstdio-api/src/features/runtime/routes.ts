@@ -1,13 +1,11 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import {
+  type BrowserSessions,
   isRuntimeBearerAuthorized,
   isRuntimeOriginAllowed,
   isRuntimeRequestAuthorized,
-  runtimeSessionCookie,
 } from "./runtime-auth";
-
-export { runtimeSessionCookie } from "./runtime-auth";
 
 export type RuntimeOwnerType = "desktop" | "persistent";
 
@@ -40,6 +38,7 @@ export interface RuntimeHost {
 
 export type RuntimeRouteDeps = {
   host: RuntimeHost;
+  browserSessions: BrowserSessions;
   activity: () => Promise<RuntimeActivitySummary>;
   cancelActivity: () => Promise<void>;
 };
@@ -60,14 +59,34 @@ const readJson = async (request: Request) => {
   }
 };
 
+// The browser redeems a login code with a plain navigation, so this route runs before the API's
+// auth middleware. The single-use code is the credential.
+export const createBrowserLoginRoutes = (deps: RuntimeRouteDeps) => {
+  const routes = new OpenAPIHono<AppBindings>();
+
+  routes.get("/browser-login", (c) => {
+    const code = c.req.query("code");
+    // The cookie only works on the exact runtime origin, so a code is not spent anywhere else.
+    if (code && new URL(c.req.url).origin === deps.host.origin() && deps.browserSessions.redeemLoginCode(code)) {
+      c.header("set-cookie", deps.browserSessions.cookie());
+    }
+    c.header("cache-control", "no-store");
+    // A used or unknown code still opens the dashboard, which explains how to sign in.
+    return c.redirect("/", 302);
+  });
+
+  return routes;
+};
+
 export const createRuntimeRoutes = (deps: RuntimeRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
-  const security = { origin: deps.host.origin, token: deps.host.token };
+  const security = { origin: deps.host.origin, token: deps.host.token, browserSessions: deps.browserSessions };
 
   routes.use("*", async (c, next) => {
     if (!isRuntimeOriginAllowed(c.req.raw, security)) return c.json({ error: "Forbidden" }, 403);
-    const browserProvision = c.req.path.endsWith("/browser-session");
-    const authorized = browserProvision
+    // Only bearer holders, the desktop shell and the CLI, may give a browser its credential.
+    const issuesBrowserCredential = c.req.path.endsWith("/browser-session") || c.req.path.endsWith("/browser-login");
+    const authorized = issuesBrowserCredential
       ? isRuntimeBearerAuthorized(c.req.raw, security)
       : isRuntimeRequestAuthorized(c.req.raw, security);
     if (!authorized) return c.json({ error: "Unauthorized" }, 401);
@@ -75,8 +94,13 @@ export const createRuntimeRoutes = (deps: RuntimeRouteDeps) => {
   });
 
   routes.post("/browser-session", (c) => {
-    c.header("set-cookie", runtimeSessionCookie(deps.host.token));
+    c.header("set-cookie", deps.browserSessions.cookie());
     return c.body(null, 204);
+  });
+
+  routes.post("/browser-login", (c) => {
+    const code = deps.browserSessions.createLoginCode();
+    return c.json({ url: `${deps.host.origin()}/runtime/browser-login?code=${code}` });
   });
 
   routes.get("/ready", (c) =>

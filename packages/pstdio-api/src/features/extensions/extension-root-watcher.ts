@@ -5,7 +5,7 @@ type SourceWatcher = {
 };
 
 type WatchListener = (eventType: string, filename: string | Buffer | null) => void;
-type WatchSource = (path: string, listener: WatchListener) => SourceWatcher;
+type WatchSource = (path: string, listener: WatchListener, onError: (error: Error) => void) => SourceWatcher;
 
 type ExtensionRootRegistration = {
   path: string;
@@ -33,7 +33,12 @@ export type CreateExtensionRootWatcherInput = {
 };
 
 const defaultEnsureRoot = (path: string) => mkdirSync(path, { recursive: true });
-const defaultWatch: WatchSource = (path, listener) => fsWatch(path, listener);
+// An FSWatcher error with no listener is thrown as an uncaught exception, which stops serve.
+const defaultWatch: WatchSource = (path, listener, onError) => {
+  const watcher = fsWatch(path, listener);
+  watcher.on("error", onError);
+  return watcher;
+};
 
 export const createExtensionRootWatcher = async (
   input: CreateExtensionRootWatcherInput,
@@ -81,13 +86,28 @@ export const createExtensionRootWatcher = async (
     }, debounceMs);
   };
 
+  // A failed watcher is dropped, so the next refresh watches the root again. A late error from a
+  // watcher that was already replaced must not drop its healthy replacement.
+  const handleWatchError = (path: string, failed: SourceWatcher, error: Error) => {
+    const registration = registrations.get(path);
+    if (registration && registration.watcher === failed) {
+      disposeRegistration(registration);
+      registrations.delete(path);
+    }
+    input.onError?.(error);
+  };
+
   const addRegistration = (root: ExtensionRootRegistration) => {
     try {
       ensureRoot(root.path);
-      const watcher = watch(root.path, () => {
-        const registration = registrations.get(root.path);
-        if (registration) scheduleSync(registration);
-      });
+      const watcher: SourceWatcher = watch(
+        root.path,
+        () => {
+          const registration = registrations.get(root.path);
+          if (registration) scheduleSync(registration);
+        },
+        (error) => handleWatchError(root.path, watcher, error),
+      );
       registrations.set(root.path, { ...root, queued: false, running: false, timer: null, watcher });
     } catch (error) {
       input.onError?.(error);
