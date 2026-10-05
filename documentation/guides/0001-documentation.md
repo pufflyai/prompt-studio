@@ -55,7 +55,11 @@ Every published page follows these rules. The website build fails when a page br
 
 Link with relative paths to `.md` files, so the same markdown works on GitHub and on the website. A link to a published page becomes a website link. A link to any other repository file, such as an ADR or a source file, becomes a link to that file on GitHub `main`. A relative link to a missing file fails the build. Anchors such as `0006-sessions.md#create-a-session` use GitHub-style heading slugs.
 
-## Screenshots
+## Screenshots and GIFs
+
+Prefer short GIFs when movement explains a feature: entering a sidebar level, choosing an option, dragging a row, or reloading a tool. Use a still screenshot when someone mainly needs to find a control or read a screen. Record real app interactions with sample data; do not animate a mock screen to imply working behavior.
+
+Keep each recording focused on one workflow, with enough time to read the result. Avoid unnecessary typing and loading pauses. Store GIFs beside screenshots in `documentation/images/`, link them with relative Markdown paths, and give them useful alt text and a caption. Label the capture version when showing an earlier release. Verify the production asset still has multiple frames and plays after in-site navigation; image optimization must not flatten it.
 
 Add screenshots when they help someone find a control, understand a screen, or check the result of a workflow. Getting-started guides and tool walkthroughs should show the relevant workbench or settings screen. API signatures and terminal-only instructions usually do not need an image.
 
@@ -273,9 +277,9 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0047 — Semantic versioning for the extension API](../adrs/0047-semantic-versioning-for-the-extension-api.md)
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
 - [0048 — Board views are core project data](../adrs/0048-shared-project-board-views.md)
-- [0051 — Temporary Motion Lab scene link pass (Superseded)](../adrs/0051-superseded-temporary-motion-scene-link-pass.md)
 - [0049 — Temporary scroll content width override for panel tabs](../adrs/0049-temporary-scroll-content-width-override.md)
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
+- [0051 — Temporary Motion Lab scene link pass (Superseded)](../adrs/0051-superseded-temporary-motion-scene-link-pass.md)
 - [0052 — Temporary Codex question delivery confirmation](../adrs/0052-temporary-codex-question-delivery-confirmation.md)
 - [0053 — Temporary webview move fallback](../adrs/0053-temporary-webview-move-fallback.md)
 - [0054 — Browser sessions for the local runtime](../adrs/0054-browser-sessions-for-the-local-runtime.md)

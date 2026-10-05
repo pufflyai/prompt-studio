@@ -1,47 +1,67 @@
 ---
-title: "Prompt Studio 0.39: tools that stay in sync"
-description: Shared saved views, clearer navigation, a versioned extension API, and fixes for busy workbenches.
+title: "Prompt Studio 0.39"
+description: Navigate inside your tools, share saved board views, and keep several agent conversations open without stalling the workbench.
 published: 2026-10-01T09:40:43Z
 author: aurelien-franky
 ---
 
-Prompt Studio 0.39 improves the parts that tools share: saved views, navigation, and live updates. It also gives the extension API its own semantic version, so a tool can declare which host APIs it supports.
+Open Notes, and the sidebar becomes your note list. Open Sessions, and it becomes your conversations grouped by day. Prompt Studio 0.39 gives a tool room for its own navigation, while keeping the rows you pinned within reach.
 
-## Share the view of your work
+This release also shares saved board views across the project, adds native toolbar actions for extension authors, and fixes a connection bottleneck when several chats are open.
 
-Saved board views and their defaults now belong to the project. Other clients and agents can use the same saved view instead of each keeping a separate configuration. The platform stores and shares those views; an extension such as Planner still owns what its board means.
+## Go inside a tool
 
-Planner also publishes refresh events after tag and option changes, so those changes reach shared board views.
+Previously, project navigation and a page's content shared one sidebar. A growing list of notes or conversations competed with the tools you were trying to reach.
 
-## Find tools and their content
+Now a page can open a **sidebar level**. Its content replaces the project rows. Notes shows your notes; Sessions shows conversations grouped by day. The breadcrumb tells you where you are. Click the project name to return to the project and its main navigation.
 
-The sidebar gains levels for pages, with header and pinned rows kept visible inside each level. Notes and Sessions get their own lists. You can move into a tool's content without filling the main sidebar with every item.
+![Animation opening Notes, switching between notes, returning through the project breadcrumb, and opening Sessions while a pinned Tickets row stays visible](../../../../../documentation/images/nested-sidebar-navigation.gif)
 
-![Notes open in the workbench, with Reading list selected in its own note list](../../../../../documentation/images/notes-editor.png)
+*A real 0.39 workbench recording with sample notes. Tickets is pinned to the header, so it stays available inside Notes and Sessions. The project breadcrumb takes you back out.*
 
-*The Notes extension using its own navigation list. This recent capture shows the 0.39 navigation pattern with sample content.*
+Header and footer rows remain available inside a level, including rows you pinned there. A frequently used tool does not have to disappear when you go into another tool's content. Page-owned lists keep the order their tool provides; customization does not silently reorder your notes or dated conversations.
 
-Extensions can add native toolbar actions and use commands to supply parameter choices. They can also declare a resource resolver: an open page can then show a resource's current title, icon, and menus when its data changes.
+Sidebar drag and drop gets clearer feedback too. A line marks the insertion point, a group tints when it will receive a row, and you can drop behind a group to move a row back out. Empty header and footer sections remain drop targets. Long customization menus scroll within the window.
 
-## Keep busy workbenches responsive
+Extension authors can use the same navigation pattern in their own tools. See [sidebar levels](/docs/references/extensions/contribution-api/#sidenav-levels).
 
-Open chats now share one session stream connection. This prevents them from using up the browser's connections and stalling other views. Slow reads keep loading until they finish instead of failing after 30 seconds.
+## Share the view, not just the underlying items
 
-Unchanged extension webview bundles are reused across restarts and checked in the background. Crowded closable tabs shrink before the row scrolls, and picking a session from a tab's menu keeps it in that tab.
+A saved board view and its default now belong to the project. Save a useful way to look at the board, and another client or agent can use that same saved configuration. It no longer lives only in one client's settings.
 
-## A clearer extension API contract
+Prompt Studio supplies the saved-view storage and commands. The extension owns the work shown on the board: Planner, for example, owns its tickets and tags. Planner now emits refresh events when tags or their options change, so open board views pick up those edits.
 
-The extension API starts at `0.1.0`. Extensions can declare a range such as `^0.1.0` to accept compatible additions and fixes without listing individual alpha versions. A new minor API version while the API is below `1.0` can still break compatibility. The [API versioning reference](/docs/references/extensions/api-versioning/) explains the rules.
+This matters when you ask an agent to work with a view you already use. It can read the project's saved view through the [board-view CLI](/docs/references/cli/board-views/), rather than guess how your screen is configured.
 
-## Selected changelog
+## Give your tool native actions
 
-- Share saved board views and defaults across project clients and agents.
-- Add sidebar levels, native toolbar actions, and command-backed choices.
-- Fix chat and Markdown list numbers of 100 and above being clipped.
-- Fix Markdown image insertion after fast keyboard selection.
-- Validate workspace provider parameters before creating an environment.
-- Restore workspace type and base-branch choices in Planner's **Run attempt** form.
-- Restore archived Planner tickets with **Unarchive** or `pst tickets unarchive`.
-- Show Opus only once in the Claude Code model picker.
+Extensions can add toolbar actions to native views and ask commands to provide parameter choices. A table can offer an action next to its content, and its form can load choices from the tool's actual data.
 
-See the [0.39 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.39.0), the [core changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.39.0/packages/pstdio/CHANGELOG.md#0390), the [Planner changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.39.0/extensions/pstdio-planner/CHANGELOG.md#0390), and the [full change list](https://github.com/pufflyai/prompt-studio/compare/pstdio@0.38.0...pstdio@0.39.0).
+The operation still belongs to a declared command. Connect the view to that command, and make it [CLI-ready](/docs/guides/extensions/cli-ready-actions/) when an agent should invoke the same operation. You do not need a custom webview just to add a toolbar button.
+
+Resource kinds can also declare a resolver command. When an open resource changes, its page can show the current title, icon, and menus. Menus on trees and cards now check the resource you clicked, rather than accidentally taking metadata from the page already open.
+
+## Keep several conversations open
+
+Open chats now share one session stream connection. Previously, enough open chats could use up the browser's connections and leave other views waiting. The shared connection removes that bottleneck.
+
+A slow view read also stays in its loading state until it finishes. It no longer fails just because 30 seconds passed. Unchanged extension webview bundles are reused across restarts and checked in the background, reducing repeated startup work.
+
+Crowded closable tabs shrink before the row scrolls. Choosing a session from one tab's menu keeps it in that tab, and opening a resource that already switched in place reuses its existing tab.
+
+## More fixes in this release
+
+- Chat and Markdown lists show numbers of 100 and above in full.
+- Markdown image insertion works after a quick keyboard selection.
+- Workspace provider parameters are validated before an environment is created.
+- Planner's **Run attempt** form lets you choose the workspace type and base branch again.
+- Archived Planner tickets can be restored through **Unarchive** or `pst tickets unarchive`. Ticket menus distinguish active and archived items, and translated menus say **Archive** for a single ticket.
+- The Claude Code model picker lists Opus once when the CLI reports both its default model and Opus.
+
+## An API version your extension can declare
+
+The extension API starts its own semantic version at `0.1.0`. An extension can declare `^0.1.0` to accept compatible additions and fixes, instead of naming individual alpha versions. The bundled extensions adopt this range.
+
+While the API is below `1.0`, a new minor API version can still break compatibility. Check the [API versioning reference](/docs/references/extensions/api-versioning/) when updating a tool's supported range.
+
+These highlights come from the released changesets. The [0.39 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.39.0) include the full package list. See the tagged [core changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.39.0/packages/pstdio/CHANGELOG.md#0390), [Planner changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.39.0/extensions/pstdio-planner/CHANGELOG.md#0390), and [all changes since 0.38](https://github.com/pufflyai/prompt-studio/compare/pstdio@0.38.0...pstdio@0.39.0).
