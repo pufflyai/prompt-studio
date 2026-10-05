@@ -32,9 +32,9 @@ describe("social radar thread images", () => {
       await workspace.writeBytes(`downloads/${name}`, png);
     // A blocked download saves the site's error page under the image's name.
     await workspace.writeBytes("downloads/blocked.png", new TextEncoder().encode("<html>403 Forbidden</html>"));
-    await expect(commands["add-thread-image"].run(ctx, { threadId: id, path: "downloads/blocked.png" })).rejects.toThrow(
-      "downloads/blocked.png is not an image. Check the download.",
-    );
+    await expect(
+      commands["add-thread-image"].run(ctx, { threadId: id, path: "downloads/blocked.png" }),
+    ).rejects.toThrow("downloads/blocked.png is not an image. Check the download.");
     await expect(commands["add-thread-image"].run(ctx, { threadId: id, path: "downloads/clip.mp4" })).rejects.toThrow(
       "Add a png, jpeg, webp or gif image.",
     );
