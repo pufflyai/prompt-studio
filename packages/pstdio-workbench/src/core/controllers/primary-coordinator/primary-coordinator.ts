@@ -1,8 +1,6 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutModel } from "../../registries/layout/layout-model";
-import { getActivePlacement } from "../../registries/layout/layout-operations";
-import { resolveAnchorRegion } from "../../registries/layout/surface-map";
-import { reconcileAnchors } from "../../registries/layout/surface-reconcile";
+import { getAnchorResource, reconcileAnchors } from "../../registries/layout/surface-reconcile";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 // Default scope predicate derived from the scoped resource providers. A detached
@@ -40,17 +38,15 @@ export const createPrimaryCoordinator = ({ layout, isInScope }: CreatePrimaryCoo
     changingPersistenceScope = false;
   });
   const unsubscribe = layout.store.subscribe((state, previous) => {
-    const primary = getActivePlacement(state.layout.regions[resolveAnchorRegion("primary")])?.resource;
-    const previousPrimaryKey = getActivePlacement(previous.layout.regions[resolveAnchorRegion("primary")])?.resourceKey;
+    const primary = getAnchorResource(state.layout, "primary");
+    const previousPrimaryKey = resourceKey(getAnchorResource(previous.layout, "primary"));
     if (resourceKey(primary) === previousPrimaryKey || changingPersistenceScope) return;
     // Reconcile only placements that belonged to the Location that is leaving.
     // Another listener may synchronously populate the new Location before this
     // callback runs; clearing the live region would delete that new content too.
     for (const action of reconcileAnchors({ layout: previous.layout, primary, isInScope })) {
       if (action.action !== "clear") continue;
-      for (const placement of previous.layout.regions[action.region].widgets) {
-        layout.removeWidgetPlacement(placement.widgetId);
-      }
+      layout.removeWidgetPlacement(action.widgetId);
     }
   });
   return createDisposable(() => {

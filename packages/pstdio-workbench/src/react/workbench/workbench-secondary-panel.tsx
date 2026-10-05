@@ -4,7 +4,12 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { WorkbenchRegion } from "../region/region";
-import { useWorkbenchPanelHeaderVisible, WorkbenchRegionTabs } from "../region/region-tabs";
+import {
+  useWorkbenchPanelHeaderVisible,
+  useWorkbenchRegionTabsVisible,
+  WorkbenchRegionTabs,
+} from "../region/region-tabs";
+import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
@@ -18,6 +23,8 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
   const { workbench, hasSecondaryHeader } = props;
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
   const settings = useWorkbenchModeRegionSettings(workbench, "secondary");
+  const hasTabs = useWorkbenchRegionTabsVisible(workbench, "secondary");
+  const visible = (settings?.showHeader !== false || hasTabs) && (hasSecondaryHeader || hasPanelHeader);
 
   return (
     <WorkbenchFocusRegion
@@ -36,9 +43,10 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
       display="flex"
       flexDirection="column"
       w="full"
+      position="relative"
     >
       <Header
-        display={settings?.showHeader !== false && (hasSecondaryHeader || hasPanelHeader) ? "flex" : "none"}
+        display={visible ? "flex" : "none"}
         data-workbench-panel-header="secondary"
         variant="main"
         bg={workbenchBackgrounds.panel}
@@ -55,6 +63,7 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
         <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
         <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
       </Header>
+      <WorkbenchTabDropTarget region="secondary" />
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel="secondary">
           <WorkbenchRegion workbench={workbench} region="secondary" title="Secondary Panel" />

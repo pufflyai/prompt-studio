@@ -27,10 +27,13 @@ const setup = async (page: Page, request: APIRequestContext) => {
   const header = page.locator('[data-workbench-panel-header="side"]');
   for (const session of sessions) {
     const draft = header.getByRole("tab", { name: "New session", exact: true });
-    if ((await draft.count()) === 0) await header.getByRole("button", { name: "Add panel", exact: true }).click();
-    await draft.click();
+    if ((await draft.count()) === 0) {
+      await header.getByRole("button", { name: "Add panel", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+    }
+    await draft.click({ button: "right" });
     await page
-      .getByRole("menu", { name: "New session menu", exact: true })
+      .getByRole("menu", { name: "New session context menu", exact: true })
       .getByRole("menuitem", { name: session.title, exact: true })
       .click();
   }

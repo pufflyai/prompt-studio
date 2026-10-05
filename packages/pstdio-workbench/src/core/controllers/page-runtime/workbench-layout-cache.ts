@@ -62,11 +62,13 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
       ? {
           ...adapter,
           getLayout: read,
-          setLayout: (layout: WorkbenchLayout, scope?: string) =>
-            write(
-              selectPlacements(layout, (p) => p.placementIdentity?.kind !== "mode"),
-              scope,
-            ),
+          setLayout: (layout: WorkbenchLayout, scope?: string) => {
+            const snapshot = selectPlacements(layout, (p) => p.placementIdentity?.kind !== "mode");
+            for (const id of workbenchRegions) {
+              snapshot.regions[id].savedWidgetOrder = layout.regions[id].widgets.map((widget) => widget.widgetId);
+            }
+            return write(snapshot, scope);
+          },
         }
       : undefined,
     readMode: (projectId: string | undefined, modeId: string) => read(modeScope(projectId, modeId)),

@@ -8,6 +8,7 @@ export type { ChipProps } from "./chip";
 export { Chip } from "./chip";
 export { ContentPlaceholder, Label as ContentPlaceholderLabel } from "./content-placeholder";
 export { CopyButton, type CopyButtonProps } from "./copy-button";
+export { DropIndicator } from "./drop-indicator";
 export type { EmptyStateProps } from "./empty-state";
 export { EmptyState } from "./empty-state";
 export { ErrorBoundary } from "./error-boundary";

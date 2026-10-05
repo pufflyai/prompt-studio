@@ -35,7 +35,7 @@ interface OpenDashboardSessionPanelInput extends OpenSessionBubbleWidgetsInput {
 const replaceSessionPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSessionPanelInput) => {
   const identity = input.replacePanel;
   if (identity?.kind !== "mode") return undefined;
-  const placements = ctx.layout.getLayout().regions.side.widgets;
+  const placements = Object.values(ctx.layout.getLayout().regions).flatMap((region) => region.widgets);
   const destination = placements.find(
     (placement) =>
       placement.viewId === dashboardWidgetIds.sessionBubble &&

@@ -233,6 +233,8 @@ export interface WorkbenchRegionState {
   visible: boolean;
   size?: number;
   widgets: WorkbenchWidgetPlacement[];
+  /** Page snapshots retain mixed-owner order without storing shared mode content. Consumed on restore. */
+  savedWidgetOrder?: string[];
   activeWidgetId?: string;
   /** Side region only: how the open Side Panel is shown. `visible` says whether it is open. */
   presentation?: Exclude<WorkbenchSidePanelMode, "closed">;

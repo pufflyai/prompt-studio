@@ -1,7 +1,7 @@
 import { getActivePlacement, removeLocationSubPanelSelection, replaceRegionWidgets } from "./layout-operations";
 import type { WorkbenchLayout, WorkbenchTabPosition, WorkbenchWidgetPlacement } from "./layout-types";
 
-const insertAtPosition = (
+export const insertAtPosition = (
   widgets: WorkbenchWidgetPlacement[],
   placement: WorkbenchWidgetPlacement,
   position: WorkbenchTabPosition = "end",
@@ -35,7 +35,7 @@ export const placeWidget = (
   const persistentWidgets = widgets.filter(
     (candidate) => candidate.tabRetention !== "preview" && candidate.widgetId !== placement.widgetId,
   );
-  return insertAtPosition(persistentWidgets, placement, "start");
+  return insertAtPosition(persistentWidgets, placement, position);
 };
 
 export const reorderWidgetPlacement = (
@@ -45,9 +45,6 @@ export const reorderWidgetPlacement = (
 ) => {
   const placement = widgets.find((candidate) => candidate.widgetId === widgetId);
   if (!placement) return widgets;
-  if (placement.tabRetention === "preview") {
-    throw new Error(`Preview widget cannot be reordered: ${widgetId}`);
-  }
   const remaining = widgets.filter((candidate) => candidate.widgetId !== widgetId);
   return insertAtPosition(remaining, placement, position);
 };

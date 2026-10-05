@@ -24,6 +24,10 @@ describe("createWorkbenchPanelWidgetPaletteEntries", () => {
 
     const entries = createWorkbenchPanelWidgetPaletteEntries({ workbench, onClose: () => undefined });
 
-    expect(entries.map((entry) => entry.id)).toEqual(["workbench-panel:main:files", "workbench-panel:side:files"]);
+    expect(entries.map((entry) => entry.id)).toEqual([
+      "workbench-panel:main:files",
+      "workbench-panel:secondary:files",
+      "workbench-panel:side:files",
+    ]);
   });
 });

@@ -50,8 +50,8 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardS
     { priority: 40 },
   );
 };
-const removeMatchingSidePanelPreview = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  for (const placement of ctx.layout.getLayout().regions.side.widgets) {
+const removeMatchingSessionPanelPreview = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  for (const placement of Object.values(ctx.layout.getLayout().regions).flatMap((region) => region.widgets)) {
     if (
       placement.viewId === dashboardWidgetIds.sessionBubble &&
       placement.resourceKey === resourceKey(resource) &&
@@ -138,7 +138,7 @@ const syncSessionsPageSelection = (ctx: WorkbenchModuleContext) => {
     label: resource.label,
     metadata: resource.metadata,
   };
-  removeMatchingSidePanelPreview(ctx, workbenchResource);
+  removeMatchingSessionPanelPreview(ctx, workbenchResource);
   updateDashboardSidenav(ctx, { selectedNode: resourceKey(workbenchResource) });
 };
 const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
@@ -172,10 +172,14 @@ const registerSidePanelSessionPersistence = (
   if (!persistence) return () => undefined;
   return ctx.layout.store.subscribeSelector(
     (state) => {
+      const active = ctx.layout.getActivePanel();
       const side = state.layout.regions.side;
-      const active = side.widgets.find((placement) => placement.widgetId === side.activeWidgetId) ?? side.widgets[0];
-      return active?.viewId === dashboardWidgetIds.sessionBubble && active.resource?.type === "session"
-        ? active.resource.id
+      const session =
+        active?.viewId === dashboardWidgetIds.sessionBubble
+          ? active
+          : (side.widgets.find((placement) => placement.widgetId === side.activeWidgetId) ?? side.widgets[0]);
+      return session?.viewId === dashboardWidgetIds.sessionBubble && session.resource?.type === "session"
+        ? session.resource.id
         : undefined;
     },
     (sessionId) => persistence.setSelectedSessionId(sessionId),

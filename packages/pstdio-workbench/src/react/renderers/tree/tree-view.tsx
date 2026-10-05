@@ -9,7 +9,7 @@ import type {
   TreeViewSection,
   WorkbenchCore,
 } from "../../../core";
-import { getAnchorResource, getWorkbenchRenderers } from "../../../core";
+import { getWorkbenchRenderers } from "../../../core";
 import { reportUserActionError } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
@@ -17,6 +17,7 @@ import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
 import type { TreeActionParamsRequest } from "./tree-actions";
+import { resolveTreeActiveResource } from "./tree-active-resource";
 import { findNodeInSections, resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
@@ -40,17 +41,6 @@ interface WorkbenchTreeViewProps {
 }
 
 const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
-
-type WorkbenchLayoutState = ReturnType<WorkbenchCore["layout"]["getLayout"]>;
-
-const resolveActivePlacement = (
-  widgets: WorkbenchLayoutState["regions"]["overlay"]["widgets"],
-  activeWidgetId: string | undefined,
-) => widgets.find((entry) => entry.widgetId === activeWidgetId) ?? widgets[0];
-
-const resolveTreeActiveResource = (layout: WorkbenchLayoutState) =>
-  resolveActivePlacement(layout.regions.overlay.widgets, layout.regions.overlay.activeWidgetId)?.resource ??
-  getAnchorResource(layout, "primary");
 
 const useSidenavContextActions = (
   actions: ResourceContextAction[],
@@ -142,7 +132,12 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     EMPTY_TREE_STATE;
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const activeLocation = useWorkbenchStore(workbench.pages.store, (state) => state.location);
-  const activeResource = useWorkbenchStore(workbench.layout.store, (state) => resolveTreeActiveResource(state.layout));
+  const activePage = useWorkbenchStore(workbench.pages.store, (state) =>
+    state.activePageId ? state.pages[state.activePageId] : undefined,
+  );
+  const activeResource = useWorkbenchStore(workbench.layout.store, (state) =>
+    resolveTreeActiveResource(state.layout, activePage),
+  );
   const { body, childrenByNodeId, error, footer, header, loadChildren, loading, retry } = useTreeData(
     workbench,
     treeViewId,

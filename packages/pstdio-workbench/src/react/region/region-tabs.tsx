@@ -15,9 +15,9 @@ import { hasCommandParameters } from "../command-palette/command-palette-params"
 import type { WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { WorkbenchPanelAddMenu } from "./panel-add-menu";
+import { RegionTabList } from "./region-tab-list";
 import { resolveDisplayedActiveWidgetId, resolveTabIconName, toTabKey } from "./region-tabs-visibility";
 import { useWorkbenchRegionTabsState } from "./region-tabs-visibility-hooks";
-import { SortableRegionTabList } from "./sortable-region-tab-list";
 
 export {
   shouldShowPanelHeader,
@@ -132,7 +132,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   ));
   if (!showTabs) {
     return (
-      <HStack flex="1 1 auto" h="full" minW="0" gap="2xs">
+      <HStack flex="1" h="full" minW="0" gap="2xs">
         {panelRegion ? (
           <WorkbenchPanelAddMenu
             workbench={workbench}
@@ -146,86 +146,94 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     );
   }
   return (
-    <Tabs.Root
-      value={activeWidgetId}
-      onValueChange={(details) => {
-        const placement = visiblePlacements.find((candidate) => candidate.widgetId === details.value);
-        if (placement?.role === "location") {
-          workbench.layout.setRegionActiveWidget(region, placement.widgetId);
-          return;
-        }
-        workbench.layout.activatePanel(details.value);
-      }}
-      variant="subtle"
-      colorPalette="gray"
-      justify="start"
-      size={PANEL_HEADER_TAB_SIZE}
-      alignSelf="stretch"
-      flex="1 1 auto"
-      maxW="full"
-      minW="0"
-      h="full"
-      position="relative"
-      zIndex="1"
-      onContextMenu={hasVisibilityMenu ? openVisibilityMenu : undefined}
-    >
-      {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
-            height so the active tab still meets the header's bottom edge.
-          The content minimum overrides Zag's inline style; see ADR 0049. */}
-      <ScrollArea
-        viewportRef={setViewport}
-        size="xs"
-        h="full"
+    <HStack flex="1" h="full" minW="0" gap="2xs">
+      <Tabs.Root
+        value={activeWidgetId}
+        onValueChange={(details) => {
+          const placement = visiblePlacements.find((candidate) => candidate.widgetId === details.value);
+          if (placement?.role === "location") {
+            workbench.layout.setRegionActiveWidget(region, placement.widgetId);
+            return;
+          }
+          workbench.layout.activatePanel(details.value);
+        }}
+        variant="subtle"
+        colorPalette="gray"
+        justify="start"
+        size={PANEL_HEADER_TAB_SIZE}
+        alignSelf="stretch"
+        flex="0 1 auto"
         maxW="full"
         minW="0"
-        showVerticalScrollbar={false}
-        showHorizontalScrollbar
-        contentProps={{ h: "full", w: "full", minW: "0!" }}
+        h="full"
+        position="relative"
+        zIndex="1"
+        onContextMenu={hasVisibilityMenu ? openVisibilityMenu : undefined}
       >
-        {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
-            makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
-        <SortableRegionTabList
-          disabled={false}
-          workbench={workbench}
-          placements={visiblePlacements}
-          activeWidgetId={activeWidgetId}
-          panelRegion={panelRegion}
-          resource={resource}
-          eligibleSubPanels={eligibleSubPanels}
-          leadingActions={leadingActions}
-        />
-      </ScrollArea>
-      {hasVisibilityMenu ? (
-        <Menu.Root
-          open={menuOpen}
-          onOpenChange={(details) => setMenuOpen(details.open)}
-          positioning={{
-            placement: "bottom-start",
-            getAnchorRect: () => anchor,
-            offset: { mainAxis: 0 },
-          }}
+        {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
+            height so the active tab still meets the header's bottom edge.
+          The content minimum overrides Zag's inline style; see ADR 0049. */}
+        <ScrollArea
+          viewportRef={setViewport}
+          size="xs"
+          h="full"
+          maxW="full"
+          minW="0"
+          showVerticalScrollbar={false}
+          showHorizontalScrollbar
+          contentProps={{ h: "full", w: "full", minW: "0!" }}
         >
-          <Portal>
-            <Menu.Positioner>
-              <Menu.Content minW="220px" bg="bg">
-                {menuActions.map((action) => (
-                  <Menu.Item key={action.key} value={action.key} asChild>
-                    <ListRow
-                      asChild
-                      variant="full-width"
-                      label={action.label}
-                      icon={action.icon}
-                      endContent={action.endContent}
-                      disabled={action.isDisabled}
-                      onActivate={action.onClick}
-                    />
-                  </Menu.Item>
-                ))}
-              </Menu.Content>
-            </Menu.Positioner>
-          </Portal>
-        </Menu.Root>
+          {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
+            makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
+          <RegionTabList
+            disabled={false}
+            workbench={workbench}
+            placements={visiblePlacements}
+            activeWidgetId={activeWidgetId}
+            panelRegion={panelRegion}
+          />
+        </ScrollArea>
+        {hasVisibilityMenu ? (
+          <Menu.Root
+            open={menuOpen}
+            onOpenChange={(details) => setMenuOpen(details.open)}
+            positioning={{
+              placement: "bottom-start",
+              getAnchorRect: () => anchor,
+              offset: { mainAxis: 0 },
+            }}
+          >
+            <Portal>
+              <Menu.Positioner>
+                <Menu.Content minW="220px" bg="bg">
+                  {menuActions.map((action) => (
+                    <Menu.Item key={action.key} value={action.key} asChild>
+                      <ListRow
+                        asChild
+                        variant="full-width"
+                        label={action.label}
+                        icon={action.icon}
+                        endContent={action.endContent}
+                        disabled={action.isDisabled}
+                        onActivate={action.onClick}
+                      />
+                    </Menu.Item>
+                  ))}
+                </Menu.Content>
+              </Menu.Positioner>
+            </Portal>
+          </Menu.Root>
+        ) : null}
+      </Tabs.Root>
+      {panelRegion ? (
+        <WorkbenchPanelAddMenu
+          workbench={workbench}
+          region={panelRegion}
+          resource={resource}
+          panels={eligibleSubPanels}
+        />
       ) : null}
-    </Tabs.Root>
+      {leadingActions}
+    </HStack>
   );
 };

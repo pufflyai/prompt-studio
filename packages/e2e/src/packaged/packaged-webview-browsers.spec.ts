@@ -19,6 +19,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
 // Package verification does not install Playwright browsers on every release runner.
@@ -141,6 +142,7 @@ test.describe("packaged extension webviews", () => {
           });
           await page.reload();
           await expect(frame.getByText("1", { exact: true })).toBeVisible();
+          await verifyPackagedWebviewRetention(page);
 
           await page.getByText("Settings", { exact: true }).last().click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();

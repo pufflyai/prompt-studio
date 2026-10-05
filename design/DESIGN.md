@@ -46,6 +46,11 @@ Use these general UX and UI patterns across the app and its extensions.
 - Once all shrinking tabs reach their minimum, scroll the tab strip horizontally. Do not shrink tabs further or wrap them onto another row.
 - Scroll the active tab fully into view when a tab is opened or selected, including when closing a tab selects its neighbor.
 
+- Put + immediately after the scrolling tab group and keep it visible. Reserve the far-right corner for panel menu openers.
+- Normal click selects. Right-click, Shift+F10, the Context Menu key, and touch long-press open one grouped context menu with contributed actions above shared tab actions.
+- Pinning changes preview retention and never changes horizontal order. Pinned and preview tabs may be interleaved.
+- Use the shared Sidenav placement indicator, rotated vertically, between tabs. Headerless panels show a temporary top drop band during a valid drag without moving their content. After a drop, show the tray for the existing content and the moved tab.
+
 ## Command failures
 
 - Report a command failure once, where the user started it. Dialogs and renderer reads show failures inline. Actions without an inline display use the shared action reporter.

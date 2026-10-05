@@ -4,9 +4,7 @@ import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
-  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
-  await expect(tab).toHaveAttribute("aria-selected", "true");
-  await tab.click();
+  await tab.click({ button: "right" });
 };
 interface MenuCase {
   panel: "Main" | "Secondary" | "Side";
@@ -121,18 +119,23 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  const sessionChoice = page
+    .getByRole("menu", { name: "Add panel" })
+    .getByRole("menuitem", { name: "Session", exact: true });
+  if (await sessionChoice.isVisible()) await sessionChoice.click();
   const sessionTabs = sideHeader.getByRole("tab");
   await expect(sessionTabs).toHaveCount(2);
 
   await openTabCustomMenu(sessionTabs.first());
-  const menu = page.getByRole("menu", { name: "New session menu" });
+  const menu = page.getByRole("menu", { name: "New session context menu" });
   const newSession = menu.getByRole("menuitem", { name: "New session" });
   const viewAllSessions = menu.getByRole("menuitem", { name: "View all sessions" });
   await expect(newSession).toBeVisible();
   await expect(viewAllSessions).toBeVisible();
   await expect(menu.getByRole("menuitem").first()).toContainText("New session");
-  await expect(menu.getByRole("menuitem").last()).toContainText("View all sessions");
-  await expect(menu.getByRole("separator")).toHaveCount(2);
+  await expect(menu.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Reset layout", exact: true })).toBeVisible();
+  await expect(menu.getByRole("separator")).toHaveCount(3);
   await expect(viewAllSessions.locator("svg")).toHaveClass(/lucide-arrow-up-right/);
 
   await menu.getByRole("menuitem", { name: "First context session" }).click();
@@ -141,7 +144,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
   await page
-    .getByRole("menu", { name: "First context session menu" })
+    .getByRole("menu", { name: "First context session context menu" })
     .getByRole("menuitem", { name: "Second context session" })
     .click();
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
@@ -149,7 +152,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /New session/ }));
   await page
-    .getByRole("menu", { name: "New session menu" })
+    .getByRole("menu", { name: "New session context menu" })
     .getByRole("menuitem", { name: "First context session" })
     .click();
   await expect(sessionTabs).toHaveCount(2);
@@ -159,7 +162,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
   await page
-    .getByRole("menu", { name: "First context session menu" })
+    .getByRole("menu", { name: "First context session context menu" })
     .getByRole("menuitem", { name: "Second context session" })
     .click();
   await expect(sessionTabs).toHaveCount(2);
@@ -171,7 +174,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   const origin = before.find((tab) => tab.title === "First context session")!;
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
   await page
-    .getByRole("menu", { name: "First context session menu" })
+    .getByRole("menu", { name: "First context session context menu" })
     .getByRole("menuitem", { name: "New session", exact: true })
     .click();
   await expect(sessionTabs).toHaveCount(before.length);
@@ -204,6 +207,10 @@ test("switches a pinned Session tab in place from its menu", async ({ page, requ
   const previewId = await sessionTabs.first().getAttribute("id");
   // The + button opens a pinned tab; its menu must switch that tab and leave the preview alone.
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  const sessionChoice = page
+    .getByRole("menu", { name: "Add panel" })
+    .getByRole("menuitem", { name: "Session", exact: true });
+  if (await sessionChoice.isVisible()) await sessionChoice.click();
   await expect(sessionTabs).toHaveCount(2);
   const pinned = sideHeader.locator(`[role="tab"]:not([id="${previewId}"])`);
   for (const title of ["First context session", "Second context session"]) {
@@ -240,6 +247,10 @@ test("updates a New session Sub Panel in place after the first message", async (
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  const sessionChoice = page
+    .getByRole("menu", { name: "Add panel" })
+    .getByRole("menuitem", { name: "Session", exact: true });
+  if (await sessionChoice.isVisible()) await sessionChoice.click();
   const sessionTabs = sideHeader.getByRole("tab");
   const activeTab = sideHeader.getByRole("tab", { selected: true });
   await expect(sessionTabs).toHaveCount(2);
@@ -252,4 +263,43 @@ test("updates a New session Sub Panel in place after the first message", async (
   await expect(sessionTabs).toHaveCount(2);
   await expect(activeTab).toContainText(prompt);
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
+});
+
+test("renames a moved session and restores its destination after reload", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Arrange session" }),
+  });
+  const project = await response.json();
+  await createSession(request, project.id, "Session to rename");
+  await page.addInitScript((id) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", id);
+  }, project.id);
+  await page.goto(`/projects/${project.id}/`);
+  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  const side = page.locator('[data-workbench-panel-header="side"]');
+  await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true }));
+  await page.getByRole("menuitem", { name: "Session to rename", exact: true }).click();
+  await openTabCustomMenu(side.getByRole("tab", { name: "Session to rename", exact: true }));
+  await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
+  const main = page.locator('[data-workbench-panel-header="main"]');
+  const moved = main.getByRole("tab", { name: "Session to rename", exact: true });
+  await expect(moved).toBeVisible();
+  const instance = await moved.locator("..").getAttribute("data-workbench-tab");
+  expect(instance).toBeTruthy();
+  await openTabCustomMenu(moved);
+  await page.getByRole("menuitem", { name: "Rename session", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Rename session", exact: true });
+  await dialog.getByRole("textbox").fill("Renamed session");
+  await dialog.getByRole("button", { name: "Run", exact: true }).click();
+  await expect(main.getByRole("tab", { name: "Renamed session", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(main.getByRole("tab", { name: "Renamed session", exact: true })).toBeVisible();
+  expect(
+    await main
+      .getByRole("tab", { name: "Renamed session", exact: true })
+      .locator("..")
+      .getAttribute("data-workbench-tab"),
+  ).toBe(instance);
 });

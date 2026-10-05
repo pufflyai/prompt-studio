@@ -113,6 +113,7 @@ export const openNewSessionPanel = async (page: Page, projectId: string) => {
   await page.goto(`/projects/${projectId}/`);
   await page.getByRole("button", { name: "Show Side Panel" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
+  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
 };
 
 export const openRecentSession = async (page: Page, title: string) => {

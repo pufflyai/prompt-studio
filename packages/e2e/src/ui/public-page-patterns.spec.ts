@@ -29,7 +29,7 @@ const floatAndReattach = async (page: Page) => {
     .locator('[data-workbench-region="nav"]')
     .getByRole("button", { name: "Hide Side Panel", exact: true })
     .click();
-  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
   await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
 };

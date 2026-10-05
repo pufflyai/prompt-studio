@@ -7,6 +7,8 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
+  const choice = page.getByRole("menuitem", { name: "Terminal", exact: true });
+  if (await choice.isVisible()) await choice.click();
   const socket = await connection;
   expect(new URL(socket.url()).origin).toBe(origin.replace(/^http/, "ws"));
   expect(socket.url().includes(token)).toBe(false);
@@ -14,6 +16,25 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await terminalInput.pressSequentially("printf '__pstdio_%s__\\n' packaged_terminal");
   await terminalInput.press("Enter");
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__pstdio_packaged_terminal__");
+  await terminalInput.evaluate((element) => {
+    (window as Window & { retainedTerminalInput?: Element }).retainedTerminalInput = element;
+  });
+  await terminalInput.pressSequentially("export PSTDIO_PACKAGED_STATE=retained");
+  await terminalInput.press("Enter");
+  await page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
+  await expect(
+    page.locator('[data-workbench-region="main"]').getByRole("textbox", { name: "Terminal input" }),
+  ).toBeVisible();
+  expect(
+    await terminalInput.evaluate(
+      (element) => element === (window as Window & { retainedTerminalInput?: Element }).retainedTerminalInput,
+    ),
+  ).toBe(true);
+  await terminalInput.click();
+  await terminalInput.pressSequentially('printf "__packaged_%s__\\n" "$PSTDIO_PACKAGED_STATE"');
+  await terminalInput.press("Enter");
+  await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__packaged_retained__");
   const closed = socket.waitForEvent("close");
   await terminalInput.pressSequentially("exit");
   await terminalInput.press("Enter");

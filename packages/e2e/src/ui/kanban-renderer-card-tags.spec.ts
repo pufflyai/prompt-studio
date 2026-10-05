@@ -79,7 +79,7 @@ const closeFloatingSessionBubble = async (page: import("@playwright/test").Page)
   const bubble = page.getByTestId("workbench-side-panel-floating");
   if (!(await bubble.isVisible().catch(() => false))) return;
   await bubble.getByRole("button", { name: "Close Side Panel" }).click();
-  await expect(bubble).toHaveCount(0);
+  await expect(bubble).toBeHidden();
 };
 
 test("ticket card tag badges update selected values without opening the card", async ({ page, request }) => {

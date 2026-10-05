@@ -75,6 +75,14 @@ const projectItems = defineView({ id: "project-items", title: "Items", body: { k
 const projectNavigation = defineNavigationTree({ id: "project-items", owner: workbenchModes.project, view: projectItems.ref, resourceScope: "project" });
 if (projectNavigation.resourceScope !== "project") throw new Error("Navigation lost its resource scope");
 ` +
+      (react && imports.includes("@pstdio/ui")
+        ? `
+import { createElement } from "react";
+import { BubblePanel } from "@pstdio/ui";
+const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
+void panelOverlay;
+`
+        : "") +
       (react && imports.includes("@pstdio/workbench/react")
         ? `
 import type { ReactAttributeDescriptor, ReactBoardColumnConfig } from "@pstdio/workbench/react";
