@@ -1,10 +1,11 @@
 import { Spinner } from "@chakra-ui/react";
 import { type PlacementIdentity, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
-import type {
-  ResourceRef,
-  WorkbenchModuleContext,
-  WorkbenchModuleContribution,
-  WorkbenchTabRetention,
+import {
+  type ResourceRef,
+  resourceContextMenuPath,
+  type WorkbenchModuleContext,
+  type WorkbenchModuleContribution,
+  type WorkbenchTabRetention,
 } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
 import { forgetDashboardSession } from "@/modules/sessions/state/session-selection";
@@ -221,5 +222,10 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
       registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
       registerSessionRenameCommand(ctx);
+      ctx.layout.registerMenuItem(resourceContextMenuPath("session"), {
+        commandId: dashboardCommandIds.openSessionPanel,
+        group: "kernel",
+        order: 10,
+      });
     },
   }) satisfies WorkbenchModuleContribution;

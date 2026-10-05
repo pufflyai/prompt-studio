@@ -1,7 +1,13 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
+import {
+  STORY_RENDER_TIMEOUT_MS,
+  startStorybook,
+  stopStorybook,
+  storyUrl,
+  waitForStoryPlayback,
+} from "./mermaid-renderer-storybook";
 
 const workspaceResourceStoryId = "dashboard-sidenav--workspace-resource";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
@@ -78,6 +84,7 @@ test.describe("workspace sessions", () => {
   test("creates a new session from the Sessions level", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(storyUrl(baseUrl, sessionModeStoryId));
+    await waitForStoryPlayback(page);
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
