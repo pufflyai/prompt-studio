@@ -13,7 +13,7 @@ The session prompt supplies `runId`. Start with:
 pst social-radar get-context --runId <runId>
 ```
 
-This returns `brandTerms`, `topics`, `competitors`, the writing `voice`, `scrollScreens`, `channels` (each with its `id`, `name`, `budget`, `targets`, `mediaRule`, and a `url` for channels without a recipe below), `since`, `followUps` (answered threads not checked today), and `recentPosts` (new-post titles from the last 14 days). Do not repeat a recent post unless new evidence changes it.
+This returns `brandTerms`, `topics`, `competitors`, the writing `voice`, `scrollScreens`, `channels` (each with its `id`, `name`, `budget`, `targets`, `mediaRule`, `since`, and a `url` for channels without a recipe below), `followUps` (answered threads not checked today), and `recentPosts` (new-post titles from the last 14 days). Do not repeat a recent post unless new evidence changes it.
 
 Search only the returned channels, and save each thread with its channel `id` as `site`. Count every endpoint query, browser search, and follow-up lookup against that channel's `budget`. A failed endpoint attempt also counts; a browser fallback is another search. Scroll at most `scrollScreens` screens per search. A zero budget means skip that channel. Spend follow-up lookups first, then search the brand terms, then the highest priority topics and that channel's targets. Do not retry a login wall, captcha, rate limit, or unavailable endpoint repeatedly.
 
@@ -24,7 +24,7 @@ If research reveals a better community, account, or repository to watch, revise 
 | Site | First choice | Browser fallback |
 | --- | --- | --- |
 | `hn` | `https://hn.algolia.com/api/v1/search_by_date?query=<encoded-topic>&tags=story&numericFilters=created_at_i><since-unix>`; use `tags=comment` when useful | `https://hn.algolia.com`, newest first |
-| `reddit` | RSS with the full user agent `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36` (Reddit returns 403 for short ones): `https://www.reddit.com/search.rss?q=<encoded-topic>&sort=new&t=day`, `https://www.reddit.com/r/<community>/new/.rss`, and `<thread-url>.rss` for comments. Without a login Reddit allows about one request a minute, so wait 60 seconds between requests and after a 429. RSS has no scores or vote counts; leave them out | `https://www.reddit.com`, newest first |
+| `reddit` | RSS with the full user agent `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36` (Reddit returns 403 for short ones): `https://www.reddit.com/search.rss?q=<encoded-topic>&sort=new&t=day` (`t=week` when `since` is older than a day), `https://www.reddit.com/r/<community>/new/.rss`, and `<thread-url>.rss` for comments. Without a login Reddit allows about one request a minute, so wait 60 seconds between requests and after a 429. RSS has no scores or vote counts; leave them out | `https://www.reddit.com`, newest first |
 | `bluesky` | `https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=<encoded-topic>&sort=latest&since=<since-ISO>` | `https://bsky.app/search` |
 | `devto` | `https://dev.to/api/articles?tag=<relevant-tag>&per_page=20` (tag filter, not free text) | DEV.to search |
 | `github` | `gh search issues '<topic> updated:><since-date>' --sort updated --order desc --json url,title,body,updatedAt --limit 20` with the existing gh login | GitHub search |
@@ -46,7 +46,7 @@ Mark the comment you posted with `"mine": true` in the snapshot, so replies to i
 
 ## Judge and save threads
 
-Only save threads published after `since` that match a brand term, topic, or competitor. Verify the date from the source; do not guess it. Set `mention: true` on every thread that names a brand term. Prefer questions or concrete problems where a useful answer fits. Relevance:
+Only save threads published after their channel's `since` that match a brand term, topic, or competitor. Verify the date from the source; do not guess it. Set `mention: true` on every thread that names a brand term. Prefer questions or concrete problems where a useful answer fits. Relevance:
 
 - **3:** A direct tool request or problem Prompt Studio can help solve; answer today.
 - **2:** A relevant comparison, launch, or discussion worth joining.
@@ -71,7 +71,7 @@ pst social-radar update-idea --id <id> --input '{"body":"<better reply>"}'
 
 ## New posts
 
-Suggest 3–5 new posts across `demo`, `topic`, and `showcase`. A new post is a thread with a `kind`; it starts as an idea, while a found thread starts as new. It has one target channel (`site`), a ready-to-paste `draft`, a `reason`, `tags`, and `basedOn`. Keep the draft within the site's length limit. Read `git log --since=<since> --oneline` and new `.changeset/*.md` files in the linked repo. When changes shipped, make at least one `demo` or `showcase` post name an actual change, with the commit SHA or changeset name in `basedOn`. Put thread ids in `basedOn` when a post answers saved threads. If nothing shipped, say so; never invent a change.
+Suggest 3–5 new posts across `demo`, `topic`, and `showcase`. A new post is a thread with a `kind`; it starts as an idea, while a found thread starts as new. It has one target channel (`site`), a ready-to-paste `draft`, a `reason`, `tags`, and `basedOn`. Keep the draft within the site's length limit. Read `git log --since=<earliest channel since> --oneline` and new `.changeset/*.md` files in the linked repo. When changes shipped, make at least one `demo` or `showcase` post name an actual change, with the commit SHA or changeset name in `basedOn`. Put thread ids in `basedOn` when a post answers saved threads. If nothing shipped, say so; never invent a change.
 
 ```sh
 pst social-radar save-thread --input '{"runId":"<runId>","kind":"demo","site":"x","title":"<named change>","draft":"<ready-to-paste post>","reason":"<why now>","tags":["#BuildInPublic"],"basedOn":["<commit SHA>"]}'

@@ -79,17 +79,15 @@ describe("social radar runs", () => {
   });
 
   test("gives the agent brand terms, media rules, follow-ups and recent posts", async () => {
-    const { ctx, storage } = setup();
+    const { ctx } = setup();
     const run = await commands["run-daily"].run(ctx, {});
     const saved = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
     await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
     await commands["set-thread-status"].run(ctx, { id: saved.id, status: "answered" });
     await commands["finish-run"].run(ctx, { input: finish(run.runId) });
     const context = await commands["get-context"].run(ctx, { runId: run.runId });
-    const finished = await storage.collection<Run>("runs").get(run.runId);
     expect(context).toMatchObject({
       brandTerms: defaults.brandTerms,
-      since: finished?.startedAt,
       recentPosts: ["Review page for agent diffs"],
     });
     expect(context.channels.find((channel) => channel.id === "x")?.mediaRule).toEqual({
@@ -101,6 +99,19 @@ describe("social radar runs", () => {
     expect(context.followUps.map((thread) => thread.id)).toEqual([saved.id]);
     await commands["record-outcome"].run(ctx, { threadId: saved.id, outcome: "No response" });
     expect((await commands["get-context"].run(ctx, { runId: run.runId })).followUps).toHaveLength(0);
+  });
+
+  test("keeps a channel's window open until a run searches it", async () => {
+    const { ctx, storage } = setup();
+    // The fixture run searches Hacker News and skips X.
+    const first = await commands["run-daily"].run(ctx, {});
+    await commands["finish-run"].run(ctx, { input: finish(first.runId) });
+    const second = await commands["run-daily"].run(ctx, {});
+    const { channels } = await commands["get-context"].run(ctx, { runId: second.runId });
+    const searchedAt = (await storage.collection<Run>("runs").get(first.runId))?.startedAt ?? "";
+    const since = (id: string) => Date.parse(channels.find((channel) => channel.id === id)?.since ?? "");
+    expect(since("hn")).toBe(Date.parse(searchedAt));
+    expect(since("x")).toBeLessThan(Date.parse(searchedAt));
   });
 
   test("follows up on answered threads for a week only", async () => {
