@@ -15,6 +15,7 @@ import { QuestionFormBlockView } from "./timeline-tool-blocks";
 export * from "./chat-input-question-answers";
 
 interface QuestionPromptControlsProps {
+  isEditable: boolean;
   questionPrompt: ChatInputQuestionPrompt;
   selectedOptionsByQuestion: Record<string, string[]>;
   customAnswersByQuestion: ChatInputQuestionCustomAnswers;
@@ -41,7 +42,7 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
   const { questionPrompt, selectedOptionsByQuestion, customAnswersByQuestion, onToggleOption, onCustomAnswerChange } =
     props;
   const { onToggleOther } = props;
-  const { questions } = props;
+  const { questions, isEditable } = props;
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const questionPanelRef = useRef<HTMLDivElement>(null);
   const renderQuestionIndex = Math.min(activeQuestionIndex, questions.length - 1);
@@ -75,7 +76,7 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
       >
         <QuestionFormBlockView
           questions={[activeQuestion]}
-          editable
+          editable={isEditable}
           selectedOptionsByQuestion={selectedOptionsByQuestion}
           customAnswersByQuestion={customAnswersByQuestion}
           onToggleOption={(_question, _questionIndex, optionLabel) => {

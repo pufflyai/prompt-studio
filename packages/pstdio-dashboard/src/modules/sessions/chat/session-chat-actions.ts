@@ -154,6 +154,7 @@ const submitNewSessionMessage = (input: {
     attachments: input.attachments,
   });
   input.setPendingFollowUp(pending);
+  input.onSubmitted?.();
 
   return new Promise<void>((resolve) =>
     input.createSession.mutate(
@@ -168,7 +169,6 @@ const submitNewSessionMessage = (input: {
       },
       {
         onSuccess: ({ sessionId, status }) => {
-          input.onSubmitted?.();
           input.setPendingFollowUp((current) =>
             status === "queued" ? null : clearPendingFollowUpForCreatedSession(current, pending, sessionId),
           );
@@ -179,11 +179,10 @@ const submitNewSessionMessage = (input: {
           );
           resolve();
         },
-        // The message stays in the conversation as unsent, so the composer can clear.
+        // The conversation keeps ownership of the failed message.
         onError: (error) => {
           const failure = toSessionNotice(error ?? new Error("Could not create the session."));
           input.setPendingFollowUp((current) => failPendingFollowUp(current, pending, failure));
-          input.onSubmitted?.();
           resolve();
         },
       },
@@ -218,6 +217,7 @@ const submitFollowUpMessage = (input: {
     questionResponse: input.questionResponse,
   });
   input.setPendingFollowUp(pending);
+  if (!input.questionResponse) input.onSubmitted?.();
 
   return new Promise<void>((resolve, reject) =>
     input.followUp.mutate(
@@ -232,14 +232,14 @@ const submitFollowUpMessage = (input: {
       },
       {
         onSuccess: ({ followUp }) => {
-          input.onSubmitted?.();
+          if (input.questionResponse) input.onSubmitted?.();
           // Queued turns use their queue entry; accepted answers update the existing question.
           if (followUp?.status === "queued" || input.questionResponse)
             input.setPendingFollowUp((current) => (current?.userMessageId === pending.userMessageId ? null : current));
           input.reconnect();
           resolve();
         },
-        // The message stays in the conversation as unsent, so the composer can clear.
+        // The conversation keeps ownership of the failed message.
         onError: (error) => {
           input.onQuestionResponseError?.();
           const failure = toSessionNotice(error ?? new Error("Could not send the follow-up."));
@@ -248,7 +248,6 @@ const submitFollowUpMessage = (input: {
             reject(error ?? new Error("Could not send the answer."));
             return;
           }
-          input.onSubmitted?.();
           resolve();
         },
       },

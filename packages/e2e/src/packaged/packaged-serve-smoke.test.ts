@@ -11,6 +11,7 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 // Core extension checks include Notes page ownership and Planner's Open tickets command.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
@@ -94,13 +95,15 @@ test("includes extension development, smoke test, browser setup and update comma
 });
 
 test(
-  "serves the dashboard and API from the same origin",
+  "serves the dashboard and API from the same origin and hands off composer drafts immediately",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
 
     try {
-      const started = await startPackagedServe(tempRoot);
+      const started = await startPackagedServe(tempRoot, {
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
+      });
       child = started.child;
 
       const dashboardRes = await fetch(started.baseUrl);
@@ -124,6 +127,7 @@ test(
         body: JSON.stringify({ title: " " }),
       });
       expect(renameRes.status).toBe(400);
+      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
     } finally {
       if (child) {
         await stopProcess(child);

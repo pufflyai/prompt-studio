@@ -69,9 +69,9 @@ It loads project sessions, groups them by date in the left rail, and renders the
 5. Use the chat input to send follow-up prompts to the selected session.
 6. Show the submitted prompt immediately with a temporary "Thinking..." assistant placeholder.
 7. Keep the chat composer focused after submit.
-8. Clear the optimistic placeholder when stream history advances or the request fails.
+8. Clear the optimistic placeholder when stream history advances. If the request fails, keep the user message as unsent and show the send error.
 9. If a new-session request returns `queued`, clear the temporary placeholder after selecting the queued session; the queued banner explains that runtime has not started.
-10. After a follow-up is accepted, clear the composer and hydrate the durable queue or transcript. Failed requests retain the draft and attachments.
+10. Clear the composer text and attachments when a new-session or follow-up message enters the conversation. Keep sending locked until the request settles, then hydrate the durable queue or transcript after acceptance. A failed message stays as unsent; Close returns its text and attachments to the composer.
 11. If the stream exposes a pending approval request, render approve and deny controls above the chat input.
 12. If the selected session is running or awaiting input, use the chat composer stop action to abort the active provider session and mark it cancelled.
 13. The "new session" button clears the selection; the next submitted message creates the new session.
