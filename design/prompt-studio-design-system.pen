@@ -17124,7 +17124,7 @@
                       "type": "frame",
                       "id": "TwCXd",
                       "name": "cmp/Tab",
-                      "context": "Composable tab: icon/status, label, optional accessory, optional close action, and an optional tab-owned context menu. Secondary/right click opens the registered context menu anchored below that tab; tabs without one keep the default browser/workbench behavior.\n\nHeight per size (recipes/tabs.ts): xs 20 · sm 24 · md 28. Icon 12/14/14. Instances set height explicitly.",
+                      "context": "Composable tab. Normal click selects, including an active tab. Right-click, Shift+F10 or touch long-press opens one grouped context menu with contributed actions and shared tab actions. Preview and pinned tabs share user-controlled horizontal order. Height per size: xs 20, sm 24, md 28.",
                       "theme": {
                         "size": "xs",
                         "tab": "default",
@@ -32095,7 +32095,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 658
+                  "y": 665
                 },
                 {
                   "type": "frame",
@@ -74674,7 +74674,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95303,7 +95303,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124289,7 +124289,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -150741,7 +150741,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -150763,7 +150763,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151491,7 +151491,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151513,7 +151513,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152129,7 +152129,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152151,7 +152151,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153502,7 +153502,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153524,7 +153524,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -154533,6 +154533,1227 @@
                       ]
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "bGEic",
+      "x": 23000,
+      "y": 0,
+      "name": "PS-466 Approved workbench tab layouts",
+      "width": 1200,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "YQZwz",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Workbench tabs · Approved option A",
+          "fontFamily": "$font-body",
+          "fontSize": 24,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "zCXL8",
+          "name": "Rules",
+          "fill": "$ds-fg",
+          "content": "Add follows the tabs. Pinning never changes order. A subtle drop overlay covers only the hovered panel, including its controls.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "kCFin",
+          "name": "Normal and active tabs",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "N8R6sT",
+              "name": "Normal and active tabs label",
+              "fill": "$ds-fg",
+              "content": "Normal and active tabs",
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "lJt9W",
+              "name": "Panel tab header",
+              "width": "fill_container",
+              "height": 32,
+              "fill": "$ds-bg",
+              "stroke": "$ds-border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 4,
+              "padding": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "TDJEC",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Terminal tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "active"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "terminal"
+                    },
+                    "k9XlqC": {
+                      "content": "Terminal",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "aCbJR",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Build navigation tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "k9XlqC": {
+                      "content": "Build navigation",
+                      "fontStyle": "italic"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "RJCv8",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Notes tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "k9XlqC": {
+                      "content": "Notes",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "uOq13",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Add panel",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "plus",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "k1MYST",
+                  "name": "Flexible space",
+                  "width": "fill_container",
+                  "height": 24
+                },
+                {
+                  "id": "D58UIz",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Open left panel menu",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-left-open",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "B5pCo",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Open right panel menu",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right-open",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "xdwTR",
+              "name": "Normal and active tabs guidance",
+              "fill": "$ds-fg",
+              "content": "Normal click selects. Right-click, Shift+F10 and touch long-press open the same grouped menu.",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "GeyIM",
+          "name": "Insertion across panels",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "IO31w",
+              "name": "Insertion across panels label",
+              "fill": "$ds-fg",
+              "content": "Insertion across panels",
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "YaWF1",
+              "name": "Panel tab header",
+              "width": "fill_container",
+              "height": 32,
+              "fill": "$ds-surface",
+              "stroke": "$ds-border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 4,
+              "padding": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "blleY",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Terminal tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "active"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "terminal"
+                    },
+                    "k9XlqC": {
+                      "content": "Terminal",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "QWBNQ",
+                  "name": "Sidenav placement line rotated vertically",
+                  "fill": "$ds-accent",
+                  "width": 2,
+                  "height": 24
+                },
+                {
+                  "id": "OXG8Q",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Build navigation tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "k9XlqC": {
+                      "content": "Build navigation",
+                      "fontStyle": "italic"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "Cu3qd",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Notes tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "k9XlqC": {
+                      "content": "Notes",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "maHBT",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Add panel",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "plus",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "C562P",
+                  "name": "Flexible space",
+                  "width": "fill_container",
+                  "height": 24
+                },
+                {
+                  "id": "HDCXd",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Open left panel menu",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-left-open",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "dYBPi",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Open right panel menu",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right-open",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "m1uGhb",
+              "name": "Insertion across panels guidance",
+              "fill": "$ds-fg",
+              "content": "Use the shared Sidenav 2 px line and highlight. Drag any pinned or preview tab.",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Wm4C8",
+          "name": "Tray after headerless drop",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "L5ZA6",
+              "name": "Tray after headerless drop label",
+              "fill": "$ds-fg",
+              "content": "Tray after headerless drop",
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "bF3bB",
+              "name": "Panel tab header",
+              "width": "fill_container",
+              "height": 32,
+              "fill": "$ds-bg",
+              "stroke": "$ds-border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 4,
+              "padding": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "I1Jg3",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Workspace tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "active"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "k9XlqC": {
+                      "content": "Workspace",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "byIWk",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Terminal tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "terminal"
+                    },
+                    "k9XlqC": {
+                      "content": "Terminal",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "ovEf4",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Add panel",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "plus",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "sQQkH",
+                  "name": "Flexible space",
+                  "width": "fill_container",
+                  "height": 24
+                },
+                {
+                  "id": "r21S2J",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Open left panel menu",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-left-open",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "IBMfJ",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Open right panel menu",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right-open",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "YADMV",
+              "name": "Tray after headerless drop guidance",
+              "fill": "$ds-fg",
+              "content": "Original page stays open beside the moved tool. Preserve instance, draft and route.",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "UAXq3",
+          "name": "Crowded tray",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "KQRgI",
+              "name": "Crowded tray label",
+              "fill": "$ds-fg",
+              "content": "Crowded tray",
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "jjXT2",
+              "name": "Panel tab header",
+              "width": "fill_container",
+              "height": 32,
+              "fill": "$ds-bg",
+              "stroke": "$ds-border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "gap": 4,
+              "padding": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "O5yjzH",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Terminal tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "active"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "terminal"
+                    },
+                    "k9XlqC": {
+                      "content": "Terminal",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "EVpBD",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Build navigation tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "k9XlqC": {
+                      "content": "Build navigation",
+                      "fontStyle": "italic"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "I5X2A",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Notes tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "k9XlqC": {
+                      "content": "Notes",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "YkAjY",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Inspector tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "layers"
+                    },
+                    "k9XlqC": {
+                      "content": "Inspector",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "tGtrN",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Terminal 2 tab",
+                  "height": 24,
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "terminal"
+                    },
+                    "k9XlqC": {
+                      "content": "Terminal 2",
+                      "fontStyle": "normal"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "xohUN",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Add panel",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "plus",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "H7d4WL",
+                  "name": "Flexible space",
+                  "width": "fill_container",
+                  "height": 24
+                },
+                {
+                  "id": "BdwQr",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Open left panel menu",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-left-open",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "IO9CH",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Open right panel menu",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right-open",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "U61KI",
+              "name": "Crowded tray guidance",
+              "fill": "$ds-fg",
+              "content": "Tabs shrink to 48 px, then scroll. Add and panel menu controls remain visible.",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "uJGTn",
+          "name": "Headerless states",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "K1GMd",
+              "name": "Headerless at rest",
+              "width": "fill_container",
+              "height": 140,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SKroF",
+                  "name": "Page content",
+                  "fill": "$ds-fg",
+                  "content": "Workspace page · No permanent header",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tkHm1",
+              "name": "Main hovered during drag",
+              "context": "Panel drop feedback only appears while the dragged tab is over this allowed panel. Use a subtle full-container overlay; no persistent top band.",
+              "clip": true,
+              "width": "fill_container",
+              "height": 180,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "XMJjf",
+                  "layoutPosition": "absolute",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Full panel hover overlay",
+                  "context": "Shared panel tab drop overlay: 4% accent fill, 1 px accent outline, full panel bounds, pointer-transparent, shown only for the hovered valid destination.",
+                  "reusable": true,
+                  "width": 568,
+                  "height": 180,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "opacity": 0.04,
+                    "rotation": 0,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "$ds-accent",
+                        "position": 0
+                      },
+                      {
+                        "color": "$ds-accent",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "cornerRadius": 4,
+                  "stroke": "$ds-accent",
+                  "strokeWidth": 1,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "LS4yC",
+                      "name": "Drop guidance",
+                      "fill": "$ds-fg-muted",
+                      "content": "Drop here to add a tab",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "DroTo",
+                  "layoutPosition": "absolute",
+                  "x": 12,
+                  "y": 12,
+                  "name": "Page content",
+                  "fill": "$ds-fg",
+                  "content": "Workspace page · No permanent header",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "j9Jfk5",
+          "name": "Menus and reset",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "BuVVO",
+              "name": "Grouped tab context menu",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "w5KEq",
+                  "name": "Grouped tab context menu title",
+                  "fill": "$ds-fg",
+                  "content": "Grouped tab context menu",
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "WHNmD",
+                  "name": "Session",
+                  "fill": "$ds-fg",
+                  "content": "Session",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "h2Da4e",
+                  "name": "Rename session",
+                  "fill": "$ds-fg",
+                  "content": "Rename session",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "L2c7D",
+                  "name": "Recent sessions",
+                  "fill": "$ds-fg",
+                  "content": "Recent sessions",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "k7tdIe",
+                  "name": "View all sessions",
+                  "fill": "$ds-fg",
+                  "content": "View all sessions",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "d4S5gT",
+                  "name": "Tab",
+                  "fill": "$ds-fg",
+                  "content": "Tab",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "HhonA",
+                  "name": "Pin / Unpin",
+                  "fill": "$ds-fg",
+                  "content": "Pin / Unpin",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "SC4Ah",
+                  "name": "Move to Main / Side / Secondary",
+                  "fill": "$ds-fg",
+                  "content": "Move to Main / Side / Secondary",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "IbgxL",
+                  "name": "Close",
+                  "fill": "$ds-fg",
+                  "content": "Close",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "F86Zju",
+              "name": "Add panel menu",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "z2EEmD",
+                  "name": "Add panel menu title",
+                  "fill": "$ds-fg",
+                  "content": "Add panel menu",
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "FiNcz",
+                  "name": "Add panel",
+                  "fill": "$ds-fg",
+                  "content": "Add panel",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Neq5c",
+                  "name": "Session",
+                  "fill": "$ds-fg",
+                  "content": "Session",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "KG7ld",
+                  "name": "Terminal",
+                  "fill": "$ds-fg",
+                  "content": "Terminal",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "m63zw4",
+                  "name": "Files",
+                  "fill": "$ds-fg",
+                  "content": "Files",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "lnNvS",
+                  "name": "Notes",
+                  "fill": "$ds-fg",
+                  "content": "Notes",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "tGizB",
+                  "name": "Inspector",
+                  "fill": "$ds-fg",
+                  "content": "Inspector",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dLh3O",
+              "name": "Reset layout",
+              "width": "fill_container",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "UafbY",
+                  "name": "Reset layout title",
+                  "fill": "$ds-fg",
+                  "content": "Reset layout",
+                  "fontFamily": "$font-body",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "GHWTl",
+                  "name": "Restore active page and mode defaults",
+                  "fill": "$ds-fg",
+                  "content": "Restore active page and mode defaults",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "hB17a",
+                  "name": "Retain sessions, notes and terminal data",
+                  "fill": "$ds-fg",
+                  "content": "Retain sessions, notes and terminal data",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "c5XM2D",
+                  "name": "Keep other projects and modes unchanged",
+                  "fill": "$ds-fg",
+                  "content": "Keep other projects and modes unchanged",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "AZaJ8",
+          "name": "Attached and detached Side drop feedback",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "EM071",
+              "name": "Attached Side hover",
+              "clip": true,
+              "width": 448,
+              "height": 260,
+              "cornerRadius": 4,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "UTDKz",
+                  "type": "ref",
+                  "ref": "VA9mn",
+                  "name": "Side panel with header controls",
+                  "width": 448,
+                  "height": 260,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "id": "iyAU4",
+                  "type": "ref",
+                  "ref": "XMJjf",
+                  "name": "Full Side hover overlay",
+                  "width": 448,
+                  "height": 260,
+                  "x": 0,
+                  "y": 0
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "KWBNP",
+              "name": "Detached Side hover",
+              "clip": true,
+              "width": 448,
+              "height": 260,
+              "cornerRadius": 4,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "uRoXK",
+                  "type": "ref",
+                  "ref": "MXmR5",
+                  "name": "Side panel with header controls",
+                  "width": 448,
+                  "height": 260,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "id": "bDE2Y",
+                  "type": "ref",
+                  "ref": "XMJjf",
+                  "name": "Full Side hover overlay",
+                  "width": 448,
+                  "height": 260,
+                  "x": 0,
+                  "y": 0
                 }
               ]
             }

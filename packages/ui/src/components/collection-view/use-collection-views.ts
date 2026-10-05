@@ -1,7 +1,7 @@
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { useEffect, useRef } from "react";
 import { useStore } from "zustand";
-import { useKanbanRendererStorage } from "../kanban-renderer/kanban-renderer-storage";
+import { useHostStorage } from "../../utils/host-storage";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { normalFilter } from "./advanced-filter";
 import {
@@ -53,7 +53,7 @@ export interface CollectionViewsInput<TSettings> {
 
 /** Picks the views a renderer offers and keeps the store on a view that still exists. */
 export const useCollectionViews = <TSettings>(input: CollectionViewsInput<TSettings>) => {
-  const store = getCollectionViewStore(input.storageKey, input.initialState, useKanbanRendererStorage());
+  const store = getCollectionViewStore(input.storageKey, input.initialState, useHostStorage());
   const activeViewId = useStore(store, (state) => state.activeViewId);
   const { settings, filter = EMPTY_VIEW_FILTER, sorts = [] } = input.initialState;
   const defaults = input.defaultViews?.length

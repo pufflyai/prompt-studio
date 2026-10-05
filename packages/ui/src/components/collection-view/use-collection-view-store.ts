@@ -1,9 +1,13 @@
 import type { ViewFilterGroup, ViewFilterRule, ViewSort } from "@pstdio/sdk/extensions";
 import { useStore } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { createStore, type StoreApi } from "zustand/vanilla";
-import { createBrowserStorage } from "../../utils/browser-storage";
-import { type KanbanRendererStorage, useKanbanRendererStorage } from "../kanban-renderer/kanban-renderer-storage";
+import {
+  createHostPersistStorage,
+  createHostStoreRegistry,
+  type HostStorage,
+  useHostStorage,
+} from "../../utils/host-storage";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { normalFilter } from "./advanced-filter";
 import { addRule, newRule, setRuleAt } from "./collection-view-rules";
@@ -35,7 +39,7 @@ export interface CollectionViewStoreState<TSettings> extends CollectionViewSnaps
   setOpenRuleIndex: (index: number | null) => void;
   /** Adds a rule for the field and opens its pill editor. */
   startRule: (field: AttributeDescriptor) => void;
-  /** Commits a picker selection and transfers editing to its bubble. */
+  /** Commits picker values; scalar values transfer editing to their bubble. */
   selectRule: (rule: ViewFilterRule) => void;
   setSettings: (settings: Partial<TSettings>) => void;
   setFilter: (filter: ViewFilterGroup) => void;
@@ -47,7 +51,7 @@ export interface CollectionViewStoreState<TSettings> extends CollectionViewSnaps
 
 interface CreateCollectionViewStoreOptions<TSettings> {
   storageKey: string;
-  storage?: KanbanRendererStorage;
+  storage?: HostStorage;
   initialState: CollectionViewStoreInitialState<TSettings>;
 }
 
@@ -113,15 +117,7 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
         version: 5,
         // Older local state used the single-value filter map and one ordering. Start from the server's views.
         migrate: () => snapshot,
-        storage: createJSONStorage(() =>
-          storage
-            ? {
-                getItem: (key) => storage.getItem(key),
-                setItem: (key, value) => storage.setItem(key, value),
-                removeItem: (key) => storage.removeItem?.(key),
-              }
-            : createBrowserStorage(),
-        ),
+        storage: createHostPersistStorage(storage),
         merge: (persisted, current) => {
           const restored = { ...current, ...(persisted as Partial<CollectionViewSnapshot<TSettings>>) };
           return { ...restored, sorts: restored.sorts.slice(0, 1) };
@@ -140,29 +136,23 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
 
 type AnyCollectionViewStore = StoreApi<CollectionViewStoreState<unknown>>;
 
-const hostStoreRegistries = new WeakMap<KanbanRendererStorage, Map<string, AnyCollectionViewStore>>();
-const browserStoreRegistry = new Map<string, AnyCollectionViewStore>();
+const hostCollectionViewStore = createHostStoreRegistry<
+  AnyCollectionViewStore,
+  [CollectionViewStoreInitialState<unknown>]
+>((storageKey, storage, initialState) => createCollectionViewStore({ storageKey, initialState, storage }));
 
 /** One store per host storage and key. The first caller's initial state wins. */
 export const getCollectionViewStore = <TSettings>(
   storageKey: string,
   initialState: CollectionViewStoreInitialState<TSettings>,
-  storage?: KanbanRendererStorage,
-) => {
-  let registry = storage ? hostStoreRegistries.get(storage) : browserStoreRegistry;
-  if (!registry) {
-    registry = new Map();
-    hostStoreRegistries.set(storage!, registry);
-  }
-  const existing = registry.get(storageKey);
-  if (existing) return existing as unknown as StoreApi<CollectionViewStoreState<TSettings>>;
-  const store = createCollectionViewStore({ storageKey, initialState, storage });
-  registry.set(storageKey, store as unknown as AnyCollectionViewStore);
-  return store;
-};
+  storage?: HostStorage,
+) =>
+  hostCollectionViewStore(storageKey, storage, initialState) as unknown as StoreApi<
+    CollectionViewStoreState<TSettings>
+  >;
 
 export const useCollectionViewStore = <TSettings, T>(
   storageKey: string,
   initialState: CollectionViewStoreInitialState<TSettings>,
   selector: (state: CollectionViewStoreState<TSettings>) => T,
-) => useStore(getCollectionViewStore(storageKey, initialState, useKanbanRendererStorage()), selector);
+) => useStore(getCollectionViewStore(storageKey, initialState, useHostStorage()), selector);
