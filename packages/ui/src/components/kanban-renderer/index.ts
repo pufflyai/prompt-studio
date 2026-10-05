@@ -28,7 +28,6 @@ export {
 } from "./kanban-renderer-helpers";
 export type { KanbanRendererListItem } from "./kanban-renderer-list";
 export { KanbanRendererList } from "./kanban-renderer-list";
-export { type KanbanRendererStorage, KanbanRendererStorageProvider } from "./kanban-renderer-storage";
 export type { KanbanRendererToolbarProps } from "./kanban-renderer-toolbar";
 export { KanbanRendererToolbar } from "./kanban-renderer-toolbar";
 export type {

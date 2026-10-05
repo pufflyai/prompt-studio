@@ -22,7 +22,7 @@ describe("createKanbanRendererStore", () => {
   });
 
   it("starts keyed stores with the supplied initial snapshot", () => {
-    const store = getKanbanRendererStore("workspace-initial-state-test", {
+    const store = getKanbanRendererStore("workspace-initial-state-test", undefined, {
       settings: {
         viewMode: "list",
         columnGrouping: "status",

@@ -1,8 +1,18 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { installMockLocalStorage } from "@/test-utils/local-storage";
-import { createTreeListVisibilityStore } from "./tree-list-visibility.store";
+import { createTreeListVisibilityStore, getTreeListVisibilityStore } from "./tree-list-visibility.store";
 
 const STORAGE_KEY = "test-tree-vis";
+
+const memoryStorage = () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+};
 
 beforeEach(() => {
   installMockLocalStorage();
@@ -93,5 +103,28 @@ describe("createTreeListVisibilityStore", () => {
     a.getState().setSection("sec-1", "hidden");
 
     expect(b.getState().sectionOverrides).toEqual({});
+  });
+
+  test("restores overrides from host storage instead of browser storage", () => {
+    const storage = memoryStorage();
+    const first = createTreeListVisibilityStore({ storageKey: STORAGE_KEY, storage });
+    first.getState().setSection("sec-1", "hidden");
+    first.getState().setNode("node-1", "shown");
+
+    expect(globalThis.localStorage.length).toBe(0);
+    const restored = createTreeListVisibilityStore({ storageKey: STORAGE_KEY, storage }).getState();
+    expect(restored.sectionOverrides).toEqual({ "sec-1": "hidden" });
+    expect(restored.nodeOverrides).toEqual({ "node-1": "shown" });
+  });
+
+  test("shares stores only within the same host storage and key", () => {
+    const storage = memoryStorage();
+    const first = getTreeListVisibilityStore("tree:project-a", storage);
+    first.getState().setSection("sec-1", "hidden");
+
+    expect(getTreeListVisibilityStore("tree:project-a", storage)).toBe(first);
+    expect(getTreeListVisibilityStore("tree:project-b", storage).getState().sectionOverrides).toEqual({});
+    expect(getTreeListVisibilityStore("tree:project-a", memoryStorage()).getState().sectionOverrides).toEqual({});
+    expect(getTreeListVisibilityStore("tree:project-a").getState().sectionOverrides).toEqual({});
   });
 });

@@ -1,7 +1,12 @@
 import { useStore } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
-import { createBrowserStorage } from "../../utils/browser-storage";
+import {
+  createHostPersistStorage,
+  createHostStoreRegistry,
+  type HostStorage,
+  useHostStorage,
+} from "../../utils/host-storage";
 
 interface TreeListOrderSnapshot {
   sectionOrder: string[];
@@ -22,6 +27,7 @@ interface TreeListOrderState extends TreeListOrderSnapshot {
 
 interface CreateTreeListOrderStoreOptions {
   storageKey: string;
+  storage?: HostStorage;
 }
 
 const DEFAULT_SNAPSHOT: TreeListOrderSnapshot = {
@@ -75,25 +81,18 @@ export const createTreeListOrderStore = (options: CreateTreeListOrderStoreOption
       }),
       {
         name: toStorageName(options.storageKey),
-        storage: createJSONStorage(createBrowserStorage),
+        storage: createHostPersistStorage(options.storage),
         partialize: getPersistedSnapshot,
       },
     ),
   );
 
-const storeRegistry = new Map<string, ReturnType<typeof createTreeListOrderStore>>();
-
-export const getTreeListOrderStore = (storageKey: string) => {
-  const existing = storeRegistry.get(storageKey);
-  if (existing) return existing;
-
-  const store = createTreeListOrderStore({ storageKey });
-  storeRegistry.set(storageKey, store);
-  return store;
-};
+export const getTreeListOrderStore = createHostStoreRegistry((storageKey, storage) =>
+  createTreeListOrderStore({ storageKey, storage }),
+);
 
 export const useTreeListOrderStore = <T>(storageKey: string, selector: (state: TreeListOrderState) => T) => {
-  const store = getTreeListOrderStore(storageKey);
+  const store = getTreeListOrderStore(storageKey, useHostStorage());
   return useStore(store, selector);
 };
 

@@ -117,6 +117,7 @@ export {
 } from "@/utils/apply-theme-preference";
 export { FileIconThemePreferenceProvider, useFileIconThemePreference } from "@/utils/file-icon-theme-preference";
 export { getFileTypeIcon } from "@/utils/get-file-type-icon";
+export { type HostStorage, HostStorageProvider } from "@/utils/host-storage";
 export { installPrismGlobal } from "@/utils/prism";
 export { resolveFileIconElement } from "@/utils/resolve-file-icon-element";
 export {
