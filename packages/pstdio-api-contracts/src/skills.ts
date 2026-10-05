@@ -13,7 +13,6 @@ export const skillAgentInstallationSchema = z.object({
   agent_id: z.string(),
   agent_name: z.string(),
   installed_version: z.string().nullable(),
-  outdated: z.boolean(),
 });
 
 export const skillSchema = z.object({
@@ -39,7 +38,6 @@ export const skillSchema = z.object({
 
 export const skillWithContentSchema = skillSchema.extend({
   installed_agents: z.array(z.string()),
-  outdated_agents: z.array(z.string()),
   agent_installations: z.array(skillAgentInstallationSchema),
 });
 

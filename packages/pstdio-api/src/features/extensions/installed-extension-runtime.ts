@@ -8,7 +8,7 @@ import type { createWorkspaceService } from "../../services/workspace-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
-import type { LoadedExtension } from "./extension-runtime";
+import { hashExtensionSource, type LoadedExtension } from "./extension-runtime";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
@@ -38,6 +38,7 @@ export const createInstalledExtensionRuntime = async (input: {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   projectService: ReturnType<typeof createProjectService>;
+  provisionWorkspacesUsingSource: (sourcePath: string) => Promise<void>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
   webviewBuilds: boolean;
 }) => {
@@ -120,12 +121,25 @@ export const createInstalledExtensionRuntime = async (input: {
       .then(() => input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "webviews_built" }))
       .catch(reportError);
   };
+  // The source hash each source last provisioned workspaces from. Provisioning can write into a
+  // watched folder, so a write that leaves the source unchanged must not provision again.
+  const provisionedSourceHashes = new Map<string, string>();
+  const provisionWhenSourceChanged = async (sourcePath: string) => {
+    // The root watcher handles a removed folder.
+    if (!existsSync(sourcePath)) return;
+    const sourceHash = hashExtensionSource(sourcePath);
+    if (provisionedSourceHashes.get(sourcePath) === sourceHash) return;
+    provisionedSourceHashes.set(sourcePath, sourceHash);
+    await input.provisionWorkspacesUsingSource(sourcePath);
+  };
   // Editing a watched folder rebuilds the assets of the extension the project already adopted. It
-  // never re-reads contributions from disk: adopting new source is an explicit act.
+  // never re-reads contributions from disk: adopting new source is an explicit act. Skill files
+  // are read from disk, so the edit also re-provisions workspaces to keep harness copies current.
   const sourceWatcher = await createSourceWatcher({
     listInstalledSources: listExistingInstalledSources,
     onSourceChanged: async (sourcePath) => {
       await webviewBuildManager.refresh(sourcePath);
+      await provisionWhenSourceChanged(sourcePath);
     },
     onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
   });
