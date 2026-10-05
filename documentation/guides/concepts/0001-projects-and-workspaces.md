@@ -4,7 +4,7 @@ A project holds your tools, settings, and saved data. A workspace is a place whe
 
 ## Projects
 
-A project starts from one folder. Opening the folder creates its project, and opening it again returns to the same project. Each folder belongs to at most one project. A subfolder is its own project, even inside a Git repository.
+Open a folder to create a local project. Opening it again returns to the same project. Each folder belongs to at most one project. A subfolder is its own project, even inside a Git repository. A provider can instead create a project in a remote environment.
 
 A project owns:
 
@@ -14,11 +14,13 @@ A project owns:
 
 Prompt Studio writes `.pstdio/config.json` in the folder to link it to the project. `pst` commands look for this file in the current folder and its parent folders, so they act on the right project.
 
-Deleting a project removes it from Prompt Studio. Your folder and its files stay where they are.
+Deleting a project removes its saved host data and its matching `.pstdio/config.json` link. Your chosen folder and your own files stay where they are. Workspaces that a provider created follow that provider's cleanup rules.
 
 ## Workspaces
 
-Every project has a default workspace: the project folder itself. Sessions in it share the same files. When one agent changes a file, the others see the change. The default workspace has no branches and no diff or merge. It also does not sandbox the agent: the agent can reach anything its own process can reach.
+Every project has a default workspace. For a project opened from a local folder, it is that folder. Sessions in it share the same files. When one agent changes a file, the others see the change. A folder workspace has no separate branch and no diff or merge actions. It also does not sandbox the agent: the agent can reach anything its own process can reach.
+
+A provider can also create a project whose default workspace is remote. That project has no local project folder. Its file access and other actions depend on the provider. See [Local and remote work](0004-local-and-remote.md).
 
 Other workspaces come from workspace providers. A provider creates the workspace and owns its files.
 

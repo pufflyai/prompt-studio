@@ -1,6 +1,6 @@
 # Notes
 
-Notes lets you write Markdown notes inside Prompt Studio and keeps them as files in your project's repository.
+Notes lets you write Markdown notes inside Prompt Studio and keeps them as files in your project's local default workspace.
 
 ## Install
 
@@ -10,7 +10,7 @@ Notes is not installed by default. Open **Settings → Project → Extensions**,
 pst extensions add pstdio-notes
 ```
 
-You install Notes once for your user, and it works in every project.
+Install Notes once for your user, then turn it on in each project that should use it. Installing from a project turns it on there. Notes needs a ready local default workspace with file access; creating and editing notes needs write access.
 
 ## Write notes
 
@@ -33,12 +33,12 @@ pst pstdio-notes notes delete --note-id <note-id>
 
 ## Where notes are stored
 
-Each note is a folder in the project's default repository. The title and the Markdown body are separate files:
+Each note is a folder in the project's default workspace. The title and the Markdown body are separate files:
 
 ```txt
-<repo>/.pstdio/extension-storage/pstdio-notes/documents/<note-id>/
+<project-folder>/.pstdio/extension-storage/pstdio-notes/documents/<note-id>/
   title.txt
   content.md
 ```
 
-Notes belong to the repository, not to Prompt Studio. Commit that folder to share notes with your team, or leave it out of Git to keep them on your computer.
+Git is optional. In a Git project, commit that folder to share notes with your team, or leave it out of Git to keep them on your computer.

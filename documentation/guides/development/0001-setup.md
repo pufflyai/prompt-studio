@@ -41,11 +41,17 @@ Tools and caches live under `/opt/bun` and `/home/bun`; run the launcher without
 
 The container mounts the checkout, including built package files. Stop its container before rebuilding shared packages or running `verify:packages`, then start the same container and reload the browser. A running Vite server can retain imports to deleted build chunks, causing a later action such as enabling table statistics to fail. Use `docker ps` to find the container name, then `docker stop <container-name>` and `docker start <container-name>`. These commands preserve its database and project. Use `--down` only when you intend to discard the isolated state.
 
-Run the landing page separately when working on it:
+Build and serve the landing page separately in Docker when working on it. From the repository root:
 
 ```bash
-bun run dev:landing-page
+docker build -f clients/landing-page/Dockerfile -t pstdio-landing-preview .
+docker run -d --name pstdio-landing-preview -p 127.0.0.1::80 \
+  -v "$PWD/clients/landing-page/public/images:/usr/share/nginx/html/images:ro" \
+  pstdio-landing-preview
+docker port pstdio-landing-preview 80
 ```
+
+Open the loopback address printed by `docker port`. Rebuild the image and recreate the container after source changes. Stop and remove it with `docker rm -f pstdio-landing-preview`. This preview serves static files and uses no dashboard runtime or database. See the [landing page README](../../../clients/landing-page/README.md#isolated-preview).
 
 ### Repair output from the old root container
 

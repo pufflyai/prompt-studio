@@ -15,7 +15,7 @@ pst extensions add ./extensions/extension-lab
 This:
 
 1. Copies the source to the user or repo extension root, skipping `node_modules`, `.git`, `dist`, `.turbo`, `.next`.
-2. Runs `bun install` inside the installed folder when a `package.json` is present (skip with `--skip-install`).
+2. Runs `bun install` inside the installed folder (skip with `--skip-install`).
 3. Loads the installed copy through the v2 runtime to validate the default export and report diagnostics.
 4. Auto-enables the extension for the current project (when run inside one).
 
@@ -48,7 +48,7 @@ Fix errors before using the extension. Review warnings too; they call out valid 
 
 ## Local development loop
 
-Run the development command from a linked git project while Prompt Studio is running:
+Run the development command from a linked project folder while Prompt Studio is running. Git is optional:
 
 ```bash
 pst extensions dev ./path/to/my-extension
@@ -70,20 +70,12 @@ Press Ctrl+C or send SIGTERM to stop. The command waits for an active refresh to
 
 ## Develop inside this monorepo
 
-When developing extensions inside this monorepo, you usually want them installed under `~/.pstdio-dev/` so they don't pollute your real user root.
+Run the API and dashboard in Docker with an isolated database and extension installs. See the [development guide](../documentation/guides/development/0001-setup.md).
 
 ### One-time setup
 
 ```bash
-# 1. Build the SDK before running extension checks that depend on local package output.
-cd packages/sdk
-bun run build
-
-# 2. Point the local pstdio CLI at the dev API and dev paths.
-bun run pstdio:local:add-dev
-
-# 3. Start the dev API + dashboard (uses ~/.pstdio-dev for db / storage / workspaces / extensions).
-bun run dev
+bun run dev:isolated -- --name extension-dev
 ```
 
 ### Default first-party extensions
@@ -104,8 +96,8 @@ The default list is every catalog entry marked `"default": true`:
 
 The other catalog entries, such as `pstdio-planner`, `pstdio-reports`, `pstdio-notes`, and `pstdio-artifacts`, are listed in the dashboard but not installed by default.
 
-Default extensions use user scope. Subsequent project creates skip existing installs, so user edits under
-`~/.pstdio-dev/extensions/pstdio-*/` survive across restarts.
+Default extensions use user scope. Subsequent project creates skip existing installs. The Docker stack keeps
+those installs in its isolated `PSTDIO_HOME`. Stopping it with `--down` removes the stack's test data.
 
 The config shape (lives in `pstdio-api`):
 
@@ -127,7 +119,7 @@ type DefaultExtensionsConfig = {
 
 Resolution rule (same as the CLI): if `source` starts with `./`, `../`, `/`, or `~/` it is a local path; otherwise it is a named extension resolved against `https://github.com/pufflyai/prompt-studio` at `extensions/<name>`.
 
-The dashboard lists the built-in catalog under Marketplace. An uninstalled entry stays there so the
+The dashboard lists the built-in catalog under **Settings → Project → Extensions → Available**. An uninstalled entry stays there so the
 user can install it again from the host release.
 
 Set `PSTDIO_DEFAULT_EXTENSIONS` to JSON to override this configuration. For example, this value installs two extensions from the monorepo:
@@ -145,31 +137,29 @@ The Docker development stack sets its own list in `infra/local/compose.yaml`.
 
 ### Watch an extension in the development environment
 
-Use the watch command as the primary authoring loop. Run it inside the linked Prompt Studio repo:
+Use the watch command inside the running container, from its seeded project folder. Find the container name with `docker ps`; a stack named `extension-dev` normally uses `extension-dev-prompt-studio-1`:
 
 ```bash
-PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev ./extensions/extension-lab
+docker exec -it -w /workspace/project extension-dev-prompt-studio-1 \
+  /home/bun/.local/bin/pstdio extensions dev <mounted-repo-path>/extensions/extension-lab
 ```
 
-Because `extension-lab` uses user scope and `PSTDIO_HOME` is set to `~/.pstdio-dev`, each valid snapshot is published at `~/.pstdio-dev/extensions/extension-lab/`. Use `pst extensions add --force` separately for a production-like install smoke test.
+Replace `<mounted-repo-path>` with the checkout's absolute path on macOS or Linux, or `/workspace/prompt-studio` on Windows. The launcher mounts the source there. The watcher installs each valid snapshot into the container's isolated extension root. Stop the watcher before a production-like `extensions add --force` smoke test against the same isolated runtime.
 
 ### Use the workspace SDK during development
 
 First-party extensions depend on `@pstdio/sdk`. User/global install smoke tests must run dependency
 installation and leave package-local dependencies under the installed extension root.
 
-```bash
-PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev ./extensions/extension-lab
-```
-
 Do not use `--skip-install` or link workspace `node_modules` into `~/.pstdio` for production-like
-validation. If an extension needs unpublished SDK changes, keep that work in the isolated dev home
-or the repo dev stack, and never treat the linked install as the global user install.
+validation. If an extension needs unpublished SDK changes, keep that work in the Docker dev stack,
+and never treat a linked install as a released user install.
 
 ### Verify
 
 ```bash
-pst extensions check
+docker exec -w /workspace/project extension-dev-prompt-studio-1 \
+  /home/bun/.local/bin/pstdio extensions check
 ```
 
 Should list the extension with its commands, hooks, schedules, and zero errors.
@@ -201,11 +191,13 @@ Minimum viable layout:
 ```
 extensions/<name>/
   extension.ts       # default export must call `defineExtension(...)`
-  package.json       # optional; declares deps + (recommended) `packageManager`
+  package.json       # required; identity, entry path, API range, scope, dependencies
   README.md          # extension-specific docs
 ```
 
 Reference: `extensions/extension-lab/` shows commands, middleware, hooks, schedules, harnesses, views, placements, navigation, templates, and skills.
+
+See [manifest rules](../documentation/references/extensions/0002-manifest-and-installation.md) for the required fields.
 
 ### Managed webview dependencies
 
@@ -218,8 +210,6 @@ While Prompt Studio is running, edits to a webview's local import graph, `packag
 The dashboard stores workbench layouts in the browser profile. These layouts are not synced through the API, SDK, CLI, or extension instances.
 
 When an extension changes, renames, or removes a view, the dashboard reconciles locally stored layouts for the selected project. Current views keep their tab order and state where possible. Removed extension views are pruned. Native dashboard views and views from other extensions are preserved.
-
-Each enabled extension also registers a command palette action named `Reset <extension> layout`. Use it to remove that extension's local placements from the current project's stored layouts and the active workbench. The reset is local to the current browser profile.
 
 ## Documentation
 

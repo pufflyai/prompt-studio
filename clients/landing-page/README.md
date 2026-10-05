@@ -244,3 +244,14 @@ Run the image on a free localhost port. Mount `clients/landing-page/public/image
 at `/usr/share/nginx/html/images` as read-only; public images are excluded from
 the shared Docker build context. Keep this preview separate from the dashboard
 and its database.
+
+```sh
+docker run -d --name pstdio-landing-preview -p 127.0.0.1::80 \
+  -v "$PWD/clients/landing-page/public/images:/usr/share/nginx/html/images:ro" \
+  pstdio-landing-preview
+docker port pstdio-landing-preview 80
+```
+
+Open the printed address with `http://`. Rebuild the image and recreate the
+container to see content changes. Stop and remove it with
+`docker rm -f pstdio-landing-preview`.

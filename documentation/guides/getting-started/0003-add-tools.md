@@ -2,9 +2,9 @@
 
 Tools come from extensions. Install an extension once, then turn it on in each project that should use it.
 
-## Core extensions
+## First-party extensions
 
-Prompt Studio publishes these tools as extensions. Install the ones you want:
+Prompt Studio publishes these tools as extensions. They use the public extension API and own their workflows and data. Install the ones you want:
 
 | Extension | What it adds | Install name |
 | --- | --- | --- |
@@ -51,12 +51,22 @@ Extensions can add commands to `pst`. Run `pst --help` to see the command groups
 
 ## Keep extensions up to date
 
-When an installed core extension has a newer release for your Prompt Studio version, its row in **Settings → Extensions** shows **Upgrade**. From the terminal, run:
+When an installed first-party extension has a newer release for your Prompt Studio version, its row in **Settings → Extensions** shows **Upgrade**. From the terminal, run:
 
 ```sh
 pst extensions update
 ```
 
-To build your own tool, read [Write an extension](../extensions/0001-authoring.md). To learn how extensions load and run, read [Extensions](../concepts/0002-extensions.md).
+## Ask an agent to build your tool
+
+Start with one thing you want to make easier. You can describe the result without writing the extension code yourself. [Set up an agent and install its skills](0004-run-agents.md), then ask it to use the `create-pstdio-extension` skill. For example:
+
+> Build a reading-list tool for this project. Use the create-pstdio-extension skill. I want to add a title and a link, mark an item as read, and keep the list after I close and reopen Prompt Studio. Put it in this project's sidebar. Install it in this project and show me how to use it.
+
+The agent writes and installs an extension. Try adding an item, changing it, and reopening the tool. Ask for changes in the same conversation. A finished agent session is not proof that the tool works; check the result before relying on it.
+
+Tools can work together when their authors expose commands, events, or resource references that another tool can use. Sharing the workbench does not automatically share all of their data.
+
+If you want to write the code yourself, read [Write an extension](../extensions/0001-authoring.md). To learn how extensions load and run, read [Extensions](../concepts/0002-extensions.md).
 
 Next, [run agents](0004-run-agents.md).

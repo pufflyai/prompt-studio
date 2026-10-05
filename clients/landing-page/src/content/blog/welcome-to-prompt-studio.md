@@ -35,8 +35,9 @@ It only made sense for my work.
 
 Prompt Studio is the place I wanted for those tools.
 It takes care of the shared parts: where tools appear, where they keep their data, how they let you know something happened, and how agents work next to you.
-You, or your agent, describe the tool.
-It lives next to your other tools and can use what they produce.
+You describe what you need, and your agent builds it as an extension.
+Once installed and enabled in your project, it lives next to your other tools.
+Extensions can expose commands and data that other tools use; those connections still have to be built.
 
 Some of the tools I use every day started as one sentence to an agent:
 
@@ -52,13 +53,19 @@ They belong to my work, and yours will look different.
 Prompt Studio works with Claude Code, Codex, and OpenCode.
 You keep the agent you trust.
 Prompt Studio gives it a place to work and gives you a clear view of what it did.
+You install and sign in to the agent separately; Prompt Studio's harness extensions connect to it.
 
 ## Where to start
 
 [Download the desktop app](/) or install the command line tool, then open a folder.
 The [getting started guide](/docs/guides/getting-started/install/) walks you through your first project.
+Then [ask an agent to build a small tool](/docs/guides/getting-started/add-tools/#ask-an-agent-to-build-your-tool) for one thing you want to make easier.
+You do not have to write the extension code yourself, but you should try the result and check that it does what you asked.
 
-Prompt Studio is in alpha, so expect breaking changes before it reaches beta.
-I'll announce them here on the blog, so this is the place to watch.
+Prompt Studio is in alpha and is not ready for general use.
+Try it with a project you can throw away, and expect changes while the platform takes shape.
+The extension API has its own [versioning rules](/docs/references/extensions/api-versioning/), including deprecation before removal.
+Check the [release notes](https://github.com/pufflyai/prompt-studio/releases) before updating.
+I'll use this blog to share what changes and what I learn along the way.
 
 I can't wait to see what you build.

@@ -2,7 +2,7 @@
 
 Artifacts lets agents publish self-contained HTML pages, such as reports, charts, or small tools, and lets you browse every saved version in Prompt Studio.
 
-You install Artifacts once for your user, and it works in every project. Each project has its own library. Each published version is kept and never changed.
+Install Artifacts once for your user, then turn it on in each project that should use it. Installing from a project turns it on there. Each project has its own library. Published versions are snapshots; publishing again adds a version instead of changing an old one.
 
 ## Install
 

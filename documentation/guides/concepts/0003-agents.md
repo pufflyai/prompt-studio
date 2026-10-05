@@ -23,7 +23,9 @@ A session is one conversation with an agent in one workspace. The work is split 
 | Approval requests and your answers | Turning agent output into conversation updates |
 | The saved conversation | Reporting when the agent finished, failed, or stopped |
 
-A follow-up continues the same session. If Prompt Studio restarts, it resumes from the saved conversation. When the saved conversation and the agent's own history disagree, the saved conversation wins.
+A follow-up continues the same session using the saved conversation and the harness's resume support. The saved conversation is Prompt Studio's record of the session.
+
+Queued work survives a runtime restart. Already-running work reconnects only when the harness supports reattachment. Otherwise, the session becomes `disconnected`; send a follow-up to resume it if the agent's session is still available. A restart does not guarantee that an interrupted task finishes.
 
 A session finishing only means the agent stopped. It does not prove that the work is correct. Tools such as Planner add their own review steps for that.
 

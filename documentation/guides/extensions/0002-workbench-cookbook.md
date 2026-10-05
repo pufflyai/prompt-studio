@@ -6,7 +6,9 @@ The recipes use the public `@pstdio/sdk/extensions` API. If you have not built a
 
 ## Try the examples
 
-The examples come from [Extension Lab](../../../extensions/extension-lab/README.md), a set of complete tools with saved data, navigation, and custom modes. Its examples share files, so copy the whole `extensions/extension-lab` folder from the Prompt Studio repository. Rename the package and publisher before you install your copy.
+The examples come from [Extension Lab](../../../extensions/extension-lab/README.md), a set of complete tools with saved data, navigation, and custom modes. Its examples share files, so copy the whole `extensions/extension-lab` folder from the Prompt Studio repository.
+
+Before installing your copy, change `package.json`'s `name` and `publisher`. Replace the original owner ID, `pstdio.extension-lab`, throughout the copied source with your new `<publisher>.<name>`. The [public contracts](../../../extensions/extension-lab/src/contracts.ts), [state events](../../../extensions/extension-lab/src/state-commands.ts), and webview navigation use qualified IDs. Changing only the manifest leaves those calls pointing to Extension Lab instead of your copy.
 
 Run the watcher on your copy from a project folder, and check it:
 

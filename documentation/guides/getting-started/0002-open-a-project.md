@@ -35,7 +35,7 @@ Other `pst` commands find the project from the folder you run them in. See [CLI 
 - The project gets its default workspace: the folder itself. Agent sessions work in this folder and share its files.
 - The default extensions are installed and turned on. They connect the Claude Code, Codex, and OpenCode agents, and add themes and skills.
 
-Opening the same folder again reopens its project. A subfolder is a separate project, even inside a Git repository. Deleting a project keeps the folder and all of its files.
+Opening the same folder again reopens its project. A subfolder is a separate project, even inside a Git repository. Deleting a project keeps your chosen folder and your own files, but removes the project's matching `.pstdio/config.json` link and saved host data. Provider-created workspaces follow their provider's cleanup rules.
 
 To learn how projects, workspaces, and Git worktrees fit together, read [Projects and workspaces](../concepts/0001-projects-and-workspaces.md).
 

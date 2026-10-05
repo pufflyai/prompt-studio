@@ -32,13 +32,13 @@ The [Remote Workspaces](../../../extensions/remote-workspaces/README.md) extensi
 
 An extension reaches a remote service through a named connection. The connection declares which HTTP methods and paths the extension may call. The project settings store only the service address and a reference to the secret. The secret itself stays in Prompt Studio's secret store.
 
-The extension never reads the secret. It sends requests through the host, and the host refuses requests the connection does not allow. Set up connections in the extension's **Connections** settings.
+The connection API does not return the secret to the extension. It sends requests through the host, and the host refuses requests the connection does not allow. Set up connections in the extension's **Connections** settings. Extension code still runs with your account's access to the host; this API is not a sandbox for an untrusted extension.
 
 ## Start work from other systems
 
 Another system, such as a webhook or a scheduler, can start work in a project. Issue it a machine token in **Settings → Machine tokens**, or with `pst auth tokens`. A token works for one project, only for the commands you list, and only until it expires. A command must be marked for automation before a token can run it.
 
-Each request carries an idempotency key, a unique name for that request. Sending the same key twice returns the existing run instead of starting a second one. Accepted runs are saved, so queued work starts again after a restart.
+Each request carries an idempotency key, a unique name for that request. Sending the same key and input again as the same caller returns the existing run instead of starting a second one. Reusing the key with different input fails. Accepted runs are saved, so queued work starts again after a restart. Work interrupted during execution fails with a retryable `host_restarted` error; it does not resume halfway through the command.
 
 ## Learn more
 

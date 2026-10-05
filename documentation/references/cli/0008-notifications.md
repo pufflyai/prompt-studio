@@ -2,6 +2,8 @@
 
 Notifications put work that still needs a person or an agent into the project's Prompt Studio inbox. These commands list, create, and resolve them.
 
+To show the inbox in the dashboard, turn on **Settings → Experimental → Beta features → Notifications**. It starts off. The CLI and notification producers work while the dashboard feature is off.
+
 ## Commands
 
 ```sh

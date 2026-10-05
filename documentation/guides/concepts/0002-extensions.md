@@ -1,6 +1,6 @@
 # Extensions
 
-Every tool in Prompt Studio comes from an extension. The core tools use the same public API that your own extensions use.
+Extensions add tools to Prompt Studio. First-party extensions use the same public API as your own extensions.
 
 ## What an extension is
 
@@ -27,7 +27,7 @@ The extension owns its data and its domain. Prompt Studio owns the shared plumbi
 
 ## Commands do the work
 
-A command is the unit of work. The same command can run from the `pst` command line, a dashboard menu, the command palette, a schedule, or another extension. This is how an agent can do anything a person can do: both use the same commands.
+A command is the unit of work. The same command can run from the `pst` command line, a dashboard menu, the command palette, a schedule, or another extension. Put a tool's operations in commands so people and agents can use the same interface. A button implemented only inside a custom webview is not automatically available to an agent.
 
 Middleware runs before a command. It can let the command continue, change its parameters, or reject it with a reason. Hooks run after an event, such as a session starting or a workspace being created. They react to the change but cannot undo it.
 
@@ -48,7 +48,7 @@ Each project runs one copy of an extension ID. If two folders provide the same I
 
 Extension commands run inside the Prompt Studio runtime on your computer, with the access your user account has. Install extensions from sources you trust.
 
-Some limits still apply. A webview, which is a custom web page inside the dashboard, can only call the host features it declares. Credentials for remote services stay in the host, and an extension can only send the requests its connection declares.
+Some limits still apply. A webview, which is a custom web page inside the dashboard, can only call the host features it declares. Through a host-managed connection, a tool can request allowed methods and paths without receiving the credential. This connection policy is not a sandbox for extension code running inside the host process.
 
 ## Learn more
 
