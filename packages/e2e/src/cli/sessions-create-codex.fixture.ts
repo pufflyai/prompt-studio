@@ -1,11 +1,12 @@
 import { appendFileSync } from "node:fs";
+import { createInterface } from "node:readline";
 
 if (process.argv.includes("--version")) {
   console.log("codex-cli 0.0.0");
   process.exit(0);
 }
 const emit = (event: unknown) => console.log(JSON.stringify(event));
-for await (const line of console) {
+for await (const line of createInterface({ input: process.stdin })) {
   const request = JSON.parse(line);
   if (request.method === "initialize") emit({ id: request.id, result: {} });
   if (request.method === "model/list")

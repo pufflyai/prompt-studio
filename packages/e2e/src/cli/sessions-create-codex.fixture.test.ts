@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 
 test("the Codex fixture answers model discovery before a session starts", async () => {
   const child = Bun.spawn([process.execPath, `${import.meta.dir}/sessions-create-codex.fixture.ts`], {
-    stdin: new Blob([JSON.stringify({ id: 1, method: "model/list", params: {} })]),
+    stdin: new Blob([`${JSON.stringify({ id: 1, method: "model/list", params: {} })}\n`]),
     stdout: "pipe",
   });
   const output = await new Response(child.stdout).text();
