@@ -103,14 +103,14 @@ Startup order:
 
 ## Follow-Ups
 
-Follow-up requests use the same scheduler path as new sessions. Enter and the composer button accept ordinary messages while a turn runs. A nonempty composer shows Queue message; an empty composer retains Stop Response. Failed submissions preserve the text and attachments for retry.
+Follow-up requests use the same scheduler path as new sessions. Enter and the composer button accept ordinary messages while a turn runs. A nonempty composer shows Queue message; an empty composer retains Stop Response. The composer clears its text and attachments when the message enters the conversation. A failed message stays there as unsent. Close returns its text and attachments to the composer.
 
 When a follow-up is accepted but queued:
 
 1. A session waiting for capacity becomes `queued`. An active session keeps its current status while its next messages wait.
 2. The follow-up prompt is persisted in the queue entry.
 3. Conversation hydration includes the queued user prompt before the queued status banner.
-4. The dashboard waits for acceptance before clearing the composer, then hydrates the durable queue. It does not keep a separate client queue.
+4. The dashboard clears the composer when the message enters the conversation and keeps sending locked until the request settles. After acceptance, it hydrates the durable queue. It does not keep a separate client queue.
 
 Question responses for `awaiting_input` sessions bypass capacity checks. They resume work that already occupies active capacity, so queueing them would deadlock the approval flow.
 

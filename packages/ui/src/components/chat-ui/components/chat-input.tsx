@@ -2,6 +2,7 @@ import { Box, Flex, Text } from "@chakra-ui/react";
 import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { getTextFromSerializedEditorState, type PromptCommand, PromptEditor } from "../../rich-text";
+import { createSerializedPromptState } from "../utils/editor-state";
 import {
   type ChatInputAction,
   resolveChatInputButtonAction,
@@ -13,6 +14,7 @@ import { ChatInputToolbar } from "./chat-input-toolbar";
 import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
 import { type ComposerDecision, submitComposerResponse } from "./composer-decision";
 import { ComposerTakeover } from "./composer-takeover";
+import { focusPromptEditor, useComposerFocus } from "./use-chat-input-focus";
 import { useChatInputHistory } from "./use-chat-input-history";
 import { useComposerRequest } from "./use-composer-request";
 
@@ -64,36 +66,6 @@ const ChatInputPlaceholder = (props: { placeholder?: string }) => {
 };
 
 const selectedChatInputBorderColor = "border.accent-light";
-
-const focusPromptEditor = (container: HTMLDivElement | null) => {
-  const editable = container?.querySelector('[contenteditable="true"]');
-  if (editable instanceof HTMLElement) editable.focus();
-};
-
-const requestPromptEditorFocus = (container: HTMLDivElement | null, onFocus?: () => void) =>
-  requestAnimationFrame(() => {
-    focusPromptEditor(container);
-    onFocus?.();
-  });
-
-const useComposerFocus = (
-  containerRef: { current: HTMLDivElement | null },
-  autoFocus: boolean,
-  focusSignal: number,
-  setIsSelected: (selected: boolean) => void,
-) => {
-  useEffect(() => {
-    if (!autoFocus) return;
-    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
-    return () => cancelAnimationFrame(handle);
-  }, [autoFocus, containerRef, setIsSelected]);
-
-  useEffect(() => {
-    if (focusSignal === 0) return;
-    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
-    return () => cancelAnimationFrame(handle);
-  }, [focusSignal, containerRef, setIsSelected]);
-};
 
 export const ChatInput = (props: ChatInputProps) => {
   const {
@@ -148,7 +120,7 @@ export const ChatInput = (props: ChatInputProps) => {
     onChangeRef.current?.(resetText);
   }, [defaultState]);
 
-  useComposerFocus(containerRef, autoFocus, focusSignal, setIsSelected);
+  const focusAfterSubmission = useComposerFocus(containerRef, autoFocus, focusSignal, setIsSelected);
 
   const history = useChatInputHistory({
     recentUserMessages,
@@ -171,17 +143,10 @@ export const ChatInput = (props: ChatInputProps) => {
     focusPromptEditor(containerRef.current);
   };
 
-  const resetEditor = (shouldFocus = false) => {
-    history.reset();
+  const replaceDraftText = (value: string) => {
+    setEditorState(createSerializedPromptState(value));
     setEditorKey((key) => key + 1);
-    setEditorState(defaultState);
-    history.change(getTextFromSerializedEditorState(defaultState));
-
-    if (shouldFocus) {
-      requestAnimationFrame(() => {
-        focusPromptEditor(containerRef.current);
-      });
-    }
+    history.change(value);
   };
 
   const canSubmit = !isDisabled && !submitting && !submitDisabled && !occupied;
@@ -197,15 +162,19 @@ export const ChatInput = (props: ChatInputProps) => {
   const messageTitle = streaming ? "Queue message" : "Send message";
   const submitMessage = async () => {
     if (!canSubmit || !text.trim()) return;
+    const sentText = text;
     history.reset();
     setSubmitting(true);
+    // The conversation owns the message from the moment it is sent.
+    replaceDraftText("");
     try {
       await submitComposerResponse({ text: text.trim(), attachments: attachedResources, onSubmit, onClearAttachments });
-      resetEditor(true);
     } catch {
-      // Keep the composer intact so failed submissions can be retried.
+      // A rejected handoff leaves the draft available for a retry.
+      replaceDraftText(sentText);
     } finally {
       setSubmitting(false);
+      focusAfterSubmission();
     }
   };
 

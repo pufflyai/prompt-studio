@@ -29,13 +29,18 @@ export const ChatInputQuestionForm = (props: ChatInputQuestionFormProps) => {
     if (inFlight.current || disabled || (!skip && question.hasMissingRequiredAnswer)) return;
     inFlight.current = true;
     setSubmitting(true);
+    const sent = {
+      selectedOptions: question.selectedOptionsByQuestion,
+      customAnswers: question.customAnswersByQuestion,
+    };
+    const text = skip ? SKIPPED_QUESTION_TEXT : question.responseText;
+    const response = skip ? buildSkippedQuestionResponse(prompt) : toQuestionResponse(prompt, question.buildAnswers());
+    question.reset();
     try {
-      await onSubmit(
-        skip ? SKIPPED_QUESTION_TEXT : question.responseText,
-        skip ? buildSkippedQuestionResponse(prompt) : toQuestionResponse(prompt, question.buildAnswers()),
-      );
+      await onSubmit(text, response);
       // Keep accepted replies locked until native history removes this request.
     } catch {
+      question.restore(sent.selectedOptions, sent.customAnswers);
       inFlight.current = false;
       setSubmitting(false);
     }
@@ -43,6 +48,7 @@ export const ChatInputQuestionForm = (props: ChatInputQuestionFormProps) => {
   return (
     <>
       <QuestionPromptControls
+        isEditable={!disabled && !submitting}
         questionPrompt={prompt}
         selectedOptionsByQuestion={question.selectedOptionsByQuestion}
         customAnswersByQuestion={question.customAnswersByQuestion}
