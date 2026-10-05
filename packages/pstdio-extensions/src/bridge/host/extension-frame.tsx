@@ -86,10 +86,11 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     title,
   } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const loadedFrameRef = useRef<HTMLIFrameElement | null>(null);
   const remoteRef = useRef<GuestRemote | null>(null);
   const initializedRef = useRef(false);
-  const connectedKeyRef = useRef<string | null>(null);
+  // The connection belongs to one browsing context. Navigation keeps the iframe's
+  // WindowProxy, so a different contentWindow means the runtime document is gone.
+  const connectedWindowRef = useRef<Window | null>(null);
   const propsRef = useRef(extensionProps);
   const themeRef = useRef(theme);
   const capabilitiesRef = useRef(capabilities);
@@ -113,30 +114,28 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   onErrorRef.current = onError;
   onDiagnosticsRef.current = onDiagnostics;
 
-  // Connect once per iframe (keyed by runtime/module URL). React StrictMode dev double-mount and
-  // parent re-renders with unstable prop references (e.g. `webview.styles` rebuilt by
-  // `.map`) would otherwise tear down the live connection while the iframe keeps its
-  // state, leaving guest-to-host RPCs with no listener.
+  // Connect once per browsing context. React StrictMode dev double-mount and parent
+  // re-renders with unstable prop references (e.g. `webview.styles` rebuilt by `.map`)
+  // would otherwise tear down the live connection while the iframe keeps its state,
+  // leaving guest-to-host RPCs with no listener.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: frameEpoch remounts the iframe this effect reads through iframeRef.
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    // Moving the iframe in the DOM (e.g. the Side Panel switching between attached and
-    // floating hosts) reloads it to about:blank because the src attribute is empty. A
-    // second load means the runtime document is gone, even if guest initialization
-    // has not finished. Remount a fresh iframe and connection. The listener
-    // attaches before the connected guard so StrictMode's dev-only remount cannot
-    // leave the iframe without one.
+    // Reinserting the iframe (a DOM move without moveBefore, or StrictMode's dev-only
+    // remount of a moved host) replaces its browsing context with about:blank because
+    // the src attribute is empty. This can happen before the runtime finishes loading,
+    // so compare browsing contexts instead of counting loads. Remount a fresh iframe
+    // and connection when the context changed.
     const onFrameLoad = () => {
-      if (loadedFrameRef.current === iframe) setFrameEpoch((epoch) => epoch + 1);
-      else loadedFrameRef.current = iframe;
+      if (iframe.contentWindow !== connectedWindowRef.current) setFrameEpoch((epoch) => epoch + 1);
     };
     iframe.addEventListener("load", onFrameLoad);
     const removeLoadListener = () => iframe.removeEventListener("load", onFrameLoad);
 
-    const connectedKey = `${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`;
-    if (connectedKeyRef.current === connectedKey) return removeLoadListener;
-    connectedKeyRef.current = connectedKey;
+    if (iframe.contentWindow === connectedWindowRef.current) return removeLoadListener;
+    connectedWindowRef.current = iframe.contentWindow;
 
     // Snapshot styles at connect time so subsequent parent re-renders that produce a
     // new array reference don't affect what we send in init.

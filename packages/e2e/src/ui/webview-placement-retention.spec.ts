@@ -48,3 +48,44 @@ test("moving a webview between panels preserves its browsing context", async ({ 
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
   }
 });
+
+test("a webview connects when its frame is reattached while the runtime loads", async ({ page, request }) => {
+  const response = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Reattached webview" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  const runtimeRequested = Promise.withResolvers<void>();
+  const reattached = Promise.withResolvers<void>();
+  let runtimeRequests = 0;
+  await page.route("**/pstdio.workbench-fixture.view.overview/runtime", async (route) => {
+    runtimeRequests += 1;
+    if (runtimeRequests > 1) return route.continue();
+    runtimeRequested.resolve();
+    await reattached.promise;
+    // The reattach aborted this navigation, so the browser may refuse to continue it.
+    await route.continue().catch(() => undefined);
+  });
+  try {
+    await page.addInitScript((projectId: string) => {
+      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+    }, project.id);
+    await page.goto(`/projects/${project.id}/`);
+    await page.getByRole("option", { name: "Lab mode", exact: true }).click();
+    await runtimeRequested.promise;
+    // Reinserting an iframe gives it a new browsing context, as React StrictMode
+    // and DOM moves without moveBefore do.
+    await page.locator('iframe[title="Overview"]').evaluate((iframe) => {
+      const parent = iframe.parentNode!;
+      const next = iframe.nextSibling;
+      iframe.remove();
+      parent.insertBefore(iframe, next);
+    });
+    reattached.resolve();
+    await expect(
+      page.locator('iframe[title="Overview"]').contentFrame().getByRole("heading", { name: "Sandbox webview" }),
+    ).toBeVisible();
+  } finally {
+    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
+  }
+});
