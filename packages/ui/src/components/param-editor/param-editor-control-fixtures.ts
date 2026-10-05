@@ -86,6 +86,22 @@ export const paramEditorInputFixtures = {
     },
     "assistant",
   ),
+  longSelection: fixture(
+    {
+      id: "topics",
+      name: "Topics",
+      type: "selection",
+      multiSelect: true,
+      allowCustomValues: true,
+      defaultValue: [],
+      options: [
+        { id: "manage several coding agents", name: "manage several coding agents" },
+        { id: "internal tools with Claude Code", name: "internal tools with Claude Code" },
+        { id: "agent workbench", name: "agent workbench" },
+      ],
+    },
+    ["manage several coding agents", "internal tools with Claude Code", "agent workbench"],
+  ),
   date: fixture(
     {
       id: "publish-date",

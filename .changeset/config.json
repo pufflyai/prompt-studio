@@ -49,6 +49,7 @@
     "pstdio-wt",
     "workbench-fixture",
     "motion-lab",
+    "social-radar",
     "pstdio-shader-lab"
   ],
   "privatePackages": {
