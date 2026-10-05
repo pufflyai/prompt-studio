@@ -97,7 +97,9 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await expect(page.getByText("Tried Prompt Studio for reviews", { exact: true })).toBeVisible();
     await expect(page.getByText("@ Mention").first()).toBeVisible();
     // One level grouped by status: threads to join are New, posts to publish are Ideas.
-    for (const group of ["New", "Ideas"]) await expect(page.getByText(group, { exact: true }).first()).toBeVisible();
+    // The status filter menu repeats these labels, so look inside the list.
+    const list = page.getByLabel("Collection list");
+    for (const group of ["New", "Ideas"]) await expect(list.getByText(group, { exact: true }).first()).toBeVisible();
     await shot(page, "02-threads");
 
     // 03: copy a reply idea from under the comment it answers, then mark it used.
