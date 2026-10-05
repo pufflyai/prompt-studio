@@ -1,0 +1,17 @@
+{
+  "name": "Default",
+  "values": {
+    "dash": 16,
+    "gap": 2,
+    "inset": 2.5,
+    "speed": 12,
+    "lightOpacity": 0.4,
+    "darkOpacity": 0.75,
+    "noiseScale": 200,
+    "noiseContrast": 1.6,
+    "noiseBalance": 0,
+    "noiseDrift": 5,
+    "noiseDetail": 1,
+    "seed": 12
+  }
+}
