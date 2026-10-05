@@ -1,6 +1,6 @@
 # Write an extension
 
-Build a small Bookmarks tool: a command that saves a link, and a table that lists the saved links.
+Build a small Bookmarks tool with CLI-ready commands to save and list links, plus a table that people can use in the workbench.
 
 ## Before you start
 
@@ -65,6 +65,7 @@ const bookmarkParams = {
 const addBookmark = defineCommand({
   id: "add",
   title: "Add bookmark",
+  description: "Save a title and URL in this project's bookmarks.",
   cli: true,
   palette: [{ label: "Add bookmark" }],
   params: bookmarkParams,
@@ -87,6 +88,8 @@ export default defineExtension({
 - `ctx.storage` is storage that Prompt Studio keeps for this extension in the current project.
 - After saving, the command emits the `bookmarksChanged` event so views can refresh. The event's `extensionId` must match `<publisher>.<name>`.
 - `defineExtension` lists everything the extension adds. It is the file's default export.
+
+The CLI is generated from this declaration; you do not write a second command-line program. An agent can read `pst bookmarks add --help` and supply the same title and URL as a person using the form. Return the saved bookmark so the caller receives its ID.
 
 ## 3. Add a view
 
@@ -118,6 +121,7 @@ const bookmarkParams = {
 const addBookmark = defineCommand({
   id: "add",
   title: "Add bookmark",
+  description: "Save a title and URL in this project's bookmarks.",
   cli: true,
   palette: [{ label: "Add bookmark" }],
   params: bookmarkParams,
@@ -126,6 +130,16 @@ const addBookmark = defineCommand({
     await ctx.storage.collection<Bookmark>("bookmarks").put(bookmark.id, bookmark);
     await ctx.events.emit(bookmarksChanged, { id: bookmark.id });
     return bookmark;
+  },
+});
+
+const listBookmarks = defineCommand({
+  id: "list",
+  title: "List bookmarks",
+  description: "Read the saved bookmarks for this project.",
+  cli: true,
+  async run(ctx) {
+    return ctx.storage.collection<Bookmark>("bookmarks").list();
   },
 });
 
@@ -178,7 +192,7 @@ const bookmarksNavigation = defineNavigationItem({
 });
 
 export default defineExtension({
-  commands: [addBookmark],
+  commands: [addBookmark, listBookmarks],
   views: [bookmarkTable],
   pages: [bookmarksPage],
   navigationItems: [bookmarksNavigation],
@@ -188,6 +202,7 @@ export default defineExtension({
 - The view's `query` reads the saved bookmarks and returns one row for each.
 - `refreshEvents` runs `query` again after `bookmarksChanged`, so new bookmarks appear without a reload.
 - The toolbar action runs the same `add` command. Its `input` opens a form for the title and URL.
+- The `list` command reads the same collection as the table. It lets an agent check the result without opening the page.
 - The page gives the view its own address in the project, and shows it as the page's main content.
 - The navigation item adds a **Bookmarks** row to the project sidebar that opens the page.
 
@@ -208,9 +223,20 @@ Try the command:
 
 ```sh
 pst bookmarks add --title "Prompt Studio" --url https://prompt.studio
+pst bookmarks list
 ```
 
 Open the dashboard and choose **Bookmarks** in the sidebar. The table shows the bookmark. Choose **Add bookmark** to save another one from the form.
+
+Both callers use the same command and saved collection. Discover its help, or request the full execution response for an agent or script:
+
+```sh
+pst bookmarks --help
+pst bookmarks add --help
+pst bookmarks add --title "Extension docs" --url https://prompt.studio/docs/ --json
+```
+
+Without `--json`, a successful extension command prints its returned value as JSON. With `--json`, it prints the full response; check `outcome.ok` before using `outcome.value`. A failed or rejected command exits with code 1. See [Make actions CLI-ready](0007-cli-ready-actions.md) for parameter flags, aliases, and project targeting.
 
 To install a changed version, run the same command with `--force`. While you work on an extension, run the watcher instead:
 
@@ -243,6 +269,7 @@ Exit code 0 means the pages loaded without errors. [Smoke checks](0006-smoke-che
 
 - Let an agent build the next tool. Prompt Studio Skills, installed in every new project, includes a skill for writing extensions. Run `pst agents setup <agent-id>`, then ask your agent for the tool you want.
 - Add pages with inspectors, editors, and custom modes with the [Workbench cookbook](0002-workbench-cookbook.md).
+- Expose the same actions to people and agents with [Make actions CLI-ready](0007-cli-ready-actions.md).
 - Check or react to commands and events with the [Automation cookbook](0003-automation.md).
 - Build a custom page with a webview. See [Webviews and storage](../../references/extensions/0005-webview-and-storage-api.md).
 - Look up every contribution in the [extension API reference](../../references/extensions/0001-api.md), the [manifest rules](../../references/extensions/0002-manifest-and-installation.md), and [Workbench composition](../../references/extensions/0008-contextual-workbench-composition.md).

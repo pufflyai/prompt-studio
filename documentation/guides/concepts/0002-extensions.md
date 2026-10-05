@@ -29,6 +29,26 @@ The extension owns its data and its domain. Prompt Studio owns the shared plumbi
 
 A command is the unit of work. The same command can run from the `pst` command line, a dashboard menu, the command palette, a schedule, or another extension. Put a tool's operations in commands so people and agents can use the same interface. A button implemented only inside a custom webview is not automatically available to an agent.
 
+## CLI-ready tools
+
+A CLI-ready action is an operation you can run from a terminal with explicit inputs and a useful result. An agent can discover it with `--help`, call it without finding a button, and use the result in its next step.
+
+For example, with Notes installed and enabled, run these commands from your project folder:
+
+```sh
+pst pstdio-notes --help
+pst pstdio-notes notes create --help
+pst pstdio-notes notes create --title "Meeting notes"
+```
+
+The last line runs Notes' **New note** command. The sidebar action and CLI command use the same handler; you can open the resulting note in the workbench.
+
+Extension authors opt commands into the CLI with `cli: true`. Prompt Studio derives their command paths, option names, and help from the declarations. Installing and enabling a tool adds its CLI commands to that project's available commands. Run `pst --help` inside the project to discover them.
+
+This makes the command a shared interface for a person, an agent, and another tool. A custom button still needs to call that command, and a tool needs read or list commands if an agent must inspect its state. See [Make actions CLI-ready](../extensions/0007-cli-ready-actions.md) for a complete pattern.
+
+## React to commands and events
+
 Middleware runs before a command. It can let the command continue, change its parameters, or reject it with a reason. Hooks run after an event, such as a session starting or a workspace being created. They react to the change but cannot undo it.
 
 ## Install, turn on, and load
@@ -54,4 +74,5 @@ Some limits still apply. A webview, which is a custom web page inside the dashbo
 
 - [Add tools](../getting-started/0003-add-tools.md)
 - [Write an extension](../extensions/0001-authoring.md)
+- [Make actions CLI-ready](../extensions/0007-cli-ready-actions.md)
 - [Extension API reference](../../references/extensions/0001-api.md)

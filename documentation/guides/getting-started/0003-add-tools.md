@@ -61,7 +61,20 @@ Use the same check for a tool an agent builds: try its main action, change somet
 
 ## Use extension commands
 
-Extensions can add commands to `pst`. Run `pst --help` to see the command groups from your enabled extensions, then `pst <group> --help` for details. For example, Planner adds `pst tickets`.
+Tools can expose their actions as CLI commands. That lets an agent use a tool directly, rather than navigate its screen. Run the commands inside your project folder so Prompt Studio uses that project's enabled extensions:
+
+```sh
+pst --help
+pst pstdio-notes --help
+pst pstdio-notes notes create --help
+pst pstdio-notes notes create --title "Reading list"
+```
+
+With Notes installed and enabled, the last command creates the same empty note as **New note** in the sidebar. Open it in Notes to check the result. Planner adds shorter aliases such as `pst tickets list`; an extension's help shows its own paths and aliases.
+
+For extension commands, `--json` returns the execution response, including its success or failure outcome. Agents can read that response and pass returned IDs to later commands. Use `--help` before guessing an action's flags.
+
+When asking an agent to build a tool, ask for **CLI-ready actions** too: commands to inspect its state and perform its main operations, with useful help and results. This keeps the tool usable from its page, from a terminal, and by an agent. [Make actions CLI-ready](../extensions/0007-cli-ready-actions.md) explains the authoring pattern.
 
 ## Keep extensions up to date
 
@@ -75,7 +88,7 @@ pst extensions update
 
 Start with one thing you want to make easier. You can describe the result without writing the extension code yourself. [Set up an agent and install its skills](0004-run-agents.md), then ask it to use the `create-pstdio-extension` skill. For example:
 
-> Build a reading-list tool for this project. Use the create-pstdio-extension skill. I want to add a title and a link, mark an item as read, and keep the list after I close and reopen Prompt Studio. Put it in this project's sidebar. Install it in this project and show me how to use it.
+> Build a reading-list tool for this project. Use the create-pstdio-extension skill. I want to add a title and a link, mark an item as read, and keep the list after I close and reopen Prompt Studio. Put it in this project's sidebar. Make the actions CLI-ready: let me and my agents list items, add them, and mark them as read through pst commands. Install it in this project and show me how to use it.
 
 The agent writes and installs an extension. Try adding an item, changing it, and reopening the tool. Ask for changes in the same conversation. A finished agent session is not proof that the tool works; check the result before relying on it.
 

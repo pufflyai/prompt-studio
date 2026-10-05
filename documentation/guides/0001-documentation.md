@@ -117,6 +117,7 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0003 — Automation cookbook](extensions/0003-automation.md)
 - [0004 — Move to remote execution](extensions/0004-remote-execution-migration.md)
 - [0006 — Smoke checks](extensions/0006-smoke-checks.md)
+- [0007 — Make actions CLI-ready](extensions/0007-cli-ready-actions.md)
 
 ### Use the SDK
 

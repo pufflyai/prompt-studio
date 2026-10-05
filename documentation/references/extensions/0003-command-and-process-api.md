@@ -80,6 +80,46 @@ a Git worktree. The command receives `{ providerId, params }` and passes it to `
 `--workspace '{"providerId":"pstdio.worktree","params":{"base":"main"}}'`. `harness` and `resource` params also accept
 JSON on the CLI.
 
+## CLI contributions
+
+Set `cli: true` to expose a command as `pst <package-name> <command-id>`. Dots in the local command ID become path segments: package `bookmarks` and ID `links.add` produce `pst bookmarks links add`. Installing and enabling the extension makes its CLI paths available in that project.
+
+Use a CLI contribution object when you need a different path, a shorter global alias, or examples:
+
+```ts
+cli: {
+  path: ["links", "add"],
+  globalAliases: [["bookmarks", "add"]],
+  examples: ['pst bookmarks add --title "Prompt Studio" --url https://prompt.studio'],
+},
+```
+
+`path` is relative to the package name. `globalAliases` are complete paths after `pst`; they do not add a package prefix. Choose aliases that do not conflict with another enabled extension or a core command. `cli: true` does not by itself add a palette entry or toolbar action; declare those separately and point them to the same command.
+
+### Help and parameter flags
+
+Run `pst --help` inside a linked project folder to list its enabled extension namespaces. The runtime must be reachable; otherwise, top-level help shows only core commands. `pst <namespace> --help` lists CLI paths, and command help shows the provider, command ID, options, aliases, and examples. Namespace and command calls can target another project with `--project-id <project-id>`.
+
+Parameter names become flags in kebab-case: `noteId` becomes `--note-id`. The shared declarations define both the command's inputs and the dashboard form fields.
+
+| Parameter type | CLI input |
+| --- | --- |
+| Text, select, template | `--title "Meeting notes"` or another scalar value |
+| Number | `--count 3` |
+| Boolean | `--archived` for true, `--archived=false` for false |
+| List | Repeat the flag: `--tag docs --tag release` |
+| JSON, harness, resource, workspace | Pass quoted JSON, such as `--workspace '{"providerId":"pstdio.worktree","params":{"base":"main"}}'` |
+
+Missing required flags are rejected before execution. The host validates command parameters and runs the command middleware for the invocation.
+
+### Results and agent access
+
+Without `--json`, success prints the command's returned value as JSON. With `--json`, the CLI prints the full execution response. Check `outcome.ok` before reading `outcome.value`. Failure or rejection exits with code 1.
+
+Return IDs and relevant state from mutating commands, and expose read or list commands when callers need to check the result. An agent can then discover an operation, run it, inspect its response, and continue without scraping the dashboard.
+
+`cli: true` is local CLI exposure. `automation: true` is separate: it lets that exact command be granted to a scoped machine token for remote automation. Neither flag grants unrestricted access to every command. See [Remote automation](../cli/0007-automation.md).
+
 ## Named connections
 
 Extensions declare remote HTTP access by name. The host stores the base URL and credential. Extension code receives request and stream methods, never the secret value.
