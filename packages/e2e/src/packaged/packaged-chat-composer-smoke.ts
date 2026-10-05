@@ -35,6 +35,8 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     });
     const prompt = "Packaged composer first message";
     await editor.fill(prompt);
+    // Sending stays blocked until the project's agents and models load.
+    await expect(send).toBeEnabled();
     await editor.press("Enter");
     try {
       await expect(editor).toBeEmpty();
