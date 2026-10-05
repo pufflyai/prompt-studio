@@ -32,5 +32,8 @@
   "settings.implementation.defaultTargetBranch.description": "Branche distante visée par les nouveaux travaux. Effacez-la pour utiliser la branche par défaut du dépôt.",
   "ticketWorkspaces.project": "Espace de travail du projet",
   "commands.linkTicket": "Lier le ticket",
-  "commands.unlinkTicket": "Délier le ticket"
+  "commands.unlinkTicket": "Délier le ticket",
+  "commands.refinementPolicy.title": "Lire les options d’affinement des tickets",
+  "settings.uxPrototype.title": "Créer un prototype d’artefact pour les fonctionnalités UX",
+  "settings.uxPrototype.description": "Exiger un prototype interactif lors de l’affinement d’une nouvelle fonctionnalité UX si Artifacts est disponible."
 }

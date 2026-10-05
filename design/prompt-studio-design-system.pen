@@ -164239,6 +164239,70 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "yJjh2",
+      "x": 26365,
+      "y": 0,
+      "name": "Artifacts · Library header",
+      "clip": true,
+      "width": 800,
+      "height": 300,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "E31xts",
+          "type": "ref",
+          "ref": "T7x2S8",
+          "name": "Persistent library header",
+          "width": "fill_container",
+          "descendants": {
+            "Q4jxR": {
+              "content": "Artifacts"
+            },
+            "MoLLs": {
+              "id": "DFzNT",
+              "type": "ref",
+              "ref": "nbn0J",
+              "name": "Artifact search",
+              "width": 384,
+              "height": 32,
+              "theme": {
+                "size": "sm",
+                "field": "default"
+              },
+              "descendants": {
+                "hcIyD": {
+                  "content": "Search artifacts…"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "Val1T",
+          "name": "Scrollable artifact grid",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "p5yt80",
+              "name": "Library content",
+              "fill": "$ds-fg-muted",
+              "content": "Artifact cards and empty states scroll below the header.",
+              "fontFamily": "$font-label",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

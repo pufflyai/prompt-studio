@@ -32,6 +32,16 @@ const templateCommandRefs = {
 export default defineExtension({
   settings: {
     properties: {
+      "refinement.generateArtifactPrototype": {
+        type: "boolean",
+        scope: "project",
+        default: true,
+        title: l10n("settings.uxPrototype.title", "Generate an artifact prototype for UX features"),
+        description: l10n(
+          "settings.uxPrototype.description",
+          "Require an interactive prototype when refining a new UX feature if Artifacts is available.",
+        ),
+      },
       "implementation.adversarialReview": {
         type: "boolean",
         scope: "project",

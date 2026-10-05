@@ -29,6 +29,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
@@ -184,6 +185,19 @@ test(
       };
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
+          installName: "pstdio-artifacts",
+          installed: false,
+          origin: {
+            kind: "git",
+            path: "extensions/pstdio-artifacts",
+            ref: "{hostRelease}",
+            url: "https://github.com/pufflyai/prompt-studio",
+          },
+          publisher: "pstdio",
+        }),
+      );
+      expect(extensionCatalog.marketplace).toContainEqual(
+        expect.objectContaining({
           installName: "pstdio-notes",
           origin: {
             kind: "git",
@@ -332,7 +346,12 @@ test(
 
     try {
       const started = await startPackagedServe(tempRoot, {
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "extension-lab", "pstdio-artifacts"),
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+          "workbench-fixture",
+          "extension-lab",
+          "pstdio-artifacts",
+          "pstdio-planner",
+        ),
         // This check exercises metadata and commands; browser suites cover webview builds.
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
       });
@@ -359,6 +378,11 @@ test(
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),
         metadata,
+      });
+      await expectPackagedRefinement({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
       });
       const counter = await fetch(
         `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.workbench-fixture.command.counter.bump/execute`,

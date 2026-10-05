@@ -28,5 +28,8 @@
   "commands.implementationTargets.title": "列出实现目标分支",
   "commands.setImplementationTarget.title": "设置默认目标分支",
   "settings.implementation.defaultTargetBranch.title": "默认目标分支",
-  "settings.implementation.defaultTargetBranch.description": "新工作的目标远程分支。清除后将使用仓库默认分支。"
+  "settings.implementation.defaultTargetBranch.description": "新工作的目标远程分支。清除后将使用仓库默认分支。",
+  "commands.refinementPolicy.title": "读取工单细化选项",
+  "settings.uxPrototype.title": "为 UX 功能生成制品原型",
+  "settings.uxPrototype.description": "当 Artifacts 可用时，细化新的 UX 功能必须提供交互式原型。"
 }

@@ -1,11 +1,10 @@
-import { Heading, Input, InputGroup, SimpleGrid, Stack, Text } from "@chakra-ui/react";
-import { createGlyphIcon, EmptyState, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, Header, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { useState } from "react";
 import type { ArtifactSummary } from "../artifacts";
 import { useArtifactTranslations } from "../translations";
 import { ArtifactThumbnail, type LoadArtifactPreview } from "./artifact-thumbnail";
 
-const SearchIcon = createGlyphIcon("search-normal-1");
 interface ArtifactLibraryProps {
   items: ArtifactSummary[];
   onOpen: (item: ArtifactSummary) => void;
@@ -33,61 +32,69 @@ export const ArtifactLibrary = (props: ArtifactLibraryProps) => {
   const [search, setSearch] = useState("");
   const filtered = items.filter((item) => item.title.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
   return (
-    <Stack overflowY="auto" height="full">
-      <Stack gap="lg" p="lg" width="full" maxWidth="4xl" mx="auto">
-        <Heading textStyle="heading/M/bold">{t("library.heading", "Artifacts")}</Heading>
-        <InputGroup startElement={<SearchIcon />} width="full">
-          <Input
-            type="search"
-            aria-label={t("library.search", "Search artifacts")}
-            placeholder={t("library.searchPlaceholder", "Search artifacts…")}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </InputGroup>
-        {filtered.length ? (
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap="lg">
-            {filtered.map((item) => (
-              <SimpleCard
-                asChild
-                key={item.artifactId}
-                overflow="hidden"
-                textAlign="left"
-                cursor="pointer"
-                focusVisibleRing="outside"
-                _hover={{ borderColor: "border" }}
-              >
-                <button type="button" aria-label={item.title} onClick={() => onOpen(item)}>
-                  <ArtifactThumbnail item={item} loadPreview={loadPreview} />
-                  <SimpleCardBody>
-                    <Stack gap="xs">
-                      <Text textStyle="paragraph/S/medium" truncate>
-                        {item.title}
-                      </Text>
-                      <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                        {editedDate(item.publishedAt, translations)}
-                      </Text>
-                    </Stack>
-                  </SimpleCardBody>
-                </button>
-              </SimpleCard>
-            ))}
-          </SimpleGrid>
-        ) : (
-          <EmptyState
-            title={
-              search
-                ? t("library.noMatches", "No matching artifacts")
-                : t("library.emptyTitle", "Your first artifact starts with an idea")
-            }
-            description={
-              search
-                ? t("library.searchHint", "Try a different title.")
-                : t("library.emptyHint", "Ask an agent to create and publish an interactive HTML page.")
-            }
-          />
-        )}
-      </Stack>
+    <Stack height="full" minHeight="0" gap="0">
+      <Header flexShrink="0" justifyContent="space-between">
+        <Text as="h2" textStyle="label/M/medium" flexShrink="0">
+          {t("library.heading", "Artifacts")}
+        </Text>
+        <Input
+          size="sm"
+          flex="1"
+          minWidth="0"
+          maxWidth="sm"
+          type="search"
+          aria-label={t("library.search", "Search artifacts")}
+          placeholder={t("library.searchPlaceholder", "Search artifacts…")}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </Header>
+      <ScrollArea flex="1" minHeight="0">
+        <Stack gap="lg" p="lg" width="full" maxWidth="4xl" mx="auto">
+          {filtered.length ? (
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap="lg">
+              {filtered.map((item) => (
+                <SimpleCard
+                  asChild
+                  key={item.artifactId}
+                  overflow="hidden"
+                  textAlign="left"
+                  cursor="pointer"
+                  focusVisibleRing="outside"
+                  _hover={{ borderColor: "border" }}
+                >
+                  <button type="button" aria-label={item.title} onClick={() => onOpen(item)}>
+                    <ArtifactThumbnail item={item} loadPreview={loadPreview} />
+                    <SimpleCardBody>
+                      <Stack gap="xs">
+                        <Text textStyle="paragraph/S/medium" truncate>
+                          {item.title}
+                        </Text>
+                        <Text textStyle="paragraph/XS/regular" color="fg.muted">
+                          {editedDate(item.publishedAt, translations)}
+                        </Text>
+                      </Stack>
+                    </SimpleCardBody>
+                  </button>
+                </SimpleCard>
+              ))}
+            </SimpleGrid>
+          ) : (
+            <EmptyState
+              title={
+                search
+                  ? t("library.noMatches", "No matching artifacts")
+                  : t("library.emptyTitle", "Your first artifact starts with an idea")
+              }
+              description={
+                search
+                  ? t("library.searchHint", "Try a different title.")
+                  : t("library.emptyHint", "Ask an agent to create and publish an interactive HTML page.")
+              }
+            />
+          )}
+        </Stack>
+      </ScrollArea>
     </Stack>
   );
 };
