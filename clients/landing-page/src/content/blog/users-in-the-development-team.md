@@ -3,6 +3,7 @@ title: "In the future, your users will be part of the development team"
 description: Malleable software lets people shape the tools they use, while developers maintain the foundations those tools rely on.
 published: 2026-10-06
 author: aurelien-franky
+image: ../../../../../design/art/blog2.png
 ---
 
 I think users will become part of the development team.

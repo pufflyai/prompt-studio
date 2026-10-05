@@ -1,5 +1,7 @@
 import type { LandingDocument, LandingPage } from "../../content/landing-pages";
 
+const banner = new URL("../../../../../design/art/blog1.png", import.meta.url).href;
+
 // Sample pages and markup only. Real docs come from the repo's markdown.
 const doc = (path: string, label: string): LandingPage => ({
   path,
@@ -36,6 +38,7 @@ export const STORY_POST: Extract<LandingPage, { view: "post" }> = {
   published: "2026-08-31",
   author: BLOG_AUTHORS["aurelien-franky"],
   readingMinutes: 3,
+  image: { src: banner, width: 1600, height: 900 },
 };
 
 export const STORY_PAGES: LandingPage[] = [

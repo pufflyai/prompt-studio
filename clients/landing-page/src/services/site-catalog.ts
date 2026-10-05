@@ -1,3 +1,4 @@
+import { getImage } from "astro:assets";
 import { type CollectionEntry, getCollection, render } from "astro:content";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import { BLOG_AUTHORS } from "../content/blog-authors";
@@ -38,9 +39,10 @@ const docPage = (entry: CollectionEntry<"docs">): LandingPage => {
   };
 };
 
-const postPage = (entry: CollectionEntry<"blog">): LandingPage => {
+const postPage = async (entry: CollectionEntry<"blog">) => {
   const readingMinutes = metadataOf(entry).frontmatter?.readingMinutes;
   if (readingMinutes === undefined) throw new Error(`${entry.id} is missing its calculated reading time.`);
+  const image = await getImage({ src: entry.data.image, width: 1280, format: "webp" });
   return {
     path: `/blog/${entry.id}/`,
     view: "post",
@@ -50,8 +52,8 @@ const postPage = (entry: CollectionEntry<"blog">): LandingPage => {
     published: entry.data.published.toISOString(),
     author: BLOG_AUTHORS[entry.data.author],
     readingMinutes,
-    image: entry.data.image,
-  };
+    image: { src: image.src, width: Number(image.attributes.width), height: Number(image.attributes.height) },
+  } satisfies LandingPage;
 };
 
 // Docs order: topics in allow-list order, the overview first, then file numbers.
@@ -81,7 +83,7 @@ export const loadSiteCatalog = async () => {
 
   const sortedDocs = [...docs].sort((a, b) => docOrder(a).localeCompare(docOrder(b)));
   const sortedPosts = [...posts].sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
-  const pages = [...LANDING_PAGES, ...sortedDocs.map(docPage), ...sortedPosts.map(postPage)];
+  const pages = [...LANDING_PAGES, ...sortedDocs.map(docPage), ...(await Promise.all(sortedPosts.map(postPage)))];
 
   const container = await AstroContainer.create();
   const documents = new Map<string, LandingDocument>();

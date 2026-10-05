@@ -14,7 +14,13 @@ interface PageFields {
 export type LandingPage =
   | (PageFields & { view: Exclude<LandingView, "examples" | "post"> })
   | (PageFields & { view: "examples"; exampleId: ToolExampleId })
-  | (PageFields & { view: "post"; published: string; author: ActivityActor; readingMinutes: number; image?: string });
+  | (PageFields & {
+      view: "post";
+      published: string;
+      author: ActivityActor;
+      readingMinutes: number;
+      image: { src: string; width: number; height: number };
+    });
 
 /** The title bar tabs. Every page belongs to one. */
 export type SiteSection = "studio" | "docs" | "blog";

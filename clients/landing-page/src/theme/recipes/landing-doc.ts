@@ -37,6 +37,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
     "postMeta",
     "postAuthor",
     "postDetails",
+    "postBanner",
     "homeTopics",
   ],
   base: {
@@ -121,6 +122,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
     },
     postAuthor: { display: "inline-flex", alignItems: "center", gap: "xs" },
     postDetails: { display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: "xs" },
+    postBanner: { display: "block", width: "full", height: "auto", borderRadius: "xs" },
     homeTopics: {
       display: "grid",
       gridTemplateColumns: { base: "1fr", md: "repeat(2, minmax(0, 1fr))" },

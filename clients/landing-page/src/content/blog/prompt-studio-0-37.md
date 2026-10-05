@@ -3,6 +3,7 @@ title: "Prompt Studio 0.37"
 description: Update or reload your extensions, recover interrupted conversations, and install the signed Windows desktop app.
 published: 2026-09-29T08:35:40Z
 author: aurelien-franky
+image: ../../../../../design/art/blog1.png
 ---
 
 Build a tool, try it, change it, and load the next version. Prompt Studio 0.37 makes that loop easier to manage from extension settings. It also fixes conversation problems that could stop you from continuing with an agent, and adds signed Windows installers with automatic updates.

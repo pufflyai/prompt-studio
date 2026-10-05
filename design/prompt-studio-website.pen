@@ -28338,6 +28338,67 @@
                           "children": [
                             {
                               "type": "frame",
+                              "id": "f83Fk",
+                              "name": "Post · In the future, your users will be part of the development team",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "HJkHV",
+                                  "name": "Shape Art banner · blog1",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog1.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "MCrSZ",
+                                  "name": "Title link",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Prompt Studio 0.39",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 20,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "MDD47",
+                                  "name": "Date",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "October 1, 2026 · 2 min read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "R6hYEq",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
+                                  "lineHeight": 1.71,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "InpYB",
                               "name": "Post · Prompt Studio 0.39: tools that stay in sync",
                               "width": "fill_container",
@@ -28345,13 +28406,27 @@
                               "gap": 8,
                               "children": [
                                 {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "IlujE",
+                                  "name": "Shape Art banner · blog1",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog1.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
+                                {
                                   "type": "text",
                                   "id": "pbfM5",
                                   "name": "Title link",
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Prompt Studio 0.39: tools that stay in sync",
+                                  "content": "Prompt Studio 0.39",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -28362,7 +28437,7 @@
                                   "id": "R5ZAjL",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "October 1, 2026 · 2 min read",
+                                  "content": "October 1, 2026 · 4 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -28392,13 +28467,27 @@
                               "gap": 8,
                               "children": [
                                 {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "rg1ky",
+                                  "name": "Shape Art banner · blog2",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog2.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
+                                {
                                   "type": "text",
                                   "id": "dUWwP",
                                   "name": "Title link",
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Prompt Studio 0.38: clearer workspaces",
+                                  "content": "Prompt Studio 0.38",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -28439,13 +28528,27 @@
                               "gap": 8,
                               "children": [
                                 {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "A59YS",
+                                  "name": "Shape Art banner · blog1",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog1.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
+                                {
                                   "type": "text",
                                   "id": "bLGGt",
                                   "name": "Title link",
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Prompt Studio 0.37: easier updates",
+                                  "content": "Prompt Studio 0.37",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -28456,7 +28559,7 @@
                                   "id": "C4gvHV",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "September 29, 2026 · 2 min read",
+                                  "content": "September 29, 2026 · 3 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -28485,6 +28588,20 @@
                               "layout": "vertical",
                               "gap": 8,
                               "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "p0TJZX",
+                                  "name": "Shape Art banner · blog1",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog1.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
                                 {
                                   "type": "text",
                                   "id": "D49Ldx",
@@ -29160,6 +29277,21 @@
                       "layout": "vertical",
                       "gap": 24,
                       "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": "$input-radius",
+                          "id": "t21em",
+                          "name": "Shape Art banner · blog1",
+                          "context": "PostBanner: full reading width, original 16:9 proportions, radius xs. Decorative art; title stays live text below.",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "art/blog1.png",
+                            "mode": "fit"
+                          },
+                          "width": "fill_container",
+                          "height": 396
+                        },
                         {
                           "type": "frame",
                           "id": "YtRYU",
@@ -36855,6 +36987,67 @@
                           "children": [
                             {
                               "type": "frame",
+                              "id": "z6nM7",
+                              "name": "Post · In the future, your users will be part of the development team",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "aMiUL",
+                                  "name": "Shape Art banner · blog1",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog1.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Ji2bx",
+                                  "name": "Title link",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Prompt Studio 0.39",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 20,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "kuExy",
+                                  "name": "Date",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "October 1, 2026 · 2 min read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "MeYvl",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
+                                  "lineHeight": 1.71,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
                               "id": "x7phg",
                               "name": "Post · Prompt Studio 0.39: tools that stay in sync",
                               "width": "fill_container",
@@ -36862,13 +37055,27 @@
                               "gap": 8,
                               "children": [
                                 {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "BoScy",
+                                  "name": "Shape Art banner · blog1",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog1.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
+                                {
                                   "type": "text",
                                   "id": "JWzSK",
                                   "name": "Title link",
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Prompt Studio 0.39: tools that stay in sync",
+                                  "content": "Prompt Studio 0.39",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -36879,7 +37086,7 @@
                                   "id": "Yn8co",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "October 1, 2026 · 2 min read",
+                                  "content": "October 1, 2026 · 4 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -36909,13 +37116,27 @@
                               "gap": 8,
                               "children": [
                                 {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "J7iKQo",
+                                  "name": "Shape Art banner · blog2",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog2.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
+                                {
                                   "type": "text",
                                   "id": "BOcbj",
                                   "name": "Title link",
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Prompt Studio 0.38: clearer workspaces",
+                                  "content": "Prompt Studio 0.38",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -36956,13 +37177,27 @@
                               "gap": 8,
                               "children": [
                                 {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "hOQLK",
+                                  "name": "Shape Art banner · blog1",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog1.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
+                                {
                                   "type": "text",
                                   "id": "m7Ifj",
                                   "name": "Title link",
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Prompt Studio 0.37: easier updates",
+                                  "content": "Prompt Studio 0.37",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -36973,7 +37208,7 @@
                                   "id": "JnbL4",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "September 29, 2026 · 2 min read",
+                                  "content": "September 29, 2026 · 3 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -37002,6 +37237,20 @@
                               "layout": "vertical",
                               "gap": 8,
                               "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "k1qT5",
+                                  "name": "Shape Art banner · blog1",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog1.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 396
+                                },
                                 {
                                   "type": "text",
                                   "id": "QbzUG",
@@ -37677,6 +37926,21 @@
                       "layout": "vertical",
                       "gap": 24,
                       "children": [
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": "$input-radius",
+                          "id": "vYMS0",
+                          "name": "Shape Art banner · blog1",
+                          "context": "PostBanner: full reading width, original 16:9 proportions, radius xs. Decorative art; title stays live text below.",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "art/blog1.png",
+                            "mode": "fit"
+                          },
+                          "width": "fill_container",
+                          "height": 396
+                        },
                         {
                           "type": "frame",
                           "id": "EtuLy",
@@ -40124,6 +40388,67 @@
               "children": [
                 {
                   "type": "frame",
+                  "id": "MnKP8",
+                  "name": "Post · In the future, your users will be part of the development team",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "hXHdh",
+                      "name": "Shape Art banner · blog1",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog1.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
+                    {
+                      "type": "text",
+                      "id": "ewrew",
+                      "name": "Title link",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Prompt Studio 0.39",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "AmmqO",
+                      "name": "Date",
+                      "fill": "$ds-fg-muted",
+                      "content": "October 1, 2026 · 2 min read",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "whxGA",
+                      "name": "Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
+                      "lineHeight": 1.71,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "TxSbx",
                   "name": "Post · Prompt Studio 0.39: tools that stay in sync",
                   "width": "fill_container",
@@ -40131,13 +40456,27 @@
                   "gap": 8,
                   "children": [
                     {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "h4PK7L",
+                      "name": "Shape Art banner · blog1",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog1.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
+                    {
                       "type": "text",
                       "id": "fkSuP",
                       "name": "Title link",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Prompt Studio 0.39: tools that stay in sync",
+                      "content": "Prompt Studio 0.39",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -40148,7 +40487,7 @@
                       "id": "G2tdV",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "October 1, 2026 · 2 min read",
+                      "content": "October 1, 2026 · 4 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -40178,13 +40517,27 @@
                   "gap": 8,
                   "children": [
                     {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "hfWe2",
+                      "name": "Shape Art banner · blog2",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog2.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
+                    {
                       "type": "text",
                       "id": "ELvB3",
                       "name": "Title link",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Prompt Studio 0.38: clearer workspaces",
+                      "content": "Prompt Studio 0.38",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -40225,13 +40578,27 @@
                   "gap": 8,
                   "children": [
                     {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "nIOOU",
+                      "name": "Shape Art banner · blog1",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog1.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
+                    {
                       "type": "text",
                       "id": "pJoAT",
                       "name": "Title link",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Prompt Studio 0.37: easier updates",
+                      "content": "Prompt Studio 0.37",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -40242,7 +40609,7 @@
                       "id": "Rv4T7",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "September 29, 2026 · 2 min read",
+                      "content": "September 29, 2026 · 3 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -40271,6 +40638,20 @@
                   "layout": "vertical",
                   "gap": 8,
                   "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "jrpQZ",
+                      "name": "Shape Art banner · blog1",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog1.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
                     {
                       "type": "text",
                       "id": "DAroP",
@@ -40607,6 +40988,21 @@
             24
           ],
           "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": "$input-radius",
+              "id": "kgLRD",
+              "name": "Shape Art banner · blog1",
+              "context": "PostBanner: full reading width, original 16:9 proportions, radius xs. Decorative art; title stays live text below.",
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "art/blog1.png",
+                "mode": "fit"
+              },
+              "width": "fill_container",
+              "height": 192.375
+            },
             {
               "type": "frame",
               "id": "NtgPC",
@@ -46087,6 +46483,67 @@
               "children": [
                 {
                   "type": "frame",
+                  "id": "jr3lq",
+                  "name": "Post · In the future, your users will be part of the development team",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "Lona4",
+                      "name": "Shape Art banner · blog1",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog1.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
+                    {
+                      "type": "text",
+                      "id": "hTkPs",
+                      "name": "Title link",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Prompt Studio 0.39",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "tMQ8b",
+                      "name": "Date",
+                      "fill": "$ds-fg-muted",
+                      "content": "October 1, 2026 · 2 min read",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mp5Rk",
+                      "name": "Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
+                      "lineHeight": 1.71,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "oCpEd",
                   "name": "Post · Prompt Studio 0.39: tools that stay in sync",
                   "width": "fill_container",
@@ -46094,13 +46551,27 @@
                   "gap": 8,
                   "children": [
                     {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "K6Jmml",
+                      "name": "Shape Art banner · blog1",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog1.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
+                    {
                       "type": "text",
                       "id": "lKhXI",
                       "name": "Title link",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Prompt Studio 0.39: tools that stay in sync",
+                      "content": "Prompt Studio 0.39",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -46111,7 +46582,7 @@
                       "id": "QEw7l",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "October 1, 2026 · 2 min read",
+                      "content": "October 1, 2026 · 4 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -46141,13 +46612,27 @@
                   "gap": 8,
                   "children": [
                     {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "kVksP",
+                      "name": "Shape Art banner · blog2",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog2.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
+                    {
                       "type": "text",
                       "id": "H4tiC",
                       "name": "Title link",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Prompt Studio 0.38: clearer workspaces",
+                      "content": "Prompt Studio 0.38",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -46188,13 +46673,27 @@
                   "gap": 8,
                   "children": [
                     {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "DCHE8",
+                      "name": "Shape Art banner · blog1",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog1.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
+                    {
                       "type": "text",
                       "id": "f3koLC",
                       "name": "Title link",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Prompt Studio 0.37: easier updates",
+                      "content": "Prompt Studio 0.37",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -46205,7 +46704,7 @@
                       "id": "c5zZk3",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "September 29, 2026 · 2 min read",
+                      "content": "September 29, 2026 · 3 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -46234,6 +46733,20 @@
                   "layout": "vertical",
                   "gap": 8,
                   "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "YojRZ",
+                      "name": "Shape Art banner · blog1",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog1.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 192.375
+                    },
                     {
                       "type": "text",
                       "id": "c8dGV",
@@ -46570,6 +47083,21 @@
             24
           ],
           "children": [
+            {
+              "type": "rectangle",
+              "cornerRadius": "$input-radius",
+              "id": "l1QSG",
+              "name": "Shape Art banner · blog1",
+              "context": "PostBanner: full reading width, original 16:9 proportions, radius xs. Decorative art; title stays live text below.",
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "art/blog1.png",
+                "mode": "fit"
+              },
+              "width": "fill_container",
+              "height": 192.375
+            },
             {
               "type": "frame",
               "id": "T4Z5OA",

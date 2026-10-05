@@ -11,14 +11,15 @@ const docs = defineCollection({
 
 const blog = defineCollection({
   loader: glob({ base: "./src/content/blog", pattern: "*.md" }),
-  schema: z.object({
-    title: z.string(),
-    description: z.string(),
-    // Use an unquoted date or UTC timestamp. Timestamps order posts published on the same day.
-    published: z.date(),
-    author: z.enum(["aurelien-franky"]),
-    image: z.string().startsWith("/images/").optional(),
-  }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      description: z.string(),
+      // Use an unquoted date or UTC timestamp. Timestamps order posts published on the same day.
+      published: z.date(),
+      author: z.enum(["aurelien-franky"]),
+      image: image(),
+    }),
 });
 
 const legal = defineCollection({ loader: glob({ base: "./src/content/legal", pattern: "*.md" }) });

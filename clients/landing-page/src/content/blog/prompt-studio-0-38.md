@@ -3,6 +3,7 @@ title: "Prompt Studio 0.38"
 description: Extension commands can ask for a workspace and its provider fields. Terminals and extension views also get fixes for working in the right folder.
 published: 2026-09-29T21:15:47Z
 author: aurelien-franky
+image: ../../../../../design/art/blog2.png
 ---
 
 An extension command can now ask where its work should run. Prompt Studio 0.38 adds a shared workspace input with the workspace type and the fields its provider needs, such as a Git base branch.

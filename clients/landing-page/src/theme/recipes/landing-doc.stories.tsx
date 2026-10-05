@@ -85,3 +85,11 @@ export const PostHeaderLongTitle: Story = {
     />
   ),
 };
+
+export const PostHeaderMobile: Story = {
+  render: () => (
+    <Box width="full" maxWidth="sm" height="full">
+      <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} />
+    </Box>
+  ),
+};

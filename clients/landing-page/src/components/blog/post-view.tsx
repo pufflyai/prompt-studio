@@ -3,6 +3,7 @@ import { ActivityAvatar } from "@pstdio/ui";
 import type { LandingDocument, LandingPage } from "../../content/landing-pages";
 import { useDocStyles } from "../../hooks/use-landing-styles";
 import { DocColumn, DocHtml } from "../workbench/doc-column";
+import { PostBanner } from "./post-banner";
 import { PostDate } from "./post-date";
 
 interface PostViewProps {
@@ -16,6 +17,7 @@ export const PostView = (props: PostViewProps) => {
 
   return (
     <DocColumn pageKey={page.path}>
+      <PostBanner image={page.image} />
       <header>
         <h1>{page.label}</h1>
         <Box css={styles.postMeta}>

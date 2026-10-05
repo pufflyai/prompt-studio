@@ -2,6 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { LandingPage } from "../../content/landing-pages";
 import { useDocStyles } from "../../hooks/use-landing-styles";
 import { DocColumn } from "../workbench/doc-column";
+import { PostBanner } from "./post-banner";
 import { PostDate } from "./post-date";
 
 interface BlogIndexViewProps {
@@ -21,6 +22,7 @@ export const BlogIndexView = (props: BlogIndexViewProps) => {
         (post) =>
           post.view === "post" && (
             <section key={post.path}>
+              <PostBanner image={post.image} loading="lazy" />
               <h2>
                 <a href={post.path}>{post.label}</a>
               </h2>

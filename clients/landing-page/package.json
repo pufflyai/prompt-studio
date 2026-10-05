@@ -46,6 +46,7 @@
           "default",
           "^default",
           "{workspaceRoot}/documentation/**/*",
+          "{workspaceRoot}/design/art/**/*",
           "{workspaceRoot}/extensions/*/README.md",
           "{workspaceRoot}/extensions/*/docs/**/*"
         ]

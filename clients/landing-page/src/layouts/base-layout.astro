@@ -9,9 +9,8 @@ interface Props {
 }
 
 const { page } = Astro.props;
-const { title, description, canonicalUrl, structuredData, indexable } = landingMetadata(page, Astro.url.pathname);
-const { banner, themeColor } = siteMetadata;
-const bannerUrl = new URL(banner.path, siteMetadata.siteUrl).href;
+const { title, description, canonicalUrl, structuredData, banner, indexable } = landingMetadata(page, Astro.url.pathname);
+const { themeColor } = siteMetadata;
 const faviconSvgUrl = new URL(siteMetadata.faviconSvgPath, siteMetadata.siteUrl).href;
 const faviconPngUrl = new URL(siteMetadata.faviconPngPath, siteMetadata.siteUrl).href;
 const appleTouchIconUrl = new URL(siteMetadata.appleTouchIconPath, siteMetadata.siteUrl).href;
@@ -35,7 +34,7 @@ const appleTouchIconUrl = new URL(siteMetadata.appleTouchIconPath, siteMetadata.
     <meta property="og:locale" content={siteMetadata.locale} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={bannerUrl} />
+    <meta property="og:image" content={banner.url} />
     <meta property="og:image:width" content={String(banner.width)} />
     <meta property="og:image:height" content={String(banner.height)} />
     <meta property="og:image:alt" content={banner.alt} />
@@ -44,7 +43,7 @@ const appleTouchIconUrl = new URL(siteMetadata.appleTouchIconPath, siteMetadata.
     <meta name="twitter:title" content={title} />
     <meta name="twitter:url" content={canonicalUrl} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={bannerUrl} />
+    <meta name="twitter:image" content={banner.url} />
     <meta name="twitter:image:alt" content={banner.alt} />
 
     <meta name="theme-color" content={themeColor.light} media="(prefers-color-scheme: light)" />

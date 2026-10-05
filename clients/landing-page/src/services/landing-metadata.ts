@@ -8,7 +8,17 @@ export const landingMetadata = (page: LandingPage | undefined, path: string) => 
   const description = page?.description ?? "The requested Prompt Studio page could not be found.";
   const canonicalUrl = new URL(page?.path ?? path, siteMetadata.siteUrl).href;
   const structuredData = page ? landingStructuredData(page, canonicalUrl) : undefined;
-  return { title, description, canonicalUrl, structuredData, indexable: Boolean(page) };
+  const image =
+    page?.view === "post"
+      ? {
+          path: page.image.src,
+          width: page.image.width,
+          height: page.image.height,
+          alt: "Watercolor Prompt Studio tool shapes.",
+        }
+      : siteMetadata.banner;
+  const banner = { ...image, url: new URL(image.path, siteMetadata.siteUrl).href };
+  return { title, description, canonicalUrl, structuredData, banner, indexable: Boolean(page) };
 };
 
 export const updateLandingMetadata = (page: LandingPage) => {
@@ -22,6 +32,13 @@ export const updateLandingMetadata = (page: LandingPage) => {
     ['meta[name="twitter:title"]', metadata.title],
     ['meta[name="twitter:description"]', metadata.description],
     ['meta[name="twitter:url"]', metadata.canonicalUrl],
+    ['meta[property="og:type"]', page.view === "post" ? "article" : "website"],
+    ['meta[property="og:image"]', metadata.banner.url],
+    ['meta[property="og:image:width"]', String(metadata.banner.width)],
+    ['meta[property="og:image:height"]', String(metadata.banner.height)],
+    ['meta[property="og:image:alt"]', metadata.banner.alt],
+    ['meta[name="twitter:image"]', metadata.banner.url],
+    ['meta[name="twitter:image:alt"]', metadata.banner.alt],
   ]) {
     document.querySelector(selector)?.setAttribute("content", content);
   }
