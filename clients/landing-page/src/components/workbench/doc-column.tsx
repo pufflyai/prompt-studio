@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { useDocStyles } from "../../hooks/use-landing-styles";
 import { PageScroll } from "./page-scroll";
 
@@ -14,6 +14,13 @@ interface DocColumnProps {
 export const DocColumn = (props: DocColumnProps) => {
   const { children, pageKey, aside } = props;
   const styles = useDocStyles();
+
+  // Scroll to a linked heading after the new document and scroll area mount.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs again for every document that shows.
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (id) window.document.getElementById(id)?.scrollIntoView();
+  }, [pageKey]);
 
   return (
     <Box as="section" css={styles.column}>

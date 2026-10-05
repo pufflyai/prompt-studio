@@ -106,4 +106,21 @@ export const STORY_POST_DOCUMENT: LandingDocument = {
 `,
 };
 
+export const STORY_POST_OUTLINE_DOCUMENT: LandingDocument = {
+  headings: [
+    { depth: 2, slug: "shared-foundations", text: "Shared foundations" },
+    { depth: 2, slug: "tools-for-your-work", text: "Tools for your work" },
+    { depth: 2, slug: "where-to-start", text: "Where to start" },
+  ],
+  html: `
+<p>A post with several sections uses the same outline as documentation.</p>
+<h2 id="shared-foundations">Shared foundations</h2>
+${"<p>Tools share storage, a workbench, and public commands. People and agents can use the same operations.</p>".repeat(8)}
+<h2 id="tools-for-your-work">Tools for your work</h2>
+${"<p>Build one small tool, try it, and keep changing it as your work changes.</p>".repeat(8)}
+<h2 id="where-to-start">Where to start</h2>
+<p>Open a project and ask an agent for a useful tool.</p>
+`,
+};
+
 import { BLOG_AUTHORS } from "../../content/blog-authors";

@@ -4,7 +4,7 @@ import type { LandingPage } from "../../content/landing-pages";
 import { useDocStyles } from "../../hooks/use-landing-styles";
 import { docsTree } from "../../services/docs-tree";
 import { DocColumn } from "../workbench/doc-column";
-import { DocOutline } from "./doc-outline";
+import { DocOutline } from "../workbench/doc-outline";
 
 interface DocsHomeViewProps {
   page: LandingPage;

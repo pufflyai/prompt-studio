@@ -15,6 +15,7 @@ import {
   STORY_PAGES,
   STORY_POST,
   STORY_POST_DOCUMENT,
+  STORY_POST_OUTLINE_DOCUMENT,
   STORY_SESSIONS,
 } from "./landing-doc.fixtures";
 
@@ -74,6 +75,27 @@ export const DocsPage: Story = {
 };
 
 export const BlogIndex: Story = { render: () => <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} /> };
+
+export const BlogIndexMobile: Story = {
+  render: () => (
+    <Box width="full" maxWidth="sm" height="full">
+      <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} />
+    </Box>
+  ),
+};
+
+export const BlogIndexLongTitle: Story = {
+  render: () => (
+    <BlogIndexView
+      page={STORY_BLOG_HOME}
+      pages={[{ ...STORY_POST, label: "In the future, your users will be part of the development team." }]}
+    />
+  ),
+};
+
+export const PostOutline: Story = {
+  render: () => <PostView page={STORY_POST} document={STORY_POST_OUTLINE_DOCUMENT} />,
+};
 
 export const PostHeader: Story = { render: () => <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} /> };
 

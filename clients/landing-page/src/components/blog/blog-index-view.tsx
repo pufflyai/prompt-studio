@@ -1,9 +1,6 @@
-import { Box } from "@chakra-ui/react";
 import type { LandingPage } from "../../content/landing-pages";
-import { useDocStyles } from "../../hooks/use-landing-styles";
 import { DocColumn } from "../workbench/doc-column";
-import { PostBanner } from "./post-banner";
-import { PostDate } from "./post-date";
+import { PostListItem } from "./post-list-item";
 
 interface BlogIndexViewProps {
   page: LandingPage;
@@ -12,31 +9,12 @@ interface BlogIndexViewProps {
 
 export const BlogIndexView = (props: BlogIndexViewProps) => {
   const { page, pages } = props;
-  const styles = useDocStyles();
 
   return (
     <DocColumn pageKey={page.path}>
       <h1>Blog</h1>
       <p>{page.description}</p>
-      {pages.map(
-        (post) =>
-          post.view === "post" && (
-            <section key={post.path}>
-              <PostBanner image={post.image} loading="lazy" />
-              <h2>
-                <a href={post.path}>{post.label}</a>
-              </h2>
-              <Box css={styles.postMeta}>
-                <Box css={styles.postDetails}>
-                  <PostDate published={post.published} />
-                  <span aria-hidden="true">·</span>
-                  <span>{post.readingMinutes} min read</span>
-                </Box>
-              </Box>
-              <p>{post.description}</p>
-            </section>
-          ),
-      )}
+      {pages.map((post) => post.view === "post" && <PostListItem key={post.path} page={post} />)}
     </DocColumn>
   );
 };

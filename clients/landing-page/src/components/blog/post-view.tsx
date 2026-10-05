@@ -1,10 +1,8 @@
-import { Box } from "@chakra-ui/react";
-import { ActivityAvatar } from "@pstdio/ui";
 import type { LandingDocument, LandingPage } from "../../content/landing-pages";
-import { useDocStyles } from "../../hooks/use-landing-styles";
 import { DocColumn, DocHtml } from "../workbench/doc-column";
+import { DocOutline } from "../workbench/doc-outline";
 import { PostBanner } from "./post-banner";
-import { PostDate } from "./post-date";
+import { PostMeta } from "./post-meta";
 
 interface PostViewProps {
   page: Extract<LandingPage, { view: "post" }>;
@@ -13,24 +11,13 @@ interface PostViewProps {
 
 export const PostView = (props: PostViewProps) => {
   const { page, document } = props;
-  const styles = useDocStyles();
 
   return (
-    <DocColumn pageKey={page.path}>
+    <DocColumn pageKey={page.path} aside={<DocOutline key={page.path} headings={document.headings} />}>
       <PostBanner image={page.image} />
       <header>
         <h1>{page.label}</h1>
-        <Box css={styles.postMeta}>
-          <Box css={styles.postAuthor}>
-            <ActivityAvatar actor={page.author} />
-            <span>{page.author.name}</span>
-          </Box>
-          <Box css={styles.postDetails}>
-            <PostDate published={page.published} />
-            <span aria-hidden="true">·</span>
-            <span>{page.readingMinutes} min read</span>
-          </Box>
-        </Box>
+        <PostMeta page={page} />
       </header>
       <DocHtml html={document.html} />
     </DocColumn>

@@ -83,6 +83,8 @@ Blog posts live in `clients/landing-page/src/content/blog/`. Their frontmatter h
 
 Every post also has an `image` path to its own banner. Generate a distinct 4:1 piece with the repo-local Shape Art extension: `pst shape-art piece generate --id blog-<post-slug> --background ink --width 1600 --height 400`. Keep the PNG and its editable JSON recipe together in `design/art/`. For example, `image: ../../../../../design/art/blog-welcome-to-prompt-studio.png`. Astro checks the source path and optimizes the banner for the article, blog index, and link previews. Keep its original proportions. Art is decorative; screenshots and GIFs in the body explain the actual product.
 
+The blog list shows a rounded square crop of each piece beside the post title, author avatar/name, date, reading time, and description. Article pages keep the full banner. Use `##` headings for article sections: posts with at least two sections show the shared **On this page** outline on wide screens, with links to headings and a marker for the section being read.
+
 Write `published` as an unquoted date or UTC timestamp. Use a release's actual publication timestamp for release posts, so posts about releases published on the same day sort correctly. Check published GitHub releases; exclude drafts. Link each release post to its release notes and relevant changelogs at that release tag. Describe selected changes in terms of what people can do, and distinguish platform features from extension workflows.
 
 Keep an original post's publication date when adding images or correcting it. Reuse relevant documentation screenshots. Label a recent capture when it illustrates an older release, and do not imply that a pictured control was introduced in that release unless the changelog confirms it.

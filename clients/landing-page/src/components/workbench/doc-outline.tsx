@@ -7,7 +7,7 @@ interface DocOutlineProps {
   headings: LandingDocument["headings"];
 }
 
-/** Lists the page's `##` headings on wide screens and marks the one in view. */
+/** Shared by documentation and blog articles. Marks the section being read on wide screens. */
 export const DocOutline = (props: DocOutlineProps) => {
   const { headings } = props;
   const styles = useDocStyles();
@@ -16,17 +16,22 @@ export const DocOutline = (props: DocOutlineProps) => {
   const slugs = sections.map((heading) => heading.slug).join(" ");
 
   useEffect(() => {
-    const elements = slugs.split(" ").flatMap((slug) => document.getElementById(slug) ?? []);
     // The current section is the last heading above the top third of the screen,
     // so scrolling up marks the section being read, not the next one.
     const markCurrent = () => {
+      const elements = slugs.split(" ").flatMap((slug) => document.getElementById(slug) ?? []);
       const band = window.innerHeight / 3;
       const passed = elements.filter((element) => element.getBoundingClientRect().top <= band);
       setCurrent((passed.at(-1) ?? elements[0])?.id);
     };
-    const observer = new IntersectionObserver(markCurrent, { rootMargin: "0px 0px -66% 0px" });
-    for (const element of elements) observer.observe(element);
-    return () => observer.disconnect();
+    markCurrent();
+    // Capture scrolls from the reading pane, including anchor jumps past a heading.
+    document.addEventListener("scroll", markCurrent, true);
+    window.addEventListener("resize", markCurrent);
+    return () => {
+      document.removeEventListener("scroll", markCurrent, true);
+      window.removeEventListener("resize", markCurrent);
+    };
   }, [slugs]);
 
   if (sections.length < 2) return null;
