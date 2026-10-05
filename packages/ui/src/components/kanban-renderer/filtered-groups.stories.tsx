@@ -28,7 +28,7 @@ const FilteredGroups = (props: { mode: ViewMode; empty?: boolean; grouped?: bool
   const reset = useKanbanRendererStore(key, (state) => state.reset, initial);
   useState(reset);
   return (
-    <Box height="32rem">
+    <Box height={props.mode === "list" && props.grouped !== false ? "20rem" : "32rem"}>
       <KanbanRenderer
         rows={props.empty ? [] : initialRows}
         attributes={attributes}
@@ -45,15 +45,16 @@ export const Board: Story = {
   render: () => <FilteredGroups mode="board" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Nothing matches this view", { exact: true })).toBeVisible();
-    await expect(canvas.getByText("Todo", { exact: true })).toBeVisible();
+    await expect(await canvas.findByText("Todo", { exact: true })).toBeVisible();
+    expect(canvas.queryByText("Nothing matches this view", { exact: true })).toBeNull();
     await expect(canvas.getAllByText("Alex", { exact: true })[0]).toBeVisible();
     await expect(canvas.getByText("In progress", { exact: true })).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Edit filter", exact: true }));
+    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const body = within(canvasElement.ownerDocument.body);
     const picker = within(await body.findByTestId("filter-menu"));
     await waitFor(() => expect(picker.getByRole("textbox", { name: "Filter properties" })).toBeVisible());
     await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(body.queryByTestId("filter-menu")).toBeNull());
     await userEvent.click(canvas.getByRole("button", { name: "Remove Title filter" }));
     await expect(await canvas.findByText(initialRows[0]!.title, { exact: true })).toBeVisible();
   },
@@ -62,8 +63,8 @@ export const List: Story = {
   render: () => <FilteredGroups mode="list" />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Nothing matches this view", { exact: true })).toBeVisible();
     await expect(await canvas.findByText("Todo", { exact: true })).toBeVisible();
+    expect(canvas.queryByText("Nothing matches this view", { exact: true })).toBeNull();
     await expect(canvas.getAllByText("Alex", { exact: true })[0]).toBeVisible();
     const viewport = canvas.getByLabelText("Collection list");
     viewport.scrollTop = viewport.scrollHeight;
@@ -83,6 +84,11 @@ export const Ungrouped: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("Nothing matches this view", { exact: true })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Edit filter", exact: true }));
+    const body = within(canvasElement.ownerDocument.body);
+    await waitFor(() => expect(body.getByTestId("filter-menu")).toBeVisible());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(body.queryByTestId("filter-menu")).toBeNull());
     await userEvent.click(canvas.getByRole("button", { name: "Remove Title filter" }));
     await expect(await canvas.findByText(initialRows[0]!.title, { exact: true })).toBeVisible();
   },

@@ -90,9 +90,11 @@ export const KanbanRendererContent = (props: KanbanRendererContentProps) => {
     return <CollectionViewEmptyState search={search} onClearSearch={onClearSearch} />;
 
   const filteredOut = sourceCount > 0 && filteredCount === 0;
-  const filterMessage = filteredOut ? (
-    <CollectionFilterEmptyState ruleCount={ruleCount} hiddenCount={sourceCount} onEditFilter={onEditFilter} />
-  ) : null;
+  const hasVisibleContent = viewMode === "board" ? boardColumns.length > 0 : listItems.length > 0;
+  const filterMessage =
+    filteredOut && !hasVisibleContent ? (
+      <CollectionFilterEmptyState ruleCount={ruleCount} hiddenCount={sourceCount} onEditFilter={onEditFilter} />
+    ) : null;
 
   if (viewMode === "board") {
     return (

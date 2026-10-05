@@ -85,7 +85,11 @@ export const createCollectionViewStore = <TSettings>(options: CreateCollectionVi
           set((state) => {
             const current = normalFilter(state.filter);
             const index = current.rules.findIndex((entry) => entry.attributeId === rule.attributeId);
+            if (Array.isArray(rule.value) && rule.value.length === 0)
+              return { filter: setRuleAt(current, index, undefined), openRuleIndex: null };
             const filter = index === -1 ? addRule(current, rule) : setRuleAt(current, index, rule);
+            // Option lists keep their stable toolbar anchor while the selection changes.
+            if (Array.isArray(rule.value) && state.openMenu === "filter") return { filter, openRuleIndex: null };
             return { filter, openMenu: null, openRuleIndex: index === -1 ? filter.rules.length - 1 : index };
           }),
         setSettings: (settings) => set((state) => ({ settings: { ...state.settings, ...settings } })),

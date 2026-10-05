@@ -62,7 +62,7 @@ export const TextField: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: /Title/ }));
     await expect(canvas.getByTestId("filter-value")).toHaveTextContent("[]");
-    await userEvent.click(canvas.getByRole("button", { name: "Filter by text", exact: true }));
+    await userEvent.click(canvas.getByRole("button", { name: "Apply filter", exact: true }));
     await expect(canvas.getByTestId("picked-field")).toHaveTextContent("title");
   },
 };
@@ -88,15 +88,65 @@ export const SearchPropertyScope: Story = {
     await userEvent.type(search, "title");
     expect(canvas.queryByRole("checkbox", { name: "High", exact: true })).toBeNull();
     await userEvent.click(canvas.getByRole("button", { name: "Title", exact: true }));
-    const row = canvas.getByRole("button", { name: "Filter by text", exact: true });
+    const row = canvas.getByRole("button", { name: "Apply filter", exact: true });
     const column = row.closest('[data-testid="filter-value-column"]')!;
-    const style = getComputedStyle(column);
-    expect(row.getBoundingClientRect().width).toBe(
-      column.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight),
-    );
-    expect(row.getBoundingClientRect().height).toBe(28);
+    expect(row.getBoundingClientRect().width).toBe(column.clientWidth - 24);
+    expect(row.getBoundingClientRect().height).toBe(32);
     await userEvent.clear(search);
-    await expect(canvas.getByRole("button", { name: "Filter by text", exact: true })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Apply filter", exact: true })).toBeVisible();
+  },
+};
+
+export const ValuePanelLabels: Story = {
+  render: () => <Picker />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const field of ["Archived", "Labels", "Priority"]) {
+      await userEvent.click(canvas.getByRole("button", { name: field, exact: true }));
+      const panel = canvas.getByTestId("filter-value-column");
+      const label = within(panel).getByText("Value", { exact: true });
+      await expect(label).toBeVisible();
+      if (field === "Archived") {
+        for (const value of ["Yes", "No"])
+          await expect(
+            within(canvas.getByRole("button", { name: value, exact: true })).getByRole("checkbox", { hidden: true }),
+          ).not.toBeChecked();
+      }
+      expect(label.getBoundingClientRect().left - panel.getBoundingClientRect().left).toBe(12);
+    }
+  },
+};
+
+const LongPicker = () => {
+  const [filter, setFilter] = useState(EMPTY_VIEW_FILTER);
+  return (
+    <Box width="440px">
+      <FilterMenu
+        fields={storyFields}
+        filter={filter}
+        optionsFor={() =>
+          Array.from({ length: 30 }, (_, index) => ({ value: String(index), label: `Option ${index}` }))
+        }
+        onSelectRule={(rule) => setFilter({ ...filter, rules: [rule] })}
+        onAddAdvanced={() => undefined}
+        onClear={() => setFilter(EMPTY_VIEW_FILTER)}
+      />
+    </Box>
+  );
+};
+
+export const LongValueList: Story = {
+  render: () => <LongPicker />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const panel = canvas.getByTestId("filter-value-column");
+    const viewport = panel.querySelector('[data-part="viewport"]')!;
+    viewport.scrollTop = viewport.scrollHeight;
+    const last = canvas.getByRole("checkbox", { name: "Option 29", exact: true });
+    await expect(last).toBeVisible();
+    expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(panel.getBoundingClientRect().bottom);
+    await userEvent.click(last);
+    await expect(last).toHaveAttribute("aria-checked", "true");
   },
 };
 
@@ -117,5 +167,22 @@ export const MatchCounts: Story = {
     const progress = canvas.getByRole("checkbox", { name: "In progress", exact: true });
     await expect(within(progress).getByText("5", { exact: true })).toBeVisible();
     expect(within(todo).queryByText("0", { exact: true })).toBeNull();
+  },
+};
+
+export const BooleanSelection: Story = {
+  render: () => (
+    <Picker filter={{ conjunction: "and", rules: [{ attributeId: "archived", condition: "is-not", value: true }] }} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Archived", exact: true }));
+    const no = canvas.getByRole("button", { name: "No", exact: true });
+    const yes = canvas.getByRole("button", { name: "Yes", exact: true });
+    await expect(within(no).getByRole("checkbox", { hidden: true })).toBeChecked();
+    await expect(within(yes).getByRole("checkbox", { hidden: true })).not.toBeChecked();
+    await userEvent.click(yes);
+    await expect(within(yes).getByRole("checkbox", { hidden: true })).toBeChecked();
+    await expect(within(no).getByRole("checkbox", { hidden: true })).not.toBeChecked();
   },
 };

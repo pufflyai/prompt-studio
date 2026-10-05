@@ -23,7 +23,7 @@ export const TextFilterEditing: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const picker = within(await body.findByTestId("filter-menu"));
     await userEvent.click(picker.getByRole("button", { name: "Title", exact: true }));
-    await userEvent.click(picker.getByRole("button", { name: "Filter by text", exact: true }));
+    await userEvent.click(picker.getByRole("button", { name: "Apply filter", exact: true }));
     const bubble = canvas.getByRole("group", { name: "Title filter" });
     const input = within(bubble).getByRole("textbox", { name: "Value", exact: true });
     await userEvent.type(input, "gypq");
@@ -50,17 +50,7 @@ export const NoRules: Story = {
     const popover = await body.findByTestId("filter-menu-popover");
     await userEvent.click(within(popover).getByRole("checkbox", { name: "Todo", exact: true }));
     await expect(canvas.getByRole("group", { name: "Status filter" })).toBeVisible();
-    await waitFor(() => expect(popover).not.toBeVisible());
-    const menu = await body.findByRole("menu");
-    const trigger = within(canvas.getByRole("group", { name: "Status filter" })).getByRole("button", {
-      name: "Values",
-    });
-    await waitFor(() => {
-      expect(menu.getBoundingClientRect().top).toBeGreaterThanOrEqual(trigger.getBoundingClientRect().bottom);
-      expect(menu.getBoundingClientRect().left).toBeGreaterThan(0);
-    });
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
+    await expect(popover).toBeVisible();
     const footer = await body.findByTestId("filter-menu-footer");
     await userEvent.click(within(footer).getByRole("button", { name: "Clear all", exact: true }));
     await waitFor(() => expect(popover).not.toBeVisible());
@@ -109,8 +99,8 @@ export const SharedPropertyPicker: Story = {
   },
 };
 
-/** Selecting a value closes the toolbar picker and continues on the bubble. */
-export const PickerHandoff: Story = {
+/** Selecting several values keeps the toolbar picker open. */
+export const PickerSelection: Story = {
   render: () => <Bar storageKey="storybook-picker-handoff" filter={storyFilter} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -119,9 +109,8 @@ export const PickerHandoff: Story = {
     const picker = await body.findByTestId("filter-menu");
     await userEvent.click(within(picker).getByRole("button", { name: "Labels", exact: true }));
     await userEvent.click(within(picker).getByRole("checkbox", { name: "Bug", exact: true }));
-    await waitFor(() => expect(picker).not.toBeVisible());
-    const menu = await body.findByRole("menu");
-    await userEvent.click(within(menu).getByRole("menuitemcheckbox", { name: /Regression/ }));
+    await expect(picker).toBeVisible();
+    await userEvent.click(within(picker).getByRole("checkbox", { name: "Regression", exact: true }));
     await expect(
       within(canvas.getByRole("group", { name: "Labels filter" })).getByRole("button", { name: "Values" }),
     ).toHaveTextContent("Bug, Regression");
@@ -171,7 +160,7 @@ export const BooleanPredicate: Story = {
     await expect(within(pill).getByRole("button", { name: "Condition" })).toHaveTextContent("is not");
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(within(pill).getByRole("button", { name: "Condition" }));
-    await userEvent.click(body.getByRole("menuitem", { name: "is", exact: true }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "is", exact: true }));
     await expect(within(pill).getByRole("button", { name: "Condition" })).toHaveTextContent("is");
   },
 };
@@ -284,7 +273,7 @@ export const AllValuesPredicate: Story = {
     const pill = within(canvas.getByRole("group", { name: "Labels filter" }));
     await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("all of Bug");
     await userEvent.click(pill.getByRole("button", { name: "Condition" }));
-    await userEvent.click(body.getByRole("menuitem", { name: "is", exact: true }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "is", exact: true }));
     await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("all of Bug");
     await userEvent.click(pill.getByRole("button", { name: "Values" }));
     await userEvent.click(body.getByRole("menuitemcheckbox", { name: /Regression/ }));

@@ -4,6 +4,7 @@ import { ParamEditorControlItem } from "../param-editor/param-editor-control-ite
 import { NumberInputField, NumberInputRoot } from "../primitives/number-input";
 import { dayLabel } from "./collection-view-labels";
 import type { RuleValueProps } from "./filter-rule-value";
+import { FilterValuePanel } from "./filter-value-panel";
 import { RuleSelect } from "./rule-select";
 import { ViewBarPopover } from "./view-bar-popover";
 
@@ -36,49 +37,47 @@ const NumberParameterValue = (props: RuleValueProps) => {
 export const ScalarValueEditor = (props: RuleValueProps) => {
   const { field, rule, onChange } = props;
   const value = typeof rule.value === "string" ? rule.value : "";
+  if (field.type.kind !== "date")
+    return (
+      <FilterValuePanel>
+        {field.type.kind === "number" ? (
+          <NumberParameterValue {...props} />
+        ) : (
+          <Input
+            aria-label="Value"
+            size="sm"
+            placeholder="Enter text…"
+            width="full"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )}
+      </FilterValuePanel>
+    );
   return (
     <Stack gap="sm" padding="sm" minW="0">
-      {field.type.kind === "date" ? (
-        <>
-          <ParamEditorControlItem name="Relative day" fullWidth>
-            <RuleSelect
-              aria-label="Relative day"
-              size="sm"
-              variant="outline"
-              width="full"
-              placeholder="Choose relative day…"
-              options={RELATIVE_DAYS.map((day) => ({ value: day, label: dayLabel(day) }))}
-              value={value && !ISO_DAY.test(value) ? value : undefined}
-              onSelect={onChange}
-            />
-          </ParamEditorControlItem>
-          <ParamEditorControlItem name="Exact day" fullWidth>
-            <Input
-              aria-label="Exact day"
-              type="date"
-              size="sm"
-              width="full"
-              value={ISO_DAY.test(value) ? value : ""}
-              onChange={(event) => onChange(event.target.value || undefined)}
-            />
-          </ParamEditorControlItem>
-        </>
-      ) : (
-        <ParamEditorControlItem name="Value" fullWidth>
-          {field.type.kind === "number" ? (
-            <NumberParameterValue {...props} />
-          ) : (
-            <Input
-              aria-label="Value"
-              size="sm"
-              placeholder="Enter text…"
-              width="full"
-              value={value}
-              onChange={(event) => onChange(event.target.value)}
-            />
-          )}
-        </ParamEditorControlItem>
-      )}
+      <ParamEditorControlItem name="Relative day" fullWidth>
+        <RuleSelect
+          aria-label="Relative day"
+          size="sm"
+          variant="outline"
+          width="full"
+          placeholder="Choose relative day…"
+          options={RELATIVE_DAYS.map((day) => ({ value: day, label: dayLabel(day) }))}
+          value={value && !ISO_DAY.test(value) ? value : undefined}
+          onSelect={onChange}
+        />
+      </ParamEditorControlItem>
+      <ParamEditorControlItem name="Exact day" fullWidth>
+        <Input
+          aria-label="Exact day"
+          type="date"
+          size="sm"
+          width="full"
+          value={ISO_DAY.test(value) ? value : ""}
+          onChange={(event) => onChange(event.target.value || undefined)}
+        />
+      </ParamEditorControlItem>
     </Stack>
   );
 };

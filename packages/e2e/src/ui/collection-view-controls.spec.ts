@@ -91,7 +91,7 @@ test("boards search, edit filter parts, and save one sort that agents can build 
     await page.keyboard.press("Escape");
     await expect(cards).toHaveCount(0);
     for (const option of status.options!.slice(1))
-      await expect(page.getByText(option.label, { exact: true })).toBeVisible();
+      await expect(page.getByTestId(/^board-column-/).getByText(option.label, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Reset", exact: true }).click();
     await expect(cards).toHaveCount(3);
 

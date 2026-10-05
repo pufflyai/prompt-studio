@@ -164,16 +164,36 @@ describe("collection view store", () => {
 });
 
 describe("picker selection", () => {
-  test("commits a value and transfers the open menu to its bubble", () => {
+  test("commits an option while keeping the picker open", () => {
     const store = createCollectionViewStore({ storageKey: "picker-commit", initialState: { settings } });
     store.getState().setOpenMenu("filter");
     const rule = { attributeId: "status", condition: "is-any-of" as const, value: ["todo"] };
     store.getState().selectRule(rule);
     expect(store.getState()).toMatchObject({
       filter: { conjunction: "and", rules: [rule] },
-      openMenu: null,
-      openRuleIndex: 0,
+      openMenu: "filter",
+      openRuleIndex: null,
     });
+  });
+  test("removes the rule when its last option is unchecked and keeps the picker open", () => {
+    const rule = { attributeId: "status", condition: "is-any-of" as const, value: ["todo"] };
+    const store = createCollectionViewStore({
+      storageKey: "picker-clear-last-value",
+      initialState: { settings, filter: { conjunction: "and", rules: [rule] } },
+    });
+    store.getState().setOpenMenu("filter");
+    store.getState().selectRule({ ...rule, value: [] });
+    expect(store.getState()).toMatchObject({
+      filter: { conjunction: "and", rules: [] },
+      openMenu: "filter",
+      openRuleIndex: null,
+    });
+  });
+  test("applying text opens its editable bubble", () => {
+    const store = createCollectionViewStore({ storageKey: "picker-text-commit", initialState: { settings } });
+    store.getState().setOpenMenu("filter");
+    store.getState().selectRule({ attributeId: "title", condition: "contains", value: "" });
+    expect(store.getState()).toMatchObject({ openMenu: null, openRuleIndex: 0 });
   });
   test("completes an existing negative rule in place and keeps advanced groups", () => {
     const groups = [

@@ -9,6 +9,7 @@ export interface ViewBarPopoverProps {
   /** The button the menu opens from. Several buttons can open the same menu. */
   anchorRef: RefObject<HTMLElement | null>;
   width: string;
+  placement?: "bottom-start" | "bottom-end";
   /** The quick picker draws its own panes edge to edge. */
   padding?: "0" | "2xs";
   testId?: string;
@@ -17,7 +18,7 @@ export interface ViewBarPopoverProps {
 
 /** The menu shell for Search, Filter, and Sort. Menus inside it render in place, so using them never closes it. */
 export const ViewBarPopover = (props: ViewBarPopoverProps) => {
-  const { open, onOpenChange, anchorRef, width, padding = "2xs", testId, children } = props;
+  const { open, onOpenChange, anchorRef, width, placement = "bottom-start", padding = "2xs", testId, children } = props;
   const contentRef = useRef<HTMLDivElement>(null);
   const nested = useContext(ViewBarPopoverContext);
 
@@ -40,7 +41,7 @@ export const ViewBarPopover = (props: ViewBarPopoverProps) => {
       unmountOnExit
       closeOnInteractOutside={false}
       positioning={{
-        placement: "bottom-start",
+        placement,
         strategy: "fixed",
         hideWhenDetached: true,
         offset: { mainAxis: 8 },

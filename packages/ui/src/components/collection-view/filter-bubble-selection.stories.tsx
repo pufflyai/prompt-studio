@@ -32,23 +32,42 @@ export const ChooseValueThenContinue: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const picker = await body.findByTestId("filter-menu");
-    await userEvent.click(within(picker).getByRole("button", { name: "Priority", exact: true }));
+    const column = within(picker);
+    await userEvent.click(column.getByRole("button", { name: "Priority", exact: true }));
     expect(canvas.queryByRole("group", { name: "Priority filter" })).toBeNull();
-    await userEvent.click(within(picker).getByRole("checkbox", { name: "High", exact: true }));
-    await waitFor(() => expect(picker).not.toBeVisible());
+    await Promise.all(
+      picker
+        .closest("[data-part=content]")!
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished),
+    );
+    const bounds = picker.getBoundingClientRect();
+    await userEvent.click(column.getByRole("checkbox", { name: "High", exact: true }));
+    await expect(picker).toBeVisible();
+    await waitFor(() => expect(picker.getBoundingClientRect().top).toBe(bounds.top));
+    expect(picker.getBoundingClientRect().left).toBe(bounds.left);
     const pill = within(canvas.getByRole("group", { name: "Priority filter" }));
     await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("High");
-    const menu = await body.findByRole("menu");
-    await expect(within(menu).getByRole("menuitemcheckbox", { name: /High/ })).toHaveAttribute("aria-checked", "true");
-    await userEvent.click(within(menu).getByRole("menuitemcheckbox", { name: /Medium/ }));
+    await expect(column.getByRole("checkbox", { name: "High", exact: true })).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(column.getByRole("checkbox", { name: "Medium", exact: true }));
     await expect(pill.getByRole("button", { name: "Condition" })).toHaveTextContent("is any of");
     await expect(pill.getByRole("button", { name: "Values" })).toHaveTextContent("High, Medium");
-    const checkbox = within(menu).getByRole("menuitemcheckbox", { name: /High/ }).querySelector("[data-part=control]")!;
+    const checkbox = column.getByRole("checkbox", { name: "High", exact: true }).querySelector("[data-part=control]")!;
     expect(checkbox.getBoundingClientRect().width).toBe(12);
+    await userEvent.click(column.getByRole("checkbox", { name: "High", exact: true }));
+    await userEvent.click(column.getByRole("checkbox", { name: "Medium", exact: true }));
+    expect(canvas.queryByRole("group", { name: "Priority filter" })).toBeNull();
+    await expect(picker).toBeVisible();
+    await userEvent.click(column.getByRole("checkbox", { name: "Low", exact: true }));
     await userEvent.keyboard("{Escape}");
-    await userEvent.click(pill.getByRole("button", { name: "Condition" }));
+    await waitFor(() => expect(picker).not.toBeVisible());
+    await userEvent.click(
+      within(canvas.getByRole("group", { name: "Priority filter" })).getByRole("button", { name: "Condition" }),
+    );
     await userEvent.click(body.getByRole("menuitem", { name: "is not", exact: true }));
-    await expect(pill.getByRole("button", { name: "Condition" })).toHaveTextContent("is not");
+    await expect(
+      within(canvas.getByRole("group", { name: "Priority filter" })).getByRole("button", { name: "Condition" }),
+    ).toHaveTextContent("is not");
   },
 };
 
@@ -61,7 +80,7 @@ export const TextEntry: Story = {
     const picker = await body.findByTestId("filter-menu");
     await userEvent.click(within(picker).getByRole("button", { name: "Title", exact: true }));
     expect(canvas.queryByRole("group", { name: "Title filter" })).toBeNull();
-    await userEvent.click(within(picker).getByRole("button", { name: "Filter by text", exact: true }));
+    await userEvent.click(within(picker).getByRole("button", { name: "Apply filter", exact: true }));
     const pill = within(canvas.getByRole("group", { name: "Title filter" }));
     const input = await pill.findByRole("textbox", { name: "Value" });
     expect(getComputedStyle(input).outlineStyle).toBe("none");

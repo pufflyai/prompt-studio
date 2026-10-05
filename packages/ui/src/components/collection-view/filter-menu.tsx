@@ -22,7 +22,7 @@ export interface FilterMenuProps {
 
 const contentProps = { p: "2xs", display: "flex", flexDirection: "column", gap: "1px" } as const;
 
-/** Browse a property, then commit a value and continue in its bubble. */
+/** Browse properties and select values before closing the picker. */
 export const FilterMenu = (props: FilterMenuProps) => {
   const { fields, filter, optionsFor, onSelectRule } = props;
   const [query, setQuery] = useState("");

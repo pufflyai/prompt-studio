@@ -5,6 +5,7 @@ import { getIconComponent } from "@/components/primitives/icon-options";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { ListRow } from "../list-row/list-row";
+import { FilterValuePanel } from "./filter-value-panel";
 import { RuleSelect } from "./rule-select";
 import { DateBubbleValue, ScalarValueEditor } from "./scalar-filter-value";
 
@@ -148,8 +149,8 @@ const OptionChecklist = (props: RuleValueProps) => {
   const selected = listValue(rule);
 
   return (
-    <Stack gap="0" minH="0" paddingX="2xs">
-      <ScrollArea maxH="15rem" viewportProps={{ overscrollBehavior: "contain" }}>
+    <Stack gap="0" flex="1" minH="0">
+      <ScrollArea flex="1" minH="0" maxH="15rem" viewportProps={{ overscrollBehavior: "contain" }}>
         {options.map((option) => {
           const checked = selected.includes(option.value);
           return (
@@ -207,10 +208,15 @@ export const RuleValueEditor = (props: RuleValueProps) => {
   if (kind === "none") return null;
   if (kind === "boolean")
     return (
-      <Text textStyle="label/S/medium" paddingX="xs">
-        {field.label}
-      </Text>
+      <FilterValuePanel>
+        <Text textStyle="label/S/medium">{field.label}</Text>
+      </FilterValuePanel>
     );
-  if (kind === "options") return <OptionChecklist {...props} />;
+  if (kind === "options")
+    return (
+      <FilterValuePanel>
+        <OptionChecklist {...props} />
+      </FilterValuePanel>
+    );
   return <ScalarValueEditor {...props} />;
 };
