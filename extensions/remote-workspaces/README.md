@@ -1,12 +1,14 @@
 # Remote Workspaces
 
-Run PocketCoder workspaces on your desktop while Prompt Studio runs on another machine. The extension package is named `remote-workspaces` and its ID is `pstdio.remote-workspaces`.
+Remote Workspaces lets Prompt Studio run agent sessions on another computer, such as your desktop, through PocketCoder.
 
-PocketCoder runs the containers and coding agent. Prompt Studio sends prompts, displays the conversation, and manages workspace records. Model credentials and repository access belong on the PocketCoder machine. Your local project files are not copied to the desktop.
+[PocketCoder](https://github.com/pufflyai/pocketcoder) is a separate service that runs coding agents in containers. It runs the containers and the agent. Prompt Studio sends your prompts, shows the conversation, and keeps track of the workspaces. Model credentials and repository access stay on the PocketCoder machine. Your local project files are not copied there.
+
+This page calls the computer that runs PocketCoder the desktop. The extension's package name is `remote-workspaces`, and its ID is `pstdio.remote-workspaces`.
 
 ## Start PocketCoder on the desktop
 
-These commands use PocketCoder's source deployment with Pi and an OpenAI model. You need Bun 1.4.2, Docker, Git, and SSH access to the desktop. On Windows, run the commands in a Linux environment with working Docker access. Other agents need their own runnable PocketCoder template.
+These commands run PocketCoder from source with the Pi agent and an OpenAI model. You need Bun 1.4.2, Docker, Git, and SSH access to the desktop. On Windows, run the commands in a Linux environment with working Docker access. Other agents need their own runnable PocketCoder template. A template describes the container an agent runs in.
 
 Clone PocketCoder on the desktop:
 
@@ -54,7 +56,7 @@ bun run local:up -- --template pi-harness --openai
 
 Keep this process running. It builds the Pi container image, writes a runtime template under `.pocketcoder/local/templates`, starts the host model gateway, and starts PocketCoder on port 7080. The OpenAI key stays in the gateway process. The database survives restarts.
 
-The checked-in `examples/templates` directory in PocketCoder contains placeholder manifests. `local:up` materializes a runnable template; starting the server alone does not build an agent image or start a gateway. Rerunning `local:up` rotates the gateway bearer, so finish existing workspaces before restarting it.
+The `examples/templates` folder in PocketCoder holds placeholder templates only. `local:up` turns one into a runnable template. Starting the server alone does not build an agent image or start a gateway. Running `local:up` again creates a new gateway token, so finish running workspaces before you restart it.
 
 With Docker Desktop, workspaces reach the host through `host.docker.internal`. With native Linux Docker, set `POCKETCODER_HOST=0.0.0.0` before `local:up` so the containers can reach the API through their host gateway. Permit the Docker network to reach ports 7080 and 8080, and keep these ports off the public internet. SSH is the connection between machines. The desktop must stay awake while workspaces run.
 
@@ -86,20 +88,21 @@ curl --fail http://127.0.0.1:17080/livez
 
 The tunnel must be reachable from the Prompt Studio **server**, which makes the connection requests. If that server runs in Docker, `127.0.0.1` refers to its container. Run the tunnel in the server's network namespace, or give PocketCoder an HTTPS endpoint reachable from that container. Prompt Studio requires HTTPS for every non-loopback connection URL.
 
-From a Prompt Studio checkout, inside a linked project:
+Remote Workspaces is not in the built-in extension catalog yet. Install it from a copy of the Prompt Studio repository. Use the release tag that matches `pst --version`, then run the install from inside a linked project folder:
 
 ```sh
-pst extensions add ./extensions/remote-workspaces --force
+git clone --depth 1 --branch pstdio@<version> https://github.com/pufflyai/prompt-studio.git
+pst extensions add <path-to>/prompt-studio/extensions/remote-workspaces
 pst extensions check
 ```
 
-Open **Settings → Extensions → Remote Workspaces → Connections**:
+Open **Settings → Project → Extensions** and select **Remote Workspaces**. On its **Settings** tab, find **Connections**:
 
-1. Under **PocketCoder**, enter `http://127.0.0.1:17080` as the base URL. Do not add `/v1`.
-2. Enter the `pkt_...` machine key without a `Bearer ` prefix.
-3. Select **Connect**, then **Check**. The check calls the authenticated `GET /v1/templates` endpoint.
+1. Under **PocketCoder**, enter `http://127.0.0.1:17080` as the **Endpoint**. Do not add `/v1`.
+2. Enter the `pkt_...` machine key as the **Credential**, without a `Bearer ` prefix.
+3. Select **Connect**, then **Check**. The check calls PocketCoder's `GET /v1/templates` endpoint with the key.
 
-Connection settings belong to each project. The host stores the credential and adds the authorization header. Enable and configure the extension in every project where you need it.
+Connection settings belong to each project. Prompt Studio stores the key and adds it to each request, so the extension never sees it. Enable and set up the extension in every project where you need it.
 
 You can repeat the check from the CLI:
 
@@ -119,13 +122,13 @@ pst remote-workspaces launch --template pi-harness \
   --prompt 'Inspect the workspace and describe its files'
 ```
 
-The result contains `workspaceId` and `sessionId`. Open the session to see output and send follow-ups. Each PocketCoder workspace owns one conversation. Follow-ups continue that conversation; output snapshots refresh while the agent runs. Prompt Studio can reattach to a running conversation after a host restart without submitting the prompt again.
+The result contains `workspaceId` and `sessionId`. Open the session to see the output and send follow-ups. Each PocketCoder workspace has one conversation, and follow-ups continue it. The output refreshes about once a second while the agent runs. After Prompt Studio restarts, it reconnects to a running conversation without sending the prompt again.
 
 If a submit response is lost, the extension reads the existing conversation instead of resending the prompt. If the service remains unreachable, the session becomes disconnected. Check PocketCoder's conversation before manually repeating a prompt whose outcome is unknown.
 
-PocketCoder does not provide idempotent turn IDs. The extension saves a non-secret conversation cursor for each pending turn so restart recovery does not mistake an earlier reply for a new one. See the [temporary turn-cursor decision](../../documentation/adrs/0022-temporary-pocketcoder-turn-cursor.md).
+PocketCoder does not give each turn a stable ID. So the extension saves a marker of the conversation's position for each pending turn. The marker holds no secrets. It keeps restart recovery from mistaking an earlier reply for a new one. See the [temporary turn-cursor decision](../../documentation/adrs/0022-temporary-pocketcoder-turn-cursor.md).
 
-**Stop cancels the entire PocketCoder workspace.** Deleting a Prompt Studio workspace also cancels the remote execution and waits for a terminal state. PocketCoder retains its historical record. A canceled or expired workspace cannot accept follow-ups; launch a new one. This extension does not expose checkpoint restore, archive, file browsing, diff, merge, or attachments.
+**Stop cancels the entire PocketCoder workspace.** Deleting a Prompt Studio workspace also cancels the remote work and waits until PocketCoder reports that it ended. PocketCoder keeps its own record of the workspace. A canceled or expired workspace cannot take follow-ups, so launch a new one. This extension does not offer checkpoint restore, archiving, file browsing, diffs, merging, or attachments.
 
 ### Work on your own repository
 
@@ -155,20 +158,7 @@ Reuse the same idempotency key when retrying the same launch request. Use a new 
 | Connection refused | PocketCoder, the SSH tunnel, and the desktop are running. Test `/livez` from the Prompt Studio server. |
 | HTTP 401 | The PocketCoder key is correct and unexpired. The desktop uses the same authentication pepper as when the key was issued. |
 | HTTP 403 | The principal has the scopes above and allows the selected template. |
-| Template missing or launch failed | Run `pcd templates list` and `pcd doctor` on the desktop. Use a materialized runtime template. |
+| Template missing or launch failed | Run `pcd templates list` and `pcd doctor` on the desktop. Use the runtime template that `local:up` writes. |
 | Workspace never reaches ready | Check Docker access, image build, container access to port 7080, and template setup logs. |
-| Agent cannot reach the model | The desktop gateway is running on port 8080, its key and model are valid, and the workspace has the current gateway bearer. |
+| Agent cannot reach the model | The desktop gateway is running on port 8080, its key and model are valid, and the workspace has the current gateway token. |
 | Files differ from the local project | PocketCoder uses its template's filesystem. Configure repository checkout in that template. |
-
-## Development
-
-Follow Prompt Studio's isolated Docker workflow. Watch changes with `PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev ./extensions/remote-workspaces` against that host. Validate with:
-
-```sh
-bun test extensions/remote-workspaces
-bun run --cwd extensions/remote-workspaces typecheck
-bun run verify:translations
-bun run validate
-```
-
-The adapter uses PocketCoder's workspace API, AgentAPI `/message`, `/messages`, and `/status` relay routes, and durable `/conversation` history. It polls complete transcript snapshots once per second. See PocketCoder's [HTTP API](https://github.com/pufflyai/pocketcoder/blob/main/docs/api.md) and [deployment guide](https://github.com/pufflyai/pocketcoder/blob/main/docs/deployment.md).

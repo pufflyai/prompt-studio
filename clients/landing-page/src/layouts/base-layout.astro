@@ -1,8 +1,15 @@
 ---
 import { siteMetadata } from "../config/site-metadata";
+import type { LandingPage } from "../content/landing-pages";
 import { landingMetadata } from "../services/landing-metadata";
 
-const { title, description, canonicalUrl, structuredData, indexable } = landingMetadata(Astro.url.pathname);
+interface Props {
+  /** The catalog page being served. The not-found page has none. */
+  page?: LandingPage;
+}
+
+const { page } = Astro.props;
+const { title, description, canonicalUrl, structuredData, indexable } = landingMetadata(page, Astro.url.pathname);
 const { banner, themeColor } = siteMetadata;
 const bannerUrl = new URL(banner.path, siteMetadata.siteUrl).href;
 const faviconSvgUrl = new URL(siteMetadata.faviconSvgPath, siteMetadata.siteUrl).href;
@@ -23,7 +30,7 @@ const appleTouchIconUrl = new URL(siteMetadata.appleTouchIconPath, siteMetadata.
     {indexable && <link rel="canonical" href={canonicalUrl} />}
 
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={page?.view === "post" ? "article" : "website"} />
     <meta property="og:site_name" content="Prompt Studio" />
     <meta property="og:locale" content={siteMetadata.locale} />
     <meta property="og:title" content={title} />

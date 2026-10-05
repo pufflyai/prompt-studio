@@ -1,11 +1,6 @@
----
-status: "draft"
-created: "2026-03-10T20:12:05Z"
----
+# Agents
 
-# CLI agents
-
-The `pst agents` group discovers extension-provided harnesses and installs Prompt Studio skills.
+The `pst agents` group lists the agent harnesses that extensions provide and installs Prompt Studio skills for them.
 
 ## Commands
 
@@ -15,10 +10,10 @@ pst agents setup <agent-id> [--global-skills]
 pst agents install-skills <agent-id> [--global-skills]
 ```
 
-`list` shows the harness name, qualified ID, and whether its executable is installed. This command lists the host-wide installed harness registry. Project-scoped SDK discovery instead uses that project's enabled catalog. Neither reads a core agent configuration table.
+`list` shows each harness's name, qualified ID, and whether its executable is installed. It lists the harnesses installed on this machine. The SDK lists a project's harnesses from that project's enabled extensions instead.
 
-`setup` resolves one harness and installs its enabled skills. It does not persist a default agent configuration. Use `--global-skills` to install skills in the agent's global directory instead of the current project.
+`setup` finds one harness and installs its enabled skills. It does not save a default agent. Use `--global-skills` to install skills in the agent's global folder instead of the current project.
 
-`install-skills` installs any missing enabled skills for the selected harness. Prompt Studio does not overwrite an existing skill with the same name.
+`install-skills` installs any enabled skills that the selected harness is missing. Prompt Studio does not overwrite an existing skill with the same name.
 
 Run `pst agents --help` to list the commands and `pst agents <command> --help` for current options.

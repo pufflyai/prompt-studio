@@ -1,8 +1,10 @@
-# Extension automation cookbook
+# Automation cookbook
 
-Declare middleware and hooks with contribution helpers. Register the returned
-values in the extension's `middlewares` and `hooks` arrays. Callbacks receive
-context as the first argument and parameters or event payload as the second.
+Check commands before they run, react to events after they happen, and run commands on a schedule.
+
+Declare middleware, hooks, and schedules with their `define*` helpers. List the
+results in the extension's `middlewares`, `hooks`, and `schedules` arrays.
+Callbacks receive the context first and the parameters or event payload second.
 
 ## Validate a command before it runs
 
@@ -66,10 +68,39 @@ The host awaits `workspaceEvents.provision` handlers before marking that workspa
 ready; failed provisioning prevents readiness. `worktreeEvents.removed` observes
 local worktree cleanup.
 
-Workspace activity comes from sessions and Planner's managed attempts. For ticket
-workflow automation, use Planner commands or `commandEvent(commandRef, "completed")`.
-Core ticket events and stored workspace review statuses are not part of this API.
+Tickets belong to the Planner extension, so core has no ticket events. To react
+to ticket work, use Planner's commands, or hook a command's lifecycle with
+`commandEvent(commandRef, "completed")`.
 
-For recurring work, bind an extension command through `defineSchedule`. Use
-settings for project policy and storage for data that must survive a restart.
+## Run a command on a schedule
+
+Bind a command to a cron expression with `defineSchedule`:
+
+```ts
+import { defineCommand, defineExtension, defineSchedule } from "@pstdio/sdk/extensions";
+
+const writeReport = defineCommand({
+  id: "write-report",
+  title: "Write report",
+  async run(ctx) {
+    await ctx.storage.set("lastReportAt", new Date().toISOString());
+  },
+});
+
+const nightlyReport = defineSchedule({
+  id: "nightly-report",
+  title: "Nightly report",
+  schedule: "0 2 * * *",
+  command: writeReport.ref,
+});
+
+export default defineExtension({ commands: [writeReport], schedules: [nightlyReport] });
+```
+
+The dashboard shows schedules as automations. People turn each one on or off per
+project on the extension's page in **Settings → Extensions**. Automations are on
+by default. Set `disabled: true` to ship one turned off. A person's choice always
+wins over the default, and the scheduler skips automations that are off.
+
+Use settings for project policy and storage for data that must survive a restart.
 See the [extension API](../../references/extensions/0001-api.md) for command outcomes, schedules, and context APIs.

@@ -1,89 +1,249 @@
-# Extensions
+# Write an extension
 
-Prompt Studio extensions are TypeScript packages that add project workflow behavior, dashboard UI, packaged assets, and provider integrations.
+Build a small Bookmarks tool: a command that saves a link, and a table that lists the saved links.
 
-Extensions are installed into the scope declared by `package.json` `pstdio.scope`. User-scoped extensions default to `~/.pstdio/extensions/<install-name>/`; repo-scoped extensions live under `<repo>/.pstdio/extensions/<install-name>/`. User-scoped sources can be enabled in multiple projects with project-specific settings and storage.
+## Before you start
 
-## Product Model
+You need Prompt Studio and a project. See [Install Prompt Studio](../getting-started/0001-install.md) and [Open a project](../getting-started/0002-open-a-project.md).
 
-An extension has three layers:
+The commands below use Bun to install packages. If you do not have Bun, use the copy of Bun inside `pst`: put `BUN_BE_BUN=1` in front of the command and write `pst` instead of `bun`. For example, `bun add @pstdio/sdk` becomes `BUN_BE_BUN=1 pst add @pstdio/sdk`.
 
-| Layer | Owner | Purpose |
-| ----- | ----- | ------- |
-| Package source | Extension author | `package.json`, `extension.ts`, webviews, templates, skills, themes, and support files. |
-| Extension runtime | Prompt Studio API | Loads packages, validates manifests, executes commands, delivers events, scopes storage, and emits diagnostics. |
-| Dashboard host | Prompt Studio dashboard | Resolves targets into menus, area trees, views, settings panels, and renderers. |
+If extensions are new to you, read [Extensions](../concepts/0002-extensions.md) first.
 
-Extension identity is package metadata, not code metadata. `package.json` provides `publisher`, `name`, `version`, `main`, and `engines.pstdio`; `defineExtension()` exports only contributions.
+## 1. Create the package
 
-## What Extensions Can Add
+Create a folder for the extension, outside your project folder:
 
-- Commands exposed to the CLI, dashboard menus, command palette, schedules, automations, or other commands.
-- Middleware that runs before commands and can continue, patch params, replace invocation data, or reject.
-- Hooks that observe product events and command lifecycle events after they happen.
-- Cron schedules that invoke extension or host commands.
-- Dashboard views, placements, navigation items, settings panels, and workflow statuses.
-- Templates, skills, themes, file icon themes, and custom template types.
-- Artifact mounts for safe repo-local files under `.pstdio/extension-storage/<package-name>/`.
-- Workspace type and Harness providers for deeper runtime integrations.
-- Named host-managed connections for remote provider control planes.
+```sh
+mkdir bookmarks
+cd bookmarks
+```
 
-## Automation Model
+Add a `package.json`:
 
-Commands are the unit of work. Middleware protects or reshapes command execution before a command handler runs. Hooks react after events are emitted.
+```json
+{
+  "name": "bookmarks",
+  "version": "0.1.0",
+  "displayName": "Bookmarks",
+  "description": "Save links for a project.",
+  "publisher": "acme",
+  "main": "./extension.ts",
+  "type": "module",
+  "engines": {
+    "pstdio": "^0.1.0"
+  }
+}
+```
 
-Use middleware when the extension needs to block or modify an operation:
+- `publisher` and `name` form the extension ID, here `acme.bookmarks`. Use your own publisher name. Each must start with a lowercase letter and contain only lowercase letters, numbers, and dashes.
+- `main` is the entry file.
+- `engines.pstdio` is the range of extension API versions the extension works with. `^0.1.0` accepts every compatible release of API 0.1. `pst extensions check` prints the API version of your Prompt Studio.
 
-- validate a status transition before it is accepted
-- fill missing command params from project context
-- reject a command with a user-facing reason
+Then add the SDK, which has the functions and types for writing extensions:
 
-Use hooks when the extension should react to something that already happened:
+```sh
+bun add @pstdio/sdk
+```
 
-- update a ticket after a session starts
-- remove worktrees after a ticket is archived
-- create a follow-up session after an attempt status changes
-- record activity or show notifications for command lifecycle events
+## 2. Add a command
 
-Scheduled contributions (`schedules`) surface in the dashboard as **automations**. Each automation can be toggled per project from the extension's detail page in settings; the enabled count shows on the extension's list row. Automations are enabled by default — an author can opt a schedule out with `disabled: true`, and a user toggle always wins over the author default. The scheduler skips any automation whose effective state is disabled.
+Create `extension.ts`:
 
-## Dashboard UI Model
+```ts
+import { defineCommand, defineExtension, eventRef, params } from "@pstdio/sdk/extensions";
 
-The dashboard UI model uses host-owned typed slots. Extensions attach menus, navigation items, status-bar items, and settings panels to those slots.
+type Bookmark = { id: string; title: string; url: string };
 
-Targets describe the dashboard surface. Optional `when` expressions restrict visibility by active mode, command source, active resource type, or active resource metadata.
+const bookmarksChanged = eventRef<{ id: string }>({ extensionId: "acme.bookmarks", id: "changed" });
 
-Views own content. Pages own routed screens. Placements own mode-wide content. Page slots and placements bind resource kinds directly to views without copying geometry.
+const bookmarkParams = {
+  title: params.text({ label: "Title", required: true }),
+  url: params.text({ label: "URL", required: true }),
+};
 
-## Lifecycle
+const addBookmark = defineCommand({
+  id: "add",
+  title: "Add bookmark",
+  cli: true,
+  palette: [{ label: "Add bookmark" }],
+  params: bookmarkParams,
+  async run(ctx, { title, url }) {
+    const bookmark: Bookmark = { id: crypto.randomUUID(), title, url };
+    await ctx.storage.collection<Bookmark>("bookmarks").put(bookmark.id, bookmark);
+    await ctx.events.emit(bookmarksChanged, { id: bookmark.id });
+    return bookmark;
+  },
+});
 
-1. A package is installed into its declared user or repo extension root.
-2. A project enables the installed source and stores project-scoped extension settings.
-3. The API reads `package.json` before importing the entry module.
-4. The API imports `extension.ts`, validates contributions, and records diagnostics.
-5. Commands, middleware, hooks, schedules, settings, assets, and dashboard UI metadata become available for that project.
-6. The dashboard requests extension UI metadata and resolves target contributions into host UI.
+export default defineExtension({
+  commands: [addBookmark],
+});
+```
 
-## Docs
+- `defineCommand` declares the command. Its ID `add` is local to the extension.
+- `cli: true` adds it to the command line as `pst bookmarks add`. `palette` adds it to the dashboard's command palette.
+- `params` declares typed parameters. The dashboard builds a form from them, and the CLI turns them into `--title` and `--url`.
+- `ctx.storage` is storage that Prompt Studio keeps for this extension in the current project.
+- After saving, the command emits the `bookmarksChanged` event so views can refresh. The event's `extensionId` must match `<publisher>.<name>`.
+- `defineExtension` lists everything the extension adds. It is the file's default export.
 
-- [Extension API](../../references/extensions/0001-api.md)
-- [Remote execution migration](0004-remote-execution-migration.md)
-- [Extension notifications](../../references/extensions/0011-notifications.md)
-- [Extension runtime loader](../../references/architecture/0010-extensions-runtime.md)
-- [Dashboard UI attachments](../../references/extensions/0013-workbench-attachments.md)
-- [Extension modes](../../references/extensions/0009-modes-and-layout.md)
-- [Cookbook](0002-workbench-cookbook.md)
+## 3. Add a view
 
-## Product Requirements
+A view shows content in the dashboard. Prompt Studio has native views for tables, boards, trees, forms, and files, and webviews for custom pages. A native table fits this tool.
 
-- [Contextual Workbench Composition](../../references/extensions/0008-contextual-workbench-composition.md)
-- [Extension Navigation and Layout State](../../references/extensions/0010-navigation-and-layout-state.md)
-- [Project Extension Runtime Snapshots](../../requirements/extensions/0001-runtime-snapshots.md)
-- [Renderer Edit and Refresh Lifecycle](../../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
-- [Extension Conformance and Regression Coverage](0005-conformance.md)
+Replace `extension.ts` with the full version:
 
-## Architecture
+```ts
+import {
+  defineCommand,
+  defineExtension,
+  defineNavigationItem,
+  definePage,
+  defineView,
+  eventRef,
+  params,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
 
-- [Extension Workbench Composition](../../references/architecture/0009-extension-workbench-composition.md)
-- [Extension Navigation](../../references/architecture/0007-extension-navigation.md)
-- [Project Extension Runtime Snapshots](../../references/architecture/0014-project-extension-runtime-snapshots.md)
+type Bookmark = { id: string; title: string; url: string };
+
+const bookmarksChanged = eventRef<{ id: string }>({ extensionId: "acme.bookmarks", id: "changed" });
+
+const bookmarkParams = {
+  title: params.text({ label: "Title", required: true }),
+  url: params.text({ label: "URL", required: true }),
+};
+
+const addBookmark = defineCommand({
+  id: "add",
+  title: "Add bookmark",
+  cli: true,
+  palette: [{ label: "Add bookmark" }],
+  params: bookmarkParams,
+  async run(ctx, { title, url }) {
+    const bookmark: Bookmark = { id: crypto.randomUUID(), title, url };
+    await ctx.storage.collection<Bookmark>("bookmarks").put(bookmark.id, bookmark);
+    await ctx.events.emit(bookmarksChanged, { id: bookmark.id });
+    return bookmark;
+  },
+});
+
+const bookmarkTable = defineView({
+  id: "bookmark-table",
+  title: "Bookmarks",
+  body: {
+    kind: "dataTable",
+    refreshEvents: [bookmarksChanged],
+    columns: [
+      { id: "title", label: "Title" },
+      { id: "url", label: "URL" },
+    ],
+    toolbarActions: [
+      {
+        id: "add",
+        label: "Add bookmark",
+        icon: "plus",
+        presentation: "primary",
+        command: addBookmark.ref,
+        input: bookmarkParams,
+        submitLabel: "Save",
+      },
+    ],
+    async query(ctx) {
+      const bookmarks = await ctx.storage.collection<Bookmark>("bookmarks").list();
+      return {
+        rows: bookmarks.map(({ id, title, url }) => ({ id, values: { title, url } })),
+      };
+    },
+  },
+});
+
+const bookmarksPage = definePage({
+  id: "bookmarks",
+  title: "Bookmarks",
+  path: "bookmarks",
+  icon: "bookmark",
+  mode: workbenchModes.project,
+  main: { kind: "view", view: bookmarkTable.ref, cardinality: "one" },
+  slots: [],
+});
+
+const bookmarksNavigation = defineNavigationItem({
+  id: "bookmarks",
+  label: "Bookmarks",
+  icon: "bookmark",
+  owner: workbenchModes.project,
+  action: { kind: "page", page: bookmarksPage.ref },
+});
+
+export default defineExtension({
+  commands: [addBookmark],
+  views: [bookmarkTable],
+  pages: [bookmarksPage],
+  navigationItems: [bookmarksNavigation],
+});
+```
+
+- The view's `query` reads the saved bookmarks and returns one row for each.
+- `refreshEvents` runs `query` again after `bookmarksChanged`, so new bookmarks appear without a reload.
+- The toolbar action runs the same `add` command. Its `input` opens a form for the title and URL.
+- The page gives the view its own address in the project, and shows it as the page's main content.
+- The navigation item adds a **Bookmarks** row to the project sidebar that opens the page.
+
+## 4. Install it
+
+Go to your project folder and install the extension from its folder:
+
+```sh
+cd ~/my-project
+pst extensions add ../bookmarks
+```
+
+The path must start with `./`, `../`, or `~/`, or be absolute. A plain name such as `bookmarks` installs a published extension instead.
+
+Prompt Studio copies the folder, installs its dependencies, checks it, and turns it on for the project. The output shows the extension ID and `Project: enabled for <project-id>`.
+
+Try the command:
+
+```sh
+pst bookmarks add --title "Prompt Studio" --url https://prompt.studio
+```
+
+Open the dashboard and choose **Bookmarks** in the sidebar. The table shows the bookmark. Choose **Add bookmark** to save another one from the form.
+
+To install a changed version, run the same command with `--force`. While you work on an extension, run the watcher instead:
+
+```sh
+pst extensions dev ../bookmarks
+```
+
+It checks and reloads the extension each time you save a file. Keep it running while you edit, and stop it with Ctrl+C.
+
+## 5. Check it
+
+Check the installed declarations:
+
+```sh
+pst extensions check
+```
+
+The check reports missing references, invalid IDs, unknown icons, and features your Prompt Studio version does not support. Each problem names the extension, the contribution, and the field.
+
+Then run the smoke test. It installs the extension into a temporary Prompt Studio, opens its pages in a real browser, and reports errors. Install the browser once, then run the test:
+
+```sh
+pst extensions install-browser
+pst extensions test ../bookmarks
+```
+
+Exit code 0 means the pages loaded without errors. [Smoke checks](0006-smoke-checks.md) explains what the test covers and what it skips.
+
+## Next steps
+
+- Let an agent build the next tool. Prompt Studio Skills, installed in every new project, includes a skill for writing extensions. Run `pst agents setup <agent-id>`, then ask your agent for the tool you want.
+- Add pages with inspectors, editors, and custom modes with the [Workbench cookbook](0002-workbench-cookbook.md).
+- Check or react to commands and events with the [Automation cookbook](0003-automation.md).
+- Build a custom page with a webview. See [Webviews and storage](../../references/extensions/0005-webview-and-storage-api.md).
+- Look up every contribution in the [extension API reference](../../references/extensions/0001-api.md), the [manifest rules](../../references/extensions/0002-manifest-and-installation.md), and [Workbench composition](../../references/extensions/0008-contextual-workbench-composition.md).
+- Study complete tools in [Extension Lab](../../../extensions/extension-lab/README.md).

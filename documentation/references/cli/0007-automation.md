@@ -1,6 +1,8 @@
 # Remote automation
 
-Remote tools call only extension commands that opt in with `automation: true`. A machine token is limited to one project, an exact list of command ids, and an expiry time.
+Remote services can run extension commands in a project with a machine token.
+
+A token is limited to one project, an exact list of command IDs, and an expiry time. Only commands that opt in with `automation: true` can be added to a token.
 
 These examples assume your enabled `acme.remote` extension provides a `launch`
 command with `automation: true` and a `ticketId` parameter. Replace that command
@@ -19,7 +21,7 @@ pst auth tokens issue \
 
 The raw token is shown once. Store it in the calling service's secret store. Prompt Studio stores a slow hash, not the raw token.
 
-To rotate a credential without changing its idempotency namespace, issue the replacement for the existing principal:
+Each token acts as a principal, the identity that owns its runs. Idempotency keys are tracked per principal. To replace a token and keep its idempotency keys, issue the new token for the same principal:
 
 ```sh
 pst auth tokens issue \
@@ -57,4 +59,4 @@ pst automation cancel --project project-id --id run-id
 
 List and revoke credentials with `pst auth tokens list --project project-id` and `pst auth tokens revoke --id token-id`.
 
-The host accepts at most 60 new runs per principal and project each minute by default. Idempotent retries do not consume another run. Accepted runs are stored before execution. Queued runs resume after a host restart. A run interrupted while its command is executing becomes a retryable `host_restarted` failure because extension commands do not have a general resume contract. Terminal runs and their events are retained for 30 days and pruned at startup and during new-run admission.
+The host accepts at most 60 new runs per principal and project each minute by default. Set `PSTDIO_AUTOMATION_RUNS_PER_MINUTE` to change the limit. Idempotent retries do not consume another run. Accepted runs are stored before execution. Queued runs resume after a host restart. A run that was executing when the host stopped fails with a retryable `host_restarted` error, because extension commands cannot resume halfway. Terminal runs and their events are retained for 30 days and pruned at startup and during new-run admission.

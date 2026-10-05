@@ -1,39 +1,35 @@
 import { Box, Button } from "@chakra-ui/react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { type LandingView, VIEW_META } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
-import { landingPathForView, nextLandingView, previousLandingView } from "../../services/landing-route";
 
-interface PageNavigationProps {
-  view: LandingView;
-  onNavigate: (view: LandingView) => void;
+export interface PageLink {
+  href: string;
+  label: string;
 }
 
+interface PageNavigationProps {
+  previous?: PageLink;
+  next?: PageLink;
+  size?: "sm" | "md";
+}
+
+/** Previous and next page links. The site's link handling opens them without a reload. */
 export const PageNavigation = (props: PageNavigationProps) => {
-  const { view, onNavigate } = props;
+  const { previous, next, size } = props;
   const panelStyles = useLandingStyles();
   const pages = [
-    { direction: "previous", label: "Previous", view: previousLandingView(view), icon: ArrowLeft },
-    { direction: "next", label: "Next", view: nextLandingView(view), icon: ArrowRight },
+    { direction: "previous", label: "Previous", link: previous, icon: ArrowLeft },
+    { direction: "next", label: "Next", link: next, icon: ArrowRight },
   ];
   return (
     <Box as="nav" aria-label="Page navigation" css={panelStyles.pageNavigation}>
       {pages.map((page) => {
-        const targetView = page.view;
-        if (!targetView) return null;
+        if (!page.link) return null;
         return (
-          <Button key={page.direction} asChild variant="ghost" data-direction={page.direction}>
-            <a
-              href={landingPathForView(targetView)}
-              aria-label={`${page.label}: ${VIEW_META[targetView].label}`}
-              onClick={(event) => {
-                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                event.preventDefault();
-                onNavigate(targetView);
-              }}
-            >
+          <Button key={page.direction} asChild variant="ghost" size={size} data-direction={page.direction}>
+            <a href={page.link.href} aria-label={`${page.label}: ${page.link.label}`}>
               <page.icon />
-              {VIEW_META[targetView].label}
+              {page.link.label}
             </a>
           </Button>
         );

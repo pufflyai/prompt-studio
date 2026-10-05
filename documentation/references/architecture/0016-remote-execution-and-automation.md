@@ -2,6 +2,8 @@
 
 Prompt Studio keeps remote provider protocols inside extensions. The core host owns workspace and run state, authentication, secret storage, request policy, and audit records.
 
+For the user view, see [Local and remote work](../../guides/concepts/0004-local-and-remote.md).
+
 ## Remote workspace flow
 
 1. A workspace type provider creates or resolves a workspace through a named connection.

@@ -1,37 +1,112 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 
-const readingColumn = { width: "full", maxWidth: "3xl", mx: "auto", px: { base: "lg", md: "xl" } } as const;
+const list = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "sm",
+  listStylePosition: "outside",
+  ps: "lg",
+} as const;
+
+// Shiki's `css-variables` theme colors code through these variables.
+const codeColors = {
+  "--astro-code-foreground": "{colors.fg}",
+  "--astro-code-background": "{colors.bg.muted}",
+  "--astro-code-token-keyword": "{colors.fg.info}",
+  "--astro-code-token-function": "{colors.fg.info}",
+  "--astro-code-token-link": "{colors.fg.info}",
+  "--astro-code-token-string": "{colors.fg.success}",
+  "--astro-code-token-string-expression": "{colors.fg.success}",
+  "--astro-code-token-constant": "{colors.fg.warning}",
+  "--astro-code-token-parameter": "{colors.fg.warning}",
+  "--astro-code-token-comment": "{colors.fg.muted}",
+  "--astro-code-token-punctuation": "{colors.fg.muted}",
+};
 
 // Documents come from markdown, so the typography targets plain tags instead of
 // components.
 export const landingDocSlotRecipe = defineSlotRecipe({
-  slots: ["column", "prose"],
+  slots: ["column", "layout", "prose", "html", "outline", "outlineTitle", "outlineLink", "postMeta", "homeTopics"],
   base: {
     column: { layerStyle: "panel", bg: "bg", width: "full", minWidth: 0, height: "full", overflow: "hidden" },
+    layout: { display: "flex", justifyContent: "center", width: "full" },
     prose: {
-      ...readingColumn,
       display: "flex",
       flexDirection: "column",
       gap: "lg",
+      flex: 1,
+      minWidth: 0,
+      maxWidth: "3xl",
+      px: { base: "lg", md: "xl" },
       pt: "3xl",
       pb: "2xl",
       color: "fg",
+      "& header": { display: "flex", flexDirection: "column", gap: "sm" },
+      "& section": { display: "flex", flexDirection: "column", gap: "xs" },
+      "& section + section": { mt: "md" },
       "& h1": { textStyle: { base: "heading/M", md: "heading/L" } },
       "& h2": { textStyle: "heading/S", pt: "md" },
       "& h3": { textStyle: "label/L/medium" },
+      "& h4": { textStyle: "label/M/medium" },
+      "& :is(h2, h3, h4)": { scrollMarginTop: "lg" },
+      "& h2 a, & h3 a": { color: "fg", _hover: { textDecoration: "underline" } },
       "& p": { textStyle: "paragraph/M/regular", color: "fg.muted" },
       "& em": { textStyle: "label/S/italic", color: "fg.muted" },
-      "& ul": {
-        display: "flex",
-        flexDirection: "column",
-        gap: "sm",
-        listStyleType: "disc",
-        listStylePosition: "outside",
-        ps: "lg",
-      },
+      "& ul": { ...list, listStyleType: "disc" },
+      "& ol": { ...list, listStyleType: "decimal" },
       "& li": { textStyle: "paragraph/M/regular", color: "fg.muted" },
+      "& li > :is(ul, ol)": { mt: "sm" },
       "& strong": { color: "fg", fontWeight: "medium" },
-      "& a": { textDecoration: "underline", _hover: { color: "fg" } },
+      "& :where(p, li, td, blockquote) a": { textDecoration: "underline", _hover: { color: "fg" } },
+      "& blockquote": { borderInlineStartWidth: "2px", borderColor: "border", ps: "md" },
+      "& hr": { borderColor: "border" },
+      "& :not(pre) > code": { textStyle: "mono/S", bg: "bg.muted", color: "fg", px: "2xs", borderRadius: "2xs" },
+      "& pre": { textStyle: "mono/S", p: "md", borderRadius: "sm", overflowX: "auto", ...codeColors },
+      // Wide tables scroll sideways on small screens instead of squeezing their columns.
+      "& table": {
+        display: { base: "block", md: "table" },
+        width: "full",
+        overflowX: "auto",
+        borderCollapse: "collapse",
+      },
+      "& :is(th, td)": { borderWidth: "1px", borderColor: "border", px: "sm", py: "xs", textAlign: "start" },
+      "& th": { textStyle: "paragraph/M/medium", bg: "bg.subtle", color: "fg" },
+      "& td": { textStyle: "paragraph/M/regular", color: "fg.muted", verticalAlign: "top" },
+    },
+    // Markdown HTML joins the article's flow, so headings and paragraphs keep its spacing.
+    html: { display: "contents" },
+    outline: {
+      display: { base: "none", xl: "flex" },
+      flexDirection: "column",
+      width: "50",
+      flexShrink: 0,
+      position: "sticky",
+      top: 0,
+      alignSelf: "flex-start",
+      pt: "14",
+      pe: "xl",
+    },
+    outlineTitle: { textStyle: "label/S/medium", color: "fg", pb: "sm" },
+    // The links share one left track; the current section marks it in `fg`.
+    outlineLink: {
+      textStyle: "label/S/regular",
+      color: "fg.muted",
+      ps: "sm",
+      py: "2xs",
+      borderInlineStartWidth: "2px",
+      borderColor: "border",
+      _hover: { color: "fg" },
+      "&[aria-current=location]": { color: "fg", borderColor: "fg" },
+    },
+    postMeta: { textStyle: "label/S/regular", color: "fg.muted" },
+    homeTopics: {
+      display: "grid",
+      gridTemplateColumns: { base: "1fr", md: "repeat(2, minmax(0, 1fr))" },
+      columnGap: "xl",
+      rowGap: "lg",
+      "& > div": { display: "flex", flexDirection: "column", gap: "sm" },
+      "& ul": { listStyleType: "none", ps: 0, gap: "xs" },
+      "& li a": { textStyle: "label/M/regular", color: "fg.muted", textDecoration: "none", _hover: { color: "fg" } },
     },
   },
 });

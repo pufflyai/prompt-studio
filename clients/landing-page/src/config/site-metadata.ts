@@ -1,6 +1,7 @@
 export const siteMetadata = {
   title: "Prompt Studio | A workbench for your tools",
   siteUrl: "https://prompt.studio",
+  repositoryUrl: "https://github.com/pufflyai/prompt-studio",
   locale: "en_US",
   faviconSvgPath: "/images/favicon.svg",
   faviconPngPath: "/images/favicon-32x32.png",

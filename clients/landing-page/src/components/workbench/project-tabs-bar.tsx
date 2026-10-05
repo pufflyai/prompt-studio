@@ -1,18 +1,57 @@
 import { Box, chakra, HStack, Text } from "@chakra-ui/react";
-import { Maximize2, Minimize2, Minus, X } from "lucide-react";
+import { BookOpen, Maximize2, Minimize2, Minus, Newspaper, X } from "lucide-react";
+import type { SiteSection } from "../../content/landing-pages";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { PromptStudioIcon } from "../icons/prompt-studio-icon";
 
-interface ProjectTabsBarProps {
+const SITE_TABS: { section: SiteSection; label: string; icon: React.ReactNode }[] = [
+  { section: "studio", label: "Prompt Studio", icon: <PromptStudioIcon /> },
+  { section: "docs", label: "Docs", icon: <BookOpen /> },
+  { section: "blog", label: "Blog", icon: <Newspaper /> },
+];
+
+interface SiteTabsProps {
+  selected: SiteSection;
+  sectionPath: (section: SiteSection) => string;
+}
+
+// Website tabs have no close button, so each keeps its content width.
+const SiteTabs = (props: SiteTabsProps) => {
+  const { selected, sectionPath } = props;
+  const styles = useLandingStyles();
+
+  return (
+    <HStack as="nav" aria-label="Site" css={styles.siteTabs}>
+      {SITE_TABS.map((tab) => (
+        <chakra.a
+          key={tab.section}
+          href={sectionPath(tab.section)}
+          css={styles.siteTab}
+          aria-current={tab.section === selected ? "page" : undefined}
+          onPointerDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
+          <Box css={styles.siteTabIcon} aria-hidden="true">
+            {tab.icon}
+          </Box>
+          <Text as="span" css={styles.siteTabLabel}>
+            {tab.label}
+          </Text>
+        </chakra.a>
+      ))}
+    </HStack>
+  );
+};
+
+interface ProjectTabsBarProps extends SiteTabsProps {
   windowed: boolean;
-  onNavigateHome: () => void;
   onToggleWindowed: () => void;
   onTitleBarPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   onTitleBarDoubleClick: () => void;
 }
 
 export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
-  const { windowed, onNavigateHome, onToggleWindowed, onTitleBarPointerDown, onTitleBarDoubleClick } = props;
+  const { windowed, selected, sectionPath, onToggleWindowed, onTitleBarPointerDown, onTitleBarDoubleClick } = props;
 
   const styles = useLandingStyles(windowed);
   const controls = [
@@ -28,13 +67,8 @@ export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
 
   return (
     <>
-      <Box as="button" aria-label="Go to Prompt Studio home" css={styles.mobileTitlebar} onClick={onNavigateHome}>
-        <Box width="5" height="5" flexShrink="0">
-          <PromptStudioIcon />
-        </Box>
-        <Text fontFamily="heading" fontWeight="medium" textStyle="label/M/medium" lineHeight="1.2">
-          Prompt Studio
-        </Text>
+      <Box css={styles.mobileTitlebar}>
+        <SiteTabs selected={selected} sectionPath={sectionPath} />
       </Box>
       <Box css={styles.titlebar} onPointerDown={onTitleBarPointerDown} onDoubleClick={onTitleBarDoubleClick}>
         <Box
@@ -58,20 +92,7 @@ export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
             </chakra.button>
           ))}
         </Box>
-        <HStack
-          as="button"
-          css={styles.brandTab}
-          onClick={onNavigateHome}
-          onPointerDown={(event) => event.stopPropagation()}
-          onDoubleClick={(event) => event.stopPropagation()}
-        >
-          <Box boxSize="icon-sm" flexShrink="0" aria-hidden="true">
-            <PromptStudioIcon />
-          </Box>
-          <Text fontFamily="heading" fontWeight="medium" textStyle="label/S/medium" whiteSpace="nowrap">
-            Prompt Studio
-          </Text>
-        </HStack>
+        <SiteTabs selected={selected} sectionPath={sectionPath} />
       </Box>
     </>
   );

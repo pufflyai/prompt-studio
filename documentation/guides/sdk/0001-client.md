@@ -1,9 +1,11 @@
 # Client
 
-The SDK client provides typed methods for the core pstdio API endpoints.
-Planner tickets, ticket statuses, and ticket tags are extension-owned and are
-accessed through extension commands or the `pst tickets` CLI facade, not through
-core SDK domain clients.
+Use `createClient` from `@pstdio/sdk/client` to call the Prompt Studio API from scripts and other apps, with typed methods.
+
+The client covers the core API: projects, workspaces, sessions, extensions, and
+more. Planner tickets, ticket statuses, and ticket tags belong to the Planner
+extension. Reach them through extension commands or the `pst tickets` commands,
+not through a core client group.
 
 ## Creating a Client
 
@@ -17,8 +19,12 @@ const client = createClient({
 ```
 
 All options are optional. With no arguments, a non-browser client reads `PSTDIO_API_URL` and `PSTDIO_API_TOKEN` from
-the environment. Browser requests use same-origin credentials so the runtime's HttpOnly session cookie authenticates
+the environment. Browser requests use same-origin credentials, so the runtime's HttpOnly session cookie authenticates
 REST and SSE without exposing the bearer token to JavaScript.
+
+The runtime usually listens on a port the operating system picks, so set both values for scripts. The running
+runtime records its address as `origin` and its access token as `token` in `$PSTDIO_HOME/runtime.json`
+(`~/.pstdio/runtime.json` by default). Keep the token secret: it grants full access to the runtime.
 
 ### Options
 
@@ -33,6 +39,7 @@ REST and SSE without exposing the bearer token to JavaScript.
 The client is organized by resource type:
 
 ```ts
+client.views; // Shared board views
 client.projects; // Project CRUD
 client.filesystem; // Folder browsing and creation
 client.workspaces; // Workspace CRUD

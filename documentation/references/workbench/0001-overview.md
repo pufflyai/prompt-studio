@@ -1,24 +1,24 @@
-# Workbench
+# Overview
 
-The Workbench package supplies the headless application model and the React shell
-used by Prompt Studio. Start with the API reference, then use the focused guides
-for navigation and contribution ownership.
+`@pstdio/workbench` is for people who build a host app on the workbench, not for extension authors. Extensions use `@pstdio/sdk/extensions` instead.
 
-## References
+The package supplies the headless application model and the React shell that Prompt Studio itself runs on. Its registries and layout controllers are host APIs. Extension authors should read the [Extension API](../extensions/0001-api.md) reference, starting with [Workbench composition](../extensions/0008-contextual-workbench-composition.md) and [Modes and layout](../extensions/0009-modes-and-layout.md).
 
-- [Workbench API](0002-api.md) covers package entry points, core services, panel
-  registration, composition queries, resources, modes, persistence, and extension
-  placement.
-- [Navigation](0004-navigation.md) explains explicit targets, canonical locations,
-  breadcrumbs, and history.
-- [Contribution ownership](0003-contribution-ownership.md) explains module and
-  extension attribution, lifecycle, and instance ownership.
+## Install
 
-Extension authors should also read [Extension modes](../extensions/0009-modes-and-layout.md)
-and [Dashboard UI attachments](../extensions/0013-workbench-attachments.md).
+```sh
+bun add @pstdio/workbench
+```
 
-The live examples are in the `pstdio-workbench/API` section of the Workbench
-Storybook.
+The React integration needs the peer dependencies `react` and `react-dom` (19), `@chakra-ui/react` (3), and `@emotion/react` (11). The root, `storage`, and `webview-runtime` entries load without React. The [package guide](../../../packages/pstdio-workbench/README.md) covers setup.
+
+## Pages
+
+- [API](0002-api.md) covers package entry points, core services, panel registration, composition queries, resources, modes, persistence, and extension placement.
+- [Contribution ownership](0003-contribution-ownership.md) explains module and extension attribution, lifecycle, and instance ownership.
+- [Navigation](0004-navigation.md) explains explicit targets, canonical locations, breadcrumbs, and history.
+
+Runnable examples live in the workbench's Storybook stories under `packages/pstdio-workbench/src/examples`. Start with the [panels and pages stories](../../../packages/pstdio-workbench/src/examples/api/api.stories.tsx).
 
 ## Panel menus
 

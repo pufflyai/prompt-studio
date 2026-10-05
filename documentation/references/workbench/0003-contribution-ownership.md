@@ -1,6 +1,8 @@
 # Contribution ownership
 
-Ownership records which workbench module, runtime extension, mode, or page supplied a contribution. It is separate from contribution ids, project ids, resource ids, and user identity.
+Ownership records which workbench module, extension, mode, or page supplied a contribution.
+
+Ownership is separate from contribution IDs, project IDs, resource IDs, and user identity.
 
 ## Registration ownership
 

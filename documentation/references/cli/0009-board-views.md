@@ -1,4 +1,4 @@
-# Shared board views
+# Board views
 
 Saved views belong to a project and a collection. The boards API includes extension views of kind `kanban` (a board or list) or `dataTable`, and the built-in Workspaces table. Workspaces uses the stable board ID `dashboard-workbench.workspaces` and has `extensionId: null`. Everyone sees the same saved views and collection default. Local storage keeps only the active selection, unsaved edits, and expanded or collapsed groups, scoped to the collection's context such as its project.
 

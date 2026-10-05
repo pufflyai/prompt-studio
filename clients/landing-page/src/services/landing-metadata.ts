@@ -1,18 +1,18 @@
 import { siteMetadata } from "../config/site-metadata";
-import { landingPageFromPath } from "./landing-route";
+import type { LandingPage } from "../content/landing-pages";
 import { landingStructuredData } from "./landing-structured-data";
 
-export const landingMetadata = (path: string) => {
-  const page = landingPageFromPath(path);
+/** Head metadata for a page, or for the not-found page when `page` is undefined. */
+export const landingMetadata = (page: LandingPage | undefined, path: string) => {
   const title = page?.title ?? "Page not found | Prompt Studio";
   const description = page?.description ?? "The requested Prompt Studio page could not be found.";
   const canonicalUrl = new URL(page?.path ?? path, siteMetadata.siteUrl).href;
-  const structuredData = landingStructuredData({ title, description, canonicalUrl, home: page?.path === "/" });
+  const structuredData = page ? landingStructuredData(page, canonicalUrl) : undefined;
   return { title, description, canonicalUrl, structuredData, indexable: Boolean(page) };
 };
 
-export const updateLandingMetadata = (path: string) => {
-  const metadata = landingMetadata(path);
+export const updateLandingMetadata = (page: LandingPage) => {
+  const metadata = landingMetadata(page, page.path);
   document.title = metadata.title;
   for (const [selector, content] of [
     ['meta[name="description"]', metadata.description],

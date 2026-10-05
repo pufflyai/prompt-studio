@@ -1,6 +1,8 @@
-# Extension Notifications
+# Notifications
 
-Extensions have three user-facing surfaces for events:
+Extensions can report events as activity, toasts, or inbox notifications. This page explains when to use each and how notifications work.
+
+## Choose a surface
 
 | Surface | API | Use it for |
 | --- | --- | --- |

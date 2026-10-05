@@ -2,6 +2,8 @@
 
 `pstdio-wt` supplies Git operations for local workspace providers and CLI workflows. It depends on the shared file-type package and invokes the Git executable. It does not own project, ticket, review, or session state.
 
+For the user view, see [Projects and workspaces](../../guides/concepts/0001-projects-and-workspaces.md).
+
 ## Operations and ownership
 
 | Operation | Product owner | Git implementation |

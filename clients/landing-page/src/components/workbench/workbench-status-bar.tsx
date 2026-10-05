@@ -1,41 +1,22 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { Building2, Scale, ShieldCheck } from "lucide-react";
-import type { LandingView } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
-import { landingPathForView } from "../../services/landing-route";
 import { StockholmIcon } from "../icons/stockholm-icon";
 
 const LEGAL_LINKS = [
-  { label: "Privacy", view: "privacy" as const, icon: ShieldCheck },
-  { label: "Terms", view: "terms" as const, icon: Scale },
-  { label: "Imprint", view: "imprint" as const, icon: Building2 },
+  { label: "Privacy", path: "/privacy/", icon: ShieldCheck },
+  { label: "Terms", path: "/terms/", icon: Scale },
+  { label: "Imprint", path: "/imprint/", icon: Building2 },
 ];
 
-interface WorkbenchStatusBarProps {
-  onNavigate: (view: LandingView) => void;
-}
-
-export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
-  const { onNavigate } = props;
-
+export const WorkbenchStatusBar = () => {
   const styles = useLandingStyles();
 
   return (
     <HStack as="footer" aria-label="Workbench status" css={styles.status}>
       {LEGAL_LINKS.map((item) => (
-        <Button
-          key={item.view}
-          asChild
-          size="xs"
-          variant="ghost"
-          color="fg.muted"
-          onClick={(event) => {
-            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-            event.preventDefault();
-            onNavigate(item.view);
-          }}
-        >
-          <a href={landingPathForView(item.view)}>
+        <Button key={item.path} asChild size="xs" variant="ghost" color="fg.muted">
+          <a href={item.path}>
             <item.icon />
             {item.label}
           </a>

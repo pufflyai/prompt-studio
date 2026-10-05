@@ -2,6 +2,8 @@
 
 A project owns tools, settings, and saved data. A workspace identifies where work happens. A session runs in a workspace.
 
+For the user view, see [Projects and workspaces](../../guides/concepts/0001-projects-and-workspaces.md).
+
 A project has one default workspace. That relationship owns the project's home location. Projects do not store another path or link a list of repositories. Workspace records store a local `root_path` or a remote provider reference.
 
 ## Open a folder

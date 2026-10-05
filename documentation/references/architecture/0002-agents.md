@@ -2,6 +2,8 @@
 
 Prompt Studio delegates agent work to harness contributions from extensions. The host owns session lifecycle, workspace selection, queueing, permissions, and the complete conversation. Each harness owns its provider protocol and native transcript format.
 
+For the user view, see [Agents and harnesses](../../guides/concepts/0003-agents.md).
+
 ## Discovery and identity
 
 [The harness registry](../../../packages/pstdio-api/src/features/harnesses/harness-registry-service.ts) resolves project harnesses from the project's adopted extension catalog snapshot. Host-scoped discovery resolves installed host sources separately. Project handles are cached by catalog snapshot identity; a changed source path alone is not a new adopted project contract.
@@ -93,7 +95,7 @@ Host-channel answers with a pending question tool part return success only after
 
 Planner owns ticket attempts and reviews. `run-attempt`, `run-review`, `submit-change-request`, and `submit-review` operate on explicit revisions and verdicts. A session finishing does not prove that implementation or review succeeded.
 
-See [Planner attempts](../../../extensions/pstdio-planner/docs/attempts.md). Core session hooks must not recreate removed ticket or workspace attempt-status APIs.
+See [Planner attempts](../../../extensions/pstdio-planner/docs/0002-attempts.md). Core session hooks must not recreate removed ticket or workspace attempt-status APIs.
 
 ## Rules
 

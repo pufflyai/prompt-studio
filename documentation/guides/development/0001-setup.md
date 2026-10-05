@@ -156,7 +156,7 @@ For a one-off invocation without installing the wrapper:
 bun run --cwd packages/pstdio pstdio -- --help
 ```
 
-See the [CLI product documentation](../../references/cli/0003-setup.md) for runtime setup and the command-specific references for supported workflows.
+See [runtime commands](../../references/cli/0003-setup.md) for how the runtime starts and stops, and the other [CLI references](../../references/cli/0001-overview.md) for each command group. The user install steps are in [Install Prompt Studio](../getting-started/0001-install.md).
 
 ## Database Development
 

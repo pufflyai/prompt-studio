@@ -1,13 +1,15 @@
 # Resource types
 
-Import product resource types from `@pstdio/sdk/resources`:
+`@pstdio/sdk/resources` exports the types for Prompt Studio's core data: projects, workspaces, sessions, skills, agents, files, and settings.
+
+Import them as types:
 
 ```ts
 import type { Project, Session, SessionStatus, Workspace } from "@pstdio/sdk/resources";
 ```
 
-These types come from the API contracts. Use the exported types directly so new
-fields and status values reach callers without maintaining a separate schema.
+These types come from the API contracts. Use the exported types directly, so new
+fields and status values reach your code without a separate schema to maintain.
 The [resource entry](../../../packages/sdk/src/resources/index.ts) lists every export.
 
 | Data | Public types | Source |

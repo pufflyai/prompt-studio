@@ -4,10 +4,10 @@ Prompt Studio is a workbench where people and agents build and use tools through
 
 ## Start here
 
-- [Install and use Prompt Studio](0002-getting-started.md)
+- [Install Prompt Studio](getting-started/0001-install.md)
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
-- [Build an extension](extensions/0001-authoring.md)
+- [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
 - [Check lessons when stuck](../lessons-learned)
 
@@ -27,15 +27,53 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 | `adrs` | Architecture decisions, including temporary limitations and removal criteria |
 | `lessons-learned` | Diagnosed failures and rules that prevent recurrence |
 
-Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
+Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group getting started, concepts, development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
 
 Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
 
-Use relative Markdown links so these pages work in repository browsers and editors. Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
+Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
+
+## Publishing to prompt.studio/docs
+
+The website publishes some folders as the Docs tab at [prompt.studio/docs](https://prompt.studio/docs/). It reads these files straight from the repository at build time:
+
+- Guides: `guides/getting-started/`, `guides/concepts/`, `guides/extensions/`, and `guides/sdk/`
+- References: `references/cli/`, `references/extensions/`, `references/sdk/`, and `references/workbench/`
+- Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, and OpenCode harnesses, and Extension Lab
+
+Nothing else is published. This guide, `guides/development/`, `references/architecture/`, PRDs, ADRs, lessons learned, and `extensions/pstdio-planner/docs/superseded/` stay in the repository. The allow-list of published folders and their sidebar labels lives in `clients/landing-page/src/content/docs-topics.ts`. A folder that is not on that list is never published, so a new folder stays private until someone adds it.
+
+Published pages are written for users and extension authors who read them on the website without the repository open. Keep contributor material, such as repository test commands and Docker development stacks, in `guides/development/` or in an extension's `AGENTS.md`.
+
+Every published page follows these rules. The website build fails when a page breaks them.
+
+- No frontmatter.
+- The first line is a `# Title` heading. It is the page's sidebar label, so keep it short.
+- The first block after the title is a plain paragraph of one or two sentences, ideally under 160 characters. It becomes the page's description for search engines and link previews.
+- The file number sets the page order in the sidebar. The URL drops it: `references/cli/0006-sessions.md` becomes `/docs/references/cli/sessions/`. An extension's `README.md` is its overview page.
+- Use `##` headings for sections. They form the page outline.
+
+Link with relative paths to `.md` files, so the same markdown works on GitHub and on the website. A link to a published page becomes a website link. A link to any other repository file, such as an ADR or a source file, becomes a link to that file on GitHub `main`. A relative link to a missing file fails the build. Anchors such as `0006-sessions.md#create-a-session` use GitHub-style heading slugs.
 
 ## Guides
 
-- [0002 — Start using Prompt Studio](0002-getting-started.md)
+### Getting started
+
+- [0001 — Install Prompt Studio](getting-started/0001-install.md)
+- [0002 — Open a project](getting-started/0002-open-a-project.md)
+- [0003 — Add tools](getting-started/0003-add-tools.md)
+- [0004 — Run agents](getting-started/0004-run-agents.md)
+- [0005 — Troubleshooting](getting-started/0005-troubleshooting.md)
+
+### How Prompt Studio works
+
+- [0001 — Projects and workspaces](concepts/0001-projects-and-workspaces.md)
+- [0002 — Extensions](concepts/0002-extensions.md)
+- [0003 — Agents and harnesses](concepts/0003-agents.md)
+- [0004 — Local and remote work](concepts/0004-local-and-remote.md)
+
+### Developer tools
+
 - [0003 — Developer tools](0003-developer-tools.md)
 
 ### Development
@@ -44,17 +82,17 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0002 — Tests](development/0002-testing.md)
 - [0003 — Storybook coverage](development/0003-storybook-coverage.md)
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
+- [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
 
-### Extensions
+### Build extensions
 
-- [0001 — Extensions](extensions/0001-authoring.md)
+- [0001 — Write an extension](extensions/0001-authoring.md)
 - [0002 — Workbench cookbook](extensions/0002-workbench-cookbook.md)
-- [0003 — Extension automation cookbook](extensions/0003-automation.md)
-- [0004 — Migrate an extension to remote execution](extensions/0004-remote-execution-migration.md)
-- [0005 — Extension conformance and regression coverage](extensions/0005-conformance.md)
-- [0006 — Extension runtime smoke checks](extensions/0006-smoke-checks.md)
+- [0003 — Automation cookbook](extensions/0003-automation.md)
+- [0004 — Move to remote execution](extensions/0004-remote-execution-migration.md)
+- [0006 — Smoke checks](extensions/0006-smoke-checks.md)
 
-### SDK
+### Use the SDK
 
 - [0001 — Client](sdk/0001-client.md)
 
@@ -85,48 +123,49 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0021 — Streaming](../references/architecture/0021-stream.md)
 - [0022 — Workspace Diff Presentation](../references/architecture/0022-workspace-diff-presentation.md)
 - [0023 — Worktrees and Git operations](../references/architecture/0023-worktrees.md)
+- [0024 — Extension API version checks](../references/architecture/0024-extension-api-version-checks.md)
 
 ### CLI
 
-- [0001 — Prompt Studio CLI](../references/cli/0001-overview.md)
-- [0002 — CLI agents](../references/cli/0002-agents.md)
-- [0003 — Product Requirements Document: CLI Runtime and API Setup](../references/cli/0003-setup.md)
-- [0004 — CLI projects](../references/cli/0004-projects.md)
-- [0005 — CLI workspaces](../references/cli/0005-workspaces.md)
-- [0006 — CLI sessions](../references/cli/0006-sessions.md)
+- [0001 — Overview](../references/cli/0001-overview.md)
+- [0002 — Agents](../references/cli/0002-agents.md)
+- [0003 — Runtime commands](../references/cli/0003-setup.md)
+- [0004 — Projects](../references/cli/0004-projects.md)
+- [0005 — Workspaces](../references/cli/0005-workspaces.md)
+- [0006 — Sessions](../references/cli/0006-sessions.md)
 - [0007 — Remote automation](../references/cli/0007-automation.md)
-- [0008 — CLI notifications](../references/cli/0008-notifications.md)
+- [0008 — Notifications](../references/cli/0008-notifications.md)
+- [0009 — Board views](../references/cli/0009-board-views.md)
 
-### Extensions
+### Extension API
 
-- [0001 — Extension API reference](../references/extensions/0001-api.md)
-- [0002 — Extension manifest and installation](../references/extensions/0002-manifest-and-installation.md)
-- [0003 — Extension commands and processes](../references/extensions/0003-command-and-process-api.md)
-- [0004 — Extension contributions](../references/extensions/0004-contribution-api.md)
-- [0005 — Extension webviews and storage](../references/extensions/0005-webview-and-storage-api.md)
-- [0006 — Extension lifecycle automation](../references/extensions/0006-lifecycle-automation.md)
-- [0007 — Durable extension work](../references/extensions/0007-durable-automation.md)
+- [0001 — Overview](../references/extensions/0001-api.md)
+- [0002 — Manifest and installation](../references/extensions/0002-manifest-and-installation.md)
+- [0003 — Commands and processes](../references/extensions/0003-command-and-process-api.md)
+- [0004 — Contributions](../references/extensions/0004-contribution-api.md)
+- [0005 — Webviews and storage](../references/extensions/0005-webview-and-storage-api.md)
+- [0006 — Lifecycle automation](../references/extensions/0006-lifecycle-automation.md)
+- [0007 — Durable work](../references/extensions/0007-durable-automation.md)
 - [0008 — Workbench composition](../references/extensions/0008-contextual-workbench-composition.md)
-- [0009 — Extension modes and layout](../references/extensions/0009-modes-and-layout.md)
+- [0009 — Modes and layout](../references/extensions/0009-modes-and-layout.md)
 - [0010 — Navigation and layout state](../references/extensions/0010-navigation-and-layout-state.md)
-- [0011 — Extension Notifications](../references/extensions/0011-notifications.md)
-- [0012 — Renderer Edit and Refresh Lifecycle](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
-- [0013 — Dashboard UI contributions](../references/extensions/0013-workbench-attachments.md)
-- [0014 — Extension API versioning](../references/extensions/0014-api-versioning.md)
+- [0011 — Notifications](../references/extensions/0011-notifications.md)
+- [0012 — Renderer edit and refresh](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
+- [0014 — API versioning](../references/extensions/0014-api-versioning.md)
 - [0015 — Harness commands and chat modes](../references/extensions/0015-harness-commands.md)
 
 ### SDK
 
-- [0001 — SDK](../references/sdk/0001-overview.md)
+- [0001 — Overview](../references/sdk/0001-overview.md)
 - [0002 — Resource types](../references/sdk/0002-resources.md)
-- [0003 — SDK method reference](../references/sdk/0003-api.md)
+- [0003 — Method reference](../references/sdk/0003-api.md)
 
 ### Workbench
 
-- [0001 — Workbench](../references/workbench/0001-overview.md)
-- [0002 — Workbench API](../references/workbench/0002-api.md)
+- [0001 — Overview](../references/workbench/0001-overview.md)
+- [0002 — API](../references/workbench/0002-api.md)
 - [0003 — Contribution ownership](../references/workbench/0003-contribution-ownership.md)
-- [0004 — Workbench navigation](../references/workbench/0004-navigation.md)
+- [0004 — Navigation](../references/workbench/0004-navigation.md)
 
 ## PRDs
 
@@ -205,11 +244,10 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0045 — Temporary Remotion React subpath alias](../adrs/0045-temporary-remotion-react-subpath-alias.md)
 - [0046 — Let extension webviews write to the clipboard when they declare it](../adrs/0046-declared-webview-clipboard-writes.md)
 - [0047 — Semantic versioning for the extension API](../adrs/0047-semantic-versioning-for-the-extension-api.md)
-
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
+- [0048 — Board views are core project data](../adrs/0048-shared-project-board-views.md)
 - [0051 — Temporary Motion Lab scene link pass (Superseded)](../adrs/0051-superseded-temporary-motion-scene-link-pass.md)
 - [0049 — Temporary scroll content width override for panel tabs](../adrs/0049-temporary-scroll-content-width-override.md)
-
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
 - [0052 — Temporary Codex question delivery confirmation](../adrs/0052-temporary-codex-question-delivery-confirmation.md)
 - [0053 — Temporary webview move fallback](../adrs/0053-temporary-webview-move-fallback.md)

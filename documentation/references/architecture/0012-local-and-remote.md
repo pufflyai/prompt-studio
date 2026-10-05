@@ -2,6 +2,8 @@
 
 Projects are not classified as local or remote. A project owns settings, extensions, and saved data. Its workspaces can use different providers and execution targets.
 
+For the user view, see [Projects and workspaces](../../guides/concepts/0001-projects-and-workspaces.md).
+
 The default workspace supplies project files and the home location. A local default uses the exact chosen folder. A remote default uses a provider reference. Providers supply remote files or source; Prompt Studio does not infer a Git source or synchronize a local folder.
 
 | Workspace | Location | Execution | File ownership |

@@ -2,6 +2,8 @@
 
 The extension runtime discovers installed sources, validates package contracts, loads contributions, and exposes project snapshots to command, renderer, scheduler, and harness consumers. Package source, adopted project contributions, and built webview assets have distinct lifetimes.
 
+For the user view, see [Extensions](../../guides/concepts/0002-extensions.md).
+
 ## Package ownership
 
 Extension source and dependencies belong to the package. The host validates `package.json`, imports its declared entry, normalizes contributions, and records diagnostics. It must not silently replace an author's dependencies with unrelated host packages.

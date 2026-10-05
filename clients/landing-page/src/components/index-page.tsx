@@ -1,18 +1,19 @@
-import type { LegalDocuments } from "../content/landing-content";
+import type { LandingDocument, LandingPage } from "../content/landing-pages";
 import { RootProvider } from "./root-provider";
 import { WorkbenchLanding } from "./workbench/workbench-landing";
 
 interface IndexPageProps {
   initialPath: string;
-  legalDocuments: LegalDocuments;
+  pages: LandingPage[];
+  initialDocument: LandingDocument | undefined;
 }
 
 export const IndexPage = (props: IndexPageProps) => {
-  const { initialPath, legalDocuments } = props;
+  const { initialPath, pages, initialDocument } = props;
 
   return (
     <RootProvider>
-      <WorkbenchLanding initialPath={initialPath} legalDocuments={legalDocuments} />
+      <WorkbenchLanding initialPath={initialPath} pages={pages} initialDocument={initialDocument} />
     </RootProvider>
   );
 };

@@ -19,13 +19,13 @@ This:
 3. Loads the installed copy through the v2 runtime to validate the default export and report diagnostics.
 4. Auto-enables the extension for the current project (when run inside one).
 
-### From the Prompt Studio repository
+### From the built-in catalog
 
 ```bash
 pst extensions add <name>
 ```
 
-Resolves to `https://github.com/pufflyai/prompt-studio` at `extensions/<name>` and installs to the package's declared scope.
+Looks up `<name>` in the built-in extension catalog (`packages/pstdio-api/files/extension-catalog.json`), fetches that folder from `https://github.com/pufflyai/prompt-studio` at the release tag that matches the running host, and installs it to the package's declared scope. A name that is not in the catalog fails. Install those extensions from a local folder.
 
 ### Flags
 
@@ -94,15 +94,15 @@ Prompt Studio Git tag paired with the running host release. Source checkouts use
 `pstdio.scope` in `package.json` to select the user extension root or the project folder's extension
 root.
 
-The default list is:
+The default list is every catalog entry marked `"default": true`:
 
 - `harness-claude-code`
 - `harness-codex`
 - `harness-open-code`
 - `pstdio-base-themes`
-- `pstdio-planner`
-- `pstdio-reports`
 - `pstdio-skills`
+
+The other catalog entries, such as `pstdio-planner`, `pstdio-reports`, `pstdio-notes`, and `pstdio-artifacts`, are listed in the dashboard but not installed by default.
 
 Default extensions use user scope. Subsequent project creates skip existing installs, so user edits under
 `~/.pstdio-dev/extensions/pstdio-*/` survive across restarts.
@@ -130,7 +130,7 @@ Resolution rule (same as the CLI): if `source` starts with `./`, `../`, `/`, or 
 The dashboard lists the built-in catalog under Marketplace. An uninstalled entry stays there so the
 user can install it again from the host release.
 
-Set `PSTDIO_DEFAULT_EXTENSIONS` to JSON to override this configuration. `bun run pstdio:local:add-dev` uses the following value to install from the monorepo:
+Set `PSTDIO_DEFAULT_EXTENSIONS` to JSON to override this configuration. For example, this value installs two extensions from the monorepo:
 
 ```ts
 {
@@ -140,6 +140,8 @@ Set `PSTDIO_DEFAULT_EXTENSIONS` to JSON to override this configuration. `bun run
   ],
 }
 ```
+
+The Docker development stack sets its own list in `infra/local/compose.yaml`.
 
 ### Watch an extension in the development environment
 
@@ -221,8 +223,8 @@ Each enabled extension also registers a command palette action named `Reset <ext
 
 ## Documentation
 
-- [Extension authoring guide](./docs/index.md)
-- [Extension API](./docs/api.md)
+- [Extension authoring guide](../documentation/guides/extensions/0001-authoring.md)
+- [Extension API](../documentation/references/extensions/0001-api.md)
 - [Planner extension](./pstdio-planner/README.md)
 - [Remote Workspaces extension](./remote-workspaces/README.md)
 - [Extension runtime architecture](../documentation/references/architecture/0010-extensions-runtime.md)

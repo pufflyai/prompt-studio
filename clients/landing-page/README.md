@@ -7,16 +7,19 @@ The local theme extends the shared theme with the landing illustration colors.
 
 ## Code structure
 
-- `src/components/workbench` owns page chrome and panel composition.
+- `src/components/workbench` owns page chrome, panel composition, and the reading column.
 - `src/components/sections` contains Start Here, What is Prompt Studio, Examples, and Features.
+- `src/components/docs` and `src/components/blog` contain the Docs and Blog sidebars and pages.
 - `src/components/downloads` contains the download picker and agent compatibility cards.
 - `src/components/examples` contains the interactive icon set editor and coding agent demos.
-- `src/content` owns the page catalog, navigation metadata, example data, building blocks, and which views are documents.
+- `src/content` owns the static pages, navigation metadata, example data, building blocks, and the docs allow-list (`docs-topics.ts`).
 - `src/hooks` connects browser navigation, release loading, and animation to React.
-- `src/services` resolves routes, page metadata, and structured data, loads GitHub releases, and selects desktop assets.
+- `src/services` builds the page catalog, resolves routes, page metadata, and structured data, loads GitHub releases, and selects desktop assets.
+- `src/services/markdown` holds the markdown plugins that rewrite links and read page descriptions.
 - `src/services/shapes` owns tool geometry, placement, collisions, dragging, and simulation cleanup.
 - `src/theme/recipes` owns page layouts and demo styles, with colocated Storybook stories.
 - `src/content/legal` holds the legal documents as markdown. See [Legal documents](#legal-documents).
+- `src/content/blog` holds the blog posts as markdown. See [Blog](#blog).
 
 The demos and falling tools render in code. They use no screenshot or image assets.
 
@@ -45,17 +48,25 @@ The cross uses three collision rectangles that share the SVG arm dimensions. The
 half-disc uses a curved polygon and renders around its physical centre of mass, so
 its drawing and collisions stay aligned as it turns.
 
-The desktop header contains the Prompt Studio tab and window controls. The green
-control collapses or expands the window. Red and yellow enter window mode and are
-disabled there. Drag the title bar to move the window. Mobile navigation opens a
-menu below the header; desktop navigation uses the sidebar. There are no breadcrumbs.
+The desktop header contains the window controls and three tabs: Prompt Studio, Docs,
+and Blog. The mobile header shows the same tabs. The selected tab follows the URL.
+Each tab has its own sidebar. Selecting another tab reopens the last page read in
+that section during this visit; selecting the open tab returns to the section's first
+page (`/`, `/docs/`, or `/blog/`). A reload starts fresh. The green control collapses
+or expands the window. Red and yellow enter window mode and are disabled there. Drag
+the title bar to move the window. On small screens the current page name below the
+header opens the command palette; desktop navigation uses the sidebar. There are no
+breadcrumbs.
 
-Legal pages keep the workbench shell, with the title bar, sidebar, and status bar,
-but show the document as one centered column without the introduction and download
-panel. `DOCUMENT_VIEWS` in `src/content/landing-content.ts` names them.
+Every same-site link, including links inside docs HTML, opens without a reload, so
+the tool scene, window mode, and sidebar width survive moving between tabs.
+
+Legal pages, docs, and posts keep the workbench shell, with the title bar, sidebar,
+and status bar, but show one centered reading column without the introduction and
+download panel.
 
 Page navigation buttons sit in a header above the introduction and download panel,
-outside that panel's scroll area. The right content panel keeps its full height. Legal documents have no previous or next page links.
+outside that panel's scroll area. The right content panel keeps its full height. Legal documents and posts have no previous or next page links.
 Each button shows its destination page name and an arrow. Start Here
 only shows the next page. The main pages follow the sidebar order, and Features
 leads back to Start Here.
@@ -107,6 +118,80 @@ carries `noindex` and no canonical link.
 publisher, the `WebSite`, and the current `WebPage`. Only the start page adds a
 `SoftwareApplication` node, so no other page claims to be a downloadable app.
 
+## Document pipeline
+
+Astro content collections in `src/content.config.ts` read every markdown document at
+build time:
+
+- `docs` reads the published files straight from the repo: `documentation/` and each
+  extension's `README.md` and `docs/` folder. The website keeps no copy.
+- `blog` reads `src/content/blog`.
+- `legal` reads `src/content/legal`.
+
+`src/services/site-catalog.ts` combines them with the static pages in
+`src/content/landing-pages.ts` into one catalog. The catalog drives the routes in
+`src/pages/[...path].astro`, the sidebars, the command palette, `/sitemap.xml`, page
+metadata, and structured data. Docs pages carry `WebPage`, posts `BlogPosting` with
+author and date, and `/blog/` carries `Blog`.
+
+Each page gets its own document HTML and the catalog of titles and paths, not every
+document. `src/pages/documents/[...path].json.ts` writes each document as JSON, and
+`useLandingDocument` fetches it when the visitor moves to another page. Until it
+arrives, the previous page stays in place, dimmed after a short delay, so the layout
+does not shift.
+
+The build always runs with `--force`, which clears Astro's content cache. Every build
+renders every document again, so link checks never come from a stale cache.
+
+## Docs
+
+`DOCS_TOPICS` in `src/content/docs-topics.ts` is the ordered allow-list of published
+folders. It sets each sidebar group's section, label, and URL. A folder that is not
+on the list is never published, so ADRs, PRDs, lessons learned, development guides,
+and architecture notes stay in the repo. Everything else comes from the files:
+
+- Page order is the four-digit file number.
+- The page title is the file's first `#` heading. The build fails without it.
+- The meta description is the first paragraph after that heading, as plain text. The
+  build fails without it.
+- The URL is the file name without its number:
+  `documentation/references/cli/0006-sessions.md` becomes `/docs/references/cli/sessions/`.
+- An extension's `README.md` is its overview page at `/docs/extensions/<slug>/`.
+
+`/docs/` lists the same tree as the sidebar. Docs pages show previous and next links
+in sidebar order and, on wide screens, an outline of their `##` headings that marks
+the one in view. The `landingDoc` recipe styles the markdown tags, including tables
+and code. Shiki's `css-variables` theme colors code, and the recipe maps those
+variables to design tokens, so code follows the color mode.
+
+### Link rules
+
+The same markdown works on GitHub and on the site. At build time the
+`published-links` plugin in `src/services/markdown` rewrites relative links:
+
+- A link to a published page becomes its site path, with any `#heading` kept.
+- A link to any other repo file or folder becomes a GitHub link on `main`.
+- A link to a missing file fails the build. The error names the page and the link.
+
+## Blog
+
+Posts are markdown files in `src/content/blog/<slug>.md`, served at `/blog/<slug>/`.
+The collection schema checks the frontmatter, and a missing or malformed field fails
+the build:
+
+```md
+---
+title: Welcome to Prompt Studio
+description: One sentence for the post list and search results.
+published: 2026-10-05
+author: Aurélien Franky
+image: /images/blog/optional-image.png
+---
+```
+
+Write `published` without quotes so YAML reads it as a date. `/blog/` and the Blog
+sidebar list posts newest first.
+
 ## Legal documents
 
 The privacy policy and the terms of service are markdown files in
@@ -119,13 +204,13 @@ paragraph, but each change then shows up as its own line in a diff, so a reviewe
 sees exactly which sentence changed between versions. A list item that needs more
 than one sentence continues on an indented line.
 
-Astro compiles the markdown at build time in `src/services/legal-documents.ts`. The
-pages hand the HTML to the workbench as props, and `DocColumn` shows it, so the
-served HTML holds every heading, paragraph, list, and link, and no markdown parser
-ships to the browser. The `landingDoc` recipe styles the plain tags.
+Astro compiles the markdown at build time through the `legal` collection. Each page
+hands its HTML to the workbench, and `DocColumn` shows it, so the served HTML holds
+every heading, paragraph, list, and link, and no markdown parser ships to the
+browser. The `landingDoc` recipe styles the plain tags.
 
-The build itself fails when a legal page in `DOCUMENT_VIEWS` has no markdown file, so
-a renamed or deleted document cannot ship as an empty page.
+The build fails when a legal page in `src/content/landing-pages.ts` has no markdown
+file, so a renamed or deleted document cannot ship as an empty page.
 
 ## Brand assets
 
@@ -144,7 +229,7 @@ The picker lists only published desktop packages, excluding CLI binaries and
 extension releases. It prefers the visitor's operating system when available.
 The selected build shows its platform, architecture, package format and version.
 Each platform option occupies one row. Other platforms and Use via CLI share a row
-under the build details. The CLI link opens the repository's README on GitHub.
+under the build details. The CLI link opens the install guide in the Docs tab.
 If GitHub cannot be reached, the download button opens the releases page.
 
 ## Isolated preview
