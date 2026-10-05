@@ -19,8 +19,7 @@
       "pstdio-planner",
       "pstdio-reports",
       "pstdio-skills",
-      "remote-workspaces",
-      "pstdio-shader-lab"
+      "remote-workspaces"
     ]
   ],
   "linked": [],
@@ -49,7 +48,8 @@
     "pstdio-storage",
     "pstdio-wt",
     "workbench-fixture",
-    "motion-lab"
+    "motion-lab",
+    "pstdio-shader-lab"
   ],
   "privatePackages": {
     "version": true,

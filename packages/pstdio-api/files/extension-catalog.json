@@ -106,19 +106,6 @@
       "default": false
     },
     {
-      "installName": "pstdio-shader-lab",
-      "displayName": "Shader Lab",
-      "description": "Tune and compare surface shaders with live previews in both themes.",
-      "origin": {
-        "kind": "git",
-        "url": "https://github.com/pufflyai/prompt-studio",
-        "path": "extensions/pstdio-shader-lab",
-        "ref": "{hostRelease}"
-      },
-      "publisher": "pstdio",
-      "default": false
-    },
-    {
       "installName": "pstdio-skills",
       "displayName": "Prompt Studio Skills",
       "description": "Skills for using Prompt Studio and authoring extensions.",

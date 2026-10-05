@@ -11,7 +11,7 @@
     "pstdio": "^0.1.0"
   },
   "pstdio": {
-    "scope": "user"
+    "scope": "repo"
   },
   "scripts": {
     "test": "bun test src",

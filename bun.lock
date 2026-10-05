@@ -69,6 +69,25 @@
         "typescript": "6.0.2",
       },
     },
+    ".pstdio/extensions/shader-lab": {
+      "name": "pstdio-shader-lab",
+      "version": "0.0.0",
+      "dependencies": {
+        "@chakra-ui/react": "3.32.0",
+        "@emotion/react": "^11.0.0",
+        "@pstdio/sdk": "0.38.0",
+        "@pstdio/ui": "0.35.0",
+        "lucide-react": "^0.556.0",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/react": "^19.2.0",
+        "@types/react-dom": "^19.2.0",
+        "typescript": "6.0.2",
+      },
+    },
     "clients/desktop": {
       "name": "@pstdio/desktop",
       "version": "0.40.0",
@@ -262,25 +281,6 @@
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
-        "typescript": "6.0.2",
-      },
-    },
-    "extensions/pstdio-shader-lab": {
-      "name": "pstdio-shader-lab",
-      "version": "0.0.0",
-      "dependencies": {
-        "@chakra-ui/react": "3.32.0",
-        "@emotion/react": "^11.0.0",
-        "@pstdio/sdk": "0.38.0",
-        "@pstdio/ui": "0.35.0",
-        "lucide-react": "^0.556.0",
-        "react": "19.2.4",
-        "react-dom": "19.2.4",
-      },
-      "devDependencies": {
-        "@types/bun": "1.4.2",
-        "@types/react": "^19.2.0",
-        "@types/react-dom": "^19.2.0",
         "typescript": "6.0.2",
       },
     },
@@ -4013,7 +4013,7 @@
 
     "pstdio-scripts": ["pstdio-scripts@workspace:scripts"],
 
-    "pstdio-shader-lab": ["pstdio-shader-lab@workspace:extensions/pstdio-shader-lab"],
+    "pstdio-shader-lab": ["pstdio-shader-lab@workspace:.pstdio/extensions/shader-lab"],
 
     "pstdio-skills": ["pstdio-skills@workspace:extensions/pstdio-skills"],
 
