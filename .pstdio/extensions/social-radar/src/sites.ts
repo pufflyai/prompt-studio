@@ -1,7 +1,12 @@
 /** Sites the skill knows how to search. Any other channel is read in the browser at its own link. */
 export const builtInChannels = [
   { id: "hn", name: "Hacker News", budget: 4, targets: [] },
-  { id: "reddit", name: "Reddit", budget: 4, targets: ["r/ClaudeAI", "r/LocalLLaMA", "r/ChatGPTCoding"] },
+  {
+    id: "reddit",
+    name: "Reddit",
+    budget: 4,
+    targets: ["r/ClaudeAI", "r/ClaudeCode", "r/ChatGPTCoding", "r/AI_Agents", "r/vibecoding"],
+  },
   { id: "bluesky", name: "Bluesky", budget: 3, targets: [] },
   { id: "devto", name: "DEV Community", budget: 2, targets: [] },
   { id: "github", name: "GitHub", budget: 2, targets: [] },

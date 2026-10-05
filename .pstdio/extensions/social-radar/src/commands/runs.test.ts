@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Run, Thread } from "../schemas";
+import { defaults } from "../settings";
 import { commands } from ".";
 import { finish, foundThread, newPost, setup } from "./test-context";
 
@@ -87,7 +88,7 @@ describe("social radar runs", () => {
     const context = await commands["get-context"].run(ctx, { runId: run.runId });
     const finished = await storage.collection<Run>("runs").get(run.runId);
     expect(context).toMatchObject({
-      brandTerms: ["Prompt Studio", "pstdio"],
+      brandTerms: defaults.brandTerms,
       since: finished?.startedAt,
       recentPosts: ["Review page for agent diffs"],
     });

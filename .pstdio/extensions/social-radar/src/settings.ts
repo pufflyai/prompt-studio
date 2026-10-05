@@ -3,9 +3,17 @@ import { z } from "zod";
 import { builtInChannels } from "./sites";
 
 export const defaults = {
-  brandTerms: ["Prompt Studio", "pstdio"],
-  topics: ["manage several coding agents", "internal tools with Claude Code", "agent workbench", "bespoke tools"],
-  competitors: [] as string[],
+  brandTerms: ["Prompt Studio", "pstdio", "prompt.studio"],
+  // Topics are search queries, highest priority first, so they use the words people type in posts.
+  topics: [
+    "multiple Claude Code sessions",
+    "parallel agents worktrees",
+    "Claude Code GUI",
+    "internal tools Claude Code",
+    "build my own tool with AI",
+    "Codex CLI workflow",
+  ],
+  competitors: ["Claude Squad", "Vibe Kanban", "conductor.build", "Cursor background agents"],
   voice:
     "Prompt Studio is a workbench for bespoke tools. Explain how people can build tools that make their work easier. Sell the benefit. Be plain, friendly, and specific. Avoid hype and unsolicited promotion.",
   scrollScreens: 3,
