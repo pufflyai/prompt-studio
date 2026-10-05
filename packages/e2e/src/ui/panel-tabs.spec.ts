@@ -74,7 +74,10 @@ test("opens the Session tab context menu while normal clicks only select", async
   await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
 });
 
-test("keeps panel drags in the tab row and supports pointer and keyboard reorder", async ({ page, request }) => {
+test("keeps the tab viewport unscrolled during drag and supports pointer and keyboard reorder", async ({
+  page,
+  request,
+}) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await page.addInitScript((id: string) => {
@@ -113,6 +116,7 @@ test("keeps panel drags in the tab row and supports pointer and keyboard reorder
         })),
       )
       .toEqual({ top: 0, overflow: 0 });
+    await page.keyboard.press("Escape");
     await page.mouse.up();
   }
   const start = (await first.boundingBox())!;

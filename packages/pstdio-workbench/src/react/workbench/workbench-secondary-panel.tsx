@@ -63,7 +63,7 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
         <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
         <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
       </Header>
-      {!visible ? <WorkbenchTabDropTarget region="secondary" headerless /> : null}
+      <WorkbenchTabDropTarget region="secondary" />
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel="secondary">
           <WorkbenchRegion workbench={workbench} region="secondary" title="Secondary Panel" />

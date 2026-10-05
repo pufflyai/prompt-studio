@@ -139,6 +139,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
       ctx.views.registerView({
         id: WORKBENCH_TERMINAL_WIDGET_ID,
         title: "Terminal",
+        icon: "SquareTerminal",
         body: {
           kind: "react",
           render: (input) => <WorkbenchTerminalPanel placement={input.instance} workbench={input.workbench} />,

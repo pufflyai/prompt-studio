@@ -80,9 +80,6 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
-  const hasTabs = useWorkbenchRegionTabsVisible(workbench, "main");
-  const hasHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
-  const mainSettings = useWorkbenchModeRegionSettings(workbench, "main");
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
@@ -133,9 +130,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       position="relative"
     >
       <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
-      {(!hasMainHeader && !hasHeader) || (mainSettings?.showHeader === false && !hasTabs) ? (
-        <WorkbenchTabDropTarget region="main" headerless />
-      ) : null}
+      <WorkbenchTabDropTarget region="main" />
       <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
         {mainPanelWithMenus}
       </Box>

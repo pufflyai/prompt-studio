@@ -11,7 +11,13 @@ export const layerStyles = defineLayerStyles({
     },
   },
   tabDropZone: {
-    value: { bg: "bg.accent-subtle", color: "fg.muted" },
+    value: {
+      bg: "bg.accent-primary.default/4",
+      color: "fg.muted",
+      borderWidth: "1px",
+      borderColor: "bg.accent-primary.default",
+      borderRadius: "inherit",
+    },
   },
   floatingBar: {
     value: {

@@ -135620,7 +135620,7 @@
           "id": "U4HmVz",
           "name": "Rules",
           "fill": "$ds-fg",
-          "content": "Add follows the scrolling tab group. Panel menus keep the far-right corner. Pinning never changes order.",
+          "content": "Add follows the tabs. Pinning never changes order. A subtle drop overlay covers only the hovered panel, including its controls.",
           "fontFamily": "$font-body",
           "fontSize": 12,
           "fontWeight": "normal"
@@ -136288,7 +136288,7 @@
                   },
                   "descendants": {
                     "w7NkD3": {
-                      "icon": "layers"
+                      "icon": "terminal"
                     },
                     "k9XlqC": {
                       "content": "Terminal 2",
@@ -136411,9 +136411,11 @@
             {
               "type": "frame",
               "id": "AIiyI",
-              "name": "During drag",
+              "name": "Main hovered during drag",
+              "context": "Panel drop feedback only appears while the dragged tab is over this allowed panel. Use a subtle full-container overlay; no persistent top band.",
+              "clip": true,
               "width": "fill_container",
-              "height": 140,
+              "height": 180,
               "fill": "$ds-bg",
               "cornerRadius": 4,
               "stroke": "$ds-border",
@@ -136423,10 +136425,37 @@
                 {
                   "type": "frame",
                   "id": "i1GOVG",
-                  "name": "Temporary top drop zone",
-                  "width": "fill_container",
-                  "height": 32,
-                  "fill": "$ds-surface",
+                  "layoutPosition": "absolute",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Full panel hover overlay",
+                  "context": "Shared panel tab drop overlay: 4% accent fill, 1 px accent outline, full panel bounds, pointer-transparent, shown only for the hovered valid destination.",
+                  "reusable": true,
+                  "width": 568,
+                  "height": 180,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "opacity": 0.04,
+                    "rotation": 0,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "$ds-accent",
+                        "position": 0
+                      },
+                      {
+                        "color": "$ds-accent",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "cornerRadius": 4,
+                  "stroke": "$ds-accent",
+                  "strokeWidth": 1,
                   "justifyContent": "center",
                   "alignItems": "center",
                   "children": [
@@ -136434,7 +136463,7 @@
                       "type": "text",
                       "id": "St7Oy",
                       "name": "Drop guidance",
-                      "fill": "$ds-fg",
+                      "fill": "$ds-fg-muted",
                       "content": "Drop here to add a tab",
                       "fontFamily": "$font-body",
                       "fontSize": 12,
@@ -136443,17 +136472,11 @@
                   ]
                 },
                 {
-                  "type": "rectangle",
-                  "cornerRadius": 2,
-                  "id": "UDzpp",
-                  "name": "Sidenav placement line",
-                  "fill": "$ds-accent",
-                  "width": "fill_container",
-                  "height": 2
-                },
-                {
                   "type": "text",
                   "id": "Ww437",
+                  "layoutPosition": "absolute",
+                  "x": 12,
+                  "y": 12,
                   "name": "Page content",
                   "fill": "$ds-fg",
                   "content": "Workspace page · No permanent header",
@@ -136711,6 +136734,79 @@
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "U4KPLz",
+          "name": "Attached and detached Side drop feedback",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "VlGKA",
+              "name": "Attached Side hover",
+              "clip": true,
+              "width": 448,
+              "height": 260,
+              "cornerRadius": 4,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "GU32J",
+                  "type": "ref",
+                  "ref": "VA9mn",
+                  "name": "Side panel with header controls",
+                  "width": 448,
+                  "height": 260,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "id": "k7tfX",
+                  "type": "ref",
+                  "ref": "i1GOVG",
+                  "name": "Full Side hover overlay",
+                  "width": 448,
+                  "height": 260,
+                  "x": 0,
+                  "y": 0
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wZU2a",
+              "name": "Detached Side hover",
+              "clip": true,
+              "width": 448,
+              "height": 260,
+              "cornerRadius": 4,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "cS5Ke",
+                  "type": "ref",
+                  "ref": "MXmR5",
+                  "name": "Side panel with header controls",
+                  "width": 448,
+                  "height": 260,
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "id": "E0EVf",
+                  "type": "ref",
+                  "ref": "i1GOVG",
+                  "name": "Full Side hover overlay",
+                  "width": 448,
+                  "height": 260,
+                  "x": 0,
+                  "y": 0
                 }
               ]
             }

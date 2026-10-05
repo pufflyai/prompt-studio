@@ -10,8 +10,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { DropIndicator } from "@pstdio/ui";
-import { createContext, type ReactNode, useContext, useState } from "react";
+import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabPosition } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 
@@ -60,15 +59,24 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     <TabDragContext value={{ activeId, drop, destinations: activeId ? workbench.getPanelDestinations(activeId) : [] }}>
       <DndContext
         sensors={sensors}
-        collisionDetection={(args) =>
-          pointerWithin(args).sort((a, b) => {
-            const area = (id: typeof a.id) => {
-              const rect = args.droppableRects.get(id);
-              return rect ? rect.width * rect.height : Infinity;
-            };
-            return area(a.id) - area(b.id);
-          })
-        }
+        collisionDetection={(args) => {
+          const pointer = args.pointerCoordinates;
+          const panel = pointer
+            ? document
+                .elementFromPoint(pointer.x, pointer.y)
+                ?.closest("[data-workbench-panel]")
+                ?.getAttribute("data-workbench-panel")
+            : undefined;
+          return pointerWithin(args)
+            .filter((collision) => collision.data?.droppableContainer.data.current?.region === panel)
+            .sort((a, b) => {
+              const area = (id: typeof a.id) => {
+                const rect = args.droppableRects.get(id);
+                return rect ? rect.width * rect.height : Infinity;
+              };
+              return area(a.id) - area(b.id);
+            });
+        }}
         onDragStart={(event) => setActiveId(String(event.active.id))}
         onDragOver={(event) => setDrop(resolveDrop(event))}
         onDragMove={(event) => setDrop(resolveDrop(event))}
@@ -80,49 +88,44 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
         }}
       >
         {children}
-        <DragOverlay dropAnimation={null}>
-          {placement ? (
-            <Box layerStyle="floatingBar" textStyle="label/XS/medium">
-              {placement.title ?? placement.resource?.label}
-            </Box>
-          ) : null}
-        </DragOverlay>
+        <Box asChild pointerEvents="none">
+          <DragOverlay dropAnimation={null}>
+            {placement ? (
+              <Box layerStyle="floatingBar" textStyle="label/XS/medium">
+                {placement.title ?? placement.resource?.label}
+              </Box>
+            ) : null}
+          </DragOverlay>
+        </Box>
       </DndContext>
     </TabDragContext>
   );
 };
 
-export const WorkbenchTabDropTarget = (props: {
-  region: WorkbenchPanelRegion;
-  children?: ReactNode;
-  headerless?: boolean;
-}) => {
-  const { region, children, headerless = false } = props;
+export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion }) => {
+  const { region } = props;
   const { activeId, drop, destinations } = useTabDrag();
-  const { setNodeRef } = useDroppable({ id: `tab-region:${region}`, data: { region } });
-  const highlighted = drop?.region === region;
-  if (headerless && (!activeId || !destinations?.includes(region))) return null;
+  const id = useId();
+  const allowed = Boolean(activeId && destinations?.includes(region));
+  const { setNodeRef } = useDroppable({ id, data: { region }, disabled: !allowed });
+  const highlighted = allowed && drop?.region === region;
   return (
     <Box
       ref={setNodeRef}
       data-workbench-tab-drop={region}
-      data-headerless-drop={headerless || undefined}
-      position={headerless ? "absolute" : "relative"}
-      insetX={headerless ? "0" : undefined}
-      top={headerless ? "0" : undefined}
-      zIndex={headerless ? "dropdown" : undefined}
-      h={headerless ? "8" : "full"}
-      minW="0"
+      data-drop-active={highlighted || undefined}
+      position="absolute"
+      inset="0"
+      zIndex="dropdown"
       display="flex"
       alignItems="center"
-      gap="2xs"
-      flex={headerless ? undefined : "1"}
-      justifyContent={headerless ? "center" : undefined}
-      layerStyle={highlighted || headerless ? "tabDropZone" : undefined}
+      justifyContent="center"
+      pointerEvents="none"
+      visibility={highlighted ? "visible" : "hidden"}
+      layerStyle="tabDropZone"
       textStyle="label/XS/medium"
     >
-      {headerless ? "Drop here to add a tab" : children}
-      {highlighted && !drop?.widgetId ? <DropIndicator bottom="0" /> : null}
+      {highlighted && !drop?.widgetId ? "Drop here to add a tab" : null}
     </Box>
   );
 };

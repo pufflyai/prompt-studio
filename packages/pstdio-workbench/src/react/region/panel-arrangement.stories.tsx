@@ -2,6 +2,7 @@ import { Box, Input, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
+import { createWorkbenchTerminalModule } from "../terminal/terminal-module";
 
 export const createArrangementWorkbench = (crowded = false) => {
   const page = { kind: "page", extensionId: "storybook", id: "arrangement" } as const;
@@ -127,3 +128,16 @@ for (const session of movedPageWorkbench.layout.getLayout().regions.side.widgets
   movedPageWorkbench.closePlacement(session.placementIdentity!);
 movedPageWorkbench.movePanel(movedPageWorkbench.layout.getLayout().regions.main.widgets[0]!.widgetId, "side");
 export const MovedSingleView: Story = { args: { workbench: movedPageWorkbench } };
+const floatingWorkbench = createArrangementWorkbench();
+floatingWorkbench.sidePanel.setMode("floating");
+export const DetachedSide: Story = { args: { workbench: floatingWorkbench } };
+const terminalWorkbench = createArrangementWorkbench();
+terminalWorkbench.registerModule(createWorkbenchTerminalModule());
+terminalWorkbench.shellPlacements.openPlacement({
+  placementId: "workbench.terminal",
+  resource: { type: "terminal", id: "restored-terminal", label: "Restored terminal" },
+  title: "Restored terminal",
+  open: "pin",
+});
+terminalWorkbench.shell.setRegionOpen("secondary", true);
+export const TerminalIcons: Story = { args: { workbench: terminalWorkbench } };
