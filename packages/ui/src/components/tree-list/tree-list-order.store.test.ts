@@ -1,8 +1,18 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { installMockLocalStorage } from "@/test-utils/local-storage";
-import { createTreeListOrderStore } from "./tree-list-order.store";
+import { createTreeListOrderStore, getTreeListOrderStore } from "./tree-list-order.store";
 
 const STORAGE_KEY = "test-tree-order";
+
+const memoryStorage = () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+};
 
 beforeEach(() => {
   installMockLocalStorage();
@@ -62,5 +72,39 @@ describe("createTreeListOrderStore", () => {
     expect(second.getState().sectionOrder).toEqual(["b", "a"]);
     expect(second.getState().nodeOrderBySection).toEqual({ "sec-1": ["y", "x"] });
     expect(second.getState().sectionSlotById).toEqual({ "sec-1": "header" });
+  });
+
+  test("restores order and placement from host storage instead of browser storage", () => {
+    const storage = memoryStorage();
+    const first = createTreeListOrderStore({ storageKey: STORAGE_KEY, storage });
+    first.getState().setSectionOrder(["b", "a"]);
+    first.getState().setNodeOrder("sec-1", ["y", "x"]);
+    first.getState().setSectionSlot("sec-1", "footer");
+
+    expect(globalThis.localStorage.length).toBe(0);
+    const restored = createTreeListOrderStore({ storageKey: STORAGE_KEY, storage }).getState();
+    expect(restored.sectionOrder).toEqual(["b", "a"]);
+    expect(restored.nodeOrderBySection).toEqual({ "sec-1": ["y", "x"] });
+    expect(restored.sectionSlotById).toEqual({ "sec-1": "footer" });
+  });
+
+  test("keeps a reset after the store is created again", () => {
+    const storage = memoryStorage();
+    const first = createTreeListOrderStore({ storageKey: STORAGE_KEY, storage });
+    first.getState().setSectionOrder(["b", "a"]);
+    first.getState().reset();
+
+    expect(createTreeListOrderStore({ storageKey: STORAGE_KEY, storage }).getState().sectionOrder).toEqual([]);
+  });
+
+  test("shares stores only within the same host storage and key", () => {
+    const storage = memoryStorage();
+    const first = getTreeListOrderStore("tree:project-a", storage);
+    first.getState().setSectionOrder(["b", "a"]);
+
+    expect(getTreeListOrderStore("tree:project-a", storage)).toBe(first);
+    expect(getTreeListOrderStore("tree:project-b", storage).getState().sectionOrder).toEqual([]);
+    expect(getTreeListOrderStore("tree:project-a", memoryStorage()).getState().sectionOrder).toEqual([]);
+    expect(getTreeListOrderStore("tree:project-a").getState().sectionOrder).toEqual([]);
   });
 });

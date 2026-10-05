@@ -37,10 +37,10 @@ test("restores local selection and unsaved settings from host storage", () => {
 
 test("shares stores only within the same host and storage key", () => {
   const storage = memoryStorage();
-  const first = getKanbanRendererStore("tickets", undefined, storage);
+  const first = getKanbanRendererStore("tickets", storage);
   first.getState().setFilter("status", ["todo"]);
-  expect(getKanbanRendererStore("tickets", undefined, storage)).toBe(first);
-  expect(getKanbanRendererStore("tickets", undefined, memoryStorage()).getState().filters).toEqual({});
+  expect(getKanbanRendererStore("tickets", storage)).toBe(first);
+  expect(getKanbanRendererStore("tickets", memoryStorage()).getState().filters).toEqual({});
 });
 
 test("supports host storage methods on a class prototype", () => {

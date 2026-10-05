@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "zustand";
-import { useKanbanRendererStorage } from "./kanban-renderer-storage";
+import { useHostStorage } from "../../utils/host-storage";
 import { isKanbanRendererViewDirty } from "./kanban-renderer-views";
 import {
   DEFAULT_KANBAN_RENDERER_SETTINGS,
@@ -20,7 +20,7 @@ export interface KanbanViewsInput {
   defaultFilters?: KanbanRendererFilterState;
 }
 export const useKanbanViews = (input: KanbanViewsInput) => {
-  const store = getKanbanRendererStore(input.storageKey, undefined, useKanbanRendererStorage());
+  const store = getKanbanRendererStore(input.storageKey, useHostStorage());
   const activeViewId = useStore(store, (state) => state.activeViewId);
   const defaults = input.defaultViews?.length
     ? input.defaultViews

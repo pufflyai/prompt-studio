@@ -1,6 +1,6 @@
 import "@pstdio/ui/style.css";
 
-import { KanbanRendererStorageProvider } from "@pstdio/ui/kanban-renderer";
+import { HostStorageProvider } from "@pstdio/ui";
 import { Workbench } from "@pstdio/workbench/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
@@ -44,7 +44,7 @@ const renderDashboard = async () => {
   root.render(
     <StrictMode>
       <QueryClientProvider client={dashboardQueryClient}>
-        <KanbanRendererStorageProvider storage={storage}>
+        <HostStorageProvider storage={storage}>
           <SyncProvider>
             <Workbench
               workbench={dashboardWorkbench}
@@ -60,7 +60,7 @@ const renderDashboard = async () => {
               onOpenSidePanel={() => void openDashboardSidePanel(dashboardWorkbench)}
             />
           </SyncProvider>
-        </KanbanRendererStorageProvider>
+        </HostStorageProvider>
       </QueryClientProvider>
     </StrictMode>,
   );

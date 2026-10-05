@@ -1,7 +1,12 @@
 import { useStore } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
-import { createBrowserStorage } from "../../utils/browser-storage";
+import {
+  createHostPersistStorage,
+  createHostStoreRegistry,
+  type HostStorage,
+  useHostStorage,
+} from "../../utils/host-storage";
 
 export type VisibilityOverride = "hidden" | "shown";
 
@@ -22,6 +27,7 @@ interface TreeListVisibilityState extends TreeListVisibilitySnapshot {
 
 interface CreateTreeListVisibilityStoreOptions {
   storageKey: string;
+  storage?: HostStorage;
 }
 
 const DEFAULT_SNAPSHOT: TreeListVisibilitySnapshot = {
@@ -90,25 +96,18 @@ export const createTreeListVisibilityStore = (options: CreateTreeListVisibilityS
       }),
       {
         name: toStorageName(options.storageKey),
-        storage: createJSONStorage(createBrowserStorage),
+        storage: createHostPersistStorage(options.storage),
         partialize: getPersistedSnapshot,
       },
     ),
   );
 
-const storeRegistry = new Map<string, ReturnType<typeof createTreeListVisibilityStore>>();
-
-export const getTreeListVisibilityStore = (storageKey: string) => {
-  const existing = storeRegistry.get(storageKey);
-  if (existing) return existing;
-
-  const store = createTreeListVisibilityStore({ storageKey });
-  storeRegistry.set(storageKey, store);
-  return store;
-};
+export const getTreeListVisibilityStore = createHostStoreRegistry((storageKey, storage) =>
+  createTreeListVisibilityStore({ storageKey, storage }),
+);
 
 export const useTreeListVisibilityStore = <T>(storageKey: string, selector: (state: TreeListVisibilityState) => T) => {
-  const store = getTreeListVisibilityStore(storageKey);
+  const store = getTreeListVisibilityStore(storageKey, useHostStorage());
   return useStore(store, selector);
 };
 
