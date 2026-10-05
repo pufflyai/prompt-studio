@@ -24,7 +24,7 @@ If research reveals a better community, account, or repository to watch, revise 
 | Site | First choice | Browser fallback |
 | --- | --- | --- |
 | `hn` | `https://hn.algolia.com/api/v1/search_by_date?query=<encoded-topic>&tags=story&numericFilters=created_at_i><since-unix>`; use `tags=comment` when useful | `https://hn.algolia.com`, newest first |
-| `reddit` | RSS with a browser user agent: `https://www.reddit.com/search.rss?q=<encoded-topic>&sort=new&t=day`, `https://www.reddit.com/r/<community>/new/.rss`, and `<thread-url>.rss` for comments. Without a login Reddit allows about one request a minute, so wait 60 seconds between requests and after a 429. RSS has no scores or vote counts; leave them out | `https://www.reddit.com`, newest first |
+| `reddit` | RSS with the full user agent `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36` (Reddit returns 403 for short ones): `https://www.reddit.com/search.rss?q=<encoded-topic>&sort=new&t=day`, `https://www.reddit.com/r/<community>/new/.rss`, and `<thread-url>.rss` for comments. Without a login Reddit allows about one request a minute, so wait 60 seconds between requests and after a 429. RSS has no scores or vote counts; leave them out | `https://www.reddit.com`, newest first |
 | `bluesky` | `https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=<encoded-topic>&sort=latest&since=<since-ISO>` | `https://bsky.app/search` |
 | `devto` | `https://dev.to/api/articles?tag=<relevant-tag>&per_page=20` (tag filter, not free text) | DEV.to search |
 | `github` | `gh search issues '<topic> updated:><since-date>' --sort updated --order desc --json url,title,body,updatedAt --limit 20` with the existing gh login | GitHub search |
