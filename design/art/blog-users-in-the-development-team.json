@@ -1,0 +1,23 @@
+{
+  "seed": "a0753e75-8125-4088-9920-256801e754d9",
+  "width": 1600,
+  "height": 400,
+  "layout": "shelf",
+  "kinds": [
+    "page",
+    "command",
+    "skill",
+    "hook"
+  ],
+  "count": 22,
+  "scale": 1.2992648074403406,
+  "offsetX": 0.005449265101924533,
+  "offsetY": -0.016123553826473652,
+  "backgroundTop": "#0A0C10",
+  "backgroundBottom": "#141A28",
+  "bleed": 0.3634353389963507,
+  "layers": 36,
+  "texture": 0.5434494853834622,
+  "gradient": 0.4197502152761444,
+  "grain": 0.3247198295546696
+}

@@ -3,7 +3,7 @@ title: "In the future, your users will be part of the development team."
 description: "An experiment in malleable software: users and developers building together through shared data and composable tools."
 published: 2025-10-25
 author: aurelien-franky
-image: ../../../../../design/art/blog1.png
+image: ../../../../../design/art/blog-malleable-software.png
 ---
 
 *First published in Data Science Collective on October 25, 2025. This essay describes Kaset, the framework I was exploring then. Read the follow-up, [From malleable software to Prompt Studio](/blog/users-in-the-development-team/), for how these ideas inform Prompt Studio today.*

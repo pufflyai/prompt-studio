@@ -3,10 +3,10 @@ title: Welcome to Prompt Studio
 description: Why I stopped looking for the right tool to work with agents and built a place where you and your agents make your own.
 published: 2026-08-31
 author: aurelien-franky
-image: ../../../../../design/art/blog1.png
+image: ../../../../../design/art/blog-welcome-to-prompt-studio.png
 ---
 
-My time to write code shrank a while ago.
+A while ago, I found myself with less time to write code.
 I had to get more done with fewer hours at the keyboard, so I leaned on coding agents.
 They helped, up to a point.
 

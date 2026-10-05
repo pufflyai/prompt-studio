@@ -28339,7 +28339,7 @@
                             {
                               "type": "frame",
                               "id": "f83Fk",
-                              "name": "Post · In the future, your users will be part of the development team",
+                              "name": "Post · From malleable software to Prompt Studio",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
@@ -28348,15 +28348,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "HJkHV",
-                                  "name": "Shape Art banner · blog1",
+                                  "name": "Shape Art banner · users-in-the-development-team",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog1.png",
+                                    "url": "art/blog-users-in-the-development-team.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -28365,7 +28365,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Prompt Studio 0.39",
+                                  "content": "From malleable software to Prompt Studio",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -28376,7 +28376,7 @@
                                   "id": "MDD47",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "October 1, 2026 · 2 min read",
+                                  "content": "October 6, 2026 · 5 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -28389,7 +28389,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
+                                  "content": "From Kaset’s editable apps to a shared workbench where users and agents build their tools.",
                                   "lineHeight": 1.71,
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
@@ -28409,15 +28409,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "IlujE",
-                                  "name": "Shape Art banner · blog1",
+                                  "name": "Shape Art banner · prompt-studio-0-39",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog1.png",
+                                    "url": "art/blog-prompt-studio-0-39.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -28470,15 +28470,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "rg1ky",
-                                  "name": "Shape Art banner · blog2",
+                                  "name": "Shape Art banner · prompt-studio-0-38",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog2.png",
+                                    "url": "art/blog-prompt-studio-0-38.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -28531,15 +28531,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "A59YS",
-                                  "name": "Shape Art banner · blog1",
+                                  "name": "Shape Art banner · prompt-studio-0-37",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog1.png",
+                                    "url": "art/blog-prompt-studio-0-37.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -28592,15 +28592,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "p0TJZX",
-                                  "name": "Shape Art banner · blog1",
+                                  "name": "Shape Art banner · welcome-to-prompt-studio",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog1.png",
+                                    "url": "art/blog-welcome-to-prompt-studio.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -28629,6 +28629,67 @@
                                 {
                                   "type": "text",
                                   "id": "R7Iog",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Why I built a place where you and your agents make your own tools.",
+                                  "lineHeight": 1.71,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "nIUJv",
+                              "name": "Post · In the future, your users will be part of the development team",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "Q6y4v",
+                                  "name": "Shape Art banner · welcome-to-prompt-studio",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog-welcome-to-prompt-studio.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 176
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "YKr3U",
+                                  "name": "Title link",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Welcome to Prompt Studio",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 20,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "cHI4J",
+                                  "name": "Date",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "August 31, 2026 · 3 min read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "kgehl",
                                   "name": "Description",
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
@@ -29281,16 +29342,16 @@
                           "type": "rectangle",
                           "cornerRadius": "$input-radius",
                           "id": "t21em",
-                          "name": "Shape Art banner · blog1",
+                          "name": "Shape Art banner · welcome-to-prompt-studio",
                           "context": "PostBanner: full reading width, original 16:9 proportions, radius xs. Decorative art; title stays live text below.",
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "art/blog1.png",
+                            "url": "art/blog-welcome-to-prompt-studio.png",
                             "mode": "fit"
                           },
                           "width": "fill_container",
-                          "height": 396
+                          "height": 176
                         },
                         {
                           "type": "frame",
@@ -36988,7 +37049,7 @@
                             {
                               "type": "frame",
                               "id": "z6nM7",
-                              "name": "Post · In the future, your users will be part of the development team",
+                              "name": "Post · From malleable software to Prompt Studio",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
@@ -36997,15 +37058,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "aMiUL",
-                                  "name": "Shape Art banner · blog1",
+                                  "name": "Shape Art banner · users-in-the-development-team",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog1.png",
+                                    "url": "art/blog-users-in-the-development-team.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -37014,7 +37075,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Prompt Studio 0.39",
+                                  "content": "From malleable software to Prompt Studio",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -37025,7 +37086,7 @@
                                   "id": "kuExy",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "October 1, 2026 · 2 min read",
+                                  "content": "October 6, 2026 · 5 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -37038,7 +37099,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
+                                  "content": "From Kaset’s editable apps to a shared workbench where users and agents build their tools.",
                                   "lineHeight": 1.71,
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
@@ -37058,15 +37119,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "BoScy",
-                                  "name": "Shape Art banner · blog1",
+                                  "name": "Shape Art banner · prompt-studio-0-39",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog1.png",
+                                    "url": "art/blog-prompt-studio-0-39.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -37119,15 +37180,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "J7iKQo",
-                                  "name": "Shape Art banner · blog2",
+                                  "name": "Shape Art banner · prompt-studio-0-38",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog2.png",
+                                    "url": "art/blog-prompt-studio-0-38.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -37180,15 +37241,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "hOQLK",
-                                  "name": "Shape Art banner · blog1",
+                                  "name": "Shape Art banner · prompt-studio-0-37",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog1.png",
+                                    "url": "art/blog-prompt-studio-0-37.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -37241,15 +37302,15 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "k1qT5",
-                                  "name": "Shape Art banner · blog1",
+                                  "name": "Shape Art banner · welcome-to-prompt-studio",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog1.png",
+                                    "url": "art/blog-welcome-to-prompt-studio.png",
                                     "mode": "fit"
                                   },
                                   "width": "fill_container",
-                                  "height": 396
+                                  "height": 176
                                 },
                                 {
                                   "type": "text",
@@ -37278,6 +37339,67 @@
                                 {
                                   "type": "text",
                                   "id": "Wh8KH",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Why I built a place where you and your agents make your own tools.",
+                                  "lineHeight": 1.71,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tXbQD",
+                              "name": "Post · In the future, your users will be part of the development team",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": "$input-radius",
+                                  "id": "V4t7y",
+                                  "name": "Shape Art banner · welcome-to-prompt-studio",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "art/blog-welcome-to-prompt-studio.png",
+                                    "mode": "fit"
+                                  },
+                                  "width": "fill_container",
+                                  "height": 176
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "kW9P6",
+                                  "name": "Title link",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Welcome to Prompt Studio",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 20,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "vSQKC",
+                                  "name": "Date",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "August 31, 2026 · 3 min read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Er7Y9",
                                   "name": "Description",
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
@@ -37930,16 +38052,16 @@
                           "type": "rectangle",
                           "cornerRadius": "$input-radius",
                           "id": "vYMS0",
-                          "name": "Shape Art banner · blog1",
+                          "name": "Shape Art banner · welcome-to-prompt-studio",
                           "context": "PostBanner: full reading width, original 16:9 proportions, radius xs. Decorative art; title stays live text below.",
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "art/blog1.png",
+                            "url": "art/blog-welcome-to-prompt-studio.png",
                             "mode": "fit"
                           },
                           "width": "fill_container",
-                          "height": 396
+                          "height": 176
                         },
                         {
                           "type": "frame",
@@ -40389,7 +40511,7 @@
                 {
                   "type": "frame",
                   "id": "MnKP8",
-                  "name": "Post · In the future, your users will be part of the development team",
+                  "name": "Post · From malleable software to Prompt Studio",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -40398,15 +40520,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "hXHdh",
-                      "name": "Shape Art banner · blog1",
+                      "name": "Shape Art banner · users-in-the-development-team",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog1.png",
+                        "url": "art/blog-users-in-the-development-team.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -40415,7 +40537,7 @@
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Prompt Studio 0.39",
+                      "content": "From malleable software to Prompt Studio",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -40426,7 +40548,7 @@
                       "id": "AmmqO",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "October 1, 2026 · 2 min read",
+                      "content": "October 6, 2026 · 5 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -40439,7 +40561,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
+                      "content": "From Kaset’s editable apps to a shared workbench where users and agents build their tools.",
                       "lineHeight": 1.71,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -40459,15 +40581,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "h4PK7L",
-                      "name": "Shape Art banner · blog1",
+                      "name": "Shape Art banner · prompt-studio-0-39",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog1.png",
+                        "url": "art/blog-prompt-studio-0-39.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -40520,15 +40642,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "hfWe2",
-                      "name": "Shape Art banner · blog2",
+                      "name": "Shape Art banner · prompt-studio-0-38",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog2.png",
+                        "url": "art/blog-prompt-studio-0-38.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -40581,15 +40703,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "nIOOU",
-                      "name": "Shape Art banner · blog1",
+                      "name": "Shape Art banner · prompt-studio-0-37",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog1.png",
+                        "url": "art/blog-prompt-studio-0-37.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -40642,15 +40764,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "jrpQZ",
-                      "name": "Shape Art banner · blog1",
+                      "name": "Shape Art banner · welcome-to-prompt-studio",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog1.png",
+                        "url": "art/blog-welcome-to-prompt-studio.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -40679,6 +40801,67 @@
                     {
                       "type": "text",
                       "id": "v8B5H",
+                      "name": "Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Why I built a place where you and your agents make your own tools.",
+                      "lineHeight": 1.71,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Wv7sF",
+                  "name": "Post · In the future, your users will be part of the development team",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "PVILj",
+                      "name": "Shape Art banner · welcome-to-prompt-studio",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog-welcome-to-prompt-studio.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 85.5
+                    },
+                    {
+                      "type": "text",
+                      "id": "OyKiN",
+                      "name": "Title link",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Welcome to Prompt Studio",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "W88N1r",
+                      "name": "Date",
+                      "fill": "$ds-fg-muted",
+                      "content": "August 31, 2026 · 3 min read",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "KDOLb",
                       "name": "Description",
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
@@ -40992,16 +41175,16 @@
               "type": "rectangle",
               "cornerRadius": "$input-radius",
               "id": "kgLRD",
-              "name": "Shape Art banner · blog1",
+              "name": "Shape Art banner · welcome-to-prompt-studio",
               "context": "PostBanner: full reading width, original 16:9 proportions, radius xs. Decorative art; title stays live text below.",
               "fill": {
                 "type": "image",
                 "enabled": true,
-                "url": "art/blog1.png",
+                "url": "art/blog-welcome-to-prompt-studio.png",
                 "mode": "fit"
               },
               "width": "fill_container",
-              "height": 192.375
+              "height": 85.5
             },
             {
               "type": "frame",
@@ -46484,7 +46667,7 @@
                 {
                   "type": "frame",
                   "id": "jr3lq",
-                  "name": "Post · In the future, your users will be part of the development team",
+                  "name": "Post · From malleable software to Prompt Studio",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -46493,15 +46676,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "Lona4",
-                      "name": "Shape Art banner · blog1",
+                      "name": "Shape Art banner · users-in-the-development-team",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog1.png",
+                        "url": "art/blog-users-in-the-development-team.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -46510,7 +46693,7 @@
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Prompt Studio 0.39",
+                      "content": "From malleable software to Prompt Studio",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -46521,7 +46704,7 @@
                       "id": "tMQ8b",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "October 1, 2026 · 2 min read",
+                      "content": "October 6, 2026 · 5 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -46534,7 +46717,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
+                      "content": "From Kaset’s editable apps to a shared workbench where users and agents build their tools.",
                       "lineHeight": 1.71,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -46554,15 +46737,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "K6Jmml",
-                      "name": "Shape Art banner · blog1",
+                      "name": "Shape Art banner · prompt-studio-0-39",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog1.png",
+                        "url": "art/blog-prompt-studio-0-39.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -46615,15 +46798,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "kVksP",
-                      "name": "Shape Art banner · blog2",
+                      "name": "Shape Art banner · prompt-studio-0-38",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog2.png",
+                        "url": "art/blog-prompt-studio-0-38.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -46676,15 +46859,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "DCHE8",
-                      "name": "Shape Art banner · blog1",
+                      "name": "Shape Art banner · prompt-studio-0-37",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog1.png",
+                        "url": "art/blog-prompt-studio-0-37.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -46737,15 +46920,15 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "YojRZ",
-                      "name": "Shape Art banner · blog1",
+                      "name": "Shape Art banner · welcome-to-prompt-studio",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog1.png",
+                        "url": "art/blog-welcome-to-prompt-studio.png",
                         "mode": "fit"
                       },
                       "width": "fill_container",
-                      "height": 192.375
+                      "height": 85.5
                     },
                     {
                       "type": "text",
@@ -46774,6 +46957,67 @@
                     {
                       "type": "text",
                       "id": "YtmYA",
+                      "name": "Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Why I built a place where you and your agents make your own tools.",
+                      "lineHeight": 1.71,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "DnGKF",
+                  "name": "Post · In the future, your users will be part of the development team",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": "$input-radius",
+                      "id": "cYV8i",
+                      "name": "Shape Art banner · welcome-to-prompt-studio",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "art/blog-welcome-to-prompt-studio.png",
+                        "mode": "fit"
+                      },
+                      "width": "fill_container",
+                      "height": 85.5
+                    },
+                    {
+                      "type": "text",
+                      "id": "D1Vgf",
+                      "name": "Title link",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Welcome to Prompt Studio",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "RNPz2",
+                      "name": "Date",
+                      "fill": "$ds-fg-muted",
+                      "content": "August 31, 2026 · 3 min read",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "VwQC4",
                       "name": "Description",
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
@@ -47087,16 +47331,16 @@
               "type": "rectangle",
               "cornerRadius": "$input-radius",
               "id": "l1QSG",
-              "name": "Shape Art banner · blog1",
+              "name": "Shape Art banner · welcome-to-prompt-studio",
               "context": "PostBanner: full reading width, original 16:9 proportions, radius xs. Decorative art; title stays live text below.",
               "fill": {
                 "type": "image",
                 "enabled": true,
-                "url": "art/blog1.png",
+                "url": "art/blog-welcome-to-prompt-studio.png",
                 "mode": "fit"
               },
               "width": "fill_container",
-              "height": 192.375
+              "height": 85.5
             },
             {
               "type": "frame",
