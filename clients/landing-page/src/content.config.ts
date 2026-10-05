@@ -14,9 +14,9 @@ const blog = defineCollection({
   schema: z.object({
     title: z.string(),
     description: z.string(),
-    // Write it unquoted, `published: 2026-10-05`, so YAML reads it as a date.
+    // Use an unquoted date or UTC timestamp. Timestamps order posts published on the same day.
     published: z.date(),
-    author: z.string(),
+    author: z.enum(["aurelien-franky"]),
     image: z.string().startsWith("/images/").optional(),
   }),
 });

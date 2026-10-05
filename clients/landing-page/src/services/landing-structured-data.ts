@@ -61,7 +61,12 @@ export const landingStructuredData = (page: LandingPage, canonicalUrl: string) =
       ? {
           headline: page.label,
           datePublished: page.published,
-          author: { "@type": "Person", name: page.author },
+          author: {
+            "@type": "Person",
+            name: page.author.name,
+            ...(page.author.avatarSrc ? { image: new URL(page.author.avatarSrc, siteMetadata.siteUrl).href } : {}),
+          },
+          timeRequired: `PT${page.readingMinutes}M`,
           publisher: { "@id": organizationId },
           ...(page.image ? { image: new URL(page.image, siteMetadata.siteUrl).href } : {}),
         }

@@ -33,8 +33,9 @@ export const STORY_POST: Extract<LandingPage, { view: "post" }> = {
   label: "A sample post title",
   title: "A sample post title | Prompt Studio blog",
   description: "One sentence that says what the post is about.",
-  published: "2026-10-05",
-  author: "Sample Author",
+  published: "2026-08-31",
+  author: BLOG_AUTHORS["aurelien-franky"],
+  readingMinutes: 3,
 };
 
 export const STORY_PAGES: LandingPage[] = [
@@ -99,3 +100,5 @@ export const STORY_POST_DOCUMENT: LandingDocument = {
 <ul><li>A point</li><li>Another point</li></ul>
 `,
 };
+
+import { BLOG_AUTHORS } from "../../content/blog-authors";

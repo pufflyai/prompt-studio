@@ -14,7 +14,7 @@ interface PageFields {
 export type LandingPage =
   | (PageFields & { view: Exclude<LandingView, "examples" | "post"> })
   | (PageFields & { view: "examples"; exampleId: ToolExampleId })
-  | (PageFields & { view: "post"; published: string; author: string; image?: string });
+  | (PageFields & { view: "post"; published: string; author: ActivityActor; readingMinutes: number; image?: string });
 
 /** The title bar tabs. Every page belongs to one. */
 export type SiteSection = "studio" | "docs" | "blog";
@@ -96,3 +96,5 @@ export const LANDING_PAGES: LandingPage[] = [
     description: "News, releases, and breaking changes from the people who build Prompt Studio.",
   },
 ];
+
+import type { ActivityActor } from "@pstdio/ui";

@@ -1,8 +1,8 @@
 ---
 title: Welcome to Prompt Studio
 description: Why I stopped looking for the right tool to work with agents and built a place where you and your agents make your own.
-published: 2026-10-05
-author: Aurélien Franky
+published: 2026-08-31
+author: aurelien-franky
 ---
 
 My time to write code shrank a while ago.
@@ -38,6 +38,10 @@ It takes care of the shared parts: where tools appear, where they keep their dat
 You describe what you need, and your agent builds it as an extension.
 Once installed and enabled in your project, it lives next to your other tools.
 Extensions can expose commands and data that other tools use; those connections still have to be built.
+
+![Prompt Studio Start page with Sessions, Notes, and Tickets in the sidebar and links to open a conversation or tool](../../../../../documentation/images/workbench.png)
+
+*A recent view of the workbench, with Notes and Planner enabled. This screenshot was added after the original August post.*
 
 Some of the tools I use every day started as one sentence to an agent:
 

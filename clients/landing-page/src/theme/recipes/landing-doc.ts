@@ -26,7 +26,19 @@ const codeColors = {
 // Documents come from markdown, so the typography targets plain tags instead of
 // components.
 export const landingDocSlotRecipe = defineSlotRecipe({
-  slots: ["column", "layout", "prose", "html", "outline", "outlineTitle", "outlineLink", "postMeta", "homeTopics"],
+  slots: [
+    "column",
+    "layout",
+    "prose",
+    "html",
+    "outline",
+    "outlineTitle",
+    "outlineLink",
+    "postMeta",
+    "postAuthor",
+    "postDetails",
+    "homeTopics",
+  ],
   base: {
     column: { layerStyle: "panel", bg: "bg", width: "full", minWidth: 0, height: "full", overflow: "hidden" },
     layout: { display: "flex", justifyContent: "center", width: "full" },
@@ -98,7 +110,17 @@ export const landingDocSlotRecipe = defineSlotRecipe({
       _hover: { color: "fg" },
       "&[aria-current=location]": { color: "fg", borderColor: "fg" },
     },
-    postMeta: { textStyle: "label/S/regular", color: "fg.muted" },
+    postMeta: {
+      display: "flex",
+      flexDirection: { base: "column", md: "row" },
+      alignItems: { base: "flex-start", md: "center" },
+      flexWrap: "wrap",
+      gap: { base: "xs", md: "md" },
+      textStyle: "label/S/regular",
+      color: "fg.muted",
+    },
+    postAuthor: { display: "inline-flex", alignItems: "center", gap: "xs" },
+    postDetails: { display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: "xs" },
     homeTopics: {
       display: "grid",
       gridTemplateColumns: { base: "1fr", md: "repeat(2, minmax(0, 1fr))" },

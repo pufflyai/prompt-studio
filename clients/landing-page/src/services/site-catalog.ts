@@ -1,5 +1,6 @@
 import { type CollectionEntry, getCollection, render } from "astro:content";
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
+import { BLOG_AUTHORS } from "../content/blog-authors";
 import { DOCS_TOPICS, docsTopicForPath, publishedDocPath } from "../content/docs-topics";
 import { LANDING_PAGES, type LandingDocument, type LandingPage } from "../content/landing-pages";
 
@@ -8,7 +9,7 @@ type MarkdownEntry = CollectionEntry<"docs" | "blog" | "legal">;
 // What the markdown plugins in `services/markdown` add to Astro's render metadata.
 interface MarkdownMetadata {
   headings?: LandingDocument["headings"];
-  frontmatter?: { description?: string; brokenLinks?: string[] };
+  frontmatter?: { description?: string; brokenLinks?: string[]; readingMinutes?: number };
 }
 
 const metadataOf = (entry: MarkdownEntry) => (entry.rendered?.metadata ?? {}) as MarkdownMetadata;
@@ -37,16 +38,21 @@ const docPage = (entry: CollectionEntry<"docs">): LandingPage => {
   };
 };
 
-const postPage = (entry: CollectionEntry<"blog">): LandingPage => ({
-  path: `/blog/${entry.id}/`,
-  view: "post",
-  label: entry.data.title,
-  title: `${entry.data.title} | Prompt Studio blog`,
-  description: entry.data.description,
-  published: entry.data.published.toISOString().slice(0, 10),
-  author: entry.data.author,
-  image: entry.data.image,
-});
+const postPage = (entry: CollectionEntry<"blog">): LandingPage => {
+  const readingMinutes = metadataOf(entry).frontmatter?.readingMinutes;
+  if (readingMinutes === undefined) throw new Error(`${entry.id} is missing its calculated reading time.`);
+  return {
+    path: `/blog/${entry.id}/`,
+    view: "post",
+    label: entry.data.title,
+    title: `${entry.data.title} | Prompt Studio blog`,
+    description: entry.data.description,
+    published: entry.data.published.toISOString(),
+    author: BLOG_AUTHORS[entry.data.author],
+    readingMinutes,
+    image: entry.data.image,
+  };
+};
 
 // Docs order: topics in allow-list order, the overview first, then file numbers.
 const docOrder = (entry: CollectionEntry<"docs">) => {

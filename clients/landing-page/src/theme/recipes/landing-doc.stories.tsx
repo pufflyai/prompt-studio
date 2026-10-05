@@ -76,3 +76,12 @@ export const DocsPage: Story = {
 export const BlogIndex: Story = { render: () => <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} /> };
 
 export const PostHeader: Story = { render: () => <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} /> };
+
+export const PostHeaderLongTitle: Story = {
+  render: () => (
+    <PostView
+      page={{ ...STORY_POST, label: "Prompt Studio 0.39: tools that stay in sync" }}
+      document={STORY_POST_DOCUMENT}
+    />
+  ),
+};

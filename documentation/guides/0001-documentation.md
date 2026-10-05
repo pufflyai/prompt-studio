@@ -73,6 +73,14 @@ Show enough of the workbench to explain where a tool lives. For settings, captur
 
 Update screenshots when the visible workflow changes. Build the website and check the images on desktop and mobile before publishing. The production image must include them; a source-folder mount must not be needed to serve documentation screenshots.
 
+## Blog posts
+
+Blog posts live in `clients/landing-page/src/content/blog/`. Their frontmatter has `title`, `description`, `published`, and an author ID from `src/content/blog-authors.ts`. Use `author: aurelien-franky` for Aurélien Franky. The author registry supplies the name and local avatar. Reading time is calculated from article text at 220 words per minute; do not store it in frontmatter.
+
+Write `published` as an unquoted date or UTC timestamp. Use a release's actual publication timestamp for release posts, so posts about releases published on the same day sort correctly. Check published GitHub releases; exclude drafts. Link each release post to its release notes and relevant changelogs at that release tag. Describe selected changes in terms of what people can do, and distinguish platform features from extension workflows.
+
+Keep an original post's publication date when adding images or correcting it. Reuse relevant documentation screenshots. Label a recent capture when it illustrates an older release, and do not imply that a pictured control was introduced in that release unless the changelog confirms it.
+
 ## Guides
 
 ### Getting started

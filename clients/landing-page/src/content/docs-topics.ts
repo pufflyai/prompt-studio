@@ -1,4 +1,4 @@
-export type DocsSection = "Guides" | "References" | "Workbench" | "Extensions";
+export type DocsSection = "Guides" | "References" | "Extensions";
 
 export interface DocsTopic {
   section: DocsSection;
@@ -52,7 +52,7 @@ export const DOCS_TOPICS: DocsTopic[] = [
   },
   { section: "References", label: "SDK", path: "/docs/references/sdk/", pages: "documentation/references/sdk" },
   {
-    section: "Workbench",
+    section: "References",
     label: "Workbench",
     path: "/docs/references/workbench/",
     pages: "documentation/references/workbench",
@@ -68,7 +68,7 @@ export const DOCS_TOPICS: DocsTopic[] = [
   extension("Extension Lab", "extension-lab", "extension-lab"),
 ];
 
-export const DOCS_SECTIONS: DocsSection[] = ["Guides", "References", "Workbench", "Extensions"];
+export const DOCS_SECTIONS: DocsSection[] = ["Guides", "References", "Extensions"];
 
 /** Glob patterns, relative to the repo root, for every published docs file. */
 export const DOCS_PATTERNS = DOCS_TOPICS.flatMap((topic) => [

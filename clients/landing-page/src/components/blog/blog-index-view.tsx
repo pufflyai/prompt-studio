@@ -25,7 +25,11 @@ export const BlogIndexView = (props: BlogIndexViewProps) => {
                 <a href={post.path}>{post.label}</a>
               </h2>
               <Box css={styles.postMeta}>
-                <PostDate published={post.published} />
+                <Box css={styles.postDetails}>
+                  <PostDate published={post.published} />
+                  <span aria-hidden="true">·</span>
+                  <span>{post.readingMinutes} min read</span>
+                </Box>
               </Box>
               <p>{post.description}</p>
             </section>

@@ -26945,49 +26945,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "zNKsi",
-                              "name": "Empty cell",
-                              "width": "fill_container",
-                              "height": 1
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "JQx9x",
-                          "name": "h2",
-                          "width": "fill_container",
-                          "padding": [
-                            16,
-                            0,
-                            0,
-                            0
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "B0ACKi",
-                              "name": "Heading",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Workbench",
-                              "lineHeight": 1.2,
-                              "fontFamily": "$font-heading",
-                              "fontSize": 20,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "ivqkA",
-                          "name": "Topic row",
-                          "width": "fill_container",
-                          "gap": 32,
-                          "children": [
-                            {
-                              "type": "frame",
                               "id": "ymqQp",
                               "name": "Topic · Workbench",
                               "width": "fill_container",
@@ -27062,13 +27019,6 @@
                                   ]
                                 }
                               ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "sLZeZ",
-                              "name": "Empty cell",
-                              "width": "fill_container",
-                              "height": 1
                             }
                           ]
                         },
@@ -27694,38 +27644,6 @@
                         },
                         {
                           "type": "frame",
-                          "id": "TI4n7",
-                          "name": "Workbench",
-                          "width": "fill_container",
-                          "stroke": "$ds-border",
-                          "strokeWidth": {
-                            "left": 2
-                          },
-                          "strokeAlignment": "inner",
-                          "padding": [
-                            4,
-                            0,
-                            4,
-                            12
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "h7kVgI",
-                              "name": "Label",
-                              "fill": "$ds-fg-muted",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Workbench",
-                              "lineHeight": 1.5,
-                              "fontFamily": "$font-label",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
                           "id": "ncB3r",
                           "name": "Extensions",
                           "width": "fill_container",
@@ -28110,7 +28028,76 @@
                       "gap": 1,
                       "children": [
                         {
-                          "id": "Y0f3s",
+                          "id": "JEDGY",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.39: tools that stay in sync",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.39",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "N4B2no",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.38: clearer workspaces",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.38",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "nN5WG",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.37: easier updates",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.37",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "F29usz",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Welcome to Prompt Studio",
@@ -28126,49 +28113,9 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "Welcome to Prompt Studio"
-                            }
-                          }
-                        },
-                        {
-                          "id": "T4cnUz",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Extensions run remotely",
-                          "theme": {
-                            "tree": "default",
-                            "depth": "0"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "enabled": false
-                            },
-                            "ROY2j": {
-                              "content": "Extensions run remotely"
-                            }
-                          }
-                        },
-                        {
-                          "id": "OBfpr",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Alpha changes in 0.34",
-                          "theme": {
-                            "tree": "default",
-                            "depth": "0"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "enabled": false
-                            },
-                            "ROY2j": {
-                              "content": "Alpha changes in 0.34"
+                              "content": "Welcome to Prompt Studio",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
                             }
                           }
                         }
@@ -28392,7 +28339,7 @@
                             {
                               "type": "frame",
                               "id": "InpYB",
-                              "name": "Post · Welcome to Prompt Studio",
+                              "name": "Post · Prompt Studio 0.39: tools that stay in sync",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
@@ -28404,7 +28351,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Welcome to Prompt Studio",
+                                  "content": "Prompt Studio 0.39: tools that stay in sync",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -28415,7 +28362,7 @@
                                   "id": "R5ZAjL",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "October 5, 2026",
+                                  "content": "October 1, 2026 · 2 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -28428,7 +28375,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Coding agents can build the tools you need. This is why those tools need a place to live, and how Prompt Studio gives them one.",
+                                  "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
                                   "lineHeight": 1.71,
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
@@ -28439,7 +28386,7 @@
                             {
                               "type": "frame",
                               "id": "guVVY",
-                              "name": "Post · Extensions run remotely",
+                              "name": "Post · Prompt Studio 0.38: clearer workspaces",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
@@ -28451,7 +28398,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Extensions run remotely",
+                                  "content": "Prompt Studio 0.38: clearer workspaces",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -28462,7 +28409,7 @@
                                   "id": "O42gCO",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "September 21, 2026",
+                                  "content": "September 29, 2026 · 2 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -28475,7 +28422,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "An extension can now move long-running work to a remote machine. The extension itself does not change.",
+                                  "content": "Workspace choices in extension commands, reliable local tool loading, and terminals in the right folder.",
                                   "lineHeight": 1.71,
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
@@ -28486,7 +28433,7 @@
                             {
                               "type": "frame",
                               "id": "pRIZS",
-                              "name": "Post · Alpha changes in 0.34",
+                              "name": "Post · Prompt Studio 0.37: easier updates",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
@@ -28498,7 +28445,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Alpha changes in 0.34",
+                                  "content": "Prompt Studio 0.37: easier updates",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -28509,7 +28456,7 @@
                                   "id": "C4gvHV",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "September 7, 2026",
+                                  "content": "September 29, 2026 · 2 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -28522,7 +28469,54 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Two bridge capabilities have new names. Here is what to update in your extensions, and when the old names go away.",
+                                  "content": "Signed Windows releases, simpler extension updates, and fixes that keep agent conversations usable.",
+                                  "lineHeight": 1.71,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "VEzwM",
+                              "name": "Post · Welcome to Prompt Studio",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "D49Ldx",
+                                  "name": "Title link",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Welcome to Prompt Studio",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 20,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "MLNLX",
+                                  "name": "Date",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "August 31, 2026 · 3 min read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "R7Iog",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Why I built a place where you and your agents make your own tools.",
                                   "lineHeight": 1.71,
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
@@ -28886,7 +28880,76 @@
                       "gap": 1,
                       "children": [
                         {
-                          "id": "bKKEv",
+                          "id": "g4ioo",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.39: tools that stay in sync",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.39",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "vQZAS",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.38: clearer workspaces",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.38",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "EUK3u",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.37: easier updates",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.37",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "E2U5OE",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Welcome to Prompt Studio",
@@ -28902,49 +28965,9 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "Welcome to Prompt Studio"
-                            }
-                          }
-                        },
-                        {
-                          "id": "u4cjeg",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Extensions run remotely",
-                          "theme": {
-                            "tree": "default",
-                            "depth": "0"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "enabled": false
-                            },
-                            "ROY2j": {
-                              "content": "Extensions run remotely"
-                            }
-                          }
-                        },
-                        {
-                          "id": "iIBJN",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Alpha changes in 0.34",
-                          "theme": {
-                            "tree": "default",
-                            "depth": "0"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "enabled": false
-                            },
-                            "ROY2j": {
-                              "content": "Alpha changes in 0.34"
+                              "content": "Welcome to Prompt Studio",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
                             }
                           }
                         }
@@ -29159,15 +29182,59 @@
                               "fontWeight": "500"
                             },
                             {
-                              "type": "text",
-                              "id": "U3UQs",
-                              "name": "Meta",
-                              "fill": "$ds-fg-muted",
-                              "content": "October 5, 2026 · Aurélien Franky",
-                              "lineHeight": 1.5,
-                              "fontFamily": "$font-label",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "ka0Ge",
+                              "name": "Post metadata",
+                              "context": "Author avatar and name, then publication date and estimated reading time. Wrap the details onto another line on mobile.",
+                              "width": "fill_container",
+                              "gap": 16,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "G4rd8",
+                                  "name": "Author identity",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "Re5hk",
+                                      "name": "Aurélien Franky avatar",
+                                      "fill": {
+                                        "type": "image",
+                                        "enabled": true,
+                                        "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                                        "mode": "fill"
+                                      },
+                                      "width": 24,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "N5YIq",
+                                      "name": "Author name",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "Aurélien Franky",
+                                      "lineHeight": 1.5,
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ehfRR",
+                                  "name": "Publication date and reading time",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "August 31, 2026 · 3 min read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
@@ -33350,49 +33417,6 @@
                             },
                             {
                               "type": "frame",
-                              "id": "TMsho",
-                              "name": "Empty cell",
-                              "width": "fill_container",
-                              "height": 1
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "WTibG",
-                          "name": "h2",
-                          "width": "fill_container",
-                          "padding": [
-                            16,
-                            0,
-                            0,
-                            0
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "Elh0T",
-                              "name": "Heading",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Workbench",
-                              "lineHeight": 1.2,
-                              "fontFamily": "$font-heading",
-                              "fontSize": 20,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "X3vQlX",
-                          "name": "Topic row",
-                          "width": "fill_container",
-                          "gap": 32,
-                          "children": [
-                            {
-                              "type": "frame",
                               "id": "cegSk",
                               "name": "Topic · Workbench",
                               "width": "fill_container",
@@ -33467,13 +33491,6 @@
                                   ]
                                 }
                               ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "elrXK",
-                              "name": "Empty cell",
-                              "width": "fill_container",
-                              "height": 1
                             }
                           ]
                         },
@@ -34090,38 +34107,6 @@
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
                               "content": "References",
-                              "lineHeight": 1.5,
-                              "fontFamily": "$font-label",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "HnmOw",
-                          "name": "Workbench",
-                          "width": "fill_container",
-                          "stroke": "$ds-border",
-                          "strokeWidth": {
-                            "left": 2
-                          },
-                          "strokeAlignment": "inner",
-                          "padding": [
-                            4,
-                            0,
-                            4,
-                            12
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "TiWMB",
-                              "name": "Label",
-                              "fill": "$ds-fg-muted",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Workbench",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
@@ -36560,7 +36545,76 @@
                       "gap": 1,
                       "children": [
                         {
-                          "id": "ysZ8b",
+                          "id": "R25FgX",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.39: tools that stay in sync",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.39",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "D7ve6u",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.38: clearer workspaces",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.38",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "U3F17W",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.37: easier updates",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.37",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "Ctwta",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Welcome to Prompt Studio",
@@ -36576,49 +36630,9 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "Welcome to Prompt Studio"
-                            }
-                          }
-                        },
-                        {
-                          "id": "ExdTB",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Extensions run remotely",
-                          "theme": {
-                            "tree": "default",
-                            "depth": "0"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "enabled": false
-                            },
-                            "ROY2j": {
-                              "content": "Extensions run remotely"
-                            }
-                          }
-                        },
-                        {
-                          "id": "I7ApF",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Alpha changes in 0.34",
-                          "theme": {
-                            "tree": "default",
-                            "depth": "0"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "enabled": false
-                            },
-                            "ROY2j": {
-                              "content": "Alpha changes in 0.34"
+                              "content": "Welcome to Prompt Studio",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
                             }
                           }
                         }
@@ -36842,7 +36856,7 @@
                             {
                               "type": "frame",
                               "id": "x7phg",
-                              "name": "Post · Welcome to Prompt Studio",
+                              "name": "Post · Prompt Studio 0.39: tools that stay in sync",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
@@ -36854,7 +36868,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Welcome to Prompt Studio",
+                                  "content": "Prompt Studio 0.39: tools that stay in sync",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -36865,7 +36879,7 @@
                                   "id": "Yn8co",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "October 5, 2026",
+                                  "content": "October 1, 2026 · 2 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -36878,7 +36892,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Coding agents can build the tools you need. This is why those tools need a place to live, and how Prompt Studio gives them one.",
+                                  "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
                                   "lineHeight": 1.71,
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
@@ -36889,7 +36903,7 @@
                             {
                               "type": "frame",
                               "id": "e48qTz",
-                              "name": "Post · Extensions run remotely",
+                              "name": "Post · Prompt Studio 0.38: clearer workspaces",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
@@ -36901,7 +36915,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Extensions run remotely",
+                                  "content": "Prompt Studio 0.38: clearer workspaces",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -36912,7 +36926,7 @@
                                   "id": "RXso1",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "September 21, 2026",
+                                  "content": "September 29, 2026 · 2 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -36925,7 +36939,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "An extension can now move long-running work to a remote machine. The extension itself does not change.",
+                                  "content": "Workspace choices in extension commands, reliable local tool loading, and terminals in the right folder.",
                                   "lineHeight": 1.71,
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
@@ -36936,7 +36950,7 @@
                             {
                               "type": "frame",
                               "id": "whkia",
-                              "name": "Post · Alpha changes in 0.34",
+                              "name": "Post · Prompt Studio 0.37: easier updates",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
@@ -36948,7 +36962,7 @@
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Alpha changes in 0.34",
+                                  "content": "Prompt Studio 0.37: easier updates",
                                   "lineHeight": 1.2,
                                   "fontFamily": "$font-heading",
                                   "fontSize": 20,
@@ -36959,7 +36973,7 @@
                                   "id": "JnbL4",
                                   "name": "Date",
                                   "fill": "$ds-fg-muted",
-                                  "content": "September 7, 2026",
+                                  "content": "September 29, 2026 · 2 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
@@ -36972,7 +36986,54 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Two bridge capabilities have new names. Here is what to update in your extensions, and when the old names go away.",
+                                  "content": "Signed Windows releases, simpler extension updates, and fixes that keep agent conversations usable.",
+                                  "lineHeight": 1.71,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Om6vX",
+                              "name": "Post · Welcome to Prompt Studio",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "QbzUG",
+                                  "name": "Title link",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Welcome to Prompt Studio",
+                                  "lineHeight": 1.2,
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 20,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "cliQx",
+                                  "name": "Date",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "August 31, 2026 · 3 min read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Wh8KH",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Why I built a place where you and your agents make your own tools.",
                                   "lineHeight": 1.71,
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
@@ -37336,7 +37397,76 @@
                       "gap": 1,
                       "children": [
                         {
-                          "id": "V97zxz",
+                          "id": "n0g7X7",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.39: tools that stay in sync",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.39",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "tvcOb",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.38: clearer workspaces",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.38",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "jxmFu",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Prompt Studio 0.37: easier updates",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Prompt Studio 0.37",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
+                          "id": "PrqqJ",
                           "type": "ref",
                           "ref": "t5G2s8",
                           "name": "Welcome to Prompt Studio",
@@ -37352,49 +37482,9 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "Welcome to Prompt Studio"
-                            }
-                          }
-                        },
-                        {
-                          "id": "oELRG",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Extensions run remotely",
-                          "theme": {
-                            "tree": "default",
-                            "depth": "0"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "enabled": false
-                            },
-                            "ROY2j": {
-                              "content": "Extensions run remotely"
-                            }
-                          }
-                        },
-                        {
-                          "id": "HM88F",
-                          "type": "ref",
-                          "ref": "t5G2s8",
-                          "name": "Alpha changes in 0.34",
-                          "theme": {
-                            "tree": "default",
-                            "depth": "0"
-                          },
-                          "descendants": {
-                            "w2TSr": {
-                              "enabled": false
-                            },
-                            "Mbu4C": {
-                              "enabled": false
-                            },
-                            "ROY2j": {
-                              "content": "Alpha changes in 0.34"
+                              "content": "Welcome to Prompt Studio",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
                             }
                           }
                         }
@@ -37609,15 +37699,59 @@
                               "fontWeight": "500"
                             },
                             {
-                              "type": "text",
-                              "id": "mH2a0",
-                              "name": "Meta",
-                              "fill": "$ds-fg-muted",
-                              "content": "October 5, 2026 · Aurélien Franky",
-                              "lineHeight": 1.5,
-                              "fontFamily": "$font-label",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "plqve",
+                              "name": "Post metadata",
+                              "context": "Author avatar and name, then publication date and estimated reading time. Wrap the details onto another line on mobile.",
+                              "width": "fill_container",
+                              "gap": 16,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "GpvuX",
+                                  "name": "Author identity",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "ellipse",
+                                      "id": "Onr2K",
+                                      "name": "Aurélien Franky avatar",
+                                      "fill": {
+                                        "type": "image",
+                                        "enabled": true,
+                                        "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                                        "mode": "fill"
+                                      },
+                                      "width": 24,
+                                      "height": 24
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "rCbe7",
+                                      "name": "Author name",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "Aurélien Franky",
+                                      "lineHeight": 1.5,
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "OCnrR",
+                                  "name": "Publication date and reading time",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "August 31, 2026 · 3 min read",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
@@ -39033,33 +39167,6 @@
             },
             {
               "type": "frame",
-              "id": "tSDR0",
-              "name": "h2",
-              "width": "fill_container",
-              "padding": [
-                16,
-                0,
-                0,
-                0
-              ],
-              "children": [
-                {
-                  "type": "text",
-                  "id": "WCjtD",
-                  "name": "Heading",
-                  "fill": "$ds-fg",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "Workbench",
-                  "lineHeight": 1.2,
-                  "fontFamily": "$font-heading",
-                  "fontSize": 20,
-                  "fontWeight": "500"
-                }
-              ]
-            },
-            {
-              "type": "frame",
               "id": "tUiII",
               "name": "Topic row",
               "width": "fill_container",
@@ -40018,7 +40125,7 @@
                 {
                   "type": "frame",
                   "id": "TxSbx",
-                  "name": "Post · Welcome to Prompt Studio",
+                  "name": "Post · Prompt Studio 0.39: tools that stay in sync",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -40030,7 +40137,7 @@
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Welcome to Prompt Studio",
+                      "content": "Prompt Studio 0.39: tools that stay in sync",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -40041,7 +40148,7 @@
                       "id": "G2tdV",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "October 5, 2026",
+                      "content": "October 1, 2026 · 2 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -40054,7 +40161,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Coding agents can build the tools you need. This is why those tools need a place to live, and how Prompt Studio gives them one.",
+                      "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
                       "lineHeight": 1.71,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -40065,7 +40172,7 @@
                 {
                   "type": "frame",
                   "id": "K2bXX2",
-                  "name": "Post · Extensions run remotely",
+                  "name": "Post · Prompt Studio 0.38: clearer workspaces",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -40077,7 +40184,7 @@
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Extensions run remotely",
+                      "content": "Prompt Studio 0.38: clearer workspaces",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -40088,7 +40195,7 @@
                       "id": "W1s1VT",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "September 21, 2026",
+                      "content": "September 29, 2026 · 2 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -40101,7 +40208,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "An extension can now move long-running work to a remote machine. The extension itself does not change.",
+                      "content": "Workspace choices in extension commands, reliable local tool loading, and terminals in the right folder.",
                       "lineHeight": 1.71,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -40112,7 +40219,7 @@
                 {
                   "type": "frame",
                   "id": "e01ooo",
-                  "name": "Post · Alpha changes in 0.34",
+                  "name": "Post · Prompt Studio 0.37: easier updates",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -40124,7 +40231,7 @@
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Alpha changes in 0.34",
+                      "content": "Prompt Studio 0.37: easier updates",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -40135,7 +40242,7 @@
                       "id": "Rv4T7",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "September 7, 2026",
+                      "content": "September 29, 2026 · 2 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -40148,7 +40255,54 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Two bridge capabilities have new names. Here is what to update in your extensions, and when the old names go away.",
+                      "content": "Signed Windows releases, simpler extension updates, and fixes that keep agent conversations usable.",
+                      "lineHeight": 1.71,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wPj6f",
+                  "name": "Post · Welcome to Prompt Studio",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DAroP",
+                      "name": "Title link",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Welcome to Prompt Studio",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mrWj9",
+                      "name": "Date",
+                      "fill": "$ds-fg-muted",
+                      "content": "August 31, 2026 · 3 min read",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "v8B5H",
+                      "name": "Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Why I built a place where you and your agents make your own tools.",
                       "lineHeight": 1.71,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -40475,15 +40629,59 @@
                   "fontWeight": "500"
                 },
                 {
-                  "type": "text",
-                  "id": "NvXiV",
-                  "name": "Meta",
-                  "fill": "$ds-fg-muted",
-                  "content": "October 5, 2026 · Aurélien Franky",
-                  "lineHeight": 1.5,
-                  "fontFamily": "$font-label",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
+                  "type": "frame",
+                  "id": "hUE11",
+                  "name": "Post metadata",
+                  "context": "Author avatar and name, then publication date and estimated reading time. Wrap the details onto another line on mobile.",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "K7iDz",
+                      "name": "Author identity",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "E6I9XX",
+                          "name": "Aurélien Franky avatar",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                            "mode": "fill"
+                          },
+                          "width": 24,
+                          "height": 24
+                        },
+                        {
+                          "type": "text",
+                          "id": "rPF2s",
+                          "name": "Author name",
+                          "fill": "$ds-fg-muted",
+                          "content": "Aurélien Franky",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "sldqd",
+                      "name": "Publication date and reading time",
+                      "fill": "$ds-fg-muted",
+                      "content": "August 31, 2026 · 3 min read",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
                 }
               ]
             },
@@ -43925,33 +44123,6 @@
             },
             {
               "type": "frame",
-              "id": "ciFOX",
-              "name": "h2",
-              "width": "fill_container",
-              "padding": [
-                16,
-                0,
-                0,
-                0
-              ],
-              "children": [
-                {
-                  "type": "text",
-                  "id": "smpqI",
-                  "name": "Heading",
-                  "fill": "$ds-fg",
-                  "textGrowth": "fixed-width",
-                  "width": "fill_container",
-                  "content": "Workbench",
-                  "lineHeight": 1.2,
-                  "fontFamily": "$font-heading",
-                  "fontSize": 20,
-                  "fontWeight": "500"
-                }
-              ]
-            },
-            {
-              "type": "frame",
               "id": "RbtiA",
               "name": "Topic row",
               "width": "fill_container",
@@ -45917,7 +46088,7 @@
                 {
                   "type": "frame",
                   "id": "oCpEd",
-                  "name": "Post · Welcome to Prompt Studio",
+                  "name": "Post · Prompt Studio 0.39: tools that stay in sync",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -45929,7 +46100,7 @@
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Welcome to Prompt Studio",
+                      "content": "Prompt Studio 0.39: tools that stay in sync",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -45940,7 +46111,7 @@
                       "id": "QEw7l",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "October 5, 2026",
+                      "content": "October 1, 2026 · 2 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -45953,7 +46124,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Coding agents can build the tools you need. This is why those tools need a place to live, and how Prompt Studio gives them one.",
+                      "content": "Shared views, clearer navigation, a versioned extension API, and fixes for startup and busy workbenches.",
                       "lineHeight": 1.71,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -45964,7 +46135,7 @@
                 {
                   "type": "frame",
                   "id": "uVFIp",
-                  "name": "Post · Extensions run remotely",
+                  "name": "Post · Prompt Studio 0.38: clearer workspaces",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -45976,7 +46147,7 @@
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Extensions run remotely",
+                      "content": "Prompt Studio 0.38: clearer workspaces",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -45987,7 +46158,7 @@
                       "id": "paPh5",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "September 21, 2026",
+                      "content": "September 29, 2026 · 2 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -46000,7 +46171,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "An extension can now move long-running work to a remote machine. The extension itself does not change.",
+                      "content": "Workspace choices in extension commands, reliable local tool loading, and terminals in the right folder.",
                       "lineHeight": 1.71,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -46011,7 +46182,7 @@
                 {
                   "type": "frame",
                   "id": "mzOmD",
-                  "name": "Post · Alpha changes in 0.34",
+                  "name": "Post · Prompt Studio 0.37: easier updates",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -46023,7 +46194,7 @@
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Alpha changes in 0.34",
+                      "content": "Prompt Studio 0.37: easier updates",
                       "lineHeight": 1.2,
                       "fontFamily": "$font-heading",
                       "fontSize": 20,
@@ -46034,7 +46205,7 @@
                       "id": "c5zZk3",
                       "name": "Date",
                       "fill": "$ds-fg-muted",
-                      "content": "September 7, 2026",
+                      "content": "September 29, 2026 · 2 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
@@ -46047,7 +46218,54 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Two bridge capabilities have new names. Here is what to update in your extensions, and when the old names go away.",
+                      "content": "Signed Windows releases, simpler extension updates, and fixes that keep agent conversations usable.",
+                      "lineHeight": 1.71,
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "x04N6",
+                  "name": "Post · Welcome to Prompt Studio",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "c8dGV",
+                      "name": "Title link",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Welcome to Prompt Studio",
+                      "lineHeight": 1.2,
+                      "fontFamily": "$font-heading",
+                      "fontSize": 20,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z9Au4i",
+                      "name": "Date",
+                      "fill": "$ds-fg-muted",
+                      "content": "August 31, 2026 · 3 min read",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "YtmYA",
+                      "name": "Description",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Why I built a place where you and your agents make your own tools.",
                       "lineHeight": 1.71,
                       "fontFamily": "$font-body",
                       "fontSize": 14,
@@ -46374,15 +46592,59 @@
                   "fontWeight": "500"
                 },
                 {
-                  "type": "text",
-                  "id": "Yajht",
-                  "name": "Meta",
-                  "fill": "$ds-fg-muted",
-                  "content": "October 5, 2026 · Aurélien Franky",
-                  "lineHeight": 1.5,
-                  "fontFamily": "$font-label",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
+                  "type": "frame",
+                  "id": "biwyi",
+                  "name": "Post metadata",
+                  "context": "Author avatar and name, then publication date and estimated reading time. Wrap the details onto another line on mobile.",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "T1eNV",
+                      "name": "Author identity",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "iRH61",
+                          "name": "Aurélien Franky avatar",
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                            "mode": "fill"
+                          },
+                          "width": 24,
+                          "height": 24
+                        },
+                        {
+                          "type": "text",
+                          "id": "eqP9B",
+                          "name": "Author name",
+                          "fill": "$ds-fg-muted",
+                          "content": "Aurélien Franky",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "aW2bJ",
+                      "name": "Publication date and reading time",
+                      "fill": "$ds-fg-muted",
+                      "content": "August 31, 2026 · 3 min read",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
                 }
               ]
             },
