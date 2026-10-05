@@ -28044,7 +28044,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "From malleable software to Prompt Studio",
+                              "content": "From malleable software…",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -28113,7 +28113,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "Prompt Studio 0.37",
+                              "content": "Prompt Studio 0.36",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -28159,7 +28159,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "In the future, your users will be part of the development team.",
+                              "content": "In the future, your users…",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -28613,7 +28613,7 @@
                             {
                               "type": "frame",
                               "id": "guVVY",
-                              "name": "Post · Prompt Studio 0.38: clearer workspaces",
+                              "name": "Post · Prompt Studio 0.38",
                               "width": "fill_container",
                               "gap": 24,
                               "children": [
@@ -28699,7 +28699,7 @@
                                           "id": "O42gCO",
                                           "name": "Date",
                                           "fill": "$ds-fg-muted",
-                                          "content": "September 29, 2026 · 2 min read",
+                                          "content": "September 29, 2026 · 5 min read",
                                           "lineHeight": 1.5,
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
@@ -28714,7 +28714,7 @@
                                       "fill": "$ds-fg-muted",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Workspace choices in extension commands, reliable local tool loading, and terminals in the right folder.",
+                                      "content": "Choose where a tool runs, upgrade or reload your extensions, and keep agent conversations going. Highlights from the September 29 releases, 0.37 and 0.38.",
                                       "lineHeight": 1.71,
                                       "fontFamily": "$font-body",
                                       "fontSize": 14,
@@ -28727,7 +28727,7 @@
                             {
                               "type": "frame",
                               "id": "pRIZS",
-                              "name": "Post · Prompt Studio 0.37: easier updates",
+                              "name": "Post · Prompt Studio 0.36",
                               "width": "fill_container",
                               "gap": 24,
                               "children": [
@@ -28735,12 +28735,12 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "A59YS",
-                                  "name": "Shape Art thumbnail · prompt-studio-0-37",
+                                  "name": "Shape Art thumbnail · prompt-studio-0-36",
                                   "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog-prompt-studio-0-37.png",
+                                    "url": "art/blog-prompt-studio-0-36.png",
                                     "mode": "fill"
                                   },
                                   "width": 128,
@@ -28761,7 +28761,7 @@
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Prompt Studio 0.37",
+                                      "content": "Prompt Studio 0.36",
                                       "lineHeight": 1.2,
                                       "fontFamily": "$font-heading",
                                       "fontSize": 20,
@@ -28813,7 +28813,7 @@
                                           "id": "C4gvHV",
                                           "name": "Date",
                                           "fill": "$ds-fg-muted",
-                                          "content": "September 29, 2026 · 3 min read",
+                                          "content": "September 28, 2026 · 4 min read",
                                           "lineHeight": 1.5,
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
@@ -28828,7 +28828,7 @@
                                       "fill": "$ds-fg-muted",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Signed Windows releases, simpler extension updates, and fixes that keep agent conversations usable.",
+                                      "content": "Open a folder without Git, share workspaces and sessions between Planner tickets, and keep conversations and tool views intact.",
                                       "lineHeight": 1.71,
                                       "fontFamily": "$font-body",
                                       "fontSize": 14,
@@ -28989,7 +28989,7 @@
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Welcome to Prompt Studio",
+                                      "content": "In the future, your users will be part of the development team.",
                                       "lineHeight": 1.2,
                                       "fontFamily": "$font-heading",
                                       "fontSize": 20,
@@ -29041,7 +29041,7 @@
                                           "id": "cHI4J",
                                           "name": "Date",
                                           "fill": "$ds-fg-muted",
-                                          "content": "August 31, 2026 · 3 min read",
+                                          "content": "October 25, 2025 · 6 min read",
                                           "lineHeight": 1.5,
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
@@ -29056,7 +29056,7 @@
                                       "fill": "$ds-fg-muted",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Why I built a place where you and your agents make your own tools.",
+                                      "content": "An experiment in malleable software: users and developers building together through shared data and composable tools.",
                                       "lineHeight": 1.71,
                                       "fontFamily": "$font-body",
                                       "fontSize": 14,
@@ -29438,7 +29438,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "From malleable software to Prompt Studio",
+                              "content": "From malleable software…",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -29507,7 +29507,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "Prompt Studio 0.37",
+                              "content": "Prompt Studio 0.36",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -29553,7 +29553,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "In the future, your users will be part of the development team.",
+                              "content": "In the future, your users…",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -37329,7 +37329,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "From malleable software to Prompt Studio",
+                              "content": "From malleable software…",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -37398,7 +37398,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "Prompt Studio 0.37",
+                              "content": "Prompt Studio 0.36",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -37444,7 +37444,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "In the future, your users will be part of the development team.",
+                              "content": "In the future, your users…",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -37898,7 +37898,7 @@
                             {
                               "type": "frame",
                               "id": "e48qTz",
-                              "name": "Post · Prompt Studio 0.38: clearer workspaces",
+                              "name": "Post · Prompt Studio 0.38",
                               "width": "fill_container",
                               "gap": 24,
                               "children": [
@@ -37984,7 +37984,7 @@
                                           "id": "RXso1",
                                           "name": "Date",
                                           "fill": "$ds-fg-muted",
-                                          "content": "September 29, 2026 · 2 min read",
+                                          "content": "September 29, 2026 · 5 min read",
                                           "lineHeight": 1.5,
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
@@ -37999,7 +37999,7 @@
                                       "fill": "$ds-fg-muted",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Workspace choices in extension commands, reliable local tool loading, and terminals in the right folder.",
+                                      "content": "Choose where a tool runs, upgrade or reload your extensions, and keep agent conversations going. Highlights from the September 29 releases, 0.37 and 0.38.",
                                       "lineHeight": 1.71,
                                       "fontFamily": "$font-body",
                                       "fontSize": 14,
@@ -38012,7 +38012,7 @@
                             {
                               "type": "frame",
                               "id": "whkia",
-                              "name": "Post · Prompt Studio 0.37: easier updates",
+                              "name": "Post · Prompt Studio 0.36",
                               "width": "fill_container",
                               "gap": 24,
                               "children": [
@@ -38020,12 +38020,12 @@
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "hOQLK",
-                                  "name": "Shape Art thumbnail · prompt-studio-0-37",
+                                  "name": "Shape Art thumbnail · prompt-studio-0-36",
                                   "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog-prompt-studio-0-37.png",
+                                    "url": "art/blog-prompt-studio-0-36.png",
                                     "mode": "fill"
                                   },
                                   "width": 128,
@@ -38046,7 +38046,7 @@
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Prompt Studio 0.37",
+                                      "content": "Prompt Studio 0.36",
                                       "lineHeight": 1.2,
                                       "fontFamily": "$font-heading",
                                       "fontSize": 20,
@@ -38098,7 +38098,7 @@
                                           "id": "JnbL4",
                                           "name": "Date",
                                           "fill": "$ds-fg-muted",
-                                          "content": "September 29, 2026 · 3 min read",
+                                          "content": "September 28, 2026 · 4 min read",
                                           "lineHeight": 1.5,
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
@@ -38113,7 +38113,7 @@
                                       "fill": "$ds-fg-muted",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Signed Windows releases, simpler extension updates, and fixes that keep agent conversations usable.",
+                                      "content": "Open a folder without Git, share workspaces and sessions between Planner tickets, and keep conversations and tool views intact.",
                                       "lineHeight": 1.71,
                                       "fontFamily": "$font-body",
                                       "fontSize": 14,
@@ -38274,7 +38274,7 @@
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Welcome to Prompt Studio",
+                                      "content": "In the future, your users will be part of the development team.",
                                       "lineHeight": 1.2,
                                       "fontFamily": "$font-heading",
                                       "fontSize": 20,
@@ -38326,7 +38326,7 @@
                                           "id": "vSQKC",
                                           "name": "Date",
                                           "fill": "$ds-fg-muted",
-                                          "content": "August 31, 2026 · 3 min read",
+                                          "content": "October 25, 2025 · 6 min read",
                                           "lineHeight": 1.5,
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
@@ -38341,7 +38341,7 @@
                                       "fill": "$ds-fg-muted",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
-                                      "content": "Why I built a place where you and your agents make your own tools.",
+                                      "content": "An experiment in malleable software: users and developers building together through shared data and composable tools.",
                                       "lineHeight": 1.71,
                                       "fontFamily": "$font-body",
                                       "fontSize": 14,
@@ -38723,7 +38723,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "From malleable software to Prompt Studio",
+                              "content": "From malleable software…",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -38792,7 +38792,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "Prompt Studio 0.37",
+                              "content": "Prompt Studio 0.36",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -38838,7 +38838,7 @@
                               "enabled": false
                             },
                             "ROY2j": {
-                              "content": "In the future, your users will be part of the development team.",
+                              "content": "In the future, your users…",
                               "textGrowth": "fixed-width-height",
                               "height": 18
                             }
@@ -41889,7 +41889,7 @@
                 {
                   "type": "frame",
                   "id": "K2bXX2",
-                  "name": "Post · Prompt Studio 0.38: clearer workspaces",
+                  "name": "Post · Prompt Studio 0.38",
                   "width": "fill_container",
                   "gap": 16,
                   "children": [
@@ -41975,7 +41975,7 @@
                               "id": "W1s1VT",
                               "name": "Date",
                               "fill": "$ds-fg-muted",
-                              "content": "September 29, 2026 · 2 min read",
+                              "content": "September 29, 2026 · 5 min read",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
@@ -41990,7 +41990,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Workspace choices in extension commands, reliable local tool loading, and terminals in the right folder.",
+                          "content": "Choose where a tool runs, upgrade or reload your extensions, and keep agent conversations going. Highlights from the September 29 releases, 0.37 and 0.38.",
                           "lineHeight": 1.71,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
@@ -42003,7 +42003,7 @@
                 {
                   "type": "frame",
                   "id": "e01ooo",
-                  "name": "Post · Prompt Studio 0.37: easier updates",
+                  "name": "Post · Prompt Studio 0.36",
                   "width": "fill_container",
                   "gap": 16,
                   "children": [
@@ -42011,12 +42011,12 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "nIOOU",
-                      "name": "Shape Art thumbnail · prompt-studio-0-37",
+                      "name": "Shape Art thumbnail · prompt-studio-0-36",
                       "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog-prompt-studio-0-37.png",
+                        "url": "art/blog-prompt-studio-0-36.png",
                         "mode": "fill"
                       },
                       "width": 80,
@@ -42037,7 +42037,7 @@
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Prompt Studio 0.37",
+                          "content": "Prompt Studio 0.36",
                           "lineHeight": 1.2,
                           "fontFamily": "$font-heading",
                           "fontSize": 20,
@@ -42089,7 +42089,7 @@
                               "id": "Rv4T7",
                               "name": "Date",
                               "fill": "$ds-fg-muted",
-                              "content": "September 29, 2026 · 3 min read",
+                              "content": "September 28, 2026 · 4 min read",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
@@ -42104,7 +42104,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Signed Windows releases, simpler extension updates, and fixes that keep agent conversations usable.",
+                          "content": "Open a folder without Git, share workspaces and sessions between Planner tickets, and keep conversations and tool views intact.",
                           "lineHeight": 1.71,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
@@ -42265,7 +42265,7 @@
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Welcome to Prompt Studio",
+                          "content": "In the future, your users will be part of the development team.",
                           "lineHeight": 1.2,
                           "fontFamily": "$font-heading",
                           "fontSize": 20,
@@ -42317,7 +42317,7 @@
                               "id": "W88N1r",
                               "name": "Date",
                               "fill": "$ds-fg-muted",
-                              "content": "August 31, 2026 · 3 min read",
+                              "content": "October 25, 2025 · 6 min read",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
@@ -42332,7 +42332,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Why I built a place where you and your agents make your own tools.",
+                          "content": "An experiment in malleable software: users and developers building together through shared data and composable tools.",
                           "lineHeight": 1.71,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
@@ -48363,7 +48363,7 @@
                 {
                   "type": "frame",
                   "id": "uVFIp",
-                  "name": "Post · Prompt Studio 0.38: clearer workspaces",
+                  "name": "Post · Prompt Studio 0.38",
                   "width": "fill_container",
                   "gap": 16,
                   "children": [
@@ -48449,7 +48449,7 @@
                               "id": "paPh5",
                               "name": "Date",
                               "fill": "$ds-fg-muted",
-                              "content": "September 29, 2026 · 2 min read",
+                              "content": "September 29, 2026 · 5 min read",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
@@ -48464,7 +48464,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Workspace choices in extension commands, reliable local tool loading, and terminals in the right folder.",
+                          "content": "Choose where a tool runs, upgrade or reload your extensions, and keep agent conversations going. Highlights from the September 29 releases, 0.37 and 0.38.",
                           "lineHeight": 1.71,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
@@ -48477,7 +48477,7 @@
                 {
                   "type": "frame",
                   "id": "mzOmD",
-                  "name": "Post · Prompt Studio 0.37: easier updates",
+                  "name": "Post · Prompt Studio 0.36",
                   "width": "fill_container",
                   "gap": 16,
                   "children": [
@@ -48485,12 +48485,12 @@
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "DCHE8",
-                      "name": "Shape Art thumbnail · prompt-studio-0-37",
+                      "name": "Shape Art thumbnail · prompt-studio-0-36",
                       "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog-prompt-studio-0-37.png",
+                        "url": "art/blog-prompt-studio-0-36.png",
                         "mode": "fill"
                       },
                       "width": 80,
@@ -48511,7 +48511,7 @@
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Prompt Studio 0.37",
+                          "content": "Prompt Studio 0.36",
                           "lineHeight": 1.2,
                           "fontFamily": "$font-heading",
                           "fontSize": 20,
@@ -48563,7 +48563,7 @@
                               "id": "c5zZk3",
                               "name": "Date",
                               "fill": "$ds-fg-muted",
-                              "content": "September 29, 2026 · 3 min read",
+                              "content": "September 28, 2026 · 4 min read",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
@@ -48578,7 +48578,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Signed Windows releases, simpler extension updates, and fixes that keep agent conversations usable.",
+                          "content": "Open a folder without Git, share workspaces and sessions between Planner tickets, and keep conversations and tool views intact.",
                           "lineHeight": 1.71,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
@@ -48739,7 +48739,7 @@
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Welcome to Prompt Studio",
+                          "content": "In the future, your users will be part of the development team.",
                           "lineHeight": 1.2,
                           "fontFamily": "$font-heading",
                           "fontSize": 20,
@@ -48791,7 +48791,7 @@
                               "id": "RNPz2",
                               "name": "Date",
                               "fill": "$ds-fg-muted",
-                              "content": "August 31, 2026 · 3 min read",
+                              "content": "October 25, 2025 · 6 min read",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
@@ -48806,7 +48806,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Why I built a place where you and your agents make your own tools.",
+                          "content": "An experiment in malleable software: users and developers building together through shared data and composable tools.",
                           "lineHeight": 1.71,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
