@@ -1,5 +1,5 @@
 import { artifactsRead, defineView, packageAsset } from "@pstdio/sdk/extensions";
-import { postMedia } from "../store";
+import { postMedia, threadMedia } from "../store";
 
 export const analysisView = defineView({
   id: "analysis",
@@ -19,7 +19,13 @@ export const threadView = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("../thread/main.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open", "clipboard.write", artifactsRead(postMedia)],
+    capabilities: [
+      "commands.execute",
+      "navigation.open",
+      "clipboard.write",
+      artifactsRead(postMedia),
+      artifactsRead(threadMedia),
+    ],
   },
 });
 

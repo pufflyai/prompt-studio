@@ -2,7 +2,6 @@ import { Box, Flex, Grid, HStack, Text } from "@chakra-ui/react";
 import { EmptyState, ListRow, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { RadarAnalysis } from "../analysis";
-import { siteLabels } from "../sites";
 import { DailyBars, RankedBars, SentimentBar, sentimentTokens } from "../webview/charts";
 
 interface KpiProps {
@@ -61,10 +60,11 @@ const shortDate = (value: string) => new Date(value).toLocaleDateString("en-US",
 
 interface AnalysisSectionsProps {
   analysis: RadarAnalysis;
+  channelNames: Record<string, string>;
   onOpenMention: (mention: RadarAnalysis["recentMentions"][number]) => void;
 }
 export const AnalysisSections = (props: AnalysisSectionsProps) => {
-  const { analysis, onOpenMention } = props;
+  const { analysis, channelNames, onOpenMention } = props;
   const { mentions, threadsFound, answered, postsUsed, days } = analysis;
   return (
     <Flex direction="column" gap="md" flex="1" minH="0">
@@ -89,7 +89,10 @@ export const AnalysisSections = (props: AnalysisSectionsProps) => {
           {analysis.mentionsBySite.length ? (
             <RankedBars
               label="Mentions by site"
-              rows={analysis.mentionsBySite.map((row) => ({ label: siteLabels[row.site], count: row.count }))}
+              rows={analysis.mentionsBySite.map((row) => ({
+                label: channelNames[row.site] ?? row.site,
+                count: row.count,
+              }))}
             />
           ) : null}
         </Card>
@@ -112,7 +115,7 @@ export const AnalysisSections = (props: AnalysisSectionsProps) => {
                   icon={<Box boxSize="2" borderRadius="full" bg={sentimentTokens[mention.sentiment ?? "neutral"]} />}
                   endContent={
                     <Text textStyle="label/XS" color="fg.muted">
-                      {siteLabels[mention.site]} · {shortDate(mention.foundAt)}
+                      {channelNames[mention.site] ?? mention.site} · {shortDate(mention.foundAt)}
                     </Text>
                   }
                   onActivate={() => onOpenMention(mention)}

@@ -3,9 +3,8 @@ import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/reac
 import { AlertMessage, EmptyState, ScrollArea } from "@pstdio/ui";
 import { Ellipsis, ExternalLink } from "lucide-react";
 import { type Idea, isNewPost, type Thread } from "../schemas";
-import { siteLabels } from "../sites";
 import { plural } from "../text";
-import { useRadar, useRadarRefresh, useRadarResource } from "../webview/client";
+import { useOpenLink, useRadar, useRadarRefresh, useRadarResource } from "../webview/client";
 import { Conversation } from "./conversation";
 import { NewPostDraft } from "./new-post";
 
@@ -32,12 +31,11 @@ const statusActions = (thread: Thread) => {
     { value: "skipped", label: "Skip" },
   ];
 };
-const metaLine = (thread: Thread) => {
-  if (isNewPost(thread))
-    return [siteLabels[thread.site], "new post", thread.url ? "posted" : "not posted yet"].join(" · ");
+const metaLine = (thread: Thread, channelName: string) => {
+  if (isNewPost(thread)) return [channelName, "new post", thread.url ? "posted" : "not posted yet"].join(" · ");
   const post = thread.snapshot?.post;
   return [
-    siteLabels[thread.site],
+    channelName,
     thread.community,
     post?.score === undefined ? "" : plural(post.score, "upvote"),
     post?.commentCount === undefined ? "" : plural(post.commentCount, "comment"),
@@ -55,6 +53,7 @@ export const ThreadPage = () => {
 const ThreadView = (props: { id: string }) => {
   const { id } = props;
   const { client } = useRadar();
+  const openLink = useOpenLink();
   useRadarRefresh();
   const data = useCommandQuery({ queryKey: ["thread", id], command: () => client.commands["get-thread"]({ id }) });
   const invalidate = [["thread", id]];
@@ -78,7 +77,7 @@ const ThreadView = (props: { id: string }) => {
   });
   const error = data.error ?? status.error ?? updateThread.error ?? updateIdea.error ?? ideaStatus.error;
   if (!data.data) return error ? <AlertMessage status="error" title={error.message} /> : null;
-  const { thread, ideas, mediaRule } = data.data;
+  const { thread, ideas, mediaRule, channelName } = data.data;
   const draft = isNewPost(thread) && thread.status !== "answered";
   const actions = statusActions(thread);
   return (
@@ -88,11 +87,18 @@ const ThreadView = (props: { id: string }) => {
         {!isNewPost(thread) && thread.mention ? <Badge colorPalette="blue">@ Mentions us</Badge> : null}
         {isNewPost(thread) ? <Badge variant="outline">{thread.kind}</Badge> : null}
         <Text flex="1" textStyle="label/S/regular" color="fg.muted" truncate>
-          {metaLine(thread)}
+          {metaLine(thread, channelName)}
         </Text>
         {thread.url ? (
           <Button asChild size="xs" variant="outline">
-            <Link href={thread.url} target="_blank" rel="noopener noreferrer" title={thread.url}>
+            <Link
+              href={thread.url}
+              title={thread.url}
+              onClick={(event) => {
+                event.preventDefault();
+                if (thread.url) void openLink(thread.url);
+              }}
+            >
               <ExternalLink />
               Open thread
             </Link>
@@ -125,6 +131,7 @@ const ThreadView = (props: { id: string }) => {
           {draft ? (
             <NewPostDraft
               post={thread}
+              channelName={channelName}
               mediaRule={mediaRule}
               onEdit={(text) => updateThread.mutate({ draft: text })}
               onDismiss={() => status.mutate({ status: "skipped" })}

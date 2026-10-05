@@ -13,24 +13,25 @@ The session prompt supplies `runId`. Start with:
 pst social-radar get-context --runId <runId>
 ```
 
-This returns `brandTerms`, `topics`, `competitors`, per-site `targets`, the writing `voice`, per-site `budgets`, per-site `mediaRules`, `since`, `followUps` (answered threads not checked today), and `recentPosts` (new-post titles from the last 14 days). Do not repeat a recent post unless new evidence changes it.
+This returns `brandTerms`, `topics`, `competitors`, the writing `voice`, `scrollScreens`, `channels` (each with its `id`, `name`, `budget`, `targets`, `mediaRule`, `since`, and a `url` for channels without a recipe below), `followUps` (answered threads not checked today), and `recentPosts` (new-post titles from the last 14 days). Do not repeat a recent post unless new evidence changes it.
 
-Count every endpoint query, browser search, and follow-up lookup against that site's budget. A failed endpoint attempt also counts; a browser fallback is another search. Scroll at most `budgets.scrollScreens` screens per search. A zero budget means skip that site. Spend follow-up lookups first, then search the brand terms, then the highest priority topics and that site's targets. Do not retry a login wall, captcha, rate limit, or unavailable endpoint repeatedly.
+Search only the returned channels, and save each thread with its channel `id` as `site`. Count every endpoint query, browser search, and follow-up lookup against that channel's `budget`. A failed endpoint attempt also counts; a browser fallback is another search. Scroll at most `scrollScreens` screens per search. A zero budget means skip that channel. Spend follow-up lookups first, then search the brand terms, then the highest priority topics and that channel's targets. Do not retry a login wall, captcha, rate limit, or unavailable endpoint repeatedly.
 
 Read the current endpoints below; free access can change. Use the endpoint first where listed. Use Codex's computer use tool for browser work in the user's existing browser profile. Do not launch another browser profile or install a browser tool. Skip browser-only sites when that tool is unavailable. Skip on login walls or captchas; never enter credentials or try to bypass a restriction. Record each skipped site and its reason. Partial access still makes a useful run.
 
-If research reveals a better community, channel, account, or repository to watch, revise that site's complete target list with `pst social-radar update-site --site <site> --targets <target>`. Repeat `--targets` for each target to keep. Include `--budget <count>` only when the user asks to change the budget. Use `pst social-radar update-settings --input '<JSON>'` when the user asks to revise brand terms, topics, competitors, or voice. Never infer a new budget from a login wall or a failed search.
+If research reveals a better community, account, or repository to watch, revise that channel's complete target list with `pst social-radar update-channel --id <channel> --targets <target>`. Repeat `--targets` for each target to keep. Include `--budget <count>` only when the user asks to change the budget. Use `pst social-radar update-settings --input '<JSON>'` when the user asks to revise brand terms, topics, competitors, or voice. Add or remove channels only when the user asks, with `pst social-radar add-channel --name <name> --url <link>` and `pst social-radar remove-channel --id <channel>`. Never infer a new budget from a login wall or a failed search.
 
 | Site | First choice | Browser fallback |
 | --- | --- | --- |
 | `hn` | `https://hn.algolia.com/api/v1/search_by_date?query=<encoded-topic>&tags=story&numericFilters=created_at_i><since-unix>`; use `tags=comment` when useful | `https://hn.algolia.com`, newest first |
-| `reddit` | `https://www.reddit.com/search.json?q=<encoded-topic>&sort=new&t=day` or `/r/<community>/new.json` | `https://old.reddit.com`, newest first |
+| `reddit` | RSS with the full user agent `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36` (Reddit returns 403 for short ones): `https://www.reddit.com/search.rss?q=<encoded-topic>&sort=new&t=day` (`t=week` when `since` is older than a day), `https://www.reddit.com/r/<community>/new/.rss`, and `<thread-url>.rss` for comments. Without a login Reddit allows about one request a minute, so wait 60 seconds between requests and after a 429. RSS has no scores or vote counts; leave them out | `https://www.reddit.com`, newest first |
 | `bluesky` | `https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=<encoded-topic>&sort=latest&since=<since-ISO>` | `https://bsky.app/search` |
 | `devto` | `https://dev.to/api/articles?tag=<relevant-tag>&per_page=20` (tag filter, not free text) | DEV.to search |
 | `github` | `gh search issues '<topic> updated:><since-date>' --sort updated --order desc --json url,title,body,updatedAt --limit 20` with the existing gh login | GitHub search |
 | `youtube` | Browser search filtered to upload date today | None |
 | `x` | Logged-in browser search, Latest tab | None |
 | `linkedin` | Logged-in content search sorted by date | None |
+| Any other channel | None | Open its `url` in the browser and search or browse it for the topics, newest first |
 
 ## Follow up on answered threads
 
@@ -45,19 +46,30 @@ Mark the comment you posted with `"mine": true` in the snapshot, so replies to i
 
 ## Judge and save threads
 
-Only save threads published after `since` that match a brand term, topic, or competitor. Verify the date from the source; do not guess it. Set `mention: true` on every thread that names a brand term. Prefer questions or concrete problems where a useful answer fits. Relevance:
+Only save threads published after their channel's `since` that match a brand term, topic, or competitor. Verify the date from the source; do not guess it. Set `mention: true` on every thread that names a brand term. Prefer questions or concrete problems where a useful answer fits. Relevance:
 
 - **3:** A direct tool request or problem Prompt Studio can help solve; answer today.
 - **2:** A relevant comparison, launch, or discussion worth joining.
 - **1:** A relevant mention or background thread worth reading.
 
-Save the snapshot with the thread: the post and about 20 top comments with the replies under them, text only. Save every comment you read, not only the one you answer, because the thread page draws the whole conversation. Give each comment a stable `id`, and set `parentId` on replies to another comment. Set a comment's `topic` to the analysis topic it raises, when it raises one. Tag the thread with its analysis: a summary, the thread's sentiment, counts of reply sentiment, topics with counts, and the questions people ask. Keep excerpts to at most 500 characters and use a canonical thread URL (HN item id, Reddit discussion, Bluesky post, GitHub issue, YouTube video, X status, or LinkedIn post). A known URL is not saved again.
+Save the snapshot with the thread: the post and about 20 top comments with the replies under them, as text. Keep images as described below. Save every comment you read, not only the one you answer, because the thread page draws the whole conversation. Give each comment a stable `id`, and set `parentId` on replies to another comment. Set a comment's `topic` to the analysis topic it raises, when it raises one. Tag the thread with its analysis: a summary, the thread's sentiment, counts of reply sentiment, topics with counts, and the questions people ask. Keep excerpts to at most 500 characters and use a canonical thread URL (HN item id, Reddit discussion, Bluesky post, GitHub issue, YouTube video, X status, or LinkedIn post). A known URL is not saved again.
 
 ```sh
 pst social-radar save-thread --input '{"runId":"<runId>","site":"hn","url":"https://news.ycombinator.com/item?id=<id>","title":"<title>","excerpt":"<short excerpt>","publishedAt":"<ISO time>","topic":"<matched term>","mention":false,"intent":"asking-for-tool","relevance":3,"reason":"<why it matters>","snapshot":{"takenAt":"<ISO time>","post":{"author":"<name>","body":"<post text>","score":12,"commentCount":8},"comments":[{"id":"c1","author":"<name>","body":"<comment>","votes":4,"topic":"review flow"},{"id":"c2","parentId":"c1","author":"<name>","body":"<reply>","votes":2},{"id":"c3","author":"<name>","body":"<comment>","votes":1}]},"analysis":{"summary":"<two sentences>","sentiment":"neutral","replySentiment":{"negative":1,"neutral":4,"positive":3},"topics":[{"label":"review flow","count":3}],"questions":["<question>"]}}'
 ```
 
 `intent` is `asking-for-tool`, `problem`, `comparison`, `launch`, `mention`, or `discussion`. Optional fields: `author`, `community`, `publishedAt`, `snapshot`, `analysis`. `community` is the place inside the site, such as `r/ClaudeAI` or a DEV tag. Leave it out when the site has none, as on Hacker News.
+
+### Keep thread images
+
+After saving a thread, keep copies of up to 4 images from the post and its saved comments, post images first. Skip avatars, emoji, icons, videos, and images over 5 MB. Download each full-size image into `.social-radar-downloads/` in the workspace, add it, and delete the folder when the thread is done:
+
+```sh
+pst social-radar add-thread-image --threadId <id> --path .social-radar-downloads/<file> --alt '<what it shows>'
+pst social-radar add-thread-image --threadId <id> --path .social-radar-downloads/<file> --commentId <comment id> --alt '<what it shows>'
+```
+
+On Reddit, the RSS content links each image as `https://i.redd.it/<name>` or `https://preview.redd.it/<name>?...`; decode `&amp;` in the link, but change nothing else: preview links are signed, and an edited query returns a 403 page. Use the same user agent. Image downloads do not count against the channel budget. When `update-thread` replaces a snapshot, copy the `images` entries you keep into the new snapshot; copies it no longer names are deleted.
 
 ## Reply ideas
 
@@ -70,7 +82,7 @@ pst social-radar update-idea --id <id> --input '{"body":"<better reply>"}'
 
 ## New posts
 
-Suggest 3–5 new posts across `demo`, `topic`, and `showcase`. A new post is a thread with a `kind`; it starts as an idea, while a found thread starts as new. It has one target site, a ready-to-paste `draft`, a `reason`, `tags`, and `basedOn`. Keep the draft within the site's length limit. Read `git log --since=<since> --oneline` and new `.changeset/*.md` files in the linked repo. When changes shipped, make at least one `demo` or `showcase` post name an actual change, with the commit SHA or changeset name in `basedOn`. Put thread ids in `basedOn` when a post answers saved threads. If nothing shipped, say so; never invent a change.
+Suggest 3–5 new posts across `demo`, `topic`, and `showcase`. A new post is a thread with a `kind`; it starts as an idea, while a found thread starts as new. It has one target channel (`site`), a ready-to-paste `draft`, a `reason`, `tags`, and `basedOn`. Keep the draft within the site's length limit. Read `git log --since=<earliest channel since> --oneline` and new `.changeset/*.md` files in the linked repo. When changes shipped, make at least one `demo` or `showcase` post name an actual change, with the commit SHA or changeset name in `basedOn`. Put thread ids in `basedOn` when a post answers saved threads. If nothing shipped, say so; never invent a change.
 
 ```sh
 pst social-radar save-thread --input '{"runId":"<runId>","kind":"demo","site":"x","title":"<named change>","draft":"<ready-to-paste post>","reason":"<why now>","tags":["#BuildInPublic"],"basedOn":["<commit SHA>"]}'
@@ -79,7 +91,7 @@ pst social-radar update-thread --id <id> --input '{"draft":"<better post>"}'
 
 ### Media
 
-A post can carry images or a video within its site's rule in `mediaRules`. Hacker News takes none. When the project has the tools, add UI screenshots, a screen recording of the running app, or a short animation you build and record. Save each file in the workspace, then copy it to the post:
+A post can carry images or a video within its channel's `mediaRule`. Hacker News and custom channels take none. When the project has the tools, add UI screenshots, a screen recording of the running app, or a short animation you build and record. Save each file in the workspace, then copy it to the post:
 
 ```sh
 pst social-radar add-media --threadId <id> --path <workspace-path>
@@ -89,10 +101,10 @@ The command refuses a file the site does not allow. Skip media when the tools ar
 
 ## Finish
 
-Save results as you go. Finish even when every site is skipped. Summarize the real findings in two or three sentences. Report the actual search count for all eight sites, including zero, and every skipped site with a plain reason:
+Save results as you go. Finish even when every channel is skipped. Summarize the real findings in two or three sentences. Build `searches` from the channel ids returned by `get-context`, including zero for each channel you did not search. Include custom channels and omit removed channels. Report every skipped channel with its returned id and a plain reason. For example, when the returned channels are `hn` and `lobsters`:
 
 ```sh
-pst social-radar finish-run --input '{"runId":"<runId>","summary":"<summary>","searches":{"hn":0,"reddit":0,"bluesky":0,"devto":0,"github":0,"youtube":0,"x":0,"linkedin":0},"skippedSites":[{"site":"x","reason":"Browser tool unavailable"}]}'
+pst social-radar finish-run --input '{"runId":"<runId>","summary":"<summary>","searches":{"hn":1,"lobsters":0},"skippedSites":[{"site":"lobsters","reason":"Browser tool unavailable"}]}'
 ```
 
 Do not report a completed run until this command succeeds. It sends one notification that opens the run's digest. Search counts are self-reported: the platform cannot measure browser actions. If research fails, keep what you saved and report the failure in the session instead of inventing results.

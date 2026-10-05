@@ -2,7 +2,9 @@ import { Badge, Box, Heading, HStack, Icon, Separator, Stack, Text } from "@chak
 import { Chip, EmptyState, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { ArrowBigUp } from "lucide-react";
 import type { FoundThread, Idea, NewPost, SnapshotComment } from "../schemas";
+import { LinkedText } from "./linked-text";
 import { ReplyIdea } from "./reply-idea";
+import { ThreadImages } from "./thread-images";
 
 const ago = (value?: string) => {
   if (!value) return "";
@@ -12,11 +14,12 @@ const ago = (value?: string) => {
 };
 
 interface CommentBodyProps {
+  threadId: string;
   comment: SnapshotComment;
   op?: string;
 }
 const CommentBody = (props: CommentBodyProps) => {
-  const { comment, op } = props;
+  const { threadId, comment, op } = props;
   return (
     <Stack gap="xs">
       <HStack gap="xs">
@@ -32,9 +35,10 @@ const CommentBody = (props: CommentBodyProps) => {
         </Text>
         {comment.topic ? <Chip>{comment.topic}</Chip> : null}
       </HStack>
-      <Text textStyle="paragraph/S/regular" whiteSpace="pre-wrap">
+      <LinkedText textStyle="paragraph/S/regular" whiteSpace="pre-wrap">
         {comment.body}
-      </Text>
+      </LinkedText>
+      <ThreadImages threadId={threadId} images={comment.images} />
       {comment.votes === undefined ? null : (
         <HStack gap="2xs" color="fg.muted">
           <Icon as={ArrowBigUp} boxSize="icon-xs" />
@@ -68,13 +72,14 @@ const IdeaList = (props: IdeaListProps) => {
 };
 
 interface CommentTreeProps extends IdeaHandlers {
+  threadId: string;
   comment: SnapshotComment;
   comments: SnapshotComment[];
   op?: string;
   nested?: boolean;
 }
 const CommentTree = (props: CommentTreeProps) => {
-  const { comment, comments, op, nested = false, ...handlers } = props;
+  const { threadId, comment, comments, op, nested = false, ...handlers } = props;
   const children = comments.filter((child) => child.parentId === comment.id);
   return (
     <Box ps={nested ? "md" : "0"} borderStartWidth={nested ? "1px" : "0"} borderColor="border.subtle">
@@ -82,15 +87,23 @@ const CommentTree = (props: CommentTreeProps) => {
         {comment.mine ? (
           <SimpleCard bg="bg.subtle">
             <SimpleCardBody>
-              <CommentBody comment={comment} op={op} />
+              <CommentBody threadId={threadId} comment={comment} op={op} />
             </SimpleCardBody>
           </SimpleCard>
         ) : (
-          <CommentBody comment={comment} op={op} />
+          <CommentBody threadId={threadId} comment={comment} op={op} />
         )}
         <IdeaList {...handlers} replyTo={comment.id} />
         {children.map((child) => (
-          <CommentTree key={child.id} {...handlers} comment={child} comments={comments} op={op} nested />
+          <CommentTree
+            key={child.id}
+            {...handlers}
+            threadId={threadId}
+            comment={child}
+            comments={comments}
+            op={op}
+            nested
+          />
         ))}
       </Stack>
     </Box>
@@ -126,9 +139,10 @@ export const Conversation = (props: ConversationProps) => {
       <Heading as="h1" textStyle="heading/M">
         {thread.title}
       </Heading>
-      <Text textStyle="paragraph/M/regular" whiteSpace="pre-wrap">
+      <LinkedText textStyle="paragraph/M/regular" whiteSpace="pre-wrap">
         {snapshot.post.body}
-      </Text>
+      </LinkedText>
+      <ThreadImages threadId={thread.id} images={snapshot.post.images} />
       <IdeaList {...handlers} />
       <Separator />
       <Text textStyle="label/S/medium">Comments · top</Text>
@@ -137,6 +151,7 @@ export const Conversation = (props: ConversationProps) => {
           <CommentTree
             key={comment.id}
             {...handlers}
+            threadId={thread.id}
             comment={comment}
             comments={snapshot.comments}
             op={snapshot.post.author}

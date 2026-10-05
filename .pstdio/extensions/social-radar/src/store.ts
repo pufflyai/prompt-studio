@@ -4,12 +4,14 @@ import type { Idea, Run, Thread } from "./schemas";
 export const radarChanged = eventRef<{ id?: string }>({ extensionId: "pstdio.social-radar", id: "radar.changed" });
 export const threadResource = defineResourceKind({ id: "thread", label: "Thread", icon: "message-square" });
 export const postMedia = defineArtifactMount({ id: "post-media", path: "post-media", label: "Post media" });
+export const threadMedia = defineArtifactMount({ id: "thread-media", path: "thread-media", label: "Thread images" });
 export const runResource = defineResourceKind({ id: "run", label: "Run", icon: "radar" });
 export const settingsSection = defineResourceKind({
   id: "settings-section",
   label: "Settings section",
   icon: "settings",
 });
+export const channelResource = defineResourceKind({ id: "channel", label: "Channel", icon: "radio-tower" });
 
 export const runsOf = (ctx: ExtensionContextBase) => ctx.storage.collection<Run>("runs");
 export const threadsOf = (ctx: ExtensionContextBase) => ctx.storage.collection<Thread>("threads");

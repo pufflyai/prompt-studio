@@ -50,6 +50,91 @@ const sessionAttachmentFile = (name: string) => {
   };
 };
 
+interface StartedHarness {
+  start: ReturnType<typeof mock>;
+  params?: Record<string, unknown>;
+  defaults?: Record<string, unknown>;
+}
+// Session-creation deps around one fake harness; `defaults` are the project's stored harness params.
+const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unknown[] = []) => {
+  const workspace = {
+    id: "workspace",
+    project_id: "project-1",
+    execution_kind: "local",
+    root_path: process.cwd(),
+    provider_state: "ready",
+  };
+  return createCommandEnvironment(
+    {
+      extensionStorageService: makeStorageService(),
+      extensionSettingsDBService: {
+        getValue: async () => (harness.defaults ? { value_json: harness.defaults } : null),
+      },
+      workspaceService: {
+        getDefault: async () => workspace,
+        get: async () => workspace,
+        getByShorthand: async () => null,
+      },
+      workspaceSessionService: { link: async () => {}, getWorkspaceBySessionId: async () => workspace },
+      projectService: {
+        get: async () => ({ id: "project-1", default_agent_id: null, default_agent_model: null }),
+      },
+      fileService: {
+        get: async () => sessionAttachmentFile("extension-create.txt"),
+      },
+      harnessRegistry: {
+        get: async () => ({ start: harness.start, listModels: () => [], params: harness.params }),
+        list: async () => [{ id: "fake-agent" }],
+      },
+      settingsService: {
+        get: async () => ({ max_concurrent_sessions: null }),
+      },
+      sessionQueueEntriesService: {
+        createDispatchStarted: async (input: unknown) => {
+          dispatchEntries.push(input);
+          return { queue_position: 1 };
+        },
+      },
+      sessionService: {
+        create: async (input: Record<string, unknown>) => ({
+          id: "session-1",
+          project_id: input.project_id,
+          title: input.title,
+          status: "in_progress",
+          agent: input.agent,
+          last_selected_model: input.last_selected_model ?? null,
+          cwd: input.cwd ?? null,
+        }),
+        update: async () => null,
+        get: async () => ({ id: "session-1", project_id: "project-1", status: "in_progress", agent: "fake-agent" }),
+        transitionStatus: async () => null,
+        store: createTrackedSessionStore(),
+      },
+      eventBus: { emit: () => {} },
+      activityEventsService: { create: async () => ({}) },
+    } as never,
+    makeEnabledSources() as never,
+    {
+      extensionId: "pstdio.extension-lab",
+      name: "extension-lab",
+      project: projectContext,
+      projectId: "project-1",
+    },
+  );
+};
+const startedHarness = () =>
+  mock((_input: unknown) => ({
+    agentSessionId: "agent-session-1",
+    done: new Promise(() => {}),
+    stop: () => {},
+  }));
+const firstStart = async (start: ReturnType<typeof mock>) => {
+  for (let attempt = 0; attempt < 20 && start.mock.calls.length === 0; attempt += 1) {
+    await Bun.sleep(0);
+  }
+  return start.mock.calls[0]?.[0];
+};
+
 describe("createCommandEnvironment sessions listByWorkspace", () => {
   test("lists sessions linked to a workspace through the workspace-session join", async () => {
     const listByWorkspace = mock(async () => [
@@ -118,72 +203,8 @@ describe("createCommandEnvironment sessions listByWorkspace", () => {
 describe("createCommandEnvironment sessions attachments", () => {
   test("forwards attachment refs from extension-created sessions", async () => {
     const dispatchEntries: unknown[] = [];
-    const workspace = {
-      id: "workspace",
-      project_id: "project-1",
-      execution_kind: "local",
-      root_path: process.cwd(),
-      provider_state: "ready",
-    };
-    const start = mock((_input: unknown) => ({
-      agentSessionId: "agent-session-1",
-      done: new Promise(() => {}),
-      stop: () => {},
-    }));
-    const env = createCommandEnvironment(
-      {
-        extensionStorageService: makeStorageService(),
-        workspaceService: {
-          getDefault: async () => workspace,
-          get: async () => workspace,
-          getByShorthand: async () => null,
-        },
-        workspaceSessionService: { link: async () => {}, getWorkspaceBySessionId: async () => workspace },
-        projectService: {
-          get: async () => ({ id: "project-1", default_agent_id: null, default_agent_model: null }),
-        },
-        fileService: {
-          get: async () => sessionAttachmentFile("extension-create.txt"),
-        },
-        harnessRegistry: {
-          get: async () => ({ start, listModels: () => [] }),
-          list: async () => [{ id: "fake-agent" }],
-        },
-        settingsService: {
-          get: async () => ({ max_concurrent_sessions: null }),
-        },
-        sessionQueueEntriesService: {
-          createDispatchStarted: async (input: unknown) => {
-            dispatchEntries.push(input);
-            return { queue_position: 1 };
-          },
-        },
-        sessionService: {
-          create: async (input: Record<string, unknown>) => ({
-            id: "session-1",
-            project_id: input.project_id,
-            title: input.title,
-            status: "in_progress",
-            agent: input.agent,
-            last_selected_model: input.last_selected_model ?? null,
-            cwd: input.cwd ?? null,
-          }),
-          update: async () => null,
-          get: async () => ({ id: "session-1", project_id: "project-1", status: "in_progress", agent: "fake-agent" }),
-          transitionStatus: async () => null,
-          store: createTrackedSessionStore(),
-        },
-        eventBus: { emit: () => {} },
-        activityEventsService: { create: async () => ({}) },
-      } as never,
-      makeEnabledSources() as never,
-      {
-        extensionId: "pstdio.extension-lab",
-        name: "extension-lab",
-        project: projectContext,
-        projectId: "project-1",
-      },
-    );
+    const start = startedHarness();
+    const env = createSessionEnvironment({ start }, dispatchEntries);
 
     await env.sessions.create({
       title: "Extension attachment session",
@@ -196,12 +217,38 @@ describe("createCommandEnvironment sessions attachments", () => {
       request_kind: "start",
       attachments_json: [{ file_id: "file-1" }],
     });
-    for (let attempt = 0; attempt < 20 && start.mock.calls.length === 0; attempt += 1) {
-      await Bun.sleep(0);
-    }
-    expect(start.mock.calls[0]?.[0]).toMatchObject({
+    expect(await firstStart(start)).toMatchObject({
       attachments: [expect.objectContaining({ fileId: "file-1", fileName: "extension-create.txt" })],
     });
+  });
+
+  test("starts extension-created sessions with the chosen model options over the project defaults", async () => {
+    const start = startedHarness();
+    const effort = {
+      type: "select",
+      defaultValue: "medium",
+      options: ["low", "medium", "high"].map((value) => ({ label: value, value })),
+    };
+    const env = createSessionEnvironment({
+      start,
+      params: { effort, fast: { type: "boolean", defaultValue: false } },
+      defaults: { fast: true },
+    });
+
+    await env.sessions.create({
+      title: "Research",
+      prompt: "Research",
+      harness: { harnessId: "fake-agent", params: { effort: "high" } },
+    });
+
+    expect(await firstStart(start)).toMatchObject({ params: { effort: "high", fast: true } });
+  });
+
+  test("rejects model options the harness does not declare", async () => {
+    const env = createSessionEnvironment({ start: startedHarness(), params: {} });
+    await expect(
+      env.sessions.create({ title: "Research", harness: { harnessId: "fake-agent", params: { effort: "high" } } }),
+    ).rejects.toThrow();
   });
 
   test("forwards attachment refs from extension follow-ups", async () => {

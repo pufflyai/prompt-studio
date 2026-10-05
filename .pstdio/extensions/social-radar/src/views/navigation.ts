@@ -1,7 +1,8 @@
 import { defineView, type TreeNode, workbenchPanels } from "@pstdio/sdk/extensions";
 import { commands } from "../commands";
 import { isNewPost, type Run, type Thread } from "../schemas";
-import { siteLabels } from "../sites";
+import { readSettings } from "../settings";
+import { channelNames } from "../sites";
 import { newest, pageRef, radarChanged, runLabel, runRef, runsOf, threadsOf } from "../store";
 import { plural } from "../text";
 import { sectionTarget } from "./settings-menu";
@@ -13,14 +14,14 @@ const runIcon = (run: Run) => {
   return { icon: "CircleCheck", iconColor: "fg.success" };
 };
 // Tree rows show no trailing text, so the tooltip on the status icon carries the run's result.
-const runTooltip = (run: Run, threads: Thread[]) => {
+const runTooltip = (run: Run, threads: Thread[], names: Record<string, string>) => {
   if (run.status === "running") return "Running";
   if (run.status === "failed") return `Failed: ${run.failureReason ?? "unknown reason"}`;
   const found = threads.filter((thread) => thread.runId === run.id && !isNewPost(thread)).length;
-  const skipped = run.skippedSites?.map((skip) => siteLabels[skip.site]) ?? [];
+  const skipped = run.skippedSites?.map((skip) => names[skip.site] ?? skip.site) ?? [];
   return [plural(found, "thread"), skipped.length ? `Skipped ${skipped.join(", ")}` : ""].filter(Boolean).join(" · ");
 };
-const runNode = (run: Run, threads: Thread[]): TreeNode => {
+const runNode = (run: Run, threads: Thread[], names: Record<string, string>): TreeNode => {
   const resource = runRef(run);
   const digest: TreeNode = {
     id: `${run.id}:digest`,
@@ -43,7 +44,7 @@ const runNode = (run: Run, threads: Thread[]): TreeNode => {
     id: run.id,
     label: runLabel(run),
     ...runIcon(run),
-    iconTooltip: runTooltip(run, threads),
+    iconTooltip: runTooltip(run, threads, names),
     resource,
     target: { kind: "page", page: pageRef("run"), resource },
     children: run.sessionId ? [session, digest] : [digest],
@@ -60,11 +61,13 @@ export const radarTree = defineView({
     async body(ctx) {
       const runs = newest(await runsOf(ctx).list(), (run) => run.startedAt).slice(0, 14);
       const threads = await threadsOf(ctx).list();
+      const names = channelNames((await readSettings(ctx.settings)).channels);
       return [
         {
           id: "pages",
           collapsible: false,
           nodes: [
+            { id: "radar", label: "Social radar", icon: "Radar", target: { kind: "page", page: pageRef("radar") } },
             { id: "threads", label: "Threads", icon: "List", target: { kind: "page", page: pageRef("threads") } },
             {
               id: "settings",
@@ -79,7 +82,7 @@ export const radarTree = defineView({
           label: "Runs",
           actions: [{ id: "run-daily", label: "Run now", icon: "Play", command: commands["run-daily"].ref }],
           emptyState: { title: "No runs yet", description: "Run now, or wait for the 07:00 run." },
-          nodes: runs.map((run) => runNode(run, threads)),
+          nodes: runs.map((run) => runNode(run, threads, names)),
         },
       ];
     },

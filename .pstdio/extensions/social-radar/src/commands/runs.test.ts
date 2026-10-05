@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Run, Thread } from "../schemas";
+import { defaults } from "../settings";
 import { commands } from ".";
 import { finish, foundThread, newPost, setup } from "./test-context";
 
@@ -28,13 +29,28 @@ describe("social radar runs", () => {
     expect(notifications.map((notice) => notice.title)).toEqual(["Social radar: 1 mention, 1 thread"]);
   });
 
-  test("rejects a run that reports more searches than the site's budget", async () => {
-    const { ctx, settings } = setup();
-    settings.set("budgets", { hn: 1 });
+  test("starts the research session with the chosen agent and model options", async () => {
+    const { ctx, sessions } = setup();
+    const agent = {
+      harnessId: "pstdio.harness-claude.harness.claude",
+      model: "claude-opus-5-5",
+      params: { effort: "high" },
+    };
+    await commands["set-agent"].run(ctx, { agent });
+    await commands["run-daily"].run(ctx, {});
+    expect(sessions[0]).toMatchObject({ harness: agent });
+  });
+
+  test("rejects a run that reports more searches than the channel's budget", async () => {
+    const { ctx } = setup();
+    await commands["update-channel"].run(ctx, { id: "hn", budget: 1 });
     const run = await commands["run-daily"].run(ctx, {});
     await expect(
       commands["finish-run"].run(ctx, { input: { ...finish(run.runId), searches: { hn: 2 } } }),
     ).rejects.toThrow("Search budget exceeded for hn.");
+    await expect(
+      commands["finish-run"].run(ctx, { input: { ...finish(run.runId), searches: { mastodon: 1 } } }),
+    ).rejects.toThrow("mastodon is not a channel.");
   });
 
   test("retries completion when its notification could not be saved", async () => {
@@ -63,23 +79,39 @@ describe("social radar runs", () => {
   });
 
   test("gives the agent brand terms, media rules, follow-ups and recent posts", async () => {
-    const { ctx, storage } = setup();
+    const { ctx } = setup();
     const run = await commands["run-daily"].run(ctx, {});
     const saved = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
     await commands["save-thread"].run(ctx, { input: newPost(run.runId) });
     await commands["set-thread-status"].run(ctx, { id: saved.id, status: "answered" });
     await commands["finish-run"].run(ctx, { input: finish(run.runId) });
     const context = await commands["get-context"].run(ctx, { runId: run.runId });
-    const finished = await storage.collection<Run>("runs").get(run.runId);
     expect(context).toMatchObject({
-      brandTerms: ["Prompt Studio", "pstdio"],
-      mediaRules: { x: { images: 4, videos: 1, either: true } },
-      since: finished?.startedAt,
+      brandTerms: defaults.brandTerms,
       recentPosts: ["Review page for agent diffs"],
     });
+    expect(context.channels.find((channel) => channel.id === "x")?.mediaRule).toEqual({
+      images: 4,
+      videos: 1,
+      either: true,
+    });
+    expect(context).not.toHaveProperty("agent");
     expect(context.followUps.map((thread) => thread.id)).toEqual([saved.id]);
     await commands["record-outcome"].run(ctx, { threadId: saved.id, outcome: "No response" });
     expect((await commands["get-context"].run(ctx, { runId: run.runId })).followUps).toHaveLength(0);
+  });
+
+  test("keeps a channel's window open until a run searches it", async () => {
+    const { ctx, storage } = setup();
+    // The fixture run searches Hacker News and skips X.
+    const first = await commands["run-daily"].run(ctx, {});
+    await commands["finish-run"].run(ctx, { input: finish(first.runId) });
+    const second = await commands["run-daily"].run(ctx, {});
+    const { channels } = await commands["get-context"].run(ctx, { runId: second.runId });
+    const searchedAt = (await storage.collection<Run>("runs").get(first.runId))?.startedAt ?? "";
+    const since = (id: string) => Date.parse(channels.find((channel) => channel.id === id)?.since ?? "");
+    expect(since("hn")).toBe(Date.parse(searchedAt));
+    expect(since("x")).toBeLessThan(Date.parse(searchedAt));
   });
 
   test("follows up on answered threads for a week only", async () => {

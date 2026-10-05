@@ -1,9 +1,11 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { requireRunning } from "../run-lifecycle";
 import { isNewPost, type NewPost, saveThread, type Thread, threadStatus, updateThread } from "../schemas";
-import { mediaRules } from "../sites";
+import { readSettings } from "../settings";
+import { channelNames, mediaRuleOf } from "../sites";
 import { changed, ideasOf, requireThread, threadsOf } from "../store";
 import { canonicalThreadUrl, threadId } from "../urls";
+import { pruneThreadImages, requireThreadImages } from "./thread-images";
 
 const foundOnly = ["mention", "author", "community", "excerpt", "publishedAt", "topic", "intent", "relevance"];
 const postOnly = ["draft", "tags", "basedOn"];
@@ -16,6 +18,8 @@ export const saveThreadCommand = defineCommand({
   async run(ctx, { input }) {
     const data = saveThread.parse(input);
     await requireRunning(ctx, data.runId);
+    const { channels } = await readSettings(ctx.settings);
+    if (!channels.some((channel) => channel.id === data.site)) throw new Error(`${data.site} is not a channel.`);
     const foundAt = new Date().toISOString();
     if ("kind" in data) {
       const id = crypto.randomUUID();
@@ -28,6 +32,7 @@ export const saveThreadCommand = defineCommand({
     const posted = (await threadsOf(ctx).list()).find((thread) => isNewPost(thread) && thread.url === url);
     if (posted) return { id: posted.id, created: false };
     const id = threadId(url);
+    if (data.snapshot) await requireThreadImages(ctx, id, data.snapshot);
     const created = await threadsOf(ctx).createIfAbsent(id, { ...data, url, id, status: "new", foundAt });
     if (created) await changed(ctx, id);
     return { id, created };
@@ -54,9 +59,11 @@ export const updateThreadCommand = defineCommand({
         (idea) => idea.threadId === id && idea.replyTo && idea.status !== "dismissed" && !kept.has(idea.replyTo),
       );
       if (lost) throw new Error(`Keep comment ${lost.replyTo} in the snapshot; a reply idea answers it.`);
+      await requireThreadImages(ctx, id, patch.snapshot);
     }
     const outcomeCheckedAt = patch.outcome ? new Date().toISOString() : thread.outcomeCheckedAt;
     await threadsOf(ctx).update(id, { ...thread, ...patch, outcomeCheckedAt } as Thread);
+    if (patch.snapshot) await pruneThreadImages(ctx, id, patch.snapshot);
     await changed(ctx, id);
     return { id };
   },
@@ -136,6 +143,8 @@ export const getThread = defineCommand({
       const found = await threadsOf(ctx).get(source);
       if (found) sourceTitles[source] = found.title;
     }
-    return { thread, ideas, sourceTitles, mediaRule: mediaRules[thread.site] };
+    const { channels } = await readSettings(ctx.settings);
+    const channelName = channelNames(channels)[thread.site] ?? thread.site;
+    return { thread, ideas, sourceTitles, channelName, mediaRule: mediaRuleOf(thread.site) };
   },
 });

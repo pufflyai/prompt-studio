@@ -6,6 +6,7 @@ import type {
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { emitActivityEvent } from "../../activity/activity-events";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
+import { resolveHarnessRunParams } from "../../sessions/harness-params";
 import { resolveSessionCwd } from "../../sessions/resolve-session-cwd";
 import { resolveSessionAttachments } from "../../sessions/session-attachments";
 import { createSessionScheduler } from "../../sessions/session-scheduler";
@@ -95,6 +96,13 @@ export const createSessionsApi = (
           requestAgentWasOmitted: !harness.agent,
         },
       );
+      // Same resolution as REST sessions: harness defaults, project defaults, then the extension's choice.
+      const params = await resolveHarnessRunParams(deps, {
+        projectId: input.projectId,
+        agentId: resolvedAgent.agentId,
+        model,
+        overrides: harness.params,
+      });
       const prompt = resolveExtensionPrompt(sessionInput);
       const attachments = await resolveSessionAttachments(deps, input.projectId, sessionInput.attachments);
       const cwd = await resolveSessionCwd(deps, input.projectId, workspace?.id);
@@ -106,6 +114,7 @@ export const createSessionsApi = (
         attachments,
         attachmentRefs: sessionInput.attachments,
         model,
+        params,
         originalSessionId: sessionInput.originalSessionId,
         cwd,
         anchors: sessionInput.anchors,

@@ -8,7 +8,7 @@
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.0"
+    "pstdio": "^0.1.2"
   },
   "pstdio": {
     "scope": "repo"

@@ -2,7 +2,7 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { completeRun, requireRun, startRun } from "../run-lifecycle";
 import { finishRun, isNewPost, type Thread } from "../schemas";
 import { readSettings } from "../settings";
-import { mediaRules } from "../sites";
+import { mediaRuleOf } from "../sites";
 import { ideasOf, newest, runsOf, threadsOf } from "../store";
 import { localDay } from "../text";
 
@@ -31,7 +31,10 @@ export const getContext = defineCommand({
       (await runsOf(ctx).list()).filter((item) => item.status === "done"),
       (item) => item.startedAt,
     );
-    const since = finished[0]?.startedAt ?? new Date(Date.now() - day).toISOString();
+    // A run that skipped a channel did not read it, so the channel keeps its earlier window.
+    const sinceFor = (channelId: string) =>
+      finished.find((item) => item.searches?.[channelId] && !item.skippedSites?.some((skip) => skip.site === channelId))
+        ?.startedAt ?? new Date(Date.now() - day).toISOString();
     const today = localDay(run.startedAt);
     const threads = await threadsOf(ctx).list();
     // Follow up for a week after answering, at most once a day, so old answers stop costing searches.
@@ -46,7 +49,13 @@ export const getContext = defineCommand({
     const recentPosts = threads
       .filter((thread) => isNewPost(thread) && Date.parse(thread.foundAt) >= Date.now() - 14 * day)
       .map((thread) => thread.title);
-    return { ...settings, mediaRules, since, followUps, recentPosts };
+    const { agent, ...research } = settings;
+    const channels = settings.channels.map((channel) => ({
+      ...channel,
+      mediaRule: mediaRuleOf(channel.id),
+      since: sinceFor(channel.id),
+    }));
+    return { ...research, channels, followUps, recentPosts };
   },
 });
 

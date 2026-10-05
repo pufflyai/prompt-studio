@@ -1,6 +1,6 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { isNewPost } from "../schemas";
-import { mediaFits, mediaRules, mediaType } from "../sites";
+import { mediaFits, mediaRuleOf, mediaType } from "../sites";
 import { changed, postMedia, requireThread } from "../store";
 
 export const addMedia = defineCommand({
@@ -23,7 +23,7 @@ export const addMedia = defineCommand({
     const existing = (await mount.list(`${thread.id}/*`)).map((file) => file.path);
     const path = `${thread.id}/${name}`;
     if (existing.includes(path)) throw new Error(`This post already has a file named ${name}.`);
-    if (!mediaFits(mediaRules[thread.site], [...existing, path]))
+    if (!mediaFits(mediaRuleOf(thread.site), [...existing, path]))
       throw new Error(`This file does not fit the media rule for ${thread.site}.`);
     await mount.writeBytes(path, await files.readBytes(input.path));
     await changed(ctx, thread.id);

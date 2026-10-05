@@ -3,12 +3,13 @@ import { CopyButton, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { Check, Lightbulb, Pencil, X } from "lucide-react";
 import { useState } from "react";
 import type { NewPost } from "../schemas";
-import { type MediaRule, postLengthLimits, siteLabels } from "../sites";
+import { type MediaRule, postLengthLimits } from "../sites";
 import { MediaTray } from "./media-tray";
 import { DraftEditor } from "./reply-idea";
 
 interface NewPostDraftProps {
   post: NewPost;
+  channelName: string;
   mediaRule: MediaRule;
   onEdit: (draft: string) => void;
   onDismiss: () => void;
@@ -16,14 +17,14 @@ interface NewPostDraftProps {
 }
 /** A new post before it is published: the draft as it would look on its site. */
 export const NewPostDraft = (props: NewPostDraftProps) => {
-  const { post, mediaRule, onEdit, onDismiss, onPosted } = props;
+  const { post, channelName, mediaRule, onEdit, onDismiss, onPosted } = props;
   const [editing, setEditing] = useState(false);
   const [url, setUrl] = useState("");
   const limit = postLengthLimits[post.site];
   return (
     <Stack gap="md">
       <Text textStyle="label/S/regular" color="fg.muted">
-        Draft for {siteLabels[post.site]}
+        Draft for {channelName}
       </Text>
       <SimpleCard aria-label="Draft post">
         <SimpleCardBody>
@@ -54,7 +55,7 @@ export const NewPostDraft = (props: NewPostDraftProps) => {
                 {post.draft}
               </Text>
             )}
-            <MediaTray threadId={post.id} site={post.site} rule={mediaRule} />
+            <MediaTray threadId={post.id} channelName={channelName} rule={mediaRule} />
             {editing ? null : (
               <HStack gap="2xs">
                 <CopyButton size="xs" variant="ghost" text={post.draft} label="Copy post" />

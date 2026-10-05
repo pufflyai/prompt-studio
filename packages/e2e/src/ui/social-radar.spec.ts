@@ -5,13 +5,15 @@ import { folderProjectInput } from "../helpers/folder-project";
 
 const source = join(import.meta.dirname, "../../../../.pstdio/extensions/social-radar");
 
+const onePixelPng = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 // A fixture command seeds one finished run in the extension's own storage. No agent or social account is used.
 const seedCommand = `defineCommand({ id: "seed", title: "Seed radar", async run(ctx) {
   const now = new Date().toISOString();
   await ctx.storage.collection("runs").put("run-1", { id: "run-1", status: "done", sessionId: "session-1", startedAt: now, finishedAt: now, summary: "One review names Prompt Studio.", searches: { hn: 1 }, skippedSites: [{ site: "x", reason: "Browser unavailable" }] });
   await ctx.storage.collection("threads").put("thread-1", { id: "thread-1", runId: "run-1", site: "hn", url: "https://news.ycombinator.com/item?id=42", title: "Tried Prompt Studio for reviews", excerpt: "A review page in an evening.", topic: "Prompt Studio", mention: true, intent: "mention", relevance: 3, reason: "A first-hand review", status: "new", foundAt: now,
-    snapshot: { takenAt: now, post: { author: "dana", body: "I built a review page in an evening." }, comments: [{ id: "c1", author: "sam", body: "How does it compare to Cursor?" }] },
+    snapshot: { takenAt: now, post: { author: "dana", body: "I built a review page in an evening.", images: [{ file: "review.png", alt: "The review page" }] }, comments: [{ id: "c1", author: "sam", body: "How does it compare to Cursor?" }, { id: "c2", author: "lee", body: "Setup notes: https://prompt.studio/docs/setup." }] },
     analysis: { summary: "People like the review page.", sentiment: "positive", replySentiment: { negative: 0, neutral: 1, positive: 2 }, topics: [{ label: "review flow", count: 2 }], questions: ["How does it compare to Cursor?"] } });
+  await ctx.artifacts.mount("thread-media").writeBytes("thread-1/review.png", Uint8Array.from(atob("${onePixelPng}"), (c) => c.charCodeAt(0)));
   await ctx.storage.collection("ideas").put("idea-1", { id: "idea-1", runId: "run-1", threadId: "thread-1", replyTo: "c1", body: "Different jobs.\\n\\nBuild the review tool here.", status: "new", createdAt: now });
   await ctx.storage.collection("threads").put("post-1", { id: "post-1", runId: "run-1", kind: "demo", site: "x", title: "Review page in ten minutes", draft: "I built a review page in ten minutes.", reason: "Two threads ask for it.", tags: ["#BuildInPublic"], basedOn: ["thread-1"], status: "idea", foundAt: now });
   return {};
@@ -108,7 +110,25 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     const thread = page.locator('iframe[title="Thread"]:visible').contentFrame();
     const summary = page.locator('iframe[title="Summary"]:visible').contentFrame();
     await expect(summary.getByText("How does it compare to Cursor?")).toBeVisible();
+    // The run kept a copy of the post's image.
+    await expect
+      .poll(() =>
+        thread.getByRole("img", { name: "The review page" }).evaluate((image: HTMLImageElement) => image.naturalWidth),
+      )
+      .toBe(1);
     await shot(page, "03-thread");
+    // Links open through the host, outside the webview sandbox, so the site runs with its own origin.
+    await page
+      .context()
+      .route("https://prompt.studio/**", (route) =>
+        route.fulfill({ body: "<title>Setup</title>", contentType: "text/html" }),
+      );
+    const opened = page.context().waitForEvent("page");
+    await thread.getByRole("link", { name: "https://prompt.studio/docs/setup" }).click();
+    const tab = await opened;
+    await tab.waitForLoadState();
+    expect(await tab.evaluate(() => window.origin)).toBe("https://prompt.studio");
+    await tab.close();
     await thread.getByRole("button", { name: "Copy reply" }).click();
     await page.bringToFront();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
@@ -144,6 +164,13 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await expect(page.getByText("Writing voice", { exact: true })).toBeVisible();
     await expect(page.getByText("Brand terms", { exact: true })).toBeHidden();
     await shot(page, "06-settings");
+    // The Agent section shows the research agent; each channel row can be removed.
+    await page.getByRole("option", { name: "Agent", exact: true }).click();
+    await expect(page.getByText("pstdio.harness-codex.harness.codex")).toBeVisible();
+    const x = page.getByRole("option", { name: "X", exact: true });
+    await x.hover();
+    await x.getByRole("button", { name: "Remove channel" }).click();
+    await expect(x).toHaveCount(0);
   } finally {
     if (projectId) await request.delete(`/v1/projects/${projectId}`);
     rmSync(root, { recursive: true, force: true });

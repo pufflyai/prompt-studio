@@ -10,7 +10,7 @@ import { commands } from "./src/commands";
 import { navigationItems, navigationTrees, pages, viewMenus, views } from "./src/pages";
 import { sessionEnded } from "./src/run-lifecycle";
 import { settingProperties } from "./src/settings";
-import { postMedia, runResource, settingsSection, threadResource } from "./src/store";
+import { channelResource, postMedia, runResource, settingsSection, threadMedia, threadResource } from "./src/store";
 
 export default defineExtension({
   commands: Object.values(commands),
@@ -20,8 +20,8 @@ export default defineExtension({
   viewMenus,
   navigationItems,
   navigationTrees,
-  resourceKinds: [threadResource, runResource, settingsSection],
-  artifactMounts: [postMedia],
+  resourceKinds: [threadResource, runResource, settingsSection, channelResource],
+  artifactMounts: [postMedia, threadMedia],
   schedules: [
     defineSchedule({
       id: "daily-digest",

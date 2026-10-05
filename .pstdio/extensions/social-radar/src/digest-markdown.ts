@@ -1,5 +1,7 @@
-import { type FoundThread, type Idea, isNewPost, type NewPost, type Run, sites, type Thread } from "./schemas";
-import { siteLabels } from "./sites";
+import type { FoundThread, Idea, NewPost, Run, Thread } from "./schemas";
+import { isNewPost } from "./schemas";
+import type { Channel } from "./settings";
+import { channelNames } from "./sites";
 import { plural } from "./text";
 
 const time = (value: string) => new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -10,17 +12,17 @@ const ideaCount = (thread: Thread, ideas: Idea[]) => ideas.filter((idea) => idea
 const escapeMarkdown = (value: string) => value.replace(/\s+/g, " ").replace(/([\\`*_[\]|#<>])/g, "\\$1");
 const link = (thread: Thread) =>
   thread.url ? `[${escapeMarkdown(thread.title)}](<${thread.url}>)` : escapeMarkdown(thread.title);
-const foundLine = (thread: FoundThread, ideas: Idea[]) => {
+const foundLine = (thread: FoundThread, ideas: Idea[], names: Record<string, string>) => {
   const count = ideaCount(thread, ideas);
-  const details = [siteLabels[thread.site], thread.analysis?.sentiment, count ? plural(count, "idea") : ""];
+  const details = [names[thread.site] ?? thread.site, thread.analysis?.sentiment, count ? plural(count, "idea") : ""];
   return `- ${link(thread)} · ${details.filter(Boolean).join(" · ")}`;
 };
 // basedOn mixes thread ids with commit SHAs and changeset names; only saved threads have titles.
-const postLine = (post: NewPost, titles: Map<string, string>) => {
+const postLine = (post: NewPost, titles: Map<string, string>, names: Record<string, string>) => {
   const sources = post.basedOn?.length
     ? ` · ${post.basedOn.map((source) => titles.get(source) ?? source).join(", ")}`
     : "";
-  return `- ${escapeMarkdown(post.title)} · ${siteLabels[post.site]} · ${post.kind}${escapeMarkdown(sources)}`;
+  return `- ${escapeMarkdown(post.title)} · ${names[post.site] ?? post.site} · ${post.kind}${escapeMarkdown(sources)}`;
 };
 const section = (title: string, lines: string[], empty: string) => [
   `## ${title}`,
@@ -28,7 +30,7 @@ const section = (title: string, lines: string[], empty: string) => [
   ...(lines.length ? lines : [empty]),
   "",
 ];
-const coverageResult = (run: Run, site: (typeof sites)[number]) => {
+const coverageResult = (run: Run, site: string) => {
   const skipped = run.skippedSites?.find((skip) => skip.site === site);
   if (skipped) return `Skipped: ${escapeMarkdown(skipped.reason)}`;
   return run.searches?.[site] ? "Read" : "Not searched";
@@ -38,7 +40,8 @@ const coverageResult = (run: Run, site: (typeof sites)[number]) => {
  * The run's read-only digest: meta line, summary, mentions, answer today, new posts, and coverage.
  * `threads` holds every saved thread, so new-post sources from earlier runs keep their titles.
  */
-export const buildDigestMarkdown = (run: Run, threads: Thread[], ideas: Idea[], budgets: Record<string, number>) => {
+export const buildDigestMarkdown = (run: Run, threads: Thread[], ideas: Idea[], channels: Channel[]) => {
+  const names = channelNames(channels);
   const runThreads = threads.filter((thread) => thread.runId === run.id);
   const titles = new Map(threads.map((thread) => [thread.id, thread.title]));
   const found = runThreads.filter((thread): thread is FoundThread => !isNewPost(thread));
@@ -54,9 +57,9 @@ export const buildDigestMarkdown = (run: Run, threads: Thread[], ideas: Idea[], 
     plural(found.length, "thread"),
     plural(mentions.length, "mention"),
   ];
-  const coverage = sites.map(
-    (site) =>
-      `| ${siteLabels[site]} | ${run.searches?.[site] ?? 0} of ${budgets[site]} | ${coverageResult(run, site)} |`,
+  const coverage = channels.map(
+    (channel) =>
+      `| ${escapeMarkdown(channel.name)} | ${run.searches?.[channel.id] ?? 0} of ${channel.budget} | ${coverageResult(run, channel.id)} |`,
   );
   return [
     `_${meta.join(" · ")}_`,
@@ -65,22 +68,22 @@ export const buildDigestMarkdown = (run: Run, threads: Thread[], ideas: Idea[], 
     "",
     ...section(
       "Mentions",
-      mentions.map((thread) => foundLine(thread, ideas)),
+      mentions.map((thread) => foundLine(thread, ideas, names)),
       "No mentions in this run.",
     ),
     ...section(
       "Answer today",
-      answerToday.map((thread) => foundLine(thread, ideas)),
+      answerToday.map((thread) => foundLine(thread, ideas, names)),
       "Nothing to answer today.",
     ),
     ...section(
       "New posts",
-      posts.map((post) => postLine(post, titles)),
+      posts.map((post) => postLine(post, titles, names)),
       "No new posts in this run.",
     ),
     "## Coverage",
     "",
-    "| Site | Searches | Result |",
+    "| Channel | Searches | Result |",
     "| --- | --- | --- |",
     ...coverage,
     "",
