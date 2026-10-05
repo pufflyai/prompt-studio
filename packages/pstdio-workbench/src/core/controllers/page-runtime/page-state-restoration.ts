@@ -47,7 +47,7 @@ export const pageStateFromLayout = (
     });
     resourceInstances[slot.id] = binding.cardinality === "one" ? instances.slice(-1) : instances;
     if (slot.role === "primary") {
-      const active = matching.find((placement) => layout.regions.main.activeWidgetId === placement.widgetId);
+      const active = matching.find((placement) => layout.activeLocationWidgetId === placement.widgetId);
       activePrimaryInstanceKey = active?.placementIdentity?.instanceKey;
     }
   }

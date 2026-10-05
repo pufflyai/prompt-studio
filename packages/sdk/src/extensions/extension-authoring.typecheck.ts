@@ -9,6 +9,7 @@ import type {
   TreeRendererQueryParams,
 } from "./index";
 import {
+  DEFAULT_DATA_TABLE_SETTINGS,
   defineCommand,
   defineExtension,
   defineMode,
@@ -164,6 +165,9 @@ const dataTableQueryParams: DataTableRendererQueryParams = {
     resource: sharedRendererResource,
     invocation: { placement: "visible" },
   },
+  filter: { conjunction: "and", rules: [{ attributeId: "score", condition: "gte", value: 70 }] },
+  sorts: [{ attributeId: "score", direction: "desc" }],
+  settings: DEFAULT_DATA_TABLE_SETTINGS,
 };
 const kanbanQueryParams: KanbanRendererQueryParams = {
   renderer: dataTableQueryParams.renderer,
@@ -174,6 +178,8 @@ const kanbanQueryParams: KanbanRendererQueryParams = {
     ordering: { attributeId: "status", direction: "asc" },
     displayProperties: [],
   },
+  filter: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-none-of", value: ["done"] }] },
+  sorts: [{ attributeId: "status", direction: "asc" }],
   filters: {},
 };
 const treeQueryParams: TreeRendererQueryParams = { renderer: dataTableQueryParams.renderer };

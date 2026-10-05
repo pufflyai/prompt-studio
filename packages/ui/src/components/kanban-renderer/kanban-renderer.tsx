@@ -1,36 +1,31 @@
 import { Stack } from "@chakra-ui/react";
-import { type ReactNode, useState } from "react";
+import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import { type ReactNode, useDeferredValue, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
-import type {
-  KanbanRendererBoardColumn,
-  KanbanRendererBoardColumnAction,
-  KanbanRendererBoardGroup,
-} from "./kanban-renderer-board";
+import { withTitleField } from "../collection-view/collection-view-fields";
+import { countFilterRules } from "../collection-view/collection-view-filter";
+import { useCollectionViews } from "../collection-view/use-collection-views";
+import { type KanbanActionErrorHandler, runKanbanAction } from "./kanban-renderer-action";
+import type { KanbanRendererBoardColumnAction } from "./kanban-renderer-board";
+import { buildKanbanBoardColumns, narrowKanbanRows } from "./kanban-renderer-board-columns";
 import { applyBoardMoveItem, applyBoardMoveToGroup } from "./kanban-renderer-board-move";
 import { KanbanRendererContent } from "./kanban-renderer-content";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
-import { filterRows, groupRows, orderRows } from "./kanban-renderer-grouping";
-import {
-  collectDisplayBadges,
-  collectDisplayCustomSlots,
-  findEnumOption,
-  resolveKnownColumnKeys,
-} from "./kanban-renderer-helpers";
+import { groupRows } from "./kanban-renderer-grouping";
+import { resolveKnownColumnKeys } from "./kanban-renderer-helpers";
 import { buildKanbanRendererListItems } from "./kanban-renderer-list-items";
 import { KanbanRendererToolbar } from "./kanban-renderer-toolbar";
 import type {
   AttributeDescriptor,
   KanbanRendererCreateRowConfig,
   KanbanRendererCreateSubmission,
-  KanbanRendererFilterState,
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
   KanbanRendererViewsSource,
 } from "./types";
-import { findAttribute, NO_GROUPING } from "./types";
-import { useKanbanRendererStore } from "./use-kanban-renderer-store";
-import { useKanbanViews } from "./use-kanban-views";
+import { NO_GROUPING } from "./types";
+import { kanbanRendererInitialState, useKanbanRendererStore } from "./use-kanban-renderer-store";
 import { useResolvedAttributes } from "./use-resolved-attributes";
 
 /** Board-column behavior and menu configuration for a resolved column group. */
@@ -49,6 +44,7 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   rows: TRow[];
   /** Persistent key used by the renderer store for view, filter, grouping, ordering, and list expansion settings. */
   storageKey: string;
+  itemLabel?: string;
   /** Attribute descriptors that define display, filtering, grouping, ordering, and board columns. */
   attributes: AttributeDescriptor[];
   selectedRowId?: string | null;
@@ -58,7 +54,8 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   /** Replaces the data area while a query is unavailable, keeping its controls mounted. */
   contentPlaceholder?: ReactNode;
   defaultSettings?: Partial<KanbanRendererSettings>;
-  defaultFilters?: KanbanRendererFilterState;
+  defaultFilter?: ViewFilterGroup;
+  defaultSorts?: ViewSort[];
   viewsSource?: KanbanRendererViewsSource;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
@@ -66,9 +63,11 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   toolbarActions?: ReactNode;
   toolbarLeading?: ReactNode;
   onRowClick?: (row: TRow) => void;
+  /** Reports a failed badge edit or complete move once and consumes its rejection. */
+  onActionError?: KanbanActionErrorHandler;
   /** Called when a row attribute changes through drag/drop, board movement, or inline controls. */
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
-  /** Called for manual row ordering when a dragged row is dropped before another row. */
+  /** Called for manual row ordering when a dragged row is dropped before another row. Only used while the view has no sorts. */
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   createRow?: KanbanRendererCreateRowConfig;
   onCreateRow?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
@@ -76,11 +75,6 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
   getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
 }
-
-const rowEyebrow = (row: KanbanRendererRow) => {
-  const shorthand = row.attributes.id;
-  return typeof shorthand === "string" && shorthand ? shorthand : row.id;
-};
 
 export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRendererProps<TRow>) => {
   const {
@@ -93,11 +87,13 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     emptyDescription = "Try changing filters or display settings.",
     contentPlaceholder,
     defaultSettings,
-    defaultFilters,
+    defaultFilter,
+    defaultSorts,
     viewsSource,
     defaultViews,
     defaultActiveViewId,
     onRowClick,
+    onActionError,
     onAttributeChange,
     onReorder,
     createRow,
@@ -110,87 +106,69 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     toolbarLeading,
   } = props;
 
-  useKanbanViews(props);
-  const attributes = useResolvedAttributes(rawAttributes);
-  const [createColumnId, setCreateColumnId] = useState<string | null>(null);
-  const initialState = {
+  const initialState = kanbanRendererInitialState({
     settings: defaultSettings,
-    filters: defaultFilters,
-  };
+    filter: defaultFilter,
+    sorts: defaultSorts,
+  });
+  const attributes = useResolvedAttributes(rawAttributes);
+  const fields = withTitleField(attributes);
+  useCollectionViews({ ...props, initialState, fields });
+  const [createColumnId, setCreateColumnId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  // Typing stays responsive on large boards; the narrowed rows follow a frame later.
+  const deferredSearch = useDeferredValue(search);
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
-  const filters = useKanbanRendererStore(storageKey, (state) => state.filters, initialState);
+  const filter = useKanbanRendererStore(storageKey, (state) => state.filter, initialState);
+  const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
   const expandedGroups = useKanbanRendererStore(storageKey, (state) => state.expandedGroups, initialState);
   const setExpandedGroup = useKanbanRendererStore(storageKey, (state) => state.setExpandedGroup, initialState);
+  const setOpenMenu = useKanbanRendererStore(storageKey, (state) => state.setOpenMenu, initialState);
 
-  const visibleRows = filterRows(rows, filters, attributes) as TRow[];
-
-  const knownColumnKeys = resolveKnownColumnKeys(settings.columnGrouping, attributes, filters);
-
+  const { filteredRows, visibleRows, columnTotals } = narrowKanbanRows({
+    rows,
+    filter,
+    fields,
+    attributes,
+    settings,
+    search: deferredSearch,
+  });
+  const searching = deferredSearch.trim() !== "";
   const grouped = groupRows(visibleRows, {
     attributes,
     columnGrouping: settings.columnGrouping,
     rowGrouping: settings.rowGrouping,
-    knownColumnKeys,
+    knownColumnKeys: resolveKnownColumnKeys(settings.columnGrouping, attributes, filter, rows),
+    structureRows: rows,
   });
 
   const listItems = buildKanbanRendererListItems({
     settings,
+    sorts,
+    search: deferredSearch,
     visibleRows,
     grouped,
     attributes,
     onRowClick,
+    onActionError,
     onAttributeChange,
     onReorder,
     getRowContextMenuActions,
   });
 
-  const cardDisplayProperties = settings.displayProperties.filter((property) => property !== "id");
-  const toBoardItems = (boardRows: KanbanRendererRow[]) =>
-    boardRows.map((row) => ({
-      id: row.id,
-      contextMenuActions: getRowContextMenuActions?.(row as TRow),
-      cardProps: {
-        eyebrow: settings.displayProperties.includes("id") ? rowEyebrow(row) : undefined,
-        title: row.title,
-        badges: collectDisplayBadges(row, attributes, cardDisplayProperties),
-        customSlots: collectDisplayCustomSlots(row, attributes, cardDisplayProperties),
-        onBadgeChange: onAttributeChange
-          ? (attributeId: string, value: unknown) => onAttributeChange(row.id, attributeId, value)
-          : undefined,
-        onClick: () => onRowClick?.(row as TRow),
-      },
-    }));
-
-  const columnGroupingDescriptor = findAttribute(attributes, settings.columnGrouping);
-
-  const boardColumns: KanbanRendererBoardColumn[] = grouped.map((column) => {
-    const columnConfig = getBoardColumnConfig?.(column.key) ?? {};
-    const orderedRows = orderRows(column.rows, settings.ordering, attributes);
-    // Column color follows the enum option when the contribution does not
-    // provide one, while row display badges stay visually neutral.
-    const enumOption = columnGroupingDescriptor ? findEnumOption(columnGroupingDescriptor.type, column.key) : undefined;
-
-    const groups: KanbanRendererBoardGroup[] | undefined =
-      column.subgroups.length > 0
-        ? column.subgroups.map((subgroup) => ({
-            key: subgroup.key,
-            label: subgroup.label,
-            items: toBoardItems(orderRows(subgroup.rows, settings.ordering, attributes)),
-          }))
-        : undefined;
-
-    return {
-      id: column.key,
-      label: column.label,
-      color: columnConfig.color ?? enumOption?.color,
-      icon: enumOption?.icon ?? "circle",
-      canDragIn: columnConfig.canDragIn ?? false,
-      canDragOut: columnConfig.canDragOut ?? false,
-      canCreate: columnConfig.canCreate ?? false,
-      actions: columnConfig.actions ?? [],
-      items: toBoardItems(orderedRows),
-      groups,
-    } satisfies KanbanRendererBoardColumn;
+  const boardColumns = buildKanbanBoardColumns({
+    grouped,
+    settings,
+    sorts,
+    fields,
+    attributes,
+    search: deferredSearch,
+    columnTotals: searching ? columnTotals : undefined,
+    getBoardColumnConfig,
+    getRowContextMenuActions,
+    onAttributeChange,
+    onActionError,
+    onRowClick,
   });
 
   const handleBoardMoveItem = async (
@@ -198,37 +176,54 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     targetColumnId: string,
     context?: { beforeItemId?: string; targetGroupKey?: string },
   ) => {
-    await applyBoardMoveItem({
-      settings,
-      rowId,
-      targetColumnId,
-      targetGroupKey: context?.targetGroupKey,
-      beforeItemId: context?.beforeItemId,
-      onAttributeChange,
-      onReorder,
-    });
+    await runKanbanAction(
+      "Move row",
+      () =>
+        applyBoardMoveItem({
+          settings,
+          sorts,
+          rowId,
+          targetColumnId,
+          targetGroupKey: context?.targetGroupKey,
+          beforeItemId: context?.beforeItemId,
+          onAttributeChange,
+          onReorder,
+        }),
+      onActionError,
+    );
   };
 
   const handleBoardMoveToGroup = async (rowId: string, targetGroupKey: string, context?: { beforeItemId?: string }) => {
-    await applyBoardMoveToGroup({
-      settings,
-      rowId,
-      targetGroupKey,
-      beforeItemId: context?.beforeItemId,
-      onAttributeChange,
-      onReorder,
-    });
+    await runKanbanAction(
+      "Move row",
+      () =>
+        applyBoardMoveToGroup({
+          settings,
+          sorts,
+          rowId,
+          targetGroupKey,
+          beforeItemId: context?.beforeItemId,
+          onAttributeChange,
+          onReorder,
+        }),
+      onActionError,
+    );
   };
 
   return (
     <Stack data-testid="kanban-renderer" height="100%" minH="0" gap="0" background="bg" overflow="hidden">
       {hideToolbar ? null : (
         <KanbanRendererToolbar
+          itemLabel={props.itemLabel}
           rows={rows}
           storageKey={storageKey}
           attributes={attributes}
           defaultSettings={defaultSettings}
-          defaultFilters={defaultFilters}
+          defaultFilter={defaultFilter}
+          defaultSorts={defaultSorts}
+          search={search}
+          onSearchChange={setSearch}
+          searchResultLabel={searching ? `${visibleRows.length} of ${filteredRows.length}` : undefined}
           viewsSource={viewsSource}
           defaultViews={defaultViews}
           defaultActiveViewId={defaultActiveViewId}
@@ -237,26 +232,30 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
         />
       )}
 
-      {contentPlaceholder !== undefined ? (
-        contentPlaceholder
-      ) : (
-        <KanbanRendererContent
-          viewMode={settings.viewMode}
-          boardColumns={boardColumns}
-          listItems={listItems}
-          listExpandedGroups={expandedGroups}
-          selectedRowId={selectedRowId}
-          emptyState={emptyState}
-          emptyTitle={emptyTitle}
-          emptyDescription={emptyDescription}
-          onBoardMoveItem={handleBoardMoveItem}
-          onBoardMoveToGroup={handleBoardMoveToGroup}
-          onCreateRow={createRow && onCreateRow ? setCreateColumnId : undefined}
-          onColumnAction={onColumnAction}
-          onListExpandedGroupChange={setExpandedGroup}
-          listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
-        />
-      )}
+      <KanbanRendererContent
+        contentPlaceholder={contentPlaceholder}
+        sourceCount={rows.length}
+        filteredCount={filteredRows.length}
+        visibleCount={visibleRows.length}
+        search={deferredSearch}
+        ruleCount={countFilterRules(filter)}
+        onClearSearch={() => setSearch("")}
+        onEditFilter={hideToolbar ? undefined : () => setOpenMenu("filter")}
+        viewMode={settings.viewMode}
+        boardColumns={boardColumns}
+        listItems={listItems}
+        listExpandedGroups={expandedGroups}
+        selectedRowId={selectedRowId}
+        emptyState={emptyState}
+        emptyTitle={emptyTitle}
+        emptyDescription={emptyDescription}
+        onBoardMoveItem={handleBoardMoveItem}
+        onBoardMoveToGroup={handleBoardMoveToGroup}
+        onCreateRow={createRow && onCreateRow ? setCreateColumnId : undefined}
+        onColumnAction={onColumnAction}
+        onListExpandedGroupChange={setExpandedGroup}
+        listKey={`${settings.columnGrouping}:${settings.rowGrouping}`}
+      />
       {createRow && onCreateRow && createColumnId ? (
         <KanbanRendererCreateDialog
           open

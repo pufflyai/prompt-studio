@@ -1,6 +1,6 @@
 import { isAbsolute } from "node:path";
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
-import type { DesktopProjectTabsState, DesktopWorkbenchState } from "../desktop-api";
+import type { DesktopProjectTabsState, DesktopStartupAppearance, DesktopWorkbenchState } from "../desktop-api";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { isAllowedIpcSender } from "../security/ipc-security";
@@ -15,6 +15,8 @@ type DesktopIpcOptions = {
   confirmQuit: () => Promise<void>;
   copyDiagnostics: () => void;
   getState: () => DesktopState;
+  getStartupAppearance: () => DesktopStartupAppearance | undefined;
+  setStartupAppearance: (appearance: unknown) => void;
   getWorkbenchState: () => DesktopWorkbenchState;
   getProjectTabs: () => Promise<DesktopProjectTabsState>;
   setProjectTabs: (state: unknown) => Promise<void>;
@@ -27,6 +29,13 @@ type DesktopIpcOptions = {
   runtimeOrigin: () => string | null;
   setWorkbenchItem: (key: string, value: string | null) => void;
   webContents: () => WebContents[];
+  performance: {
+    readonly enabled: boolean;
+    setEnabled: (enabled: boolean) => Promise<void>;
+    snapshot: () => unknown;
+    reportFrames: (report: unknown) => void;
+    reportRendererState: (report: unknown) => void;
+  };
 };
 
 const assertSender = (event: IpcMainInvokeEvent, options: DesktopIpcOptions) => {
@@ -64,6 +73,8 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   handle(DESKTOP_CHANNELS.confirmQuit, options.confirmQuit);
   handle(DESKTOP_CHANNELS.appInfo, options.appInfo);
   handle(DESKTOP_CHANNELS.startupState, options.getState);
+  handle(DESKTOP_CHANNELS.getStartupAppearance, () => options.getStartupAppearance() ?? null);
+  handle(DESKTOP_CHANNELS.setStartupAppearance, options.setStartupAppearance);
   handle(DESKTOP_CHANNELS.retryRuntime, options.retryRuntime);
   handle(DESKTOP_CHANNELS.openLogs, options.openLogs);
   handle(DESKTOP_CHANNELS.revealInFinder, (path) => {
@@ -82,6 +93,14 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
     }
     options.setWorkbenchItem(key, value);
   });
+  handle(DESKTOP_CHANNELS.getPerformanceMonitoring, () => options.performance.enabled);
+  handle(DESKTOP_CHANNELS.setPerformanceMonitoring, (enabled) => {
+    if (typeof enabled !== "boolean") throw new Error("Invalid performance monitoring update");
+    return options.performance.setEnabled(enabled);
+  });
+  handle(DESKTOP_CHANNELS.getPerformanceSnapshot, () => options.performance.snapshot());
+  handle(DESKTOP_CHANNELS.reportSlowFrames, (report) => options.performance.reportFrames(report));
+  handle(DESKTOP_CHANNELS.reportRendererState, (report) => options.performance.reportRendererState(report));
 
   return () => {
     for (const channel of Object.values(DESKTOP_CHANNELS)) options.ipcMain.removeHandler(channel);

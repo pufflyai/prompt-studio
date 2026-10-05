@@ -1,5 +1,5 @@
 import { Flex } from "@chakra-ui/react";
-import { ResizableSplitLayout, type ResourceContextAction, Toaster } from "@pstdio/ui";
+import { ResizableSplitLayout, type ResourceContextAction, type ThemePreferenceStorage, Toaster } from "@pstdio/ui";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchShellOpenRegion } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
@@ -9,7 +9,10 @@ import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybindi
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
+import { movePanelHost } from "../region/move-panel-host";
+import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
+import { WorkbenchTabDragProvider } from "../region/tab-drag-context";
 import { installWorkbenchControlsRenderer } from "../renderers/controls/install-controls-renderer";
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
@@ -44,6 +47,8 @@ interface WorkbenchProps {
   sidePanelBubbleIcon?: ReactNode;
   /** Host action for opening the closed Side Panel from its bubble launcher. */
   onOpenSidePanel?: () => void;
+  /** Host storage for the chosen theme. Defaults to browser storage. */
+  themeStorage?: ThemePreferenceStorage;
 }
 
 const SIDENAV_DEFAULT_SIZE_PX = 250;
@@ -164,8 +169,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   );
   const hasSecondaryPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
   const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
-  const floatingPanelsAllowed = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
-  // The mode lives in the layout; the floating policy above re-renders when the active mode changes.
   const sidePanelMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
 
   const {
@@ -205,14 +208,15 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideHeaderWidgets || hasSidePanelHeader ? (
       <WorkbenchSidePanelRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />
     ) : undefined;
-  const activeSidePanelSlot = sidePanelMode === "floating" ? floatingSidePanelSlot : attachedSidePanelSlot;
+  let activeSidePanelSlot: HTMLElement | null = attachedSidePanelSlot;
+  if (sidePanelMode === "floating") activeSidePanelSlot = floatingSidePanelSlot;
+  else if (sidePanelMode === "closed")
+    activeSidePanelSlot = sidePanelHostRef.current?.parentElement ?? attachedSidePanelSlot;
 
   useLayoutEffect(() => {
     const host = sidePanelHostRef.current;
     if (!host) return;
-    if (activeSidePanelSlot) {
-      if (host.parentNode !== activeSidePanelSlot) activeSidePanelSlot.appendChild(host);
-    }
+    movePanelHost(host, activeSidePanelSlot);
   }, [activeSidePanelSlot]);
 
   const contentWithHeader = (
@@ -264,7 +268,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           minH="0"
           minW="0"
           overflow="hidden"
-          py="panel-gap"
+          pt="panel-gap"
+          // The status bar owns the space under the panels, so its items center in it.
+          pb={hasStatusWidgets ? "0" : "panel-gap"}
           pr="panel-gap"
           pl={hasActivityBarWidgets ? "0" : "panel-gap"}
         >
@@ -278,16 +284,15 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           />
         </Flex>
         <WorkbenchStatusBar workbench={workbench} visible={hasStatusWidgets} />
-        {hasSidePanel && floatingPanelsAllowed ? (
-          <WorkbenchFloatingSidePanel
-            workbench={workbench}
-            bubbleIcon={sidePanelBubbleIcon}
-            onOpen={onOpenSidePanel}
-            contentSlotRef={setFloatingSidePanelSlot}
-            bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
-            header={sideHeader}
-          />
-        ) : null}
+        <WorkbenchFloatingSidePanel
+          workbench={workbench}
+          available={hasSidePanel}
+          bubbleIcon={sidePanelBubbleIcon}
+          onOpen={onOpenSidePanel}
+          contentSlotRef={setFloatingSidePanelSlot}
+          bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
+          header={sideHeader}
+        />
         <WorkbenchCommandPalette
           workbench={workbench}
           open={paletteOpen}
@@ -317,8 +322,13 @@ export const Workbench = (props: WorkbenchProps) => {
       fileIconThemePreferences={fileIconThemePreferences}
       defaultThemePreference={mode?.defaultTheme}
       preferenceScope={mode?.defaultTheme ? mode.id : undefined}
+      themeStorage={props.themeStorage}
     >
-      <WorkbenchContent key={projectId} {...props} />
+      <WorkbenchTabDragProvider workbench={props.workbench}>
+        <WorkbenchPanelViewHosts key={projectId} workbench={props.workbench}>
+          <WorkbenchContent {...props} />
+        </WorkbenchPanelViewHosts>
+      </WorkbenchTabDragProvider>
       <Toaster />
     </WorkbenchThemeProvider>
   );

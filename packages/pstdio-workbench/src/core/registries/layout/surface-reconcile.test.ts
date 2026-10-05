@@ -34,7 +34,7 @@ describe("reconcileAnchors", () => {
       primary: ticket,
       isInScope: scopeContaining(),
     });
-    expect(actions).toContainEqual({ region: "secondary", action: "clear" });
+    expect(actions).toContainEqual(expect.objectContaining({ region: "secondary", action: "clear" }));
   });
   test("keeps a Location-owned Sub Panel when its Location becomes active", () => {
     const layout = createLayoutModel();
@@ -59,7 +59,7 @@ describe("reconcileAnchors", () => {
       primary: ticket,
       isInScope: scopeContaining(),
     });
-    expect(actions).toContainEqual({ region: "secondary", action: "keep" });
+    expect(actions).toContainEqual(expect.objectContaining({ region: "secondary", action: "keep" }));
   });
   test("keeps a detached anchor (session) that is still in scope", () => {
     const layout = createLayoutModel();
@@ -70,7 +70,7 @@ describe("reconcileAnchors", () => {
       primary: ticket,
       isInScope: scopeContaining(resourceKey(inWorkspace)),
     });
-    expect(actions).toContainEqual({ region: "side", action: "keep" });
+    expect(actions).toContainEqual(expect.objectContaining({ region: "side", action: "keep" }));
   });
   test("disconnects a detached anchor when out of scope (scope wins)", () => {
     const layout = createLayoutModel();
@@ -81,7 +81,7 @@ describe("reconcileAnchors", () => {
       primary: ticket,
       isInScope: scopeContaining(),
     });
-    expect(actions).toContainEqual({ region: "side", action: "clear" });
+    expect(actions).toContainEqual(expect.objectContaining({ region: "side", action: "clear" }));
   });
   test("leaves a resourceless side widget untouched (not scoped content)", () => {
     const layout = createLayoutModel();

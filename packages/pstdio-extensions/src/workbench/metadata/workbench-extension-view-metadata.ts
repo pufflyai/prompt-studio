@@ -1,5 +1,6 @@
 import type { WorkbenchExtensionMetadata, WorkbenchExtensionViewBody } from "@pstdio/sdk/api";
 import type { CommandRef, PackageAssetDescriptor, ViewBody, WebviewContribution } from "@pstdio/sdk/extensions";
+import { normalizeKanbanViewDefaults } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { commandRef, normalizedRef, refreshEventIds } from "./workbench-extension-metadata-normalizers";
 
@@ -43,7 +44,9 @@ const toNativeViewBody = (
 ): Exclude<WorkbenchExtensionViewBody, { kind: "webview" }> => {
   const body = view.contribution.body as Exclude<ViewBody, { kind: "webview" }>;
   const handlers = body as typeof body & Record<string, unknown>;
+  const resourceKind = body.resourceKind ? normalizedRef(body.resourceKind, view.extensionId) : undefined;
   const common = {
+    ...(resourceKind ? { resourceKind: resourceKind.id } : {}),
     refreshEventIds: refreshEventIds(body.refreshEvents, view.extensionId),
     emptyTitle: body.emptyTitle,
     emptyDescription: body.emptyDescription,
@@ -97,6 +100,11 @@ const toNativeViewBody = (
       rowActivationHandlerId: handlers.rowActivationHandlerId as string | undefined,
       initialPageSize: body.initialPageSize,
       pageSizeOptions: body.pageSizeOptions,
+      defaultSettings: body.defaultSettings,
+      defaultFilter: body.defaultFilter,
+      defaultSorts: body.defaultSorts,
+      defaultViews: body.defaultViews,
+      defaultActiveViewId: body.defaultActiveViewId,
     };
   }
   return {
@@ -132,9 +140,7 @@ const toNativeViewBody = (
       ...action,
       params: action.params ? { ...action.params } : undefined,
     })),
-    defaultSettings: body.defaultSettings,
-    defaultFilters: body.defaultFilters,
-    defaultViews: body.defaultViews,
+    ...normalizeKanbanViewDefaults(body),
     defaultActiveViewId: body.defaultActiveViewId,
     hideToolbar: body.hideToolbar,
   };

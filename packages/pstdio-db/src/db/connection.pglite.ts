@@ -6,6 +6,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
+import { finishBoardViewRules, prepareBoardViewRules } from "./board-view-rules-migration";
 import {
   ensureLegacyTemplateOwners,
   hasLegacyTemplatesTable,
@@ -131,7 +132,9 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       if (legacy.rows[0]?.legacy) await migrateThrough(db, migrationsFolder, 31);
       await prepareWorkspaceLocations(openedPglite);
       await removeSharedWorkspaceFolders(openedPglite, db, migrationsFolder);
+      await prepareBoardViewRules(openedPglite);
       await migrate(db, { migrationsFolder });
+      await finishBoardViewRules(openedPglite);
     }
 
     let closed = false;

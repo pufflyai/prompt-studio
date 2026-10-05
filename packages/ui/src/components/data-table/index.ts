@@ -14,6 +14,7 @@ export type {
   DataTableColorScaleStop,
   DataTableColumnRenderer,
   DataTableColumnStat,
+  DataTableColumnType,
   DataTableDiffValue,
   DataTableEditModeAlignment,
   DataTableEditModeCellEditorProps,
@@ -21,7 +22,11 @@ export type {
   DataTableEditModeConfig,
   DataTableProps,
   DataTableRowAction,
+  DataTableSavedView,
   DataTableSelectionAction,
+  DataTableSettings,
   DataTableThemeColor,
+  DataTableViewsSource,
   RowData,
 } from "./types";
+export { useDataTableViewStore } from "./use-data-table-view";

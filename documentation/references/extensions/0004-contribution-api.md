@@ -270,13 +270,83 @@ Pressed and selected controls, such as an open panel's toggle, use
 `editor.selectionBackground`, the app mixes the theme's text color into its
 background instead, so pressed controls stand out from the main background.
 
-## Shared kanban views
+## Views: filter, sort, and display
+
+Kanban and data table bodies share one view model. A view stores:
+
+- `filter`: a rule is `{ attributeId, condition, value }`. Normal rules join with `"and"`. Optional `groups` contain one level of advanced rules, each with `conjunction: "and" | "or"` and `rules`. Normal rules and groups combine using AND. Whole-view OR filters remain supported and appear as one Advanced filter bubble in the dashboard. Groups cannot contain other groups.
+- `sorts`: zero or one field and direction pair. Display settings and table headers edit this same single sort. An empty list keeps the board's manual order, or the query's order for a table.
+- `settings`: board display settings (view mode, grouping, sub-grouping, visible properties), or table display settings (`grouping`, `rowNumbers`, `wrapRows`, `showStats`, `hiddenColumns`, `columnOrder`).
+
+Search is screen state. It narrows what is on screen, is never saved, and is never sent to a query.
+
+Boolean fields hold real `true` or `false` values. Their controls read as predicates, such as "Ticket is Archived" or "Ticket is not Archived". Set the native view body's `resourceKind` to a resource-kind ref to use its singular label as the subject; otherwise the subject is "Item". The property label supplies the predicate. `is false` and `is-not true` show the same negative predicate; `is-not` also includes rows with no value. In the CLI, use `--filter "archived is false"`. Data-table columns opt in with `type: "boolean"`; undeclared columns keep their existing text filters.
+
+When changing an enum field to a boolean, declare its old stored IDs in `type.legacyValues`, for example `{ kind: "boolean", legacyValues: { active: false, archived: true } }`. The host normalizes saved rules before cleanup, and the renderer normalizes local view state before edits. This map never coerces row values or allows old option lists in new API writes. Keep the map while saved views may still use those IDs.
+
+Each field kind accepts a fixed list of conditions. `VIEW_FILTER_CONDITIONS` in `@pstdio/sdk/extensions` is the only copy, and the dashboard, the views API, and `pst views` all read it.
+
+| Field kind | Conditions | Sortable |
+| --- | --- | --- |
+| `string` | `contains`, `does-not-contain`, `is`, `is-not`, `is-empty`, `is-not-empty` | yes |
+| `boolean` | `is`, `is-not`, `is-empty`, `is-not-empty` | yes |
+| `number` | `is`, `is-not`, `gt`, `gte`, `lt`, `lte`, `is-empty`, `is-not-empty` | yes |
+| `date` | `is`, `is-before`, `is-after`, `is-on-or-before`, `is-on-or-after`, `is-empty`, `is-not-empty` | yes |
+| `enum`, `status`, `user` | `is-any-of`, `is-none-of`, `is-empty`, `is-not-empty` | yes |
+| `enum-multi` | `has-any-of`, `has-all-of`, `has-none-of`, `is-empty`, `is-not-empty` | no |
+
+A date value is a day (`2026-10-02`) or a day relative to today (`today`, `today-7`, `today+7`). Relative days resolve against the viewer's date each time the view renders. Option values are compared by value ID. The board title is a built-in `string` field with ID `title`.
+
+Declare the starting view with `defaultFilter`, `defaultSorts`, and `defaultSettings`, and read-only built-in views with `defaultViews`:
+
+```ts
+defineView({
+  id: "tickets",
+  title: "Tickets",
+  body: {
+    kind: "kanban",
+    attributes,
+    query: queryTickets,
+    defaultFilter: {
+      conjunction: "and",
+      rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }],
+    },
+    defaultSorts: [{ attributeId: "created", direction: "desc" }],
+    defaultViews: [
+      {
+        id: "urgent",
+        title: "Urgent",
+        settings: { viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: ["id"] },
+        filter: { conjunction: "and", rules: [{ attributeId: "priority", condition: "is-any-of", value: ["urgent"] }] },
+        sorts: [{ attributeId: "updated", direction: "desc" }],
+      },
+    ],
+  },
+});
+```
+
+Data table columns can declare `type` (`"string"`, `"number"`, or `"date"`) and `groupable: true`. Without a type, a column whose values are all numbers is a number field and every other column is text. Columns are filterable by default. Declare `filterable: false` on a column to exclude it from Filter and reject saved rules for it. Query-returned columns use the same option and take precedence over declared columns. Disabling filtering keeps display, sorting, and grouping available. Only groupable columns appear under Grouping in the table's Display menu. Tables group by exact value; empty values form a last "No <column>" group.
+
+The query receives `filter`, `sorts`, and the display `settings`. Use them only to narrow what you load. The renderer always applies the full filter and sorts to the rows you return, so returning more rows than the view shows is always correct.
+
+Deprecated fields still work and are converted where the host reads the contribution. When both are set, the new field wins. They are removed together in the next breaking extension API release.
+
+| Deprecated | Replacement |
+| --- | --- |
+| `defaultFilters: { status: ["todo"] }` | `defaultFilter` with an `is-any-of` rule (`has-any-of` for `enum-multi`) |
+| `defaultSettings.ordering`, `settings.ordering` in `defaultViews` | `defaultSorts`, `sorts`; manual ordering is an empty list |
+| `filters` in `defaultViews` | `filter` |
+| `params.filters` and `params.settings.ordering` in a kanban query | `params.filter` and `params.sorts` |
+
+The host keeps sending `params.filters`, derived from root `is-any-of` and `has-any-of` rules when the root joins with `"and"`, and `params.settings.ordering`, the first sort or `manual`.
+
+## Shared views
 
 `defaultViews` defines extension-owned, read-only built-ins. `defaultActiveViewId` chooses the extension fallback. The deprecated `isDefault` flag remains a fallback when `defaultActiveViewId` is absent; use `defaultActiveViewId` in new extensions. The project's shared default takes precedence over both. Do not copy or save built-ins into extension storage.
 
-The host saves user-created views per project, extension instance and local board ID. Query-returned attributes and status options are used to validate settings and filters. Keep field IDs stable across releases. A successful query can clean removed options from saved views; a failed query never removes them.
+The host saves user-created views for kanban and data table views per project, extension instance and local view ID. Query-returned attributes, columns, and status options are used to validate settings, rules, and sorts. Keep field IDs stable across releases. A successful query can clean rules for removed fields and options from saved views; a failed query never removes them.
 
-Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` supplies shared views and asynchronous mutations to the UI renderer. The workbench accepts a subscribable views provider from its host; standalone callers without one show their built-ins read-only.
+Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` and `DataTableViewsSource` supply shared views and asynchronous mutations to the UI renderers. The workbench accepts a subscribable views provider from its host; standalone callers without one show their built-ins read-only.
 
 ## Sidenav levels
 
@@ -388,3 +458,5 @@ The header and footer keep the mode's sections, followed by the sections of ever
 A level page without a declared parent, such as Notes, has nothing outside the level in its breadcrumb. The host then leads that breadcrumb with a project crumb. It opens the last location the user visited outside every level, or the start page when there is none. A page whose mode sets `chrome.sidenav` also hides the project rows, so it counts as a level here. Extensions need no code for this: declare a `parent` when the level belongs under another page, and leave it out when the level is a top-level page.
 
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.
+
+Session commands contributed through `sessionSlots.headerPrimary` or `sessionSlots.headerOverflow` also appear in shared session resource menus. Session tree rows must set `resource` explicitly, even when `target.resource` already names the session. Visibility and execution use the clicked session; opening a different resource first is not required. Host session rows expose the existing Open session panel action without tab placement arguments.

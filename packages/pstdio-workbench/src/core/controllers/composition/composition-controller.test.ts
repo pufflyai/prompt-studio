@@ -112,6 +112,27 @@ describe("workbench composition query", () => {
     workbench.modes.setActiveMode("lab");
     expect(workbench.composition.panelsFor("secondary")).toEqual({ open: [], addable: [], closable: [] });
   });
+  test("registered Add panels follow the same legacy destination restrictions as Move", () => {
+    const workbench = createWorkbench();
+    workbench.layout.registerPanel({
+      id: "restricted",
+      title: "Restricted",
+      rendererId: "restricted",
+      region: "secondary",
+      eligibleLocations: { modeIds: ["edit"] },
+    });
+    workbench.modes.registerMode({
+      id: "edit",
+      activate() {},
+      listAddablePanels: () => [{ panelId: "restricted", region: "secondary", allowedRegions: ["secondary"] }],
+    });
+    workbench.modes.setActiveMode("edit");
+    expect(workbench.composition.panelsFor("main").addable).toEqual([]);
+    expect(workbench.composition.panelsFor("side").addable).toEqual([]);
+    expect(workbench.composition.panelsFor("secondary").addable.map((p) => p.panelId)).toEqual(["restricted"]);
+    workbench.layout.openWidget("restricted", { region: "secondary" });
+    expect(workbench.getPanelDestinations("restricted")).toEqual(["secondary"]);
+  });
   test("does not offer a singleton Location that is already open for the active resource", () => {
     const workbench = createWorkbench();
     const resource = {

@@ -10,6 +10,7 @@ import type {
   WorkbenchCoreContributionContext,
 } from "../../../core";
 import { matchesContextExpression, scopeWorkbenchResourceContextValues } from "../../../core";
+import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { hasCommandParameters } from "../../command-palette/command-palette-params";
 import type { CommandParamsRequest } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
@@ -86,7 +87,8 @@ const runTreeAction = async (input: {
   try {
     await executeTreeAction({ action, args, context, workbench });
   } catch (error) {
-    onCommandError?.(error);
+    if (onCommandError) onCommandError(error);
+    else reportUserActionError(workbench, action.label ?? "Action", error);
     throw error;
   }
 };
@@ -182,12 +184,7 @@ const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
                 context,
               },
               run: async (nextArgs) => {
-                try {
-                  await workbench.commands.executeCommand(record.command.id, nextArgs, context);
-                } catch (error) {
-                  onCommandError?.(error);
-                  throw error;
-                }
+                await workbench.commands.executeCommand(record.command.id, nextArgs, context);
               },
             })
         : undefined;
@@ -207,9 +204,10 @@ const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
               requestParams();
               return;
             }
-            void workbench.commands
-              .executeCommand(record.command.id, args, context)
-              .catch((error) => onCommandError?.(error));
+            void workbench.commands.executeCommand(record.command.id, args, context).catch((error) => {
+              if (onCommandError) onCommandError(error);
+              else reportUserActionError(workbench, label, error);
+            });
           },
     };
 
@@ -255,7 +253,7 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
                 args: action.args,
                 context,
               },
-              run: (args) => runTreeAction({ action, args, context, workbench, onCommandError }),
+              run: (args) => executeTreeAction({ action, args, context, workbench }),
             })
         : undefined;
     items.push({
@@ -315,7 +313,7 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
                 args: action.args,
                 context,
               },
-              run: (args) => runTreeAction({ action, args, context, workbench, onCommandError }),
+              run: (args) => executeTreeAction({ action, args, context, workbench }),
             })
         : undefined;
     items.push({

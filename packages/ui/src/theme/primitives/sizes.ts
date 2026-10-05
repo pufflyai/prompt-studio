@@ -41,10 +41,16 @@ export const spacing = {
   "4.5xl": { value: sp[900] },
   "5xl": { value: sp[1600] },
   "panel-gap": { value: sp[50] },
+  // Performance meter: frame-rate bars sit 1px apart.
+  "performance-bar-gap": { value: "1px" },
 };
 
 export const sizes = {
   "status-dot": { value: "0.375rem" },
+  "performance-bar": { value: sp[25] },
+  "performance-meter": { value: "0.625rem" },
+  "performance-chart": { value: "2.25rem" },
+  "performance-popover": { value: "23.75rem" },
   "folder-picker-width": { value: "36.5rem" },
   "folder-picker-height": { value: "31rem" },
   "folder-picker-header": { value: "3.25rem" },
@@ -61,6 +67,7 @@ export const sizes = {
   "drop-indicator": { value: sp[25] },
   "tree-empty-drop-zone": { value: "1.75rem" },
   "filter-pill": { value: sp[300] },
+  "filter-picker-height": { value: "30rem" },
   "icon-2xs": { value: sp[150] },
   "icon-xs": { value: "0.875rem" },
   "icon-sm": { value: sp[200] },

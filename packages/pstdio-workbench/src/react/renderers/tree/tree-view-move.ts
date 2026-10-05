@@ -6,6 +6,7 @@ import type {
   WorkbenchCore,
 } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
+import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { findNodeInSections } from "./tree-list-adapter";
 
 interface MoveTreeNodeContext {
@@ -20,21 +21,24 @@ interface MoveTreeNodeContext {
 
 export const createMoveTreeNode = (context: MoveTreeNodeContext) =>
   context.renderer.moveNode
-    ? (sourceNodeId: string, targetNodeId?: string) => {
+    ? async (sourceNodeId: string, targetNodeId?: string) => {
         const source = findNodeInSections(context.sections, sourceNodeId, context.childrenByNodeId);
         const target = targetNodeId
           ? (findNodeInSections(context.sections, targetNodeId, context.childrenByNodeId) ?? undefined)
           : undefined;
         if (!source || (targetNodeId && !target)) return;
         const trees = getWorkbenchRenderers(context.workbench);
-        void Promise.resolve(
-          context.renderer.moveNode?.(source, target, {
+        try {
+          await context.renderer.moveNode?.(source, target, {
             resource: context.resource,
             viewId: context.viewId,
             state: trees.getTreeState(context.renderer.id),
             refresh: () => trees.refresh(context.renderer.id),
             setSelectedNode: (nodeId) => trees.setSelectedNode(context.renderer.id, nodeId),
-          }),
-        ).catch(context.onError);
+          });
+        } catch (error) {
+          if (context.onError) context.onError(error);
+          else reportUserActionError(context.workbench, "Move", error);
+        }
       }
     : undefined;

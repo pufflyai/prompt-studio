@@ -95,8 +95,8 @@ export const createWorkbenchPageRegistry = <Value>(
       return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
     },
 
-    pinPlacement(identity) {
-      commit({ ...pinPagePlacement(store.getState(), identity, input.resources), action: "pinPagePlacement" });
+    pinPlacement(identity, open) {
+      commit({ ...pinPagePlacement(store.getState(), identity, input.resources, open), action: "pinPagePlacement" });
     },
 
     openSlot(target) {

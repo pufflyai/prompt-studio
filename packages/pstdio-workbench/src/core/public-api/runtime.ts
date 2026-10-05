@@ -6,6 +6,7 @@ export type {
   RegisteredContributionMetadata,
 } from "../shared/contributions/metadata";
 export type { Disposable } from "../shared/disposable";
+export { runUserAction } from "../shared/run-user-action";
 export { batchWorkbenchChanges } from "../shared/store/workbench-batch";
 export type {
   CreateWorkbenchStoreInput,

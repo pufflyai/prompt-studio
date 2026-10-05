@@ -16,4 +16,5 @@ export * from "./session-messages";
 export * from "./sessions";
 export * from "./settings";
 export * from "./skills";
+export * from "./workspace-collection";
 export * from "./workspaces";

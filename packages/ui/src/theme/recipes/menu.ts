@@ -67,6 +67,7 @@ export const menuSlotRecipe = defineSlotRecipe({
 
     separator: {
       my: "0",
+      mx: "0",
       borderColor: "border.subtle",
     },
 
@@ -84,7 +85,7 @@ export const menuSlotRecipe = defineSlotRecipe({
       bg: "bg",
       borderWidth: "1px",
       borderStyle: "solid",
-      borderColor: "border",
+      borderColor: "border.subtle",
       textStyle: "label/M/regular",
     },
   },

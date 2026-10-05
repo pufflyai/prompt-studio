@@ -10,8 +10,6 @@ const phaseCopy = {
 } as const;
 
 interface DesktopLifecycleActions {
-  cancelQuit: () => Promise<void>;
-  confirmQuit: () => Promise<void>;
   copyDiagnostics: () => Promise<void>;
   openLogs: () => Promise<void>;
   quitApp: () => Promise<void>;
@@ -25,8 +23,6 @@ interface DesktopLifecycleViewProps {
 }
 
 const desktopActions: DesktopLifecycleActions = {
-  cancelQuit: () => window.promptStudioDesktop.cancelQuit(),
-  confirmQuit: () => window.promptStudioDesktop.confirmQuit(),
   copyDiagnostics: () => window.promptStudioDesktop.copyDiagnostics(),
   openLogs: () => window.promptStudioDesktop.openLogs(),
   quitApp: () => window.promptStudioDesktop.quitApp(),
@@ -106,68 +102,6 @@ const RecoveryState = (props: {
   );
 };
 
-const activityGroups = (state: Extract<DesktopState, { kind: "confirming_active_work" }>) => [
-  { label: "Agent sessions", items: state.activity.sessions },
-  { label: "Terminals", items: state.activity.terminals },
-  { label: "Jobs", items: state.activity.jobs },
-];
-
-const ActiveWorkState = (props: {
-  actions: DesktopLifecycleActions;
-  state: Extract<DesktopState, { kind: "confirming_active_work" }>;
-}) => {
-  const { actions, state } = props;
-  return (
-    <SimpleCard width="full">
-      <SimpleCardBody>
-        <Stack
-          gap="lg"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="active-work-title"
-          aria-describedby="active-work-description"
-        >
-          <Stack gap="xs">
-            <Heading id="active-work-title" textStyle="heading/M">
-              Active work is still running
-            </Heading>
-            <Text id="active-work-description" color="fg.muted" textStyle="paragraph/M/regular">
-              Canceling this work will stop the items below. This cannot be undone.
-            </Text>
-          </Stack>
-          <Stack gap="sm">
-            {activityGroups(state).map((group) => {
-              if (group.items.length === 0) return null;
-              return (
-                <Box key={group.label} bg="bg.muted" borderRadius="xs" px="sm" py="xs">
-                  <Text textStyle="label/S/medium" color="fg.muted">
-                    {group.label}
-                  </Text>
-                  <Stack as="ul" gap="2xs" listStyle="none" padding="0" margin="0" mt="2xs">
-                    {group.items.map((item) => (
-                      <Text as="li" key={item.id} textStyle="paragraph/M/regular">
-                        {item.label}
-                      </Text>
-                    ))}
-                  </Stack>
-                </Box>
-              );
-            })}
-          </Stack>
-          <HStack gap="xs" justify="flex-end" flexWrap="wrap">
-            <Button autoFocus onClick={actions.cancelQuit}>
-              Keep Prompt Studio open
-            </Button>
-            <Button variant="destructive" onClick={actions.confirmQuit}>
-              Cancel work and quit
-            </Button>
-          </HStack>
-        </Stack>
-      </SimpleCardBody>
-    </SimpleCard>
-  );
-};
-
 const ClosingState = () => {
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
@@ -186,7 +120,8 @@ export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
   const { actions = desktopActions, state, platform = "darwin" } = props;
   // Electron includes covered renderers in native drag hit testing. Only the
   // active surface may contribute a title bar, or it blocks workbench controls.
-  if (state.kind === "workbench") return null;
+  // The quit confirmation is a dialog inside the workbench.
+  if (state.kind === "workbench" || state.kind === "confirming_active_work") return null;
 
   return (
     <Stack as="main" width="full" minHeight="100vh" bg="bg" color="fg" gap="0">
@@ -195,7 +130,6 @@ export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
         <Box width="full" maxWidth="2xl">
           {state.kind === "starting" && <StartingState phase={state.phase} />}
           {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
-          {state.kind === "confirming_active_work" && <ActiveWorkState actions={actions} state={state} />}
           {state.kind === "closing" && <ClosingState />}
         </Box>
       </Box>

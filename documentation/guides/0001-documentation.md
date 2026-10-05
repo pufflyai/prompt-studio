@@ -36,6 +36,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 ## Guides
 
 - [0002 — Start using Prompt Studio](0002-getting-started.md)
+- [0003 — Developer tools](0003-developer-tools.md)
 
 ### Development
 
@@ -211,6 +212,7 @@ Use relative Markdown links so these pages work in repository browsers and edito
 
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
 - [0052 — Temporary Codex question delivery confirmation](../adrs/0052-temporary-codex-question-delivery-confirmation.md)
+- [0053 — Temporary webview move fallback](../adrs/0053-temporary-webview-move-fallback.md)
 
 ## Lessons learned
 

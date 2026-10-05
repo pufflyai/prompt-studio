@@ -62,6 +62,7 @@ test("closes and keyboard-restores the same full-height Side Panel", async ({ pa
   await nav.getByRole("button", { name: "Show Side Panel" }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
+  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
   await expectDashboardAttachedBounds(page);
 
   const mainNode = await page.locator('[data-workbench-region="main"]').elementHandle();
@@ -74,7 +75,7 @@ test("closes and keyboard-restores the same full-height Side Panel", async ({ pa
   await nav.getByRole("button", { name: "Hide Side Panel" }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
-  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
 
   const closedMainBox = await page.locator('[data-workbench-panel="main"]').boundingBox();
   expect(closedMainBox).not.toBeNull();

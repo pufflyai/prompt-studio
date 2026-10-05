@@ -150,7 +150,7 @@ export const WithContextMenuActions: Story = {
     const card = canvas.getByText("Set up auth").closest('[data-testid="renderer-card"]');
     expect(card).not.toBeNull();
     fireEvent.contextMenu(card!);
-    await expect(within(document.body).getByRole("menuitem", { name: "Run attempt" })).toBeVisible();
+    await expect(await within(document.body).findByRole("menuitem", { name: "Run attempt" })).toBeVisible();
     await expect(within(document.body).getByRole("menuitem", { name: "Delete" })).toBeVisible();
   },
 };

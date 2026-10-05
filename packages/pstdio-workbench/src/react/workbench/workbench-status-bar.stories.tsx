@@ -151,3 +151,46 @@ export const MixedItemHeights: Story = {
     }
   },
 };
+
+// Items often appear later, for example when a setting turns a feature on.
+const lateWorkbench = createWorkbench();
+lateWorkbench.views.registerView({
+  id: "late.item",
+  title: "Late item",
+  body: {
+    kind: "react",
+    render: () => (
+      <Text textStyle="xs" px="sm">
+        Registered after mount
+      </Text>
+    ),
+  },
+});
+lateWorkbench.views.registerView({
+  id: "first.item",
+  title: "First item",
+  body: {
+    kind: "react",
+    render: () => (
+      <Text textStyle="xs" px="sm">
+        First item
+      </Text>
+    ),
+  },
+});
+lateWorkbench.statusBar.registerItem({ id: "first.item", viewId: "first.item", slot: "leading" });
+
+export const ItemRegisteredAfterMount: Story = {
+  ...SeveralOwnersInOrder,
+  args: { workbench: lateWorkbench },
+  play: async ({ canvas }) => {
+    await canvas.findByText("First item");
+    const registration = lateWorkbench.statusBar.registerItem({
+      id: "late.item",
+      viewId: "late.item",
+      slot: "trailing",
+    });
+    await expect(await canvas.findByText("Registered after mount")).toBeVisible();
+    registration.dispose();
+  },
+};

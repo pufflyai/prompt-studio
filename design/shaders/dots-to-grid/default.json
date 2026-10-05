@@ -1,0 +1,18 @@
+{
+  "name": "Default",
+  "values": {
+    "spacing": 8,
+    "dotSize": 1,
+    "lineStrength": 0.75,
+    "bandWidth": 0.4,
+    "cycle": 4.5,
+    "lightOpacity": 0.3,
+    "darkOpacity": 0.5,
+    "noiseScale": 200,
+    "noiseContrast": 1.6,
+    "noiseBalance": 0,
+    "noiseDrift": 5,
+    "noiseDetail": 1,
+    "seed": 7
+  }
+}

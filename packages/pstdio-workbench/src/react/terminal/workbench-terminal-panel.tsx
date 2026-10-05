@@ -82,19 +82,23 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
     sessionId ? state.sessionsById[sessionId]?.title : undefined,
   );
   const active = useWorkbenchStore(workbench.layout.store, (state) => {
-    const region = state.layout.regions.secondary;
+    const region = Object.values(state.layout.regions).find((region) =>
+      region.widgets.some((candidate) => candidate.widgetId === placement.instanceId),
+    );
+    if (!region) return false;
     return (region.activeWidgetId ?? region.widgets[0]?.widgetId) === placement.instanceId;
   });
   const updateShellPlacement = workbench.shellPlacements.updatePlacement;
 
   useEffect(() => {
     if (!sessionId || !processTitle) return;
-    const currentPlacement = workbench.layout
-      .getLayout()
-      .regions.secondary.widgets.find((candidate) => candidate.widgetId === placement.instanceId);
-    const identity = currentPlacement?.placementIdentity;
-    if (identity?.kind === "shell" && currentPlacement?.resource) {
-      updateShellPlacement(identity, { resource: { ...currentPlacement.resource, label: processTitle } });
+    const currentPlacement = workbench.layout.getLayout().regions;
+    const current = Object.values(currentPlacement)
+      .flatMap((region) => region.widgets)
+      .find((candidate) => candidate.widgetId === placement.instanceId);
+    const identity = current?.placementIdentity;
+    if (identity?.kind === "shell" && current?.resource) {
+      updateShellPlacement(identity, { resource: { ...current.resource, label: processTitle } });
     }
   }, [sessionId, processTitle, placement.instanceId, workbench.layout, updateShellPlacement]);
 

@@ -34,6 +34,15 @@ const sessionPlacements = (workbench: ReturnType<typeof createWorkbench>) =>
   workbench.layout
     .getLayout()
     .regions.side.widgets.filter((widget) => widget.viewId === dashboardWidgetIds.sessionBubble);
+test("opens the session supplied by a resource menu execution context", async () => {
+  const workbench = createWorkbench();
+  workbench.registerModule(createSessionBubbleModule());
+  await activateProjectPage(workbench);
+  const resource = { type: "session", id: "inactive", label: "Inactive session" };
+  await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, undefined, { resource });
+  expect(sessionPlacements(workbench).map((placement) => placement.resource?.id)).toEqual(["inactive"]);
+});
+
 describe("createSessionBubbleModule", () => {
   for (const retention of ["preview", "persistent"] as const) {
     test(`replaces the originating ${retention} draft through its recent-session action`, async () => {

@@ -1,6 +1,12 @@
 import { hydrateRoot } from "react-dom/client";
 import { DesktopLifecycleRoot } from "./desktop-lifecycle-root";
 
-const appInfo = await window.promptStudioDesktop.getAppInfo();
+const [appInfo, appearance] = await Promise.all([
+  window.promptStudioDesktop.getAppInfo(),
+  window.promptStudioDesktop.getStartupAppearance(),
+]);
 
-hydrateRoot(document.getElementById("root")!, <DesktopLifecycleRoot platform={appInfo.platform} />);
+hydrateRoot(
+  document.getElementById("root")!,
+  <DesktopLifecycleRoot platform={appInfo.platform} initialAppearance={appearance} />,
+);

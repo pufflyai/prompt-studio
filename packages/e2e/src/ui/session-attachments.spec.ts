@@ -111,10 +111,30 @@ test.describe("Session attachments", () => {
         response.request().method() === "POST" && response.url().endsWith("/v1/sessions") && response.status() === 201,
     );
 
-    await page.locator("[data-testid='content-editable']").fill(prompt);
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/v1/sessions", async (route) => {
+      if (route.request().method() === "POST") await held;
+      await route.continue();
+    });
+    const editor = page.getByTestId("content-editable").last();
+    await editor.fill(prompt);
     await page.locator("[data-testid='send-message-button']").click();
 
+    try {
+      await expect(editor).toBeEmpty();
+      await expect(page.getByText(prompt, { exact: true })).toHaveCount(1);
+      await expect(page.getByRole("button", { name: "Remove diagram.png" })).toHaveCount(0);
+      await expect(page.getByText("diagram.png", { exact: true })).toHaveCount(1);
+      await expect(editor).toHaveAttribute("contenteditable", "false");
+      await expect(page.locator("[data-workbench-region=main]").getByTestId("send-message-button")).toBeDisabled();
+    } finally {
+      release();
+    }
     const createResponse = await createResponsePromise;
+    await page.unroute("**/v1/sessions");
     const createRequest = createResponse.request();
     const createPayload = createRequest.postDataJSON() as { attachments?: Array<{ file_id: string }> };
     expect(createPayload.attachments).toHaveLength(1);

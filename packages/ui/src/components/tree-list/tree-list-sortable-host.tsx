@@ -2,6 +2,7 @@ import { Box, type StackProps } from "@chakra-ui/react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import type { ReactNode } from "react";
+import { DropIndicator } from "../primitives/drop-indicator";
 import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
 import { toGapDragId } from "./tree-list-reorder";
 
@@ -14,20 +15,7 @@ const edgePosition = {
 // The accent line marks the drop slot on the target's edge without shifting the rows.
 const DropLine = (props: { edge: TreeListDropIndicator["edge"] }) => {
   const { edge } = props;
-  return (
-    <Box
-      aria-hidden
-      data-tree-list-drop-indicator={edge}
-      position="absolute"
-      insetX="0"
-      zIndex="1"
-      h="drop-indicator"
-      borderRadius="2xs"
-      bg="bg.accent-primary.default"
-      pointerEvents="none"
-      {...edgePosition[edge]}
-    />
-  );
+  return <DropIndicator data-tree-list-drop-indicator={edge} {...edgePosition[edge]} />;
 };
 
 interface SortableHostProps {

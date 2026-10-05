@@ -1,5 +1,17 @@
 import { defineRecipe } from "@chakra-ui/react";
 
+const filterSegment = {
+  color: "fg",
+  bg: "transparent",
+  borderRadius: "0",
+  border: "none",
+  borderRightWidth: "1px",
+  borderRightStyle: "solid",
+  borderRightColor: "border.subtle",
+  _hover: { bg: "bg.hover" },
+  _expanded: { bg: "bg.active" },
+};
+
 export const buttonRecipe = defineRecipe({
   base: {
     borderRadius: "xs",
@@ -94,6 +106,8 @@ export const buttonRecipe = defineRecipe({
           _hover: { bg: "transparent" },
         },
       },
+      "filter-segment": filterSegment,
+      "filter-condition": { ...filterSegment, color: "fg.muted" },
       "ghost-static": {
         color: "fg",
         bg: "transparent",

@@ -475,5 +475,58 @@
     "description": "Prueba funciones beta. Este ajuste se aplica a todos los proyectos y paneles conectados a esta instalación.",
     "notifications": "Notificaciones",
     "loading": "Cargando ajustes…"
+  },
+  "performance": {
+    "settings": {
+      "title": "Supervisión del rendimiento",
+      "description": "Mide la tasa de fotogramas, la CPU y los fotogramas lentos de esta aplicación. No se mide nada mientras esté desactivada. Las mediciones se quedan en este dispositivo y nunca se suben.",
+      "enable": "Habilitar supervisión del rendimiento",
+      "helperOff": "Se guarda solo en este dispositivo. Otros dispositivos y entornos de ejecución remotos tienen su propia configuración.",
+      "helperDesktopOn": "Activada en este dispositivo. Muestra la tasa de fotogramas en la barra de estado. Toma una muestra cada 2 segundos y guarda los últimos 30 segundos.",
+      "helperBrowserOn": "Activada en este navegador. Muestra la tasa de fotogramas en la barra de estado y registra los fotogramas lentos mientras esta pestaña esté abierta.",
+      "saveError": "No se pudo cambiar la supervisión del rendimiento."
+    },
+    "popover": {
+      "title": "Rendimiento",
+      "statusLabel": "Tasa de fotogramas {{fps}} fps. Mostrar detalles de rendimiento.",
+      "avgMin": "media {{avg}} · mín. {{min}}",
+      "ago": "hace 30 s",
+      "now": "ahora",
+      "cpu": "CPU",
+      "window": "últimos 30 s",
+      "workbench": "Workbench",
+      "workbenchDetail": "Esta ventana",
+      "views_one": "{{count}} vista",
+      "views_other": "{{count}} vistas",
+      "paused": "En pausa · vistas descargadas",
+      "pause": "Pausar {{name}}",
+      "pauseTooltip": "Pausar {{name}} · descarga sus vistas",
+      "resume": "Reanudar",
+      "resumeLabel": "Reanudar {{name}}",
+      "more_one": "{{count}} extensión más",
+      "more_other": "{{count}} extensiones más",
+      "fewer": "Mostrar las {{count}} más activas",
+      "cpuUnavailableTitle": "No se pudo leer la CPU.",
+      "cpuUnavailableBody": "La tasa de fotogramas sigue actualizándose. Pausar sigue funcionando.",
+      "browserTitle": "La CPU se mide en la aplicación de escritorio",
+      "browserBody": "Una pestaña del navegador no puede leer la CPU. Pausar sigue funcionando.",
+      "sustainedTitle": "CPU alta sostenida",
+      "sustainedBody": "{{process}} promedió {{cpu}} de CPU en los últimos {{seconds}} segundos.",
+      "unknownExtension": "Extensión desconocida",
+      "roles": {
+        "main": "Aplicación",
+        "gpu": "GPU",
+        "utility": "Proceso auxiliar",
+        "startup": "Ventana de inicio",
+        "renderer": "Renderizador",
+        "other": "Otro proceso",
+        "extension-frames": "Marcos de extensiones",
+        "workbench": "Workbench"
+      }
+    },
+    "paused": {
+      "title": "{{name}} está en pausa",
+      "body": "Se pausó desde el monitor de rendimiento. Sus vistas siguen descargadas hasta que la reanudes."
+    }
   }
 }

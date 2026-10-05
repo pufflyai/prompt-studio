@@ -125,3 +125,19 @@ uses the clicked file when another document is active. Actions with input fields
 Typecheck with `skipLibCheck: false`. Fix the field named by `pst extensions check`; declaration errors identify the extension, contribution, field path, and expected value. Test edits, another resource, revisit, reload, Back/Forward, independent closing, and mode navigation through the normal dev installation.
 
 These examples are repository TypeScript sources included in Extension Lab's typecheck and runtime checks. Host integration belongs in the [workbench guide](../../../packages/pstdio-workbench/README.md).
+
+### Session rows
+
+A session may open a preview panel while retaining its own action identity:
+
+```ts
+const resource = { type: "session", id: session.id, label: session.title };
+const node = {
+  id: `session-${session.id}`,
+  label: session.title,
+  resource,
+  target: { kind: "panel", panel: workbenchPanels.projectSession, resource, open: "preview" },
+} satisfies TreeNode;
+```
+
+Import `TreeNode` and `workbenchPanels` from `@pstdio/sdk/extensions`. Use the existing `sessionSlots` menu refs to contribute session commands. The host supplies the row resource as command context and preserves it when collecting parameters.

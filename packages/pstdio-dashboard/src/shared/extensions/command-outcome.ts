@@ -26,23 +26,5 @@ export const collectExtensionCommandNotifications = (response: CommandExecuteRes
     });
   }
 
-  if (outcome.status === "rejected") {
-    notifications.push({
-      level: "warning",
-      title: "Extension command rejected",
-      message: outcome.reason ?? outcome.code ?? "Command was rejected by middleware.",
-      metadata: commandMetadata(response),
-    });
-  }
-
-  if (outcome.status === "error") {
-    notifications.push({
-      level: "error",
-      title: "Extension command failed",
-      message: outcome.error?.message ?? outcome.reason ?? "Command threw an error.",
-      metadata: commandMetadata(response),
-    });
-  }
-
   return notifications;
 };

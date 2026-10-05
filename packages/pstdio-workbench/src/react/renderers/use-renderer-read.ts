@@ -4,7 +4,13 @@ import type { Disposable, RendererReadBinding, WorkbenchCore } from "../../core"
 interface RendererReadOptions<T> {
   workbench: WorkbenchCore;
   ownerKey: string;
+  /** What the read is about. A new key drops the old value and loads again. */
   queryKey: string;
+  /**
+   * What the read is asked for, such as a view's filter. A new key loads again but keeps the
+   * current value on screen until the new one arrives.
+   */
+  refreshKey?: string;
   load(signal: AbortSignal, publish: (value: T) => void): Promise<T> | T;
   subscribe(listener: () => void): Disposable | (() => void);
 }
@@ -17,9 +23,11 @@ interface ReadState<T> {
 }
 
 export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
-  const { workbench, ownerKey, queryKey } = options;
+  const { workbench, ownerKey, queryKey, refreshKey } = options;
   const [state, setState] = useState<ReadState<T>>({ queryKey, loading: true });
   const retryRef = useRef<(() => void) | undefined>(undefined);
+  const refreshRef = useRef<(() => void) | undefined>(undefined);
+  const lastRefreshKey = useRef(refreshKey);
   const callbacks = useRef(options);
   useEffect(() => {
     callbacks.current = options;
@@ -48,6 +56,9 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
         })),
     };
     const refresh = () => binding.request(request);
+    refreshRef.current = refresh;
+    // This read already uses the current refresh key, so the refresh effect below must not repeat it.
+    lastRefreshKey.current = callbacks.current.refreshKey;
     retryRef.current = () => {
       setState((previous) => ({ ...previous, loading: true, error: undefined }));
       binding.request(request, "retry");
@@ -56,11 +67,17 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     const subscription = callbacks.current.subscribe(refresh);
     return () => {
       retryRef.current = undefined;
+      refreshRef.current = undefined;
       binding.dispose();
       if (typeof subscription === "function") subscription();
       else subscription.dispose();
     };
   }, [workbench, ownerKey, queryKey]);
+  useEffect(() => {
+    if (lastRefreshKey.current === refreshKey) return;
+    lastRefreshKey.current = refreshKey;
+    refreshRef.current?.();
+  }, [refreshKey]);
   const current = state.queryKey === queryKey ? state : { queryKey, loading: true };
   return { ...current, retry: () => retryRef.current?.() };
 };

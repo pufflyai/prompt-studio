@@ -1,16 +1,16 @@
 import type { DataTableRendererColumn, WorkbenchModuleContext } from "@pstdio/workbench";
+import { workspaceCollectionColumns, workspaceCollectionDefaults } from "pstdio-api-contracts";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createDashboardWorkspaces, toWorkspaceDataTableRow } from "@/shared/workspaces/dashboard-workspaces";
 import { requestDashboardWorkspaceDiffSummaries } from "@/shared/workspaces/workspace-diff-summary-data";
 import { subscribeWorkspaceDataChanges } from "./workspace-data-subscription";
+import { createWorkspaceViewsProvider } from "./workspace-views";
 
-const workspaceColumns: DataTableRendererColumn[] = [
-  { id: "name", label: "Name", stat: { type: "unique" } },
-  {
-    id: "type",
-    label: "Type",
+const presentation: Record<string, Pick<DataTableRendererColumn, "stat" | "renderer">> = {
+  name: { stat: { type: "unique" } },
+  type: {
     stat: { type: "top-values", limit: 3 },
     renderer: {
       type: "badge",
@@ -21,17 +21,17 @@ const workspaceColumns: DataTableRendererColumn[] = [
       ],
     },
   },
-  { id: "location", label: "Location", stat: { type: "unique" }, renderer: { type: "path" } },
-  { id: "created", label: "Created at", renderer: { type: "date" } },
-  { id: "diff", label: "Diff", renderer: { type: "diff" } },
-  // Diagnostic fields stay available from the column menu without crowding the default list.
-  { id: "attempt", label: "Attempt", defaultHidden: true, stat: { type: "unique" } },
-  { id: "provider", label: "Provider", defaultHidden: true, stat: { type: "top-values", limit: 5 } },
-  { id: "state", label: "State", defaultHidden: true, stat: { type: "top-values", limit: 2 } },
-  { id: "error", label: "Provider error", defaultHidden: true, stat: { type: "unique" } },
-  { id: "branch", label: "Branch", defaultHidden: true, stat: { type: "unique" } },
-  { id: "updated", label: "Updated at", defaultHidden: true, renderer: { type: "date" } },
-];
+  location: { stat: { type: "unique" }, renderer: { type: "path" } },
+  created: { renderer: { type: "date" } },
+  diff: { renderer: { type: "diff" } },
+  attempt: { stat: { type: "unique" } },
+  provider: { stat: { type: "top-values", limit: 5 } },
+  state: { stat: { type: "top-values", limit: 2 } },
+  error: { stat: { type: "unique" } },
+  branch: { stat: { type: "unique" } },
+  updated: { renderer: { type: "date" } },
+};
+const workspaceColumns = workspaceCollectionColumns.map((column) => ({ ...column, ...presentation[column.id] }));
 
 const executeWorkspaceQuery = async (ctx: WorkbenchModuleContext, signal: AbortSignal) => {
   const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx), { includeArchived: true });
@@ -53,7 +53,8 @@ export const registerWorkspaceDataTableView = (ctx: WorkbenchModuleContext) => {
         kind: "dataTable",
         resourceKind: "workspace",
         columns: workspaceColumns,
-        defaultShowStats: false,
+        defaultSettings: workspaceCollectionDefaults,
+        viewsProvider: createWorkspaceViewsProvider(ctx),
         emptyTitle: "No workspaces yet",
         emptyDescription: "Create a workspace to start an isolated attempt for this project.",
         contextKeys: [dashboardSelectedProjectIdContextKey],

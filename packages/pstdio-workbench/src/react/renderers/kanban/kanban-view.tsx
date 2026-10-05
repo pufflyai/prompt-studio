@@ -16,6 +16,7 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
+import { reportUserActionError, runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { RendererReadNotice } from "../renderer-read-notice";
@@ -107,18 +108,23 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   );
   const initialState = {
     settings: contribution.defaultSettings,
-    filters: contribution.defaultFilters,
+    filter: contribution.defaultFilter,
+    sorts: contribution.defaultSorts,
   };
 
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
-  const filters = useKanbanRendererStore(storageKey, (state) => state.filters, initialState);
+  const filter = useKanbanRendererStore(storageKey, (state) => state.filter, initialState);
+  const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
 
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
-    queryKey: JSON.stringify([contribution.id, settings, filters]),
+    queryKey: contribution.id,
+    // The view can narrow what the query returns, so it loads again while the board stays on
+    // screen. Search is not part of it, so typing a search never runs the query.
+    refreshKey: JSON.stringify([settings, filter, sorts]),
 
-    load: (signal) => contribution.executeQuery({ settings, filters }, signal),
+    load: (signal) => contribution.executeQuery({ settings, filter, sorts }, signal),
     subscribe: (refresh) => {
       const subscription = contribution.subscribe?.(refresh);
       const events = getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {
@@ -134,12 +140,15 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const rows = read.value ?? [];
 
   const handleOpenRow = (row: KanbanRendererRow) => {
-    if (contribution.onRowActivate) void Promise.resolve(contribution.onRowActivate(row)).catch(() => undefined);
+    if (contribution.onRowActivate) void runUserAction(workbench, "Open row", () => contribution.onRowActivate!(row));
   };
 
   const getRowContextMenuActions = (row: KanbanRendererRow) => {
     const resourceActions = isKanbanRowResource(row.resource) ? resolveResourceActions(row.resource) : [];
-    const contributionActions = contribution.getRowContextMenuActions?.(row) ?? [];
+    const contributionActions = (contribution.getRowContextMenuActions?.(row) ?? []).map((action) => ({
+      ...action,
+      onClick: () => runUserAction(workbench, action.label, () => action.onClick()),
+    }));
     return mergeKanbanViewRowActions(resourceActions, contributionActions);
   };
   const contentPlaceholder = read.error ? (
@@ -162,13 +171,17 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     <WorkbenchKanbanViewFrame usesInternalScroll={settings.viewMode === "board"}>
       {readNotice}
       <KanbanRenderer
+        itemLabel={
+          contribution.resourceKind ? workbench.resources.getKind(contribution.resourceKind)?.label : undefined
+        }
         viewsSource={viewsSource}
         rows={rows}
         contentPlaceholder={read.value ? undefined : contentPlaceholder}
         storageKey={storageKey}
         attributes={attributes}
         defaultSettings={contribution.defaultSettings}
-        defaultFilters={contribution.defaultFilters}
+        defaultFilter={contribution.defaultFilter}
+        defaultSorts={contribution.defaultSorts}
         defaultViews={contribution.defaultViews}
         defaultActiveViewId={contribution.defaultActiveViewId}
         emptyTitle={contribution.emptyTitle}
@@ -176,11 +189,16 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         getBoardColumnConfig={contribution.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
         onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
+        onActionError={(error, action) => reportUserActionError(workbench, action, error)}
         onAttributeChange={contribution.onAttributeChange}
         onReorder={contribution.onReorder}
         createRow={contribution.createRow}
         onCreateRow={contribution.onCreateRow}
-        onColumnAction={contribution.onColumnAction}
+        onColumnAction={
+          contribution.onColumnAction
+            ? (...args) => runUserAction(workbench, "Column action", () => contribution.onColumnAction!(...args))
+            : undefined
+        }
         getRowContextMenuActions={getRowContextMenuActions}
         toolbarActions={
           <ViewToolbarActions

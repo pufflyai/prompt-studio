@@ -14,9 +14,7 @@ const getVerticalMenuGap = async (
 };
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
-  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
-  await expect(tab).toHaveAttribute("aria-selected", "true");
-  await tab.click();
+  await tab.click({ button: "right" });
 };
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
@@ -35,7 +33,7 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as { id: string };
 };
 
-test("opens the active Session tab's custom menu", async ({ page, request }) => {
+test("opens the Session tab context menu while normal clicks only select", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await page.addInitScript((selectedProjectId: string) => {
@@ -52,15 +50,22 @@ test("opens the active Session tab's custom menu", async ({ page, request }) => 
   const nav = page.locator('[data-workbench-region="nav"]');
   await nav.getByRole("button", { name: "Show Side Panel" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
+  const sessionChoice = page
+    .getByRole("menu", { name: "Add panel" })
+    .getByRole("menuitem", { name: "Session", exact: true });
+  if (await sessionChoice.isVisible()) await sessionChoice.click();
   await expect(page.locator('[data-workbench-panel-header="side"]').getByRole("tab")).toHaveCount(1);
   const sessionTab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
     name: /New session/,
     selected: true,
   });
   await expect(sessionTab).toBeVisible();
+  await sessionTab.click();
+  await sessionTab.click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
   await openTabCustomMenu(sessionTab);
 
-  const sessionMenu = page.getByRole("menu", { name: "New session menu" });
+  const sessionMenu = page.getByRole("menu", { name: "New session context menu" });
   await expect(sessionMenu).toBeVisible();
   await expect(sessionMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
   await expect(sessionMenu.getByRole("menuitem", { name: "View all sessions" })).toBeVisible();
@@ -69,7 +74,10 @@ test("opens the active Session tab's custom menu", async ({ page, request }) => 
   await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
 });
 
-test("keeps panel drags in the tab row and supports pointer and keyboard reorder", async ({ page, request }) => {
+test("keeps the tab viewport unscrolled during drag and supports pointer and keyboard reorder", async ({
+  page,
+  request,
+}) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await page.addInitScript((id: string) => {
@@ -82,6 +90,10 @@ test("keeps panel drags in the tab row and supports pointer and keyboard reorder
   const header = page.locator('[data-workbench-panel-header="secondary"]');
   for (let index = 0; index < 3; index += 1) {
     await header.getByRole("button", { name: "Add panel", exact: true }).click();
+    const terminalChoice = page
+      .getByRole("menu", { name: "Add panel" })
+      .getByRole("menuitem", { name: "Terminal", exact: true });
+    if (await terminalChoice.isVisible()) await terminalChoice.click();
     await expect(header.getByRole("tab")).toHaveCount(index + 1);
   }
   const tabs = header.getByRole("tab");
@@ -104,6 +116,7 @@ test("keeps panel drags in the tab row and supports pointer and keyboard reorder
         })),
       )
       .toEqual({ top: 0, overflow: 0 });
+    await page.keyboard.press("Escape");
     await page.mouse.up();
   }
   const start = (await first.boundingBox())!;

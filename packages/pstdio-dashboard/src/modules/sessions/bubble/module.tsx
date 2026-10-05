@@ -1,10 +1,11 @@
 import { Spinner } from "@chakra-ui/react";
 import { type PlacementIdentity, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
-import type {
-  ResourceRef,
-  WorkbenchModuleContext,
-  WorkbenchModuleContribution,
-  WorkbenchTabRetention,
+import {
+  type ResourceRef,
+  resourceContextMenuPath,
+  type WorkbenchModuleContext,
+  type WorkbenchModuleContribution,
+  type WorkbenchTabRetention,
 } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
 import { forgetDashboardSession } from "@/modules/sessions/state/session-selection";
@@ -18,6 +19,7 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
+import { registerSessionRenameCommand } from "./session-rename-command";
 import { createSessionTabPresentation } from "./session-tab-presentation";
 
 const SessionWidget = lazy(() =>
@@ -127,9 +129,9 @@ const openNewSessionDraft = (
   }
   const identity = input.replacePanel;
   if (identity?.kind === "mode") {
-    const origin = ctx.layout
-      .getLayout()
-      .regions.side.widgets.find(
+    const origin = Object.values(ctx.layout.getLayout().regions)
+      .flatMap((region) => region.widgets)
+      .find(
         (placement) =>
           placement.viewId === dashboardWidgetIds.sessionBubble &&
           placement.placementIdentity?.kind === "mode" &&
@@ -156,9 +158,9 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
       icon: "MessageCircle",
     },
     {
-      execute: async (args) => {
+      execute: async (args, context) => {
         const {
-          resource,
+          resource = context?.resource,
           preservePanelMode = false,
           selectWorkspaceSidenav = true,
           tabRetention,
@@ -219,5 +221,11 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
     activate(ctx) {
       registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
+      registerSessionRenameCommand(ctx);
+      ctx.layout.registerMenuItem(resourceContextMenuPath("session"), {
+        commandId: dashboardCommandIds.openSessionPanel,
+        group: "kernel",
+        order: 10,
+      });
     },
   }) satisfies WorkbenchModuleContribution;

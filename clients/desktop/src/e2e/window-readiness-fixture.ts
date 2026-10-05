@@ -9,7 +9,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 void app.whenReady().then(async () => {
-  const controller = await DesktopWindowController.create(join(import.meta.dirname, "preload.cjs"));
+  const controller = await DesktopWindowController.create(join(import.meta.dirname, "preload.cjs"), () => undefined);
   const descriptor: RuntimeDescriptor = {
     schemaVersion: 1,
     protocolVersion: 1,
@@ -30,7 +30,7 @@ void app.whenReady().then(async () => {
       await workbenchReady;
       return new Response(null, { status: 404 });
     }
-    return readLifecycleAsset(request.url, join(import.meta.dirname, "renderer"));
+    return readLifecycleAsset(request.url, join(import.meta.dirname, "renderer"), undefined);
   });
   controller.window.webContents.once("dom-ready", () => {
     process.send!({ documentReadyVisible: controller.window.isVisible() });

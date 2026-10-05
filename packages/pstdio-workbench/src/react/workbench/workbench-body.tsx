@@ -10,6 +10,7 @@ import {
   useWorkbenchRegionTabsVisible,
   WorkbenchRegionTabs,
 } from "../region/region-tabs";
+import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -46,7 +47,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
   const settings = useWorkbenchModeRegionSettings(workbench, "main");
 
-  const visible = settings?.showHeader !== false && (hasMainHeader || hasPanelHeader);
+  const visible = (settings?.showHeader !== false || hasMainContentTabs) && (hasMainHeader || hasPanelHeader);
 
   return (
     <Header
@@ -126,8 +127,10 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       w="full"
       bg={workbenchBackgrounds.main}
       layerStyle="panel"
+      position="relative"
     >
       <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+      <WorkbenchTabDropTarget region="main" />
       <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
         {mainPanelWithMenus}
       </Box>

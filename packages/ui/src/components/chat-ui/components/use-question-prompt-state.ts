@@ -67,6 +67,10 @@ export const useQuestionPromptState = (questionPrompt: ChatInputQuestionPrompt |
     selectedOptionsByQuestion,
     customAnswersByQuestion,
     reset,
+    restore: (selected: Record<string, string[]>, custom: ChatInputQuestionCustomAnswers) => {
+      setSelectedOptionsByQuestion(selected);
+      setCustomAnswersByQuestion(custom);
+    },
     toggleOption,
     toggleOther,
     setCustomAnswer,

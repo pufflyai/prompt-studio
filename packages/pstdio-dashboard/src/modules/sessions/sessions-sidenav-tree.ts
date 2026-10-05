@@ -46,6 +46,7 @@ const getWorkspaceResourceId = (resource: ResourceRef | undefined) => {
 const createSessionNode = (session: DashboardSession, target: SessionNodeTarget): TreeNode => ({
   id: resourceKey(session.resource),
   label: session.title,
+  resource: session.resource,
   icon: sessionStatusIcon(session.status),
   iconColor: sessionStatusColor(session.status),
   ...(target === "resource"

@@ -1,3 +1,4 @@
+import type { ViewSort } from "@pstdio/sdk/extensions";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { headerTrailingMenuPath, type WorkbenchModuleContext, type WorkbenchModuleContribution } from "../../core";
 import { AttributeEditor } from "./attribute-editor";
@@ -15,9 +16,9 @@ const defaultSettings = {
   viewMode: "board",
   columnGrouping: "status",
   rowGrouping: "none",
-  ordering: { attributeId: "updated", direction: "desc" },
   displayProperties: ["status", "assignee", "priority"],
 } satisfies Partial<KanbanRendererSettings>;
+const defaultSorts: ViewSort[] = [{ attributeId: "updated", direction: "desc" }];
 const resolveBoardColumnConfig = (groupKey: string) => {
   const status = storySchemaStore.getAttributes().find((attribute) => attribute.id === "status");
   if (!status || status.type.kind !== "enum") {
@@ -113,6 +114,7 @@ export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution =
         ],
         attributes: storySchemaStore.source,
         defaultSettings,
+        defaultSorts,
         getBoardColumnConfig: resolveBoardColumnConfig,
         executeQuery: () => rowsStore.getRows(),
         subscribe: rowsStore.subscribe,

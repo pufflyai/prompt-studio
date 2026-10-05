@@ -40,7 +40,21 @@ const mode = defineMode({
 
 `regionSettings.sidenav` controls a custom sidebar even without a placement. Page-owned content still belongs in `slots`. Region settings inherit the host defaults per property. For example, setting `alwaysShowTabs` preserves the host's size unless the mode supplies its own `size`.
 
-Set `regionSettings.secondary.showHeader: false` for a player or timeline that supplies its own controls. This removes the docked panel's tab and Add header without changing its content. Main and attached Side panels support the same setting. Floating panels retain their window controls.
+Set `regionSettings.secondary.showHeader: false` for a player or timeline that supplies its own controls. A panel without tabs stays headerless. During a tab drag, only the hovered valid panel shows a faint overlay across its whole container without shifting its content. The overlay covers padding and header controls in attached and floating panels. Dropping another tab there reveals the shared tray. Main, Side, and Secondary use the same rule. Tab insertion keeps the shared Sidenav placement indicator.
+
+## User arrangement
+
+A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or the tab context menu. Explicit `movableTo` restrictions and the mode's supported panels remain hard limits. Navigation chrome and the Sidenav do not become tabs.
+
+The + control follows the scrolling tab group. Its choices include active panels from other regions that are allowed in this destination. A single-instance panel is reused. Resource bindings retain their declared Add action. Panel menu openers stay at the far right.
+
+Right-click, Shift+F10, the Context Menu key, and touch long-press open the same grouped tab menu. Normal clicks select. Preview and pinned tabs can appear in any order. Pin and Unpin change retention without changing position. Alt+Left and Alt+Right reorder the focused tab.
+
+Placement identity and ownership stay the same when a tab moves. Mode arrangements persist within the project and mode; page arrangements persist within the page location. Reset layout restores the active page and shared mode defaults without deleting session or terminal data or clearing other page locations.
+
+A moved view keeps its tab tray even when it is the only view in its destination. This keeps the move and reset actions available. Returning it to its declared region restores that region's normal header policy. Page-owned Locations and their Sub Panels keep their owner lifecycle when they share a region with other scoped content. Primary changes reconcile each placement separately.
+
+Live views stay mounted during tab selection and page navigation. Iframe state also survives explicit moves in browsers with the DOM `moveBefore` API. See [ADR 0053](../../adrs/0053-temporary-webview-move-fallback.md) for the temporary WebKit limit.
 
 ## Panel policy
 
@@ -48,7 +62,7 @@ Declare `floatingPanels: "hidden"` on the mode to prevent floating side panels. 
 
 `regionSettings[region].collapsible: false` prevents dragging the region closed. The shared navigation buttons can still hide and reopen it. Hiding preserves its placements. Docked content stays mounted through hide and reopen. It does not close a tab or change the page.
 
-A lone closable panel keeps its tab visible by default. `alwaysShowTabs: true` shows every lone tab; `false` hides a lone tab. Multiple visible items always show tabs. Tab visibility does not affect panel visibility or floating permission.
+A lone closable panel keeps its tab visible by default. `alwaysShowTabs: true` shows every lone tab; `false` hides a lone tab in its declared region. Multiple visible items and moved views always show tabs. Tab visibility does not affect panel visibility or floating permission.
 
 | Mode | Panel policy |
 | --- | --- |

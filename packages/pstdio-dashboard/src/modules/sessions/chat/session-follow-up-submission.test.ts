@@ -32,7 +32,7 @@ const submission = (followUp: FollowUpMutation, onSubmitted: () => void, answers
     questionResponse: answers ? { answers } : undefined,
   });
 
-test("waits for server acceptance before completing a follow-up submission", async () => {
+test("hands off the draft immediately but waits for server acceptance before completing", async () => {
   let accept!: Parameters<FollowUpMutation["mutate"]>[1]["onSuccess"];
   let submitted = false;
   const result = submission(
@@ -47,7 +47,14 @@ test("waits for server acceptance before completing a follow-up submission", asy
     },
   );
   expect(result).toBeInstanceOf(Promise);
-  expect(submitted).toBe(false);
+  expect(submitted).toBe(true);
+  expect(current()?.prompt).toBe("Next turn");
+  let settled = false;
+  void result.then(() => {
+    settled = true;
+  });
+  await Promise.resolve();
+  expect(settled).toBe(false);
   accept({ status: "in_progress", followUp: { status: "queued", queue_position: 1 } });
   await result;
   expect(submitted).toBe(true);
@@ -104,16 +111,19 @@ test("a queued follow-up leaves the conversation to the queued list", async () =
 
 test("an accepted question answer clears its pending submission without a new user turn", async () => {
   pending = null;
-  const result = submission(
-    {
-      mutate: (_input, options) => {
-        options.onSuccess({ status: "in_progress", followUp: { status: "dispatched" } });
-      },
+  let accept!: Parameters<FollowUpMutation["mutate"]>[1]["onSuccess"];
+  let submitted = false;
+  const result = submission({
+    mutate: (_input, options) => {
+      accept = options.onSuccess;
     },
-    () => undefined,
-    [["Blue"]],
-  );
+  }, () => {
+    submitted = true;
+  }, [["Blue"]]);
+  expect(submitted).toBe(false);
+  accept({ status: "in_progress", followUp: { status: "dispatched" } });
   await result;
+  expect(submitted).toBe(true);
   expect(current()).toBeNull();
 });
 

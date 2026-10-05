@@ -5,6 +5,10 @@ import { Header } from "@/components/layout/header";
 import { PANEL_HEADER_CONTROL_SIZE } from "@/components/layout/panel-header.constants";
 import { Tooltip } from "@/components/primitives/tooltip";
 
+interface BubblePanelContainerProps extends HTMLChakraProps<"section"> {
+  [attribute: `data-${string}`]: string | number | boolean | undefined;
+}
+
 export interface BubblePanelProps {
   isOpen?: boolean;
   title?: string;
@@ -15,10 +19,11 @@ export interface BubblePanelProps {
   popOutLabel?: string;
   width?: string;
   height?: string;
-  containerProps?: HTMLChakraProps<"section">;
+  containerProps?: BubblePanelContainerProps;
   testId?: string;
   "aria-label"?: string;
   children?: ReactNode;
+  overlay?: ReactNode;
 }
 
 export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function BubblePanel(props, ref) {
@@ -36,6 +41,7 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
     testId,
     "aria-label": ariaLabel,
     children,
+    overlay,
   } = props;
 
   if (!isOpen) return null;
@@ -99,6 +105,7 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
             {children}
           </Box>
         </Flex>
+        {overlay}
       </chakra.section>
     </Portal>
   );

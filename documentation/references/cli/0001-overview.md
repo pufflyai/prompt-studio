@@ -17,6 +17,7 @@ Run `pst --help`, `pst <group> --help`, or `pst <group> <command> --help` for th
 | `pst serve` | Start or reuse the local API runtime. |
 | `pst close` | Stop the background API runtime. |
 | `pst logs` | Read the local runtime log. |
+| `pst performance` | Print the desktop app's local performance snapshot as JSON, including the workbench frame rate (`frameRate`) and paused extensions (`pausedExtensionIds`). See [Developer tools](../../guides/0003-developer-tools.md). |
 | `pst projects` | Create, link, inspect, and remove projects. |
 | `pst agents` | Discover harnesses and install skills. |
 | `pst sessions` | Run and inspect agent sessions. |

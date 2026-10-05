@@ -5,7 +5,7 @@ import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -22,6 +22,7 @@ import { createSessionsModule } from "../sessions/module";
 import { createSettingsModule } from "../settings/module";
 import { createStartModule } from "../start/module";
 import { createWorkspacesModule } from "../workspaces/module";
+import { seedSidenavStory } from "./dashboard-sidenav-story-data";
 import { createSidenavModule } from "./module";
 
 const PROJECT_ID = "demo-project";
@@ -186,73 +187,6 @@ const createTicketsNavigationModule = () => ({
     return [];
   },
 });
-const seedSessions = () => {
-  getWriter("settings")?.truncateAndWrite([
-    { id: "global", max_concurrent_sessions: null, notifications_enabled: true },
-  ]);
-  getWriter("sessions")?.truncateAndWrite([
-    sessionRow("session-today-1", "Refactor sidenav", "completed", "2026-06-24T09:00:00Z", "workspace-1"),
-    sessionRow("session-today-2", "Investigate flaky test", "failed", "2026-06-24T08:00:00Z"),
-    sessionRow("session-yesterday", "Wire up board", "completed", "2026-06-23T15:00:00Z", "workspace-1"),
-  ]);
-  getWriter("workspaces")?.truncateAndWrite([
-    {
-      id: "workspace-1",
-      project_id: PROJECT_ID,
-      name: "Mode-driven sidenav",
-      branch: "feature/PS-107",
-      root_path: "/repo/.pstdio/workspaces/PS-107",
-      archived: false,
-      workspace_shorthand: "PS-107_A1",
-      setup_error: null,
-      created_at: "2026-06-22T08:10:00Z",
-      updated_at: "2026-06-24T09:00:00Z",
-      deleted_at: null,
-    },
-  ]);
-  getWriter("notifications")?.truncateAndWrite([
-    {
-      id: "notification-1",
-      project_id: PROJECT_ID,
-      title: "Review generated ticket summary",
-      body: "The planner has an update ready for review.",
-      kind: "needs_review",
-      priority: "normal",
-      status: "open",
-      source: "dashboard",
-      origin: "core",
-      source_extension_id: null,
-      actor_type: "agent",
-      actor_id: null,
-      target_json: null,
-      related_json: [],
-      actions_json: [],
-      dedupe_key: "story-notification",
-      metadata_json: null,
-      created_at: "2026-06-24T09:30:00Z",
-      updated_at: "2026-06-24T09:30:00Z",
-      read_at: null,
-      resolved_at: null,
-      snoozed_until: null,
-      expires_at: null,
-    },
-  ]);
-};
-const sessionRow = (id: string, title: string, status: string, updatedAt: string, workspaceId?: string) => ({
-  id,
-  project_id: PROJECT_ID,
-  title,
-  status,
-  agent: null,
-  last_selected_model: null,
-  archived: false,
-  last_request_started: updatedAt,
-  last_request_ended: updatedAt,
-  created_at: updatedAt,
-  updated_at: updatedAt,
-  deleted_at: null,
-  ...(workspaceId ? { workspace_id: workspaceId } : {}),
-});
 const linkSessionsToWorkspace = () => {
   getWriter("workspace_sessions")?.truncateAndWrite([
     { id: "link-1", workspace_id: "workspace-1", session_id: "session-today-1" },
@@ -260,7 +194,7 @@ const linkSessionsToWorkspace = () => {
   ]);
 };
 const bootstrapWorkbench = () => {
-  seedSessions();
+  seedSidenavStory(PROJECT_ID);
   linkSessionsToWorkspace();
   const workbench = createWorkbench();
   for (const module of [
@@ -396,6 +330,22 @@ export const TicketWorkspaceBackJourney: Story = {
 // Session mode: global collections stay fixed above an expanded Sessions group with inline creation.
 export const SessionMode: Story = {
   render: () => <SidenavStory open={(workbench) => void openSessionsPage(workbench)} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const document = within(canvasElement.ownerDocument.body);
+    const row = await canvas.findByRole("option", { name: "Investigate flaky test" });
+    await fireEvent.contextMenu(row);
+    await waitFor(() => expect(document.getByRole("menuitem", { name: "Open session panel" })).toBeVisible());
+    await expect(document.getAllByRole("menu")).toHaveLength(1);
+    await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
+    await fireEvent.contextMenu(canvas.getByRole("option", { name: "Search" }));
+    await waitFor(() => expect(document.getByRole("menuitem", { name: "Reset to default" })).toBeVisible());
+    await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
+  },
 };
 // Workspace resource: global collections stay fixed above the expanded, workspace-scoped Sessions group.
 export const WorkspaceResource: Story = {

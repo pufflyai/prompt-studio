@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { ViewFilterGroup, ViewSort } from "./collection-view";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { JsonValue, Struct } from "./json";
@@ -8,8 +9,43 @@ import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export type DataTableRendererResourceRef = ResourceRef;
 
+/** Display settings stored in a data table view. */
+export interface DataTableRendererSettings {
+  /** A groupable column id, or "none". */
+  grouping: string;
+  rowNumbers: boolean;
+  wrapRows: boolean;
+  showStats: boolean;
+  hiddenColumns: string[];
+  /** Column ids in display order. An empty list means the declared order. */
+  columnOrder: string[];
+}
+
+/** What a data table view shows until a contribution or a saved view says otherwise. */
+export const DEFAULT_DATA_TABLE_SETTINGS: DataTableRendererSettings = {
+  grouping: "none",
+  rowNumbers: true,
+  wrapRows: false,
+  showStats: true,
+  hiddenColumns: [],
+  columnOrder: [],
+};
+
+export interface DataTableRendererSavedView {
+  id: string;
+  title: Localizable<string>;
+  settings?: Partial<DataTableRendererSettings>;
+  filter?: ViewFilterGroup;
+  sorts?: ViewSort[];
+}
+
 export interface DataTableRendererQueryParams {
   renderer: RendererContext;
+  /** The view's full filter. Use it only to narrow what you load; the renderer applies it to the rows you return. */
+  filter: ViewFilterGroup;
+  /** The view's sorts, first level first. The renderer applies them to the rows you return. */
+  sorts: ViewSort[];
+  settings: DataTableRendererSettings;
 }
 
 export interface DataTableRendererThemeColor {
@@ -37,6 +73,12 @@ export type DataTableRendererColumnRenderer =
 export interface DataTableRendererColumn {
   id: string;
   label?: Localizable<string>;
+  /** How filters and sorts compare the column. Without it, the type is inferred from the values. */
+  type?: "string" | "number" | "boolean" | "date";
+  /** Offers the column under Grouping in the table's Display menu. */
+  groupable?: boolean;
+  /** Whether this column can be filtered. Defaults to true. */
+  filterable?: boolean;
   description?: Localizable<string>;
   icon?: string;
   hidden?: boolean;
@@ -83,4 +125,9 @@ export interface DataTableRendererContribution extends RendererContributionBase 
   onRowActivate?: DataTableRendererRowActivationHandler;
   initialPageSize?: number;
   pageSizeOptions?: number[];
+  defaultSettings?: Partial<DataTableRendererSettings>;
+  defaultFilter?: ViewFilterGroup;
+  defaultSorts?: ViewSort[];
+  defaultViews?: DataTableRendererSavedView[];
+  defaultActiveViewId?: string;
 }

@@ -36,6 +36,15 @@ interface RenderedOwnedPlacement {
 const bindsToLocation = (placement: WorkbenchOwnedWidgetPlacement) =>
   placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceKey));
 
+const resolveOwnerResourceKey = (
+  desired: WorkbenchOwnedWidgetPlacement,
+  exact?: WorkbenchWidgetPlacement,
+  transfer?: WorkbenchWidgetPlacement,
+) =>
+  bindsToLocation(desired)
+    ? (desired.value.ownerResourceKey ?? exact?.ownerResourceKey ?? transfer?.ownerResourceKey)
+    : desired.value.ownerResourceKey;
+
 const indexCurrentOwnedPlacements = (layout: WorkbenchLayout) => {
   const indexed = new Map<string, { region: WorkbenchRegion; placement: WorkbenchWidgetPlacement }>();
   for (const region of Object.values(layout.regions)) {
@@ -88,9 +97,10 @@ const restoreModeWidgets = (
   widgets: readonly WorkbenchWidgetPlacement[],
   saved: readonly WorkbenchWidgetPlacement[],
   desired: ReadonlyMap<string, RenderedOwnedPlacement>,
+  order?: readonly string[],
 ) => {
   const currentIds = new Set(widgets.map((widget) => widget.widgetId));
-  return [
+  const restored = [
     ...widgets,
     ...saved.filter(
       (widget) =>
@@ -99,6 +109,19 @@ const restoreModeWidgets = (
         desired.has(placementIdentityKey(widget.placementIdentity)),
     ),
   ];
+  if (!order) return restored;
+  const positions = new Map(order.map((id, index) => [id, index]));
+  const ordered = restored.sort(
+    (a, b) => (positions.get(a.widgetId) ?? order.length) - (positions.get(b.widgetId) ?? order.length),
+  );
+  // Page snapshots own the mixed slots. Shared mode snapshots own the order
+  // of mode tabs occupying those slots, including edits made on another page.
+  const modePositions = new Map(saved.map((widget, index) => [widget.widgetId, index]));
+  const modes = ordered
+    .filter((widget) => widget.placementIdentity?.kind === "mode")
+    .sort((a, b) => (modePositions.get(a.widgetId) ?? saved.length) - (modePositions.get(b.widgetId) ?? saved.length));
+  let modeIndex = 0;
+  return ordered.map((widget) => (widget.placementIdentity?.kind === "mode" ? modes[modeIndex++]! : widget));
 };
 
 const renderDesiredPlacements = (
@@ -108,6 +131,7 @@ const renderDesiredPlacements = (
   const rendered: RenderedOwnedPlacement[] = [];
   const identities = new Set<string>();
   const currentWidgetOwners = indexCurrentWidgetOwners(input.layout);
+  const saved = input.modeLayout ? indexCurrentOwnedPlacements(input.modeLayout) : new Map();
   const desiredWidgetIds = new Set<string>();
 
   const ordered = composeOwnedPlacements({
@@ -121,7 +145,7 @@ const renderDesiredPlacements = (
     const key = placementIdentityKey(desired.identity);
     if (identities.has(key)) throw new Error(`Duplicate desired placement identity: ${key}`);
     identities.add(key);
-    const exact = current.get(key);
+    const exact = current.get(key) ?? saved.get(key);
     const transfer = exact
       ? undefined
       : findModePlacementTransfer({ current, desired, desiredKeys, transferredCurrentKeys });
@@ -134,14 +158,10 @@ const renderDesiredPlacements = (
     }
     if (desiredWidgetIds.has(widgetId)) throw new Error(`Duplicate desired widget ID: ${widgetId}`);
     desiredWidgetIds.add(widgetId);
-    const ownerResourceKey = bindsToLocation(desired)
-      ? (desired.value.ownerResourceKey ??
-        exact?.placement.ownerResourceKey ??
-        transfer?.[1].placement.ownerResourceKey)
-      : desired.value.ownerResourceKey;
+    const ownerResourceKey = resolveOwnerResourceKey(desired, exact?.placement, transfer?.[1].placement);
     rendered.push({
       identity: desired.identity,
-      region: desired.region,
+      region: exact?.region ?? desired.region,
       placement: {
         ...desired.value,
         widgetId,
@@ -177,7 +197,12 @@ const reconcileRegions = (
     const placedKeys = new Set<string>();
     // Keep the visible order while updating existing placements in place. Any
     // desired placement left afterward is a new tab and belongs at the end.
-    const restored = restoreModeWidgets(region.widgets, modeLayout?.regions[regionId].widgets ?? [], desiredByKey);
+    const restored = restoreModeWidgets(
+      region.widgets,
+      modeLayout?.regions[regionId].widgets ?? [],
+      desiredByKey,
+      region.savedWidgetOrder,
+    );
     const widgets = restored.flatMap((placement) => {
       if (!placement.placementIdentity) {
         return regionId === "main" && pageOwnsPrimaryLocation && placement.role === "location" ? [] : [placement];
@@ -205,6 +230,7 @@ const reconcileRegions = (
     regions[regionId] = {
       ...region,
       widgets,
+      savedWidgetOrder: undefined,
       activeWidgetId,
       ...(docked.has(regionId) ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),
     };
@@ -229,7 +255,7 @@ const normalizeRemovedState = (input: {
   const activeLocation = layout.activeLocationWidgetId
     ? findPlacementByWidgetId(layout, layout.activeLocationWidgetId)?.placement
     : undefined;
-  const fallbackLocation = layout.regions.main.widgets.filter((placement) => placement.role === "location").at(-1);
+  const fallbackLocation = getActiveLocationPlacement(layout);
   const activeLocationWidgetId = activeLocation?.widgetId ?? fallbackLocation?.widgetId;
   const active = layout.activeWidgetId ? findPlacementByWidgetId(layout, layout.activeWidgetId)?.placement : undefined;
   const fallbackActive = activeLocationWidgetId

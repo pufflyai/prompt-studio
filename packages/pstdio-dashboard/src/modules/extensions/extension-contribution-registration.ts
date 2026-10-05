@@ -26,6 +26,7 @@ import {
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
+import { createSharedTableViews } from "./extension-board-views";
 import {
   type ExecuteDashboardExtensionCommand,
   openSessionCommandResult,
@@ -130,6 +131,9 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
           return response;
         },
         kanbanAdapter: kanban,
+        dataTableAdapter: {
+          createViewsProvider: (record) => createSharedTableViews(input.projectId, record, input.metadata),
+        },
         menuSlotsById: menuResult.menuSlotsById,
         menuTargetsById: dashboardMenuTargetsById,
         menuRegistrations: menuResult.registrations,

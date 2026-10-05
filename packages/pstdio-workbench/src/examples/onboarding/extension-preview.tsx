@@ -1,5 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ExtensionDefinition, RendererCallback, ViewBody } from "@pstdio/sdk/extensions";
+import { normalizeKanbanViewDefaults } from "pstdio-api-contracts";
 import { createWorkbench } from "../../core";
 import { emptyWorkbenchExtensionMetadata, registerWorkbenchExtensionContributions } from "../../extensions";
 import { previewNavigationTarget, previewPage } from "./extension-preview-composition";
@@ -63,9 +64,7 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
         queryHandlerId: handler(id, "kanban", "query", body.query)!,
         attributeChangeHandlerId: handler(id, "kanban", "onAttributeChange", body.onAttributeChange),
         reorderHandlerId: handler(id, "kanban", "onReorder", body.onReorder),
-        defaultSettings: body.defaultSettings,
-        defaultFilters: body.defaultFilters,
-        defaultViews: body.defaultViews,
+        ...normalizeKanbanViewDefaults(body),
         defaultActiveViewId: body.defaultActiveViewId,
         hideToolbar: body.hideToolbar,
       };

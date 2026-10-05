@@ -70,3 +70,24 @@ describe("createWorkbenchHotkeyRegistrations", () => {
     ]);
   });
 });
+
+test("a failed keybinding reports its command once and consumes the rejection", async () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand(
+    { id: "project.save", label: "Save project" },
+    {
+      execute: async () => {
+        throw new Error("Connection lost");
+      },
+    },
+  );
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "project.save" },
+    keybinding: "Ctrl+Shift+Y",
+  });
+  const registration = createWorkbenchHotkeyRegistrations({ workbench }).find((item) => item.id === "project.save")!;
+  await expect(registration.execute()).resolves.toBeUndefined();
+  expect(workbench.notifications.listNotifications()).toMatchObject([
+    { title: "Save project failed", message: "Connection lost", level: "error" },
+  ]);
+});

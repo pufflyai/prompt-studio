@@ -54,7 +54,10 @@ layer-map change.
    packages through declared package dependencies and package exports.
 
    The private `@pstdio/desktop` client may consume the public runtime lifecycle
-   subpath from `pstdio`, path/logging utilities, and `@pstdio/ui`. It must not
+   subpath from `pstdio`, path/logging utilities, and `@pstdio/ui`. It shares
+   local performance payload schemas and extension webview URL grammar with the
+   dashboard and API through `pstdio-api-contracts`. These contracts keep host
+   validation and attribution consistent without importing host services. It must not
    import API domain services, database packages, or another client.
    Its packaged Electron tests declare `workbench-fixture` as a development
    dependency and resolve its package root for installation through the public

@@ -8,6 +8,7 @@ import {
   type WorkbenchCommandExecutionContext,
   type WorkbenchCore,
 } from "../../core";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
@@ -75,7 +76,7 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
       workbench.commandPalette.requestParams({ record: { command }, label: item.label, args, context });
       return;
     }
-    void workbench.commands.executeCommand(item.commandId, args, context).catch(() => undefined);
+    void runUserAction(workbench, item.label, () => workbench.commands.executeCommand(item.commandId, args, context));
   };
 
   if (items.length === 0) return null;

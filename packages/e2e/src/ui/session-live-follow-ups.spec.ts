@@ -27,10 +27,13 @@ const setup = async (page: Page, request: APIRequestContext) => {
   const header = page.locator('[data-workbench-panel-header="side"]');
   for (const session of sessions) {
     const draft = header.getByRole("tab", { name: "New session", exact: true });
-    if ((await draft.count()) === 0) await header.getByRole("button", { name: "Add panel", exact: true }).click();
-    await draft.click();
+    if ((await draft.count()) === 0) {
+      await header.getByRole("button", { name: "Add panel", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+    }
+    await draft.click({ button: "right" });
     await page
-      .getByRole("menu", { name: "New session menu", exact: true })
+      .getByRole("menu", { name: "New session context menu", exact: true })
       .getByRole("menuitem", { name: session.title, exact: true })
       .click();
   }
@@ -63,7 +66,7 @@ test("queues two follow-ups without stopping the active session and keeps a fail
   await expect(
     header.getByRole("tab", { name: session.title, exact: true }).locator('[aria-label="Session status: in_progress"]'),
   ).toBeVisible();
-  const editor = page.locator('[data-testid="content-editable"][contenteditable="true"]').last();
+  const editor = page.getByTestId("content-editable").last();
   const send = page.getByTestId("send-message-button").last();
   for (const [index, prompt] of ["First waiting message", "Second waiting message"].entries()) {
     await editor.fill(prompt);
@@ -71,9 +74,27 @@ test("queues two follow-ups without stopping the active session and keeps a fail
     const accepted = page.waitForResponse(
       (response) => response.url() === `${url}/follow-up` && response.request().method() === "POST",
     );
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(`${url}/follow-up`, async (route) => {
+      await held;
+      await route.continue();
+    });
     if (index === 0) await editor.press("Enter");
     else await send.click();
+    try {
+      await expect(editor).toBeEmpty();
+      await expect(page.getByText(prompt, { exact: true })).toHaveCount(1);
+      await expect(editor).toHaveAttribute("contenteditable", "false");
+      await expect(send).toBeDisabled();
+    } finally {
+      release();
+    }
     expect((await (await accepted).json()).follow_up.status).toBe("queued");
+    await page.unroute(`${url}/follow-up`);
+    await expect(editor).toHaveAttribute("contenteditable", "true");
     await expect(editor).toBeEmpty();
     await expect(page.getByText(prompt, { exact: true })).toBeVisible();
     expect((await (await request.get(url)).json()).status).toBe("in_progress");
@@ -93,6 +114,10 @@ test("queues two follow-ups without stopping the active session and keeps a fail
   await expect(page.getByText("Message not sent")).toHaveCount(0);
   await expect(editor).toHaveText("Keep this draft");
   await page.unroute(`${url}/follow-up`);
+  await send.click();
+  await expect(editor).toBeEmpty();
+  await expect(page.getByText("Keep this draft", { exact: true })).toHaveCount(1);
+  await expect(editor).toBeFocused();
   await request.patch(`${url}/status`, { data: { status: "completed" } });
   await expect
     .poll(async () => {
@@ -101,5 +126,5 @@ test("queues two follow-ups without stopping the active session and keeps a fail
         (message: { role: string; id: string }) => message.role === "user" && !message.id.startsWith("queued-prompt-"),
       ).length;
     })
-    .toBe(3);
+    .toBe(4);
 });

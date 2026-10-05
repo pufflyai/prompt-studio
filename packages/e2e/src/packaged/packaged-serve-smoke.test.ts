@@ -9,7 +9,9 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
+// Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 // Core extension checks include Notes page ownership and Planner's Open tickets command.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
@@ -23,12 +25,15 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
+// Native actions retain failed outcomes for the UI entry point to report.
+// Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
+// The paired browser smoke also retains live views across navigation and exercises session row menus.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 const BUILD_TIMEOUT = 180_000;
@@ -92,13 +97,15 @@ test("includes extension development, smoke test, browser setup and update comma
 });
 
 test(
-  "serves the dashboard and API from the same origin",
+  "serves the dashboard and API from the same origin and hands off composer drafts immediately",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
 
     try {
-      const started = await startPackagedServe(tempRoot);
+      const started = await startPackagedServe(tempRoot, {
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
+      });
       child = started.child;
 
       const dashboardRes = await fetch(started.baseUrl);
@@ -116,6 +123,13 @@ test(
       });
       expect(projectsRes.status).toBe(200);
       expect(await projectsRes.json()).toEqual([]);
+      const renameRes = await fetch(`${started.baseUrl}/v1/sessions/missing/title`, {
+        method: "PATCH",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ title: " " }),
+      });
+      expect(renameRes.status).toBe(400);
+      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
     } finally {
       if (child) {
         await stopProcess(child);
@@ -423,10 +437,22 @@ test("packaged CLI includes automation and machine authentication", () => {
   expect(result.status).toBe(0);
   expect(result.stdout).toContain("pstdio automation [command]");
   expect(result.stdout).toContain("pstdio auth [command]");
+
+  // Reads only this device's desktop app, so an empty home starts no runtime.
+  const home = mkdtempSync(join(tmpdir(), "packaged-performance-"));
+  const performance = spawnSync(PACKAGED_BINARY_PATH, ["performance"], {
+    encoding: "utf8",
+    env: { ...process.env, PSTDIO_HOME: home },
+  });
+  expect(performance.status).not.toBe(0);
+  expect(performance.stdout).toBe("");
+  expect(existsSync(join(home, "runtime.json"))).toBe(false);
+  rmSync(home, { recursive: true, force: true });
 });
 
 registerExtensionAutomationSmokeTests();
 registerHarnessCleanupSmokeTests();
 registerLiveQuestionSmokeTests();
 
+// Shared views persist flat filters and one ordering, and reject a second sort.
 registerBoardViewsSmokeTests();

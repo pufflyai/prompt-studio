@@ -17,12 +17,13 @@ import type {
   ExtensionWebviewArtifactCapabilities,
   ExtensionWebviewFileCapabilities,
 } from "../bridge/webview-command-capabilities";
+import type { WorkbenchExtensionDataTableRendererAdapter } from "../contributions/data-table-renderer-contributions";
 import type {
   WorkbenchExtensionMenuRegistration,
   WorkbenchExtensionMenuSlotConfig,
   WorkbenchExtensionMenuWhenBuilder,
 } from "../contributions/extension-contributions";
-import type { WorkbenchExtensionKanbanRendererAdapter } from "../contributions/kanban-renderer-contributions";
+import type { WorkbenchExtensionKanbanRendererAdapter } from "../contributions/kanban-renderer-adapter";
 import type { RegisterWorkbenchExtensionTreeRenderersInput } from "../contributions/tree-renderer-contributions";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import type { WorkbenchExtensionRefreshEvent } from "./workbench-extension-refresh";
@@ -44,6 +45,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   createWebviewTheme?: CreateBridgeWebviewTheme;
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   kanbanAdapter?: WorkbenchExtensionKanbanRendererAdapter;
+  dataTableAdapter?: WorkbenchExtensionDataTableRendererAdapter;
   menuSlotsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuTargetsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuRegistrations?: readonly WorkbenchExtensionHostMenuRegistration[];

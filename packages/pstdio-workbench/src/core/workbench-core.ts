@@ -1,8 +1,11 @@
 import { defaultPageResourceCodec, workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
+import { registerArrangementCommands } from "./controllers/composition/arrangement-commands";
+import { createPanelArrangement } from "./controllers/composition/panel-arrangement";
 import { createPlacementCloseController } from "./controllers/composition/placement-close-controller";
 import { createPlacementPinController } from "./controllers/composition/placement-pin-controller";
+import { createLayoutResetController } from "./controllers/composition/reset-workbench-layout";
 import { removeWorkbenchResource } from "./controllers/composition/resource-removal";
 import { createWorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
@@ -244,6 +247,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   core = {
     closePlacement: createPlacementCloseController(() => core),
     pinPlacement: createPlacementPinController(() => core),
+    ...createPanelArrangement(() => core),
+    ...createLayoutResetController(() => core),
     breadcrumbs,
     commandPalette: createWorkbenchCommandPaletteController(),
     commands,
@@ -329,6 +334,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   };
 
   setWorkbenchRenderers(core, renderers);
+  registerArrangementCommands(core);
   layout.store.subscribe(() => {
     const state = pages.store.getState();
     if (state.activeModeId) layoutCache.saveMode(state.projectId, state.activeModeId, layout.getLayout());

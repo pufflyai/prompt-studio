@@ -81,7 +81,15 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
-  pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity): void;
+  pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
+  getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
+  movePanel(
+    instanceId: string,
+    region: import("./registries/layout/layout-types").WorkbenchPanelRegion,
+    position?: import("./registries/layout/layout-types").WorkbenchTabPosition,
+  ): void;
+  resetLayout(): void;
+  onDidResetLayout(listener: () => void): Disposable;
   closePlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity): void;
   breadcrumbs: WorkbenchBreadcrumbController;
   commandPalette: WorkbenchCommandPaletteController;
