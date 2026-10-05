@@ -1,0 +1,17 @@
+{
+  "name": "Default",
+  "values": {
+    "spacing": 8,
+    "angle": 45,
+    "lineWidth": 1,
+    "lineDrift": 3,
+    "lightOpacity": 0.12,
+    "darkOpacity": 0.22,
+    "noiseScale": 290,
+    "noiseContrast": 1.6,
+    "noiseBalance": -0.1,
+    "noiseDrift": 5,
+    "noiseDetail": 1,
+    "seed": 7
+  }
+}

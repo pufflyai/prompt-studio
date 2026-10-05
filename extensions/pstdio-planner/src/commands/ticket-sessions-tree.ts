@@ -36,18 +36,22 @@ const sessionStatusColor = (status: string) => {
 const sessionActivityAt = (session: TicketSession) =>
   session.last_request_ended ?? session.last_request_started ?? session.updated_at ?? "";
 
-const sessionNode = (session: TicketSession): TreeNode => ({
-  id: `session-${session.id}`,
-  label: session.title,
-  icon: sessionStatusIcon(session.status),
-  iconColor: sessionStatusColor(session.status),
-  target: {
-    kind: "panel",
-    panel: workbenchPanels.projectSession,
-    resource: { type: "session", id: session.id, label: session.title },
-    open: "preview",
-  },
-});
+const sessionNode = (session: TicketSession): TreeNode => {
+  const resource = { type: "session", id: session.id, label: session.title };
+  return {
+    id: `session-${session.id}`,
+    label: session.title,
+    resource,
+    icon: sessionStatusIcon(session.status),
+    iconColor: sessionStatusColor(session.status),
+    target: {
+      kind: "panel",
+      panel: workbenchPanels.projectSession,
+      resource,
+      open: "preview",
+    },
+  };
+};
 
 const emptySessionsNode = (): TreeNode => ({
   id: "sessions-empty",

@@ -83,6 +83,7 @@ describe("buildSessionsSection", () => {
 
     const node = buildSessionsSection({ sessions, ticketId: "ticket-1" })?.nodes[0];
 
+    expect(node?.resource).toEqual({ type: "session", id: "a", label: "Refine ticket: PS-1" });
     expect(node?.target).toEqual({
       kind: "panel",
       panel: { extensionId: "pstdio", kind: "placement", id: "project-session" },
