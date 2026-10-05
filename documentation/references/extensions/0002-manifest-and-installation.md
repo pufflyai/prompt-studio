@@ -117,6 +117,10 @@ trusted configuration because every entry names code the host may run.
   in the background and does not wait. Editing an installed folder still rebuilds that extension's
   webview assets, so an open webview updates while you work. Only its contributions wait for the
   update, because those are what the project agreed to run.
+- Skill files are read from the installed folder. Editing a folder that ships skills or a
+  `workspace.provision` hook re-provisions the workspaces of every project that runs it, so agent
+  skill folders such as `.agents/skills` match the edit. A write that leaves the folder's content
+  unchanged does not re-provision.
 - `pst extensions dev <path>` still reinstalls on every edit. That is an explicit development loop,
   not automatic adoption.
 

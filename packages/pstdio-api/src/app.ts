@@ -17,6 +17,7 @@ import {
 import { createAutomationService } from "./features/automation/automation-service";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
+import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
@@ -94,6 +95,11 @@ const appHostSecurity = (host: CreateAppInput["host"]) =>
     ? { runtimeHost: host.runtime, securityToken: host.runtime.token }
     : { runtimeHost: undefined, securityToken: host.token };
 
+const apiSecurity = (token: string | undefined, runtimeHost: ReturnType<typeof appHostSecurity>["runtimeHost"]) => {
+  if (!token) return undefined;
+  return runtimeHost ? { token, origin: runtimeHost.origin } : { token };
+};
+
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
   const { db, close: closeDb } = await openAppDatabase(input.config.database.path, input.lifecycle);
   const { runtimeHost, securityToken } = appHostSecurity(input.host);
@@ -147,6 +153,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     storageRoot,
     onInstalledSourcesChanged: (path) => refreshInstalledSources(path),
   });
+  let deps!: RouteDeps;
   const {
     extensionConnectionService,
     extensionRuntime,
@@ -165,6 +172,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     extensionConnectionsDBService,
     installedExtensionSourcesService,
     projectService,
+    provisionWorkspacesUsingSource: (sourcePath) => provisionWorkspacesUsingSource(deps, sourcePath),
     workspaceService,
     storageRoot,
   });
@@ -176,7 +184,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     skillsDBService,
   });
 
-  let deps!: RouteDeps;
   const automationService = await createAppAutomationService({
     automationDBService,
     getCommandDeps: () => deps,
@@ -292,12 +299,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
 
   registerApi(app, deps, {
-    security: securityToken
-      ? {
-          token: securityToken,
-          ...(runtimeHost ? { origin: runtimeHost.origin } : {}),
-        }
-      : undefined,
+    security: apiSecurity(securityToken, runtimeHost),
     terminalOrigins: input.config.transport.terminalOrigins,
   });
 

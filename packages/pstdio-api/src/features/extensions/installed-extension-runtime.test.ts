@@ -54,6 +54,7 @@ const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
 const noopRuntimeDeps = {
   harnessRegistry: {} as never,
   projectRuntimeCatalog: { invalidate: () => {} } as never,
+  provisionWorkspacesUsingSource: async () => {},
 };
 
 const writeExtension = (dir: string, name: string) => {

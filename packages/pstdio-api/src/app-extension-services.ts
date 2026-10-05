@@ -35,6 +35,7 @@ interface WireExtensionServicesInput {
   extensionConnectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectService: ReturnType<typeof createProjectService>;
+  provisionWorkspacesUsingSource: (sourcePath: string) => Promise<void>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
   storageRoot: string;
 }
@@ -120,6 +121,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     installedExtensionSourcesService: input.installedExtensionSourcesService,
     projectRuntimeCatalog: extensionRuntimeCatalog,
     projectService: input.projectService,
+    provisionWorkspacesUsingSource: input.provisionWorkspacesUsingSource,
     workspaceService: input.workspaceService,
     webviewBuilds: input.config.buildWebviews,
   });

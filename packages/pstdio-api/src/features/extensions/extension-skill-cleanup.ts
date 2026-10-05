@@ -24,3 +24,16 @@ export const extensionChangesWorkspaceProvisioning = async (
 export const refreshProjectSkillsInRepos = async (deps: SkillRefreshDeps, projectId: string) => {
   await provisionProjectWorkspaces(deps, projectId);
 };
+
+// The skill catalog reads skill files from the source folder, so an edit on disk changes the
+// catalog at once. Harness copies only follow on provision, so every project that runs the
+// edited source re-provisions.
+export const provisionWorkspacesUsingSource = async (deps: SkillRefreshDeps, sourcePath: string) => {
+  for (const project of await deps.projectService.list()) {
+    const enabledSources = await deps.extensionService.listEnabledSourcesForProject(project.id);
+    const record = enabledSources.find(({ installedSource }) => installedSource.source_path === sourcePath);
+    if (!record) continue;
+    if (!(await extensionChangesWorkspaceProvisioning(deps, record.installedSource))) continue;
+    await provisionProjectWorkspaces(deps, project.id);
+  }
+};
