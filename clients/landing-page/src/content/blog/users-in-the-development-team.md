@@ -1,60 +1,76 @@
 ---
-title: "In the future, your users will be part of the development team"
-description: Malleable software lets people shape the tools they use, while developers maintain the foundations those tools rely on.
+title: "From malleable software to Prompt Studio"
+description: "From Kaset's editable apps to a shared workbench: why users and agents should build their own tools, while developers maintain the foundations."
 published: 2026-10-06
 author: aurelien-franky
 image: ../../../../../design/art/blog2.png
 ---
 
-I think users will become part of the development team.
-They will describe a need, work with an agent to build it, try the result, and keep changing it as their work changes.
+Last year, I wrote [In the future, your users will be part of the development team](/blog/malleable-software/).
+It began with a failed attempt to mod a video game.
+I wanted to change something I cared about, but I did not know how.
+Years later, that same desire brought me back to coding: I wanted to make my own tools.
 
-A lot of the conversation around vibe coding starts with building a whole application: describe an idea, generate the code, and take it from start to finish.
-That is useful.
-But I am more interested in what happens inside software people already use.
+The essay explored a different relationship between software teams and their users.
+Developers would maintain the foundations, while users shaped the tools around their own work.
+Coding agents could help people cross the gap between knowing what they needed and being able to build it.
 
-What if a user could add the missing action, build a view for their own workflow, or connect two tools, while the developers keep maintaining the foundations?
+I explored that idea with Kaset, a framework for making web applications editable by coding agents in the browser.
+Prompt Studio brings the same spirit to a shared workbench where people and agents build and use tools together.
 
-## The space between a feature request and a new app
+## Keep the user's knowledge in the loop
 
-People constantly find small gaps in their tools.
-A team wants a different review checklist.
-Someone needs a reading list beside their project notes.
-Another person wants one button that gathers the information they need before a meeting.
+A lot of vibe coding starts with a blank page: describe an idea and build an entire application.
+The space that interests me is closer to everyday work.
+Someone already uses a set of tools, understands where those tools fall short, and wants to change one part.
 
-These needs can matter a lot to one person and make little sense as features for everyone.
-A developer has to weigh them against the rest of the product.
-The user waits, works around the gap, or builds a separate script that needs its own storage, interface, and upkeep.
+A team needs a different review checklist.
+Someone wants a reading list beside their project notes.
+Another person needs one button that gathers the information they use before a meeting.
 
-Code generation creates another option: let the user build the part that belongs to their work, inside the software that already supports it.
+The user knows the problem because they live with it.
+They can describe a useful result, try what an agent builds, and explain what still feels wrong.
+That knowledge belongs in development throughout the life of a tool.
 
-That is what I mean by **malleable software**.
-People can reshape the tools they use instead of only choosing among the options a team anticipated.
+In the original essay, I called this **malleable software**: software people can reshape as their needs change.
+Prompt Studio's mission starts from the same place.
+Anyone who can direct an agent should be able to build the tools they want and make their own work easier.
 
-## Developers maintain the foundations
+## Give the tools shared foundations
 
-The developer's job becomes more important at this boundary.
-They decide which interfaces users can extend, how data is stored, how changes reach other clients, and which operations require permission.
-They keep those contracts understandable and reliable as the system evolves.
+Kaset explored two ideas: shared digital material that tools can work on, and small tools that can move between contexts.
+The essay called these an **information substrate** and an **instrumental interface**.
 
-An extension author can then focus on a smaller problem.
-A reading-list tool needs a way to save items, show them, and mark them as read.
-It should be able to use the host's shared infrastructure for those jobs.
+The practical question is what a tool should be able to reuse.
+A reading list needs somewhere to save items, a place to appear, and operations for adding and reading them.
+A review tool needs access to the work it reviews and a way to tell someone when it finishes.
+Each tool should not have to build those foundations again.
 
-This is the direction behind Prompt Studio.
-The platform supplies agents, workspaces, storage, live sync, and the workbench contracts.
-Tools such as Notes and Planner are extensions, and use the same public interfaces available to the tools you build.
-In today's alpha, host-side extensions are trusted code running with your user account's access; the extension API is not a security sandbox.
+Prompt Studio supplies the shared parts: agents and their workspaces, extension execution, storage, live sync, workbench layout, notifications, and trust contracts.
+The tools built on those parts are extensions.
+Notes owns notes.
+Planner owns tickets and planning workflows.
+A reading-list extension would own its reading list.
+Our own tools use the same public interfaces available to yours.
 
-## An agent needs access to the tool it builds
+The core should grow when extensions cannot provide something themselves, or when most extensions need it.
+A feature that matters to one person's workflow can stay in that person's tool.
+That leaves room for different people to build different answers without asking everyone else to adopt them.
 
-A tool is more useful when an agent can operate it after creating it.
-That means exposing the operations behind its interface, with explicit inputs and useful results.
+## Let a person and an agent use the same operation
 
-In Prompt Studio, extension authors declare commands.
-A toolbar action or menu can call a command, and `cli: true` makes that command available through `pst`.
-The same declaration provides parameter flags and help.
-The command handler performs the operation, whether a person clicked the action or an agent invoked it from a terminal.
+The original essay imagined a user asking:
+
+> Add a button that exports my data to CSV.
+
+In Prompt Studio, I would want that tool to declare an export command, connect its button to the command, and expose the command through the CLI.
+A person can click it.
+An agent can invoke it.
+Both routes should perform the same operation with the same permissions.
+
+Extension authors opt commands into the CLI with `cli: true`.
+The declaration supplies the parameter flags and help; the command handler does the work.
+A tool's interface calls that same declared command.
 
 For example, with Notes installed and enabled in a project:
 
@@ -65,18 +81,18 @@ pst pstdio-notes notes create --title "Meeting notes" --json
 
 The second command runs Notes' **New note** operation and returns an execution response.
 An agent can check `outcome.ok` and use the returned value on success.
-A custom button still has to be connected to a declared command; CLI access does not appear just because a page has a button.
+For your own tools, add read and list commands so an agent can inspect the result and use it in another operation.
+Our [CLI-ready actions guide](/docs/guides/extensions/cli-ready-actions/) shows how to give your own tools this interface.
 
-When an agent also needs to inspect a tool's state, its author should add read or list commands.
-The agent can then check its work and use the result in another operation.
-Our [CLI-ready actions guide](/docs/guides/extensions/cli-ready-actions/) shows the pattern.
+Kaset made text files the shared material in its experiment.
+Prompt Studio tools can work with files or the host's storage services, and their authors define the operations other tools and agents can use.
+They do not all have to become editable files.
+The connection is that a person and an agent should be able to work on the same state through clear, supported interfaces.
 
-## Give users a place in the development loop
+## Build one small tool, then keep shaping it
 
-The user's contribution starts with knowledge of their own work.
-They know which small gap costs them time and what a useful result looks like.
-An agent can help turn that description into an extension.
-The user can try it, point out what is wrong, and ask for the next change.
+Start with a gap in your own work.
+Describe the result you want, let an agent build an extension, and try it where you already work.
 
 ![Agent conversation with a request to build a reading-list extension beside the project's Start page](../../../../../documentation/images/new-conversation.png)
 
@@ -86,12 +102,21 @@ For example:
 
 > Build a reading-list tool for this project. Let me add a title and link, list items, and mark an item as read. Give it a page and CLI-ready commands. Show me that an item added from the terminal appears in the page, and that a change in the page appears in the list command.
 
-The user does not need to write the code.
-They do need to try the tool and decide whether it does what they asked.
-Sharing it with someone else also means maintaining it and checking that it works for their needs.
+The user supplies the need and judges the result.
+The agent writes and changes the tool.
+The developers maintain the shared platform those changes rely on.
+An extension author still has to connect its commands, views, and data; sharing a workbench does not make every tool interoperate automatically.
 
-I want software teams to make this kind of participation possible.
-Developers maintain the shared foundations.
-Users and their agents build the tools that fit their work, and help shape what those tools become.
+That division of work also needs clear limits.
+In today's alpha, host-side extensions are trusted code running with your user account's access; the extension API is not a security sandbox.
+The original essay's browser-local Kaset model should not be read as a description of Prompt Studio's runtime.
+
+## The idea I want to carry forward
+
+I still like building software.
+But learning its deeper engineering should not be the price everyone pays before they can make one useful tool.
+
+The spirit of the Kaset essay is user agency: let people shape their tools, while developers keep the foundations reliable.
+Prompt Studio gives that idea a place to live, with shared infrastructure and public interfaces for the tools people and agents build.
 
 If you want to try that loop, [open a project](/docs/guides/getting-started/open-a-project/), [set up an agent](/docs/guides/getting-started/run-agents/), and [ask it to build one small tool](/docs/guides/getting-started/add-tools/#ask-an-agent-to-build-your-tool).
