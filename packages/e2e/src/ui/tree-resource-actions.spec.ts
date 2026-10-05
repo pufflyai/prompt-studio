@@ -139,3 +139,90 @@ test("tree file menus rename and delete files while workspace menus archive the 
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
+
+test("session row menus keep their subject across Sessions, workspace and ticket navigation", async ({
+  page,
+  request,
+}, testInfo) => {
+  const project = await createResourceActionsProject(request);
+  const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Session row actions" });
+  for (const title of ["Session A", "Session B"]) {
+    const response = await request.post(`${apiBase}/v1/sessions`, {
+      data: {
+        project_id: project.id,
+        title,
+        prompt: title,
+        agent: "pstdio.workbench-fixture.harness.fake",
+        anchors: [{ type: "ticket", id: ticket.id }],
+      },
+    });
+    expect(response.ok()).toBe(true);
+  }
+  await prepareResourceActionsDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}/sessions`);
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  const row = (name: string) => sidenav.getByRole("option", { name, exact: true });
+  await row("Session A").click();
+  const sessionUrl = page.url();
+  await row("Session B").click({ button: "right" });
+  await expectResourceMenuItems(page, ["Open session panel"]);
+  await expect(page.getByRole("menu")).toHaveCount(1);
+  await expect(page).toHaveURL(sessionUrl);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(row("Session A")).toHaveAttribute("aria-selected", "true");
+  await row("Session B").focus();
+  await page.keyboard.press("Shift+F10");
+  await expectResourceMenuItems(page, ["Open session panel"]);
+  await page.keyboard.press("Escape");
+  await expect(row("Session B")).toBeFocused();
+  await page.keyboard.press("ContextMenu");
+  await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+  await expect(
+    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(sessionUrl);
+
+  await page.goto(`/projects/${project.id}/`);
+  await showHiddenSidenavEntry(page, "Workspaces");
+  await row("Workspaces").click();
+  await page.getByText("Project folder", { exact: true }).first().click();
+  await row("Session A").click();
+  const workspaceUrl = page.url();
+  await row("Session B").dispatchEvent("pointerdown", { pointerType: "touch", clientX: 80, clientY: 200 });
+  await expectResourceMenuItems(page, ["Open session panel"]);
+  await row("Session B").dispatchEvent("pointerup", { pointerType: "touch" });
+  await expect(page.getByRole("menu")).toHaveCount(1);
+  await expect(page).toHaveURL(workspaceUrl);
+  await page.keyboard.press("Escape");
+  await row("Session B").click({ button: "right" });
+  await expectResourceMenuItems(page, ["Open session panel"]);
+  await page.screenshot({ path: testInfo.outputPath("workspace-session-menu.png"), animations: "disabled" });
+  await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+  await expect(
+    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(workspaceUrl);
+
+  await page.goto(`/projects/${project.id}/tickets`);
+  await row("Tickets").click();
+  await page
+    .getByTestId("renderer-card")
+    .filter({ hasText: ticket.title })
+    .getByText(ticket.title, { exact: true })
+    .click();
+  await expect(row("Session B")).toBeVisible();
+  const ticketUrl = page.url();
+  await row("Session B").click({ button: "right" });
+  await expectResourceMenuItems(page, ["Open session panel"]);
+  await expect(page.getByRole("menu")).toHaveCount(1);
+  await expect(page.getByRole("menuitem", { name: "Archive", exact: true })).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+  await expect(
+    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(ticketUrl);
+  await row("Search").click({ button: "right" });
+  await expect(page.getByRole("menuitem", { name: "Reset to default", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Open session panel", exact: true })).toHaveCount(0);
+});

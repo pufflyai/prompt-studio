@@ -14,6 +14,13 @@ type Story = StoryObj<typeof meta>;
 const exerciseRowMenus = async (canvasElement: HTMLElement) => {
   const canvas = within(canvasElement);
   const document = within(canvasElement.ownerDocument.body);
+  const session = await canvas.findByRole("option", { name: "Inactive session" });
+  session.focus();
+  await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+  await waitFor(() => expect(document.getByRole("menuitem", { name: "Inspect session" })).toBeVisible());
+  await userEvent.click(document.getByRole("menuitem", { name: "Inspect session" }));
+  await expect(await document.findByText("Inspected Inactive session")).toBeVisible();
+  await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
   const ticket = await canvas.findByRole("option", { name: /Write notes/ });
   await fireEvent.contextMenu(ticket);
   await waitFor(() => expect(document.getByRole("menuitem", { name: "Archive ticket" })).toBeVisible());

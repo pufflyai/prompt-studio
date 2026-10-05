@@ -8,12 +8,20 @@ export const createTreeResourceActionsWorkbench = (region: "sidenav" | "main") =
   const page: PageRef = { extensionId: "storybook", kind: "page", id: `tree-actions-${region}` };
   const workbench = createWorkbench({ startPage: page });
   const ticket: ResourceRef = { type: "ticket", id: "ticket", label: "Write notes" };
+  const session: ResourceRef = { type: "session", id: "inactive-session", label: "Inactive session" };
   const workspace: ResourceRef = {
     type: "workspace",
     id: "workspace",
     label: "Review workspace",
   };
   workbench.modes.registerMode({ id: "tree-actions", label: "Tree actions", activate: () => undefined });
+  workbench.commands.registerCommand(
+    { id: "session.inspect", label: "Inspect session", icon: "MessageCircle" },
+    {
+      execute: (_args, context) =>
+        workbench.notifications.show({ title: `Inspected ${context?.resource?.label}`, level: "success" }),
+    },
+  );
   workbench.commands.registerCommand(
     { id: "ticket.archive", label: "Archive ticket", icon: "Archive" },
     {
@@ -34,6 +42,7 @@ export const createTreeResourceActionsWorkbench = (region: "sidenav" | "main") =
   );
   for (const [kind, commandId] of [
     ["ticket", "ticket.archive"],
+    ["session", "session.inspect"],
     ["workspace", "workspace.archive"],
     ["workspace", "workspace.delete"],
   ]) {
@@ -46,6 +55,7 @@ export const createTreeResourceActionsWorkbench = (region: "sidenav" | "main") =
       label: "Resources",
       canHide: true,
       nodes: [
+        { id: "session", label: session.label!, icon: "MessageCircle", resource: session },
         { id: "ticket", label: ticket.label!, icon: "Component", resource: ticket },
         {
           id: "file",
