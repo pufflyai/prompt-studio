@@ -1,10 +1,9 @@
-import { Badge, Box, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea, TreeList, type TreeListNavigateEvent, toaster, useFileIconThemePreference } from "@pstdio/ui";
+import { Badge, Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
+import { ScrollArea, TreeList, type TreeListNavigateEvent, useFileIconThemePreference } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
-import { useProjectSkill, useUpdateProjectSkillInstallation } from "../data/use-skills";
+import { useProjectSkill } from "../data/use-skills";
 import { buildSkillFileTree, collectFolderIds } from "../utils/build-skill-file-tree";
 import { parseSkillVersion } from "../utils/parse-skill-version";
 
@@ -49,9 +48,6 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
   const selectedFile = skill.files.find((file) => file.path === selectedPath) ?? skill.files[0];
   const skillFile = skill.files.find((file) => file.path === "SKILL.md");
   const currentVersion = parseSkillVersion(skillFile?.content ?? "");
-  const canUpdateSkill =
-    skill.source_kind === "extension" && skill.agent_installations.some((installation) => installation.outdated);
-  const updateSkill = useUpdateProjectSkillInstallation(skill.project_id, skill.name);
 
   const handleNavigate = (event: TreeListNavigateEvent) => {
     setSelectedPath(event.nodeId);
@@ -59,18 +55,6 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
 
   const handleToggleNode = (nodeId: string) => {
     setExpandedNodes((prev) => (prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]));
-  };
-
-  const handleUpdateSkill = async () => {
-    try {
-      await updateSkill.mutateAsync();
-    } catch (error) {
-      toaster.create({
-        type: "error",
-        title: "Skill update failed",
-        description: error instanceof Error ? error.message : skill.name,
-      });
-    }
   };
 
   return (
@@ -87,11 +71,6 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
                   <Badge size="sm" data-testid="project-skill-installed-version">
                     {installedVersionLabel(installation.installed_version)}
                   </Badge>
-                  {installation.outdated && (
-                    <Badge size="sm" colorPalette="orange" data-testid="project-skill-agent-outdated">
-                      Out of date
-                    </Badge>
-                  )}
                 </Flex>
               ))}
             </Stack>
@@ -133,25 +112,7 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
                       v{currentVersion}
                     </Badge>
                   )}
-                  {canUpdateSkill && (
-                    <Badge size="sm" colorPalette="orange" data-testid="project-skill-outdated">
-                      Out of date
-                    </Badge>
-                  )}
                 </Flex>
-                {canUpdateSkill && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    flexShrink="0"
-                    onClick={handleUpdateSkill}
-                    loading={updateSkill.isPending}
-                    data-testid="project-skill-update"
-                  >
-                    <RefreshCw size={14} />
-                    {currentVersion ? `Update to v${currentVersion}` : "Update skill"}
-                  </Button>
-                )}
               </Flex>
               <Text textStyle="paragraph/S/regular" color="fg.muted" data-testid="project-skill-description">
                 {skill.description}

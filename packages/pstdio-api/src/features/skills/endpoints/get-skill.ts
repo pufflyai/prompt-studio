@@ -50,11 +50,7 @@ export const getSkillHandler = (deps: SkillsRouteDeps): AppRouteHandler<typeof g
       return c.json({ error: `Skill not found: ${name}` }, 404);
     }
 
-    const installStatus = await getSkillInstallStatus(deps, {
-      projectId,
-      name: skill.name,
-      files: skill.files,
-    });
+    const installStatus = await getSkillInstallStatus(deps, { projectId, name: skill.name });
 
     return c.json(
       {

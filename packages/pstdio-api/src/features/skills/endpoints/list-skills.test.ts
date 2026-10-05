@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -19,16 +19,6 @@ type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 let handle: AppHandle;
 let tempRoot: string;
 let projectId: string;
-let sourcePath: string;
-
-const catalogSkillPath = () => join(sourcePath, "skills", "catalog-skill", "SKILL.md");
-const versionedSkillContent = (version: string) => `---
-metadata:
-  version: ${version}
----
-
-# Catalog Skill
-`;
 
 const writeSkillExtension = (root: string) => {
   const sourcePath = join(root, "skill-extension");
@@ -101,7 +91,7 @@ beforeAll(async () => {
   });
   const project = await res.json();
   projectId = project.id;
-  sourcePath = writeSkillExtension(tempRoot);
+  const sourcePath = writeSkillExtension(tempRoot);
   await enableSource(sourcePath, "skill-extension");
 
   // Enable harness extensions whose workspace.provision hooks sync skills into each agent dir,
@@ -152,7 +142,6 @@ describe("GET /v1/projects/:id/skills/:name", () => {
     expect(body).not.toHaveProperty("bundled_version");
     expect(body.files.map((file: { path: string }) => file.path).sort()).toEqual(["SKILL.md", "references/notes.md"]);
     expect(body.installed_agents).toEqual([]);
-    expect(body.outdated_agents).toEqual([]);
     expect(body.agent_installations).toEqual([]);
   });
 
@@ -169,64 +158,5 @@ describe("GET /v1/projects/:id/skills/:name", () => {
 
     const body = await res.json();
     expect(body.installed_agents).toContain(testHarnessId("claude-code"));
-  });
-
-  test("returns agent IDs where the installed skill is out of date", async () => {
-    writeFileSync(catalogSkillPath(), versionedSkillContent("1.2.0"), "utf8");
-    await provisionProjectWorkspaces(handle.deps, projectId);
-
-    try {
-      writeFileSync(catalogSkillPath(), versionedSkillContent("1.3.0"), "utf8");
-
-      const res = await handle.app.request(`/v1/projects/${projectId}/skills/catalog-skill`);
-      expect(res.status).toBe(200);
-
-      const body = await res.json();
-      expect(body.installed_agents).toContain(testHarnessId("claude-code"));
-      expect(body.outdated_agents).toContain(testHarnessId("claude-code"));
-      expect(body.agent_installations).toContainEqual(
-        expect.objectContaining({
-          agent_id: testHarnessId("claude-code"),
-          agent_name: "claude-code",
-          installed_version: "1.2.0",
-          outdated: true,
-        }),
-      );
-      expect(body.agent_installations).toContainEqual(
-        expect.objectContaining({
-          agent_id: testHarnessId("codex"),
-          agent_name: "codex",
-          installed_version: "1.2.0",
-          outdated: true,
-        }),
-      );
-    } finally {
-      writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
-    }
-  });
-});
-
-describe("POST /v1/projects/:id/skills/:name/update", () => {
-  test("updates installed extension-backed skills to the latest source files", async () => {
-    writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
-    const repoPath = (await handle.deps.workspaceService.getDefault(projectId))!.root_path!;
-    await provisionProjectWorkspaces(handle.deps, projectId);
-
-    try {
-      writeFileSync(catalogSkillPath(), "# Catalog Skill v2\n", "utf8");
-
-      const res = await handle.app.request(`/v1/projects/${projectId}/skills/catalog-skill/update`, {
-        method: "POST",
-      });
-      expect(res.status).toBe(200);
-
-      const body = await res.json();
-      expect(body.outdated_agents).not.toContain(testHarnessId("claude-code"));
-      expect(readFileSync(join(repoPath, ".claude", "skills", "catalog-skill", "SKILL.md"), "utf8")).toBe(
-        "# Catalog Skill v2\n",
-      );
-    } finally {
-      writeFileSync(catalogSkillPath(), "# Catalog Skill\n", "utf8");
-    }
   });
 });
