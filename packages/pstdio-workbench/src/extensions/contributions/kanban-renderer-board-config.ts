@@ -70,9 +70,3 @@ export const statusColorConfig = (
   const status = context.workbench.statuses.getStatuses(id)?.find((candidate) => candidate.id === groupKey);
   return status ? { color: status.color } : undefined;
 };
-
-export const initialColumnGrouping = (record: WorkbenchExtensionKanbanRendererRecord) => {
-  if (record.defaultSettings?.columnGrouping) return record.defaultSettings.columnGrouping;
-  const statusAttributes = record.attributes?.filter((attribute) => attribute.type.kind === "status") ?? [];
-  return statusAttributes.length === 1 ? statusAttributes[0]?.id : undefined;
-};

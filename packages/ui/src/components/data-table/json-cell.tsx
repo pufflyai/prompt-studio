@@ -1,6 +1,7 @@
 import { Button, HStack, Image, Popover, Portal, Text } from "@chakra-ui/react";
 import { Braces, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { HighlightedText } from "../collection-view/highlighted-text";
 import {
   buildJsonFields,
   FriendlyJsonDisplay,
@@ -12,12 +13,13 @@ import {
 interface JsonCellProps {
   columnLabel: string;
   value: unknown;
+  search?: string;
 }
 
 const stopRowActivation = (event: { stopPropagation: () => void }) => event.stopPropagation();
 
 export const JsonCell = (props: JsonCellProps) => {
-  const { columnLabel, value } = props;
+  const { columnLabel, value, search = "" } = props;
   const fields = buildJsonFields(value);
   const imageFields = fields
     .flatMap((field) => {
@@ -61,7 +63,7 @@ export const JsonCell = (props: JsonCellProps) => {
             <Braces size={14} />
           )}
           <Text flex="1" minWidth="0" textAlign="left" textStyle="paragraph/S/regular" truncate>
-            {summary}
+            <HighlightedText text={summary} query={search} />
           </Text>
           <ChevronRight size={12} />
         </Button>

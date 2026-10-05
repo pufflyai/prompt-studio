@@ -1,7 +1,7 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 
 export const editableSlotRecipe = defineSlotRecipe({
-  slots: ["preview", "input", "textarea"] as const,
+  slots: ["root", "preview", "input", "textarea"] as const,
   base: {
     preview: {
       textStyle: "label/L/medium",
@@ -40,7 +40,18 @@ export const editableSlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
+    variant: {
+      "filter-segment": {
+        input: { bg: "transparent", _focusVisible: { outline: "none" } },
+      },
+    },
     size: {
+      xs: {
+        root: { display: "inline-flex", alignItems: "center" },
+        preview: { textStyle: "label/XS", lineHeight: "1rem", px: "xs", minH: "5", alignContent: "center" },
+        input: { textStyle: "label/XS", lineHeight: "1rem", px: "xs", minH: "5" },
+        textarea: { textStyle: "label/XS", lineHeight: "1rem", px: "xs" },
+      },
       sm: {
         preview: {
           textStyle: "label/S/medium",

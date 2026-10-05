@@ -1,7 +1,7 @@
 import type { Localizable } from "../l10n";
 import type { ExtensionPanelRegion } from "./composition";
 import type { RendererCallback } from "./context";
-import type { ContributionDefinition, ModeRef, PageRef, ViewRef } from "./contribution-identity";
+import type { ContributionDefinition, ModeRef, PageRef, ResourceKindRef, ViewRef } from "./contribution-identity";
 import type { KanbanRendererContribution, WebviewContribution, WhenExpression } from "./contributions";
 import type { ControlsRendererContribution } from "./controls";
 import type { DataTableRendererContribution } from "./data-table-renderer";
@@ -12,10 +12,10 @@ import type { RendererEventReference } from "./renderer-base";
 import type { ResourceBinding } from "./resource-binding";
 import type { TreeRendererContribution } from "./tree-renderer";
 
-type NativeViewBody<Kind extends string, Definition> = { readonly kind: Kind } & Omit<
-  Definition,
-  "title" | "icon" | "resourceKind"
->;
+type NativeViewBody<Kind extends string, Definition> = {
+  readonly kind: Kind;
+  readonly resourceKind?: ResourceKindRef;
+} & Omit<Definition, "title" | "icon" | "resourceKind">;
 
 export type WebviewViewBody = { readonly kind: "webview" } & WebviewContribution;
 export type TreeViewBody = NativeViewBody<"tree", TreeRendererContribution>;

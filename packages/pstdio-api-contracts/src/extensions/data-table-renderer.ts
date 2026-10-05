@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { viewFilterGroupSchema, viewSortsSchema } from "./collection-view";
 import { localizableStringSchema } from "./common";
 import { extensionRendererRecordBaseSchema } from "./renderers";
 import { viewToolbarActionRecordSchema } from "./view-toolbar-action";
@@ -32,11 +33,31 @@ const columnRendererSchema = z.discriminatedUnion("type", [
 export const dataTableRendererColumnSchema = z.object({
   id: z.string(),
   label: localizableStringSchema.optional(),
+  type: z.enum(["string", "number", "boolean", "date"]).optional(),
+  groupable: z.boolean().optional(),
+  filterable: z.boolean().optional(),
   description: localizableStringSchema.optional(),
   icon: z.string().optional(),
   hidden: z.boolean().optional(),
   stat: columnStatSchema.optional(),
   renderer: columnRendererSchema.optional(),
+});
+
+export const dataTableRendererSettingsSchema = z.object({
+  grouping: z.string(),
+  rowNumbers: z.boolean(),
+  wrapRows: z.boolean(),
+  showStats: z.boolean(),
+  hiddenColumns: z.array(z.string()),
+  columnOrder: z.array(z.string()),
+});
+
+const dataTableRendererSavedViewSchema = z.object({
+  id: z.string(),
+  title: localizableStringSchema,
+  settings: dataTableRendererSettingsSchema.partial().optional(),
+  filter: viewFilterGroupSchema.optional(),
+  sorts: viewSortsSchema.optional(),
 });
 
 const rowActionSchema = z.object({
@@ -65,6 +86,11 @@ export const extensionDataTableRendererRecordSchema = extensionRendererRecordBas
   rowActivationHandlerId: z.string().optional(),
   initialPageSize: z.number().int().positive().optional(),
   pageSizeOptions: z.array(z.number().int().positive()).optional(),
+  defaultSettings: dataTableRendererSettingsSchema.partial().optional(),
+  defaultFilter: viewFilterGroupSchema.optional(),
+  defaultSorts: viewSortsSchema.optional(),
+  defaultViews: z.array(dataTableRendererSavedViewSchema).optional(),
+  defaultActiveViewId: z.string().optional(),
 });
 
 export type ExtensionDataTableRendererRecord = z.infer<typeof extensionDataTableRendererRecordSchema>;

@@ -1,13 +1,15 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { board_default_views, board_views } from "../../db/schemas.pg";
 
 type BoardScope = Pick<typeof board_views.$inferSelect, "project_id" | "extension_instance_id" | "board_id">;
-type ViewInput = Pick<typeof board_views.$inferSelect, "title" | "settings" | "filters">;
+type ViewInput = Pick<typeof board_views.$inferSelect, "title" | "settings" | "filter" | "sorts">;
 const scopeWhere = (table: typeof board_views | typeof board_default_views, scope: BoardScope) =>
   and(
     eq(table.project_id, scope.project_id),
-    eq(table.extension_instance_id, scope.extension_instance_id),
+    scope.extension_instance_id === null
+      ? isNull(table.extension_instance_id)
+      : eq(table.extension_instance_id, scope.extension_instance_id),
     eq(table.board_id, scope.board_id),
   );
 const viewWhere = (projectId: string, id: string) => and(eq(board_views.project_id, projectId), eq(board_views.id, id));
@@ -46,7 +48,7 @@ export const createBoardViewsDBService = (db: DbClient) => {
         .where(viewWhere(projectId, id))
         .returning()
     )[0] ?? null;
-  const clean = async (original: typeof board_views.$inferSelect, input: Pick<ViewInput, "settings" | "filters">) =>
+  const clean = async (original: typeof board_views.$inferSelect, input: Omit<ViewInput, "title">) =>
     (
       await db
         .update(board_views)
@@ -56,7 +58,8 @@ export const createBoardViewsDBService = (db: DbClient) => {
             viewWhere(original.project_id, original.id),
             eq(board_views.updated_at, original.updated_at),
             eq(board_views.settings, original.settings),
-            eq(board_views.filters, original.filters),
+            eq(board_views.filter, original.filter),
+            eq(board_views.sorts, original.sorts),
           ),
         )
         .returning()

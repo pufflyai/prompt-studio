@@ -37,7 +37,6 @@ const EditableBadgeWrapper = () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "manual", direction: "asc" },
           displayProperties: ["status"],
         }}
         onAttributeChange={handleAttributeChange}
@@ -64,7 +63,7 @@ export const EditableDisplayBadge: Story = {
     if (!card) throw new Error("Expected the ticket card to render in the Todo column");
 
     await userEvent.click(within(card as HTMLElement).getByText("Todo"));
-    await userEvent.click(within(document.body).getByRole("menuitem", { name: "Done" }));
+    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: "Done" }));
 
     await expect(within(doneColumn).getByText("Set up API authentication")).toBeInTheDocument();
     await expect(within(todoColumn).queryByText("Set up API authentication")).not.toBeInTheDocument();
@@ -87,7 +86,6 @@ const ClearableSingleSelectBadgeWrapper = () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "manual", direction: "asc" },
           displayProperties: ["priority"],
         }}
         onAttributeChange={(rowId, attributeId, value) =>
@@ -140,7 +138,6 @@ const EditableMultiSelectBadgeWrapper = () => {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "manual", direction: "asc" },
           displayProperties: ["labels"],
         }}
         onAttributeChange={handleAttributeChange}
@@ -219,9 +216,9 @@ export const CustomAttributeRenderer: Story = {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "updated", direction: "desc" },
           displayProperties: ["diffOverview", "status"],
         }}
+        defaultSorts={[{ attributeId: "updated", direction: "desc" }]}
       />
     </Box>
   ),
@@ -271,9 +268,9 @@ export const WorkspaceDisplayProperty: Story = {
           viewMode: "board",
           columnGrouping: "status",
           rowGrouping: "none",
-          ordering: { attributeId: "updated", direction: "desc" },
           displayProperties: ["workspace", "priority"],
         }}
+        defaultSorts={[{ attributeId: "updated", direction: "desc" }]}
       />
     </Box>
   ),
@@ -299,4 +296,16 @@ const FailedActionExample = () => {
   );
 };
 
-export const FailedAction: Story = { render: () => <FailedActionExample /> };
+export const FailedAction: Story = {
+  render: () => <FailedActionExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const column = canvas.getByTestId("board-column-todo");
+    const card = within(column).getByText("Set up API authentication").closest('[data-testid="renderer-card"]');
+    if (!card) throw new Error("Expected the ticket card");
+    await userEvent.click(within(card as HTMLElement).getByText("Todo"));
+    await userEvent.click(within(document.body).getByRole("menuitemradio", { name: "Done" }));
+    await expect(canvas.getByText("Could not save the change.")).toBeVisible();
+    await expect(within(column).getByText("Set up API authentication")).toBeVisible();
+  },
+};

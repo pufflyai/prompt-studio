@@ -6,6 +6,8 @@ interface DiffBubbleProps extends Omit<ComponentProps<typeof Span>, "onClick"> {
   fileName?: string;
   additions: number;
   deletions: number;
+  additionsLabel?: React.ReactNode;
+  deletionsLabel?: React.ReactNode;
   label?: React.ReactNode;
   variant?: "outline" | "ghost";
   size?: "default" | "small";
@@ -18,6 +20,8 @@ export const DiffBubble = (props: DiffBubbleProps) => {
     fileName,
     additions,
     deletions,
+    additionsLabel,
+    deletionsLabel,
     label,
     variant = "outline",
     size = "default",
@@ -66,8 +70,8 @@ export const DiffBubble = (props: DiffBubbleProps) => {
           {fileName}
         </Span>
       )}
-      <Span color="fg.success">{`+${additions}`}</Span>
-      <Span color="fg.error">{`-${deletions}`}</Span>
+      <Span color="fg.success">{additionsLabel ?? `+${additions}`}</Span>
+      <Span color="fg.error">{deletionsLabel ?? `-${deletions}`}</Span>
     </Span>
   );
 };

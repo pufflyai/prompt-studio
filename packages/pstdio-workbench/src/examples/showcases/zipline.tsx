@@ -4,7 +4,6 @@ import {
   type AttributeDescriptor,
   type KanbanRendererRow,
   type KanbanRendererSettings,
-  MANUAL_ORDERING,
   NO_GROUPING,
 } from "@pstdio/ui/kanban-renderer";
 import { createWorkbench, type WorkbenchPanelRenderInput } from "../../core";
@@ -97,7 +96,6 @@ const boardSettings = {
   viewMode: "board",
   columnGrouping: "status",
   rowGrouping: NO_GROUPING,
-  ordering: { attributeId: MANUAL_ORDERING, direction: "asc" },
   displayProperties: ["id", "priority", "team", "assignee"],
 } satisfies Partial<KanbanRendererSettings>;
 const getBoardRows = () => {

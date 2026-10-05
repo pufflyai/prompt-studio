@@ -2,12 +2,15 @@ import { HStack, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { DragEventHandler, MouseEvent, ReactNode } from "react";
 import type { WorkspaceBadgeProps } from "@/components/primitives/workspace-badge";
 import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
+import { HighlightedText } from "../collection-view/highlighted-text";
 import { KanbanRendererAttributeBadge } from "./kanban-renderer-attribute-badge";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
 
 export interface KanbanRendererCardProps {
   eyebrow?: string;
   title: string;
+  /** Search text to mark in the title and eyebrow. */
+  highlight?: string;
   badges?: AttributeBadge[];
   customSlots?: ReactNode[];
   workspaceBadge?: WorkspaceBadgeProps;
@@ -23,6 +26,7 @@ export const KanbanRendererCard = (props: KanbanRendererCardProps) => {
   const {
     eyebrow,
     title,
+    highlight = "",
     badges = [],
     customSlots = [],
     workspaceBadge,
@@ -65,7 +69,7 @@ export const KanbanRendererCard = (props: KanbanRendererCardProps) => {
         <HStack minW="0" gap="2xs">
           {eyebrow ? (
             <Text textStyle="label/XS" color="fg.muted" fontFamily="mono" truncate>
-              {eyebrow}
+              <HighlightedText text={eyebrow} query={highlight} />
             </Text>
           ) : null}
           <HStack marginLeft="auto">{workspaceBadge ? <WorkspaceBadge {...workspaceBadge} /> : null}</HStack>
@@ -73,7 +77,7 @@ export const KanbanRendererCard = (props: KanbanRendererCardProps) => {
       ) : null}
 
       <Text textStyle="paragraph/S/regular" minW="0" overflowWrap="anywhere">
-        {title}
+        <HighlightedText text={title} query={highlight} />
       </Text>
 
       {hasBadges && (

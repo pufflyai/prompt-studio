@@ -1,130 +1,92 @@
+import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
+import { CollectionViewBar } from "../collection-view/collection-view-bar";
+import { withTitleField } from "../collection-view/collection-view-fields";
+import { DisplaySortControl } from "../collection-view/display-sort-control";
+import type { RuleValueOption } from "../collection-view/filter-rule-value";
+import { useCollectionViews } from "../collection-view/use-collection-views";
 import { DisplayMenu } from "./display-menu";
-import { FilterMenu } from "./filter-menu";
 import { countFilterValues } from "./kanban-renderer-grouping";
-import {
-  buildDisplayPropertyOptions,
-  buildFilterCategories,
-  buildGroupingOptions,
-  buildOrderingOptions,
-} from "./kanban-renderer-helpers";
-import { KanbanRendererViewBar } from "./kanban-renderer-view-bar";
+import { buildDisplayPropertyOptions, buildFilterCategories, buildGroupingOptions } from "./kanban-renderer-helpers";
 import type {
   AttributeDescriptor,
-  KanbanRendererFilterState,
   KanbanRendererRow,
   KanbanRendererSavedView,
   KanbanRendererSettings,
   KanbanRendererViewsSource,
 } from "./types";
-import { useKanbanRendererStore } from "./use-kanban-renderer-store";
-import { useKanbanViews } from "./use-kanban-views";
+import { kanbanRendererInitialState, useKanbanRendererStore } from "./use-kanban-renderer-store";
 import { useResolvedAttributes } from "./use-resolved-attributes";
 
 export interface KanbanRendererToolbarProps<TRow extends KanbanRendererRow = KanbanRendererRow> {
   rows: TRow[];
   storageKey: string;
+  itemLabel?: string;
   attributes: AttributeDescriptor[];
   defaultSettings?: Partial<KanbanRendererSettings>;
-  defaultFilters?: KanbanRendererFilterState;
+  defaultFilter?: ViewFilterGroup;
+  defaultSorts?: ViewSort[];
   viewsSource?: KanbanRendererViewsSource;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
+  search: string;
+  onSearchChange: (value: string) => void;
+  searchResultLabel?: string;
   leading?: ReactNode;
   actions?: ReactNode;
-  displayControl?: ReactNode;
-  align?: "split" | "end";
 }
 
+const toggle = (values: string[], value: string) =>
+  values.includes(value) ? values.filter((entry) => entry !== value) : [...values, value];
+
 export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: KanbanRendererToolbarProps<TRow>) => {
-  const {
-    rows,
-    storageKey,
-    attributes: rawAttributes,
-    defaultSettings,
-    defaultFilters,
-    leading,
-    actions,
-    displayControl,
-    align = "split",
-  } = props;
-
-  const viewState = useKanbanViews(props);
-  const attributes = useResolvedAttributes(rawAttributes);
-  const groupingOptions = buildGroupingOptions(attributes);
-  const orderingOptions = buildOrderingOptions(attributes);
-  const displayPropertyOptions = buildDisplayPropertyOptions(attributes);
-
-  const initialState = {
+  const { rows, storageKey, attributes: rawAttributes, defaultSettings, defaultFilter, defaultSorts } = props;
+  const { search, onSearchChange, searchResultLabel, leading, actions } = props;
+  const initialState = kanbanRendererInitialState({
     settings: defaultSettings,
-    filters: defaultFilters,
+    filter: defaultFilter,
+    sorts: defaultSorts,
+  });
+  const attributes = useResolvedAttributes(rawAttributes);
+  const viewState = useCollectionViews({ ...props, initialState, fields: attributes });
+  const { settings, setSettings, sorts, setSorts } = useKanbanRendererStore(storageKey, (state) => state, initialState);
+  const categories = buildFilterCategories(attributes, rows);
+  const optionsFor = (field: AttributeDescriptor): RuleValueOption[] => {
+    const counts = countFilterValues(rows, field.id, attributes);
+    const category = categories.find((entry) => entry.id === field.id);
+    return (category?.options ?? []).map((option) => ({ ...option, count: counts[option.value] ?? 0 }));
   };
-  const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
-  const filters = useKanbanRendererStore(storageKey, (state) => state.filters, initialState);
-  const setViewMode = useKanbanRendererStore(storageKey, (state) => state.setViewMode, initialState);
-  const setColumnGrouping = useKanbanRendererStore(storageKey, (state) => state.setColumnGrouping, initialState);
-  const setRowGrouping = useKanbanRendererStore(storageKey, (state) => state.setRowGrouping, initialState);
-  const setOrderingAttributeId = useKanbanRendererStore(
-    storageKey,
-    (state) => state.setOrderingAttributeId,
-    initialState,
-  );
-  const toggleSortDirection = useKanbanRendererStore(storageKey, (state) => state.toggleSortDirection, initialState);
-  const toggleDisplayProperty = useKanbanRendererStore(
-    storageKey,
-    (state) => state.toggleDisplayProperty,
-    initialState,
-  );
-  const toggleFilterValue = useKanbanRendererStore(storageKey, (state) => state.toggleFilterValue, initialState);
-  const clearFilter = useKanbanRendererStore(storageKey, (state) => state.clearFilter, initialState);
-  const clearAllFilters = useKanbanRendererStore(storageKey, (state) => state.clearAllFilters, initialState);
-
-  const categoryOptions = buildFilterCategories(attributes, rows);
-  const countsByCategory = Object.fromEntries(
-    categoryOptions.map((category) => [category.id, countFilterValues(rows, category.id, attributes)]),
-  );
-
-  const filterControl = (
-    <FilterMenu
-      categories={categoryOptions}
-      filters={filters}
-      countsByCategory={countsByCategory}
-      onToggleFilterValue={toggleFilterValue}
-      onClearFilter={clearFilter}
-      onClearAll={clearAllFilters}
-    />
-  );
-  const resolvedDisplayControl =
-    displayControl === undefined ? (
-      <DisplayMenu
-        settings={settings}
-        groupingOptions={groupingOptions}
-        orderingOptions={orderingOptions}
-        displayPropertyOptions={displayPropertyOptions}
-        onViewModeChange={setViewMode}
-        onColumnGroupingChange={setColumnGrouping}
-        onRowGroupingChange={setRowGrouping}
-        onOrderingAttributeIdChange={setOrderingAttributeId}
-        onSortDirectionToggle={toggleSortDirection}
-        onDisplayPropertyToggle={toggleDisplayProperty}
-      />
-    ) : (
-      displayControl
-    );
 
   return (
-    <KanbanRendererViewBar
-      views={viewState.views}
-      defaultViewId={viewState.defaultId}
-      viewsSource={props.viewsSource}
+    <CollectionViewBar
+      itemLabel={props.itemLabel}
       storageKey={storageKey}
-      categories={categoryOptions}
-      filters={filters}
+      initialState={initialState}
+      views={viewState.views}
+      viewsSource={props.viewsSource}
+      fields={withTitleField(attributes)}
+      optionsFor={optionsFor}
+      search={search}
+      onSearchChange={onSearchChange}
+      searchResultLabel={searchResultLabel}
       leading={leading}
       actions={actions}
-      filterControl={filterControl}
-      displayControl={resolvedDisplayControl}
-      align={align}
+      displayControl={
+        <DisplayMenu
+          settings={settings}
+          sortControl={
+            <DisplaySortControl fields={withTitleField(attributes)} sorts={sorts} onSortsChange={setSorts} />
+          }
+          groupingOptions={buildGroupingOptions(attributes)}
+          displayPropertyOptions={buildDisplayPropertyOptions(attributes)}
+          onViewModeChange={(viewMode) => setSettings({ viewMode })}
+          onColumnGroupingChange={(columnGrouping) => setSettings({ columnGrouping })}
+          onRowGroupingChange={(rowGrouping) => setSettings({ rowGrouping })}
+          onDisplayPropertyToggle={(property) =>
+            setSettings({ displayProperties: toggle(settings.displayProperties, property) })
+          }
+        />
+      }
     />
   );
 };

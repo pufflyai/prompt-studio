@@ -8,6 +8,8 @@ export interface DataTableColumnMeta {
   columnDescription?: string;
   renderer?: DataTableColumnRenderer;
   wrapRows?: boolean;
+  /** The view's search text, marked in plain text cells. */
+  search?: string;
   selectedRowIds?: RowSelectionState;
   rowActions?: DataTableRowAction[];
   getRowActions?: (row: RowData) => DataTableRowAction[];

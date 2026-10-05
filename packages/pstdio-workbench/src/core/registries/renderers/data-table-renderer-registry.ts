@@ -1,8 +1,10 @@
+import type { DataTableRendererSettings, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { ResourceRef } from "../resources/resource-registry";
+import type { CollectionSavedView, CollectionViewsProvider } from "./kanban-renderer-contracts";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 import type { ViewToolbarAction } from "./view-toolbar-action";
 
@@ -47,11 +49,15 @@ export type DataTableRendererColumnRenderer =
 export interface DataTableRendererColumn {
   id: string;
   label?: string;
+  /** How filters and sorts compare the column. Without it, the type is inferred from the values. */
+  type?: "string" | "number" | "boolean" | "date";
+  /** Offers the column under Grouping in the table's Display menu. */
+  groupable?: boolean;
+  /** Whether this column can be filtered. Defaults to true. */
+  filterable?: boolean;
   description?: string;
   icon?: unknown;
   hidden?: boolean;
-  /** Starts unchecked in the column menu; viewers can still show the column. */
-  defaultHidden?: boolean;
   stat?: DataTableRendererColumnStat;
   renderer?: DataTableRendererColumnRenderer;
 }
@@ -70,7 +76,12 @@ export interface DataTableRendererQueryResult {
 export interface DataTableRendererQueryContext {
   resource?: ResourceRef;
   modeId?: string;
+  filter: ViewFilterGroup;
+  sorts: ViewSort[];
+  settings: DataTableRendererSettings;
 }
+
+export type DataTableRendererSavedView = CollectionSavedView<DataTableRendererSettings>;
 
 export interface DataTableRendererRowAction {
   id: string;
@@ -99,8 +110,14 @@ export interface DataTableRendererContribution {
   rowActions?: DataTableRendererRowAction[];
   initialPageSize?: number;
   pageSizeOptions?: number[];
-  /** Whether column statistics start visible. Defaults to `true`. */
-  defaultShowStats?: boolean;
+  /** The view state used before a saved view is active, such as hidden columns or statistics. */
+  defaultSettings?: Partial<DataTableRendererSettings>;
+  defaultFilter?: ViewFilterGroup;
+  defaultSorts?: ViewSort[];
+  defaultViews?: DataTableRendererSavedView[];
+  defaultActiveViewId?: string;
+  /** Shared saved views. Without it the table offers its default views only. */
+  viewsProvider?: CollectionViewsProvider<DataTableRendererSettings>;
   emptyTitle?: string;
   emptyDescription?: string;
   /** Context keys that choose which rows the query returns. A change drops the old rows and starts a new read. */

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { DisplayMenu } from "./display-menu";
-import { buildDisplayPropertyOptions, buildGroupingOptions, buildOrderingOptions } from "./kanban-renderer-helpers";
+import { buildDisplayPropertyOptions, buildGroupingOptions } from "./kanban-renderer-helpers";
 import type { AttributeDescriptor, KanbanRendererSettings } from "./types";
 import { DEFAULT_KANBAN_RENDERER_SETTINGS } from "./types";
 
@@ -52,23 +52,10 @@ const Wrapper = (props: { initialSettings?: KanbanRendererSettings } = {}) => {
       <DisplayMenu
         settings={settings}
         groupingOptions={buildGroupingOptions(attributes)}
-        orderingOptions={buildOrderingOptions(attributes)}
         displayPropertyOptions={buildDisplayPropertyOptions(attributes)}
         onViewModeChange={(value) => setSettings((current) => ({ ...current, viewMode: value }))}
         onColumnGroupingChange={(value) => setSettings((current) => ({ ...current, columnGrouping: value }))}
         onRowGroupingChange={(value) => setSettings((current) => ({ ...current, rowGrouping: value }))}
-        onOrderingAttributeIdChange={(value) =>
-          setSettings((current) => ({ ...current, ordering: { ...current.ordering, attributeId: value } }))
-        }
-        onSortDirectionToggle={() =>
-          setSettings((current) => ({
-            ...current,
-            ordering: {
-              ...current.ordering,
-              direction: current.ordering.direction === "asc" ? "desc" : "asc",
-            },
-          }))
-        }
         onDisplayPropertyToggle={(value) =>
           setSettings((current) => ({
             ...current,
@@ -92,42 +79,6 @@ const Wrapper = (props: { initialSettings?: KanbanRendererSettings } = {}) => {
 };
 
 export const Default: Story = { render: () => <Wrapper /> };
-
-export const AscendingSortMenu: Story = {
-  render: () => (
-    <Wrapper
-      initialSettings={{
-        ...DEFAULT_KANBAN_RENDERER_SETTINGS,
-        ordering: { attributeId: "updated", direction: "asc" },
-      }}
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Display settings"));
-    const displayMenu = within(document.body);
-    await expect(displayMenu.getByRole("img", { name: "Ascending order" })).toBeVisible();
-    await expect(displayMenu.getByText("Updated").parentElement).not.toHaveTextContent("ASC");
-  },
-};
-
-export const DescendingSortMenu: Story = {
-  render: () => (
-    <Wrapper
-      initialSettings={{
-        ...DEFAULT_KANBAN_RENDERER_SETTINGS,
-        ordering: { attributeId: "updated", direction: "desc" },
-      }}
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByLabelText("Display settings"));
-    const displayMenu = within(document.body);
-    await expect(displayMenu.getByRole("img", { name: "Descending order" })).toBeVisible();
-    await expect(displayMenu.getByText("Updated").parentElement).not.toHaveTextContent("DESC");
-  },
-};
 
 export const ToggleViewMode: Story = {
   render: () => <Wrapper />,

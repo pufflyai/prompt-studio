@@ -39,6 +39,8 @@ non-root user (1000:1000). Builds write into the checkout with that identity.
 Tools and caches live under `/opt/bun` and `/home/bun`; run the launcher without
 `sudo`.
 
+The container mounts the checkout, including built package files. Stop its container before rebuilding shared packages or running `verify:packages`, then start the same container and reload the browser. A running Vite server can retain imports to deleted build chunks, causing a later action such as enabling table statistics to fail. Use `docker ps` to find the container name, then `docker stop <container-name>` and `docker start <container-name>`. These commands preserve its database and project. Use `--down` only when you intend to discard the isolated state.
+
 Run the landing page separately when working on it:
 
 ```bash

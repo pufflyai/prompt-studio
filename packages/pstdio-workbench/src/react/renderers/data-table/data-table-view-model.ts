@@ -72,7 +72,13 @@ export const resolveDataTableRendererResourceActions = (
       onSelect: (_context?: unknown) => void action.onClick(),
     }));
 };
-export const resolveDataTableRendererStorageKey = (rendererId: string, placement: WorkbenchPanelInstance) => {
+export const resolveDataTableRendererStorageKey = (
+  contribution: Pick<DataTableRendererContribution, "id" | "contextKeys">,
+  placement: WorkbenchPanelInstance,
+  contextValues: Record<string, unknown>,
+) => {
   const identity = resourceKey(placement.resource) ?? placement.resource?.id ?? "unscoped";
-  return `pstdio:workbench:dataTableRenderer:${rendererId}:${placement.instanceId}:${identity}`;
+  const scope = contribution.contextKeys?.map((key) => contextValues[key] ?? null);
+  const key = `pstdio:workbench:dataTableRenderer:${contribution.id}:${placement.instanceId}:${identity}`;
+  return scope?.length ? `${key}:${JSON.stringify(scope)}` : key;
 };

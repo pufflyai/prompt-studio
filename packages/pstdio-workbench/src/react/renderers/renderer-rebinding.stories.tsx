@@ -6,6 +6,7 @@ import { createWorkbench, getWorkbenchRenderers } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchControlsView } from "./controls/controls-view";
 import { WorkbenchFileRendererView } from "./file/file-renderer-view";
+import { WorkbenchKanbanView } from "./kanban/kanban-view";
 
 const ControlsRebinding = () => {
   const [fixture] = useState(() => {
@@ -75,6 +76,40 @@ const FileContributionReplacement = () => {
   );
 };
 
+const KanbanViewRefresh = () => {
+  const [fixture] = useState(() => {
+    const workbench = createWorkbench();
+    const pending = Promise.withResolvers<void>();
+    const renderers = getWorkbenchRenderers(workbench);
+    let reads = 0;
+    renderers.registerKanbanRenderer({
+      id: "refresh-board",
+      title: "Tasks",
+      attributes: [{ id: "title", label: "Title", type: { kind: "string" }, sortable: true }],
+      defaultSettings: { viewMode: "list", columnGrouping: "none", rowGrouping: "none", displayProperties: [] },
+      executeQuery: async () => {
+        reads += 1;
+        if (reads === 1) return [{ id: "write", title: "Write docs", attributes: {} }];
+        await pending.promise;
+        return [{ id: "review", title: "Review docs", attributes: {} }];
+      },
+    });
+    return { workbench, pending, contribution: renderers.getKanbanRenderer("refresh-board")! };
+  });
+  return (
+    <Stack gap="md">
+      <Button onClick={() => fixture.pending.resolve()}>Finish loading</Button>
+      <Box height="md">
+        <WorkbenchKanbanView
+          workbench={fixture.workbench}
+          contribution={fixture.contribution}
+          placement={{ instanceId: "refresh-board", panelId: "refresh-board", closable: false }}
+        />
+      </Box>
+    </Stack>
+  );
+};
+
 const meta = {
   title: "Renderers/Rebinding",
   tags: ["!manifest"],
@@ -111,5 +146,20 @@ export const FileContributionChange: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Replace contribution" }));
     await userEvent.click(canvas.getByRole("button", { name: "Refresh file" }));
     await expect(await canvas.findByText("New contribution")).toBeVisible();
+  },
+};
+
+export const KanbanViewChange: Story = {
+  render: () => <KanbanViewRefresh />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Write docs")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Sort" }));
+    await userEvent.click(await within(document.body).findByRole("button", { name: "Add sort" }));
+    await userEvent.keyboard("{Escape}");
+    // A new sort runs the query again, but the old rows stay on screen until the new ones arrive.
+    await expect(canvas.getByText("Write docs")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
+    await expect(await canvas.findByText("Review docs")).toBeVisible();
   },
 };

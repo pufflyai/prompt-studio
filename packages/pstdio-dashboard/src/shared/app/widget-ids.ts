@@ -3,7 +3,7 @@
 export const dashboardWidgetIds = {
   projectHeader: "dashboard-workbench.project-header",
   start: "dashboard-workbench.start",
-  workspaces: "dashboard-workbench.workspaces",
+  workspaces: WORKSPACES_COLLECTION_ID,
   workspaceFiles: "dashboard-workbench.workspace.files",
   workspaceDiffs: "dashboard-workbench.workspace.diffs",
   workspaceFileTree: "dashboard-workbench.workspace.file-tree",
@@ -22,3 +22,5 @@ export const dashboardWidgetIds = {
   sessionBubble: "dashboard-workbench.session-bubble",
   performance: "dashboard-workbench.performance",
 } as const;
+
+import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";

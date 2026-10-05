@@ -12,8 +12,8 @@ test("a failed drag stops later mutations and reports once", async () => {
         settings: {
           columnGrouping: "status",
           rowGrouping: "type",
-          ordering: { attributeId: "manual", direction: "asc" },
         },
+        sorts: [],
         rowId: "ticket",
         targetColumnId: "done",
         targetGroupKey: "bug",

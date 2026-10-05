@@ -11,22 +11,9 @@ import {
   SelectionCell,
   SelectionHeader,
 } from "./data-table-cell-renderers";
-import { resolveDataTableComparableValue } from "./data-table-cell-value";
 import type { DataTableColumnMeta } from "./data-table-column-meta";
 import { columnHelper, getIcon } from "./helpers";
 import type { DataTableColumnRenderer, DataTableRowAction, RowData } from "./types";
-
-const compareValues = (valueA: unknown, valueB: unknown) => {
-  if (valueA === valueB) return 0;
-  if (valueA === null || valueA === undefined) return 1;
-  if (valueB === null || valueB === undefined) return -1;
-
-  if (typeof valueA === "number" && typeof valueB === "number") {
-    return valueA - valueB;
-  }
-
-  return String(valueA).localeCompare(String(valueB));
-};
 
 interface BuildColumnsOptions {
   columnIcons?: Partial<Record<string, ReactNode>>;
@@ -38,6 +25,8 @@ interface BuildColumnsOptions {
   getRowActions?: (row: RowData) => DataTableRowAction[];
   columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
   wrapRows?: boolean;
+  rowNumbers?: boolean;
+  search?: string;
 }
 
 const resolveDataCellStyle = (value: unknown, renderer?: DataTableColumnRenderer) => {
@@ -63,7 +52,10 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     getRowActions,
     columnRenderers,
     wrapRows = false,
+    rowNumbers = true,
+    search,
   } = options;
+  // Rows arrive in the order the view shows them, so their position is their number.
   const rowIndexColumn = columnHelper.accessor((_row, rowIndex) => rowIndex + 1, {
     header: "",
     id: "rowIndex",
@@ -100,13 +92,10 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
         columnDescription,
         renderer,
         wrapRows,
+        search,
         getCellStyle: (value: unknown) => resolveDataCellStyle(value, renderer),
       } satisfies DataTableColumnMeta,
-      sortingFn: (rowA, rowB) => {
-        const valueA = resolveDataTableComparableValue(rowA.original[fallBackKey], renderer);
-        const valueB = resolveDataTableComparableValue(rowB.original[fallBackKey], renderer);
-        return compareValues(valueA, valueB);
-      },
+      enableSorting: false,
     });
   });
 
@@ -121,7 +110,7 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
   });
 
   return [
-    rowIndexColumn,
+    ...(rowNumbers ? [rowIndexColumn] : []),
     ...(enableSelection ? [selectionColumn] : []),
     ...dataColumns,
     ...(rowActions.length > 0 || getRowActions ? [rowActionsColumn] : []),

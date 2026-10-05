@@ -229,7 +229,13 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(
       registerWorkbenchExtensionKanbanRenderers(context, input.metadata.kanbanRenderers ?? [], input.kanbanAdapter),
     );
-    disposables.push(registerWorkbenchExtensionDataTableRenderers(context, input.metadata.dataTableRenderers ?? []));
+    disposables.push(
+      registerWorkbenchExtensionDataTableRenderers(
+        context,
+        input.metadata.dataTableRenderers ?? [],
+        input.dataTableAdapter,
+      ),
+    );
     disposables.push(...registerViewMenus(input));
     disposables.push(
       registerWorkbenchExtensionCommandPaletteResources(context, input.metadata.commandPaletteResources ?? []),

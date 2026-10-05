@@ -3,6 +3,7 @@ import { type ChildProcess, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { WORKSPACES_COLLECTION_ID } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -32,7 +33,7 @@ const readSnapshot = async (baseUrl: string, headers: Record<string, string>) =>
 };
 
 export const registerBoardViewsSmokeTests = () => {
-  test("packaged board views support CLI edits and survive a runtime restart", async () => {
+  test("packaged collection views include native Workspaces and survive a runtime restart", async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-board-views-"));
     let child: ChildProcess | undefined;
     const env = { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner") };
@@ -59,7 +60,42 @@ export const registerBoardViewsSmokeTests = () => {
         return JSON.parse(result.stdout);
       };
       const boards = cli("boards");
-      expect(boards).toContainEqual(expect.objectContaining({ id: board }));
+      expect(boards).toContainEqual(expect.objectContaining({ id: board, kind: "kanban" }));
+      expect(boards).toContainEqual(expect.objectContaining({ id: WORKSPACES_COLLECTION_ID, extensionId: null }));
+      const nativeFields = boards.find((entry: { id: string }) => entry.id === WORKSPACES_COLLECTION_ID).fields;
+      expect(nativeFields).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: "diff", filterable: false, sortable: true, displayable: true }),
+        ]),
+      );
+      const refusedDiff = await fetch(
+        `${runtime.baseUrl}/v1/projects/${projectId}/boards/${WORKSPACES_COLLECTION_ID}/views`,
+        {
+          method: "POST",
+          headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
+          body: JSON.stringify({
+            title: "Diff filter",
+            filter: { conjunction: "and", rules: [{ attributeId: "diff", condition: "gt", value: 5 }] },
+          }),
+        },
+      );
+      expect(refusedDiff.status).toBe(400);
+      const workspaces = cli(
+        "create",
+        "--board",
+        WORKSPACES_COLLECTION_ID,
+        "--title",
+        "Workspace view",
+        "--filter",
+        "name contains release",
+        "--sort",
+        "created:desc",
+        "--group",
+        "type",
+        "--stats",
+        "on",
+      );
+      cli("set-default", "--board", WORKSPACES_COLLECTION_ID, "--id", workspaces.id);
       const created = cli(
         "create",
         "--board",
@@ -67,18 +103,73 @@ export const registerBoardViewsSmokeTests = () => {
         "--title",
         "Agent view",
         "--filter",
-        "archived=Active",
+        "archived is-any-of Active",
+        "--filter",
+        "status is-none-of done",
+        "--sort",
+        "updated:desc",
         "--mode",
         "list",
       );
       expect(created).toMatchObject({
         title: "Agent view",
         builtIn: false,
-        filters: { archived: ["active"] },
+        filter: {
+          conjunction: "and",
+          rules: [
+            { attributeId: "archived", condition: "is-any-of", value: ["active"] },
+            { attributeId: "status", condition: "is-none-of", value: ["done"] },
+          ],
+        },
+        sorts: [{ attributeId: "updated", direction: "desc" }],
         settings: { viewMode: "list" },
       });
+      const invalidSort = spawnSync(
+        PACKAGED_BINARY_PATH,
+        [
+          "views",
+          "update",
+          "--id",
+          created.id,
+          "--sort",
+          "updated:desc",
+          "--sort",
+          "created:asc",
+          "--project-id",
+          projectId,
+        ],
+        {
+          cwd: folder,
+          encoding: "utf8",
+          env: { ...process.env, HOME: root, PSTDIO_HOME: root, PSTDIO_API_URL: runtime.baseUrl },
+        },
+      );
+      expect(invalidSort.status).not.toBe(0);
+      expect(invalidSort.stderr).toContain("one sort");
       cli("set-default", "--board", board, "--id", created.id);
-      cli("update", "--id", created.id, "--title", "Shared default");
+      const filter = {
+        conjunction: "and",
+        rules: [{ attributeId: "title", condition: "does-not-contain", value: "archived" }],
+        groups: [
+          {
+            conjunction: "or",
+            rules: [
+              { attributeId: "title", condition: "contains", value: "review" },
+              { attributeId: "status", condition: "is-any-of", value: ["done"] },
+            ],
+          },
+        ],
+      };
+      const updated = cli(
+        "update",
+        "--id",
+        created.id,
+        "--title",
+        "Shared default",
+        "--filter-json",
+        JSON.stringify(filter),
+      );
+      expect(updated.filter).toEqual(filter);
       await stopProcess(child);
       runtime = await startPackagedServe(root, env);
       child = runtime.child;
@@ -88,16 +179,39 @@ export const registerBoardViewsSmokeTests = () => {
         expect.objectContaining({
           id: created.id,
           title: "Shared default",
+          filter,
           settings: expect.objectContaining({ viewMode: "list" }),
         }),
       );
       const snapshot = await readSnapshot(runtime.baseUrl, runtimeAuthorization(runtime.descriptor));
-      expect(snapshot.board_views).toContainEqual(expect.objectContaining({ id: created.id, title: "Shared default" }));
+      expect(cli("list", "--board", WORKSPACES_COLLECTION_ID)).toMatchObject({ defaultViewId: workspaces.id });
+      expect(snapshot.board_views).toContainEqual(
+        expect.objectContaining({
+          id: workspaces.id,
+          board_id: WORKSPACES_COLLECTION_ID,
+          extension_instance_id: null,
+          settings: expect.objectContaining({ grouping: "type", showStats: true }),
+        }),
+      );
+      expect(snapshot.board_default_views).toContainEqual(
+        expect.objectContaining({
+          id: JSON.stringify([projectId, null, WORKSPACES_COLLECTION_ID]),
+          default_view_id: workspaces.id,
+        }),
+      );
+      expect(snapshot.board_views).toContainEqual(
+        expect.objectContaining({
+          id: created.id,
+          title: "Shared default",
+          filter,
+          sorts: created.sorts,
+        }),
+      );
       expect(snapshot.board_default_views).toContainEqual(
         expect.objectContaining({ id: expect.any(String), default_view_id: created.id }),
       );
       const copy = cli("create", "--board", board, "--title", "Copy", "--copy-from", created.id);
-      expect(copy.filters).toEqual(created.filters);
+      expect(copy).toMatchObject({ filter, sorts: created.sorts });
       const ordered = cli("reorder", "--board", board, "--ids", `${copy.id},${created.id}`);
       expect(
         ordered.views.filter((view: { builtIn: boolean }) => !view.builtIn).map((view: { id: string }) => view.id),

@@ -1,9 +1,11 @@
 import { Text } from "@chakra-ui/react";
+import { HighlightedText } from "../collection-view/highlighted-text";
 import { mixHexColors } from "./color-cell-style";
 import type { DataTableColorScaleStop, DataTableThemeColor } from "./types";
 
 interface ColorScaleCellProps {
   value: number;
+  search?: string;
 }
 
 const toDisplayPercent = (value: number) => Math.round(value * 100) / 100;
@@ -51,11 +53,11 @@ export const resolveColorScaleValue = (value: unknown, stops: DataTableColorScal
 };
 
 export const ColorScaleCell = (props: ColorScaleCellProps) => {
-  const { value } = props;
+  const { value, search = "" } = props;
 
   return (
     <Text textStyle="paragraph/S/medium" fontVariantNumeric="tabular-nums" truncate>
-      {value}
+      <HighlightedText text={String(value)} query={search} />
     </Text>
   );
 };

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { defineCommand, defineExtension, defineView } from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, defineResourceKind, defineView } from "@pstdio/sdk/extensions";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "../../runtime/loader";
@@ -39,21 +39,35 @@ test.each(["dataTable", "kanban"] as const)("%s toolbar actions survive the publ
     disabled: false,
     when: "ready",
   };
+  const resourceKind = defineResourceKind({ id: "ticket", label: "Ticket", icon: "ticket" });
   const view =
     kind === "dataTable"
       ? defineView({
           id: "runs",
           title: "Runs",
-          body: { kind: "dataTable", query: async () => ({ rows: [] }), toolbarActions: [action] },
+          body: {
+            kind: "dataTable",
+            resourceKind: resourceKind.ref,
+            query: async () => ({ rows: [] }),
+            toolbarActions: [action],
+          },
         })
       : defineView({
           id: "runs",
           title: "Runs",
-          body: { kind: "kanban", query: async () => ({ rows: [] }), toolbarActions: [action] },
+          body: {
+            kind: "kanban",
+            resourceKind: resourceKind.ref,
+            query: async () => ({ rows: [] }),
+            toolbarActions: [action],
+          },
         });
-  const runtime = normalizeExtensionSources([source(defineExtension({ commands: [run], views: [view] }))]);
+  const runtime = normalizeExtensionSources([
+    source(defineExtension({ commands: [run], resourceKinds: [resourceKind], views: [view] })),
+  ]);
   const metadata = workbenchExtensionMetadataSchema.parse(createWorkbenchExtensionMetadata({ runtime }));
   expect(metadata.views[0]?.body).toMatchObject({
+    resourceKind: "ticket",
     toolbarActions: [{ ...action, command: { ...run.ref, extensionId: "pstdio.lab" } }],
   });
 });

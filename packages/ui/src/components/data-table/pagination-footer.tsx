@@ -9,13 +9,12 @@ interface PaginationFooterProps {
   pageIndex: number;
   pageSize: number;
   pageSizeOptions: number[];
-  totalRows: number;
   onPageChange: (pageIndex: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }
 
 export function PaginationFooter(props: PaginationFooterProps) {
-  const { pageCount, pageIndex, pageSize, pageSizeOptions, totalRows, onPageChange, onPageSizeChange } = props;
+  const { pageCount, pageIndex, pageSize, pageSizeOptions, onPageChange, onPageSizeChange } = props;
   const totalPages = Math.max(pageCount, 1);
   const canGoBack = pageIndex > 0;
   const canGoForward = pageIndex < totalPages - 1;
@@ -23,12 +22,11 @@ export function PaginationFooter(props: PaginationFooterProps) {
   return (
     <Flex
       alignItems="center"
-      justifyContent="space-between"
+      justifyContent="flex-end"
       borderTop="1px solid"
       borderColor={"border.subtle"}
       paddingX="xs"
     >
-      <Text textStyle="label/S/regular">{totalRows} rows</Text>
       <Stack alignItems="center" direction="row" justifyContent="flex-end" paddingY="xs">
         <Flex alignItems="center" gap="xs" marginRight="sm">
           <Text textStyle="label/S/regular">Rows per page</Text>

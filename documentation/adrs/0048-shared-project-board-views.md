@@ -22,6 +22,7 @@ Saved views are project data owned by the core API. They are stored in the `boar
 
 ## Consequences
 
+- Native collections use the same storage and API. Workspaces uses `dashboard-workbench.workspaces` with no extension owner. Its views belong directly to the project. Extension-owned rows keep their disable and uninstall rules; rows with a null `extension_instance_id` are native project data. Default scope uniqueness treats null owners as equal, so a native collection has one shared default per project.
 - Views follow the project to every client and machine.
 - Agents and people use the same interface and rules (mission rule 4).
 - Views saved locally before this change are dropped, not migrated.

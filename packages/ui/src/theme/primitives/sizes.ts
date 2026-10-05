@@ -67,6 +67,7 @@ export const sizes = {
   "drop-indicator": { value: sp[25] },
   "tree-empty-drop-zone": { value: "1.75rem" },
   "filter-pill": { value: sp[300] },
+  "filter-picker-height": { value: "30rem" },
   "icon-2xs": { value: sp[150] },
   "icon-xs": { value: "0.875rem" },
   "icon-sm": { value: sp[200] },

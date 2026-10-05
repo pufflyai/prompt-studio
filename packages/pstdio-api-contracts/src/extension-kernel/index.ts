@@ -9,6 +9,7 @@
  */
 
 export { parseExtensionApiDeclaration, supportsExtensionApiVersion } from "./api-versions";
+export { normalizeBooleanViewRule } from "./boolean-view-filter";
 export {
   workbenchModeDefinitions,
   workbenchModes,
@@ -25,6 +26,7 @@ export {
   localContributionIdGrammar,
   localContributionIdPattern,
 } from "./contribution-id";
+export { resolveDataTableComparableValue, resolveDataTableFieldKind } from "./data-table-values";
 export type {
   CommitPayload,
   ConflictPayload,
@@ -52,7 +54,9 @@ export { packageAsset } from "./package-asset";
 export { commandRef, eventRef } from "./refs";
 export { defineSlot } from "./slots";
 export type * from "./types";
+export { VIEW_FILTER_CONDITIONS } from "./types/collection-view";
 export { dockedWorkbenchRegions, extensionPanelRegions } from "./types/composition";
+export { DEFAULT_DATA_TABLE_SETTINGS } from "./types/data-table-renderer";
 export { EXTENSION_API_VERSION } from "./types/extension";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,

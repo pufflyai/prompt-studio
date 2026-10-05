@@ -1,10 +1,11 @@
 import { Box, Button, Flex } from "@chakra-ui/react";
+import { DEFAULT_DATA_TABLE_SETTINGS } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { MarkdownEditor } from "@/components/rich-text/markdown-editor/markdown-editor";
 import { MarkdownInline } from "@/components/rich-text/shared/markdown-inline";
-import type { KanbanRendererSavedView } from "../kanban-renderer/types";
+import { EMPTY_VIEW_FILTER } from "../collection-view/collection-view-types";
 import { DataTable } from "./data-table";
-import type { DataTableEditModeColumn, RowData } from "./types";
+import type { DataTableEditModeColumn, DataTableSavedView, RowData } from "./types";
 
 const editModeColumns: DataTableEditModeColumn[] = [
   { id: "name", label: "Name", alignment: "left" },
@@ -159,30 +160,14 @@ export const EditableSelectableRowsStory = () => {
   );
 };
 
-const editableViews: KanbanRendererSavedView[] = [
-  {
-    id: "all",
-    title: "All",
-    settings: {
-      viewMode: "list",
-      columnGrouping: "none",
-      rowGrouping: "none",
-      ordering: { attributeId: "manual", direction: "asc" },
-      displayProperties: [],
-    },
-    filters: {},
-  },
+const editableViews: DataTableSavedView[] = [
+  { id: "all", title: "All", settings: DEFAULT_DATA_TABLE_SETTINGS, filter: EMPTY_VIEW_FILTER, sorts: [] },
   {
     id: "active",
     title: "Active",
-    settings: {
-      viewMode: "list",
-      columnGrouping: "none",
-      rowGrouping: "none",
-      ordering: { attributeId: "manual", direction: "asc" },
-      displayProperties: [],
-    },
-    filters: { status: ["Active"] },
+    settings: DEFAULT_DATA_TABLE_SETTINGS,
+    filter: { conjunction: "and", rules: [{ attributeId: "status", condition: "is", value: "Active" }] },
+    sorts: [],
   },
 ];
 
