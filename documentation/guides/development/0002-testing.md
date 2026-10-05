@@ -31,9 +31,9 @@ bun run --cwd packages/e2e playwright install --with-deps chromium firefox webki
 
 For manual app validation, use `bun run dev:playwright`, open the printed dashboard URL, and stop it with `bun run dev:playwright:down`. Do not start a development server directly or use the developer database.
 
-## Pull request and merge queue runs
+## Pull request and main runs
 
-The merge queue protects `main`. It runs every Test and Build job on the exact commit that lands, and `ci_passed` fails if any job fails or is skipped. Pushes to `main` do not run the workflow again.
+Test and Build runs on every pull request update: opening, reopening, and each new push. The `main` ruleset requires its `ci_passed` check before a pull request can merge. A newer push to the same pull request cancels the older run.
 
 Pull requests run only what their changes need. The `scope` job runs `scripts/ci/pull-request-ci-scope.ts`, which compares the merge commit with the target branch:
 
@@ -44,13 +44,13 @@ Pull requests run only what their changes need. The `scope` job runs `scripts/ci
 - A change under `scripts/` runs every job. It holds repository tooling, such as the test preload and build scripts.
 - A change outside every workspace package runs every job, unless the file is Markdown, under `design/`, or `LICENSE`.
 
-On a pull request, `ci_passed` accepts skipped jobs. A Windows or e2e failure that a pull request skipped appears in the merge queue instead, and removes the pull request from the queue.
+On a pull request, `ci_passed` accepts skipped jobs. Each push to `main` runs every job, and there `ci_passed` fails if any job fails or is skipped. A Windows or e2e failure that a pull request skipped shows up on the `main` commit that caused it. Fix it in a follow-up pull request.
 
 ## Published extension dependencies
 
 Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `tsc --noEmit`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.
 
-The CI job runs for extension, SDK, UI, and API contract changes, and for repository tooling changes that already run all jobs. It always runs in the merge queue. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
+The CI job runs for extension, SDK, UI, and API contract changes, and for repository tooling changes that already run all jobs. It always runs on pushes to `main`. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 
 ## Isolation
 

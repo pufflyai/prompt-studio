@@ -37,7 +37,7 @@ const isPackageFile = (file: string, packageDirs: string[]) =>
 const isDocumentation = (file: string) => file.endsWith(".md") || file.startsWith("design/") || file === "LICENSE";
 
 export function resolveCiScope({ event, changedFiles, packageDirs, affectedPackages }: CiScopeInput) {
-  // Only pull requests are narrowed. The merge queue tests every commit that reaches main in full.
+  // Only pull requests are narrowed. Every commit on main is tested in full.
   // Files outside every package, such as the lockfile or workflows, can affect any job.
   const full =
     event !== "pull_request" ||

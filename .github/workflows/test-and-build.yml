@@ -1,15 +1,17 @@
 name: Test and Build
 
-# The merge queue tests every commit that reaches main, so main pushes need no second run.
-# Pull requests run only the jobs their changes need; the merge queue runs every job.
+# Every pull request update runs the jobs its changes need. Each push to main runs every job,
+# so a failure in a job the pull request skipped still shows up on the commit that caused it.
 on:
   pull_request:
-  merge_group:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
-  # Only a newer push to the same pull request replaces a run. Every merge queue commit
-  # keeps its own run until it finishes, so a red commit can always be traced.
+  # Only a newer push to the same pull request replaces a run. Every main commit keeps
+  # its own run until it finishes, so a red commit can always be traced.
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -356,10 +358,10 @@ jobs:
         if: matrix.image == 'pstdio/api'
         run: docker run --rm --entrypoint bun pstdio/api:${{ github.sha }} -e 'await import("./src/app.ts");'
 
-  # The one status check the main ruleset and merge queue require. Job and matrix names
-  # can change without touching the ruleset. It must always run: GitHub treats a skipped
-  # required check as passing, and jobs are skipped when a job they need fails.
-  # Pull requests may skip jobs their changes do not need. In the merge queue every job must pass.
+  # The one status check the main ruleset requires. Job and matrix names can change
+  # without touching the ruleset. It must always run: GitHub treats a skipped required
+  # check as passing, and jobs are skipped when a job they need fails.
+  # Pull requests may skip jobs their changes do not need. On main every job must pass.
   ci_passed:
     if: always()
     needs: [scope, published_extensions, test_and_build, windows_test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, license_check, build_docker]
