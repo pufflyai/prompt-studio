@@ -23,6 +23,10 @@ New projects already have the agent harnesses, the base themes, and Prompt Studi
 
 The extension is installed and turned on for this project. Its tools appear in the sidebar, in menus, or in the command palette.
 
+![Extensions settings filtered to Artifacts, showing an Available row with an Install button.](../../images/install-extension.png)
+
+Use the search field to find a tool by name. **Available** lists extensions you can install; **Installed** lists those installed for the project or your user. This example shows Artifacts before installation. The list changes as you add extensions.
+
 ## Install from the terminal
 
 Run `pst extensions add` with the install name, from inside the project folder:
@@ -44,6 +48,16 @@ pst extensions add ./my-extension
 Each project has its own list in **Settings → Extensions**. Use the switch next to an extension to turn it on or off for that project. An extension installed for your user appears in every project. Other existing projects list it as off until you turn it on there. A project you create later starts with every installed extension turned on.
 
 Settings and saved data belong to each project, so two projects can use the same extension in different ways.
+
+![Extensions settings filtered to Notes, showing the installed extension with its project switch turned on.](../../images/extension-settings.png)
+
+The switch controls whether this project uses Notes. Turning it off removes its tools from this project's workbench. It does not uninstall the extension from your user.
+
+## Try an installed tool
+
+After installing Notes, choose **Notes** in the sidebar and create a note. Write a short heading and a list, then close and reopen the note to check that your work is saved. See [Write notes](../../../extensions/pstdio-notes/README.md#write-notes) for the editor and its controls.
+
+Use the same check for a tool an agent builds: try its main action, change something, and reopen it. Tell the agent what happened if the result differs from your request.
 
 ## Use extension commands
 

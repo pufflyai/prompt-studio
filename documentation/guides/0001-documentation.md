@@ -55,6 +55,24 @@ Every published page follows these rules. The website build fails when a page br
 
 Link with relative paths to `.md` files, so the same markdown works on GitHub and on the website. A link to a published page becomes a website link. A link to any other repository file, such as an ADR or a source file, becomes a link to that file on GitHub `main`. A relative link to a missing file fails the build. Anchors such as `0006-sessions.md#create-a-session` use GitHub-style heading slugs.
 
+## Screenshots
+
+Add screenshots when they help someone find a control, understand a screen, or check the result of a workflow. Getting-started guides and tool walkthroughs should show the relevant workbench or settings screen. API signatures and terminal-only instructions usually do not need an image.
+
+Keep the source images in `documentation/images/` with descriptive kebab-case names. Use relative Markdown image paths so the same image works in the repository and on the website. Reuse an existing image when it shows the same screen; do not keep a second copy in the website's public folder.
+
+For example, from a guide in `guides/getting-started/`:
+
+```md
+![Workbench showing the project sidebar and the Start page.](../../images/workbench.png)
+```
+
+Capture the real app with `bun run dev:playwright`, using its printed dashboard URL. Use a disposable project, sample content, and the light theme. Do not include credentials, private paths, or personal conversations. Stop the capture stack afterward with `bun run dev:playwright:down`.
+
+Show enough of the workbench to explain where a tool lives. For settings, capture the dialog with its navigation and relevant controls, rather than the whole desktop. Keep text readable at the documentation's column width. Give every image useful alt text and a nearby sentence that explains what to look for. State when enabled extensions or sample data make the picture differ from a new project.
+
+Update screenshots when the visible workflow changes. Build the website and check the images on desktop and mobile before publishing. The production image must include them; a source-folder mount must not be needed to serve documentation screenshots.
+
 ## Guides
 
 ### Getting started

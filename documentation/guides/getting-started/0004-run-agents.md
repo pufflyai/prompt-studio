@@ -24,6 +24,16 @@ The list shows each harness, its full ID, and whether its command is installed.
 
 A session is one conversation with an agent. In the dashboard, choose **New conversation** on the project's Start page. Pick a harness and a model, type your request, and send it.
 
+![New session panel beside the Start page, with a draft request to build a reading-list extension, a Project folder selector, and model controls.](../../images/new-conversation.png)
+
+The conversation opens in a side panel so you can keep a tool visible while talking to the agent. The image shows a draft request before sending it. It asks for a small tool and describes what the person should be able to do with it.
+
+Before sending:
+
+1. Check the workspace selector above the message field. **Project folder** uses the project's own files; choose another ready workspace if you want the work elsewhere.
+2. Use the model selector below the message field to choose the agent and model available on your machine. The pictured model is an example, not a requirement.
+3. Describe the result you want and how you will check it. For a new tool, follow [Ask an agent to build your tool](0003-add-tools.md#ask-an-agent-to-build-your-tool), including skill setup.
+
 From the terminal, run this inside the project folder:
 
 ```sh
@@ -42,6 +52,10 @@ pst sessions stop --id <session-id>
 ```
 
 When too many sessions run at once, new ones wait with the status `queued` and start in order. Set the limit in **Settings → Runtime → Max concurrent sessions**. Leave it blank for no limit.
+
+![Runtime settings showing Max concurrent sessions and the Default model and reasoning effort selectors.](../../images/runtime-settings.png)
+
+Choose **Save** after changing the concurrency limit. This limit applies across projects. **Default model** sets the starting choice for new sessions in the current project; you can choose a different model in a session's composer.
 
 ## Answer approval requests
 

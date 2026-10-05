@@ -1,4 +1,5 @@
-import { type CollectionEntry, getCollection } from "astro:content";
+import { type CollectionEntry, getCollection, render } from "astro:content";
+import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import { DOCS_TOPICS, docsTopicForPath, publishedDocPath } from "../content/docs-topics";
 import { LANDING_PAGES, type LandingDocument, type LandingPage } from "../content/landing-pages";
 
@@ -12,10 +13,11 @@ interface MarkdownMetadata {
 
 const metadataOf = (entry: MarkdownEntry) => (entry.rendered?.metadata ?? {}) as MarkdownMetadata;
 
-const documentOf = (entry: MarkdownEntry): LandingDocument => ({
-  html: entry.rendered?.html ?? "",
-  headings: metadataOf(entry).headings ?? [],
-});
+const documentOf = async (entry: MarkdownEntry, container: AstroContainer) => {
+  // Astro's content renderer resolves local images into built assets before HTML is serialized.
+  const { Content, headings } = await render(entry);
+  return { html: await container.renderToString(Content), headings };
+};
 
 const docPage = (entry: CollectionEntry<"docs">): LandingPage => {
   const path = publishedDocPath(entry.id)!;
@@ -75,14 +77,15 @@ export const loadSiteCatalog = async () => {
   const sortedPosts = [...posts].sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
   const pages = [...LANDING_PAGES, ...sortedDocs.map(docPage), ...sortedPosts.map(postPage)];
 
+  const container = await AstroContainer.create();
   const documents = new Map<string, LandingDocument>();
   for (const page of pages.filter((item) => item.view === "legal")) {
     const entry = legal.find((item) => `/${item.id}/` === page.path);
     if (!entry) throw new Error(`Missing legal markdown in src/content/legal: ${page.path.slice(1, -1)}.md`);
-    documents.set(page.path, documentOf(entry));
+    documents.set(page.path, await documentOf(entry, container));
   }
-  for (const entry of sortedDocs) documents.set(publishedDocPath(entry.id)!, documentOf(entry));
-  for (const entry of sortedPosts) documents.set(`/blog/${entry.id}/`, documentOf(entry));
+  for (const entry of sortedDocs) documents.set(publishedDocPath(entry.id)!, await documentOf(entry, container));
+  for (const entry of sortedPosts) documents.set(`/blog/${entry.id}/`, await documentOf(entry, container));
 
   const paths = pages.map((page) => page.path);
   const duplicate = paths.find((path, index) => paths.indexOf(path) !== index);

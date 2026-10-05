@@ -9,6 +9,7 @@ on:
       - packages/ui/**
       - documentation/guides/**
       - documentation/references/**
+      - documentation/images/**
       - extensions/*/README.md
       - extensions/*/docs/**
       - clients/landing-page/Dockerfile
