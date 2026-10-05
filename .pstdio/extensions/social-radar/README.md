@@ -7,7 +7,7 @@ A repo-local tool for daily marketing research. Every morning an agent reads sit
 3. Open **Social radar** under Tools. The analysis page opens, and the sidebar shows **Threads**, **Settings** and **Runs**. Threads are grouped as New (threads to join), Ideas (posts to publish), Answered and Skipped.
 4. Open **Settings** in the sidebar. The section menu on its left holds **Research** (brand terms, topics, competitors and browse depth), **Voice** (the brand voice for every draft), **Agent** (the harness, model and model options; change them with **Choose model**) and **Channels**. Each channel has its own targets and daily search budget. Use **Add channel** to add a built-in site back or a new one with a link, and the trash icon to remove one.
 5. Click the play button on **Runs**, or wait for the 07:00 run. Each run has its **Session** and a read-only **Digest**.
-6. Open a thread. Copy a reply idea, post it yourself, then choose **Mark used**. For a new post, post it, paste its link, and choose **Mark posted**.
+6. Open a thread. Copy a reply idea, post it yourself, then choose **Mark used** on the idea. Open the thread's actions and choose **Mark answered** so later runs can follow up. For a new post, post it, paste its link, and choose **Mark posted**.
 
 The schedule runs at 07:00 in the host machine's local time. The app must be running; startup catches up once for the latest missed slot. Disable it in project automations. An active run blocks another run; the next run closes sessions that ended without finishing.
 
