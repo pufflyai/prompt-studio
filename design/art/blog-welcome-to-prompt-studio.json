@@ -4,9 +4,10 @@
   "height": 400,
   "layout": "solo",
   "kinds": [
+    "page",
     "editor",
-    "hook",
-    "automation"
+    "skill",
+    "hook"
   ],
   "count": 18,
   "scale": 1.2992700057104232,
@@ -17,6 +18,6 @@
   "bleed": 0.5669400794897228,
   "layers": 36,
   "texture": 0.5283432383206673,
-  "gradient": 0.4393918709596619,
+  "gradient": 0.3,
   "grain": 0.2798503336845897
 }

@@ -5,10 +5,9 @@
   "layout": "scatter",
   "kinds": [
     "page",
-    "command",
+    "editor",
     "skill",
-    "hook",
-    "automation"
+    "hook"
   ],
   "count": 18,
   "scale": 1.015638053044677,
@@ -19,6 +18,6 @@
   "bleed": 0.3681301267817616,
   "layers": 34,
   "texture": 0.534671887231525,
-  "gradient": 0.6957688668742776,
+  "gradient": 0.3,
   "grain": 0.42782400831347334
 }

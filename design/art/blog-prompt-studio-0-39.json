@@ -5,7 +5,9 @@
   "layout": "solo",
   "kinds": [
     "page",
-    "command"
+    "editor",
+    "skill",
+    "hook"
   ],
   "count": 10,
   "scale": 1.5136080082505943,
@@ -16,6 +18,6 @@
   "bleed": 0.34475283387582745,
   "layers": 41,
   "texture": 0.4388410379993729,
-  "gradient": 0.3368376553757116,
+  "gradient": 0.3,
   "grain": 0.5324933431693353
 }
