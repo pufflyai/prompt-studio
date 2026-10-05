@@ -52,13 +52,24 @@ Only save threads published after their channel's `since` that match a brand ter
 - **2:** A relevant comparison, launch, or discussion worth joining.
 - **1:** A relevant mention or background thread worth reading.
 
-Save the snapshot with the thread: the post and about 20 top comments with the replies under them, text only. Save every comment you read, not only the one you answer, because the thread page draws the whole conversation. Give each comment a stable `id`, and set `parentId` on replies to another comment. Set a comment's `topic` to the analysis topic it raises, when it raises one. Tag the thread with its analysis: a summary, the thread's sentiment, counts of reply sentiment, topics with counts, and the questions people ask. Keep excerpts to at most 500 characters and use a canonical thread URL (HN item id, Reddit discussion, Bluesky post, GitHub issue, YouTube video, X status, or LinkedIn post). A known URL is not saved again.
+Save the snapshot with the thread: the post and about 20 top comments with the replies under them, as text. Keep images as described below. Save every comment you read, not only the one you answer, because the thread page draws the whole conversation. Give each comment a stable `id`, and set `parentId` on replies to another comment. Set a comment's `topic` to the analysis topic it raises, when it raises one. Tag the thread with its analysis: a summary, the thread's sentiment, counts of reply sentiment, topics with counts, and the questions people ask. Keep excerpts to at most 500 characters and use a canonical thread URL (HN item id, Reddit discussion, Bluesky post, GitHub issue, YouTube video, X status, or LinkedIn post). A known URL is not saved again.
 
 ```sh
 pst social-radar save-thread --input '{"runId":"<runId>","site":"hn","url":"https://news.ycombinator.com/item?id=<id>","title":"<title>","excerpt":"<short excerpt>","publishedAt":"<ISO time>","topic":"<matched term>","mention":false,"intent":"asking-for-tool","relevance":3,"reason":"<why it matters>","snapshot":{"takenAt":"<ISO time>","post":{"author":"<name>","body":"<post text>","score":12,"commentCount":8},"comments":[{"id":"c1","author":"<name>","body":"<comment>","votes":4,"topic":"review flow"},{"id":"c2","parentId":"c1","author":"<name>","body":"<reply>","votes":2},{"id":"c3","author":"<name>","body":"<comment>","votes":1}]},"analysis":{"summary":"<two sentences>","sentiment":"neutral","replySentiment":{"negative":1,"neutral":4,"positive":3},"topics":[{"label":"review flow","count":3}],"questions":["<question>"]}}'
 ```
 
 `intent` is `asking-for-tool`, `problem`, `comparison`, `launch`, `mention`, or `discussion`. Optional fields: `author`, `community`, `publishedAt`, `snapshot`, `analysis`. `community` is the place inside the site, such as `r/ClaudeAI` or a DEV tag. Leave it out when the site has none, as on Hacker News.
+
+### Keep thread images
+
+After saving a thread, keep copies of up to 4 images from the post and its saved comments, post images first. Skip avatars, emoji, icons, videos, and images over 5 MB. Download each full-size image into `.social-radar-downloads/` in the workspace, add it, and delete the folder when the thread is done:
+
+```sh
+pst social-radar add-thread-image --threadId <id> --path .social-radar-downloads/<file> --alt '<what it shows>'
+pst social-radar add-thread-image --threadId <id> --path .social-radar-downloads/<file> --commentId <comment id> --alt '<what it shows>'
+```
+
+On Reddit, the RSS content links each image as `https://i.redd.it/<name>` or `https://preview.redd.it/<name>?...`; decode `&amp;` in the link, but change nothing else: preview links are signed, and an edited query returns a 403 page. Use the same user agent. Image downloads do not count against the channel budget. When `update-thread` replaces a snapshot, copy the `images` entries you keep into the new snapshot; copies it no longer names are deleted.
 
 ## Reply ideas
 

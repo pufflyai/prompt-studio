@@ -6,7 +6,13 @@ export const setup = () => {
   const events: unknown[] = [];
   const sessions: { id: string; title: string; status: string }[] = [];
   const settings = new Map<string, unknown>();
-  const media = createMemoryRepoFiles();
+  // Each artifact mount gets its own files, as the host gives each mount its own folder.
+  const mounts = new Map<string, ReturnType<typeof createMemoryRepoFiles>>();
+  const mount = (id: string) => {
+    const files = mounts.get(id) ?? createMemoryRepoFiles();
+    mounts.set(id, files);
+    return files;
+  };
   const workspace = createMemoryRepoFiles();
   const ctx = makeCommandContext({
     storage,
@@ -39,11 +45,21 @@ export const setup = () => {
           return { delivered: 1 } as never;
         },
       },
-      artifacts: { mount: () => media },
+      artifacts: { mount },
       workspaceFiles: workspace as never,
     },
   });
-  return { ctx, storage, notifications, events, sessions, settings, media, workspace };
+  return {
+    ctx,
+    storage,
+    notifications,
+    events,
+    sessions,
+    settings,
+    media: mount("post-media"),
+    threadMedia: mount("thread-media"),
+    workspace,
+  };
 };
 
 export const foundThread = (runId: string, url = "https://news.ycombinator.com/item?id=42&utm_source=x") => ({

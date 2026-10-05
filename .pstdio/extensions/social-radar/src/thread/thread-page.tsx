@@ -4,7 +4,7 @@ import { AlertMessage, EmptyState, ScrollArea } from "@pstdio/ui";
 import { Ellipsis, ExternalLink } from "lucide-react";
 import { type Idea, isNewPost, type Thread } from "../schemas";
 import { plural } from "../text";
-import { useRadar, useRadarRefresh, useRadarResource } from "../webview/client";
+import { useOpenLink, useRadar, useRadarRefresh, useRadarResource } from "../webview/client";
 import { Conversation } from "./conversation";
 import { NewPostDraft } from "./new-post";
 
@@ -53,6 +53,7 @@ export const ThreadPage = () => {
 const ThreadView = (props: { id: string }) => {
   const { id } = props;
   const { client } = useRadar();
+  const openLink = useOpenLink();
   useRadarRefresh();
   const data = useCommandQuery({ queryKey: ["thread", id], command: () => client.commands["get-thread"]({ id }) });
   const invalidate = [["thread", id]];
@@ -90,7 +91,14 @@ const ThreadView = (props: { id: string }) => {
         </Text>
         {thread.url ? (
           <Button asChild size="xs" variant="outline">
-            <Link href={thread.url} target="_blank" rel="noopener noreferrer" title={thread.url}>
+            <Link
+              href={thread.url}
+              title={thread.url}
+              onClick={(event) => {
+                event.preventDefault();
+                if (thread.url) void openLink(thread.url);
+              }}
+            >
               <ExternalLink />
               Open thread
             </Link>

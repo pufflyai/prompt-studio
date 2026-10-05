@@ -11,6 +11,7 @@ import {
   updateChannel,
   updateSettings,
 } from "./settings";
+import { addThreadImage } from "./thread-images";
 import { getThread, recordOutcome, saveThreadCommand, setThreadStatus, updateThreadCommand } from "./threads";
 
 // Keys match command ids, so webviews can call them through the typed client.
@@ -25,6 +26,7 @@ export const commands = {
   "set-idea-status": setIdeaStatus,
   "get-thread": getThread,
   "add-media": addMedia,
+  "add-thread-image": addThreadImage,
   "record-outcome": recordOutcome,
   "finish-run": finishRunCommand,
   "list-analysis": listAnalysis,

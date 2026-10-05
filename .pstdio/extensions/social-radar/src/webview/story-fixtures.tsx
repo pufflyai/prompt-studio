@@ -33,13 +33,14 @@ export const storyThread: FoundThread = {
       body: "I review a lot of agent diffs every day, so I tried Prompt Studio to build a small review page. It took an evening. Setup was the slow part. Has anyone else done this on Windows?",
       score: 142,
       commentCount: 38,
+      images: [{ file: "review-page.png", alt: "A review page with a diff and its tests" }],
     },
     comments: [
       {
         id: "c1",
         author: "u/agent_wrangler",
         publishedAt: hoursAgo(20),
-        body: "Setup on Windows took me an hour.",
+        body: "Setup on Windows took me an hour. I followed https://prompt.studio/docs/setup.",
         votes: 41,
         topic: "Windows setup",
       },
@@ -124,8 +125,12 @@ export const storyAnalysis = buildAnalysis({
   })),
 });
 
+// A stand-in screenshot, so stories show where kept images appear without a host.
+const storyImage = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#e8ecf2"/><rect x="40" y="40" width="560" height="40" rx="6" fill="#c9d2df"/><rect x="40" y="100" width="360" height="220" rx="6" fill="#d7dee8"/><rect x="420" y="100" width="180" height="220" rx="6" fill="#c9d2df"/></svg>',
+)}`;
 const client = {
-  artifacts: { list: async () => [], readText: async () => "", imageUrl: async () => "" },
+  artifacts: { list: async () => [], readText: async () => "", imageUrl: async () => storyImage },
   events: { subscribe: () => () => {} },
 } as unknown as RadarClient;
 const queryClient = new QueryClient();
@@ -137,7 +142,8 @@ export const RadarStory = (props: { children: ReactNode }) => {
     <QueryClientProvider client={queryClient}>
       <RadarContext.Provider
         value={{
-          host: {} as GuestHost,
+          // Links call the host; stories have none, so opening a link does nothing.
+          host: { call: async () => undefined } as unknown as GuestHost,
           client,
           propsStore: { get: () => ({}), subscribe: () => () => {} },
         }}

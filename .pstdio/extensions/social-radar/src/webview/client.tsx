@@ -35,3 +35,8 @@ export const useOpenThread = () => {
   return (resource: ResourceRef) =>
     host.call("navigation.open", { target: { kind: "page", page: { kind: "page", id: "thread" }, resource } });
 };
+// A link inside the sandboxed webview opens a sandboxed tab where sites cannot run, so the host opens it.
+export const useOpenLink = () => {
+  const { host } = useRadar();
+  return (href: string) => host.call("navigation.open", { target: { kind: "href", href } });
+};

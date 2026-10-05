@@ -12,6 +12,10 @@ export const ideaStatus = z.enum(["new", "saved", "used", "dismissed"]);
 export const postKind = z.enum(["demo", "topic", "showcase"]);
 const httpUrl = z.url({ protocol: /^https?$/ });
 
+export const maxThreadImages = 4;
+// A copy kept in the thread-media mount under the thread's id, so the snapshot still shows it after the site removes it.
+const snapshotImage = z.object({ file: text.regex(/^[^/\\]+$/, "Use a file name, not a path."), alt: text.optional() });
+const images = z.array(snapshotImage).optional();
 const snapshotComment = z.object({
   id: text,
   parentId: text.optional(),
@@ -22,35 +26,45 @@ const snapshotComment = z.object({
   mine: z.boolean().optional(),
   // One of the thread's analysis topics, so a reader can see which comment raised it.
   topic: text.optional(),
+  images,
 });
-export const snapshotSchema = z.object({
-  takenAt: timestamp,
-  post: z.object({
-    author: text.optional(),
-    publishedAt: timestamp.optional(),
-    body: text,
-    score: z.number().int().optional(),
-    commentCount: z.number().int().nonnegative().optional(),
-  }),
-  comments: z
-    .array(snapshotComment)
-    .max(30)
-    .superRefine((comments, ctx) => {
-      // Comments form a tree: unique ids, and no comment answers itself through its parents.
-      const parents = new Map(comments.map((comment) => [comment.id, comment.parentId]));
-      if (parents.size !== comments.length) ctx.addIssue({ code: "custom", message: "Comment ids must be unique." });
-      for (const comment of comments) {
-        const seen = new Set([comment.id]);
-        for (let parent = comment.parentId; parent; parent = parents.get(parent)) {
-          if (seen.has(parent)) {
-            ctx.addIssue({ code: "custom", message: `Comment ${comment.id} answers itself.` });
-            break;
-          }
-          seen.add(parent);
-        }
-      }
+export const snapshotSchema = z
+  .object({
+    takenAt: timestamp,
+    post: z.object({
+      author: text.optional(),
+      publishedAt: timestamp.optional(),
+      body: text,
+      score: z.number().int().optional(),
+      commentCount: z.number().int().nonnegative().optional(),
+      images,
     }),
-});
+    comments: z
+      .array(snapshotComment)
+      .max(30)
+      .superRefine((comments, ctx) => {
+        // Comments form a tree: unique ids, and no comment answers itself through its parents.
+        const parents = new Map(comments.map((comment) => [comment.id, comment.parentId]));
+        if (parents.size !== comments.length) ctx.addIssue({ code: "custom", message: "Comment ids must be unique." });
+        for (const comment of comments) {
+          const seen = new Set([comment.id]);
+          for (let parent = comment.parentId; parent; parent = parents.get(parent)) {
+            if (seen.has(parent)) {
+              ctx.addIssue({ code: "custom", message: `Comment ${comment.id} answers itself.` });
+              break;
+            }
+            seen.add(parent);
+          }
+        }
+      }),
+  })
+  .superRefine((snapshot, ctx) => {
+    const files = [snapshot.post, ...snapshot.comments].flatMap((part) => part.images ?? []).map((image) => image.file);
+    if (files.length > maxThreadImages)
+      ctx.addIssue({ code: "custom", message: `A thread keeps at most ${maxThreadImages} images.` });
+    const repeated = files.find((file, index) => files.indexOf(file) !== index);
+    if (repeated) ctx.addIssue({ code: "custom", message: `This thread already has an image named ${repeated}.` });
+  });
 const count = z.number().int().nonnegative();
 export const analysisSchema = z.object({
   summary: text,
@@ -107,6 +121,7 @@ export const finishRun = z.object({
 });
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SnapshotComment = Snapshot["comments"][number];
+export type SnapshotImage = z.infer<typeof snapshotImage>;
 export type Analysis = z.infer<typeof analysisSchema>;
 export type FoundThreadInput = z.infer<typeof foundThreadInput>;
 export type NewPostInput = z.infer<typeof newPostInput>;
