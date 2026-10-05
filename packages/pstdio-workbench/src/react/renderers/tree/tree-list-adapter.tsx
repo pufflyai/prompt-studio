@@ -100,14 +100,19 @@ const resolveActivePageNodeIds = (
 export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) => {
   const { sections, childrenByNodeId, activeNodeId, activeLocation, activeResource, selectedNodeId } = input;
   if (activeNodeId) return activeNodeId;
-  // Keep renderer selection on the nodes so it survives composing and scoping trees.
+  const activeResourceKeys = getWorkbenchSelectionResourceKeys(activeResource);
+  // Parent trees retain their document selection, but only the active context owns selection.
   const declaredSelection = activeNodeIds(
     listSectionNodes(sections, childrenByNodeId)
-      .filter((node) => node.selected)
+      .filter((node) => {
+        if (!node.selected) return false;
+        const nodeResourceKey = resolveTreeNodeResourceKey(node);
+        if (nodeResourceKey && activeResourceKeys.includes(nodeResourceKey)) return true;
+        return activeLocation ? targetMatchesPage(node.target, activeLocation.page, activeResource) : !activeResource;
+      })
       .map((node) => node.id),
   );
   if (declaredSelection) return declaredSelection;
-  const activeResourceKeys = getWorkbenchSelectionResourceKeys(activeResource);
   const selectedNode = selectedNodeId ? findSectionNode(sections, selectedNodeId, childrenByNodeId) : undefined;
   const selectedResourceKey = selectedNode ? resolveTreeNodeResourceKey(selectedNode) : undefined;
   if (selectedResourceKey && activeResourceKeys.includes(selectedResourceKey)) return selectedNodeId;

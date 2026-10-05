@@ -163,8 +163,9 @@ Navigation trees default to `resourceScope: "selection"`, so selecting a differe
 
 Set `selected: true` on the current node when several rows share a resource, such as
 documents within one ticket. The declaration stays on the node when trees are combined
-and their IDs are scoped. It takes precedence over saved row selection and automatic
-page or resource matching.
+and their IDs are scoped. While its resource or page is active, it takes precedence
+over saved row selection and automatic page or resource matching. A contextual parent
+tree's declared document selection does not override the open workspace.
 
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and

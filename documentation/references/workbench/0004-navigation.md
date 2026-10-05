@@ -22,6 +22,8 @@ The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, regi
 
 Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.
 
+Tree selection follows the active resource and page. A node's declared `selected` value distinguishes documents that share a resource identity, but applies only while that resource or page is active. Contextual parent trees remain visible without overriding the current workspace selection. Returning to the parent restores its active document selection.
+
 ## Resource actions on navigation rows
 
 Set `TreeNode.resource` to the subject of row actions. `target` remains the normal-click destination. Session rows in the Sessions level, workspace group, and Planner ticket section use the same session reference for both. The shared tree resolves resource menu contributions and keeps the clicked resource in command context, including parameter dialogs. Opening or dismissing a menu does not navigate.

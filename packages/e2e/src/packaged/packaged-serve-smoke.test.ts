@@ -12,7 +12,7 @@ import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
-// Core extension checks include Notes page ownership and Planner's Open tickets command.
+// Core extension checks include Notes page ownership, Planner commands, and ticket workspace selection.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
