@@ -1,11 +1,11 @@
 import type { ExtensionContextBase, KanbanRendererFilterState } from "@pstdio/sdk/extensions";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { runTicketsQuery } from "../data/query";
+import { runTicketsQuery, type TicketsViewFilter } from "../data/query";
 import { loadLatestWorkspaceSessions } from "../data/workspace-sessions";
 
 export const queryTickets = async (
   ctx: Pick<ExtensionContextBase, "projectId" | "sessions" | "storage" | "workspaces">,
-  input: { filters?: KanbanRendererFilterState },
+  input: { filters?: KanbanRendererFilterState; filter?: TicketsViewFilter },
 ) => {
   const workspaces = await ctx.workspaces.list();
 
@@ -13,6 +13,7 @@ export const queryTickets = async (
     storage: ctx.storage,
     projectId: ctx.projectId,
     filters: input.filters,
+    filter: input.filter,
     workspaces,
     workspaceSessions: await loadLatestWorkspaceSessions(ctx.sessions, workspaces),
   });
@@ -25,6 +26,7 @@ export const queryTicketsCommand = defineCommand({
   title: "Query tickets",
   params: {
     filters: params.json<KanbanRendererFilterState>(),
+    filter: params.json<TicketsViewFilter>(),
   },
   run: queryTickets,
 });
