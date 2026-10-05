@@ -103,15 +103,29 @@ export const DateParameterFields: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Filter", exact: true }));
     const picker = await body.findByTestId("filter-menu");
     await userEvent.click(within(picker).getByRole("button", { name: "Updated", exact: true }));
-    const relative = within(picker).getByRole("button", { name: "Relative day" });
-    const exact = within(picker).getByLabelText("Exact day");
+    const exact = within(picker).getByLabelText("Value");
     await waitFor(() => expect(exact.getBoundingClientRect().height).toBe(32));
-    expect(relative.getBoundingClientRect().width).toBe(exact.getBoundingClientRect().width);
-    expect(exact.getBoundingClientRect().top).toBeGreaterThan(relative.getBoundingClientRect().bottom);
     const column = picker.querySelector('[data-testid="filter-value-column"]')!;
+    expect(exact.getBoundingClientRect().left - column.getBoundingClientRect().left).toBe(12);
     expect(exact.getBoundingClientRect().right).toBeLessThanOrEqual(column.getBoundingClientRect().right);
     fireEvent.change(exact, { target: { value: "2026-10-04" } });
     await userEvent.click(within(picker).getByRole("button", { name: "Apply filter" }));
-    await expect(canvas.getByRole("group", { name: "Updated filter" })).toBeVisible();
+    await waitFor(() => expect(body.queryByTestId("filter-menu")).toBeNull());
+    const bubble = within(canvas.getByRole("group", { name: "Updated filter" }));
+    await expect(bubble.getByRole("button", { name: "Values" })).toHaveTextContent(
+      new Date("2026-10-04T00:00:00").toLocaleDateString(),
+    );
+    await expect(await body.findByLabelText("Value")).toHaveValue("2026-10-04");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(body.queryByLabelText("Value")).toBeNull());
+    await userEvent.click(bubble.getByRole("button", { name: "Values" }));
+    const date = await body.findByLabelText("Value");
+    fireEvent.change(date, { target: { value: "2026-10-05" } });
+    await expect(date).toHaveValue("2026-10-05");
+    await waitFor(() =>
+      expect(bubble.getByRole("button", { name: "Values" })).toHaveTextContent(
+        new Date("2026-10-05T00:00:00").toLocaleDateString(),
+      ),
+    );
   },
 };

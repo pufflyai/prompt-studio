@@ -43,7 +43,7 @@ export const NumberField: Story = {
   render: () => <Editor rule={{ attributeId: "score", condition: "gte", value: 70 }} />,
 };
 
-/** A day relative to today stays current when the view opens later; an exact day stays fixed. */
+/** The Value field edits an exact calendar day. */
 export const DateField: Story = {
-  render: () => <Editor rule={{ attributeId: "updated", condition: "is-after", value: "today-7" }} />,
+  render: () => <Editor rule={{ attributeId: "updated", condition: "is-after", value: "2026-10-05" }} />,
 };

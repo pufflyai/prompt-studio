@@ -33,7 +33,7 @@ export const FilterMenu = (props: FilterMenuProps) => {
   const active = visible.find((field) => field.id === activeId);
 
   return (
-    <Stack data-testid="filter-menu" height="min(320px, calc(100vh - 32px))" gap="0" overflow="hidden">
+    <Stack data-testid="filter-menu" layerStyle="filterPicker" gap="0" overflow="hidden">
       <HStack height="2.25rem" gap="xs" paddingX="sm" borderBottomWidth="1px" borderColor="border.subtle">
         <Icon as={Search} boxSize="0.875rem" color="fg.muted" />
         <Input

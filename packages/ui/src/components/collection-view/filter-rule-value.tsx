@@ -150,7 +150,7 @@ const OptionChecklist = (props: RuleValueProps) => {
 
   return (
     <Stack gap="0" flex="1" minH="0">
-      <ScrollArea flex="1" minH="0" maxH="15rem" viewportProps={{ overscrollBehavior: "contain" }}>
+      <ScrollArea flex="1" minH="0" viewportProps={{ overscrollBehavior: "contain" }}>
         {options.map((option) => {
           const checked = selected.includes(option.value);
           return (

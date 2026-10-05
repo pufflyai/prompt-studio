@@ -1,14 +1,11 @@
-import { Button, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, Input, Text } from "@chakra-ui/react";
 import { useRef, useState } from "react";
-import { ParamEditorControlItem } from "../param-editor/param-editor-control-item";
 import { NumberInputField, NumberInputRoot } from "../primitives/number-input";
 import { dayLabel } from "./collection-view-labels";
 import type { RuleValueProps } from "./filter-rule-value";
 import { FilterValuePanel } from "./filter-value-panel";
-import { RuleSelect } from "./rule-select";
 import { ViewBarPopover } from "./view-bar-popover";
 
-const RELATIVE_DAYS = ["today", "today-1", "today-7", "today-14", "today-30", "today+1", "today+7"];
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const NumberParameterValue = (props: RuleValueProps) => {
@@ -37,52 +34,38 @@ const NumberParameterValue = (props: RuleValueProps) => {
 export const ScalarValueEditor = (props: RuleValueProps) => {
   const { field, rule, onChange } = props;
   const value = typeof rule.value === "string" ? rule.value : "";
-  if (field.type.kind !== "date")
+  if (field.type.kind === "date")
     return (
       <FilterValuePanel>
-        {field.type.kind === "number" ? (
-          <NumberParameterValue {...props} />
-        ) : (
-          <Input
-            aria-label="Value"
-            size="sm"
-            placeholder="Enter text…"
-            width="full"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-          />
-        )}
-      </FilterValuePanel>
-    );
-  return (
-    <Stack gap="sm" padding="sm" minW="0">
-      <ParamEditorControlItem name="Relative day" fullWidth>
-        <RuleSelect
-          aria-label="Relative day"
-          size="sm"
-          variant="outline"
-          width="full"
-          placeholder="Choose relative day…"
-          options={RELATIVE_DAYS.map((day) => ({ value: day, label: dayLabel(day) }))}
-          value={value && !ISO_DAY.test(value) ? value : undefined}
-          onSelect={onChange}
-        />
-      </ParamEditorControlItem>
-      <ParamEditorControlItem name="Exact day" fullWidth>
         <Input
-          aria-label="Exact day"
+          aria-label="Value"
           type="date"
           size="sm"
           width="full"
           value={ISO_DAY.test(value) ? value : ""}
           onChange={(event) => onChange(event.target.value || undefined)}
         />
-      </ParamEditorControlItem>
-    </Stack>
+      </FilterValuePanel>
+    );
+  return (
+    <FilterValuePanel>
+      {field.type.kind === "number" ? (
+        <NumberParameterValue {...props} />
+      ) : (
+        <Input
+          aria-label="Value"
+          size="sm"
+          placeholder="Enter text…"
+          width="full"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </FilterValuePanel>
   );
 };
 
-/** Date editing uses the same stacked fields wherever the rule is opened. */
+/** Date editing uses the same exact-date field wherever the rule is opened. */
 export const DateBubbleValue = (props: RuleValueProps) => {
   const { rule, variant } = props;
   const [localOpen, setLocalOpen] = useState(false);

@@ -76,6 +76,11 @@ export const WithSelectedValues: Story = {
       }}
     />
   ),
+  play: async ({ canvasElement }) => {
+    const picker = within(canvasElement).getByTestId("filter-menu");
+    const viewportHeight = canvasElement.ownerDocument.defaultView!.innerHeight;
+    expect(picker.getBoundingClientRect().height).toBe(Math.min(480, viewportHeight - 32));
+  },
 };
 
 export const SearchPropertyScope: Story = {
@@ -141,6 +146,7 @@ export const LongValueList: Story = {
     const canvas = within(canvasElement);
     const panel = canvas.getByTestId("filter-value-column");
     const viewport = panel.querySelector('[data-part="viewport"]')!;
+    expect(viewport.getBoundingClientRect().bottom).toBe(panel.getBoundingClientRect().bottom - 12);
     viewport.scrollTop = viewport.scrollHeight;
     const last = canvas.getByRole("checkbox", { name: "Option 29", exact: true });
     await expect(last).toBeVisible();

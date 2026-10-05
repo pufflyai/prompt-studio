@@ -46,6 +46,8 @@ Commands print JSON. Use `--project-id` outside a linked folder. `pst views boar
 
 Every kind also accepts `is-empty` and `is-not-empty`, which take no value. Relative days such as `today-7` resolve against the viewer's date each time the view opens. A field of kind `enum-multi` cannot be sorted.
 
+Dashboard date fields accept exact calendar days. The CLI and API also accept relative day values.
+
 Use `--filter-json` for advanced groups or a whole-view `or`. It takes a full filter and cannot be combined with `--filter`. This example requires an unarchived ticket and either the selected assignee or a recent update:
 
 ```sh

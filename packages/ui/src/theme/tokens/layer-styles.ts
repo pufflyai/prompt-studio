@@ -19,6 +19,11 @@ export const layerStyles = defineLayerStyles({
       borderRadius: "inherit",
     },
   },
+  filterPicker: {
+    value: {
+      height: "min({sizes.filter-picker-height}, calc(100dvh - {spacing.xl}))",
+    },
+  },
   filterLabel: {
     value: {
       paddingInline: "xs",

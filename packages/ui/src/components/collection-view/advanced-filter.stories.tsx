@@ -6,14 +6,14 @@ const meta: Meta = { title: "Patterns/Collection View/Advanced Filter", paramete
 export default meta;
 type Story = StoryObj;
 
-export const NestedDateParameterFields: Story = {
+export const NestedExactDateField: Story = {
   render: () => (
     <Bar
       storageKey="storybook-advanced-date-parameters"
       filter={{
         conjunction: "and",
         rules: [],
-        groups: [{ conjunction: "and", rules: [{ attributeId: "updated", condition: "is", value: "today" }] }],
+        groups: [{ conjunction: "and", rules: [{ attributeId: "updated", condition: "is", value: "2026-10-04" }] }],
       }}
     />
   ),
@@ -23,15 +23,12 @@ export const NestedDateParameterFields: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Edit advanced filter" }));
     const advanced = await body.findByTestId("advanced-filter-popover");
     await userEvent.click(within(advanced).getByRole("button", { name: "Values" }));
-    await userEvent.click(within(advanced).getByRole("button", { name: "Relative day" }));
-    await userEvent.click(body.getByRole("menuitem", { name: "1 day ago", exact: true }));
-    await expect(advanced).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "Edit advanced filter" })).toHaveTextContent("1 day ago");
-    const exact = within(advanced).getByLabelText("Exact day");
-    await userEvent.click(exact);
-    fireEvent.change(exact, { target: { value: "2026-10-04" } });
-    await expect(advanced).toBeVisible();
+    const exact = within(advanced).getByLabelText("Value");
     await expect(exact).toHaveValue("2026-10-04");
+    await userEvent.click(exact);
+    fireEvent.change(exact, { target: { value: "2026-10-05" } });
+    await expect(advanced).toBeVisible();
+    await expect(exact).toHaveValue("2026-10-05");
   },
 };
 

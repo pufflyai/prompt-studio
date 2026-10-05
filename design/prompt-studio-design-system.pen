@@ -24284,10 +24284,10 @@
                       "type": "frame",
                       "id": "V7ww8",
                       "name": "cmp/KanbanRendererFilterMenu",
-                      "context": "All value panels use the shared Param Editor Value label and 12px inset. Scalar drafts commit with a full-width primary Apply filter button. Option lists scroll within the available pane above the footer. Multiselect keeps the picker open until the user closes it. Anchor the toolbar picker to the stable right edge of the Filter button.",
+                      "context": "480px filter picker, constrained to the available viewport. Option lists scroll within the pane above the footer. Scalar values use shared Value parameter fields and pinned Apply filter buttons. Dates use one exact-date input. Multiselect stays open until the user closes it.",
                       "reusable": true,
                       "width": 440,
-                      "height": 320,
+                      "height": 480,
                       "fill": "$ds-bg",
                       "cornerRadius": "$overlay-radius",
                       "stroke": "$ds-border-subtle",
@@ -159511,7 +159511,7 @@
           "type": "frame",
           "id": "H3pT2G",
           "name": "Scalar filter content panels",
-          "context": "Text, number and date values share Param Editor fields and a full-width primary Apply filter button. In short viewports, scroll the editor within its pane and keep the Apply button and picker footer reachable.",
+          "context": "480px filter pickers with shared Value parameter fields and full-width primary Apply filter buttons. Dates use one exact-date input. In short viewports, scroll the editor within its pane and keep Apply and the picker footer reachable.",
           "width": "fill_container",
           "gap": 24,
           "children": [
@@ -159520,7 +159520,7 @@
               "id": "A9zInf",
               "name": "Text filter picker",
               "width": 440,
-              "height": 320,
+              "height": 480,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border-subtle",
@@ -160026,7 +160026,7 @@
               "id": "xfuUk",
               "name": "Number filter picker",
               "width": 440,
-              "height": 320,
+              "height": 480,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border-subtle",
@@ -160532,7 +160532,7 @@
               "id": "ZWwWl",
               "name": "Date filter picker",
               "width": 440,
-              "height": 320,
+              "height": 480,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border-subtle",
@@ -160859,50 +160859,13 @@
                         {
                           "type": "frame",
                           "id": "g2P7di",
-                          "name": "Date parameter fields",
+                          "name": "Date parameter field",
                           "width": "fill_container",
                           "height": "fill_container",
                           "layout": "vertical",
-                          "gap": 12,
+                          "gap": 4,
                           "padding": 12,
                           "children": [
-                            {
-                              "type": "frame",
-                              "id": "QXbp4",
-                              "name": "Relative day parameter field",
-                              "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": 4,
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "Bw291",
-                                  "name": "Relative day label",
-                                  "fill": "$ds-fg-muted",
-                                  "content": "Relative day",
-                                  "lineHeight": 1.428571,
-                                  "fontFamily": "$font-label",
-                                  "fontSize": 14,
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "id": "JVMSy",
-                                  "type": "ref",
-                                  "ref": "nbn0J",
-                                  "name": "Relative day input",
-                                  "width": "fill_container",
-                                  "height": 32,
-                                  "theme": {
-                                    "size": "sm"
-                                  },
-                                  "descendants": {
-                                    "hcIyD": {
-                                      "content": "Choose relative day…"
-                                    }
-                                  }
-                                }
-                              ]
-                            },
                             {
                               "type": "frame",
                               "id": "ANNxs",
@@ -160914,9 +160877,9 @@
                                 {
                                   "type": "text",
                                   "id": "gJInD",
-                                  "name": "Exact day label",
+                                  "name": "Value label",
                                   "fill": "$ds-fg-muted",
-                                  "content": "Exact day",
+                                  "content": "Value",
                                   "lineHeight": 1.428571,
                                   "fontFamily": "$font-label",
                                   "fontSize": 14,
@@ -161112,7 +161075,7 @@
               "name": "Boolean filter picker",
               "context": "Value uses the Param Editor label and inset. Option selections update the bubble without closing or moving this picker; only the user closes it.",
               "width": 440,
-              "height": 320,
+              "height": 480,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border-subtle",
@@ -161653,7 +161616,7 @@
               "name": "Flags filter picker",
               "context": "Value uses the Param Editor label and inset. Option selections update the bubble without closing or moving this picker; only the user closes it.",
               "width": 440,
-              "height": 320,
+              "height": 480,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border-subtle",
@@ -162241,7 +162204,7 @@
               "name": "Multiselect filter picker",
               "context": "Value uses the Param Editor label and inset. Option selections update the bubble without closing or moving this picker; only the user closes it.",
               "width": 440,
-              "height": 320,
+              "height": 480,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border-subtle",
