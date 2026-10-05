@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-export const sites = ["hn", "reddit", "bluesky", "devto", "github", "youtube", "x", "linkedin"] as const;
-export const siteSchema = z.enum(sites);
-export type Site = z.infer<typeof siteSchema>;
+// A thread's site is the id of the channel it was found on; settings own the channel list.
+export const siteSchema = z.string().trim().min(1);
 export const sentiments = ["negative", "neutral", "positive"] as const;
 export type Sentiment = (typeof sentiments)[number];
 const text = z.string().trim().min(1);
@@ -103,7 +102,7 @@ export const updateIdea = z.object({ body: text }).strict();
 export const finishRun = z.object({
   runId: text,
   summary: text,
-  searches: z.partialRecord(siteSchema, z.number().int().nonnegative()),
+  searches: z.record(siteSchema, z.number().int().nonnegative()),
   skippedSites: z.array(z.object({ site: siteSchema, reason: text })),
 });
 export type Snapshot = z.infer<typeof snapshotSchema>;
@@ -137,7 +136,7 @@ export interface Run {
   startedAt: string;
   finishedAt?: string;
   summary?: string;
-  searches?: Partial<Record<Site, number>>;
-  skippedSites?: { site: Site; reason: string }[];
+  searches?: Record<string, number>;
+  skippedSites?: { site: string; reason: string }[];
   failureReason?: string;
 }

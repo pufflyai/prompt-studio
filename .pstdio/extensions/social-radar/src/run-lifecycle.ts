@@ -60,7 +60,7 @@ export const startRun = (ctx: ExtensionContextBase) =>
         return { runId: run.id, alreadyRunning: true as const };
       await failRun(ctx, run, "session ended without finish-run");
     }
-    await readSettings(ctx.settings);
+    const { agent } = await readSettings(ctx.settings);
     const now = new Date();
     const run: Run = { id: crypto.randomUUID(), status: "running", sessionId: "", startedAt: now.toISOString() };
     await runs.put(run.id, run);
@@ -68,7 +68,7 @@ export const startRun = (ctx: ExtensionContextBase) =>
       const session = await ctx.sessions.create({
         title: `Social radar ${now.toLocaleDateString("sv-SE")}`,
         prompt: `Use the social-radar skill. Run id: ${run.id}. Start with pst social-radar get-context --runId ${run.id}. Save results through social-radar commands. Finish with pst social-radar finish-run. Read only: never post, reply, like, follow, or send messages.`,
-        harness: { harnessId: "pstdio.harness-codex.harness.codex", model: "gpt-6-astra" },
+        harness: agent,
       });
       await runs.update(run.id, { ...run, sessionId: session.id });
       await changed(ctx, run.id);
@@ -86,8 +86,9 @@ export const completeRun = (ctx: ExtensionContextBase, input: unknown) =>
     if (run.status !== "running") throw new Error("Run has ended.");
     const settings = await readSettings(ctx.settings);
     for (const [site, count] of Object.entries(data.searches)) {
-      if (count > settings.budgets[site as keyof typeof settings.budgets])
-        throw new Error(`Search budget exceeded for ${site}.`);
+      const channel = settings.channels.find((item) => item.id === site);
+      if (!channel) throw new Error(`${site} is not a channel.`);
+      if (count > channel.budget) throw new Error(`Search budget exceeded for ${site}.`);
     }
     const done: Run = { ...run, ...data, status: "done", finishedAt: new Date().toISOString() };
     const found = (await threadsOf(ctx).list()).filter((item) => item.runId === run.id && !isNewPost(item));

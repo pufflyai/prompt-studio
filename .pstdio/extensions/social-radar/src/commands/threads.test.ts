@@ -36,6 +36,15 @@ describe("social radar threads", () => {
     expect(again).toEqual({ id: saved.id, created: false });
   });
 
+  test("saves threads only from configured channels", async () => {
+    const { ctx } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    await commands["remove-channel"].run(ctx, { id: "hn" });
+    await expect(commands["save-thread"].run(ctx, { input: foundThread(run.runId) })).rejects.toThrow(
+      "hn is not a channel.",
+    );
+  });
+
   test("keeps the topic each snapshot comment talks about", async () => {
     const { ctx, storage } = setup();
     const run = await commands["run-daily"].run(ctx, {});

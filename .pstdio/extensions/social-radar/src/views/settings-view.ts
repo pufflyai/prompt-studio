@@ -1,10 +1,9 @@
 import { type ControlGroup, type ControlParam, type ControlValueMap, defineView } from "@pstdio/sdk/extensions";
-import { type Run, type Site, sites } from "../schemas";
-import { type RadarSettings, readSettings, writeSettings } from "../settings";
-import { siteLabels } from "../sites";
+import type { Run } from "../schemas";
+import { type Channel, type RadarSettings, readSettings, writeSettings } from "../settings";
 import { changed, newest, radarChanged, runsOf } from "../store";
 import { plural } from "../text";
-import { type SectionId, sectionOf } from "./settings-menu";
+import { type SettingsPart, settingsPartOf } from "./settings-menu";
 
 const listControl = (id: string, name: string, values: string[], description?: string): ControlParam => ({
   id,
@@ -18,15 +17,6 @@ const listControl = (id: string, name: string, values: string[], description?: s
   defaultValue: values,
   options: values.map((value) => ({ id: value, name: value })),
 });
-// The group description is the site's status line: what it costs, or why recent runs skipped it.
-const siteStatus = (site: Site, runs: Run[], budget: number, targets: number) => {
-  const finished = runs.filter((run) => run.status === "done");
-  let streak = 0;
-  while (finished[streak]?.skippedSites?.some((skip) => skip.site === site)) streak += 1;
-  const reason = finished[0]?.skippedSites?.find((skip) => skip.site === site)?.reason;
-  if (streak && reason) return `Skipped on the last ${plural(streak, "run")}: ${reason}`;
-  return `${plural(budget, "search", "searches")} · ${targets ? plural(targets, "target") : "no targets"}`;
-};
 // Budgets are plain number fields: a max would turn them into sliders, and the schema already caps them.
 const countControl = (id: string, name: string, value: number): ControlParam => ({
   id,
@@ -36,8 +26,47 @@ const countControl = (id: string, name: string, value: number): ControlParam => 
   min: 0,
   step: 1,
 });
-const sectionGroups = (section: SectionId, settings: RadarSettings, runs: Run[]): ControlGroup[] => {
-  if (section === "voice")
+const readOnly = (id: string, name: string, value: string): ControlParam => ({ id, type: "readOnly", name, value });
+// Harness option keys such as model_reasoning_effort read as "Model reasoning effort".
+const optionName = (key: string) => {
+  const words = key.replace(/[_-]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+// The group description is the channel's status line: what it costs, or why recent runs skipped it.
+const channelStatus = (channel: Channel, runs: Run[]) => {
+  const finished = runs.filter((run) => run.status === "done");
+  let streak = 0;
+  while (finished[streak]?.skippedSites?.some((skip) => skip.site === channel.id)) streak += 1;
+  const reason = finished[0]?.skippedSites?.find((skip) => skip.site === channel.id)?.reason;
+  if (streak && reason) return `Skipped on the last ${plural(streak, "run")}: ${reason}`;
+  const targets = channel.targets.length ? plural(channel.targets.length, "target") : "no targets";
+  return `${plural(channel.budget, "search", "searches")} · ${targets}`;
+};
+const channelGroup = (channel: Channel | undefined, runs: Run[]): ControlGroup => {
+  if (!channel)
+    return {
+      id: "channel",
+      title: "Channel removed",
+      params: [readOnly("removed", "Status", "Add it again from Channels in the menu.")],
+    };
+  const params = [
+    countControl(`budget-${channel.id}`, "Daily search budget", channel.budget),
+    listControl(`targets-${channel.id}`, "Targets", channel.targets),
+  ];
+  // Built-in channels have a search recipe in the skill; other channels are read at their link.
+  if (channel.url)
+    params.push({ id: `url-${channel.id}`, type: "text", name: "Link", defaultValue: channel.url, singleLine: true });
+  return { id: channel.id, title: channel.name, description: channelStatus(channel, runs), params };
+};
+const partGroups = (part: SettingsPart, settings: RadarSettings, runs: Run[]): ControlGroup[] => {
+  if (part.kind === "channel")
+    return [
+      channelGroup(
+        settings.channels.find((channel) => channel.id === part.id),
+        runs,
+      ),
+    ];
+  if (part.id === "voice")
     return [
       {
         id: "voice",
@@ -46,18 +75,22 @@ const sectionGroups = (section: SectionId, settings: RadarSettings, runs: Run[])
         params: [{ id: "voice", type: "text", name: "Voice", defaultValue: settings.voice, singleLine: false }],
       },
     ];
-  if (section === "channels")
-    return sites.map((site) => ({
-      id: site,
-      title: siteLabels[site],
-      description: siteStatus(site, runs, settings.budgets[site], settings.targets[site].length),
-      collapsible: true,
-      defaultCollapsed: site !== "reddit",
-      params: [
-        countControl(`budget-${site}`, "Daily search budget", settings.budgets[site]),
-        listControl(`targets-${site}`, "Targets", settings.targets[site]),
-      ],
-    }));
+  if (part.id === "agent") {
+    const { harnessId, model, params = {} } = settings.agent;
+    return [
+      {
+        id: "agent",
+        title: "Research agent",
+        description:
+          "The harness and model that run each morning's session. Change them with Choose model in the menu.",
+        params: [
+          readOnly("harness", "Harness", harnessId),
+          readOnly("model", "Model", model ?? "Harness default"),
+          ...Object.entries(params).map(([key, value]) => readOnly(`param-${key}`, optionName(key), String(value))),
+        ],
+      },
+    ];
+  }
   return [
     {
       id: "research",
@@ -72,7 +105,7 @@ const sectionGroups = (section: SectionId, settings: RadarSettings, runs: Run[])
         ),
         listControl("topics", "Topics", settings.topics),
         listControl("competitors", "Competitors", settings.competitors),
-        countControl("scroll-screens", "Screens per search", settings.budgets.scrollScreens),
+        countControl("scroll-screens", "Screens per search", settings.scrollScreens),
       ],
     },
   ];
@@ -84,16 +117,20 @@ const applyValues = (settings: RadarSettings, values: ControlValueMap) => {
     return Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : saved;
   };
   const count = (id: string, saved: number) => (id in values ? values[id] : saved);
+  const textValue = (id: string, saved: string | undefined) => (id in values ? String(values[id]).trim() : saved);
   return {
+    ...settings,
     brandTerms: list("brandTerms", settings.brandTerms),
     topics: list("topics", settings.topics),
     competitors: list("competitors", settings.competitors),
-    voice: "voice" in values ? String(values.voice).trim() : settings.voice,
-    targets: Object.fromEntries(sites.map((site) => [site, list(`targets-${site}`, settings.targets[site])])),
-    budgets: {
-      ...Object.fromEntries(sites.map((site) => [site, count(`budget-${site}`, settings.budgets[site])])),
-      scrollScreens: count("scroll-screens", settings.budgets.scrollScreens),
-    },
+    voice: textValue("voice", settings.voice),
+    scrollScreens: count("scroll-screens", settings.scrollScreens),
+    channels: settings.channels.map((channel) => ({
+      ...channel,
+      budget: count(`budget-${channel.id}`, channel.budget),
+      targets: list(`targets-${channel.id}`, channel.targets),
+      url: textValue(`url-${channel.id}`, channel.url),
+    })),
   };
 };
 
@@ -108,19 +145,20 @@ export const settingsView = defineView({
       const settings = await readSettings(ctx.settings);
       const runs = newest(await runsOf(ctx).list(), (run) => run.startedAt);
       return {
-        groups: sectionGroups(sectionOf(renderer.resource), settings, runs),
+        groups: partGroups(settingsPartOf(renderer.resource), settings, runs),
         values: {
           brandTerms: settings.brandTerms,
           topics: settings.topics,
           competitors: settings.competitors,
           voice: settings.voice,
+          "scroll-screens": settings.scrollScreens,
           ...Object.fromEntries(
-            sites.flatMap((site) => [
-              [`budget-${site}`, settings.budgets[site]],
-              [`targets-${site}`, settings.targets[site]],
+            settings.channels.flatMap((channel) => [
+              [`budget-${channel.id}`, channel.budget],
+              [`targets-${channel.id}`, channel.targets],
+              ...(channel.url ? [[`url-${channel.id}`, channel.url]] : []),
             ]),
           ),
-          "scroll-screens": settings.budgets.scrollScreens,
         },
       };
     },

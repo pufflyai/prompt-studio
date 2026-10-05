@@ -5,7 +5,7 @@ import {
   defineViewMenu,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
-import { runResource, settingsSection, threadResource } from "./store";
+import { channelResource, runResource, settingsSection, threadResource } from "./store";
 import { digestView } from "./views/digest";
 import { radarTree } from "./views/navigation";
 import { settingsMenu } from "./views/settings-menu";
@@ -61,7 +61,7 @@ const settingsPage = definePage({
   path: "social-radar/settings",
   mode: workbenchModes.project,
   parent: radarPage.ref,
-  resource: { kinds: [settingsSection.ref] },
+  resource: { kinds: [settingsSection.ref, channelResource.ref] },
   main: { kind: "view", view: settingsView.ref, cardinality: "one" },
   slots: [],
 });

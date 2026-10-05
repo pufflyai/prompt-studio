@@ -184,6 +184,8 @@ export interface ExtensionSessionsApi {
 export interface ExtensionHarnessInput {
   harnessId: string;
   model?: string;
+  /** Run params the harness declares for the model, such as reasoning effort. They override the project's defaults. */
+  params?: Record<string, string | boolean>;
 }
 
 export interface ExtensionEventsApi {

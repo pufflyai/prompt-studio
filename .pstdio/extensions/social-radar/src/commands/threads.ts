@@ -1,7 +1,8 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { requireRunning } from "../run-lifecycle";
 import { isNewPost, type NewPost, saveThread, type Thread, threadStatus, updateThread } from "../schemas";
-import { mediaRules } from "../sites";
+import { readSettings } from "../settings";
+import { channelNames, mediaRuleOf } from "../sites";
 import { changed, ideasOf, requireThread, threadsOf } from "../store";
 import { canonicalThreadUrl, threadId } from "../urls";
 
@@ -16,6 +17,8 @@ export const saveThreadCommand = defineCommand({
   async run(ctx, { input }) {
     const data = saveThread.parse(input);
     await requireRunning(ctx, data.runId);
+    const { channels } = await readSettings(ctx.settings);
+    if (!channels.some((channel) => channel.id === data.site)) throw new Error(`${data.site} is not a channel.`);
     const foundAt = new Date().toISOString();
     if ("kind" in data) {
       const id = crypto.randomUUID();
@@ -136,6 +139,8 @@ export const getThread = defineCommand({
       const found = await threadsOf(ctx).get(source);
       if (found) sourceTitles[source] = found.title;
     }
-    return { thread, ideas, sourceTitles, mediaRule: mediaRules[thread.site] };
+    const { channels } = await readSettings(ctx.settings);
+    const channelName = channelNames(channels)[thread.site] ?? thread.site;
+    return { thread, ideas, sourceTitles, channelName, mediaRule: mediaRuleOf(thread.site) };
   },
 });

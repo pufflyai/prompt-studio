@@ -13,13 +13,13 @@ The session prompt supplies `runId`. Start with:
 pst social-radar get-context --runId <runId>
 ```
 
-This returns `brandTerms`, `topics`, `competitors`, per-site `targets`, the writing `voice`, per-site `budgets`, per-site `mediaRules`, `since`, `followUps` (answered threads not checked today), and `recentPosts` (new-post titles from the last 14 days). Do not repeat a recent post unless new evidence changes it.
+This returns `brandTerms`, `topics`, `competitors`, the writing `voice`, `scrollScreens`, `channels` (each with its `id`, `name`, `budget`, `targets`, `mediaRule`, and a `url` for channels without a recipe below), `since`, `followUps` (answered threads not checked today), and `recentPosts` (new-post titles from the last 14 days). Do not repeat a recent post unless new evidence changes it.
 
-Count every endpoint query, browser search, and follow-up lookup against that site's budget. A failed endpoint attempt also counts; a browser fallback is another search. Scroll at most `budgets.scrollScreens` screens per search. A zero budget means skip that site. Spend follow-up lookups first, then search the brand terms, then the highest priority topics and that site's targets. Do not retry a login wall, captcha, rate limit, or unavailable endpoint repeatedly.
+Search only the returned channels, and save each thread with its channel `id` as `site`. Count every endpoint query, browser search, and follow-up lookup against that channel's `budget`. A failed endpoint attempt also counts; a browser fallback is another search. Scroll at most `scrollScreens` screens per search. A zero budget means skip that channel. Spend follow-up lookups first, then search the brand terms, then the highest priority topics and that channel's targets. Do not retry a login wall, captcha, rate limit, or unavailable endpoint repeatedly.
 
 Read the current endpoints below; free access can change. Use the endpoint first where listed. Use Codex's computer use tool for browser work in the user's existing browser profile. Do not launch another browser profile or install a browser tool. Skip browser-only sites when that tool is unavailable. Skip on login walls or captchas; never enter credentials or try to bypass a restriction. Record each skipped site and its reason. Partial access still makes a useful run.
 
-If research reveals a better community, channel, account, or repository to watch, revise that site's complete target list with `pst social-radar update-site --site <site> --targets <target>`. Repeat `--targets` for each target to keep. Include `--budget <count>` only when the user asks to change the budget. Use `pst social-radar update-settings --input '<JSON>'` when the user asks to revise brand terms, topics, competitors, or voice. Never infer a new budget from a login wall or a failed search.
+If research reveals a better community, account, or repository to watch, revise that channel's complete target list with `pst social-radar update-channel --id <channel> --targets <target>`. Repeat `--targets` for each target to keep. Include `--budget <count>` only when the user asks to change the budget. Use `pst social-radar update-settings --input '<JSON>'` when the user asks to revise brand terms, topics, competitors, or voice. Add or remove channels only when the user asks, with `pst social-radar add-channel --name <name> --url <link>` and `pst social-radar remove-channel --id <channel>`. Never infer a new budget from a login wall or a failed search.
 
 | Site | First choice | Browser fallback |
 | --- | --- | --- |
@@ -31,6 +31,7 @@ If research reveals a better community, channel, account, or repository to watch
 | `youtube` | Browser search filtered to upload date today | None |
 | `x` | Logged-in browser search, Latest tab | None |
 | `linkedin` | Logged-in content search sorted by date | None |
+| Any other channel | None | Open its `url` in the browser and search or browse it for the topics, newest first |
 
 ## Follow up on answered threads
 
@@ -70,7 +71,7 @@ pst social-radar update-idea --id <id> --input '{"body":"<better reply>"}'
 
 ## New posts
 
-Suggest 3–5 new posts across `demo`, `topic`, and `showcase`. A new post is a thread with a `kind`; it starts as an idea, while a found thread starts as new. It has one target site, a ready-to-paste `draft`, a `reason`, `tags`, and `basedOn`. Keep the draft within the site's length limit. Read `git log --since=<since> --oneline` and new `.changeset/*.md` files in the linked repo. When changes shipped, make at least one `demo` or `showcase` post name an actual change, with the commit SHA or changeset name in `basedOn`. Put thread ids in `basedOn` when a post answers saved threads. If nothing shipped, say so; never invent a change.
+Suggest 3–5 new posts across `demo`, `topic`, and `showcase`. A new post is a thread with a `kind`; it starts as an idea, while a found thread starts as new. It has one target channel (`site`), a ready-to-paste `draft`, a `reason`, `tags`, and `basedOn`. Keep the draft within the site's length limit. Read `git log --since=<since> --oneline` and new `.changeset/*.md` files in the linked repo. When changes shipped, make at least one `demo` or `showcase` post name an actual change, with the commit SHA or changeset name in `basedOn`. Put thread ids in `basedOn` when a post answers saved threads. If nothing shipped, say so; never invent a change.
 
 ```sh
 pst social-radar save-thread --input '{"runId":"<runId>","kind":"demo","site":"x","title":"<named change>","draft":"<ready-to-paste post>","reason":"<why now>","tags":["#BuildInPublic"],"basedOn":["<commit SHA>"]}'
@@ -79,7 +80,7 @@ pst social-radar update-thread --id <id> --input '{"draft":"<better post>"}'
 
 ### Media
 
-A post can carry images or a video within its site's rule in `mediaRules`. Hacker News takes none. When the project has the tools, add UI screenshots, a screen recording of the running app, or a short animation you build and record. Save each file in the workspace, then copy it to the post:
+A post can carry images or a video within its channel's `mediaRule`. Hacker News and custom channels take none. When the project has the tools, add UI screenshots, a screen recording of the running app, or a short animation you build and record. Save each file in the workspace, then copy it to the post:
 
 ```sh
 pst social-radar add-media --threadId <id> --path <workspace-path>

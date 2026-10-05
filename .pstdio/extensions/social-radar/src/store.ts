@@ -10,6 +10,7 @@ export const settingsSection = defineResourceKind({
   label: "Settings section",
   icon: "settings",
 });
+export const channelResource = defineResourceKind({ id: "channel", label: "Channel", icon: "radio-tower" });
 
 export const runsOf = (ctx: ExtensionContextBase) => ctx.storage.collection<Run>("runs");
 export const threadsOf = (ctx: ExtensionContextBase) => ctx.storage.collection<Thread>("threads");

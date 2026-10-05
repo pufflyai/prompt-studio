@@ -2,19 +2,18 @@ import { Box, HStack, Icon, Image, Stack, Text } from "@chakra-ui/react";
 import { Chip } from "@pstdio/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Film, Info } from "lucide-react";
-import type { Site } from "../schemas";
 import { describeMediaRule, type MediaRule, mediaType } from "../sites";
 import { postMedia } from "../store";
 import { useRadar } from "../webview/client";
 
 interface MediaTrayProps {
   threadId: string;
-  site: Site;
+  channelName: string;
   rule: MediaRule;
 }
 /** The thread's folder in the post-media mount is the media list; the agent fills it with add-media. */
 export const MediaTray = (props: MediaTrayProps) => {
-  const { threadId, site, rule } = props;
+  const { threadId, channelName, rule } = props;
   const { client } = useRadar();
   const media = useQuery({
     queryKey: ["media", threadId],
@@ -48,7 +47,7 @@ export const MediaTray = (props: MediaTrayProps) => {
       <HStack gap="xs" color="fg.muted">
         <Icon as={Info} boxSize="icon-xs" />
         <Text textStyle="label/XS">
-          {describeMediaRule(site, rule)}
+          {describeMediaRule(channelName, rule)}
           {media.data?.length ? ` Files are in post-media/${threadId}/ in the extension storage folder.` : ""}
         </Text>
       </HStack>

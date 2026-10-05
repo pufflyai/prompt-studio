@@ -40,6 +40,7 @@ export const NewPost: Story = {
       <Box flex="1" maxW="3xl">
         <NewPostDraft
           post={storyPost}
+          channelName="X"
           mediaRule={mediaRules.x}
           onEdit={() => {}}
           onDismiss={() => {}}

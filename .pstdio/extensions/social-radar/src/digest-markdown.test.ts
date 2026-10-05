@@ -12,7 +12,7 @@ test("keeps parentheses in the summary as plain text", () => {
     { ...run, summary: "Six sites were unavailable (one failed CLI attempt)." },
     [],
     [],
-    defaults.budgets,
+    defaults.channels,
   );
   // The file view reads \( ... \) as inline math.
   expect(markdown).not.toContain("\\(");
@@ -27,7 +27,7 @@ test("names new-post sources by thread title, including threads from earlier run
     foundAt: now,
     basedOn: ["thread-1", "abc123"],
   };
-  const markdown = buildDigestMarkdown(run, [source, post], [], defaults.budgets);
+  const markdown = buildDigestMarkdown(run, [source, post], [], defaults.channels);
   expect(markdown).toContain(source.title);
   expect(markdown).not.toContain("thread-1");
   expect(markdown).toContain("abc123");

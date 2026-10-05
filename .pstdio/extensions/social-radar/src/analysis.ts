@@ -1,4 +1,4 @@
-import { type FoundThread, isNewPost, type Sentiment, type Site, sentiments, type Thread } from "./schemas";
+import { type FoundThread, isNewPost, type Sentiment, sentiments, type Thread } from "./schemas";
 import { localDay as dayKey } from "./text";
 
 const countBy = <T>(items: T[], key: (item: T) => string) => {
@@ -17,7 +17,7 @@ const gotReply = (thread: FoundThread) => {
 interface AnalysisInput {
   threads: Thread[];
   days: number;
-  site?: Site;
+  site?: string;
   now?: number;
 }
 
@@ -68,7 +68,7 @@ export const buildAnalysis = (input: AnalysisInput) => {
     mentionsBySite: ranked(
       countBy(mentions, (thread) => thread.site),
       8,
-    ).map(([value, count]) => ({ site: value as Site, count })),
+    ).map(([value, count]) => ({ site: value, count })),
     topics: ranked(topicCounts, 8).map(([label, count]) => ({ label, count })),
     recentMentions: [...mentions]
       .sort((a, b) => b.foundAt.localeCompare(a.foundAt))

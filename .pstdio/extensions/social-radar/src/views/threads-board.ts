@@ -5,8 +5,9 @@ import {
   type KanbanRendererSettings,
 } from "@pstdio/sdk/extensions";
 import { commands } from "../commands";
-import { type Idea, isNewPost, sites, type Thread } from "../schemas";
-import { siteLabels } from "../sites";
+import { type Idea, isNewPost, type Thread } from "../schemas";
+import { readSettings } from "../settings";
+import { channelNames } from "../sites";
 import { ideasOf, pageRef, radarChanged, threadRef, threadsOf } from "../store";
 import { plural } from "../text";
 
@@ -17,7 +18,8 @@ const statusOptions = [
   { value: "answered", label: "Answered", icon: "status-done", color: "green" },
   { value: "skipped", label: "Skipped", icon: "status-canceled", color: "gray" },
 ];
-const attributes: KanbanRendererAttributeDescriptor[] = [
+// Site options follow the configured channels, so the query returns the attributes.
+const attributes = (sites: { value: string; label: string }[]): KanbanRendererAttributeDescriptor[] => [
   {
     id: "status",
     label: "Status",
@@ -50,7 +52,7 @@ const attributes: KanbanRendererAttributeDescriptor[] = [
   {
     id: "site",
     label: "Site",
-    type: { kind: "enum", options: sites.map((site) => ({ value: site, label: siteLabels[site] })) },
+    type: { kind: "enum", options: sites },
     filterable: true,
     groupable: true,
   },
@@ -82,7 +84,6 @@ export const threadsBoard = defineView({
   icon: "list",
   body: {
     kind: "kanban",
-    attributes,
     defaultSettings: settings,
     defaultViews: [
       view("active", "Active", { status: ["new", "idea"] }),
@@ -96,7 +97,11 @@ export const threadsBoard = defineView({
       const ideas = await ideasOf(ctx).list();
       // Newest first, so equal relevance falls back to the date.
       const threads = (await threadsOf(ctx).list()).sort((a, b) => b.foundAt.localeCompare(a.foundAt));
+      const { channels } = await readSettings(ctx.settings);
+      const names = channelNames(channels);
+      const sites = [...new Set([...channels.map((channel) => channel.id), ...threads.map((thread) => thread.site)])];
       return {
+        attributes: attributes(sites.map((site) => ({ value: site, label: names[site] ?? site }))),
         rows: threads.map((thread) => ({
           id: thread.id,
           title: thread.title,

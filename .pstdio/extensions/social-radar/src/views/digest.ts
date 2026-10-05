@@ -16,11 +16,11 @@ export const digestView = defineView({
       if (!run) return { emptyState: { title: "Run not found", description: "Pick a run under Runs." } };
       const threads = await threadsOf(ctx).list();
       const ideas = (await ideasOf(ctx).list()).filter((idea) => idea.runId === run.id);
-      const { budgets } = await readSettings(ctx.settings);
+      const { channels } = await readSettings(ctx.settings);
       return {
         fileName: "digest.md",
         mimeType: "text/markdown",
-        content: buildDigestMarkdown(run, threads, ideas, budgets),
+        content: buildDigestMarkdown(run, threads, ideas, channels),
         editable: false,
       };
     },

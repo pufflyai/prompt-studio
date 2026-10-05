@@ -3,8 +3,6 @@ import { useCommandQuery } from "@pstdio/sdk/extensions/react";
 import { AlertMessage, SegmentedControl } from "@pstdio/ui";
 import { ChevronDown, Globe } from "lucide-react";
 import { useState } from "react";
-import { type Site, sites } from "../schemas";
-import { siteLabels } from "../sites";
 import { threadResource } from "../store";
 import { useOpenThread, useRadar, useRadarRefresh } from "../webview/client";
 import { AnalysisSections } from "./analysis-sections";
@@ -15,7 +13,7 @@ export const AnalysisPage = () => {
   const { client } = useRadar();
   const openThread = useOpenThread();
   const [days, setDays] = useState("14");
-  const [site, setSite] = useState<Site | "">("");
+  const [site, setSite] = useState("");
   useRadarRefresh();
   const analysis = useCommandQuery({
     queryKey: ["analysis", days, site],
@@ -33,11 +31,11 @@ export const AnalysisPage = () => {
             { value: "30", label: "30 days" },
           ]}
         />
-        <Menu.Root onSelect={({ value }) => setSite(value as Site | "")}>
+        <Menu.Root onSelect={({ value }) => setSite(value)}>
           <Menu.Trigger asChild>
             <Button size="sm" variant="outline">
               <Globe />
-              {site ? siteLabels[site] : "All sites"}
+              {site ? (analysis.data?.channelNames[site] ?? site) : "All sites"}
               <ChevronDown />
             </Button>
           </Menu.Trigger>
@@ -45,9 +43,9 @@ export const AnalysisPage = () => {
             <Menu.Positioner>
               <Menu.Content>
                 <Menu.Item value="">All sites</Menu.Item>
-                {sites.map((value) => (
-                  <Menu.Item key={value} value={value}>
-                    {siteLabels[value]}
+                {analysis.data?.channels.map((channel) => (
+                  <Menu.Item key={channel.id} value={channel.id}>
+                    {channel.name}
                   </Menu.Item>
                 ))}
               </Menu.Content>
@@ -62,6 +60,7 @@ export const AnalysisPage = () => {
       {analysis.data ? (
         <AnalysisSections
           analysis={analysis.data}
+          channelNames={analysis.data.channelNames}
           onOpenMention={(mention) => openThread({ type: threadResource.id, id: mention.id, label: mention.title })}
         />
       ) : null}

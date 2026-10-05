@@ -2,7 +2,7 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { completeRun, requireRun, startRun } from "../run-lifecycle";
 import { finishRun, isNewPost, type Thread } from "../schemas";
 import { readSettings } from "../settings";
-import { mediaRules } from "../sites";
+import { mediaRuleOf } from "../sites";
 import { ideasOf, newest, runsOf, threadsOf } from "../store";
 import { localDay } from "../text";
 
@@ -46,7 +46,9 @@ export const getContext = defineCommand({
     const recentPosts = threads
       .filter((thread) => isNewPost(thread) && Date.parse(thread.foundAt) >= Date.now() - 14 * day)
       .map((thread) => thread.title);
-    return { ...settings, mediaRules, since, followUps, recentPosts };
+    const { agent, ...research } = settings;
+    const channels = settings.channels.map((channel) => ({ ...channel, mediaRule: mediaRuleOf(channel.id) }));
+    return { ...research, channels, since, followUps, recentPosts };
   },
 });
 

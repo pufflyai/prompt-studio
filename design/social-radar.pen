@@ -18605,7 +18605,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": 1180,
-              "content": "Settings is a row in the Social Radar level, next to Threads. A section menu on the left of the settings view lists Research, Voice and Channels. Each row opens the same controls view on its section.",
+              "content": "Settings is a row in the Social Radar level, next to Threads. A menu on the left of the settings view lists the Research, Voice and Agent sections, then every channel. Each row opens the same controls view on that section or channel.",
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 15,
@@ -19157,7 +19157,7 @@
                               "padding": 8,
                               "children": [
                                 {
-                                  "id": "dYoX2",
+                                  "id": "YFMls",
                                   "type": "ref",
                                   "ref": "t5G2s8",
                                   "name": "Menu · Research",
@@ -19179,9 +19179,9 @@
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "A9yZf",
+                                      "id": "iM7uO",
                                       "name": "End",
-                                      "width": 0,
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -19189,7 +19189,7 @@
                                   }
                                 },
                                 {
-                                  "id": "g3z6Pm",
+                                  "id": "DqtpJ",
                                   "type": "ref",
                                   "ref": "t5G2s8",
                                   "name": "Menu · Voice",
@@ -19211,9 +19211,9 @@
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "VG0qR",
+                                      "id": "E7GE7y",
                                       "name": "End",
-                                      "width": 0,
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -19221,10 +19221,87 @@
                                   }
                                 },
                                 {
-                                  "id": "W4zQTm",
+                                  "id": "f23ccP",
                                   "type": "ref",
                                   "ref": "t5G2s8",
-                                  "name": "Menu · Channels",
+                                  "name": "Menu · Agent",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "bot",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Agent"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "RyV4C",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "H60gOk",
+                                  "name": "Section header · Channels",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "gap": 4,
+                                  "padding": [
+                                    12,
+                                    6,
+                                    4,
+                                    6
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "bCydO",
+                                      "name": "Label",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "CHANNELS",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 0.8
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "k0kmXl",
+                                      "name": "Spacer",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "BUQES",
+                                      "name": "Add channel",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "plus",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "qVsOf",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Hacker News",
                                   "width": "fill_container",
                                   "theme": {
                                     "depth": "0",
@@ -19239,13 +19316,269 @@
                                       "fill": "$ds-fg-muted"
                                     },
                                     "ROY2j": {
-                                      "content": "Channels"
+                                      "content": "Hacker News"
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "VNVSJ",
+                                      "id": "A1FKCy",
                                       "name": "End",
-                                      "width": 0,
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "McFXm",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Reddit",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Reddit"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "KuHDB",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "E4GdHK",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Bluesky",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Bluesky"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "W9J1Q5",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "RQ6Lm",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · DEV Community",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "DEV Community"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "WGFY3",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "hq7dZ",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · GitHub",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "GitHub"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "Hq2Ae",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "ctNWs",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · YouTube",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "YouTube"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "avlfV",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "Jxs6y",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · X",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "X"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "rljD4",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "MATl5",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · LinkedIn",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "LinkedIn"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "wCxvr",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "O3UJiU",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Lobsters",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "globe",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Lobsters"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "Ywcqu",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -20133,7 +20466,7 @@
                               "padding": 8,
                               "children": [
                                 {
-                                  "id": "JU5Yo",
+                                  "id": "NBd3s",
                                   "type": "ref",
                                   "ref": "t5G2s8",
                                   "name": "Menu · Research",
@@ -20155,9 +20488,9 @@
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "QVELx",
+                                      "id": "AWnU9",
                                       "name": "End",
-                                      "width": 0,
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -20165,7 +20498,7 @@
                                   }
                                 },
                                 {
-                                  "id": "fyBBB",
+                                  "id": "EbyIc",
                                   "type": "ref",
                                   "ref": "t5G2s8",
                                   "name": "Menu · Voice",
@@ -20187,9 +20520,9 @@
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "KUzqz",
+                                      "id": "dNCnu",
                                       "name": "End",
-                                      "width": 0,
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -20197,10 +20530,87 @@
                                   }
                                 },
                                 {
-                                  "id": "zFXVd",
+                                  "id": "DcylT",
                                   "type": "ref",
                                   "ref": "t5G2s8",
-                                  "name": "Menu · Channels",
+                                  "name": "Menu · Agent",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "bot",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Agent"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "EZ9mb",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "s8tPkQ",
+                                  "name": "Section header · Channels",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "gap": 4,
+                                  "padding": [
+                                    12,
+                                    6,
+                                    4,
+                                    6
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "eKxcP",
+                                      "name": "Label",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "CHANNELS",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 0.8
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "l1BxtB",
+                                      "name": "Spacer",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "s2kP32",
+                                      "name": "Add channel",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "plus",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "QPUJh",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Hacker News",
                                   "width": "fill_container",
                                   "theme": {
                                     "depth": "0",
@@ -20215,13 +20625,269 @@
                                       "fill": "$ds-fg-muted"
                                     },
                                     "ROY2j": {
-                                      "content": "Channels"
+                                      "content": "Hacker News"
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "t9uqtX",
+                                      "id": "jEq5a",
                                       "name": "End",
-                                      "width": 0,
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "CIajx",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Reddit",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Reddit"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "x892m",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "Tya6c",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Bluesky",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Bluesky"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "jDIBa",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "zMA2e",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · DEV Community",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "DEV Community"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "V7b0L",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "dD7aQ",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · GitHub",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "GitHub"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "h5rCh",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "DWVnm",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · YouTube",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "YouTube"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "JWggf",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "k9SQMU",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · X",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "X"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "nbSx5",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "ebx9h",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · LinkedIn",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "LinkedIn"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "LzLt3",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "GK55x",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Lobsters",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "globe",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Lobsters"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "Sw5qq",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -20412,8 +21078,1239 @@
         },
         {
           "type": "frame",
+          "id": "d72dK",
+          "name": "Settings page · Window · Agent",
+          "clip": true,
+          "width": "fill_container",
+          "height": 560,
+          "fill": "$ds-bg",
+          "cornerRadius": 10,
+          "stroke": "$ds-border",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "oiroA",
+              "name": "Workbench Body",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "cS3FQ",
+                  "name": "Sidenav",
+                  "clip": true,
+                  "width": 272,
+                  "height": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 8,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    8,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "dpmdu",
+                      "name": "Search",
+                      "width": "fill_container",
+                      "height": 28,
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        6
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "EgCMK",
+                          "name": "search",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "search",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "eX41o",
+                          "name": "Search",
+                          "fill": "$ds-fg-muted",
+                          "content": "Search",
+                          "fontFamily": "$font-body",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DPTpi",
+                      "name": "Level · Social Radar",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "padding": [
+                        8,
+                        0,
+                        0,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "HtmjV",
+                          "name": "Section · Threads",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 1,
+                          "children": [
+                            {
+                              "id": "elLbn",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Threads",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "list",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "ROY2j": {
+                                  "content": "Threads"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "ZEH7z",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "L8L2Q",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Settings",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "width": "fill_container",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "settings",
+                                  "fill": "$ds-fg-muted"
+                                },
+                                "ROY2j": {
+                                  "content": "Settings"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "QvJyp",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "hWJbc",
+                          "name": "Section · Runs",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 1,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "F3Y4Y",
+                              "name": "Section header",
+                              "width": "fill_container",
+                              "height": 28,
+                              "gap": 4,
+                              "padding": [
+                                4,
+                                6
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "AUKJU",
+                                  "name": "Label",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "RUNS",
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal",
+                                  "letterSpacing": 0.8
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "pUK6q",
+                                  "name": "Spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "type": "icon",
+                                  "id": "nGKKT",
+                                  "name": "Run now",
+                                  "width": 12,
+                                  "height": 12,
+                                  "icon": "play",
+                                  "library": "lucide",
+                                  "fill": "$ds-fg-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "wt4MF",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Today · 07:00",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": true,
+                                  "icon": "chevron-right"
+                                },
+                                "Mbu4C": {
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
+                                },
+                                "ROY2j": {
+                                  "content": "Today · 07:00"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "nUQ7c",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "w1OQf",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Sep 27 · 07:00",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": true,
+                                  "icon": "chevron-right"
+                                },
+                                "Mbu4C": {
+                                  "icon": "circle-check",
+                                  "fill": "$ds-success"
+                                },
+                                "ROY2j": {
+                                  "content": "Sep 27 · 07:00"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "g0xSr",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "PZwxE",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Sep 26 · 07:02",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": true,
+                                  "icon": "chevron-right"
+                                },
+                                "Mbu4C": {
+                                  "icon": "circle-alert",
+                                  "fill": "$ds-warning"
+                                },
+                                "ROY2j": {
+                                  "content": "Sep 26 · 07:02"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "YfqnO",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            },
+                            {
+                              "id": "JmcOn",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Sep 25 · 07:00",
+                              "width": "fill_container",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": true,
+                                  "icon": "chevron-right"
+                                },
+                                "Mbu4C": {
+                                  "icon": "circle-x",
+                                  "fill": "$ds-error"
+                                },
+                                "ROY2j": {
+                                  "content": "Sep 25 · 07:00"
+                                },
+                                "uFz3m": {
+                                  "type": "frame",
+                                  "id": "r3Rp1B",
+                                  "name": "End",
+                                  "width": 0,
+                                  "height": "fill_container",
+                                  "gap": 4,
+                                  "alignItems": "center"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DbotQ",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": "fill_container"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RXCHa",
+                      "name": "Footer",
+                      "width": "fill_container",
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": {
+                        "top": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 1,
+                      "padding": [
+                        4,
+                        0,
+                        0,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "N4fxWx",
+                          "name": "Settings",
+                          "width": "fill_container",
+                          "height": 28,
+                          "cornerRadius": 4,
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            6
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "gzlKE",
+                              "name": "settings",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "settings",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "hqPUI",
+                              "name": "Settings",
+                              "fill": "$ds-fg-muted",
+                              "content": "Settings",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RU98o",
+                          "name": "Help",
+                          "width": "fill_container",
+                          "height": 28,
+                          "cornerRadius": 4,
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            6
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "K4ouvk",
+                              "name": "circle-question-mark",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "circle-question-mark",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "rmqcR",
+                              "name": "Help",
+                              "fill": "$ds-fg-muted",
+                              "content": "Help",
+                              "fontFamily": "$font-body",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ywHMz",
+                  "name": "Resource Workbench",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "id": "I2dZr",
+                      "type": "ref",
+                      "ref": "Uke3B",
+                      "name": "Nav Chrome",
+                      "width": "fill_container",
+                      "descendants": {
+                        "rKPgR": {
+                          "theme": {
+                            "crumb": "default",
+                            "size": "sm"
+                          }
+                        },
+                        "rKPgR/QAdbs": {
+                          "icon": "radar"
+                        },
+                        "rKPgR/g7l5u": {
+                          "content": "Social radar"
+                        },
+                        "U8yd35": {
+                          "theme": {
+                            "crumb": "current",
+                            "size": "sm"
+                          }
+                        },
+                        "U8yd35/QAdbs": {
+                          "icon": "settings"
+                        },
+                        "U8yd35/g7l5u": {
+                          "content": "Settings"
+                        },
+                        "R8Q6C": {
+                          "enabled": false
+                        },
+                        "AZ9VV": {
+                          "enabled": false
+                        },
+                        "saN8L": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OFjjM",
+                      "name": "Main Panel",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "fill": "$ds-surface",
+                      "cornerRadius": 8,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "z3JDu",
+                          "name": "Main Panel Body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "OMe1N",
+                              "name": "Panel menu · Settings sections",
+                              "width": 280,
+                              "height": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "stroke": "$ds-border",
+                              "strokeWidth": {
+                                "left": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 1,
+                              "padding": 8,
+                              "children": [
+                                {
+                                  "id": "n0uLeF",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Research",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "telescope",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Research"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "cfMIw",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "uaygg",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Voice",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "pen-line",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Voice"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "qro42",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "Avca1",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Agent",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "active"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "bot",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Agent"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "CGsAb",
+                                      "name": "End",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "s4hyi",
+                                          "name": "Choose model",
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "sliders-horizontal",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "k4NDy",
+                                  "name": "Section header · Channels",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "gap": 4,
+                                  "padding": [
+                                    12,
+                                    6,
+                                    4,
+                                    6
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "x9Lxd",
+                                      "name": "Label",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "CHANNELS",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 0.8
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "YXjju",
+                                      "name": "Spacer",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "ZyMiG",
+                                      "name": "Add channel",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "plus",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "Xttdc",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Hacker News",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Hacker News"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "RmrOs",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "mjUZt",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Reddit",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Reddit"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "P1ABt",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "KJNHQ",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Bluesky",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Bluesky"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "dGErz",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "BlJT9",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · DEV Community",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "DEV Community"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "NE1Zd",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "LaRlG",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · GitHub",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "GitHub"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "hUHk2",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "V2jgH3",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · YouTube",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "YouTube"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "OZS3V",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "O1cZhh",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · X",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "X"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "SzvsZ",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "G2RFb",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · LinkedIn",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "LinkedIn"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "WQl2L",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "gJGPa",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Lobsters",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "globe",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Lobsters"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "zIuhI",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "fwLjb",
+                              "name": "Settings page",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "stroke": "$ds-border",
+                              "strokeWidth": {
+                                "left": 1
+                              },
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "w5B37",
+                                  "name": "Group · Research agent",
+                                  "width": "fill_container",
+                                  "stroke": "$ds-border-subtle",
+                                  "strokeWidth": {
+                                    "bottom": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 6,
+                                  "padding": [
+                                    12,
+                                    14
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "RsKQ8",
+                                      "name": "Head",
+                                      "width": "fill_container",
+                                      "padding": [
+                                        0,
+                                        0,
+                                        4,
+                                        0
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "T4YIU7",
+                                          "name": "T",
+                                          "layout": "vertical",
+                                          "gap": 2,
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "Yx4E5",
+                                              "name": "Writing voice",
+                                              "fill": "$ds-fg",
+                                              "content": "Research agent",
+                                              "fontFamily": "$font-heading",
+                                              "fontSize": 12,
+                                              "fontWeight": "600"
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "yzRwB",
+                                              "name": "Instructions for every d",
+                                              "fill": "$ds-fg-subtle",
+                                              "content": "The harness and model that run each morning's session. Change them with Choose model in the menu.",
+                                              "fontFamily": "$font-body",
+                                              "fontSize": 10,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "Py4qx",
+                                          "name": "Spacer",
+                                          "width": "fill_container",
+                                          "height": 1
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "JNy5C",
+                                      "name": "Field · Harness",
+                                      "width": "fill_container",
+                                      "gap": 12,
+                                      "padding": [
+                                        4,
+                                        0
+                                      ],
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "e74Gzc",
+                                          "name": "Harness",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "Harness",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "h0Bz2y",
+                                          "name": "Value",
+                                          "fill": "$ds-fg",
+                                          "content": "pstdio.harness-codex.harness.codex",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "BLaxv",
+                                      "name": "Field · Model",
+                                      "width": "fill_container",
+                                      "gap": 12,
+                                      "padding": [
+                                        4,
+                                        0
+                                      ],
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "kC284",
+                                          "name": "Model",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "Model",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "xXvgg",
+                                          "name": "Value",
+                                          "fill": "$ds-fg",
+                                          "content": "gpt-6-astra",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "TZdJf",
+                                      "name": "Field · Reasoning effort",
+                                      "width": "fill_container",
+                                      "gap": 12,
+                                      "padding": [
+                                        4,
+                                        0
+                                      ],
+                                      "justifyContent": "space_between",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "s8aMM",
+                                          "name": "Reasoning effort",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "Model reasoning effort",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "x4laOo",
+                                          "name": "Value",
+                                          "fill": "$ds-fg",
+                                          "content": "high",
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sfDf3",
+              "name": "Status Bar",
+              "width": "fill_container",
+              "height": 30,
+              "gap": 14,
+              "padding": [
+                0,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "GxRIO",
+                  "name": "main",
+                  "gap": 5,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "lxb1o",
+                      "name": "git-branch",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "git-branch",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ky8K8",
+                      "name": "main",
+                      "fill": "$ds-fg-muted",
+                      "content": "main",
+                      "fontFamily": "$font-body",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
           "id": "xEZGB",
-          "name": "Settings page · Window · Channels",
+          "name": "Settings page · Window · Channel",
           "clip": true,
           "width": "fill_container",
           "height": 640,
@@ -20954,7 +22851,7 @@
                               "padding": 8,
                               "children": [
                                 {
-                                  "id": "JRBok",
+                                  "id": "HIpQb",
                                   "type": "ref",
                                   "ref": "t5G2s8",
                                   "name": "Menu · Research",
@@ -20976,9 +22873,9 @@
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "HgI01",
+                                      "id": "d43dC",
                                       "name": "End",
-                                      "width": 0,
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -20986,7 +22883,7 @@
                                   }
                                 },
                                 {
-                                  "id": "ifBtV",
+                                  "id": "c3Z1v",
                                   "type": "ref",
                                   "ref": "t5G2s8",
                                   "name": "Menu · Voice",
@@ -21008,9 +22905,9 @@
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "h7x73",
+                                      "id": "w13L1W",
                                       "name": "End",
-                                      "width": 0,
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -21018,10 +22915,119 @@
                                   }
                                 },
                                 {
-                                  "id": "vIhdt",
+                                  "id": "S2LCht",
                                   "type": "ref",
                                   "ref": "t5G2s8",
-                                  "name": "Menu · Channels",
+                                  "name": "Menu · Agent",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "bot",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Agent"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "UJeAG",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "wSQtd",
+                                  "name": "Section header · Channels",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "gap": 4,
+                                  "padding": [
+                                    12,
+                                    6,
+                                    4,
+                                    6
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "BwDn3",
+                                      "name": "Label",
+                                      "fill": "$ds-fg-muted",
+                                      "content": "CHANNELS",
+                                      "fontFamily": "$font-label",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal",
+                                      "letterSpacing": 0.8
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "OA3bG",
+                                      "name": "Spacer",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "SZK90",
+                                      "name": "Add channel",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "plus",
+                                      "library": "lucide",
+                                      "fill": "$ds-fg-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "O2btJd",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Hacker News",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Hacker News"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "hk94T",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "l6d3I3",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Reddit",
                                   "width": "fill_container",
                                   "theme": {
                                     "depth": "0",
@@ -21036,13 +23042,248 @@
                                       "fill": "$ds-fg-muted"
                                     },
                                     "ROY2j": {
-                                      "content": "Channels"
+                                      "content": "Reddit"
                                     },
                                     "uFz3m": {
                                       "type": "frame",
-                                      "id": "ZgU4B",
+                                      "id": "sYbeX",
                                       "name": "End",
-                                      "width": 0,
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "ey7gt",
+                                          "name": "Remove channel",
+                                          "width": 12,
+                                          "height": 12,
+                                          "icon": "trash-2",
+                                          "library": "lucide",
+                                          "fill": "$ds-fg-muted"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "YUsX7",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Bluesky",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Bluesky"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "P1F8xC",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "A6ziSw",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · DEV Community",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "DEV Community"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "iQ2WF",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "MnrYD",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · GitHub",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "GitHub"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "gSI7H",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "UtiwK",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · YouTube",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "YouTube"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "hw6xS",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "KgUxO",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · X",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "X"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "I57CwL",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "w7yhAS",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · LinkedIn",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "radio-tower",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "LinkedIn"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "rIRC6",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
+                                      "height": "fill_container",
+                                      "gap": 4,
+                                      "alignItems": "center"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "m6KlW9",
+                                  "type": "ref",
+                                  "ref": "t5G2s8",
+                                  "name": "Menu · Lobsters",
+                                  "width": "fill_container",
+                                  "theme": {
+                                    "depth": "0",
+                                    "tree": "default"
+                                  },
+                                  "descendants": {
+                                    "w2TSr": {
+                                      "enabled": false
+                                    },
+                                    "Mbu4C": {
+                                      "icon": "globe",
+                                      "fill": "$ds-fg-muted"
+                                    },
+                                    "ROY2j": {
+                                      "content": "Lobsters"
+                                    },
+                                    "uFz3m": {
+                                      "type": "frame",
+                                      "id": "t7rXaL",
+                                      "name": "End",
+                                      "width": "fit_content(0)",
                                       "height": "fill_container",
                                       "gap": 4,
                                       "alignItems": "center"
@@ -21231,246 +23472,6 @@
                                       ]
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "kSice",
-                                  "name": "Group · LinkedIn",
-                                  "width": "fill_container",
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": {
-                                    "bottom": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "layout": "vertical",
-                                  "gap": 6,
-                                  "padding": [
-                                    12,
-                                    14
-                                  ],
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "B01ew",
-                                      "name": "Head",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        0,
-                                        4,
-                                        0
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "frame",
-                                          "id": "Fz0bH",
-                                          "name": "T",
-                                          "layout": "vertical",
-                                          "gap": 2,
-                                          "children": [
-                                            {
-                                              "type": "text",
-                                              "id": "ilKIK",
-                                              "name": "LinkedIn",
-                                              "fill": "$ds-fg",
-                                              "content": "LinkedIn",
-                                              "fontFamily": "$font-heading",
-                                              "fontSize": 12,
-                                              "fontWeight": "600"
-                                            },
-                                            {
-                                              "type": "text",
-                                              "id": "HMlAF",
-                                              "name": "Skipped on the last 2 ru",
-                                              "fill": "$ds-fg-subtle",
-                                              "content": "Skipped on the last 2 runs: login wall",
-                                              "fontFamily": "$font-body",
-                                              "fontSize": 10,
-                                              "fontWeight": "normal"
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "U6loB",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "type": "icon",
-                                          "id": "YyyMa",
-                                          "name": "chevron-right",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-right",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "G3JfZ",
-                                  "name": "Group · Hacker News",
-                                  "width": "fill_container",
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": {
-                                    "bottom": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "layout": "vertical",
-                                  "gap": 6,
-                                  "padding": [
-                                    12,
-                                    14
-                                  ],
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "kmVbR",
-                                      "name": "Head",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        0,
-                                        4,
-                                        0
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "frame",
-                                          "id": "uzzEY",
-                                          "name": "T",
-                                          "layout": "vertical",
-                                          "gap": 2,
-                                          "children": [
-                                            {
-                                              "type": "text",
-                                              "id": "IGkB3",
-                                              "name": "Hacker News",
-                                              "fill": "$ds-fg",
-                                              "content": "Hacker News",
-                                              "fontFamily": "$font-heading",
-                                              "fontSize": 12,
-                                              "fontWeight": "600"
-                                            },
-                                            {
-                                              "type": "text",
-                                              "id": "ByoR8",
-                                              "name": "4 searches · no targets",
-                                              "fill": "$ds-fg-subtle",
-                                              "content": "4 searches · no targets",
-                                              "fontFamily": "$font-body",
-                                              "fontSize": 10,
-                                              "fontWeight": "normal"
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "N54p4J",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "type": "icon",
-                                          "id": "v017Sc",
-                                          "name": "chevron-right",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-right",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "eZp6a",
-                                  "name": "Group · X",
-                                  "width": "fill_container",
-                                  "stroke": "$ds-border-subtle",
-                                  "strokeWidth": {
-                                    "bottom": 1
-                                  },
-                                  "strokeAlignment": "inner",
-                                  "layout": "vertical",
-                                  "gap": 6,
-                                  "padding": [
-                                    12,
-                                    14
-                                  ],
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "Y8rpCA",
-                                      "name": "Head",
-                                      "width": "fill_container",
-                                      "padding": [
-                                        0,
-                                        0,
-                                        4,
-                                        0
-                                      ],
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "frame",
-                                          "id": "MyKrO",
-                                          "name": "T",
-                                          "layout": "vertical",
-                                          "gap": 2,
-                                          "children": [
-                                            {
-                                              "type": "text",
-                                              "id": "Qb8mQ",
-                                              "name": "X",
-                                              "fill": "$ds-fg",
-                                              "content": "X",
-                                              "fontFamily": "$font-heading",
-                                              "fontSize": 12,
-                                              "fontWeight": "600"
-                                            },
-                                            {
-                                              "type": "text",
-                                              "id": "o3DxA",
-                                              "name": "3 searches · 2 targets",
-                                              "fill": "$ds-fg-subtle",
-                                              "content": "3 searches · 2 targets",
-                                              "fontFamily": "$font-body",
-                                              "fontSize": 10,
-                                              "fontWeight": "normal"
-                                            }
-                                          ]
-                                        },
-                                        {
-                                          "type": "frame",
-                                          "id": "B04gLI",
-                                          "name": "Spacer",
-                                          "width": "fill_container",
-                                          "height": 1
-                                        },
-                                        {
-                                          "type": "icon",
-                                          "id": "OICZQ",
-                                          "name": "chevron-right",
-                                          "width": 12,
-                                          "height": 12,
-                                          "icon": "chevron-right",
-                                          "library": "lucide",
-                                          "fill": "$ds-fg-muted"
-                                        }
-                                      ]
-                                    }
-                                  ]
                                 }
                               ]
                             }
@@ -21635,7 +23636,7 @@
                       "id": "TLFHH",
                       "name": "No extra header",
                       "fill": "$ds-fg",
-                      "content": "Three sections",
+                      "content": "Sections and channels",
                       "fontFamily": "$font-heading",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -21649,7 +23650,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Research: brand terms, topics, competitors and browse depth. Voice: one text area for the brand voice. Channels: one group per site with its daily search budget and targets.",
+                  "content": "Research, Voice and Agent are sections. Each channel is a row under Channels: + adds a built-in site back or a new channel with a link, and the trash icon on a row removes it.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -21772,6 +23773,67 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "Terms, topics and targets use a multi-select control that accepts custom values. It needs no new control.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "giSQa",
+              "name": "Note · Agent",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "stroke": "$ds-border-subtle",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 6,
+              "padding": [
+                12,
+                14
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "j83CL",
+                  "name": "Head",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "veb05",
+                      "name": "at-sign",
+                      "width": 13,
+                      "height": 13,
+                      "icon": "bot",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "k1ELbt",
+                      "name": "Brand terms",
+                      "fill": "$ds-fg",
+                      "content": "Agent",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "ONBXQ",
+                  "name": "A new setting next to to",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Choose model opens the host's model picker, the one sessions use, so it lists each model's options. The page shows the current choice.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -22598,7 +24660,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Social Radar (project row): opens the analysis page (01, custom) and starts the Social Radar level.\nThreads: the thread list (02). A thread opens its mockup page (03, custom) with a summary menu; its reply ideas are drafts in that mockup.\nA new post is a thread too, tagged with its kind; it opens as a draft post on the same page (04).\nSettings: the settings page (06), a controls view with a section menu: Research, Voice and Channels.\nRuns: a section with a play action for run-daily. Each run holds its Session and its Digest, a read-only document (05).",
+                  "content": "Social Radar (project row): opens the analysis page (01, custom) and starts the Social Radar level.\nThreads: the thread list (02). A thread opens its mockup page (03, custom) with a summary menu; its reply ideas are drafts in that mockup.\nA new post is a thread too, tagged with its kind; it opens as a draft post on the same page (04).\nSettings: the settings page (06), a controls view with a menu of sections (Research, Voice, Agent) and channels you can add or remove.\nRuns: a section with a play action for run-daily. Each run holds its Session and its Digest, a read-only document (05).",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,

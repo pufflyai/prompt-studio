@@ -144,6 +144,13 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await expect(page.getByText("Writing voice", { exact: true })).toBeVisible();
     await expect(page.getByText("Brand terms", { exact: true })).toBeHidden();
     await shot(page, "06-settings");
+    // The Agent section shows the research agent; each channel row can be removed.
+    await page.getByRole("option", { name: "Agent", exact: true }).click();
+    await expect(page.getByText("pstdio.harness-codex.harness.codex")).toBeVisible();
+    const x = page.getByRole("option", { name: "X", exact: true });
+    await x.hover();
+    await x.getByRole("button", { name: "Remove channel" }).click();
+    await expect(x).toHaveCount(0);
   } finally {
     if (projectId) await request.delete(`/v1/projects/${projectId}`);
     rmSync(root, { recursive: true, force: true });

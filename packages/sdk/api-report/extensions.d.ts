@@ -2383,6 +2383,7 @@ interface ExtensionSessionsApi {
 interface ExtensionHarnessInput {
   harnessId: string;
   model?: string;
+  params?: Record<string, string | boolean>;
 }
 interface ExtensionEventsApi {
   emit<TPayload extends Struct>(event: EventRef<TPayload> | string, payload: TPayload): Promise<EventDeliveryResult>;
