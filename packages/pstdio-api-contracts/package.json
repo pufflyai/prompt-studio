@@ -10,6 +10,7 @@
     "./extension-webview-path": "./src/extension-webview-path.ts",
     "./history-reconciliation": "./src/history-reconciliation.ts",
     "./performance-diagnostics": "./src/performance-diagnostics.ts",
+    "./runtime-auth": "./src/runtime-auth.ts",
     "./session-attachment-types": "./src/session-attachment-types.ts"
   },
   "scripts": {

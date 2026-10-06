@@ -2,6 +2,10 @@
 
 Proposed: 2026-10-06
 
+## Status
+
+Partly superseded by [ADR 0057](0057-browser-sessions-in-per-origin-storage.md). The browser no longer keeps its secret in a cookie: it keeps it in per-origin storage and sends it as a header, and the desktop shell signs in with a login link like `pst`. Decision 1, the separate secret in decision 2, and the rule that only bearer holders sign a browser in still hold.
+
 ## Context
 
 The local runtime protects its API with the token in `runtime.json`. That file has mode 0600, so only the user's own processes can read it.

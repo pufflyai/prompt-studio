@@ -6,6 +6,7 @@ import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
+import { useApiFileParts } from "@/lib/api-file-url";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
@@ -149,6 +150,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const openWorkspaceOnSelection = input.panel.region !== "side";
 
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId);
+  const chatMessages = useApiFileParts(splitDisplay.messages);
   const effectiveStreaming = streaming || view.status === "in_progress" || pendingWork;
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
 
@@ -205,7 +207,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             // Keying on the session id gives each session its own draft and scroll
             // state, so switching sessions in the bubble is a real switch.
             conversationKey={`dashboard-workbench-session:${view.id}`}
-            messages={splitDisplay.messages}
+            messages={chatMessages}
             conversationNotices={
               <>
                 {commandComposer.notices}

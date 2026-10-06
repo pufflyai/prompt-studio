@@ -304,6 +304,7 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0055 — Temporary webview guest message filter](../adrs/0055-temporary-webview-guest-message-filter.md)
 - [0056 — Temporary KaTeX security override](../adrs/0056-temporary-katex-security-override.md)
 - [0060 — Board views are core project data](../adrs/0060-shared-project-board-views.md)
+- [0057 — Browser sessions in per-origin storage](../adrs/0057-browser-sessions-in-per-origin-storage.md)
 
 ## Lessons learned
 

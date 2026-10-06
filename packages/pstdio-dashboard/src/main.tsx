@@ -7,6 +7,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { apiRequest } from "@/lib/api";
+import { storeBrowserSession, takeBrowserLoginCode } from "@/lib/browser-session";
 import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
@@ -23,6 +24,23 @@ import { BrowserSignInRequired } from "@/shared/components/browser-sign-in-requi
 import { createDashboardWorkbench } from "./workbench";
 import "./i18n";
 
+// `pst` and the desktop app open a login link with a single-use code in the fragment (ADR 0057).
+// The code leaves the address bar first, so a reload or a copied URL never carries it.
+const signInFromLoginLink = async () => {
+  const { code, hash } = takeBrowserLoginCode(window.location.hash);
+  if (!code) return;
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${hash}`);
+  try {
+    const { secret } = await apiRequest<{ secret: string }>("/runtime/browser-session", {
+      method: "POST",
+      body: { code },
+    });
+    storeBrowserSession(secret);
+  } catch {
+    // A used or expired code leaves the browser signed out, and the sign-in page explains what to do.
+  }
+};
+
 // A runtime accepts a browser only with the session that `pst` or the desktop app gives it.
 // A server without auth has no runtime routes and answers 404.
 const isBrowserSignedOut = async () => {
@@ -36,7 +54,12 @@ const isBrowserSignedOut = async () => {
 
 const renderDashboard = async () => {
   const root = createRoot(document.getElementById("root")!);
+  await signInFromLoginLink();
   if (await isBrowserSignedOut()) {
+    // A login link opened in this tab only changes the fragment, which does not reload the page.
+    window.addEventListener("hashchange", () => {
+      if (takeBrowserLoginCode(window.location.hash).code) window.location.reload();
+    });
     root.render(
       <StrictMode>
         <WorkbenchThemeProvider>

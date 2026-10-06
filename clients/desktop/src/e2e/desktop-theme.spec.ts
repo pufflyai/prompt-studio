@@ -37,9 +37,9 @@ const startPersistentRuntime = async (home: string) => {
       );
       return;
     }
-    if (request.url === "/runtime/browser-session") {
-      response.setHeader("set-cookie", `pstdio_runtime_session=${token}; Path=/; HttpOnly; SameSite=Strict`);
-      response.writeHead(204).end();
+    if (request.url === "/runtime/browser-login") {
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({ url: `http://${request.headers.host}/#browser-login=fixture-code` }));
       return;
     }
     if (request.url === "/runtime/events") {

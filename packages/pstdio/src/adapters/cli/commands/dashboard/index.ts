@@ -1,4 +1,4 @@
-import { createRequest, PstdioApiError } from "@pstdio/sdk/client";
+import { createClient, PstdioApiError } from "@pstdio/sdk/client";
 import type { Argv } from "yargs";
 import { openBrowser as defaultOpenBrowser } from "../../dashboard/open-browser";
 
@@ -15,15 +15,13 @@ const defaultDeps: LaunchDeps = {
   openBrowser: defaultOpenBrowser,
 };
 
-// The runtime token stays in this process. The browser gets a single-use login link that sets
-// its own session cookie (ADR 0054). Servers without a token, and runtimes from before browser
+// The runtime token stays in this process. The browser gets a single-use login link and
+// redeems it for its own session secret (ADR 0057). Servers without a token, and runtimes from before browser
 // login links, need no sign-in step.
 const browserLoginUrl = async (apiUrl: string) => {
   if (!process.env.PSTDIO_API_TOKEN) return null;
   try {
-    const login = await createRequest({ baseUrl: apiUrl })<{ url: string }>("/runtime/browser-login", {
-      method: "POST",
-    });
+    const login = await createClient({ baseUrl: apiUrl }).runtime.createBrowserLogin();
     return login.url;
   } catch (error) {
     if (error instanceof PstdioApiError && error.status === 404) return null;

@@ -28,7 +28,7 @@ const startRuntime = (options: { loginRoute?: boolean } = {}) => {
       const url = new URL(request.url);
       const isLogin = url.pathname === "/runtime/browser-login" && request.method === "POST";
       return isLogin && options.loginRoute !== false
-        ? Response.json({ url: `${url.origin}/runtime/browser-login?code=one-time` })
+        ? Response.json({ url: `${url.origin}/#browser-login=one-time` })
         : Response.json({ error: "Not Found" }, { status: 404 });
     },
   });
@@ -79,7 +79,7 @@ describe("launch", () => {
     }
 
     expect(runtime.authorizations).toEqual(["Bearer runtime-secret"]);
-    expect(openBrowser).toEqual([`${runtime.origin}/runtime/browser-login?code=one-time`]);
+    expect(openBrowser).toEqual([`${runtime.origin}/#browser-login=one-time`]);
     expect(stdoutWriteSpy).toHaveBeenCalledWith(`Dashboard: ${runtime.origin}\n`);
   });
 
@@ -96,7 +96,7 @@ describe("launch", () => {
 
     expect(openBrowser).toEqual([]);
     expect(stdoutWriteSpy).toHaveBeenCalledWith(
-      `Sign in:   ${runtime.origin}/runtime/browser-login?code=one-time (single use, expires in 60 seconds)\n`,
+      `Sign in:   ${runtime.origin}/#browser-login=one-time (single use, expires in 60 seconds)\n`,
     );
   });
 

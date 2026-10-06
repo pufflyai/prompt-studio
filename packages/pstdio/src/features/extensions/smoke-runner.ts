@@ -83,11 +83,8 @@ export const runExtensionSmoke = async (input: {
     });
     result.browser = { name: "chromium", version: browser.browser()!.version() };
     // Page loads never sign a browser in (ADR 0054). The runner holds the runtime token, so it
-    // asks for the browser session cookie the same way the desktop app does.
-    const session = await browser.request.post(`${host.origin}/runtime/browser-session`, {
-      headers: { authorization: `Bearer ${host.token}` },
-    });
-    if (!session.ok()) throw new Error(`The runtime refused a browser session (HTTP ${session.status()}).`);
+    // creates a login link the same way `pst` does and opens it with the first page (ADR 0057).
+    const { url: loginUrl } = await client.runtime.createBrowserLogin();
     const dashboard = await browser.request.get(host.origin);
     if (!dashboard.ok() || !dashboard.headers()["content-type"]?.includes("text/html"))
       throw new Error(
@@ -97,6 +94,7 @@ export const runExtensionSmoke = async (input: {
     await exerciseSmokeDashboard({
       context: browser,
       origin: host.origin,
+      loginUrl,
       projectId: project.id,
       inventory,
       result,
