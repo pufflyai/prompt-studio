@@ -1,8 +1,9 @@
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "./dashboard-storage";
 import type { DashboardProjectSelectionPersistence } from "./project-selection-persistence";
+import { createSessionDraftAttachmentsPersistence } from "./session-draft-attachments-persistence";
 
-export interface DashboardSessionDraftPersistence {
+export interface DashboardSessionDraftPersistence extends ReturnType<typeof createSessionDraftAttachmentsPersistence> {
   getDraft(draftKey: string): string;
   setDraft(draftKey: string, text: string): void;
 }
@@ -41,6 +42,7 @@ export const createDashboardSessionDraftPersistence = (
   };
 
   return {
+    ...createSessionDraftAttachmentsPersistence(storage, input.namespace),
     getDraft: (draftKey) => {
       const key = resolveKey();
       if (!key) return "";

@@ -5,7 +5,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
-import { type ReactNode, useRef } from "react";
+import type { ReactNode } from "react";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
@@ -18,12 +18,12 @@ import {
 import { createDraftCommandSession } from "../chat/create-draft-command-session";
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
 import { openCreatedSessionFromDraft, submitSessionMessage } from "../chat/session-chat-actions";
-import { shouldShowPendingFollowUp } from "../chat/session-chat-state";
+import { updatePendingFollowUp } from "../chat/session-chat-state";
 import { sessionDraftSubmission } from "../chat/session-draft-submission";
 import { sessionUnsentActions } from "../chat/session-unsent-actions";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
-import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
+import type { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { useStopSession } from "../hooks/use-stop-session";
@@ -43,6 +43,7 @@ import { useSessionModelSelection } from "./use-session-model-selection";
 interface DashboardSessionChatPanelProps {
   input: WorkbenchPanelRenderInput;
   view: DashboardSessionView;
+  history: ReturnType<typeof useDashboardSessionMessages>;
   emptyStateTitle: string;
   emptyStateDescription: string;
   workspaceAction: ReactNode;
@@ -84,7 +85,7 @@ export const openSelectedWorkspace = (
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
-  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, drafts } = props;
+  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, drafts, history } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
   const sessionId = view.sessionId ?? null;
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
@@ -92,10 +93,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     return typeof value === "string" ? value : undefined;
   });
 
-  const { messages, loading, streaming, reconnect, refreshQueue, error, queueError } = useDashboardSessionMessages(
-    input,
-    view.sessionId,
-  );
+  const { messages, loading, streaming, reconnect, refreshQueue, error, queueError } = history;
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();
@@ -110,7 +108,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     harnessParamOverrides,
     setHarnessParamOverrides,
   } = useSessionModelSelection(view, projectId);
-  const draftAttachments = useSessionDraftAttachments(projectId);
+  const draftAttachments = useSessionDraftAttachments(projectId, view.draftKey, drafts);
   const { data: agents = [] } = useAgents(projectId);
   const canSubmit = canSubmitSessionMessage({
     agentOptions: agents.map((agent) => ({ value: agent.id, disabled: agent.availability.type === "NOT_FOUND" })),
@@ -118,6 +116,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     selectedModel,
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
+  const openCreatedSession = (createdSessionId: string, prompt: string) => {
+    if (projectId)
+      openCreatedSessionFromDraft({ input, draftKey: view.draftKey, sessionId: createdSessionId, prompt, projectId });
+  };
   const commandDraft = projectId
     ? {
         project_id: projectId,
@@ -136,13 +138,14 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     view.lastRequestStarted,
     commandDraft,
     (operation) => createDraftCommandSession(commandDraft, operation),
-    (sessionId, title) => {
-      if (projectId) openCreatedSessionFromDraft({ input, sessionId, prompt: title, projectId });
-    },
+    openCreatedSession,
   );
-  const { pendingFollowUp, setPendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } =
-    usePendingSessionFollowUp(sessionId, messages, view.lastRequestStarted, view.status === "in_progress");
-  const pendingIdRef = useRef(0);
+  const { pendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } = usePendingSessionFollowUp(
+    view.draftKey,
+    messages,
+    view.lastRequestStarted,
+    view.status === "in_progress",
+  );
   const openWorkspaceOnSelection = input.panel.region !== "side";
 
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId);
@@ -158,6 +161,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     const command = commandComposer.submit(text, attachments, questionResponse, onSubmitted);
     if (command) return command;
     return submitSessionMessage({
+      conversationKey: view.draftKey,
       sessionId,
       lastRequestStarted: view.lastRequestStarted,
       projectId,
@@ -169,20 +173,14 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
       attachments,
       questionResponse,
       messages,
-      pendingIdRef,
-      setPendingFollowUp,
       createSession,
       followUp,
       reconnect,
       onSubmitted,
-      onSessionCreated: (sessionId, pending) => {
-        if (!projectId) return;
-        openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId, pending });
-      },
+      onSessionCreated: (createdSessionId) => openCreatedSession(createdSessionId, text),
     });
   };
-  const unsent =
-    pendingFollowUp?.failure && shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null;
+  const unsent = pendingFollowUp?.failure ? pendingFollowUp : null;
 
   const { handleQueuedFollowUpUpdate, handleQueuedFollowUpRemove, handleQueuedFollowUpMove } = useQueuedSessionMessages(
     { sessionId, queuedFollowUps: splitDisplay.queuedFollowUps, refreshQueue },
@@ -193,7 +191,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     controls: commandComposer.controls,
   };
   const submit = sessionDraftSubmission(send, draftAttachments.attachments, () => {
-    chatDraft.clear();
+    chatDraft.change("");
     draftAttachments.clearSubmittedAttachments();
   });
 
@@ -221,10 +219,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
                       ? {
                           notice: unsent.failure,
                           ...sessionUnsentActions(unsent, {
-                            clear: () => setPendingFollowUp(null),
+                            clear: () => updatePendingFollowUp(view.draftKey, null),
                             send,
                             restore: (text, attachments) => {
-                              chatDraft.restore(text);
+                              chatDraft.change(text);
                               draftAttachments.restoreAttachments(attachments);
                             },
                           }),
@@ -245,8 +243,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             emptyStateDescription={emptyStateDescription}
             loaderComponent={<ChatSkeleton />}
             chatInputPlaceholder="Reply to the agent..."
-            chatInputDefaultValue={chatDraft.seed}
-            onChatInputChange={commandComposer.change}
+            chatInputDefaultValue={chatDraft.text}
+            onChatInputChange={chatDraft.change}
             chatInputCommands={commandComposer.suggestions}
             composerDecision={decision}
             attachedResources={attachedResources}

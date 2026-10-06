@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
-import { type DashboardSessionView, draftSessionViewId } from "../data/dashboard-sessions";
+import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
 import type { HarnessParamValues } from "./harness-param-values";
 
+// The chat panel is keyed by its view, so these picks always belong to one session or draft.
 export const useSessionModelSelection = (view: DashboardSessionView, projectId: string | undefined) => {
   const [recent] = useState(() => (view.sessionId ? undefined : readRecentHarnessSelection(projectId)));
   const [selectedAgent, setSelectedAgent] = useState(view.agent ?? recent?.harnessId ?? "");
@@ -17,22 +18,12 @@ export const useSessionModelSelection = (view: DashboardSessionView, projectId: 
   useEffect(() => {
     const previous = previousViewRef.current;
     previousViewRef.current = view;
-    const isViewSwitch = previous.id !== view.id;
-    const recent = isViewSwitch && !view.sessionId ? readRecentHarnessSelection(projectId) : undefined;
-    const nextView = recent
-      ? { ...view, agent: recent.harnessId, lastSelectedModel: recent.model ?? null, params: recent.params ?? {} }
-      : view;
-    const updates = resolveSessionSelectionSync({
-      isViewSwitch,
-      isPreviousViewDraft: previous.id === draftSessionViewId,
-      previous,
-      view: nextView,
-    });
+    const updates = resolveSessionSelectionSync(previous, view);
     if (updates.agent !== undefined) setSelectedAgent(updates.agent);
     if (updates.model !== undefined) setSelectedModel(updates.model);
     if (updates.workspaceId !== undefined) setSelectedWorkspaceId(updates.workspaceId);
     if (updates.params !== undefined) setHarnessParamOverrides(updates.params);
-  }, [projectId, view]);
+  }, [view]);
 
   return {
     selectedAgent,

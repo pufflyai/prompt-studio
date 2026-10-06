@@ -1,52 +1,52 @@
-import { expect, test } from "bun:test";
+import { beforeEach, expect, test } from "bun:test";
 import { type FollowUpMutation, submitSessionMessage } from "./session-chat-actions";
-import {
-  mergeMessagesWithPendingFollowUp,
-  type PendingFollowUpState,
-  shouldShowPendingFollowUp,
-} from "./session-chat-state";
+import { getPendingFollowUp, mergeMessagesWithPendingFollowUp, updatePendingFollowUp } from "./session-chat-state";
 
-let pending: PendingFollowUpState | null = null;
-// The submission assigns this through a callback, which TypeScript cannot see after a reset.
-const current = (): PendingFollowUpState | null => pending;
+type FollowUpResult = Awaited<ReturnType<FollowUpMutation["mutateAsync"]>>;
+
+const deferred = () => {
+  let resolve!: (result: FollowUpResult) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<FollowUpResult>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
+};
+
+const current = () => getPendingFollowUp("session-1");
 const submission = (followUp: FollowUpMutation, onSubmitted: () => void, answers?: string[][]) =>
   submitSessionMessage({
+    conversationKey: "session-1",
     sessionId: "session-1",
     projectId: "project-1",
     agent: "codex",
     model: "model-1",
     text: "Next turn",
     messages: [],
-    pendingIdRef: { current: 0 },
-    setPendingFollowUp: (next) => {
-      pending = typeof next === "function" ? next(pending) : next;
-    },
-    createSession: {
-      mutate: () => {
-        throw new Error("Must use existing session");
-      },
-    },
+    createSession: { mutateAsync: () => Promise.reject(new Error("Must use existing session")) },
     followUp,
     reconnect: () => undefined,
     onSubmitted,
     questionResponse: answers ? { answers } : undefined,
   });
 
+beforeEach(() => updatePendingFollowUp("session-1", null));
+
 test("hands off the draft immediately but waits for server acceptance before completing", async () => {
-  let accept!: Parameters<FollowUpMutation["mutate"]>[1]["onSuccess"];
+  const response = deferred();
   let submitted = false;
   const result = submission(
     {
-      mutate: (input, options) => {
+      mutateAsync: (input) => {
         expect(input).toMatchObject({ sessionId: "session-1", prompt: "Next turn", agent: "codex", model: "model-1" });
-        accept = options.onSuccess;
+        return response.promise;
       },
     },
     () => {
       submitted = true;
     },
   );
-  expect(result).toBeInstanceOf(Promise);
   expect(submitted).toBe(true);
   expect(current()?.prompt).toBe("Next turn");
   let settled = false;
@@ -55,15 +55,14 @@ test("hands off the draft immediately but waits for server acceptance before com
   });
   await Promise.resolve();
   expect(settled).toBe(false);
-  accept({ status: "in_progress", followUp: { status: "queued", queue_position: 1 } });
+  response.resolve({ status: "in_progress", followUp: { status: "queued", queue_position: 1 } });
   await result;
   expect(submitted).toBe(true);
 });
 
 test("a follow-up shows in the conversation while it is being sent", () => {
-  pending = null;
   const beforeSubmission = Date.now();
-  void submission({ mutate: () => undefined }, () => undefined);
+  void submission({ mutateAsync: () => deferred().promise }, () => undefined);
   expect(current()?.submittedAt).toBeGreaterThanOrEqual(beforeSubmission);
   expect(current()?.submittedAt).toBeLessThanOrEqual(Date.now());
   expect(mergeMessagesWithPendingFollowUp([], current()).map((message) => message.parts[0])).toEqual([
@@ -73,21 +72,10 @@ test("a follow-up shows in the conversation while it is being sent", () => {
 });
 
 test("a follow-up that cannot be sent stays in the conversation as unsent", async () => {
-  pending = null;
-  let reject!: Parameters<FollowUpMutation["mutate"]>[1]["onError"];
   let submitted = false;
-  const result = submission(
-    {
-      mutate: (_input, options) => {
-        reject = options.onError;
-      },
-    },
-    () => {
-      submitted = true;
-    },
-  );
-  reject(new TypeError("Failed to fetch"));
-  await result;
+  await submission({ mutateAsync: () => Promise.reject(new TypeError("Failed to fetch")) }, () => {
+    submitted = true;
+  });
   expect(submitted).toBe(true);
   expect(current()?.failure).toEqual({ message: "The network is unavailable.", temporary: true });
   expect(mergeMessagesWithPendingFollowUp([], current())).toEqual([
@@ -96,43 +84,29 @@ test("a follow-up that cannot be sent stays in the conversation as unsent", asyn
 });
 
 test("a queued follow-up leaves the conversation to the queued list", async () => {
-  pending = null;
-  const result = submission(
-    {
-      mutate: (_input, options) => {
-        options.onSuccess({ status: "in_progress", followUp: { status: "queued", queue_position: 2 } });
-      },
-    },
+  await submission(
+    { mutateAsync: async () => ({ status: "in_progress", followUp: { status: "queued", queue_position: 2 } }) },
     () => undefined,
   );
-  await result;
   expect(current()).toBeNull();
 });
 
 test("an accepted question answer clears its pending submission without a new user turn", async () => {
-  pending = null;
-  let accept!: Parameters<FollowUpMutation["mutate"]>[1]["onSuccess"];
+  const response = deferred();
   let submitted = false;
-  const result = submission({
-    mutate: (_input, options) => {
-      accept = options.onSuccess;
-    },
-  }, () => {
+  const result = submission({ mutateAsync: () => response.promise }, () => {
     submitted = true;
   }, [["Blue"]]);
   expect(submitted).toBe(false);
-  accept({ status: "in_progress", followUp: { status: "dispatched" } });
+  response.resolve({ status: "in_progress", followUp: { status: "dispatched" } });
   await result;
   expect(submitted).toBe(true);
   expect(current()).toBeNull();
 });
 
 test("a rejected question reply preserves the form for retry", async () => {
-  pending = null;
   let submitted = false;
-  const result = submission({
-    mutate: (_input, options) => options.onError(new Error("Native reply rejected")),
-  }, () => {
+  const result = submission({ mutateAsync: () => Promise.reject(new Error("Native reply rejected")) }, () => {
     submitted = true;
   }, [["Blue"]]);
   await expect(result).rejects.toThrow("Native reply rejected");
@@ -141,15 +115,13 @@ test("a rejected question reply preserves the form for retry", async () => {
 });
 
 test("shows an accepted follow-up once while its run timestamp is still syncing", () => {
-  pending = null;
-  void submission({ mutate: () => undefined }, () => undefined);
+  void submission({ mutateAsync: () => deferred().promise }, () => undefined);
   const accepted = [{ id: "accepted", role: "user" as const, parts: [{ type: "text" as const, text: "Next turn" }] }];
   expect(mergeMessagesWithPendingFollowUp(accepted, current())).toEqual(accepted);
 });
 
 test("assistant messages arriving during submission keep the pending user turn visible", () => {
-  pending = null;
-  void submission({ mutate: () => undefined }, () => undefined);
+  void submission({ mutateAsync: () => deferred().promise }, () => undefined);
   const streaming = [
     { id: "streaming", role: "assistant" as const, parts: [{ type: "text" as const, text: "Still working" }] },
   ];
@@ -160,16 +132,14 @@ test("assistant messages arriving during submission keep the pending user turn v
 });
 
 test("another user turn does not acknowledge a different pending submission", () => {
-  pending = null;
-  void submission({ mutate: () => undefined }, () => undefined);
+  void submission({ mutateAsync: () => deferred().promise }, () => undefined);
   const other = [{ id: "other", role: "user" as const, parts: [{ type: "text" as const, text: "A different turn" }] }];
   expect(mergeMessagesWithPendingFollowUp(other, current())).toHaveLength(3);
 });
 
-test("a session follow-up does not become work in a new draft", () => {
-  pending = null;
-  void submission({ mutate: () => undefined }, () => undefined);
-  expect(shouldShowPendingFollowUp(current(), null)).toBe(false);
-  expect(shouldShowPendingFollowUp(current(), "session-1")).toBe(true);
-  expect(shouldShowPendingFollowUp(current(), "session-2")).toBe(false);
+test("a session follow-up belongs only to its own session", () => {
+  void submission({ mutateAsync: () => deferred().promise }, () => undefined);
+  expect(current()?.prompt).toBe("Next turn");
+  expect(getPendingFollowUp("session-2")).toBeNull();
+  expect(getPendingFollowUp("draft")).toBeNull();
 });
