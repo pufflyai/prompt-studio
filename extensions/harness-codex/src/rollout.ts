@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
@@ -30,24 +30,33 @@ interface RolloutState {
 export const codexSessionsRoot = () => join(process.env.CODEX_HOME ?? join(homedir(), ".codex"), "sessions");
 
 // Rollout files live under <sessions>/<year>/<month>/<day>/rollout-<timestamp>-<thread-id>.jsonl;
-// the timestamp is unknown at lookup time, so match on the thread-id suffix.
-export const findRolloutPath = (agentSessionId: string, root = codexSessionsRoot()) => {
-  let entries: string[];
+// the timestamp is unknown at lookup time, so match on the thread-id suffix. Harness code runs in
+// the API process, so the scan is async, and a thread keeps its file, so a found path is cached.
+const rolloutPaths = new Map<string, string>();
 
+export const findRolloutPath = async (agentSessionId: string, root = codexSessionsRoot()) => {
+  const key = join(root, agentSessionId);
+  const cached = rolloutPaths.get(key);
+  if (cached) return cached;
+
+  let entries: string[];
   try {
-    entries = readdirSync(root, { recursive: true }) as string[];
+    entries = await readdir(root, { recursive: true });
   } catch {
     return null;
   }
 
   const match = entries.find((entry) => entry.endsWith(`-${agentSessionId}.jsonl`));
-  return match ? join(root, match) : null;
+  if (!match) return null;
+  const path = join(root, match);
+  rolloutPaths.set(key, path);
+  return path;
 };
 
 export const readRollout = async (agentSessionId: string) => {
-  const path = findRolloutPath(agentSessionId);
+  const path = await findRolloutPath(agentSessionId);
   if (!path) throw new Error("Native transcript unavailable");
-  return readFileSync(path, "utf8");
+  return readFile(path, "utf8");
 };
 
 const contentText = (content: RolloutMessageContent[] | undefined) =>
