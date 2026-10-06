@@ -396,14 +396,12 @@
       },
       "dependencies": {
         "@tanstack/react-db": "^0.1.74",
-        "mustache": "^4.2.0",
         "react": "^19.2.4",
         "yargs": "^18.0.0",
       },
       "devDependencies": {
         "@pstdio/sdk": "workspace:*",
         "@types/bun": "1.4.2",
-        "@types/mustache": "^4.2.6",
         "@types/node": "^24.3.0",
         "@types/react": "^19.2.14",
         "@types/yargs": "^17.0.35",
@@ -430,7 +428,6 @@
         "@hono/zod-openapi": "^1.1.5",
         "drizzle-orm": "^0.45.1",
         "hono": "^4.10.7",
-        "mustache": "^4.2.0",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-api-runtime-host": "workspace:*",
         "pstdio-db": "workspace:*",
@@ -444,7 +441,6 @@
       "devDependencies": {
         "@electric-sql/pglite": "^0.3.15",
         "@types/bun": "1.4.2",
-        "@types/mustache": "^4.2.6",
         "extension-lab": "workspace:*",
         "pstdio-planner": "workspace:*",
         "pstdio-skills": "workspace:*",
@@ -618,8 +614,6 @@
       "version": "0.40.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
-        "@dnd-kit/sortable": "^10.0.0",
-        "@dnd-kit/utilities": "^3.2.2",
         "@pstdio/sdk": "workspace:^",
         "@pstdio/ui": "workspace:^",
         "@tanstack/react-hotkeys": "0.10.0",

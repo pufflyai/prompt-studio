@@ -19,7 +19,3 @@ export const listResourceAnchors = (row: SyncedRow) => {
   if (!Array.isArray(anchors)) return [];
   return anchors.filter(isResourceAnchor);
 };
-
-export const findResourceAnchor = (row: SyncedRow, type: string) => {
-  return listResourceAnchors(row).find((anchor) => anchor.type === type);
-};

@@ -1,4 +1,3 @@
-import type { CommandRef, EventRef } from "@pstdio/sdk/extensions";
 import type {
   ExtensionDiagnostic,
   ExtensionRuntime,
@@ -85,9 +84,3 @@ export const createRegistryIndex = (): RegistryIndex => ({
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
-export const refId = (ref: CommandRef | EventRef | string | undefined): string | null => {
-  if (typeof ref === "string" && ref.length > 0) return ref;
-  if (isRecord(ref) && typeof ref.id === "string" && ref.id.length > 0) return ref.id;
-  return null;
-};
