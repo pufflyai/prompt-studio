@@ -8,7 +8,7 @@ import { chromium, expect as expectPage } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary } from "./packaged-helpers";
-import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
@@ -192,6 +192,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
         JSON.stringify({ state: { sessionModalState: "closed" }, version: 0 }),
       );
     }, project.id);
+    await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}`, { waitUntil: "domcontentloaded" });
     await page.getByText("Settings", { exact: true }).last().click();
     const settings = page.getByRole("dialog").last();

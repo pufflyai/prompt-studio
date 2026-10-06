@@ -24,8 +24,8 @@ export const provisionRuntimeSession = async (session: RuntimeSession, runtime: 
   });
   if (!response.ok) throw new Error(`Runtime browser session provisioning failed with status ${response.status}`);
 
-  const cookies = await session.cookies.get({ name: COOKIE_NAME, url: runtime.origin });
-  const cookie = cookies.find((candidate) => candidate.value === runtime.token);
+  // The runtime chooses the cookie value. It is its own browser session secret, not the token.
+  const [cookie] = await session.cookies.get({ name: COOKIE_NAME, url: runtime.origin });
   if (!cookie?.httpOnly || cookie.sameSite?.toLowerCase() !== "strict") {
     throw new Error("Runtime did not provision the expected protected runtime session cookie");
   }

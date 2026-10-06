@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mockFetchSSE } from "@/test-utils/mock-fetch";
+import { mockFetchSSE, restoreFetch } from "@/test-utils/mock-fetch";
 import { getCollection } from "./collections";
 import { startSync } from "./sync-client";
 
@@ -16,6 +16,7 @@ let activeStream: ReturnType<typeof mockFetchSSE> | null = null;
 afterEach(() => {
   activeStream?.close();
   activeStream = null;
+  restoreFetch();
 });
 
 const setupSSE = () => {

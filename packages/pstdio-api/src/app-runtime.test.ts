@@ -41,9 +41,45 @@ describe("runtime authentication", () => {
 
     expect(res.status).toBe(204);
     expect(await res.text()).toBe("");
-    expect(res.headers.getSetCookie()).toEqual([
-      "pstdio_runtime_session=runtime-secret; Path=/; HttpOnly; SameSite=Strict",
-    ]);
+    const [cookie] = res.headers.getSetCookie();
+    expect(cookie).toMatch(/^pstdio_runtime_session=[^;]+; Path=\/; HttpOnly; SameSite=Strict$/);
+    expect(cookie).not.toContain("runtime-secret");
+  });
+
+  test("signs a browser in once through a login code that a bearer holder created", async () => {
+    const created = await handle.app.request(`${runtimeOrigin}/runtime/browser-login`, {
+      method: "POST",
+      headers: { authorization: "Bearer runtime-secret" },
+    });
+    expect(created.status).toBe(200);
+    const { url } = (await created.json()) as { url: string };
+    expect(url).toStartWith(`${runtimeOrigin}/runtime/browser-login?code=`);
+    expect(url).not.toContain("runtime-secret");
+
+    const login = await handle.app.request(url);
+    expect(login.status).toBe(302);
+    expect(login.headers.get("location")).toBe("/");
+    const cookie = login.headers.get("set-cookie")!.split(";", 1)[0]!;
+    const projects = await handle.app.request(`${runtimeOrigin}/v1/projects`, { headers: { cookie } });
+    expect(projects.status).toBe(200);
+
+    const reused = await handle.app.request(url);
+    expect(reused.status).toBe(302);
+    expect(reused.headers.get("set-cookie")).toBeNull();
+  });
+
+  test("only bearer holders can create a login code", async () => {
+    const res = await handle.app.request(`${runtimeOrigin}/runtime/browser-login`, { method: "POST" });
+
+    expect(res.status).toBe(401);
+  });
+
+  test("does not accept the runtime token as a cookie", async () => {
+    const res = await handle.app.request(`${runtimeOrigin}/v1/projects`, {
+      headers: { cookie: "pstdio_runtime_session=runtime-secret", origin: runtimeOrigin },
+    });
+
+    expect(res.status).toBe(401);
   });
 
   test("accepts exact-origin cookie auth for REST and SSE", async () => {

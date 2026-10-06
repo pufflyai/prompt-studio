@@ -364,5 +364,9 @@
   },
   "workspace": {
     "title": "Espacio de trabajo"
+  },
+  "browserSignIn": {
+    "title": "Abre Prompt Studio desde una terminal",
+    "description": "Este navegador no ha iniciado sesión. Ejecuta este comando en una terminal para abrir un panel con la sesión iniciada."
   }
 }

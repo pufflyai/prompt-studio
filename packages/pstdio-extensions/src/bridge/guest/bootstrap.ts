@@ -67,6 +67,22 @@ const ensureMount = () => {
   return element;
 };
 
+// The rimless guest accepts a handshake and calls from any window, so a sibling or nested frame
+// could mount its own module with this webview's host capabilities. Only the host page that embeds
+// this frame may use the bridge. The window identity is the check: this opaque-origin frame has no
+// trusted copy of the host origin, and only the host page can post with `source === window.parent`.
+const acceptBridgeMessagesOnlyFromHost = () => {
+  window.addEventListener(
+    "message",
+    (event) => {
+      const action = (event.data as { action?: unknown } | null)?.action;
+      if (typeof action !== "string" || !action.startsWith("RIMLESS/")) return;
+      if (event.source !== window.parent) event.stopImmediatePropagation();
+    },
+    { capture: true },
+  );
+};
+
 const isEditableTarget = (target: EventTarget | null) =>
   target instanceof HTMLInputElement ||
   target instanceof HTMLTextAreaElement ||
@@ -75,6 +91,7 @@ const isEditableTarget = (target: EventTarget | null) =>
 
 const start = async () => {
   installOpaqueOriginStorageFallbacks();
+  acceptBridgeMessagesOnlyFromHost();
 
   const propsStore = createPropsStore<unknown>(undefined);
   const hostEventListeners = new Map<string, Set<(payload: unknown) => void>>();

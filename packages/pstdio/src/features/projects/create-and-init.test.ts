@@ -1,9 +1,10 @@
-import { beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, test } from "bun:test";
 import { resetApiClient } from "@/features/api-client";
-import { mockFetchSequence } from "@/test-utils/mock-fetch";
+import { mockFetchSequence, restoreFetch } from "@/test-utils/mock-fetch";
 import { createAndInitProject } from "./create-and-init";
 
 beforeEach(resetApiClient);
+afterEach(restoreFetch);
 test("opens a folder through the server-owned initialization flow", async () => {
   mockFetchSequence([
     { status: 201, body: { id: "project", name: "1234" } },

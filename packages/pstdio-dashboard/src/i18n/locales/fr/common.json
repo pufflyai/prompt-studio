@@ -364,5 +364,9 @@
   },
   "workspace": {
     "title": "Espace de travail"
+  },
+  "browserSignIn": {
+    "title": "Ouvrez Prompt Studio depuis un terminal",
+    "description": "Ce navigateur n'est pas connecté. Exécutez cette commande dans un terminal pour ouvrir un tableau de bord connecté."
   }
 }

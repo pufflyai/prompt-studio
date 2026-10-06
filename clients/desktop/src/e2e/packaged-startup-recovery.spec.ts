@@ -7,6 +7,7 @@ import { waitForWorkbenchPage } from "./desktop-pages";
 import {
   createPackagedHome,
   disposePackagedApp,
+  launchPackagedApp,
   launchPackagedWindow,
   type PackagedWindow,
   readDescriptor,
@@ -110,6 +111,24 @@ test("keeps an uncertain runtime owner intact until its descriptor is repaired",
     await waitForExit(app.child);
     expect(await close).toMatchObject({ exitCode: 0 });
     expect(readDescriptor(home)).toBeNull();
+  } finally {
+    await disposePackagedApp(app);
+    await removePackagedHome(home);
+  }
+});
+
+test("quits from recovery after the runtime crashes", async () => {
+  const home = createPackagedHome();
+  let app: PackagedWindow | null = null;
+  try {
+    const launched = await launchPackagedApp(home);
+    app = launched;
+    process.kill(launched.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
+    await waitForVisibleElement(app.lifecyclePage, '[role="alert"] :is(h1, h2, h3)', "Prompt Studio needs attention");
+
+    await app.lifecyclePage.getByRole("button", { name: "Quit", exact: true }).click();
+
+    await waitForExit(app.child);
   } finally {
     await disposePackagedApp(app);
     await removePackagedHome(home);
