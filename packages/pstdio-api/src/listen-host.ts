@@ -7,7 +7,5 @@ export const isLoopbackHost = (host: string) => LOOPBACK_HOSTS.has(host.toLowerC
 // own interfaces, so it needs a token too.
 export const assertListenHostAllowed = (host: string, token: string | undefined) => {
   if (token || isLoopbackHost(host)) return;
-  throw new Error(
-    `Refusing to listen on ${host} without an API token. Listen on 127.0.0.1, or set PSTDIO_API_TOKEN.`,
-  );
+  throw new Error(`Refusing to listen on ${host} without an API token. Listen on 127.0.0.1, or set PSTDIO_API_TOKEN.`);
 };
