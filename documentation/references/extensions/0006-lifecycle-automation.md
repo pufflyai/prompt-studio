@@ -1,4 +1,6 @@
-# Extension lifecycle automation
+# Lifecycle automation
+
+Extensions automate work with commands, middleware, hooks, and schedules. This page explains how they fit together.
 
 Commands are the unit of work. Middleware can change or reject a command before its handler runs. Hooks observe emitted events. Schedules invoke commands at configured times.
 
@@ -8,7 +10,7 @@ Declare commands with `defineCommand` and middleware with `defineMiddleware`. Re
 
 A middleware handler receives `(ctx, params)`. It returns a decision from `ctx.commands`: `continue`, `patchParams`, `replaceParams`, `replaceInvocation`, or `reject`. Returning nothing also continues. There is no `next()` callback. Middleware can protect a transition only when the transition runs through the command it targets.
 
-Use provider-exported command refs for cross-extension calls. Keep ticket, status, tag, and managed-attempt policy in the Planner extension. These are not core host resources.
+To call another extension's command, use the command ref that extension exports. Tickets, statuses, tags, and attempts belong to the Planner extension, not to the core host.
 
 ## Events and payloads
 
@@ -16,7 +18,7 @@ Declare hooks with `defineHook({ id, event, run })` and register them in `hooks`
 
 Callbacks receive the context and a typed payload. Payload fields use camelCase and include the resource identifiers needed to load further data. Use their exported types instead of assuming every event shares one payload.
 
-Most hooks perform follow-up work after an accepted change. Provisioning is a blocking lifecycle boundary: the host awaits `workspaceEvents.provision` before declaring a workspace ready. `workspaceEvents.ready` is for setup after readiness. See the [runtime boundaries](../architecture/0011-hooks-runtime-boundaries.md).
+Most hooks do follow-up work after a change was accepted. Provisioning is different: the host waits for `workspaceEvents.provision` hooks before it marks a workspace ready. `workspaceEvents.ready` is for setup after readiness. See the [hook runtime boundaries](../architecture/0011-hooks-runtime-boundaries.md).
 
 ## Schedules and durable work
 
@@ -28,7 +30,7 @@ Use `ctx.automation.enqueue` for accepted work that needs a durable run record b
 
 Log rejected middleware decisions with the command and resource IDs. Record command outcome and duration. Report hook failures at the event boundary; a failed background hook must not be presented as rollback of an already accepted change.
 
-Never put credentials or connection secrets in logs. Use the [runtime logging requirements](../../requirements/api/0001-error-logs.md) for redaction and diagnostics.
+Never put credentials or connection secrets in logs.
 
 ## Examples
 

@@ -1,4 +1,8 @@
-# Workbench navigation
+# Navigation
+
+The workbench navigates only to explicit targets. This page lists the target kinds, how navigation validates them, and how history and mounted views behave.
+
+## Targets
 
 `workbench.navigation.openTarget()` accepts explicit targets:
 
@@ -12,9 +16,13 @@
 
 A page target may carry `resource`, `section`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
 
+## Validation and history
+
 Navigation validates the complete target before changing state. An unresolved page or inactive panel owner produces one error and leaves location, history, breadcrumbs, page instances, mode placements, selection, and visibility unchanged. Commands and external links remain standalone actions. It does not search by resource kind or fall back to `main`.
 
 Browser Back and Forward replay canonical `PageLocation` values. Replay replaces the active owner set and does not push another history entry.
+
+## Mounted views
 
 Visited registered views remain mounted when navigation hides them. Returning to a page or mode reuses its live view, including its iframe and local state. Docked views have stable portal hosts owned by the workbench. Moving a tab changes the host's DOM parent without remounting its React content. Hidden views do not take layout space or accept user input.
 

@@ -1,10 +1,19 @@
 ---
 import { siteMetadata } from "../config/site-metadata";
+import type { LandingPage } from "../content/landing-pages";
 import { landingMetadata } from "../services/landing-metadata";
 
-const { title, description, canonicalUrl, structuredData, indexable } = landingMetadata(Astro.url.pathname);
-const { banner, themeColor } = siteMetadata;
-const bannerUrl = new URL(banner.path, siteMetadata.siteUrl).href;
+interface Props {
+  /** The catalog page being served. The not-found page has none. */
+  page?: LandingPage;
+}
+
+const { page } = Astro.props;
+const { title, description, canonicalUrl, structuredData, banner, indexable } = landingMetadata(
+  page,
+  Astro.url.pathname,
+);
+const { themeColor } = siteMetadata;
 const faviconSvgUrl = new URL(siteMetadata.faviconSvgPath, siteMetadata.siteUrl).href;
 const faviconPngUrl = new URL(siteMetadata.faviconPngPath, siteMetadata.siteUrl).href;
 const appleTouchIconUrl = new URL(siteMetadata.appleTouchIconPath, siteMetadata.siteUrl).href;
@@ -23,12 +32,12 @@ const appleTouchIconUrl = new URL(siteMetadata.appleTouchIconPath, siteMetadata.
     {indexable && <link rel="canonical" href={canonicalUrl} />}
 
     <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={page?.view === "post" ? "article" : "website"} />
     <meta property="og:site_name" content="Prompt Studio" />
     <meta property="og:locale" content={siteMetadata.locale} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={bannerUrl} />
+    <meta property="og:image" content={banner.url} />
     <meta property="og:image:width" content={String(banner.width)} />
     <meta property="og:image:height" content={String(banner.height)} />
     <meta property="og:image:alt" content={banner.alt} />
@@ -37,7 +46,7 @@ const appleTouchIconUrl = new URL(siteMetadata.appleTouchIconPath, siteMetadata.
     <meta name="twitter:title" content={title} />
     <meta name="twitter:url" content={canonicalUrl} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={bannerUrl} />
+    <meta name="twitter:image" content={banner.url} />
     <meta name="twitter:image:alt" content={banner.alt} />
 
     <meta name="theme-color" content={themeColor.light} media="(prefers-color-scheme: light)" />

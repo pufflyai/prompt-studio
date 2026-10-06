@@ -1,16 +1,10 @@
----
-status: "shipped"
-created: "2026-08-18T17:03:48.668Z"
-updated: "2026-08-19"
----
+# Renderer edit and refresh
 
-# Renderer Edit and Refresh Lifecycle
+This page explains how native file editors load, save, and refresh content, and how native views cancel and refresh their reads.
 
-## Summary
+Editable native file renderers have one owner for loaded content, the current draft, one active save, errors, and external invalidation. Opening or saving an editor does not remount it, lose the selection, or repeat unchanged saves.
 
-Editable native file renderers have one owner for loaded content, the current draft, one active save, errors, and external invalidation. Opening or saving an editor does not remount it, destroy selection, or cause repeated unchanged saves.
-
-## Goals
+## Guarantees
 
 - Opening unchanged content performs no save.
 - Editing keeps focus and selection before, during, and after save.
@@ -92,13 +86,11 @@ Each file save receives a host operation origin. The file renderer adapter place
 - Without revisions, a deferred generic external event performs one broader reload after local save state settles.
 - A generic event cannot detect every concurrent write. It still never overwrites a known local draft.
 
-Revisions are compared as ordered strings. Current Planner revisions are ISO timestamps from the existing ticket or file `updatedAt` value.
+Revisions are compared as ordered strings. Planner, for example, uses the ISO timestamp from the ticket or file `updatedAt` value.
 
 ## Focus and Selection
 
 Debounce, save completion, self invalidation, and unchanged clean reloads keep the editor key stable. The renderer does not force focus after navigation or after a real external document change.
-
-The Planner browser regression holds a non-collapsed DOM selection, waits beyond the debounce, waits for stored content to confirm the save response, and checks both the active element and selection before and after completion.
 
 ## Errors
 
@@ -115,15 +107,6 @@ The Planner browser regression holds a non-collapsed DOM selection, waits beyond
 - It does not provide an offline write queue.
 - A browser cannot wait for an asynchronous save during forced page termination. The renderer still starts the flush and retains ownership for every lifecycle where the page remains active.
 
-## Shipped Surfaces
-
-- Reusable controller: `packages/pstdio-workbench/src/react/renderers/file/file-renderer-edit-state.ts`
-- React integration: `packages/pstdio-workbench/src/react/renderers/file/file-renderer-view.tsx`
-- Registry envelope: `packages/pstdio-workbench/src/core/registries/renderers/file-renderer-registry.ts`
-- Extension adapter and host refresh: `packages/pstdio-workbench/src/extensions`
-- Dashboard event feed: `packages/pstdio-dashboard/src/shared/extensions/extension-webview-broadcast.ts`
-- Real consumer: Planner ticket-content file view
-
 ## Read ownership and cancellation
 
 The workbench owns read slots by stable placement, resource, and read lane. Each slot permits one active load and one latest pending refresh. Repeated events coalesce. Replacing a query, retrying, or unmounting aborts the active signal. The slot remains occupied until the actual load and its children settle, including across remounts and reopening the same placement.
@@ -136,15 +119,15 @@ Command scopes bind their host readers to the invocation signal. Reads check can
 
 Refresh failures retain the last successful value for the same query. A first failure shows an error and Retry. A different query has its own initial loading state. File reads never clear a dirty draft, and saves retain their original binding when the user switches resources.
 
-Tree queries include their bound resource, the current project and mode, and the page's navigation contribution owner when present. Trees also follow the current page resource unless their renderer supplies a data read key. Composed dashboard navigation derives this key from every active contribution and the resource passed to it. Contributions receive the selected resource by default; host contributions can resolve a narrower data resource. The shared session list has no data resource in Sessions mode and uses the workspace in project mode. Project links borrowed by Sessions mode receive no selected session resource. Resource-dependent contributions still cancel old reads and clear old actions when their resource changes. Settings navigation passes the selected panel as selection only, because its data belongs to the settings surface rather than an individual panel.
+Tree queries include their bound resource, the current project and mode, and the page's navigation contribution owner when present. Trees also follow the current page resource unless their renderer supplies a data read key. Navigation contributions receive the selected resource by default. When their resource changes, they cancel old reads and clear old actions.
 
-Settings publishes its static navigation and collection parents before waiting for collection items. Visible collections load concurrently, including collapsed collections, and each publishes its items when ready. Native tree reads can publish partial sections through `TreeQueryContext.onProgress`. Progress belongs to the active read and is ignored after cancellation or completion. Background refreshes keep the last complete navigation until the replacement is ready.
+Host tree renderers can publish partial sections through the workbench's `TreeQueryContext.onProgress`. Progress belongs to the active read and is ignored after cancellation or completion. Background refreshes keep the last complete navigation until the replacement is ready.
 
 Static host navigation and extension links have no selected resource dependency. Links with resource-based visibility conditions retain it. Extension navigation trees can declare `resourceScope: "project"` when their data belongs to the project independently of the selected resource. The default `"selection"` scope preserves selected-resource reads and cancellation for other trees. Changing modes still replaces their navigation.
 
 ## Declared data dependencies
 
-Extensions use public `viewDataEvents` for host-owned session, workspace, and session-workspace link data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. File and notification churn does not broadcast a view refresh. Each renderer also declares its own extension data events.
+Extensions use public `viewDataEvents` for host-owned session, workspace, and session-workspace link data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. File and notification churn does not broadcast a view refresh. Each renderer also declares its own extension data events. The core extensions and host views declare these dependencies:
 
 | Native view | Dependencies |
 | --- | --- |
@@ -155,5 +138,3 @@ Extensions use public `viewDataEvents` for host-owned session, workspace, and se
 | Lab example board | Its storage collection event |
 | Host session list and selected session | Sessions, workspace links, and linked workspaces |
 | Host workspace table | Workspaces and workspace diff summaries |
-
-The core collection bridge owns the before/after project lookup. Selected-session metadata uses keyed rows and a collection-owned workspace-link index. Recent menus read session rows only. Neither path copies unrelated file collections.

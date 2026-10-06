@@ -1,42 +1,42 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgeCheck, Building2, LayoutGrid, PanelsTopLeft, Scale, Sparkles } from "lucide-react";
+import { BadgeCheck, LayoutGrid, PanelsTopLeft, Sparkles } from "lucide-react";
+import { siteMetadata } from "../config/site-metadata";
 
 export const SITE_LINKS = {
-  github: "https://github.com/pufflyai/prompt-studio",
-  readme: "https://github.com/pufflyai/prompt-studio/blob/main/README.md",
-  issues: "https://github.com/pufflyai/prompt-studio/issues",
+  github: siteMetadata.repositoryUrl,
+  issues: `${siteMetadata.repositoryUrl}/issues`,
   discord: "https://discord.gg/3RxwUEk8fW",
-  harnessClaudeCode: "https://github.com/pufflyai/prompt-studio/tree/main/extensions/harness-claude-code",
-  harnessCodex: "https://github.com/pufflyai/prompt-studio/tree/main/extensions/harness-codex",
-  harnessOpenCode: "https://github.com/pufflyai/prompt-studio/tree/main/extensions/harness-open-code",
+  install: "/docs/guides/getting-started/install/",
+  harnessClaudeCode: "/docs/extensions/claude-code/",
+  harnessCodex: "/docs/extensions/codex/",
+  harnessOpenCode: "/docs/extensions/opencode/",
 };
 
-/** In-app views rendered inside the workbench main area. */
-export type LandingView = "start" | "what-is-prompt-studio" | "examples" | "features" | "privacy" | "terms" | "imprint";
+/** What the workbench main area renders for a page. */
+export type LandingView =
+  | "start"
+  | "what-is-prompt-studio"
+  | "examples"
+  | "features"
+  | "legal"
+  | "docs"
+  | "doc"
+  | "blog"
+  | "post";
+
+/** Views the Prompt Studio sidebar lists, in order. */
+export type SidebarView = "start" | "what-is-prompt-studio" | "examples" | "features";
 
 export interface ViewMeta {
   label: string;
   icon: LucideIcon;
 }
 
-/** Legal pages come from markdown in `src/content/legal` and read as one column in the workbench. */
-export const DOCUMENT_VIEWS = ["privacy", "terms", "imprint"] as const satisfies LandingView[];
-export type DocumentView = (typeof DOCUMENT_VIEWS)[number];
-/** Compiled HTML of each legal document, keyed by its view. */
-export type LegalDocuments = Record<DocumentView, string>;
-
-export const isDocumentView = (view: LandingView): view is DocumentView =>
-  (DOCUMENT_VIEWS as readonly LandingView[]).includes(view);
-
-export const VIEW_META: Record<LandingView, ViewMeta> = {
+export const VIEW_META: Record<SidebarView, ViewMeta> = {
   start: { label: "Start Here", icon: Sparkles },
   "what-is-prompt-studio": { label: "What is Prompt Studio", icon: BadgeCheck },
   examples: { label: "Examples", icon: PanelsTopLeft },
   features: { label: "Features", icon: LayoutGrid },
-  privacy: { label: "Privacy policy", icon: Scale },
-  terms: { label: "Terms of service", icon: Scale },
-  imprint: { label: "Imprint", icon: Building2 },
 };
 
-/** Views the sidebar lists, in order. */
-export const SIDEBAR_VIEWS: LandingView[] = ["start", "what-is-prompt-studio", "examples", "features"];
+export const SIDEBAR_VIEWS: SidebarView[] = ["start", "what-is-prompt-studio", "examples", "features"];

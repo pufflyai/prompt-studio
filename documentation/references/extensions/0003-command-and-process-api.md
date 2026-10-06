@@ -1,10 +1,10 @@
-# Extension commands and processes
+# Commands and processes
 
-Part of the [extension API reference](0001-api.md).
+Commands are the operations an extension offers. This page covers commands, parameters, connections, middleware, hooks, and processes.
 
 ## Durable background work
 
-Use `ctx.automation.enqueue({ command, input, key })` for work that lasts longer than a request. Read runs with `get` and `list`, and cancel them with `cancel`. Runs are scoped to the calling extension and project. Use `ctx.process` only for work the caller awaits. See [durable extension work](0007-durable-automation.md) for command flags, status events, restart behavior, and limits.
+Use `ctx.automation.enqueue({ command, input, key })` for work that lasts longer than a request. Read runs with `get` and `list`, and cancel them with `cancel`. Runs are scoped to the calling extension and project. Use `ctx.process` only for work the caller awaits. See [Durable work](0007-durable-automation.md) for command flags, status events, restart behavior, and limits.
 
 ## Detached processes
 
@@ -79,6 +79,46 @@ a Git worktree. The command receives `{ providerId, params }` and passes it to `
 `providers` to offer every workspace type. On the CLI, pass the value as JSON:
 `--workspace '{"providerId":"pstdio.worktree","params":{"base":"main"}}'`. `harness` and `resource` params also accept
 JSON on the CLI.
+
+## CLI contributions
+
+Set `cli: true` to expose a command as `pst <package-name> <command-id>`. Dots in the local command ID become path segments: package `bookmarks` and ID `links.add` produce `pst bookmarks links add`. Installing and enabling the extension makes its CLI paths available in that project.
+
+Use a CLI contribution object when you need a different path, a shorter global alias, or examples:
+
+```ts
+cli: {
+  path: ["links", "add"],
+  globalAliases: [["bookmarks", "add"]],
+  examples: ['pst bookmarks add --title "Prompt Studio" --url https://prompt.studio'],
+},
+```
+
+`path` is relative to the package name. `globalAliases` are complete paths after `pst`; they do not add a package prefix. Choose aliases that do not conflict with another enabled extension or a core command. `cli: true` does not by itself add a palette entry or toolbar action; declare those separately and point them to the same command.
+
+### Help and parameter flags
+
+Run `pst --help` inside a linked project folder to list its enabled extension namespaces. The runtime must be reachable; otherwise, top-level help shows only core commands. `pst <namespace> --help` lists CLI paths, and command help shows the provider, command ID, options, aliases, and examples. Namespace and command calls can target another project with `--project-id <project-id>`.
+
+Parameter names become flags in kebab-case: `noteId` becomes `--note-id`. The shared declarations define both the command's inputs and the dashboard form fields.
+
+| Parameter type | CLI input |
+| --- | --- |
+| Text, select, template | `--title "Meeting notes"` or another scalar value |
+| Number | `--count 3` |
+| Boolean | `--archived` for true, `--archived=false` for false |
+| List | Repeat the flag: `--tag docs --tag release` |
+| JSON, harness, resource, workspace | Pass quoted JSON, such as `--workspace '{"providerId":"pstdio.worktree","params":{"base":"main"}}'` |
+
+Missing required flags are rejected before execution. The host validates command parameters and runs the command middleware for the invocation.
+
+### Results and agent access
+
+Without `--json`, success prints the command's returned value as JSON. With `--json`, the CLI prints the full execution response. Check `outcome.ok` before reading `outcome.value`. Failure or rejection exits with code 1.
+
+Return IDs and relevant state from mutating commands, and expose read or list commands when callers need to check the result. An agent can then discover an operation, run it, inspect its response, and continue without scraping the dashboard.
+
+`cli: true` is local CLI exposure. `automation: true` is separate: it lets that exact command be granted to a scoped machine token for remote automation. Neither flag grants unrestricted access to every command. See [Remote automation](../cli/0007-automation.md).
 
 ## Named connections
 
@@ -184,8 +224,8 @@ export default defineExtension({
 Prefer exported event refs such as `sessionEvents.started` and
 `workspaceEvents.created`, `workspaceEvents.ready`, and `worktreeEvents.removed`.
 The host awaits `workspaceEvents.provision` handlers before marking a local workspace ready.
-Planner ticket automation should use planner commands
-or command lifecycle events, not removed core ticket/attempt-status events. Use
+The core host emits no ticket events. Tickets belong to the Planner extension, so ticket automation
+uses Planner's commands or their lifecycle events. Use
 `commandEvent(providerCommands.someCommand, "completed")` or another command lifecycle phase
 when a hook should react to a command outcome.
 
@@ -198,24 +238,6 @@ when a hook should react to a command outcome.
 Diagnostics should include the extension id when known, the source path, and project/repo context where relevant. If the entry module fails to import, the package still loads with empty contributions and an `extension_import_failed` diagnostic so the dashboard can show the package identity and error.
 
 Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `invalid_placement` (a placement has an invalid shape) and `invalid_page_slot` (a page slot has an invalid shape) drop the invalid contribution and keep the rest of the extension loading. Invalid declarations report the extension, contribution, field path, and expected contract. Nested unknown fields are rejected.
-
-## Migrating to extension API alpha.12
-
-Native-history harnesses must implement `recoverMessages(ctx, { knownMessages, nativeMessages, cwd, workspace })`. Return `{ kind: "recovered", messages }`. Returning `{ kind: "conflict", category }` makes the host continue from the saved conversation, so prefer the saved side inside a harness instead of returning a conflict. A failed native read must throw; returning `[]` declares a successful empty history. Use the SDK's pure ordered-history helpers and keep provider-specific comparisons in the harness.
-
-Every harness event sink now provides `getMessages()`. Full-snapshot providers must read it after asynchronous polling and compose any harness-generated metadata before synchronously publishing the replacement. Root replacements remain authoritative. When a snapshot cannot be composed safely, a provider must leave the readable messages unchanged.
-
-Renderer read callbacks receive an AbortSignal. Forward it through command execution and all child I/O, and do not resolve a load before its children settle. Native renderers declare their refresh dependencies explicitly with extension events and the public `viewDataEvents` references. The host no longer reloads every extension view on unrelated sync changes.
-
-## Migrating to extension API alpha.14
-
-Navigation and resource removal use explicit context APIs. The host no longer interprets a command's returned value as a navigation target or a deletion report. Return ordinary data to the caller.
-
-- Call `ctx.navigation.open(target)` from commands and interaction callbacks. Table and kanban row activation callbacks return void. Navigation still uses the existing target types and dispatcher, applies only after successful UI execution, and does not affect dashboards during headless execution.
-- After deleting data, call `await ctx.resources.removed(resource)`. This reports the committed removal to every connected client, independently of command success. Keep missing-resource handling and update-only writes so a stale save cannot recreate deleted data.
-- Remove imports of the workbench's `toWorkbenchNavigationTargetResult` and `isExtensionNavigationTarget` aliases. Use the SDK's `isNavigationTarget` for explicit target validation and `toWorkbenchNavigationTarget` when adapting a target to the workbench.
-
-Core extensions already use these APIs, and their existing published SDK dependency provides them.
 
 ## Workspace files and context
 
@@ -263,3 +285,23 @@ set. This validation belongs to the dialog. The command runtime does not call
 option commands again. Commands must enforce their own business rules. CLI and
 API callers pass explicit values as before; CLI help marks these parameters as
 `command-backed` and does not load choices or prompt interactively.
+
+## Migrating from older API versions
+
+Before `0.1.0`, the extension API used `1.0.0-alpha.N` versions. An extension written for an older alpha needs these changes. See [API versioning](0014-api-versioning.md) for the current scheme.
+
+### Changes in 1.0.0-alpha.12
+
+Native-history harnesses must implement `recoverMessages(ctx, { knownMessages, nativeMessages, cwd, workspace })`. Return `{ kind: "recovered", messages }`. Returning `{ kind: "conflict", category }` makes the host continue from the saved conversation, so prefer the saved side inside a harness instead of returning a conflict. A failed native read must throw; returning `[]` declares a successful empty history. Use the SDK's pure ordered-history helpers and keep provider-specific comparisons in the harness.
+
+Every harness event sink now provides `getMessages()`. Full-snapshot providers must read it after asynchronous polling and compose any harness-generated metadata before synchronously publishing the replacement. Root replacements remain authoritative. When a snapshot cannot be composed safely, a provider must leave the readable messages unchanged.
+
+Renderer read callbacks receive an AbortSignal. Forward it through command execution and all child I/O, and do not resolve a load before its children settle. Native renderers declare their refresh dependencies explicitly with extension events and the public `viewDataEvents` references. The host no longer reloads every extension view on unrelated sync changes.
+
+### Changes in 1.0.0-alpha.14
+
+Navigation and resource removal use explicit context APIs. The host no longer interprets a command's returned value as a navigation target or a deletion report. Return ordinary data to the caller.
+
+- Call `ctx.navigation.open(target)` from commands and interaction callbacks. Table and kanban row activation callbacks return void. Navigation still uses the existing target types and dispatcher, applies only after successful UI execution, and does not affect dashboards during headless execution.
+- After deleting data, call `await ctx.resources.removed(resource)`. This reports the committed removal to every connected client, independently of command success. Keep missing-resource handling and update-only writes so a stale save cannot recreate deleted data.
+- Remove imports of the workbench's `toWorkbenchNavigationTargetResult` and `isExtensionNavigationTarget` aliases. Use the SDK's `isNavigationTarget` for explicit target validation and `toWorkbenchNavigationTarget` when adapting a target to the workbench.

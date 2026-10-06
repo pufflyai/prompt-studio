@@ -1,26 +1,37 @@
-import { Palette, type PaletteEntry, useThemePreference } from "@pstdio/ui";
-import { ArrowUpRight, CircleDot, Download, Github, MessagesSquare, SunMoon } from "lucide-react";
-import { type LandingView, SIDEBAR_VIEWS, SITE_LINKS, VIEW_META } from "../../content/landing-content";
+import { filterPaletteEntries, Palette, type PaletteEntry, useThemePreference } from "@pstdio/ui";
+import {
+  ArrowUpRight,
+  BookOpen,
+  CircleDot,
+  Download,
+  FileText,
+  Github,
+  MessagesSquare,
+  Newspaper,
+  SunMoon,
+} from "lucide-react";
+import { docsTopicForPath } from "../../content/docs-topics";
+import { SIDEBAR_VIEWS, SITE_LINKS, type SidebarView, VIEW_META } from "../../content/landing-content";
+import type { LandingPage } from "../../content/landing-pages";
 import { DESKTOP_RELEASES_URL } from "../../services/desktop-releases";
+import { landingPathForView } from "../../services/landing-route";
 
-const VIEW_SEARCH_TEXT: Record<LandingView, string> = {
+const VIEW_SEARCH_TEXT: Record<SidebarView, string> = {
   start: "home landing start here install",
   "what-is-prompt-studio": "what is prompt studio extensions tools building blocks workbench",
   examples: "examples tools icons coding agent dashboard kanban financial formula glossary building blocks",
   features: "features search notifications navigation extension management themes plumbing",
-  privacy: "privacy policy legal data",
-  terms: "terms of service legal",
-  imprint: "imprint company contact address legal",
 };
 
 interface CommandPaletteModalProps {
   open: boolean;
+  pages: LandingPage[];
   onClose: () => void;
-  onNavigate: (view: LandingView) => void;
+  onNavigate: (path: string) => void;
 }
 
 export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
-  const { open, onClose, onNavigate } = props;
+  const { open, pages, onClose, onNavigate } = props;
   const { toggleThemePreference } = useThemePreference();
 
   const run = (action: () => void) => () => {
@@ -28,16 +39,40 @@ export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
     action();
   };
 
-  const viewEntries: PaletteEntry[] = SIDEBAR_VIEWS.map((view) => {
-    const Icon = VIEW_META[view].icon;
+  const viewEntries: PaletteEntry[] = [
+    ...SIDEBAR_VIEWS.map((view) => {
+      const Icon = VIEW_META[view].icon;
+      return {
+        id: `nav:${view}`,
+        label: VIEW_META[view].label,
+        searchText: VIEW_SEARCH_TEXT[view],
+        icon: <Icon size={14} />,
+        path: landingPathForView(view),
+      };
+    }),
+    {
+      id: "nav:docs",
+      label: "Docs",
+      searchText: "documentation guides references",
+      icon: <BookOpen size={14} />,
+      path: "/docs/",
+    },
+    { id: "nav:blog", label: "Blog", searchText: "news posts releases", icon: <Newspaper size={14} />, path: "/blog/" },
+  ].map(({ path, ...entry }) => ({ ...entry, group: "Navigate", onActivate: run(() => onNavigate(path)) }));
 
+  // Pages and posts appear once the visitor types, so the open palette stays short.
+  const documentEntries: PaletteEntry[] = pages.flatMap((page) => {
+    if (page.view !== "doc" && page.view !== "post") return [];
+    const topic = docsTopicForPath(page.path)?.label;
     return {
-      id: `nav:${view}`,
-      label: VIEW_META[view].label,
-      searchText: VIEW_SEARCH_TEXT[view],
-      group: "Navigate",
-      icon: <Icon size={14} />,
-      onActivate: run(() => onNavigate(view)),
+      id: `page:${page.path}`,
+      label: page.label,
+      secondaryLabel: topic,
+      searchText: topic,
+      group: page.view === "doc" ? "Docs" : "Blog",
+      assetType: page.view,
+      icon: page.view === "doc" ? <FileText size={14} /> : <Newspaper size={14} />,
+      onActivate: run(() => onNavigate(page.path)),
     };
   });
 
@@ -92,7 +127,8 @@ export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
   return (
     <Palette
       open={open}
-      entries={[...viewEntries, ...externalEntries, ...commandEntries]}
+      entries={[...viewEntries, ...externalEntries, ...documentEntries, ...commandEntries]}
+      filterEntries={(entries, query) => filterPaletteEntries(entries, { query, defaultAssetLimit: 0 })}
       placeholder="Search or run a command…"
       onClose={onClose}
     />

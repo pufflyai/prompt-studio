@@ -12,7 +12,7 @@ export const builder = (yargs: Argv) =>
     .option("title", { type: "string", describe: "Session title (defaults to prompt excerpt)" })
     .option("workspace-id", { type: "string", describe: "Workspace ID or shorthand" })
     .option("project-id", { type: "string", describe: "Project ID" })
-    .option("agent", { type: "string", describe: "Agent to use (claude-code, opencode)" })
+    .option("agent", { type: "string", describe: "Agent ID. Run `pst agents list` to see the installed agents" })
     .option("model", { type: "string", describe: "Model override" })
     .option("attach", { type: "string", array: true, describe: "Local file to attach to the session prompt" })
     .option("original-session-id", { type: "string", describe: "ID of the session that triggered this one" })

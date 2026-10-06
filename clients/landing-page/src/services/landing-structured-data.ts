@@ -1,5 +1,6 @@
 import { siteMetadata } from "../config/site-metadata";
-import { SITE_LINKS } from "../content/landing-content";
+import { blogCategoryLabel } from "../content/blog-categories";
+import type { LandingPage } from "../content/landing-pages";
 import { DESKTOP_RELEASES_URL } from "./desktop-releases";
 
 const websiteId = `${siteMetadata.siteUrl}/#website`;
@@ -34,29 +35,44 @@ const application = {
   operatingSystem: "macOS, Windows, Linux",
   url: `${siteMetadata.siteUrl}/`,
   downloadUrl: DESKTOP_RELEASES_URL,
-  codeRepository: SITE_LINKS.github,
-  license: `${SITE_LINKS.github}/blob/main/LICENSE`,
+  codeRepository: siteMetadata.repositoryUrl,
+  license: `${siteMetadata.repositoryUrl}/blob/main/LICENSE`,
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
   publisher: { "@id": organizationId },
 };
 
-interface LandingStructuredDataInput {
-  title: string;
-  description: string;
-  canonicalUrl: string;
-  home: boolean;
-}
+// Posts are articles with an author and a date; the blog index is the blog itself.
+const pageType = (page: LandingPage) => {
+  if (page.view === "post") return "BlogPosting";
+  if (page.view === "blog") return "Blog";
+  return "WebPage";
+};
 
-export const landingStructuredData = (input: LandingStructuredDataInput) => {
-  const { title, description, canonicalUrl, home } = input;
+export const landingStructuredData = (page: LandingPage, canonicalUrl: string) => {
+  const home = page.path === "/";
   const webPage = {
-    "@type": "WebPage",
+    "@type": pageType(page),
     "@id": canonicalUrl,
     url: canonicalUrl,
-    name: title,
-    description,
+    name: page.title,
+    description: page.description,
     isPartOf: { "@id": websiteId },
     ...(home ? { about: { "@id": applicationId } } : {}),
+    ...(page.view === "post"
+      ? {
+          headline: page.label,
+          datePublished: page.published,
+          articleSection: blogCategoryLabel(page.category),
+          author: {
+            "@type": "Person",
+            name: page.author.name,
+            ...(page.author.avatarSrc ? { image: new URL(page.author.avatarSrc, siteMetadata.siteUrl).href } : {}),
+          },
+          timeRequired: `PT${page.readingMinutes}M`,
+          publisher: { "@id": organizationId },
+          image: new URL(page.image.light.src, siteMetadata.siteUrl).href,
+        }
+      : {}),
   };
 
   return {

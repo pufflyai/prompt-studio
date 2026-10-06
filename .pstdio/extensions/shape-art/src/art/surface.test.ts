@@ -3,10 +3,13 @@ import { createRandom } from "./random";
 import { backgroundPresets, recipeSchema } from "./recipe";
 import { createSurface } from "./surface";
 
-test("ink background glows stay cool across random seeds", () => {
+test.each([
+  backgroundPresets.ink,
+  { backgroundTop: "#FAFAFA", backgroundBottom: "#FAFAFA" },
+])("background glows stay cool across random seeds: %j", (background) => {
   for (let seed = 0; seed < 12; seed++) {
     const recipe = recipeSchema.parse({
-      ...backgroundPresets.ink,
+      ...background,
       seed: `ink-${seed}`,
       width: 64,
       height: 64,

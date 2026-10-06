@@ -1,0 +1,18 @@
+{
+  "seed": "e91d01b9-e27a-4676-ad3d-8e0aec4d297b",
+  "width": 1600,
+  "height": 400,
+  "layout": "shelf",
+  "kinds": ["page", "command", "editor", "skill", "hook", "automation"],
+  "count": 21,
+  "scale": 1.5698221297934651,
+  "offsetX": 0.05484472909010947,
+  "offsetY": -0.00008162569254636931,
+  "backgroundTop": "#0A0C10",
+  "backgroundBottom": "#141A28",
+  "bleed": 0.5607770990347489,
+  "layers": 31,
+  "texture": 0.537662333296612,
+  "gradient": 0.7384098281501792,
+  "grain": 0.5424685737118126
+}

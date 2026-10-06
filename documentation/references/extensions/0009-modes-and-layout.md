@@ -1,6 +1,8 @@
-# Extension modes and layout
+# Modes and layout
 
-A mode describes workbench context and the docked regions it supports. A page declares its base mode, so page navigation always selects the correct mode.
+A mode is a workbench context with its own docked regions, chrome, and theme. This page covers modes, mode placements, chrome, and region settings.
+
+A page declares its base mode, so opening a page always selects the correct mode.
 
 Use `definePlacement` only for content that should remain across pages in that mode:
 
@@ -64,12 +66,14 @@ Declare `floatingPanels: "hidden"` on the mode to prevent floating side panels. 
 
 A lone closable panel keeps its tab visible by default. `alwaysShowTabs: true` shows every lone tab; `false` hides a lone tab in its declared region. Multiple visible items and moved views always show tabs. Tab visibility does not affect panel visibility or floating permission.
 
+The host's Project mode and the workbench's [showcase examples](../../../packages/pstdio-workbench/src/examples/showcases/showcases.stories.tsx) use these policies:
+
 | Mode | Panel policy |
 | --- | --- |
 | Project | Session and terminal regions keep single tabs. Side panels may float. |
-| Kiln | Floating disabled. Inspector and timeline cannot be dragged closed. Both have navigation visibility buttons and hide single tabs. |
-| Boombox | Fixed-height transport cannot be dragged closed. Its navigation visibility button preserves the player. |
+| Kiln (animation editor) | Floating disabled. Inspector and timeline cannot be dragged closed. Both have navigation visibility buttons and hide single tabs. |
+| Boombox (music player) | Fixed-height transport cannot be dragged closed. Its navigation visibility button preserves the player. |
 | Pigeon, Zipline | Side panels may float, attach, hide, and reopen. Sidebar sizes belong to the mode. |
 | Scribble | Custom sidebar keeps its mode size and disables drag collapse. |
 
-Core callers and SDK extensions use these same settings. Storybook may register modes directly with the workbench; the SDK metadata adapter feeds that same registry and controller.
+Host modes and extension modes use the same settings.

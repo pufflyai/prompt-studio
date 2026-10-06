@@ -1,0 +1,18 @@
+{
+  "seed": "a897cc6a-39ab-4aed-95c3-1c9ec5bd9452",
+  "width": 1600,
+  "height": 400,
+  "layout": "scatter",
+  "kinds": ["page", "editor", "skill", "hook"],
+  "count": 23,
+  "scale": 1.5068656170740724,
+  "offsetX": 0.004077100614085796,
+  "offsetY": -0.05290301346220076,
+  "backgroundTop": "#F7F2E8",
+  "backgroundBottom": "#EAE1D1",
+  "bleed": 0.4337508266791701,
+  "layers": 35,
+  "texture": 0.6929759628255852,
+  "gradient": 0.3,
+  "grain": 0.4857074996689335
+}

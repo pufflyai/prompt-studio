@@ -240,6 +240,14 @@ export const textStyles = defineTextStyles({
       lineHeight: "100%",
     },
   },
+  "mono/S": {
+    value: {
+      fontFamily: "mono",
+      fontSize: "sm",
+      fontWeight: "400",
+      lineHeight: "160%",
+    },
+  },
   "paragraph/S/regular": {
     value: {
       fontFamily: "body",

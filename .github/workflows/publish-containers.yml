@@ -7,6 +7,12 @@ on:
     paths:
       - clients/landing-page/**
       - packages/ui/**
+      - documentation/guides/**
+      - documentation/references/**
+      - documentation/images/**
+      - design/art/**
+      - extensions/*/README.md
+      - extensions/*/docs/**
       - clients/landing-page/Dockerfile
       - package.json
       - bun.lock

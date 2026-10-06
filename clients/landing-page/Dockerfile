@@ -13,6 +13,9 @@ COPY infra/local/extensions infra/local/extensions
 COPY .pstdio/extensions/font-editor/package.json .pstdio/extensions/font-editor/package.json
 COPY .pstdio/extensions/pstdio-dev/package.json .pstdio/extensions/pstdio-dev/package.json
 COPY scripts scripts
+# The docs pages are built from the repo's documentation and extension READMEs.
+COPY documentation documentation
+COPY design/art design/art
 
 # @pstdio/ui imports @pstdio/sdk/extensions at runtime, so the SDK is built before ui.
 RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/sdk

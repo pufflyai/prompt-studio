@@ -1,11 +1,12 @@
----
-status: "draft"
-created: "2026-08-20T00:00:00Z"
----
+# Notifications
 
-# CLI notifications
+Notifications put work that still needs a person or an agent into the project's Prompt Studio inbox. These commands list, create, and resolve them.
 
-Notifications let extensions and tools place project-scoped work in the Prompt Studio inbox.
+To show the inbox in the dashboard, turn on **Settings → Experimental → Beta features → Notifications**. It starts off. The CLI and notification producers work while the dashboard feature is off.
+
+![Settings with Beta features selected and the Notifications switch turned off.](../../images/beta-features.png)
+
+The switch is global: it changes the dashboard feature for every project. It controls whether the inbox is visible, rather than whether notifications can be created. Use the commands below to inspect them even before turning the dashboard feature on.
 
 ## Commands
 
@@ -20,9 +21,9 @@ pst notifications dismiss <id> [--project-id <id>]
 pst notifications snooze <id> --until <time> [--project-id <id>]
 ```
 
-`pst inbox` and `pst notifications list` show pending notifications. Comma-separate more than one status or priority filter.
+`pst inbox` and `pst notifications list` show pending notifications. To filter by more than one status or priority, separate the values with commas.
 
-`send` also accepts `--body`, `--priority`, `--target <type:id>`, and `--dedupe-key`.
+`send` also accepts `--body`, `--priority`, `--target <type:id>`, and `--dedupe-key`. Sending again with the same live dedupe key updates the existing notification instead of creating a second one.
 
 `snooze --until` accepts an ISO timestamp or a relative duration such as `1h`.
 

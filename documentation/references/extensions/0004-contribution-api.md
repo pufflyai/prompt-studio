@@ -1,6 +1,6 @@
-# Extension contributions
+# Contributions
 
-Part of the [extension API reference](0001-api.md).
+Contributions are what an extension adds to Prompt Studio. This page lists every contribution kind and explains the UI contributions.
 
 ## Contribution Surfaces
 
@@ -32,7 +32,7 @@ Part of the [extension API reference](0001-api.md).
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
 | `connections`                                     | Host-managed HTTP access to a declared remote control plane.                                       |
 
-UI-facing contributions attach to implemented host-owned targets. The attachment model is covered in [Dashboard UI attachments](0013-workbench-attachments.md).
+UI contributions attach to targets that the host owns. [Workbench composition](0008-contextual-workbench-composition.md) explains how views, pages, modes, and panels fit together.
 
 ## Kanban create results
 
@@ -71,7 +71,7 @@ Extension code should not:
 
 - define package identity inside `defineExtension()`
 - invent dashboard target ids outside the SDK target registry
-- import from `clients/*`
+- import Prompt Studio packages other than `@pstdio/sdk` and `@pstdio/ui`
 - write outside package assets, API-owned storage, or declared artifact mounts
 - assume a target maps to a fixed physical location across dashboard implementations
 
@@ -203,7 +203,7 @@ menus: [
 Workspace resources use the host project mode. Target workspace actions with
 `workbenchResourceKinds.workspace`; the SDK does not export a host workspace mode.
 
-See [Dashboard UI attachments](0013-workbench-attachments.md) and [Extension modes](0009-modes-and-layout.md) for the current product contract.
+See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
 
 ## Native view toolbar actions
 
@@ -242,7 +242,6 @@ arguments. An input schema opens the command dialog. It supports
 Use `presentation: "primary"` for the main action and `"secondary"` for other
 actions. Secondary is the default. More than one primary action produces a
 warning, and an unknown command produces an error diagnostic.
-
 
 ## Appearance Contributions
 

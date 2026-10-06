@@ -1,6 +1,6 @@
-# Extension webviews and storage
+# Webviews and storage
 
-Part of the [extension API reference](0001-api.md).
+Webviews are extension views built with HTML and JavaScript. This page covers the webview client, files, navigation, terminals, and storage.
 
 ## Webview Client
 
@@ -30,7 +30,7 @@ export default defineExtensionView({
   Declare the settings contribution `as const` and export it so the types stay precise.
 - `client.artifacts` has `list(mount, prefix?)`, `readText(mount, path)`, and
   `imageUrl(mount, path)` for artifact mounts the webview declared with
-  `artifactsRead(mount)` (see "Artifact Mounts And Storage"). `imageUrl` returns a short-lived URL
+  `artifactsRead(mount)` (see [Artifact mounts and storage](#artifact-mounts-and-storage)). `imageUrl` returns a short-lived URL
   for png, jpeg, webp, or gif, usable in `<img src>`; request a fresh URL when one
   expires. Undeclared mounts are denied by the capability gate with the exact missing
   declaration, such as `artifacts.read:runs`.
@@ -39,7 +39,7 @@ export default defineExtensionView({
 - `navigation.open` opens an explicit page or panel target. See
   [Navigate from a webview](#navigate-from-a-webview).
 - Author commands with `defineCommand`. Commands written as inline literals inside
-  `defineExtension` keep untyped results (see ADR 0012 in the repository docs).
+  `defineExtension` keep untyped results (see [ADR 0012](../../adrs/0012-temporary-webview-client-type-source.md)).
 - Pass `{ extensionId }` as the second argument only in tests, where no host bridge
   provides one.
 
@@ -191,14 +191,19 @@ is idle. Background and stopped jobs do not count as foreground work. A directly
 launched program counts as active until it exits. Custom shell invocations, shells with
 unavailable prompt hooks, and unknown process state conservatively report activity.
 
-Terminals are layered: the workbench-native terminal surface is the product UI, and `terminal.session` is the low-level host service behind it.
+Terminals have two layers. The workbench terminal panel is the user interface. `terminal.session` is the lower-level host service behind it. The host runs each shell in a PTY (pseudo-terminal).
 
-- **Runtime contexts** get `ctx.terminal` (an `ExtensionTerminalApi`) when the host wires a PTY supervisor. `ctx.terminal.openSession(request)` returns a host-side `TerminalSessionHandle` with `write`, `resize`, `kill`, and a single-consumer `events()` iterable. The handle never crosses into renderer code.
-- **Webviews** declare the `terminal.session` capability — the only public webview terminal capability for this version. Calls are serializable operations (`open`, `write`, `resize`, `kill`, `subscribe`); `open` returns only a `sessionId`, and output/exit events are pushed through the bridge host-event channel. Use `createTerminalSessionBridge(host)` from `@pstdio/sdk/extensions` to get a bridge that plugs into the `Terminal` component from `@pstdio/ui/terminal`. Undeclared webviews are rejected by the capability gate.
-- **Lifecycle ownership**: workbench-surface sessions live in `workbench.terminal`; closing the terminal panel kills its session, and disposing the controller kills every live session. A session opened through `ctx.terminal` belongs to the invocation that opened it and is killed when that invocation ends. The app-scoped PTY supervisor is the shutdown backstop: it force-kills whatever is still live when the app exits.
-- **Stopping a session**: `kill()` signals the session's process group, so the shell and everything it started stop together. The default signal is `SIGHUP`, which shells honour even while they ignore `SIGTERM`, and the group is then swept with `SIGKILL` because a shell exiting does not prove its children did. The call always settles. A job that puts itself in its own process group and ignores the hangup survives, which is the same `nohup` behaviour every terminal has.
-- **Dashboard transport**: the dashboard backs `workbench.terminal` with the API terminal transport — `POST /v1/terminal/sessions` opens a PTY on the app supervisor, the SSE `events` endpoint streams base64 output chunks and the exit event, and stdin/resize/kill address the session id. Dashboard extension webviews that declare `terminal.session` get live sessions through this path.
-- **Diagnostics** log lifecycle metadata only (session id, pid, exit code, signal) — PTY content is never logged.
+Commands and hooks get `ctx.terminal` (an `ExtensionTerminalApi`) when the host provides a PTY supervisor. `ctx.terminal.openSession(request)` returns a host-side `TerminalSessionHandle` with `write`, `resize`, `kill`, and an `events()` iterable that one consumer can read. The handle never reaches renderer code.
+
+Webviews declare the `terminal.session` capability. It is the only public webview terminal capability in this version. Its calls are serializable operations: `open`, `write`, `resize`, `kill`, and `subscribe`. `open` returns only a `sessionId`, and the bridge pushes output and exit events to the webview. Use `createTerminalSessionBridge(host)` from `@pstdio/sdk/extensions` to get a bridge for the `Terminal` component from `@pstdio/ui/terminal`. The capability gate rejects webviews that did not declare the capability.
+
+Closing a terminal panel kills its session. A session opened through `ctx.terminal` belongs to the invocation that opened it and is killed when that invocation ends. When the app exits, the PTY supervisor kills any session that is still running.
+
+`kill()` signals the session's process group, so the shell and everything it started stop together. The default signal is `SIGHUP`, which shells honor even when they ignore `SIGTERM`. The host then sends `SIGKILL` to the group, because a shell that exits may leave children running. The call always settles. A job that moves to its own process group and ignores the hangup keeps running, as `nohup` jobs do in any terminal.
+
+In the dashboard, `POST /v1/terminal/sessions` opens a PTY in the runtime. A server-sent events (SSE) stream delivers base64 output chunks and the exit event. Input, resize, and kill requests address the session ID. Webviews that declare `terminal.session` use this same path.
+
+Logs record only lifecycle data: session ID, process ID, exit code, and signal. Terminal content is never logged.
 
 ## Package Assets
 
@@ -263,8 +268,8 @@ Extension storage is API-owned and scoped by extension instance. Project-owned s
 
 Artifact mounts create their directories on the first write. Before that, `exists()` returns false and `list()` returns an empty array.
 
-The mount's `path` is relative to that package-name root, and its `id` is only the mount's local name — it
-appears in refs and capability grants, never in the disk path. For package `planner`,
+The mount's `path` is relative to that package-name root. Its `id` is only the mount's local name. The
+`id` appears in refs and capability grants, never in the disk path. For package `planner`,
 `defineArtifactMount({ id: "runs", path: "runs", label: "Runs" })` resolves to
 `<repo>/.pstdio/extension-storage/planner/runs/`, and a read of `a/summary.json` targets
 `<repo>/.pstdio/extension-storage/planner/runs/a/summary.json`.
@@ -295,7 +300,7 @@ mount the extension does not define (`webview_artifact_mount_missing`). All enfo
 reads stay inside the declared mount (traversal and symlink escapes are rejected before filesystem access),
 text reads over 5 MB and images over 20 MB return limit errors instead of truncated content, and image URLs
 are minted only for png, jpeg, webp, and gif. Image bytes are served through the capability-secured webview
-asset channel with short-lived, fully-bound signed URLs (ADR 0008). Webviews never write to mounts; mutation
+asset channel with short-lived signed URLs that each cover one file ([ADR 0008](../../adrs/0008-capability-secured-extension-webview-assets.md)). Webviews never write to mounts; mutation
 goes through commands.
 
 ## Client events and workspace scope

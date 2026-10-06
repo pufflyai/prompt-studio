@@ -9,8 +9,8 @@ export const hex = (value: string) =>
   [1, 3, 5].map((start) => Number.parseInt(value.slice(start, start + 2), 16) / 255) as Color;
 
 export const palette = [...new Set(Object.values(shapeColors))].map(hex);
-// Ink sheets use blue and pink glows without a yellow or orange background wash.
-const inkGlowPalette = palette.filter(([, green, blue]) => blue >= green);
+// Background washes stay blue and pink on both paper and ink sheets.
+const glowPalette = palette.filter(([, green, blue]) => blue >= green);
 
 // Optical density lets paper washes glaze like real watercolor: overlapping pigments multiply.
 const density = (color: Color) => color.map((channel) => -Math.log(Math.max(channel, 0.02))) as Color;
@@ -63,7 +63,7 @@ export const createSurface = (recipe: Recipe, scale: number, random: Random) => 
     x: random.range(0, width),
     y: random.range(0, height),
     radius: Math.max(width, height) * random.range(0.3, 0.6),
-    color: random.pick(ink ? inkGlowPalette : palette),
+    color: random.pick(glowPalette),
   }));
   for (const glow of glows) {
     for (let y = 0; y < height; y++) {

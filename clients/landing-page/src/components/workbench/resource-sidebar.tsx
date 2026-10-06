@@ -1,54 +1,65 @@
 import { Box, Link, Text } from "@chakra-ui/react";
-import { ListRow } from "@pstdio/ui";
+import { ListRow, ScrollArea } from "@pstdio/ui";
 import { ArrowUpRight, CircleDot, MessagesSquare } from "lucide-react";
-import { type LandingView, SIDEBAR_VIEWS, SITE_LINKS, VIEW_META } from "../../content/landing-content";
+import { SIDEBAR_VIEWS, SITE_LINKS, VIEW_META } from "../../content/landing-content";
+import type { LandingPage } from "../../content/landing-pages";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
-import { landingPathForView } from "../../services/landing-route";
+import { landingPathForView, sectionForPage } from "../../services/landing-route";
+import { BlogSidebar } from "../blog/blog-sidebar";
+import { DocsSidebar } from "../docs/docs-sidebar";
 
 const EXTERNAL_LINKS = [
   { label: "Issues", icon: CircleDot, href: SITE_LINKS.issues },
   { label: "Discord", icon: MessagesSquare, href: SITE_LINKS.discord },
 ];
 
+const StudioSidebar = (props: { page: LandingPage }) => {
+  const { page } = props;
+  return SIDEBAR_VIEWS.map((view) => {
+    const meta = VIEW_META[view];
+    return (
+      <ListRow
+        key={view}
+        icon={<meta.icon />}
+        label={meta.label}
+        href={landingPathForView(view)}
+        role="link"
+        isSelected={view === page.view}
+        aria-current={view === page.view ? "page" : undefined}
+      />
+    );
+  });
+};
+
 interface ResourceSidebarProps {
-  activeView: LandingView;
-  onNavigate: (view: LandingView) => void;
+  page: LandingPage;
+  pages: LandingPage[];
+  onNavigate: (path: string) => void;
 }
 
+/** Each title bar tab has its own sidebar. */
 export const ResourceSidebar = (props: ResourceSidebarProps) => {
-  const { activeView, onNavigate } = props;
+  const { page, pages, onNavigate } = props;
   const styles = useLandingStyles();
+  const section = sectionForPage(page);
 
   return (
     <Box as="nav" aria-label="Sections" css={styles.sidebar}>
-      {SIDEBAR_VIEWS.map((view) => {
-        const meta = VIEW_META[view];
-        return (
-          <ListRow
-            key={view}
-            icon={<meta.icon />}
-            label={meta.label}
-            href={landingPathForView(view)}
-            role="link"
-            isSelected={view === activeView}
-            aria-current={view === activeView ? "page" : undefined}
-            onClick={(event) => {
-              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-              event.preventDefault();
-              onNavigate(view);
-            }}
-          />
-        );
-      })}
-      <Box flex="1" />
-      <Text textStyle="label/XS" color="fg.subtle" px="xs">
-        GET INVOLVED
-      </Text>
-      {EXTERNAL_LINKS.map((link) => (
-        <Link key={link.label} href={link.href} target="_blank" rel="noopener" variant="plain">
-          <ListRow icon={<link.icon />} label={link.label} endContent={<ArrowUpRight size={12} />} width="full" />
-        </Link>
-      ))}
+      <ScrollArea css={styles.sidebarScroll}>
+        <Box css={styles.sidebarRows}>
+          {section === "studio" && <StudioSidebar page={page} />}
+          {section === "docs" && <DocsSidebar page={page} pages={pages} onNavigate={onNavigate} />}
+          {section === "blog" && <BlogSidebar page={page} pages={pages} />}
+        </Box>
+      </ScrollArea>
+      <Box css={styles.sidebarFooter}>
+        <Text css={styles.sidebarHeading}>GET INVOLVED</Text>
+        {EXTERNAL_LINKS.map((link) => (
+          <Link key={link.label} href={link.href} target="_blank" rel="noopener" variant="plain">
+            <ListRow icon={<link.icon />} label={link.label} endContent={<ArrowUpRight size={12} />} width="full" />
+          </Link>
+        ))}
+      </Box>
     </Box>
   );
 };

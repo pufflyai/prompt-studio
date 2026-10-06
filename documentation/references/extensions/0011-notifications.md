@@ -1,6 +1,10 @@
-# Extension Notifications
+# Notifications
 
-Extensions have three user-facing surfaces for events:
+Extensions can report events as activity, toasts, or inbox notifications. This page explains when to use each and how notifications work.
+
+The dashboard's notification center starts off. Users enable it in **Settings → Experimental → Beta features → Notifications**. Producers and CLI commands still work while it is off.
+
+## Choose a surface
 
 | Surface | API | Use it for |
 | --- | --- | --- |

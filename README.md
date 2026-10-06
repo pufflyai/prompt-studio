@@ -12,13 +12,17 @@
 
 ## Install
 
+Download the desktop app from [prompt.studio](https://prompt.studio) or the [releases page](https://github.com/pufflyai/prompt-studio/releases). It includes the `pst` command.
+
+To install only the command-line tool, use Bun:
+
 ```bash
 bun add --global pstdio@latest
 ```
 
 ## Quick start
 
-1. Run `pst` to start the dashboard.
+1. Open the desktop app, or run `pst` to start the dashboard.
 2. Open a folder to create or reopen its project. Git is optional.
 3. Install the coding-agent executable for the harness you want to use.
 4. Start a session or install an extension to add a tool.
@@ -35,4 +39,6 @@ Learn more about the CLI using `pst --help`.
 
 ## Documentation
 
-Start with the [documentation guide](documentation/guides/0001-documentation.md), [user setup](documentation/guides/0002-getting-started.md), or [development setup](documentation/guides/development/0001-setup.md). Central docs live under `documentation/`, grouped into guides, references, requirements, ADRs, and lessons learned.
+Read the documentation at [prompt.studio/docs](https://prompt.studio/docs/). Start with [Getting started](https://prompt.studio/docs/guides/getting-started/install/), or learn to [write an extension](https://prompt.studio/docs/guides/extensions/authoring/).
+
+The website builds these pages from the `documentation/` folder and from each extension's own folder. To work on Prompt Studio itself, see [development setup](documentation/guides/development/0001-setup.md). The [documentation guide](documentation/guides/0001-documentation.md) explains how the docs are organized and which folders are published.

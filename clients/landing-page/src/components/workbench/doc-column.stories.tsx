@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { DocColumn } from "./doc-column";
+import { DocColumn, DocHtml } from "./doc-column";
 
 // Sample markup only. Real legal text lives in the markdown files.
 const PRIVACY_HTML = `
@@ -40,15 +40,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const PrivacyPolicy: Story = {
-  args: {
-    html: PRIVACY_HTML,
-    pageKey: "/privacy/",
-  },
+  args: { pageKey: "/privacy/", children: <DocHtml html={PRIVACY_HTML} /> },
 };
 
 export const TermsOfService: Story = {
-  args: {
-    html: TERMS_HTML,
-    pageKey: "/terms/",
-  },
+  args: { pageKey: "/terms/", children: <DocHtml html={TERMS_HTML} /> },
 };

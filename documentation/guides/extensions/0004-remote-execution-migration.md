@@ -1,18 +1,21 @@
-# Migrate an extension to remote execution
+# Move to remote execution
 
-Start with the [connection, workspace provider, and harness contracts](../../references/extensions/0001-api.md)
-and the [remote execution architecture](../../references/architecture/0016-remote-execution-and-automation.md).
+Change an extension so its agent sessions can run on another machine, while credentials stay in the Prompt Studio host.
+
+Read [Local and remote work](../concepts/0004-local-and-remote.md) first. The [extension API](../../references/extensions/0001-api.md) covers the connection, workspace provider, and harness contracts. The [remote execution design](../../references/architecture/0016-remote-execution-and-automation.md) has the full rules for retries, cancellation, and cleanup.
 
 For installation, connection setup, and launching remote sessions, see the
 [Remote Workspaces extension](../../../extensions/remote-workspaces/README.md).
 
-1. Declare a named connection with exact methods and path prefixes. Add a fixed health-check path when the service supports one.
-2. Move credentials out of extension settings, environment variables, repository files, webviews, and subprocesses. Configure them through the extension's Connections settings.
-3. Return a versioned, non-secret `providerRef` from the workspace provider. Set `executionKind` to `remote`; do not create a dummy local path.
-4. Make the harness use `input.workspace.executionTarget`. Set `cwdRequirement` to `optional` only after every start, resume, reattach, follow-up, and message path works without `cwd`.
-5. Implement provider `resolve` and harness `reattach` before enabling restart recovery.
-6. Mark only safe public commands with `automation: true`. Keep their input and result small and free of credentials.
-7. Issue project- and command-scoped machine tokens. Require a stable idempotency key for each external intent.
-8. Test local harnesses, remote restart recovery, cancellation, credential canaries, duplicate requests, denied scopes, and result limits.
+## Steps
 
-Do not replace the named connection with `ctx.process`, direct webview requests, or a general secret getter. Those paths move credentials outside the host boundary.
+1. Declare a named connection with the exact HTTP methods and path prefixes it needs. Add a fixed health-check path when the service has one.
+2. Move credentials out of extension settings, environment variables, repository files, webviews, and child processes. People enter them in the extension's **Connections** settings instead.
+3. Return a versioned `providerRef` from the workspace provider. It must not contain secrets. Set `executionKind` to `remote`. Do not create a placeholder local path.
+4. Make the harness read `input.workspace.executionTarget`. Set `cwdRequirement` to `optional` only after start, resume, reattach, follow-up, and message reads all work without a local working directory.
+5. Implement the provider's `resolve` and the harness's `reattach` before you rely on recovery after a restart.
+6. Mark only safe public commands with `automation: true`. Keep their input and result small and free of credentials.
+7. Callers use machine tokens limited to one project and the exact commands they need. Each outside request needs a stable idempotency key, so a retry does not start the same work twice.
+8. Test local harnesses, recovery after a restart, cancellation, duplicate requests, refused scopes, and result size limits. Use a fake test credential and check that it never appears in logs, settings, or command output.
+
+Do not replace the named connection with `ctx.process`, direct requests from a webview, or a general way to read secrets. Those paths move credentials outside the host.

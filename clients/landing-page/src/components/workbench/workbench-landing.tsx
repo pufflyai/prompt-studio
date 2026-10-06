@@ -1,71 +1,94 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
-import { isDocumentView, type LegalDocuments } from "../../content/landing-content";
-import type { LandingPage } from "../../content/landing-pages";
-import type { ToolExampleId } from "../../content/tool-examples-content";
+import { VIEW_META } from "../../content/landing-content";
+import type { LandingDocument, LandingPage } from "../../content/landing-pages";
+import { useLandingDocument } from "../../hooks/use-landing-document";
 import { useLandingNavigation } from "../../hooks/use-landing-navigation";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { useWindowChrome } from "../../hooks/use-window-chrome";
+import {
+  landingPathForExample,
+  landingPathForView,
+  nextLandingView,
+  previousLandingView,
+  sectionForPage,
+} from "../../services/landing-route";
 import { ExamplesView } from "../sections/examples-view";
 import { FeaturesView } from "../sections/features-view";
 import { StartHereView } from "../sections/start-here-view";
 import { WhatIsPromptStudioView } from "../sections/what-is-prompt-studio-view";
 import { CommandPaletteModal } from "./command-palette-modal";
-import { DocColumn } from "./doc-column";
 import { LandingPanels } from "./landing-panels";
 import { PageNavigation } from "./page-navigation";
 import { ProjectTabsBar } from "./project-tabs-bar";
+import { ReadingContent } from "./reading-content";
 import { ResourceSidebar } from "./resource-sidebar";
 import { WorkbenchNav } from "./workbench-nav";
 import { WorkbenchStatusBar } from "./workbench-status-bar";
 
-interface LandingContentProps {
-  page: LandingPage;
-  onNavigateExample: (exampleId: ToolExampleId) => void;
+type StudioPage = LandingPage & { view: "start" | "what-is-prompt-studio" | "examples" | "features" };
+
+const isStudioPage = (page: LandingPage): page is StudioPage =>
+  ["start", "what-is-prompt-studio", "examples", "features"].includes(page.view);
+
+interface StudioContentProps {
+  page: StudioPage;
+  onNavigate: (path: string) => void;
   windowOffset?: { x: number; y: number };
 }
 
-const LandingContent = (props: LandingContentProps) => {
-  const { page: activePage, onNavigateExample, windowOffset } = props;
-  const { view, exampleId } = activePage;
-  if (view === "start") return <StartHereView windowOffset={windowOffset} />;
-  let page = <FeaturesView />;
-  if (view === "examples" && exampleId)
-    page = <ExamplesView key={exampleId} exampleId={exampleId} onNavigate={onNavigateExample} />;
-  if (view === "what-is-prompt-studio") page = <WhatIsPromptStudioView />;
+const StudioContent = (props: StudioContentProps) => {
+  const { page, onNavigate, windowOffset } = props;
+  if (page.view === "start") return <StartHereView windowOffset={windowOffset} />;
+  let content = <FeaturesView />;
+  if (page.view === "examples")
+    content = (
+      <ExamplesView
+        key={page.exampleId}
+        exampleId={page.exampleId}
+        onNavigate={(exampleId) => onNavigate(landingPathForExample(exampleId))}
+      />
+    );
+  if (page.view === "what-is-prompt-studio") content = <WhatIsPromptStudioView />;
   return (
     <Box layerStyle="panel" bg="bg" width="full" minWidth="0" height="full" overflow="hidden">
-      {page}
+      {content}
     </Box>
   );
 };
 
+const studioPageLinks = (page: StudioPage) => {
+  const previous = previousLandingView(page.view);
+  const next = nextLandingView(page.view);
+  return {
+    previous: previous ? { href: landingPathForView(previous), label: VIEW_META[previous].label } : undefined,
+    next: { href: landingPathForView(next), label: VIEW_META[next].label },
+  };
+};
+
 interface WorkbenchLandingProps {
   initialPath: string;
-  legalDocuments: LegalDocuments;
+  pages: LandingPage[];
+  initialDocument: LandingDocument | undefined;
 }
 
 export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
-  const { initialPath, legalDocuments } = props;
-  const { page, navigate, navigateExample, paletteOpen, setPaletteOpen } = useLandingNavigation(initialPath);
-  const { view } = page;
+  const { initialPath, pages, initialDocument } = props;
+  const { page, navigate, sectionPath, paletteOpen, setPaletteOpen } = useLandingNavigation(initialPath, pages);
+  const { shownPage, document, loading } = useLandingDocument(page, initialDocument);
   const { windowed, offset, toggleWindowed, onTitleBarPointerDown } = useWindowChrome();
   const styles = useLandingStyles(windowed);
 
   const content = (
     <Flex direction="column" flex="1" minWidth="0">
-      <WorkbenchNav activeView={view} onOpenNavigation={() => setPaletteOpen(true)} />
-      <Box as="main" css={styles.main}>
-        {isDocumentView(view) ? (
-          <DocColumn html={legalDocuments[view]} pageKey={page.path} />
-        ) : (
-          <LandingPanels page={page} navigation={<PageNavigation view={view} onNavigate={navigate} />}>
-            <LandingContent
-              page={page}
-              onNavigateExample={navigateExample}
-              windowOffset={windowed ? offset : undefined}
-            />
+      <WorkbenchNav page={page} onOpenNavigation={() => setPaletteOpen(true)} />
+      <Box as="main" css={styles.main} aria-busy={loading || undefined}>
+        {isStudioPage(shownPage) ? (
+          <LandingPanels page={shownPage} navigation={<PageNavigation {...studioPageLinks(shownPage)} />}>
+            <StudioContent page={shownPage} onNavigate={navigate} windowOffset={windowed ? offset : undefined} />
           </LandingPanels>
+        ) : (
+          <ReadingContent page={shownPage} pages={pages} document={document} />
         )}
       </Box>
     </Flex>
@@ -76,10 +99,13 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
       <Flex css={styles.window} style={{ transform: windowed ? `translate(${offset.x}px, ${offset.y}px)` : undefined }}>
         <ProjectTabsBar
           windowed={windowed}
-          onNavigateHome={() => navigate("start")}
+          selected={sectionForPage(page)}
+          sectionPath={sectionPath}
           onToggleWindowed={toggleWindowed}
           onTitleBarPointerDown={onTitleBarPointerDown}
           onTitleBarDoubleClick={toggleWindowed}
+          actionMenuOpen={paletteOpen}
+          onOpenActionMenu={() => setPaletteOpen(true)}
         />
         <Flex css={styles.body}>
           <ResizableSplitLayout
@@ -92,13 +118,18 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
             contentMinSizePx={600}
             collapsible={false}
             resizeLabel="Resize navigation"
-            resizablePanel={<ResourceSidebar activeView={view} onNavigate={navigate} />}
+            resizablePanel={<ResourceSidebar page={page} pages={pages} onNavigate={navigate} />}
             contentPanel={content}
           />
         </Flex>
-        <WorkbenchStatusBar onNavigate={navigate} />
+        <WorkbenchStatusBar />
       </Flex>
-      <CommandPaletteModal open={paletteOpen} onClose={() => setPaletteOpen(false)} onNavigate={navigate} />
+      <CommandPaletteModal
+        open={paletteOpen}
+        pages={pages}
+        onClose={() => setPaletteOpen(false)}
+        onNavigate={navigate}
+      />
     </Box>
   );
 };

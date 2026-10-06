@@ -1,6 +1,6 @@
-# CLI projects
+# Projects
 
-A project owns tools, settings, saved data, and workspaces. Open one existing folder with:
+A project is a folder that Prompt Studio opens with its own tools, settings, data, and workspaces. These commands create, list, inspect, and remove projects.
 
 ```sh
 pst projects create [name] [--path <folder>]
@@ -9,17 +9,17 @@ pst projects view [--project-id <project-id>]
 pst projects delete <project-id>
 ```
 
-`create` defaults to the exact current directory and its folder name. Git is optional. Numeric and Unicode folder names work. Selecting the same canonical folder again opens its existing project. Selecting a child creates a distinct project, including inside a Git repository.
+`create` uses the current directory and its folder name unless you pass `--path` or a name. Git is optional. Numeric and Unicode folder names work. Choosing the same folder again, including through a symlink, opens its existing project. Choosing a child folder creates a separate project, even inside a Git repository.
 
 ```sh
 pst projects create --path ./notes
 pst projects create "My tools" --path ./tools
 ```
 
-The server writes `.pstdio/config.json`, initializes extensions, and provisions the default workspace. Additional sessions share this folder. Project settings can rename the project.
+The runtime writes `.pstdio/config.json` in the folder, sets up the default extensions, and creates the default workspace. Sessions in that workspace share the folder. You can rename the project in its settings.
 
-Commands discover the nearest ancestor `.pstdio/config.json`. They do not move to a containing Git root. The default workspace remains the authority for project files, including when an old config file exists elsewhere.
+Commands find the project from the nearest `.pstdio/config.json` in the current folder or a parent folder. They do not move up to a containing Git root. The project's default workspace decides where its files are, even when an old config file exists elsewhere.
 
-`delete` removes the project from active use while preserving the selected folder and its contents. Provider-created resources follow their provider's deletion rules.
+`delete` removes the project from Prompt Studio. The folder and its contents stay on disk. Resources that a workspace provider created follow that provider's deletion rules.
 
 Run `pst projects <command> --help` for current options.

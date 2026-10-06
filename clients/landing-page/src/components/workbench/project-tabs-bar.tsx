@@ -1,18 +1,84 @@
 import { Box, chakra, HStack, Text } from "@chakra-ui/react";
-import { Maximize2, Minimize2, Minus, X } from "lucide-react";
+import { BookOpen, Maximize2, Minimize2, Minus, Newspaper, X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import type { SiteSection } from "../../content/landing-pages";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
+import { trackWindowControlClicked } from "../../services/landing-analytics";
 import { PromptStudioIcon } from "../icons/prompt-studio-icon";
+import { ActionMenuButton } from "./action-menu-button";
 
-interface ProjectTabsBarProps {
+const SITE_TABS: { section: SiteSection; label: string; icon: React.ReactNode }[] = [
+  { section: "studio", label: "Prompt Studio", icon: <PromptStudioIcon /> },
+  { section: "docs", label: "Docs", icon: <BookOpen /> },
+  { section: "blog", label: "Blog", icon: <Newspaper /> },
+];
+
+interface SiteTabsProps {
+  selected: SiteSection;
+  sectionPath: (section: SiteSection) => string;
+}
+
+// Website tabs have no close button, so each keeps its content width.
+const SiteTabs = (props: SiteTabsProps) => {
+  const { selected, sectionPath } = props;
+  const styles = useLandingStyles();
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const tabs = tabsRef.current!;
+    const revealSelected = () => {
+      tabs.querySelector(`[data-section="${selected}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+    revealSelected();
+    const observer = new ResizeObserver(revealSelected);
+    observer.observe(tabs);
+    return () => observer.disconnect();
+  }, [selected]);
+
+  return (
+    <HStack as="nav" ref={tabsRef} aria-label="Site" css={styles.siteTabs}>
+      {SITE_TABS.map((tab) => (
+        <chakra.a
+          key={tab.section}
+          href={sectionPath(tab.section)}
+          data-section={tab.section}
+          css={styles.siteTab}
+          aria-current={tab.section === selected ? "page" : undefined}
+          onPointerDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
+          <Box css={styles.siteTabIcon} aria-hidden="true">
+            {tab.icon}
+          </Box>
+          <Text as="span" css={styles.siteTabLabel}>
+            {tab.label}
+          </Text>
+        </chakra.a>
+      ))}
+    </HStack>
+  );
+};
+
+interface ProjectTabsBarProps extends SiteTabsProps {
   windowed: boolean;
-  onNavigateHome: () => void;
   onToggleWindowed: () => void;
   onTitleBarPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   onTitleBarDoubleClick: () => void;
+  actionMenuOpen: boolean;
+  onOpenActionMenu: () => void;
 }
 
 export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
-  const { windowed, onNavigateHome, onToggleWindowed, onTitleBarPointerDown, onTitleBarDoubleClick } = props;
+  const {
+    windowed,
+    selected,
+    sectionPath,
+    onToggleWindowed,
+    onTitleBarPointerDown,
+    onTitleBarDoubleClick,
+    actionMenuOpen,
+    onOpenActionMenu,
+  } = props;
 
   const styles = useLandingStyles(windowed);
   const controls = [
@@ -24,17 +90,13 @@ export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
       icon: windowed ? Maximize2 : Minimize2,
       disabled: false,
     },
-  ];
+  ] as const;
 
   return (
     <>
-      <Box as="button" aria-label="Go to Prompt Studio home" css={styles.mobileTitlebar} onClick={onNavigateHome}>
-        <Box width="5" height="5" flexShrink="0">
-          <PromptStudioIcon />
-        </Box>
-        <Text fontFamily="heading" fontWeight="medium" textStyle="label/M/medium" lineHeight="1.2">
-          Prompt Studio
-        </Text>
+      <Box css={styles.mobileTitlebar}>
+        <SiteTabs selected={selected} sectionPath={sectionPath} />
+        <ActionMenuButton open={actionMenuOpen} onOpen={onOpenActionMenu} />
       </Box>
       <Box css={styles.titlebar} onPointerDown={onTitleBarPointerDown} onDoubleClick={onTitleBarDoubleClick}>
         <Box
@@ -52,26 +114,17 @@ export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
               disabled={control.disabled}
               aria-label={control.label}
               title={control.label}
-              onClick={onToggleWindowed}
+              onClick={() => {
+                trackWindowControlClicked(control.id, windowed);
+                onToggleWindowed();
+              }}
             >
               <control.icon strokeWidth={3} />
             </chakra.button>
           ))}
         </Box>
-        <HStack
-          as="button"
-          css={styles.brandTab}
-          onClick={onNavigateHome}
-          onPointerDown={(event) => event.stopPropagation()}
-          onDoubleClick={(event) => event.stopPropagation()}
-        >
-          <Box boxSize="icon-sm" flexShrink="0" aria-hidden="true">
-            <PromptStudioIcon />
-          </Box>
-          <Text fontFamily="heading" fontWeight="medium" textStyle="label/S/medium" whiteSpace="nowrap">
-            Prompt Studio
-          </Text>
-        </HStack>
+        <SiteTabs selected={selected} sectionPath={sectionPath} />
+        <ActionMenuButton open={actionMenuOpen} onOpen={onOpenActionMenu} />
       </Box>
     </>
   );

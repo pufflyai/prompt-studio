@@ -1,6 +1,6 @@
-# Extension manifest and installation
+# Manifest and installation
 
-Part of the [extension API reference](0001-api.md).
+Every extension is a package with a `package.json` manifest and an entry file. This page covers manifest fields, installs, updates, and IDs.
 
 ## Package Manifest
 
@@ -109,10 +109,6 @@ Installs and updates are explicit. Source that appears in the extensions root is
   that already exists under `.pstdio/extensions`. The request is
   `POST /v1/projects/{projectId}/extensions/local` with multipart form data: a `name` field and one
   `files` part per file, whose file name is its path relative to the folder root.
-
-The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to a local JSON file or
-an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is
-trusted configuration because every entry names code the host may run.
 - Webview bundles are reused across restarts while their inputs are unchanged. Startup checks them
   in the background and does not wait. Editing an installed folder still rebuilds that extension's
   webview assets, so an open webview updates while you work. Only its contributions wait for the
@@ -123,6 +119,10 @@ trusted configuration because every entry names code the host may run.
   unchanged does not re-provision.
 - `pst extensions dev <path>` still reinstalls on every edit. That is an explicit development loop,
   not automatic adoption.
+
+The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to a local JSON file or
+an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is
+trusted configuration because every entry names code the host may run.
 
 ## Developing A Repo-Scoped Extension
 
@@ -158,7 +158,7 @@ two copies of the same extension apart.
 
 ## Changing The Extension API
 
-[API versioning](0014-api-versioning.md) defines the change levels, the one-step-per-release rule, and how to deprecate and remove APIs. Bundled extensions and the host still move together: update every first-party extension and its manifest before a breaking release. `bun run verify:extension-api-version` lists any tracked manifest the host would refuse. See [release versioning](../../requirements/platform/0005-versioning-and-releases.md) and [PR separation](../../guides/development/0004-pull-request-labels.md).
+[API versioning](0014-api-versioning.md) defines the change levels, the one-step-per-release rule, and how APIs are deprecated and removed. When a release breaks the API, update your extension's code, then add a caret range for the new API version to `engines.pstdio`. When a release only adds APIs or fixes behavior, your existing range keeps working.
 
 ## Source Layout
 
@@ -228,7 +228,7 @@ artifact root    <repo>/.pstdio/extension-storage/planner/
 theme id         pstdio.planner.theme.<local-id>
 ```
 
-The old `namespace` concept is removed. Use the package `name` anywhere extension-facing code needs a short project scope.
+Use the package `name` anywhere extension-facing code needs a short project scope.
 Publisher-qualified runtime ids are host routing details. Extension code declares local ids and uses typed refs.
 For same-extension composition, use the `ref` returned by `defineCommand()`.
 

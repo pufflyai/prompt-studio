@@ -1,6 +1,8 @@
-# Durable extension work
+# Durable work
 
-Use `ctx.automation` for work that lasts longer than the request that starts it. Use `ctx.process` for work the caller awaits. A detached process has no durable run record.
+Use `ctx.automation` for work that lasts longer than the request that starts it. The host stores each run and tracks it until it finishes.
+
+Use `ctx.process` for work the caller awaits. A detached process has no durable run record.
 
 Declare the worker command with `automation: true`. A command can enqueue only a worker owned by the same extension. This uses the same flag as machine-token automation; machine tokens still need an explicit command scope.
 
@@ -41,7 +43,7 @@ Cancellation aborts `ctx.signal` and waits for command cleanup. A cancelled work
 - Input: 64 KB, including the command ID and input envelope.
 - Result: 64 KB. Error: 8 KB.
 - Idempotency key: 1 to 200 characters.
-- Admission: 60 new runs per minute per extension and project by default, controlled by `config.automation.runsPerMinute`.
+- Admission: 60 new runs per minute per extension and project by default. The `PSTDIO_AUTOMATION_RUNS_PER_MINUTE` environment variable changes the limit.
 - Terminal runs: pruned after 30 days. Keys can be reused after their run is pruned.
 
-Use `AutomationRun` and `AutomationRunStatus` from `@pstdio/sdk/extensions` for stored run handles. The host owns run supervision. Extensions own retry policies, checkpoints, progress, and their run tables. The [automation directory](../cli/0007-automation.md) describes lifecycle hooks, which are a separate feature.
+Use `AutomationRun` and `AutomationRunStatus` from `@pstdio/sdk/extensions` for stored run handles. The host owns run supervision. Extensions own retry policies, checkpoints, progress, and their run tables. [Remote automation](../cli/0007-automation.md) describes machine tokens, which start runs from outside Prompt Studio. [Lifecycle automation](0006-lifecycle-automation.md) describes hooks and schedules, which are separate features.

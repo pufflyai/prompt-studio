@@ -1,19 +1,47 @@
-# Extension runtime smoke checks
+# Smoke checks
 
-Run `pst extensions install-browser` once, then `pst extensions test ./my-extension` to install a local source into a disposable home and load its resource-free pages in the real dashboard. Browser setup uses the Bun runtime included in the installed CLI and the matching Playwright version. It does not require a separate Bun, bunx, or Node.js installation. Browser downloads are cached and reused.
+`pst extensions test` installs an extension into a throwaway Prompt Studio and opens its pages in a real browser, to catch errors before you ship.
 
-On Linux, use `pst extensions install-browser --with-deps` when browser system libraries are also needed. Installing system libraries may require administrator access. `PLAYWRIGHT_BROWSERS_PATH` selects the browser cache for both setup and smoke runs.
+## Run a smoke check
 
-Use `--json` for one machine-readable result on stdout. Logs go to stderr. Use `--keep-home` to retain the temporary run directory and evidence after all processes stop. `--project-path <directory>` supplies fixture context containing the source and its relative local dependencies. Original source files, caller project configuration, lockfiles and installed dependencies are never changed. Dependencies install in the copied context. Source symlinks and absolute local dependencies are unsupported.
+Install the browser once, then test a local extension folder:
 
-The run inherits only OS launch and locale environment variables. Caller credentials and arbitrary environment variables are not passed to extension imports, the host, or Chromium. Dependencies must install without caller environment credentials. The command isolates process state; it does not provide an operating-system sandbox.
+```sh
+pst extensions install-browser
+pst extensions test ./my-extension
+```
 
-The result includes installed source identity and hash, host and browser versions, phase durations, individual checks, visited contributions, and coverage omissions. Exit 0 means the applicable initial-load checks passed; 1 means an extension runtime failure; 2 means an installation or declaration failure; 3 means input, setup, or process cleanup failure. Dependent checks prevented by a failure are marked `not-run`. Browser or host close errors still produce a complete result and do not prevent disposable disk cleanup.
+The test installs the source into a temporary home and loads its pages that need no resource in the real dashboard. Browser setup uses the Bun runtime inside the installed `pst` and the matching Playwright version. You do not need a separate Bun, bunx, or Node.js installation. Downloaded browsers are cached and reused.
 
-A pass covers registration, selected resource-free page compositions, mounted webview readiness, and errors observed during those steps. Regions normally mount only their active tab, so inactive panels that do not mount are listed as unexercised. Host diagnostics are read only from dashboard scripts; extension console output cannot report host results. Commands, resource-bound editors, settings, optional tabs and interaction-only branches require explicit tests. Duplicate display labels are allowed. Zero UI visits are valid for extensions without eligible pages. The command never creates domain resources or executes arbitrary commands.
+On Linux, use `pst extensions install-browser --with-deps` when the browser's system libraries are missing too. Installing them may need administrator access. `PLAYWRIGHT_BROWSERS_PATH` selects the browser cache for both setup and test runs.
 
-Chromium support follows Playwright 1.60.0: macOS arm64/x64, Windows x64, and supported Linux x64/arm64 distributions. Browser support loads only for this command. See [ADR 0029](../../adrs/0029-temporary-chromium-only-playwright-bundle.md) for the temporary compiled-bundle exclusion of optional BiDi modules.
+## Options
 
-For Prompt Studio repository contributors with the repository's Bun toolchain installed, build dashboard assets first, run `bun run validate`, then `bun run --cwd scripts verify:packages`. Packaged consumer fixtures exercise passing views, startup exceptions, capability denials caught by guest code, forged host diagnostics, fixed main panels, and browser setup without external JavaScript runtimes. For interactive dashboard validation use `bun run dev:playwright` and stop it with `bun run dev:playwright:down`. These contributor commands are not prerequisites for installed CLI users.
+Use `--json` to print one machine-readable result on stdout. Logs go to stderr. Use `--keep-home` to keep the temporary run folder and its evidence after all processes stop.
 
-Package verification provisions Chromium through the compiled CLI before starting the timed tests, including on Windows x64. The install test reuses the browser and package caches while checking a fresh caller directory with no external JavaScript runtimes. Cold downloads remain subject to the existing CI job limit instead of the runtime test's 30-second deadline.
+`--project-path <directory>` supplies a project folder for the test. It must contain the source and any local dependencies it refers to by relative path. The test copies it first. Your source files, project configuration, lockfiles, and installed dependencies are never changed. Dependencies install in the copy. Source symlinks and local dependencies with absolute paths are not supported.
+
+## Isolation
+
+The run passes on only the operating system's launch and locale environment variables. Your credentials and other environment variables do not reach extension code, the host, or the browser. Dependencies must install without credentials from your environment. The command keeps processes apart, but it is not an operating-system sandbox.
+
+## Results
+
+The result lists the installed source and its hash, the host and browser versions, how long each phase took, each check, the contributions it visited, and what it did not cover.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | The checks for the initial load passed. |
+| 1 | The extension failed at runtime. |
+| 2 | Installation or a declaration failed. |
+| 3 | The input, setup, or cleanup failed. |
+
+Checks that could not run because an earlier check failed are marked `not-run`. Errors while closing the browser or host still produce a complete result, and the temporary files are still removed.
+
+## What a pass covers
+
+A pass covers registration, the selected pages that need no resource, mounted webviews becoming ready, and errors seen during those steps. A region normally mounts only its active tab, so inactive panels that never mount are listed as not exercised. Host diagnostics come only from dashboard scripts, so extension console output cannot fake a result.
+
+Commands, editors for a specific resource, settings, optional tabs, and behavior that needs clicks require your own tests. Two items may share a display label. An extension without eligible pages passes with zero pages visited. The command never creates resources or runs arbitrary commands.
+
+Chromium support follows Playwright 1.60.0: macOS on arm64 and x64, Windows x64, and supported Linux distributions on x64 and arm64. The browser support loads only for this command.

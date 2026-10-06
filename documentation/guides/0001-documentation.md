@@ -4,10 +4,10 @@ Prompt Studio is a workbench where people and agents build and use tools through
 
 ## Start here
 
-- [Install and use Prompt Studio](0002-getting-started.md)
+- [Install Prompt Studio](getting-started/0001-install.md)
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
-- [Build an extension](extensions/0001-authoring.md)
+- [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
 - [Check lessons when stuck](../lessons-learned)
 
@@ -27,15 +27,101 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 | `adrs` | Architecture decisions, including temporary limitations and removal criteria |
 | `lessons-learned` | Diagnosed failures and rules that prevent recurrence |
 
-Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
+Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group getting started, concepts, development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
 
 Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Package and extension READMEs, extension-owned product docs, and Pencil/design guidance stay beside their owners.
 
-Use relative Markdown links so these pages work in repository browsers and editors. Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
+Treat source-linked type declarations as the signature authority. Call requirements documents PRDs, not proposals. Mark unimplemented PRDs as proposed and delete superseded PRDs. Preserve the remaining numbers when a PRD is removed; gaps do not need to be filled.
+
+## Publishing to prompt.studio/docs
+
+The website publishes some folders as the Docs tab at [prompt.studio/docs](https://prompt.studio/docs/). It reads these files straight from the repository at build time:
+
+- Guides: `guides/getting-started/`, `guides/concepts/`, `guides/extensions/`, and `guides/sdk/`
+- References: `references/cli/`, `references/extensions/`, `references/sdk/`, and `references/workbench/`
+- Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, and OpenCode harnesses, and Extension Lab
+
+Nothing else is published. This guide, `guides/development/`, `references/architecture/`, PRDs, ADRs, lessons learned, and `extensions/pstdio-planner/docs/superseded/` stay in the repository. The allow-list of published folders and their sidebar labels lives in `clients/landing-page/src/content/docs-topics.ts`. A folder that is not on that list is never published, so a new folder stays private until someone adds it.
+
+Published pages are written for users and extension authors who read them on the website without the repository open. Keep contributor material, such as repository test commands and Docker development stacks, in `guides/development/` or in an extension's `AGENTS.md`.
+
+Every published page follows these rules. The website build fails when a page breaks them.
+
+- No frontmatter.
+- The first line is a `# Title` heading. It is the page's sidebar label, so keep it short.
+- The first block after the title is a plain paragraph of one or two sentences, ideally under 160 characters. It becomes the page's description for search engines and link previews.
+- The file number sets the page order in the sidebar. The URL drops it: `references/cli/0006-sessions.md` becomes `/docs/references/cli/sessions/`. An extension's `README.md` is its overview page.
+- Use `##` headings for sections. They form the page outline.
+
+Link with relative paths to `.md` files, so the same markdown works on GitHub and on the website. A link to a published page becomes a website link. A link to any other repository file, such as an ADR or a source file, becomes a link to that file on GitHub `main`. A relative link to a missing file fails the build. Anchors such as `0006-sessions.md#create-a-session` use GitHub-style heading slugs.
+
+## Screenshots and GIFs
+
+Prefer short GIFs when movement explains a feature: entering a sidebar level, choosing an option, dragging a row, or reloading a tool. Use a still screenshot when someone mainly needs to find a control or read a screen. Record real app interactions with sample data; do not animate a mock screen to imply working behavior.
+
+For every new UX GIF, record matching light and dark variants of the same workflow. Use the same sample data, framing, actions, and playback speed. Save them with `-light.gif` and `-dark.gif` suffixes. Show the variant for the page’s active theme, and verify both versions remain animated after direct loading and in-site navigation.
+
+Keep each recording focused on one workflow, with enough time to read the result. Avoid unnecessary typing and loading pauses. Store GIFs beside screenshots in `documentation/images/`, link them with relative Markdown paths, and give them useful alt text and a caption. Label the capture version when showing an earlier release. Verify the production asset still has multiple frames and plays after in-site navigation; image optimization must not flatten it.
+
+Add screenshots when they help someone find a control, understand a screen, or check the result of a workflow. Getting-started guides and tool walkthroughs should show the relevant workbench or settings screen. API signatures and terminal-only instructions usually do not need an image.
+
+Keep the source images in `documentation/images/` with descriptive kebab-case names. Use relative Markdown image paths so the same image works in the repository and on the website. Reuse an existing image when it shows the same screen; do not keep a second copy in the website's public folder.
+
+For example, from a guide in `guides/getting-started/`:
+
+```md
+![Workbench showing the project sidebar and the Start page.](../../images/workbench.png)
+```
+
+Capture the real app with `bun run dev:playwright`, using its printed dashboard URL. Use a disposable project and sample content. Capture both light and dark themes for UX GIFs; choose the clearest theme for still screenshots. Do not include credentials, private paths, or personal conversations. Stop the capture stack afterward with `bun run dev:playwright:down`.
+
+Show enough of the workbench to explain where a tool lives. For settings, capture the dialog with its navigation and relevant controls, rather than the whole desktop. Keep text readable at the documentation's column width. Give every image useful alt text and a nearby sentence that explains what to look for. State when enabled extensions or sample data make the picture differ from a new project.
+
+Update screenshots when the visible workflow changes. Build the website and check the images on desktop and mobile before publishing. The production image must include them; a source-folder mount must not be needed to serve documentation screenshots.
+
+## Blog posts
+
+Blog posts live in `clients/landing-page/src/content/blog/`. Their frontmatter has `title`, `description`, `published`, `category`, and an author ID from `src/content/blog-authors.ts`. Use `author: aurelien-franky` for Aurélien Franky. The author registry supplies the name and local avatar. Reading time is calculated from article text at 220 words per minute; do not store it in frontmatter.
+
+Release article views show an alpha notice before the body: Prompt Studio is still in alpha. Its APIs and core feature set are not fully defined yet and can change day by day, introducing breaking changes until beta. Keep the shared notice in `PostView` consistent when the release stage changes.
+
+Give each post one category: `release` for shipped versions and their changes, `thoughts` for ideas and personal essays, or `tool showcase` for a specific tool and how people and agents use it. The schema rejects missing or unknown categories. The list and article header show the category, and article metadata carries it as `articleSection`.
+
+Every post has its own paired light and dark banners. Generate a distinct 4:1 piece with the repo-local Shape Art extension: `pst shape-art piece generate --id blog-<post-slug> --background ink --width 1600 --height 400`. Follow the [Shape Art skill](../../.pstdio/extensions/shape-art/skills/shape-art/SKILL.md). Allow all six shape kinds, including yellow commands and orange automation shapes. Save a second recipe with the same seed and composition on a paper background, using an `-light` suffix. Keep each PNG and its editable JSON recipe together in `design/art/`.
+
+```yaml
+image:
+  light: ../../../../../design/art/blog-welcome-to-prompt-studio-light.png
+  dark: ../../../../../design/art/blog-welcome-to-prompt-studio.png
+```
+
+Astro checks both source paths and optimizes the banners. The site shows the variant for its active theme; link previews use the light variant. Keep the original proportions and opaque backgrounds. Art is decorative; screenshots and GIFs in the body explain the actual product.
+
+The blog list highlights the newest post with a wide banner and larger title. Older entries have no artwork in the list. Every card includes the author avatar/name, date, reading time, category, and description, and its whole area opens the post. Cards zoom slightly on hover and show a keyboard focus ring; reduced motion disables the zoom. Article pages keep their full banners. Use `##` headings for article sections: posts with at least two sections show the shared **On this page** outline on wide screens, with links to headings and a marker for the section being read.
+
+Write `published` as an unquoted date or UTC timestamp. Use a release's actual publication timestamp for release posts, so posts about releases published on the same day sort correctly. Check published GitHub releases; exclude drafts. Link each release post to its release notes and relevant changelogs at that release tag. Describe selected changes in terms of what people can do, and distinguish platform features from extension workflows.
+
+Keep an original post's publication date when adding images or correcting it. Reuse relevant documentation screenshots. Label a recent capture when it illustrates an older release, and do not imply that a pictured control was introduced in that release unless the changelog confirms it.
 
 ## Guides
 
-- [0002 — Start using Prompt Studio](0002-getting-started.md)
+### Getting started
+
+- [0001 — Install Prompt Studio](getting-started/0001-install.md)
+- [0002 — Open a project](getting-started/0002-open-a-project.md)
+- [0003 — Add tools](getting-started/0003-add-tools.md)
+- [0004 — Run agents](getting-started/0004-run-agents.md)
+- [0005 — Troubleshooting](getting-started/0005-troubleshooting.md)
+
+### How Prompt Studio works
+
+- [0001 — Projects and workspaces](concepts/0001-projects-and-workspaces.md)
+- [0002 — Extensions](concepts/0002-extensions.md)
+- [0003 — Agents and harnesses](concepts/0003-agents.md)
+- [0004 — Local and remote work](concepts/0004-local-and-remote.md)
+
+### Developer tools
+
 - [0003 — Developer tools](0003-developer-tools.md)
 
 ### Development
@@ -44,17 +130,18 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0002 — Tests](development/0002-testing.md)
 - [0003 — Storybook coverage](development/0003-storybook-coverage.md)
 - [0004 — Pull request area labels](development/0004-pull-request-labels.md)
+- [0005 — Extension conformance and regression coverage](development/0005-conformance.md)
 
-### Extensions
+### Build extensions
 
-- [0001 — Extensions](extensions/0001-authoring.md)
+- [0001 — Write an extension](extensions/0001-authoring.md)
 - [0002 — Workbench cookbook](extensions/0002-workbench-cookbook.md)
-- [0003 — Extension automation cookbook](extensions/0003-automation.md)
-- [0004 — Migrate an extension to remote execution](extensions/0004-remote-execution-migration.md)
-- [0005 — Extension conformance and regression coverage](extensions/0005-conformance.md)
-- [0006 — Extension runtime smoke checks](extensions/0006-smoke-checks.md)
+- [0003 — Automation cookbook](extensions/0003-automation.md)
+- [0004 — Move to remote execution](extensions/0004-remote-execution-migration.md)
+- [0006 — Smoke checks](extensions/0006-smoke-checks.md)
+- [0007 — Make actions CLI-ready](extensions/0007-cli-ready-actions.md)
 
-### SDK
+### Use the SDK
 
 - [0001 — Client](sdk/0001-client.md)
 
@@ -85,48 +172,49 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0021 — Streaming](../references/architecture/0021-stream.md)
 - [0022 — Workspace Diff Presentation](../references/architecture/0022-workspace-diff-presentation.md)
 - [0023 — Worktrees and Git operations](../references/architecture/0023-worktrees.md)
+- [0024 — Extension API version checks](../references/architecture/0024-extension-api-version-checks.md)
 
 ### CLI
 
-- [0001 — Prompt Studio CLI](../references/cli/0001-overview.md)
-- [0002 — CLI agents](../references/cli/0002-agents.md)
-- [0003 — Product Requirements Document: CLI Runtime and API Setup](../references/cli/0003-setup.md)
-- [0004 — CLI projects](../references/cli/0004-projects.md)
-- [0005 — CLI workspaces](../references/cli/0005-workspaces.md)
-- [0006 — CLI sessions](../references/cli/0006-sessions.md)
+- [0001 — Overview](../references/cli/0001-overview.md)
+- [0002 — Agents](../references/cli/0002-agents.md)
+- [0003 — Runtime commands](../references/cli/0003-setup.md)
+- [0004 — Projects](../references/cli/0004-projects.md)
+- [0005 — Workspaces](../references/cli/0005-workspaces.md)
+- [0006 — Sessions](../references/cli/0006-sessions.md)
 - [0007 — Remote automation](../references/cli/0007-automation.md)
-- [0008 — CLI notifications](../references/cli/0008-notifications.md)
+- [0008 — Notifications](../references/cli/0008-notifications.md)
+- [0009 — Board views](../references/cli/0009-board-views.md)
 
-### Extensions
+### Extension API
 
-- [0001 — Extension API reference](../references/extensions/0001-api.md)
-- [0002 — Extension manifest and installation](../references/extensions/0002-manifest-and-installation.md)
-- [0003 — Extension commands and processes](../references/extensions/0003-command-and-process-api.md)
-- [0004 — Extension contributions](../references/extensions/0004-contribution-api.md)
-- [0005 — Extension webviews and storage](../references/extensions/0005-webview-and-storage-api.md)
-- [0006 — Extension lifecycle automation](../references/extensions/0006-lifecycle-automation.md)
-- [0007 — Durable extension work](../references/extensions/0007-durable-automation.md)
+- [0001 — Overview](../references/extensions/0001-api.md)
+- [0002 — Manifest and installation](../references/extensions/0002-manifest-and-installation.md)
+- [0003 — Commands and processes](../references/extensions/0003-command-and-process-api.md)
+- [0004 — Contributions](../references/extensions/0004-contribution-api.md)
+- [0005 — Webviews and storage](../references/extensions/0005-webview-and-storage-api.md)
+- [0006 — Lifecycle automation](../references/extensions/0006-lifecycle-automation.md)
+- [0007 — Durable work](../references/extensions/0007-durable-automation.md)
 - [0008 — Workbench composition](../references/extensions/0008-contextual-workbench-composition.md)
-- [0009 — Extension modes and layout](../references/extensions/0009-modes-and-layout.md)
+- [0009 — Modes and layout](../references/extensions/0009-modes-and-layout.md)
 - [0010 — Navigation and layout state](../references/extensions/0010-navigation-and-layout-state.md)
-- [0011 — Extension Notifications](../references/extensions/0011-notifications.md)
-- [0012 — Renderer Edit and Refresh Lifecycle](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
-- [0013 — Dashboard UI contributions](../references/extensions/0013-workbench-attachments.md)
-- [0014 — Extension API versioning](../references/extensions/0014-api-versioning.md)
+- [0011 — Notifications](../references/extensions/0011-notifications.md)
+- [0012 — Renderer edit and refresh](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
+- [0014 — API versioning](../references/extensions/0014-api-versioning.md)
 - [0015 — Harness commands and chat modes](../references/extensions/0015-harness-commands.md)
 
 ### SDK
 
-- [0001 — SDK](../references/sdk/0001-overview.md)
+- [0001 — Overview](../references/sdk/0001-overview.md)
 - [0002 — Resource types](../references/sdk/0002-resources.md)
-- [0003 — SDK method reference](../references/sdk/0003-api.md)
+- [0003 — Method reference](../references/sdk/0003-api.md)
 
 ### Workbench
 
-- [0001 — Workbench](../references/workbench/0001-overview.md)
-- [0002 — Workbench API](../references/workbench/0002-api.md)
+- [0001 — Overview](../references/workbench/0001-overview.md)
+- [0002 — API](../references/workbench/0002-api.md)
 - [0003 — Contribution ownership](../references/workbench/0003-contribution-ownership.md)
-- [0004 — Workbench navigation](../references/workbench/0004-navigation.md)
+- [0004 — Navigation](../references/workbench/0004-navigation.md)
 
 ## PRDs
 
@@ -205,12 +293,11 @@ Use relative Markdown links so these pages work in repository browsers and edito
 - [0045 — Temporary Remotion React subpath alias](../adrs/0045-temporary-remotion-react-subpath-alias.md)
 - [0046 — Let extension webviews write to the clipboard when they declare it](../adrs/0046-declared-webview-clipboard-writes.md)
 - [0047 — Semantic versioning for the extension API](../adrs/0047-semantic-versioning-for-the-extension-api.md)
-
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
-- [0051 — Temporary Motion Lab scene link pass (Superseded)](../adrs/0051-superseded-temporary-motion-scene-link-pass.md)
+- [0048 — Board views are core project data](../adrs/0048-shared-project-board-views.md)
 - [0049 — Temporary scroll content width override for panel tabs](../adrs/0049-temporary-scroll-content-width-override.md)
-
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
+- [0051 — Temporary Motion Lab scene link pass (Superseded)](../adrs/0051-superseded-temporary-motion-scene-link-pass.md)
 - [0052 — Temporary Codex question delivery confirmation](../adrs/0052-temporary-codex-question-delivery-confirmation.md)
 - [0053 — Temporary webview move fallback](../adrs/0053-temporary-webview-move-fallback.md)
 - [0054 — Browser sessions for the local runtime](../adrs/0054-browser-sessions-for-the-local-runtime.md)

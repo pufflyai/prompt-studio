@@ -2,6 +2,8 @@
 
 The control plane owns accepted intent, permissions, lifecycle, and stored metadata. The execution plane runs work where its files or remote resources exist. They may share a machine without sharing responsibility.
 
+For the user view, see [Local and remote work](../../guides/concepts/0004-local-and-remote.md).
+
 ## Current owners
 
 | Operation | Owner |

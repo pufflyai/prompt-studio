@@ -1,21 +1,29 @@
 # Workbench cookbook
 
-Build on the public `@pstdio/sdk/extensions` API. Install the SDK with Bun and set `engines.pstdio` to a caret range of the extension API version shipped with your host, such as `^0.1.0`. The range keeps the extension loading across additive host releases. See [API versioning](../../references/extensions/0014-api-versioning.md).
+Recipes for pages, inspectors, shared panels, editors, and navigation in the dashboard. Each recipe links to a working example.
 
-Start with [Extension Lab](../../../extensions/extension-lab/README.md). It contains working tools with saved data, navigation, and custom modes. Copy the extension directory when trying it outside this repository; individual example modules import its shared files. Rename the package and publisher before installing your own copy.
+The recipes use the public `@pstdio/sdk/extensions` API. If you have not built an extension yet, start with [Write an extension](0001-authoring.md).
+
+## Try the examples
+
+The examples come from [Extension Lab](../../../extensions/extension-lab/README.md), a set of complete tools with saved data, navigation, and custom modes. Its examples share files, so copy the whole `extensions/extension-lab` folder from the Prompt Studio repository.
+
+Before installing your copy, change `package.json`'s `name` and `publisher`. Replace the original owner ID, `pstdio.extension-lab`, throughout the copied source with your new `<publisher>.<name>`. The [public contracts](../../../extensions/extension-lab/src/contracts.ts), [state events](../../../extensions/extension-lab/src/state-commands.ts), and webview navigation use qualified IDs. Changing only the manifest leaves those calls pointing to Extension Lab instead of your copy.
+
+Run the watcher on your copy from a project folder, and check it:
 
 ```sh
-bun install
-bun run typecheck
 pst extensions dev /absolute/path/to/your-extension
 pst extensions check
 ```
 
-Run `pst extensions dev` from a linked project. Keep it running while editing. It installs package dependencies and watches source changes. Native contributions load from TypeScript; webviews use the host's asset build. Changes to definitions, callbacks, and assets go through this same loop. Stop the watcher before a production installation with `pst extensions add --force <path>`.
+`pst extensions dev` installs the package dependencies, then watches the source. Keep it running while you edit. Changes to declarations, callbacks, and webview files all reload through the same loop. Stop the watcher before you install a final version with `pst extensions add --force <path>`.
 
-## Ownership in one minute
+Set `engines.pstdio` to a caret range of the extension API version your Prompt Studio ships, such as `^0.1.0`. The range keeps the extension loading across releases that only add features. See [API versioning](../../references/extensions/0014-api-versioning.md).
 
-A view supplies content. A page owns a route and its panels. A mode owns shared panels, region policy, and chrome. `ResourceRef` identifies data with `type`, `id`, and an optional `label`. Keep that reference intact when passing it between callbacks. An extension or project identity can distinguish data with the same type and id.
+## Who owns what
+
+A view supplies content. A page owns an address in the dashboard and the panels on it. A mode owns the panels shared across its pages, the rules for its regions, and its chrome: the bars around the content, such as the sidebar and the status bar. A resource is one item of your data, such as a document or a ticket. `ResourceRef` identifies it with `type`, `id`, and an optional `label`. Pass the reference on unchanged between callbacks. Its extension and project fields keep items with the same type and ID apart.
 
 A page declares its routed resource separately with `resource: { kinds }`. Its `main` chooses either a view with `cardinality: "one" | "many"`, or peer panels with `kind: "panels"` and an `empty` view. Multiple routed view instances require a resource-bound page. That page declares a parent for closing its last resource tab.
 
@@ -33,7 +41,7 @@ For a native editor, choose a view body with `kind: "file"`. Its `load` callback
 
 The [compiled controls example](../../../extensions/pstdio-skills/skills/create-pstdio-extension/references/examples/controls.ts) shows every required text and read-only field. Use `params.text(...)` for command parameters; renderer controls use their serializable control types.
 
-Use `ctx.storage` for extension-owned data. The [Lab state commands](../../../extensions/extension-lab/src/state-commands.ts) save changes, emit the declared `examplesChanged` event, and return the saved result. The [native Zipline board](../../../extensions/extension-lab/src/examples/zipline-board.ts) declares `refreshEvents` and queries that same saved data. Native renderers refresh after saves and matching events; the author does not maintain a second host-side store.
+Use `ctx.storage` for extension-owned data. The [Lab state commands](../../../extensions/extension-lab/src/state-commands.ts) save changes, emit the declared `examplesChanged` event, and return the saved result. The [native Zipline board](../../../extensions/extension-lab/src/examples/zipline-board.ts) declares `refreshEvents` and queries that same saved data. Native views refresh after saves and matching events, so you do not keep a second copy of the data for the view.
 
 Open resource pages with `open: "preview"` for replaceable tabs or `open: "pin"` for retained tabs. Reopening the same resource reuses its instance. The default tab title is the resource label, falling back to the view title. A tab query can supply an explicit label, icon, or indicator.
 
@@ -122,10 +130,9 @@ uses the clicked file when another document is active. Actions with input fields
 
 ## Check an authoring change
 
-Typecheck with `skipLibCheck: false`. Fix the field named by `pst extensions check`; declaration errors identify the extension, contribution, field path, and expected value. Test edits, another resource, revisit, reload, Back/Forward, independent closing, and mode navigation through the normal dev installation.
+Typecheck the extension with `skipLibCheck: false`. Fix the field named by `pst extensions check`; declaration errors identify the extension, contribution, field path, and expected value. With `pst extensions dev` running, test edits, another resource, revisiting, reloading, Back and Forward, closing panels one at a time, and moving between modes.
 
-These examples are repository TypeScript sources included in Extension Lab's typecheck and runtime checks. Host integration belongs in the [workbench guide](../../../packages/pstdio-workbench/README.md).
-
+The linked examples are compiled and tested with Extension Lab, so they match the current API. To build your own host app on the workbench, see the [Workbench reference](../../references/workbench/0001-overview.md).
 ### Session rows
 
 A session may open a preview panel while retaining its own action identity:

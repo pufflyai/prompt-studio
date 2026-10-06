@@ -9,23 +9,17 @@ This proposal is no longer the current direction.
 
 Core attempt-status hooks were removed when ticket tables moved out of the
 backend. Planner ticket workflow automation now lives in the `pstdio-planner`
-extension and is driven by planner workspace status commands/storage.
+extension. Planner stores one managed attempt record per workspace and drives
+the workflow through its attempt commands. See [Attempts](../0002-attempts.md)
+for the current flow.
 
-Current behavior:
+These are not current APIs:
 
-1. Planner ticket attempts create host workspaces and sessions through planner
-   commands.
-2. Session start moves the planner ticket to `In Progress`.
-3. Planner workspace status `review-ready` starts a review session.
-4. Planner workspace status `changes-requested` follows up the original
-   implementation session.
-5. Planner workspace status `reviewed` contributes to the aggregate transition
-   that moves the planner ticket to `In Review`.
-
-Removed core concepts:
-
-- `pre-attempt-status-*`
-- `post-attempt-status-*`
+- `pre-attempt-status-*` and `post-attempt-status-*` hooks
 - `attemptStatusEvents.changed`
 - `PATCH /v1/workspaces/:id/attempt-status`
-- core attempt-status tables
+- Core attempt-status tables
+- Core workspace status mutation and the old planner workspace-status command family
+- The old command that inferred ticket status from workspace state
+- Workspace-status settings and their legacy storage collections
+- Ticket-status inference from generic session start or completion hooks

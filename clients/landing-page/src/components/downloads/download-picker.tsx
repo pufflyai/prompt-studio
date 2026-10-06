@@ -27,7 +27,7 @@ export const DownloadPicker = () => {
         </Button>
       ) : (
         <Button asChild variant="primary" size="lg" width="full">
-          <a href={selected?.url ?? SITE_LINKS.readme} aria-describedby="download-build">
+          <a href={selected?.url ?? SITE_LINKS.install} aria-describedby="download-build">
             {selected ? <Download /> : <SquareTerminal />}
             {selected ? "Download Prompt Studio" : "Use via CLI"}
           </a>
@@ -60,7 +60,7 @@ export const DownloadPicker = () => {
         )}
         {selected && (
           <Button asChild variant="ghost" size="sm">
-            <a href={SITE_LINKS.readme} target="_blank" rel="noopener">
+            <a href={SITE_LINKS.install}>
               <SquareTerminal />
               Use via CLI
             </a>

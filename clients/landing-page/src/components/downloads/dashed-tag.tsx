@@ -59,9 +59,7 @@ export const DashedTag = (props: DashedTagProps) => {
           outlineColor: "colorPalette.focusRing",
         }}
       >
-        <Link href={href} target="_blank" rel="noopener">
-          {content}
-        </Link>
+        <Link href={href}>{content}</Link>
       </HStack>
     );
   }
