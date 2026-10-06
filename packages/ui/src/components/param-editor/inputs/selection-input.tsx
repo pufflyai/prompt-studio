@@ -71,13 +71,9 @@ export const SelectionInput = (props: SelectionInputProps) => {
     setGroupValue(group?.defaultValue ?? "");
   }, [group?.defaultValue]);
 
-  const selectedIds = multiSelect
-    ? Array.isArray(value)
-      ? value
-      : []
-    : typeof value === "string" && value
-      ? [value]
-      : [];
+  const multiSelectedIds = Array.isArray(value) ? value : [];
+  const singleSelectedIds = typeof value === "string" && value ? [value] : [];
+  const selectedIds = multiSelect ? multiSelectedIds : singleSelectedIds;
 
   const availableOptions = withCustomChoices(options, selectedIds, allowCustomValues);
 

@@ -9,8 +9,9 @@ export const toSessionNotice = (error: unknown): SessionNotice => {
   const status = (error as { status?: unknown } | null)?.status;
   // fetch rejects with a TypeError when no response arrives; its text ("Failed to fetch") means nothing to users.
   const unreachable = typeof status !== "number" && error instanceof TypeError;
+  const message = error instanceof Error ? error.message : String(error);
   return {
-    message: unreachable ? "The network is unavailable." : error instanceof Error ? error.message : String(error),
+    message: unreachable ? "The network is unavailable." : message,
     temporary: typeof status !== "number" || status >= 500 || status === 408 || status === 429,
   };
 };

@@ -7,7 +7,7 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchPanelRegions,
 } from "../layout/layout-model";
-import type { WorkbenchModeActivationContext, WorkbenchModeContribution } from "./mode-registry";
+import type { WorkbenchModeActivationContext, WorkbenchModeContribution } from "./mode-registry-types";
 
 const modePanelRegions = {
   main: ["main-header", "main-left-menu", "main", "main-right-menu"],

@@ -81,7 +81,10 @@ const hasTagValueChanges = <TValue extends SortableValue>(
   });
 };
 
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : error ? String(error) : null);
+const errorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  return error ? String(error) : null;
+};
 
 export const TagSettingsPanel = <TValue extends SortableValue>(props: TagSettingsPanelProps<TValue>) => {
   const {

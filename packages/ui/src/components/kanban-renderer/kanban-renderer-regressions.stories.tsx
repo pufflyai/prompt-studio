@@ -41,7 +41,7 @@ const EditableBadgeWrapper = () => {
         }}
         onAttributeChange={handleAttributeChange}
         getBoardColumnConfig={(groupKey) => ({
-          color: groupKey === "done" ? "green" : groupKey === "in_progress" ? "blue" : "gray",
+          color: boardColumnColors[groupKey] ?? "gray",
           canDragIn: true,
           canDragOut: true,
           canCreate: false,
@@ -142,7 +142,7 @@ const EditableMultiSelectBadgeWrapper = () => {
         }}
         onAttributeChange={handleAttributeChange}
         getBoardColumnConfig={(groupKey) => ({
-          color: groupKey === "done" ? "green" : groupKey === "in_progress" ? "blue" : "gray",
+          color: boardColumnColors[groupKey] ?? "gray",
           canDragIn: true,
           canDragOut: true,
           canCreate: false,

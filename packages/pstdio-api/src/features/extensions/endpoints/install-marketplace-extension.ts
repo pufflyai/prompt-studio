@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { installMarketplaceExtensionResponseSchema } from "pstdio-api-contracts";
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../../services/extension-service";
-import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-service";
+import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
 import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 

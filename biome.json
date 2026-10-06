@@ -34,7 +34,8 @@
       "recommended": true,
       "style": {
         "noNonNullAssertion": "off",
-        "noUselessElse": "error"
+        "noUselessElse": "error",
+        "noNestedTernary": "error"
       },
       "complexity": {
         "noExcessiveLinesPerFunction": {

@@ -55,7 +55,8 @@ class ApiChildStartupError extends Error {}
 const monitorApiChild = (child: ApiChild, controller: AbortController) => {
   let failure: ApiChildStartupError | null = null;
   const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
-    const reason = code !== null ? `code ${code}` : signal ? `signal ${signal}` : "an unknown status";
+    const signalReason = signal ? `signal ${signal}` : "an unknown status";
+    const reason = code !== null ? `code ${code}` : signalReason;
     failure = new ApiChildStartupError(`API process exited with ${reason} before becoming healthy.`);
     rejectFailure?.(failure);
     controller.abort();

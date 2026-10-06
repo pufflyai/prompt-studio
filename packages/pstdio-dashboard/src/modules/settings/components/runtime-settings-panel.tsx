@@ -63,7 +63,8 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
         <Box py="md" display="flex" justifyContent="center">
           <Spinner size="sm" />
         </Box>
-      ) : isError ? (
+      ) : null}
+      {!isLoading && isError ? (
         <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
           <Stack gap="2xs">
             <Text textStyle="label/S/medium" color="fg.error">
@@ -77,7 +78,8 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
             {t("runtimeSettings.retry")}
           </Button>
         </Stack>
-      ) : (
+      ) : null}
+      {!isLoading && !isError ? (
         <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
           <Stack gap="2xs">
             <Text textStyle="label/S/medium">{t("runtimeSettings.maxConcurrentSessions.label")}</Text>
@@ -112,7 +114,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
             </Button>
           </HStack>
         </Stack>
-      )}
+      ) : null}
 
       {projectId ? <ProjectDefaultsCard projectId={projectId} /> : null}
     </Stack>

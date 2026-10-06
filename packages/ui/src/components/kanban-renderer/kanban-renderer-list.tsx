@@ -103,8 +103,14 @@ const updateExpandedState = (expandedState: KanbanRendererListExpandedState, row
   return { ...expandedState, [rowId]: isExpanded };
 };
 
-const renderLabel = (item: KanbanRendererListItem, isGroup: boolean) => {
-  if (isGroup) {
+interface KanbanRendererListItemContentProps {
+  item: KanbanRendererListItem;
+}
+
+const KanbanRendererListLabel = (props: KanbanRendererListItemContentProps) => {
+  const { item } = props;
+
+  if (item.isGroup) {
     return (
       <HStack gap="xs" minW="0" maxW="full" flex="1">
         <Text textStyle="label/S/medium" minW="0" truncate>
@@ -131,10 +137,8 @@ const renderLabel = (item: KanbanRendererListItem, isGroup: boolean) => {
   );
 };
 
-const renderEndContent = (item: KanbanRendererListItem) => {
-  const hasBadges = (item.badges?.length ?? 0) > 0 || (item.customSlots?.length ?? 0) > 0;
-
-  if (!hasBadges) return null;
+const KanbanRendererListBadges = (props: KanbanRendererListItemContentProps) => {
+  const { item } = props;
 
   return (
     <HStack gap="xs" flexShrink={0}>
@@ -148,9 +152,13 @@ const renderEndContent = (item: KanbanRendererListItem) => {
   );
 };
 
+// ListRow only reserves end space when endContent is set, so rows without badges pass null.
+const hasEndContent = (item: KanbanRendererListItem) =>
+  (item.badges?.length ?? 0) > 0 || (item.customSlots?.length ?? 0) > 0;
+
 const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): ListRowItem => ({
   id: item.id,
-  label: renderLabel(item, item.isGroup === true),
+  label: <KanbanRendererListLabel item={item} />,
   icon: item.statusIcon ? (
     <Icon
       data-testid={item.isGroup ? "list-status-icon" : "row-status-icon"}
@@ -160,7 +168,7 @@ const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): L
       color={item.statusColor ?? (item.isGroup || item.statusColorPalette ? "colorPalette.solid" : "fg.muted")}
     />
   ) : undefined,
-  endContent: renderEndContent(item),
+  endContent: hasEndContent(item) ? <KanbanRendererListBadges item={item} /> : null,
   isContainer: hasChildren,
   contextMenuItems: item.contextMenuActions?.map((action) => ({
     id: action.key,

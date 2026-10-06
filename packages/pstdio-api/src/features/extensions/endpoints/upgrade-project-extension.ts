@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { upgradeProjectExtensionResponseSchema } from "pstdio-api-contracts";
-import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-service";
+import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";

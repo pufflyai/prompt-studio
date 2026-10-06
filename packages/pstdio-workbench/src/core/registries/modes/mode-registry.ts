@@ -1,14 +1,7 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
-import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
-import type { WorkbenchCoreContributionContext } from "../../workbench-core";
-import type {
-  WorkbenchLayout,
-  WorkbenchPanelRegion,
-  WorkbenchRegion,
-  WorkbenchRegionSettings,
-} from "../layout/layout-model";
-import type { ResourceRef } from "../resources/resource-registry";
+import type { WorkbenchLayout } from "../layout/layout-model";
 import {
   applyModePanelAvailability,
   disposeReverse,
@@ -17,83 +10,32 @@ import {
   restoreUnscopedModeLayout,
 } from "./mode-layout";
 import { setWorkbenchModeRegistryInternals } from "./mode-registry-internals";
+import type {
+  CreateWorkbenchModeRegistryInput,
+  WorkbenchModeActivationResult,
+  WorkbenchModeContribution,
+  WorkbenchModeRegistry,
+  WorkbenchModeStoreState,
+} from "./mode-registry-types";
+import { seedModeScope } from "./mode-seed-scope";
 
 export { getWorkbenchModePanelForRegion, isWorkbenchModePanelAvailable } from "./mode-layout";
-
-export type WorkbenchModeActivationContext = WorkbenchCoreContributionContext;
-
-export type WorkbenchModeActivationResult = Disposable | readonly Disposable[] | undefined;
-
-export interface WorkbenchModeAddablePanel {
-  panelId: string;
-  region: WorkbenchPanelRegion;
-  allowedRegions?: readonly WorkbenchRegion[];
-  pinned?: boolean;
-}
-
-export interface WorkbenchModeAddablePanelContext {
-  layout: WorkbenchLayout;
-  resource?: ResourceRef;
-}
-
-export interface WorkbenchModeContribution {
-  id: string;
-  label?: string;
-  defaultTheme?: string;
-  floatingPanels?: "visible" | "hidden";
-  chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
-  panels?: readonly WorkbenchPanelRegion[];
-  /** Region-level layout policy while this mode is active. */
-  regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
-  // Resource kinds this mode accepts. The atomic navigator validates targets
-  // against this list; a mode without kinds navigates with a cleared resource.
-  resourceKinds?: readonly string[];
-  // Fallback resource when the mode is entered without a compatible resource.
-  defaultResource?: ResourceRef | (() => Promise<ResourceRef | undefined> | ResourceRef | undefined);
-  // Returns optional composition panels that are closed in the current context.
-  listAddablePanels?(context: WorkbenchModeAddablePanelContext): readonly WorkbenchModeAddablePanel[];
-  // Registers the mode's contributions once for the lifetime of the mode.
-  activate(ctx: WorkbenchModeActivationContext): WorkbenchModeActivationResult;
-  // Seeds default placements only when the persistence scope has no layout yet.
-  seed?(ctx: WorkbenchModeActivationContext): void;
-  // Activates non-layout behavior while the mode is current.
-  enter?(ctx: WorkbenchModeActivationContext): WorkbenchModeActivationResult;
-  // Repairs required layout structure whenever the mode-scope context activates:
-  // first activation, reselecting the active mode, and persistence-scope changes.
-  // Reconciliation must not reset valid optional user state.
-  reconcile?(ctx: WorkbenchModeActivationContext): void;
-}
-
-export type WorkbenchModeChangeListener = () => void;
-
-export interface WorkbenchModeStoreState {
-  modes: Record<string, WorkbenchModeContribution>;
-  activeModeId: string | undefined;
-}
-
-export interface WorkbenchModeRegistry {
-  store: WorkbenchStore<WorkbenchModeStoreState>;
-  dispose(): void;
-  registerMode(mode: WorkbenchModeContribution): Disposable;
-  getMode(id: string): WorkbenchModeContribution | undefined;
-  listModes(): WorkbenchModeContribution[];
-  getActiveModeId(): string | undefined;
-  isTransitioning(): boolean;
-  setActiveMode(id: string | undefined, input?: { deferSeed?: boolean }): void;
-  seedActiveMode(): void;
-  onDidChangeActive(listener: WorkbenchModeChangeListener): Disposable;
-}
+export type {
+  CreateWorkbenchModeRegistryInput,
+  WorkbenchModeActivationContext,
+  WorkbenchModeActivationResult,
+  WorkbenchModeAddablePanel,
+  WorkbenchModeAddablePanelContext,
+  WorkbenchModeChangeListener,
+  WorkbenchModeContribution,
+  WorkbenchModeRegistry,
+  WorkbenchModeStoreState,
+} from "./mode-registry-types";
 
 const toDisposables = (result: WorkbenchModeActivationResult) => {
   if (!result) return [] as Disposable[];
   return Array.isArray(result) ? [...result] : [result as Disposable];
 };
-
-export interface CreateWorkbenchModeRegistryInput {
-  establishLocation?(instanceId: string): void;
-  layout: Pick<WorkbenchCoreContributionContext["layout"], "onDidChangePersistenceScope">;
-  resolveContext(): WorkbenchModeActivationContext;
-}
 
 export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryInput): WorkbenchModeRegistry => {
   const store = createWorkbenchStore<WorkbenchModeStoreState>({
@@ -117,36 +59,6 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     initializedModes.set(mode.id, disposables);
   };
 
-  const seedScope = (mode: WorkbenchModeContribution, context: WorkbenchModeActivationContext) => {
-    let locationEstablished = false;
-    let unsubscribeMainPanel: () => void = () => undefined;
-    const establishSeededLocation = () => {
-      if (locationEstablished) return;
-      const primary = context.layout.getActivePanel("main");
-      if (!primary) return;
-      // Sub Panels cannot become Locations; keep waiting for a Location-capable
-      // placement instead of consuming the one-shot on a tab.
-      const placement = context.layout
-        .getLayout()
-        .regions.main.widgets.find((candidate) => candidate.widgetId === primary.instanceId);
-      if (placement && (placement.role === "sub-panel" || placement.role === "panel-menu")) return;
-      locationEstablished = true;
-      unsubscribeMainPanel();
-      input.establishLocation?.(primary.instanceId);
-    };
-
-    unsubscribeMainPanel = context.layout.store.subscribeSelector(
-      (state) => state.layout.regions.main,
-      establishSeededLocation,
-    );
-    try {
-      runWorkbenchEffect(`mode ${mode.id}.seed`, () => mode.seed?.(context));
-      establishSeededLocation();
-    } finally {
-      unsubscribeMainPanel();
-    }
-  };
-
   // Applies panel availability and seeds default placements only when the scope is
   // new: no persisted layout and not seeded earlier in this session.
   const prepareScope = (mode: WorkbenchModeContribution) => {
@@ -156,7 +68,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     restoreModeLayout(context, availableLayout);
     context.layout.reconcilePanelMenus();
     if (!seededScopes.has(scopeKey) && !context.layout.enteredWithPersistedLayout()) {
-      seedScope(mode, context);
+      seedModeScope(mode, context, input.establishLocation);
     }
     seededScopes.add(scopeKey);
   };

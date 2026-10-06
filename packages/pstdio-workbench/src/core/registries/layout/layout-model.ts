@@ -4,31 +4,21 @@ import {
   createContributionRegistrations,
   createRegionQueries,
 } from "./layout-contribution-helpers";
+import { createLocationEstablisher } from "./layout-location-establisher";
 import type { CreateLayoutModelInput, LayoutModel } from "./layout-model-types";
-import {
-  activateInLayout,
-  closeWidgetInLayout,
-  findPlacementByWidgetId,
-  getActiveLocationPlacement,
-  removePlacementsForContribution,
-  selectRegionActiveWidget,
-  setLocationSubPanelSelection,
-} from "./layout-operations";
+import { activateInLayout, removePlacementsForContribution } from "./layout-operations";
 import { createLayoutPlacementMethods } from "./layout-placement-methods";
+import { createLayoutRegionContentMethods } from "./layout-region-content-methods";
 import { createLayoutRegionMethods } from "./layout-region-methods";
 import { resolveScopedLayout } from "./layout-scope";
 import { createLayoutScopeMethods } from "./layout-scope-methods";
-import {
-  mergeWithDefaultRegions,
-  type RegisteredWidgetContribution,
-  type WorkbenchLayout,
-  type WorkbenchLayoutStoreState,
-  type WorkbenchPanelInstance,
-  type WorkbenchPanelRegion,
-  type WorkbenchRegion,
-  type WorkbenchRegionState,
-  type WorkbenchWidgetPlacement,
-  workbenchPanelRegions,
+import type {
+  RegisteredWidgetContribution,
+  WorkbenchLayout,
+  WorkbenchLayoutStoreState,
+  WorkbenchPanelInstance,
+  WorkbenchRegion,
+  WorkbenchWidgetPlacement,
 } from "./layout-types";
 import { createWidgetOpeners } from "./layout-widget-openers";
 import { createPanelLayoutMethods } from "./panel-layout-methods";
@@ -93,54 +83,6 @@ interface LocationAwareLayoutModel extends LayoutModel {
   establishLocation(instanceId: string): WorkbenchPanelInstance;
 }
 
-interface CreateLocationEstablisherInput {
-  applyAndActivate(
-    layout: WorkbenchLayout,
-    regionId: WorkbenchRegion,
-    placement: WorkbenchWidgetPlacement,
-  ): WorkbenchWidgetPlacement;
-  getLayout(): WorkbenchLayout;
-  getWidget(id: string): RegisteredWidgetContribution | undefined;
-  panelMethods: Pick<LayoutModel, "activatePanel" | "getActivePanel">;
-}
-
-const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (instanceId: string) => {
-  const layout = input.getLayout();
-  const found = findPlacementByWidgetId(layout, instanceId);
-  if (!found) throw new Error(`Panel instance not found: ${instanceId}`);
-  // Sub Panels and Panel Menus stay tabs beside their Location: promoting one would
-  // create a second Location and clone every Sub Panel per Location.
-  if (found.regionId !== "main" || found.placement.role === "sub-panel" || found.placement.role === "panel-menu") {
-    return input.panelMethods.activatePanel(instanceId);
-  }
-
-  const placement = { ...found.placement, role: "location" as const };
-  const ownedPanelMenuIds = new Set(input.getWidget(placement.contributionId)?.ownedPanelMenuIds ?? []);
-  const regions = Object.fromEntries(
-    Object.entries(layout.regions).map(([regionId, region]) => [
-      regionId,
-      {
-        ...region,
-        widgets: region.widgets.map((candidate) => {
-          if (candidate.widgetId === instanceId) return placement;
-          if (!ownedPanelMenuIds.has(candidate.contributionId)) return candidate;
-          if (candidate.resourceKey !== placement.resourceKey) return candidate;
-          return { ...candidate, ownerResourceKey: placement.resourceKey };
-        }),
-      },
-    ]),
-  ) as WorkbenchLayout["regions"];
-  input.applyAndActivate(
-    {
-      ...layout,
-      regions,
-    },
-    "main",
-    placement,
-  );
-  return input.panelMethods.getActivePanel("main")!;
-};
-
 const requireRegisteredWidget = (
   widgets: WorkbenchLayoutStoreState["widgets"],
   id: string,
@@ -188,6 +130,12 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   };
 
   const regionMethods = createLayoutRegionMethods({ getLayout, setLayout, persistLayout });
+  const regionContentMethods = createLayoutRegionContentMethods({
+    defaultRegionVisibility: input.defaultRegionVisibility,
+    getLayout,
+    setLayout,
+    persistLayout,
+  });
 
   const applyAndActivate = (
     layout: WorkbenchLayout,
@@ -283,80 +231,9 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
 
     reconcilePanelMenus: ownedMenus.reconcilePanelMenus,
 
-    setRegionActiveWidget(regionId, widgetId) {
-      const nextLayout = selectRegionActiveWidget(getLayout(), regionId, widgetId);
-      if (!nextLayout) return;
-      setLayout(nextLayout);
-      persistLayout();
-    },
-
-    closeWidget(widgetId) {
-      const result = closeWidgetInLayout(getLayout(), widgetId);
-      if (!result) throw new Error(`Widget placement not found: ${widgetId}`);
-      if (result.closedPlacement.closable !== true) throw new Error(`Widget cannot be closed: ${widgetId}`);
-
-      setLayout(result.layout);
-      persistLayout();
-      return result.activePlacement;
-    },
-
-    removeWidgetPlacement(widgetId) {
-      const result = closeWidgetInLayout(getLayout(), widgetId);
-      if (!result) return undefined;
-      setLayout(result.layout);
-      persistLayout();
-      return result.activePlacement;
-    },
-
-    clearRegion(regionId) {
-      const layout = getLayout();
-      const region = layout.regions[regionId];
-      const activeWidgetId = region.activeWidgetId;
-
-      const cleared: WorkbenchLayout = {
-        ...layout,
-        regions: { ...layout.regions, [regionId]: { ...region, widgets: [], activeWidgetId: undefined } },
-      };
-      let next =
-        activeWidgetId && layout.activeWidgetId === activeWidgetId
-          ? { ...cleared, activeWidgetId: undefined, activeResourceKey: undefined }
-          : cleared;
-
-      if (regionId !== "side" && workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)) {
-        next = setLocationSubPanelSelection(
-          next,
-          getActiveLocationPlacement(next),
-          regionId as WorkbenchPanelRegion,
-          undefined,
-        );
-      }
-
-      setLayout(next);
-      persistLayout();
-    },
-
-    resetRegions() {
-      const layout = getLayout();
-      const nextRegions = {} as WorkbenchLayout["regions"];
-      for (const [id, region] of Object.entries(layout.regions) as [WorkbenchRegion, WorkbenchRegionState][]) {
-        nextRegions[id] = { ...region, widgets: [], activeWidgetId: undefined };
-      }
-      setLayout({
-        regions: nextRegions,
-        locationSubPanelSelections: {},
-        activeWidgetId: undefined,
-        activeLocationWidgetId: undefined,
-        activeResourceKey: undefined,
-      });
-      persistLayout();
-    },
+    ...regionContentMethods,
 
     getLayout,
-
-    restoreLayout(layout) {
-      setLayout(mergeWithDefaultRegions(layout, input.defaultRegionVisibility));
-      persistLayout();
-    },
 
     setPersistenceScope: scopeMethods.setPersistenceScope,
     getPersistenceScope: scopeMethods.getPersistenceScope,

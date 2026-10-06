@@ -85,7 +85,7 @@ const createHostTerminalModule = () => ({
       region: "secondary",
     });
     return [
-      ...(Array.isArray(terminalDisposables) ? terminalDisposables : terminalDisposables ? [terminalDisposables] : []),
+      ...(terminalDisposables ? [terminalDisposables].flat() : []),
       launcherView,
       launcherPlacement,
       notesView,

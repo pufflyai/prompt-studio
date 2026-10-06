@@ -68,7 +68,7 @@ export const createMonacoThemeFromVsCodeTheme = (input: {
   theme: VsCodeColorTheme;
 }): MonacoThemeData => {
   const rules = (input.theme.tokenColors ?? []).flatMap((tokenColor) => {
-    const scopes = Array.isArray(tokenColor.scope) ? tokenColor.scope : tokenColor.scope ? [tokenColor.scope] : [];
+    const scopes = tokenColor.scope ? [tokenColor.scope].flat() : [];
     return scopes.map((scope) => ({
       token: scope,
       ...(tokenColor.settings?.foreground ? { foreground: stripHash(tokenColor.settings.foreground) } : {}),

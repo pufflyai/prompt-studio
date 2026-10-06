@@ -206,8 +206,6 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
     setActiveList("child");
   };
 
-  const renderIcon = (icon: ElementType | undefined) => (icon ? <Icon as={icon} boxSize="14px" /> : undefined);
-
   const parentListHeader = parentList ? (
     <Header
       as="div"
@@ -233,7 +231,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
         variant="full-width"
         id="__parent-toggle"
         label={parentList.selectedLabel}
-        icon={renderIcon(parentList.selectedIcon)}
+        icon={parentList.selectedIcon ? <Icon as={parentList.selectedIcon} boxSize="14px" /> : undefined}
         disabled={parentList.disabled}
         endContent={parentList.disabled ? undefined : <Icon as={ChevronDown} boxSize="14px" />}
       />

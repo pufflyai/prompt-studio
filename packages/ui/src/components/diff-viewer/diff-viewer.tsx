@@ -173,9 +173,8 @@ export const DiffViewer = (props: DiffViewerProps) => {
         </HStack>
         <DiffBubble variant="ghost" size="small" additions={totalDiff.additions} deletions={totalDiff.deletions} />
       </Header>
-      {loading ? (
-        <DiffViewerLoading />
-      ) : hasDiffs ? (
+      {loading && <DiffViewerLoading />}
+      {!loading && hasDiffs && (
         <Box flex="1" minH="0">
           <DiffDrawer
             diffs={filteredDiffs}
@@ -187,7 +186,8 @@ export const DiffViewer = (props: DiffViewerProps) => {
             diffViewMode={diffViewMode}
           />
         </Box>
-      ) : (
+      )}
+      {!loading && !hasDiffs && (
         <Box flex="1" minH="0" px="md" py="lg" display="flex" alignItems="center" justifyContent="center" bg="bg">
           <EmptyState title={emptyDiffTitle} />
         </Box>

@@ -286,7 +286,7 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
 
       <Grid templateColumns="minmax(0, max-content) auto" alignItems="center" justifyContent="start" gap="2xs" minW={0}>
         <Box minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={filePath}>
-          {diff.change === "renamed" ? (
+          {diff.change === "renamed" && (
             <Text as="span" textStyle="sm">
               <Text as="span" color="fg.muted" textDecoration="line-through" mr="xs">
                 {diff.oldPath}
@@ -296,11 +296,13 @@ export const DiffCardHeader = (props: DiffCardHeaderProps) => {
               </Box>
               {diff.newPath}
             </Text>
-          ) : diff.change === "deleted" ? (
+          )}
+          {diff.change === "deleted" && (
             <Text as="span" color="fg.muted" textDecoration="line-through" textStyle="sm">
               {filePath}
             </Text>
-          ) : (
+          )}
+          {diff.change !== "renamed" && diff.change !== "deleted" && (
             <Text as="span" textStyle="sm">
               {filePath}
             </Text>

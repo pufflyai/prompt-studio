@@ -70,12 +70,12 @@ const normalizeWhen = (when: WhenExpression | undefined, extensionId: string): M
   if (!when) return undefined;
   const normalizeRefs = <Kind extends ContributionKind>(
     value: ContributionRef<Kind> | readonly ContributionRef<Kind>[] | undefined,
-  ) =>
-    value
-      ? Array.isArray(value)
-        ? value.map((ref) => normalizedRef(ref, extensionId))
-        : normalizedRef(value as ContributionRef<Kind>, extensionId)
-      : undefined;
+  ) => {
+    if (!value) return undefined;
+    return Array.isArray(value)
+      ? value.map((ref) => normalizedRef(ref, extensionId))
+      : normalizedRef(value as ContributionRef<Kind>, extensionId);
+  };
   return {
     ...when,
     mode: normalizeRefs(when.mode),

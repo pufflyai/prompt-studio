@@ -1,7 +1,7 @@
 import { Badge, Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea, TreeList, type TreeListNavigateEvent, useFileIconThemePreference } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ProjectSkillDetails } from "../data/skills-api";
 import { useProjectSkill } from "../data/use-skills";
 import { buildSkillFileTree, collectFolderIds } from "../utils/build-skill-file-tree";
@@ -27,17 +27,14 @@ const installedVersionLabel = (version: string | null) => (version ? `v${version
 export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
   const { skill } = props;
   const { activeFileIconTheme } = useFileIconThemePreference();
-  const treeNodes = useMemo(
-    () => buildSkillFileTree(skill.files, activeFileIconTheme),
-    [skill.files, activeFileIconTheme],
-  );
-  const initialExpanded = useMemo(() => collectFolderIds(treeNodes), [treeNodes]);
-  const [expandedNodes, setExpandedNodes] = useState<string[]>(initialExpanded);
+  const treeNodes = buildSkillFileTree(skill.files, activeFileIconTheme);
+  const [expandedNodes, setExpandedNodes] = useState(() => collectFolderIds(treeNodes));
   const [selectedPath, setSelectedPath] = useState(getDefaultFilePath(skill.files));
 
+  // Keyed on the source inputs, not on the derived tree, so the reset does not depend on memoized identities.
   useEffect(() => {
-    setExpandedNodes(initialExpanded);
-  }, [initialExpanded]);
+    setExpandedNodes(collectFolderIds(buildSkillFileTree(skill.files, activeFileIconTheme)));
+  }, [skill.files, activeFileIconTheme]);
 
   useEffect(() => {
     setSelectedPath(getDefaultFilePath(skill.files));

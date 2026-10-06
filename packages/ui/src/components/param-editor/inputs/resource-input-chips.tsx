@@ -28,14 +28,10 @@ export const ResourceChip = (props: ResourceChipProps) => {
     return <Chip>{option.name}</Chip>;
   }
 
-  const handleSelect =
-    option.href && option.href.length > 0
-      ? () => openExternal(option.href!)
-      : option.ref && onOpenResource
-        ? () => onOpenResource(option.ref!)
-        : option.copyText
-          ? () => copyToClipboard(option.copyText!)
-          : undefined;
+  let handleSelect: (() => void) | undefined;
+  if (option.href && option.href.length > 0) handleSelect = () => openExternal(option.href!);
+  else if (option.ref && onOpenResource) handleSelect = () => onOpenResource(option.ref!);
+  else if (option.copyText) handleSelect = () => copyToClipboard(option.copyText!);
 
   return (
     <ResourceBadge

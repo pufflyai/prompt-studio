@@ -103,11 +103,13 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
           <Box py="md" display="flex" justifyContent="center">
             <Spinner size="sm" />
           </Box>
-        ) : tokens.length === 0 ? (
+        ) : null}
+        {!loading && tokens.length === 0 ? (
           <Text textStyle="paragraph/XS/regular" color="fg.muted">
             {t("projectSettings.machineTokens.empty")}
           </Text>
-        ) : (
+        ) : null}
+        {!loading &&
           tokens.map((token) => (
             <HStack
               key={token.id}
@@ -137,8 +139,7 @@ export const MachineTokensPanelView = (props: MachineTokensPanelViewProps) => {
                 {t("projectSettings.machineTokens.revoke")}
               </Button>
             </HStack>
-          ))
-        )}
+          ))}
       </Stack>
     </Stack>
   );

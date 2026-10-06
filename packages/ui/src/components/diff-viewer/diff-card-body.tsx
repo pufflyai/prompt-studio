@@ -101,7 +101,7 @@ export const DiffCardBody = (props: DiffCardBodyProps) => {
 
   return (
     <Box bg="bg" borderBottomRadius="xs" overflow="hidden">
-      {model.kind === "editor" ? (
+      {model.kind === "editor" && (
         <DiffEditor
           original={oldContent}
           modified={newContent}
@@ -110,11 +110,10 @@ export const DiffCardBody = (props: DiffCardBodyProps) => {
           sideBySide={model.sideBySide}
           data={model.diffViewData}
         />
-      ) : model.kind === "image" ? (
-        <ImageDiffPreview oldSrc={model.oldSrc} newSrc={model.newSrc} />
-      ) : model.kind === "binary" ? (
-        <BinaryDiffPlaceholder isImage={model.isImage} />
-      ) : (
+      )}
+      {model.kind === "image" && <ImageDiffPreview oldSrc={model.oldSrc} newSrc={model.newSrc} />}
+      {model.kind === "binary" && <BinaryDiffPlaceholder isImage={model.isImage} />}
+      {model.kind === "placeholder" && (
         <LargeDiffPlaceholder
           filePath={model.filePath}
           renderedLineCount={model.renderedLineCount}

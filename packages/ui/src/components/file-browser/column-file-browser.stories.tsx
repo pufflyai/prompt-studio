@@ -2,7 +2,8 @@ import { Box, Stack, Text } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { ColumnFileBrowser, type ColumnFileItem } from "@/components/file-browser/column-file-browser";
+import { ColumnFileBrowser } from "@/components/file-browser/column-file-browser";
+import type { ColumnFileItem } from "@/components/file-browser/column-file-paths";
 
 type StoryFn = () => ReactNode;
 

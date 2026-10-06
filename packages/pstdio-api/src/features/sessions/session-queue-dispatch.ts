@@ -1,10 +1,11 @@
 import type { HarnessAttachment } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
+import { WorkspaceSessionNotReadyError } from "./harness-workspace-readiness";
 import { resolveSessionAttachments } from "./session-attachments";
 import type { ExistingSession, PendingQueueEntry } from "./session-scheduler-internals";
 import { logStartupFailure } from "./session-startup-failure";
 import type { ActiveSession } from "./session-store";
-import { resumeAgentSession, spawnAgentSession, WorkspaceSessionNotReadyError } from "./spawn-agent";
+import { resumeAgentSession, spawnAgentSession } from "./spawn-agent";
 
 export const dispatchQueuedEntry = async (
   deps: SessionsRouteDeps,

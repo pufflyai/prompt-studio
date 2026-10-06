@@ -8,6 +8,12 @@ const callStatusLabel = (call: CommandCallLogEntry) => {
   return "running";
 };
 
+const callStatusBorderColors = {
+  success: "fg.success",
+  error: "fg.error",
+  pending: "border.subtle",
+};
+
 const formatCommandParams = (request: CommandExecuteRequest) => {
   if (!request.params) return "{}";
   return JSON.stringify(request.params, null, 2);
@@ -58,9 +64,7 @@ export const CommandLog = (props: CommandLogProps) => {
               as="article"
               bg="bg"
               borderColor="border.subtle"
-              borderLeftColor={
-                call.status === "success" ? "fg.success" : call.status === "error" ? "fg.error" : "border.subtle"
-              }
+              borderLeftColor={callStatusBorderColors[call.status]}
               borderWidth="1px"
               display="flex"
               flexDirection="column"

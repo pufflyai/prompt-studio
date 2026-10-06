@@ -114,10 +114,9 @@ export const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
         </Text>
         {collapsible ? (
           <Box color="fg.muted" flexShrink={0}>
-            <ChevronRight
-              size={14}
-              style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)", transition: "120ms" }}
-            />
+            <Box asChild transform={expanded ? "rotate(90deg)" : "rotate(0deg)"} transition="120ms">
+              <ChevronRight size={14} />
+            </Box>
           </Box>
         ) : null}
       </HStack>

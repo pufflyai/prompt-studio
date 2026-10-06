@@ -167,14 +167,13 @@ export const createNotificationService = (deps: NotificationServiceDeps) => {
   };
 
   const transition = async (projectId: string, id: string, status: "read" | "done" | "dismissed" | "expired") => {
-    const row =
-      status === "read"
-        ? await deps.notificationsDb.markRead(projectId, id)
-        : status === "done"
-          ? await deps.notificationsDb.markDone(projectId, id)
-          : status === "dismissed"
-            ? await deps.notificationsDb.dismiss(projectId, id)
-            : await deps.notificationsDb.expire(projectId, id);
+    const updates = {
+      read: () => deps.notificationsDb.markRead(projectId, id),
+      done: () => deps.notificationsDb.markDone(projectId, id),
+      dismissed: () => deps.notificationsDb.dismiss(projectId, id),
+      expired: () => deps.notificationsDb.expire(projectId, id),
+    };
+    const row = await updates[status]();
     if (!row) return null;
     await emitUpdate(deps, row, `notification.${status}`, `notification ${row.id} ${status}`);
     return toNotification(row);

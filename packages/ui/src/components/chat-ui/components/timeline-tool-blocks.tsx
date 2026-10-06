@@ -153,13 +153,14 @@ interface QuestionFieldsetProps {
 
 const QuestionOtherField = (props: QuestionFieldsetProps & { hasOtherChoice: boolean }) => {
   const { question, questionIndex, editable, customAnswer, onCustomAnswerChange, hasOtherChoice } = props;
+  const editablePlaceholder = hasOtherChoice ? "Type your answer..." : "Answer...";
 
   return (
     <Textarea
       readOnly={!editable}
       aria-readonly={editable ? undefined : "true"}
       value={customAnswer ?? ""}
-      placeholder={editable ? (hasOtherChoice ? "Type your answer..." : "Answer...") : "Answer"}
+      placeholder={editable ? editablePlaceholder : "Answer"}
       aria-label={hasOtherChoice ? `${question.question} (${OTHER_CHOICE_LABEL})` : question.question}
       rows={2}
       borderWidth="1px"

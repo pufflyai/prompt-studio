@@ -39,7 +39,8 @@ export const KanbanRendererCard = (props: KanbanRendererCardProps) => {
   } = props;
 
   const hasBadges = badges.length > 0 || customSlots.length > 0;
-  const cursor = draggable ? "grab" : onClick ? "pointer" : "default";
+  const clickCursor = onClick ? "pointer" : "default";
+  const cursor = draggable ? "grab" : clickCursor;
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.defaultPrevented) return;
     if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;

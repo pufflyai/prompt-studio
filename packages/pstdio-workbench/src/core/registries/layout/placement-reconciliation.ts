@@ -42,7 +42,10 @@ export interface ReconcileOwnedPlacementsInput<Value> {
   valuesEqual: (current: Value, desired: Value) => boolean;
 }
 
-const compareText = (left: string, right: string) => (left < right ? -1 : left > right ? 1 : 0);
+const compareText = (left: string, right: string) => {
+  if (left < right) return -1;
+  return left > right ? 1 : 0;
+};
 
 const placementOwnerSortKey = (identity: PlacementIdentity) => {
   if (identity.kind === "shell") return `shell\0${identity.placementId}`;

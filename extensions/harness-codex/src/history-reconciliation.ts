@@ -30,8 +30,8 @@ export const shellWords = (command: string) => {
 // The live stream reports a command as one quoted string; the rollout keeps its arguments.
 // Both reduce to the script a `sh -c` wrapper runs, or else to the argument list.
 const commandScript = (command: unknown) => {
-  const words = Array.isArray(command) ? command : typeof command === "string" ? shellWords(command) : null;
-  if (!words) return command;
+  const words = typeof command === "string" ? shellWords(command) : command;
+  if (!Array.isArray(words)) return command;
   const [shell, flag, script, ...rest] = words;
   const wrapped = /^(?:\/\S+\/)?(?:ba|z|da)?sh$/.test(shell ?? "") && /^-l?c$/.test(flag ?? "");
   return wrapped && typeof script === "string" && rest.length === 0 ? script : words;

@@ -17,7 +17,7 @@ export const EditModeSelectionHeader = (props: EditModeSelectionHeaderProps) => 
 
   return (
     <Checkbox
-      checked={checked ? true : indeterminate ? "indeterminate" : false}
+      checked={checked || (indeterminate ? "indeterminate" : false)}
       aria-label="Select all"
       icon={<ChakraIcon as={indeterminate ? Minus : Check} boxSize="12px" strokeWidth="3" />}
       onClick={stopControlPropagation}

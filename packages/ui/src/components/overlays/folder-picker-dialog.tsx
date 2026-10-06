@@ -143,11 +143,11 @@ export const FolderPicker = (props: FolderPickerProps) => {
         )}
         <ScrollArea css={styles.list}>
           <Box css={styles.rows} aria-label="Folders">
-            {isLoading ? (
-              <Text color="fg.muted">Loading folders...</Text>
-            ) : folders.length === 0 ? (
+            {isLoading && <Text color="fg.muted">Loading folders...</Text>}
+            {!isLoading && folders.length === 0 && (
               <Text color="fg.muted">{query ? "No matching folders." : "This folder is empty."}</Text>
-            ) : (
+            )}
+            {!isLoading &&
               folders.map((entry) => (
                 <ListRow
                   key={entry.path}
@@ -157,8 +157,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
                   disabled={isLoading || isOpening}
                   onActivate={() => onNavigate(entry.path)}
                 />
-              ))
-            )}
+              ))}
           </Box>
         </ScrollArea>
       </Dialog.Body>

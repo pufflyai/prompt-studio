@@ -28,7 +28,7 @@ const maliciousSkill = {
 
 const mockMaliciousSkillApi = () => {
   globalThis.fetch = mock((input: string | URL | Request) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const url = input instanceof Request ? input.url : input.toString();
     const path = new URL(url).pathname;
 
     if (path === "/v1/agents/info") {
@@ -55,7 +55,7 @@ describe("installSkillsForAgent security", () => {
     try {
       resetApiClient();
       globalThis.fetch = mock((input: string | URL | Request) => {
-        const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        const url = input instanceof Request ? input.url : input.toString();
         const path = new URL(url).pathname;
 
         if (path === "/v1/agents/info") {

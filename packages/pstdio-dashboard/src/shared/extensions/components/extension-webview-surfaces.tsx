@@ -98,9 +98,8 @@ export const BridgedWebviewSurface = (props: {
       display="flex"
       flexDirection="column"
     >
-      {error ? (
-        <WebviewLoadError detail={error} />
-      ) : !ready ? (
+      {error ? <WebviewLoadError detail={error} /> : null}
+      {!error && !ready ? (
         <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
           <Spinner size="sm" />
         </Center>

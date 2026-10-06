@@ -91,12 +91,7 @@ export const replaceRegionWidgets = (
 ): WorkbenchLayout => {
   const region = layout.regions[regionId];
   const widgets = update(region.widgets);
-  const activeWidgetId =
-    options.activeWidgetId !== undefined
-      ? options.activeWidgetId
-      : options.clearActiveWidget
-        ? undefined
-        : region.activeWidgetId;
+  const activeWidgetId = options.activeWidgetId ?? (options.clearActiveWidget ? undefined : region.activeWidgetId);
   return {
     ...layout,
     activeLocationWidgetId:

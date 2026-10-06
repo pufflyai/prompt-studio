@@ -1,4 +1,4 @@
-import type { WorkbenchModeRegistry } from "./mode-registry";
+import type { WorkbenchModeRegistry } from "./mode-registry-types";
 
 interface WorkbenchModeRegistryInternals {
   activatePageMode(modeId: string | undefined, applyLayout: () => void): void;

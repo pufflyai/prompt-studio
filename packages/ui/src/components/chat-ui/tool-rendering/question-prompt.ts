@@ -81,12 +81,11 @@ const parseQuestion = (value: unknown, index: number): QuestionFormBlockQuestion
     ? value.options.map(parseQuestionOption).filter((option): option is QuestionFormBlockOption => option !== null)
     : [];
   const type = getStringValue(value.type);
-  const allowCustomAnswer =
-    typeof value.custom === "boolean"
-      ? value.custom
-      : typeof value.allowCustomAnswer === "boolean"
-        ? value.allowCustomAnswer
-        : options.length === 0 || type === "freeform" || type === "text";
+  const declaredCustomAnswer =
+    typeof value.allowCustomAnswer === "boolean"
+      ? value.allowCustomAnswer
+      : options.length === 0 || type === "freeform" || type === "text";
+  const allowCustomAnswer = typeof value.custom === "boolean" ? value.custom : declaredCustomAnswer;
 
   return {
     id: getStringValue(value.id) ?? `question-${index}`,

@@ -203,11 +203,11 @@ const AttributeRow = (props: AttributeRowProps) => {
     onChange({ ...attribute, type: { kind: attribute.type.kind, options: next } });
   };
 
+  const isEnum = attribute.type.kind === "enum" || attribute.type.kind === "enum-multi";
   // Source-backed options aren't editable inline — surface that as a hint
   // instead of pretending the inputs would round-trip.
   const sourceBacked =
-    (attribute.type.kind === "enum" || attribute.type.kind === "enum-multi") &&
-    isEnumOptionsSource((attribute.type as Extract<AttributeType, { kind: "enum" | "enum-multi" }>).options);
+    isEnum && isEnumOptionsSource((attribute.type as Extract<AttributeType, { kind: "enum" | "enum-multi" }>).options);
 
   return (
     <Stack gap="xs" p="sm" borderWidth="1px" borderRadius="sm" bg="bg.subtle">
@@ -245,17 +245,16 @@ const AttributeRow = (props: AttributeRowProps) => {
         ))}
       </HStack>
 
-      {attribute.type.kind === "enum" || attribute.type.kind === "enum-multi" ? (
-        sourceBacked ? (
-          <Badge variant="subtle" colorPalette="purple" alignSelf="flex-start">
-            Options come from a live source
-          </Badge>
-        ) : (
-          <EnumOptionsEditor
-            options={(attribute.type as Extract<AttributeType, { kind: "enum" | "enum-multi" }>).options}
-            onChange={setOptions}
-          />
-        )
+      {isEnum && sourceBacked ? (
+        <Badge variant="subtle" colorPalette="purple" alignSelf="flex-start">
+          Options come from a live source
+        </Badge>
+      ) : null}
+      {isEnum && !sourceBacked ? (
+        <EnumOptionsEditor
+          options={(attribute.type as Extract<AttributeType, { kind: "enum" | "enum-multi" }>).options}
+          onChange={setOptions}
+        />
       ) : null}
     </Stack>
   );

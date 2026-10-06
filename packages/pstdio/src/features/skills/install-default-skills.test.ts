@@ -65,7 +65,7 @@ const OPENCODE_AGENT = {
 const originalFetch = globalThis.fetch;
 
 const getRequestDetails = (input: string | URL | Request, init?: RequestInit) => {
-  const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  const url = input instanceof Request ? input.url : input.toString();
   return {
     path: new URL(url).pathname,
     method: init?.method ?? "GET",
