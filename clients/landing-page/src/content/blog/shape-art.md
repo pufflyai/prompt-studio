@@ -1,5 +1,5 @@
 ---
-title: "Shape Art: a tool for humans and agents"
+title: "Shape art: make blog banners"
 description: "The small art tool behind this blog’s banners, with a live editor for people and saved recipes agents can use from the CLI."
 published: 2026-10-06T08:00:00Z
 author: aurelien-franky
@@ -21,9 +21,7 @@ It arranges them on a sheet, then adds soft edges, uneven pigment, and grain.
 The result looks like watercolor, but every image comes from a small set of saved settings.
 No image model is involved in painting a piece.
 
-## The prompt that started it
-
-Here is a reconstructed version of the brief I gave the agent:
+Want something similar? Use this prompt as a starting point:
 
 > Build a Shape Art tool inside Prompt Studio. Use the six shapes from the website’s illustrations to paint watercolor-like images, with soft edges, uneven pigment, and grain.
 >

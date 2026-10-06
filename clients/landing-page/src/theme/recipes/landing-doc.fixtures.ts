@@ -78,7 +78,7 @@ export const STORY_PAGES: LandingPage[] = [
   {
     ...STORY_POST,
     path: "/blog/tool-showcase/",
-    label: "Shape Art: a tool for humans and agents",
+    label: "Shape art: make blog banners",
     published: "2026-10-06T08:00:00Z",
     category: "tool showcase",
     description: "A live editor for people and saved recipes agents can use from the CLI.",
