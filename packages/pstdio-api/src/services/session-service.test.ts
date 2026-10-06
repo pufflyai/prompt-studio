@@ -11,6 +11,7 @@ const buildDeps = () => {
   }));
   const create = mock(async (input: { project_id: string; title: string; agent: string }) => ({
     id: "session_1",
+    anchors_json: [],
     project_id: input.project_id,
     status: "in_progress",
     title: input.title,
@@ -189,7 +190,10 @@ describe("SessionService", () => {
       const result = await service.create({ project_id: "p1", title: "test", agent: "claude-code" });
 
       expect(result).toMatchObject({ id: "session_1", project_id: "p1" });
-      expect(mocks.create).toHaveBeenCalledWith({ project_id: "p1", title: "test", agent: "claude-code" });
+      expect(mocks.create).toHaveBeenCalledWith(
+        { project_id: "p1", title: "test", agent: "claude-code" },
+        expect.any(Function),
+      );
       expect(emitted).toContainEqual(["sessions", "set", expect.objectContaining({ id: "session_1" })]);
       expect(mocks.onSessionStarted).toHaveBeenCalledWith({
         id: "session_1",

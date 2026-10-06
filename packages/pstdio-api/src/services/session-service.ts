@@ -1,7 +1,9 @@
+import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import type { createSessionsDBService } from "pstdio-db";
 import { createSessionStore } from "../features/sessions/session-store";
 import type { EventBus } from "../features/sync/event-bus";
 import { apiLogger } from "../lib/logger";
+import { publishCreatedResourceAnchors, publishResourceAnchorChanges } from "./resource-anchor-events";
 import { releasesCapacity, type TransitionStatusOptions, writeSessionTransition } from "./session-status-transition";
 
 export type SessionStatus =
@@ -21,6 +23,7 @@ export type CapacityAvailableInput = { releasedSessionId?: string };
 export type SessionServiceDeps = {
   sessionsDb: ReturnType<typeof createSessionsDBService>;
   eventBus: EventBus;
+  validateCreatedAnchors?: (source: ResourceRef & { projectId: string }, anchors: ResourceAnchor[]) => Promise<void>;
   onSessionStarted?: (session: HookSessionRecord) => void;
   onSessionStatusChanged?: (session: HookSessionRecord) => void;
   onSessionResumed?: (session: HookSessionRecord) => void;
@@ -36,6 +39,39 @@ type ResumeSessionOptions = {
   /** Refuse the resume unless the session still holds this status. */
   expectedStatus?: SessionStatus;
 };
+
+const sessionHook = (hook: ((session: HookSessionRecord) => void) | undefined) => (session: SessionRecord) => {
+  if (!session.project_id) return;
+  hook?.({
+    id: session.id,
+    project_id: session.project_id,
+    status: session.status,
+    original_session_id: session.original_session_id,
+  });
+};
+
+const createSessionAnchorMethods = (
+  raw: SessionServiceDeps["sessionsDb"],
+  eventBus: EventBus,
+  logNoOpSet: (op: string, id: string) => void,
+) => ({
+  addAnchors: async (id: string, anchors: Parameters<typeof raw.addAnchors>[1]) => {
+    const result = await raw.addAnchors(id, anchors);
+    const updated = result?.record;
+    if (result) publishResourceAnchorChanges(eventBus, result.changes, "add");
+    if (updated) eventBus.emit("sessions", "set", updated);
+    else logNoOpSet("addAnchors", id);
+    return updated;
+  },
+  removeAnchors: async (id: string, refs: Parameters<typeof raw.removeAnchors>[1]) => {
+    const result = await raw.removeAnchors(id, refs);
+    const updated = result?.record;
+    if (result) publishResourceAnchorChanges(eventBus, result.changes, "remove");
+    if (updated) eventBus.emit("sessions", "set", updated);
+    else logNoOpSet("removeAnchors", id);
+    return updated;
+  },
+});
 
 export const createSessionService = (deps: SessionServiceDeps) => {
   const raw = deps.sessionsDb;
@@ -96,42 +132,21 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     return updated;
   };
 
-  const emitStartedHook = (session: SessionRecord) => {
-    if (!session.project_id) return;
-
-    deps.onSessionStarted?.({
-      id: session.id,
-      project_id: session.project_id,
-      status: session.status,
-      original_session_id: session.original_session_id,
-    });
-  };
-
-  const emitResumedHook = (session: SessionRecord) => {
-    if (!session.project_id) return;
-
-    deps.onSessionResumed?.({
-      id: session.id,
-      project_id: session.project_id,
-      status: session.status,
-      original_session_id: session.original_session_id,
-    });
-  };
-
-  const emitStatusChanged = (session: SessionRecord) => {
-    if (!session.project_id) return;
-
-    deps.onSessionStatusChanged?.({
-      id: session.id,
-      project_id: session.project_id,
-      status: session.status,
-      original_session_id: session.original_session_id,
-    });
-  };
+  const emitStartedHook = sessionHook(deps.onSessionStarted);
+  const emitResumedHook = sessionHook(deps.onSessionResumed);
+  const emitStatusChanged = sessionHook(deps.onSessionStatusChanged);
 
   const create = async (input: Parameters<typeof raw.create>[0], options: CreateSessionOptions = {}) => {
-    const session = await raw.create(input);
+    const session = await raw.create(
+      input,
+      (row) =>
+        deps.validateCreatedAnchors?.(
+          { type: "session", id: row.id, projectId: row.project_id!, extensionId: "pstdio" },
+          input.anchors ?? [],
+        ) ?? Promise.resolve(),
+    );
     deps.eventBus.emit("sessions", "set", session);
+    publishCreatedResourceAnchors(deps.eventBus, "session", session);
     if (options.emitStartedHook !== false) {
       emitStartedHook(session);
     }
@@ -142,8 +157,16 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     input: Parameters<typeof raw.createQueuedWithEntry>[0],
     options: CreateSessionOptions = {},
   ) => {
-    const session = await raw.createQueuedWithEntry(input);
+    const session = await raw.createQueuedWithEntry(
+      input,
+      (row) =>
+        deps.validateCreatedAnchors?.(
+          { type: "session", id: row.id, projectId: row.project_id!, extensionId: "pstdio" },
+          input.anchors ?? [],
+        ) ?? Promise.resolve(),
+    );
     deps.eventBus.emit("sessions", "set", session);
+    publishCreatedResourceAnchors(deps.eventBus, "session", session);
     if (options.emitStartedHook !== false) {
       emitStartedHook(session);
     }
@@ -270,18 +293,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     recoverQueuedDispatchClaim,
     requeueAfterTerminal,
     update,
-    addAnchors: async (id: string, anchors: Parameters<typeof raw.addAnchors>[1]) => {
-      const updated = await raw.addAnchors(id, anchors);
-      if (updated) deps.eventBus.emit("sessions", "set", updated);
-      else logNoOpSet("addAnchors", id);
-      return updated;
-    },
-    removeAnchors: async (id: string, refs: Parameters<typeof raw.removeAnchors>[1]) => {
-      const updated = await raw.removeAnchors(id, refs);
-      if (updated) deps.eventBus.emit("sessions", "set", updated);
-      else logNoOpSet("removeAnchors", id);
-      return updated;
-    },
+    ...createSessionAnchorMethods(raw, deps.eventBus, logNoOpSet),
     transitionStatus,
     cancel,
     archive,

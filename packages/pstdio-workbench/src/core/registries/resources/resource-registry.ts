@@ -32,6 +32,7 @@ export type {
 export { isWorkbenchViewHierarchyNode, resourceHierarchyCycleCode } from "./resource-hierarchy";
 
 export const workbenchResourceTypeContextKey = "workbench.resource.type";
+export const workbenchResourceOwnerContextKey = "workbench.resource.extensionId";
 export const workbenchResourceIdContextKey = "workbench.resource.id";
 export const workbenchResourceMetadataContextKey = (key: string) => `workbench.resource.metadata.${key}`;
 export const workbenchSelectionResourceKeyMetadataKey = "workbench.selectionResourceKey";
@@ -42,6 +43,7 @@ export const createWorkbenchResourceContextValues = (resource: ResourceRef | und
   const values: Record<string, ContextKeyValue> = {
     [workbenchResourceTypeContextKey]: resource.type,
     [workbenchResourceIdContextKey]: resource.id,
+    [workbenchResourceOwnerContextKey]: resource.extensionId,
   };
   for (const [key, value] of Object.entries(resource.metadata ?? {})) {
     if (isContextPrimitive(value)) values[workbenchResourceMetadataContextKey(key)] = value;
@@ -50,6 +52,7 @@ export const createWorkbenchResourceContextValues = (resource: ResourceRef | und
 };
 const isWorkbenchResourceContextKey = (key: string) =>
   key === workbenchResourceTypeContextKey ||
+  key === workbenchResourceOwnerContextKey ||
   key === workbenchResourceIdContextKey ||
   key.startsWith(workbenchResourceMetadataContextKey(""));
 // A menu for one resource must not see the open page's resource keys. Otherwise a key

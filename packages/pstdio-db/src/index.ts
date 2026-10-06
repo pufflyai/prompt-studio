@@ -24,8 +24,10 @@ export { createExtensionStorageDBService } from "./services/extension-storage/ex
 export { createExtensionUserDataDBService } from "./services/extension-user-data/extension-user-data";
 export { createFilesDBService } from "./services/files/files";
 export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";
+export { legacyResourceOwner, sessionColumns, workspaceColumns } from "./services/legacy-resource-links";
 export { createNotificationsDBService } from "./services/notifications/notifications";
 export { createProjectsDBService } from "./services/projects/projects";
+export { createResourceLinksDBService } from "./services/resource-links";
 export { createSessionQueueEntriesDBService } from "./services/session-queue-entries/session-queue-entries";
 export { createSessionsDBService } from "./services/sessions/sessions";
 export { createSettingsDBService } from "./services/settings/settings";

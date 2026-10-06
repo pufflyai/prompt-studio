@@ -12,6 +12,7 @@ import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/
 import { apiRequest } from "@/lib/api";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
@@ -41,7 +42,11 @@ const hasOnlyWorkspaceBadgeResources = (value: unknown) =>
         ).type === "workspace",
     );
   });
-export const toDashboardExtensionResource = (resource: unknown, projectId: string): ResourceRef | undefined => {
+export const toDashboardExtensionResource = (
+  resource: unknown,
+  projectId: string,
+  kinds?: Parameters<typeof canonicalDashboardResource>[2],
+): ResourceRef | undefined => {
   if (!resource || typeof resource !== "object") return undefined;
   const ref = resource as KanbanRendererResourceRef & {
     icon?: string;
@@ -49,7 +54,7 @@ export const toDashboardExtensionResource = (resource: unknown, projectId: strin
   const workspace =
     ref.type === "workspace" ? createDashboardWorkspaces(projectId).find((entry) => entry.id === ref.id) : undefined;
   return {
-    ...ref,
+    ...canonicalDashboardResource(ref, projectId, kinds),
     label: workspace?.resource.label ?? ref.label ?? ref.id,
     icon: workspace?.resource.icon ?? ref.icon ?? standardResourceIcons.kanbanRenderer,
     metadata: {
@@ -62,12 +67,19 @@ export const toDashboardExtensionResource = (resource: unknown, projectId: strin
 };
 const sameMenuPath = (left: MenuPath, right: MenuPath) =>
   left.length === right.length && left.every((entry, index) => entry === right[index]);
-const rowResource = (record: KanbanRecord, row: KanbanRendererRow, projectId: string) => {
-  const resolved = toDashboardExtensionResource(row.resource, projectId);
+const rowResource = (
+  record: KanbanRecord,
+  row: KanbanRendererRow,
+  projectId: string,
+  kinds: Parameters<typeof canonicalDashboardResource>[2],
+) => {
+  const resolved = toDashboardExtensionResource(row.resource, projectId, kinds);
   if (resolved || !record.resourceKind) return resolved;
   return {
     type: record.resourceKind,
     id: row.id,
+    extensionId: record.extensionId,
+    projectId,
     label: row.title,
     metadata: { projectId },
   };
@@ -179,8 +191,8 @@ export const createDashboardKanbanAdapter = (input: {
   const adapter: WorkbenchExtensionKanbanRendererAdapter = {
     createViewsProvider: (record) => createSharedBoardViews(projectId, record, metadata),
     decorateAttribute: (_record, attribute) => decorateAttribute(ctx, projectId, attribute),
-    resolveRowResource: (_record, row) => toDashboardExtensionResource(row.resource, projectId),
-    resolveRowActionResource: (record, row) => rowResource(record, row, projectId),
+    resolveRowResource: (_record, row) => toDashboardExtensionResource(row.resource, projectId, metadata.resourceKinds),
+    resolveRowActionResource: (record, row) => rowResource(record, row, projectId, metadata.resourceKinds),
     executeRowAction: ({ record, action, row, resource, runDefault }) => {
       const registration = matchingRowAction(menuRegistrations, record, action.commandId);
       const command = registration ? ctx.commands.getCommand(registration.command.id) : undefined;

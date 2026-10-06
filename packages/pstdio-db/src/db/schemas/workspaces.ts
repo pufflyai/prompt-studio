@@ -3,7 +3,6 @@ import { boolean, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core"
 import { files } from "./files";
 import { projects } from "./projects";
 import { sessions } from "./sessions";
-import type { ResourceRef } from "./types";
 
 type JsonObject = Record<string, unknown>;
 
@@ -90,7 +89,6 @@ export const workspaces = pgTable(
     initializing: boolean("initializing").notNull().default(false),
     setup_error: text("setup_error"),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
-    anchors_json: jsonb("anchors_json").$type<ResourceRef[]>().notNull().default([]),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
     deleted_at: text("deleted_at"),

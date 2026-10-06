@@ -12,6 +12,7 @@ import { createHealthRoutes } from "./features/health/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createProjectRoutes } from "./features/projects/routes";
 import { createBrowserSessionRoutes, createRuntimeRoutes } from "./features/runtime/routes";
+import { createResourceAnchorRoutes } from "./features/resource-anchors/routes";
 import {
   isRuntimeOriginAllowed,
   isRuntimeRequestAuthorized,
@@ -174,6 +175,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/", createHealthRoutes(deps));
   if (deps.runtime) app.route("/runtime", createRuntimeRoutes(deps.runtime));
   app.route("/v1", createProjectRoutes(deps));
+  app.route("/v1", createResourceAnchorRoutes(deps));
   app.route("/v1", createAutomationRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));

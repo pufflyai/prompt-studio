@@ -12,6 +12,7 @@ export * from "./history-reconciliation";
 export * from "./notifications/types";
 export * from "./projects";
 export * from "./runtime-auth";
+export * from "./resource-anchors";
 export * from "./session-attachment-types";
 export * from "./session-messages";
 export * from "./sessions";

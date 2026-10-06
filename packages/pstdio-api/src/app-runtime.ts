@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { sessionEvents } from "pstdio-api-contracts/extension-kernel";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
@@ -28,16 +27,6 @@ export const closeBeforeFatalExit = async (close: () => Promise<void>, timeoutMs
   );
   await Promise.race([closing, deadline]);
   clearTimeout(timer);
-};
-
-// `session.completed` means "the run ended" and fires for every terminal status; the payload's
-// `sessionStatus` says how. `succeeded` and `failed` stay as the narrower events.
-export const sessionStatusEventsFor = (status: string) => {
-  if (status === "awaiting_input") return [sessionEvents.awaitingInput];
-  if (status === "completed") return [sessionEvents.succeeded, sessionEvents.completed];
-  if (status === "failed") return [sessionEvents.failed, sessionEvents.completed];
-  if (status === "cancelled" || status === "disconnected") return [sessionEvents.completed];
-  return [];
 };
 
 export const createAppTerminalSupervisor = () =>
@@ -189,3 +178,5 @@ export const startAppLifecycle = async (input: {
     getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
   });
 };
+
+export { sessionStatusEventFor } from "./services/session-lifecycle-callbacks";
