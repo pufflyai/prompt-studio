@@ -54,12 +54,12 @@ const isBrowserSignedOut = async () => {
 
 const renderDashboard = async () => {
   const root = createRoot(document.getElementById("root")!);
+  // Login links must work when an old dashboard remains mounted after its runtime restarts.
+  window.addEventListener("hashchange", () => {
+    if (takeBrowserLoginCode(window.location.hash).code) window.location.reload();
+  });
   await signInFromLoginLink();
   if (await isBrowserSignedOut()) {
-    // A login link opened in this tab only changes the fragment, which does not reload the page.
-    window.addEventListener("hashchange", () => {
-      if (takeBrowserLoginCode(window.location.hash).code) window.location.reload();
-    });
     root.render(
       <StrictMode>
         <WorkbenchThemeProvider>

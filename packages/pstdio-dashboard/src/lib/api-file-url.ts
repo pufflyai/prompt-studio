@@ -2,6 +2,7 @@ import { PstdioApiError } from "@pstdio/sdk/client";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { apiClientOptions, buildApiUrl } from "./api";
+import { safeApiFileBlob } from "./api-file-blob";
 
 export const API_FILE_URL_QUERY_KEY = "api-file-url";
 
@@ -15,7 +16,7 @@ const apiFileUrlQuery = (url: string) => ({
     const { token } = apiClientOptions();
     const response = await fetch(buildApiUrl(url), { headers: token ? { authorization: `Bearer ${token}` } : {} });
     if (!response.ok) throw new PstdioApiError(`Request failed: ${response.status}`, response.status);
-    return URL.createObjectURL(await response.blob());
+    return URL.createObjectURL(safeApiFileBlob(await response.blob()));
   },
   staleTime: Number.POSITIVE_INFINITY,
 });
