@@ -83,7 +83,7 @@ Update screenshots when the visible workflow changes. Build the website and chec
 
 Blog posts live in `clients/landing-page/src/content/blog/`. Their frontmatter has `title`, `description`, `published`, `category`, and an author ID from `src/content/blog-authors.ts`. Use `author: aurelien-franky` for Aurélien Franky. The author registry supplies the name and local avatar. Reading time is calculated from article text at 220 words per minute; do not store it in frontmatter.
 
-Release article views show an alpha notice before the body: Prompt Studio is still in alpha, and breaking changes can happen until beta. Keep the shared notice in `PostView` consistent when the release stage changes.
+Release article views show an alpha notice before the body: Prompt Studio is still in alpha. Its APIs and core feature set are not fully defined yet and can change day by day, introducing breaking changes until beta. Keep the shared notice in `PostView` consistent when the release stage changes.
 
 Give each post one category: `release` for shipped versions and their changes, `thoughts` for ideas and personal essays, or `tool showcase` for a specific tool and how people and agents use it. The schema rejects missing or unknown categories. The list and article header show the category, and article metadata carries it as `articleSection`.
 

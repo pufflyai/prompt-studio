@@ -28,7 +28,8 @@ export const PostView = (props: PostViewProps) => {
           variant="subtle"
           title="Prompt Studio is still in alpha"
         >
-          Breaking changes can happen until we reach beta.
+          The APIs and core feature set are not fully defined yet. They can change day by day, introducing breaking
+          changes until we reach beta.
         </AlertMessage>
       )}
       <DocHtml html={document.html} />
