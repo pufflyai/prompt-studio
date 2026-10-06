@@ -528,5 +528,11 @@
       "title": "{{name}} est en pause",
       "body": "Mise en pause depuis le moniteur de performances. Ses vues restent déchargées jusqu'à ce que vous la repreniez."
     }
+  },
+  "appearance": {
+    "title": "Apparence",
+    "description": "Choisissez l'apparence de Prompt Studio. Vous pouvez aussi changer de thème avec Alt+Shift+T.",
+    "theme": "Thème",
+    "themeHelper": "S'applique à tous les projets."
   }
 }

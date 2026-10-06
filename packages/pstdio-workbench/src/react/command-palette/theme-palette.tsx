@@ -19,7 +19,8 @@ const getThemePreferenceLabel = (themePreference: ThemePreferenceOption) => them
 export const getThemePaletteEntryIndex = (
   entries: readonly WorkbenchThemePaletteEntry[],
   themePreference: ThemePreference,
-) => Math.max(
+) =>
+  Math.max(
     entries.findIndex((entry) => entry.themePreference === themePreference),
     0,
   );

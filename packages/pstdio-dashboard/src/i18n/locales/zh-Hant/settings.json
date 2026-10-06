@@ -528,5 +528,11 @@
       "title": "{{name}} 已暫停",
       "body": "已從效能監視器暫停。在繼續之前，其檢視會保持卸載狀態。"
     }
+  },
+  "appearance": {
+    "title": "外觀",
+    "description": "選擇 Prompt Studio 的外觀。也可以按 Alt+Shift+T 變更主題。",
+    "theme": "主題",
+    "themeHelper": "套用至所有專案。"
   }
 }

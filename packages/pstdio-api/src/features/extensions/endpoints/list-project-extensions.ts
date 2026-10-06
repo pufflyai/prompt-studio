@@ -54,7 +54,11 @@ export const listProjectExtensionsHandler = (
         origin: {
           kind: extension.origin.kind,
           path: extension.origin.path,
-          ref: extension.origin.ref,
+          // Catalog entries that follow the host release show the release they install.
+          ref:
+            extension.origin.ref === "{hostRelease}"
+              ? (deps.extensionUpgradeService?.releaseRef ?? extension.origin.ref)
+              : extension.origin.ref,
           url: extension.origin.url,
         },
         publisher: extension.publisher,

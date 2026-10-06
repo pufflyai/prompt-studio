@@ -179,8 +179,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     renderParamField,
     onClose,
   } = props;
-  const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } =
-    useThemePreference();
+  const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
   const [liveQuery, setLiveQuery] = useState(initialQuery);
   const commandPaletteResourceEntries = useWorkbenchCommandPaletteResourceEntries({

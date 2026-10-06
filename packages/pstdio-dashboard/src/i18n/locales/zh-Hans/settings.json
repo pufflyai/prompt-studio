@@ -528,5 +528,11 @@
       "title": "{{name}} 已暂停",
       "body": "已从性能监视器暂停。在恢复之前，其视图将保持卸载状态。"
     }
+  },
+  "appearance": {
+    "title": "外观",
+    "description": "选择 Prompt Studio 的外观。也可以按 Alt+Shift+T 更改主题。",
+    "theme": "主题",
+    "themeHelper": "适用于所有项目。"
   }
 }

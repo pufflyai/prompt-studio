@@ -2,6 +2,7 @@ import { Box, Flex, Input } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { ParamEditorLabel } from "../param-editor-label";
 import { ParamEditorReadOnlyValue } from "../param-editor-read-only-value";
+import { formatReadOnlyDate } from "./date-value";
 
 interface DateInputProps {
   id: string;
@@ -49,7 +50,7 @@ export const DateInput = (props: DateInputProps) => {
   };
 
   if (readOnly) {
-    const valueElement = <ParamEditorReadOnlyValue>{value}</ParamEditorReadOnlyValue>;
+    const valueElement = <ParamEditorReadOnlyValue>{formatReadOnlyDate(value)}</ParamEditorReadOnlyValue>;
 
     if (fullWidth) {
       return (
