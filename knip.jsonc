@@ -29,6 +29,8 @@
         "package.json",
         "src/index.ts",
         "src/**/index.ts",
+        // The shared workbench target contracts are imported outside this workspace.
+        "src/extension-kernel/workbench-targets.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         // Tests spawn fixtures by path, so nothing imports them.
