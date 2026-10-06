@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  createBoardViewsDBService,
   createDb,
   createExtensionInstancesDBService,
+  createExtensionStorageDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
   createSessionsDBService,
@@ -82,6 +84,24 @@ describe("ProjectService", () => {
       scope_type: "project",
       scope_id: project.id,
     });
+    // Rows that point at the instance with a restricting foreign key must not block the delete.
+    const view = await createBoardViewsDBService(db).create({
+      project_id: project.id,
+      extension_instance_id: instance.id,
+      board_id: "tasks",
+      title: "Tasks",
+      settings: { viewMode: "board", columnGrouping: "none", rowGrouping: "none", displayProperties: [] },
+      filter: { conjunction: "and", rules: [] },
+      sorts: [],
+    });
+    await createExtensionStorageDBService(db).setKv({
+      extension_instance_id: instance.id,
+      scope_type: "project",
+      scope_id: project.id,
+      key: "state",
+      value_json: {},
+      project_id: project.id,
+    });
     const events = recordEvents();
     const projectRowsAtEmit: Promise<unknown[]>[] = [];
     // PGlite runs queries in order, so a read started inside the listener sees the state at emit time.
@@ -96,13 +116,18 @@ describe("ProjectService", () => {
         { table: "workspaces", op: "delete", data: { id: workspace.id } },
         { table: "sessions", op: "delete", data: { id: session.id } },
         { table: "workspace_sessions", op: "delete", data: { id: link.id } },
-        { table: "extension_instances", op: "delete", data: { id: instance.id } },
+        {
+          table: "extension_instances",
+          op: "delete",
+          data: expect.objectContaining({ id: instance.id, scope_type: "project", scope_id: project.id }),
+        },
       ]),
     );
+    const indexOf = (table: string) => events.findIndex((event) => event.table === table);
+    expect(indexOf("board_views")).toBeLessThan(indexOf("extension_instances"));
+    expect(events).toContainEqual({ table: "board_views", op: "delete", data: { id: view.id } });
     expect(events.at(-1)).toEqual({ table: "projects", op: "delete", data: { id: project.id } });
-    expect(events.findIndex((event) => event.table === "workspace_sessions")).toBeLessThan(
-      events.findIndex((event) => event.table === "workspaces"),
-    );
+    expect(indexOf("workspace_sessions")).toBeLessThan(indexOf("workspaces"));
     for (const rows of await Promise.all(projectRowsAtEmit)) expect(rows).toEqual([]);
     expect(await db.select().from(extension_instances).where(eq(extension_instances.id, instance.id))).toEqual([]);
   });

@@ -11,10 +11,9 @@ type CascadeEdge = { parent: SyncedTable; parentKey: string; child: SyncedTable;
 
 const syncedTableOf = (table: PgTable) => SYNCED_TABLES.find((name) => tableMap[name] === table);
 
-const propertyKey = (table: PgTable, columnName: string) => {
-  const column = getTableConfig(table).columns.find((candidate) => candidate.name === columnName);
+const propertyKey = (table: PgTable, column: PgColumn) => {
   const entry = Object.entries(getTableColumns(table)).find(([, value]) => value === column);
-  if (!entry) throw new Error(`Column ${columnName} has no property on ${getTableConfig(table).name}`);
+  if (!entry) throw new Error(`Column ${column.name} has no property on ${getTableConfig(table).name}`);
   return entry[0];
 };
 
@@ -26,7 +25,7 @@ const cascadeEdges = SYNCED_TABLES.flatMap((child) =>
       const { columns, foreignColumns, foreignTable } = key.reference();
       const parent = syncedTableOf(foreignTable);
       if (!parent || columns.length !== 1) return [];
-      return [{ parent, parentKey: propertyKey(foreignTable, foreignColumns[0].name), child, childColumn: columns[0] }];
+      return [{ parent, parentKey: propertyKey(foreignTable, foreignColumns[0]), child, childColumn: columns[0] }];
     }),
 );
 

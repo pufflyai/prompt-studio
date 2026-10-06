@@ -95,30 +95,6 @@ export const createProjectsDBService = (db: DbClient) => {
       return { extensionInstances };
     });
 
-  const getStartupScript = async (id: string) => {
-    const project = await get(id);
-    if (!project) return null;
-    return project.startup_script;
-  };
-
-  const setStartupScript = async (id: string, script: string) => {
-    const existing = await get(id);
-    if (!existing) return null;
-
-    await db.update(projects).set({ startup_script: script, updated_at: nowTimestamp() }).where(eq(projects.id, id));
-
-    return true;
-  };
-
-  const clearStartupScript = async (id: string) => {
-    const existing = await get(id);
-    if (!existing) return null;
-
-    await db.update(projects).set({ startup_script: null, updated_at: nowTimestamp() }).where(eq(projects.id, id));
-
-    return true;
-  };
-
   return {
     list,
     get,
@@ -127,8 +103,5 @@ export const createProjectsDBService = (db: DbClient) => {
     setDefaults,
     remove,
     hardDelete,
-    getStartupScript,
-    setStartupScript,
-    clearStartupScript,
   };
 };
