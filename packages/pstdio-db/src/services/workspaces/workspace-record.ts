@@ -12,7 +12,6 @@ import {
 } from "../../db/schemas.pg";
 import { workspaceColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
 
-export type WorkspaceRecord = typeof workspaces.$inferSelect;
 export type JsonObject = Record<string, unknown>;
 
 export type CreateInput = {
