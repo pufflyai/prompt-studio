@@ -60,38 +60,19 @@ interface SessionViewSelectionSnapshot {
   params?: HarnessParamValues;
 }
 
-/**
- * Reconciles the user's in-flight selector picks with a refreshed session view.
- * Same view (or a draft that just became its session): adopt only fields the
- * backend changed, so sync refreshes never clobber an unsent pick. A switch to
- * a different session resets everything to that session's values.
- */
-export const resolveSessionSelectionSync = (input: {
-  isViewSwitch: boolean;
-  isPreviousViewDraft: boolean;
-  previous: SessionViewSelectionSnapshot;
-  view: SessionViewSelectionSnapshot;
-}) => {
-  if (input.isViewSwitch && !input.isPreviousViewDraft) {
-    return {
-      agent: input.view.agent ?? "",
-      model: input.view.lastSelectedModel ?? "",
-      workspaceId: input.view.workspaceId ?? "",
-      ...(input.view.params ? { params: input.view.params } : {}),
-    };
-  }
-
+// Reconciles the user's unsent selector picks with a refreshed view of the same session. Only
+// fields the backend changed are adopted, so a sync refresh never clobbers an unsent pick.
+export const resolveSessionSelectionSync = (
+  previous: SessionViewSelectionSnapshot,
+  view: SessionViewSelectionSnapshot,
+) => {
   const updates: { agent?: string; model?: string; workspaceId?: string; params?: HarnessParamValues } = {};
-  if (input.view.params && !harnessParamValuesEqual(input.previous.params ?? {}, input.view.params)) {
-    updates.params = input.view.params;
+  if (view.params && !harnessParamValuesEqual(previous.params ?? {}, view.params)) updates.params = view.params;
+  if (view.agent && view.agent !== previous.agent) updates.agent = view.agent;
+  if (view.lastSelectedModel && view.lastSelectedModel !== previous.lastSelectedModel) {
+    updates.model = view.lastSelectedModel;
   }
-  if (input.view.agent && input.view.agent !== input.previous.agent) updates.agent = input.view.agent;
-  if (input.view.lastSelectedModel && input.view.lastSelectedModel !== input.previous.lastSelectedModel) {
-    updates.model = input.view.lastSelectedModel;
-  }
-  if (input.view.workspaceId && input.view.workspaceId !== input.previous.workspaceId) {
-    updates.workspaceId = input.view.workspaceId;
-  }
+  if (view.workspaceId && view.workspaceId !== previous.workspaceId) updates.workspaceId = view.workspaceId;
   return updates;
 };
 

@@ -1,48 +1,39 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
-  forgetHandedOffPendingFollowUp,
+  getPendingFollowUp,
   hasAcceptedPendingFollowUp,
   mergeMessagesWithPendingFollowUp,
-  type PendingFollowUpState,
-  peekHandedOffPendingFollowUp,
-  shouldShowPendingFollowUp,
+  subscribePendingFollowUps,
+  updatePendingFollowUp,
 } from "../chat/session-chat-state";
 import { hasPendingSessionRunStarted, resolveSessionWorkStartedAt } from "../chat/session-work-start";
 
 export const usePendingSessionFollowUp = (
-  sessionId: string | null,
+  conversationKey: string,
   messages: SessionMessage[],
   lastRequestStarted: string | null,
   runInProgress: boolean,
 ) => {
-  const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(() =>
-    peekHandedOffPendingFollowUp(sessionId),
-  );
-
-  useEffect(() => {
-    forgetHandedOffPendingFollowUp(sessionId);
-  }, [sessionId]);
+  const pendingFollowUp = useSyncExternalStore(subscribePendingFollowUps, () => getPendingFollowUp(conversationKey));
 
   useEffect(() => {
     // An unsent message stays until the user resends or removes it.
-    if (!pendingFollowUp || pendingFollowUp.failure || !shouldShowPendingFollowUp(pendingFollowUp, sessionId)) return;
+    if (!pendingFollowUp || pendingFollowUp.failure) return;
     if (
       hasAcceptedPendingFollowUp(messages, pendingFollowUp) &&
       hasPendingSessionRunStarted(lastRequestStarted, pendingFollowUp.previousRunStarted)
     )
-      setPendingFollowUp(null);
-  }, [messages, pendingFollowUp, lastRequestStarted, sessionId]);
+      updatePendingFollowUp(conversationKey, (current) => (current === pendingFollowUp ? null : current));
+  }, [conversationKey, messages, pendingFollowUp, lastRequestStarted]);
 
-  const visiblePending = shouldShowPendingFollowUp(pendingFollowUp, sessionId) ? pendingFollowUp : null;
   return {
     pendingFollowUp,
-    pendingWork: Boolean(visiblePending && !visiblePending.failure),
-    setPendingFollowUp,
-    displayedMessages: mergeMessagesWithPendingFollowUp(messages, visiblePending),
+    pendingWork: Boolean(pendingFollowUp && !pendingFollowUp.failure),
+    displayedMessages: mergeMessagesWithPendingFollowUp(messages, pendingFollowUp),
     streamingStartedAt: resolveSessionWorkStartedAt(
       lastRequestStarted,
-      visiblePending?.failure ? undefined : (visiblePending ?? undefined),
+      pendingFollowUp?.failure ? undefined : (pendingFollowUp ?? undefined),
       runInProgress,
     ),
   };

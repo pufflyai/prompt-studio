@@ -38,11 +38,16 @@ import { syncActiveResourceContext } from "./active-resource-context";
 import { registerDashboardActivityRail } from "./extension-activity-rail";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
+import { omitExtensionMetadata, registerHealthyExtensions } from "./extension-contribution-isolation";
 import {
   captureExtensionContributionRefreshLayout,
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
-import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
+import {
+  disposeExtensionContributions,
+  notifyUnresolvedExtensionMenus,
+  registerExtensionContributions,
+} from "./extension-contribution-registration";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
@@ -101,62 +106,72 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         appearanceDisposable = registerExtensionAppearance(ctx, nextAppearance);
       };
 
+      const registrationError = (projectId: string, error: unknown, extensionId?: string) =>
+        logExtensionHostDiagnostic({
+          event: "registration-error",
+          projectId,
+          extensionId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+
+      // Returns what is registered now; a failed extension is left out so the next refresh retries it.
       const replaceContributions = (nextProjectId: string, nextMetadata: ResolvedWorkbenchExtensionMetadata) => {
         clearContributions();
         try {
-          contributionDisposables = [
-            ctx.registerChildModule({
-              id: extensionContributionModuleId,
-              ownerId: "dashboard.extensions",
-              source: "extension",
-              activate(contributionCtx) {
-                return [
-                  ...registerExtensionContributions({
+          const registration = registerHealthyExtensions({
+            metadata: nextMetadata,
+            register: (metadata) =>
+              ctx.registerChildModule({
+                id: extensionContributionModuleId,
+                ownerId: "dashboard.extensions",
+                source: "extension",
+                activate: (contributionCtx) =>
+                  registerExtensionContributions({
                     ctx: contributionCtx,
                     executeCommand,
-                    metadata: nextMetadata,
+                    metadata,
                     projectId: nextProjectId,
                   }),
-                ];
-              },
-            }),
-          ];
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          logExtensionHostDiagnostic({
-            event: "registration-error",
-            projectId: nextProjectId,
-            extensionId: nextMetadata.extensions.length === 1 ? nextMetadata.extensions[0]?.id : undefined,
-            message,
+              }),
+            onFailure: (extensionId, error) => registrationError(nextProjectId, error, extensionId),
           });
+          contributionDisposables = [registration.disposable];
+          return registration.metadata;
+        } catch (error) {
+          registrationError(nextProjectId, error);
+          return omitExtensionMetadata(nextMetadata, new Set(nextMetadata.extensions.map((extension) => extension.id)));
         }
+      };
+
+      const commitMetadata = (nextProjectId: string, registeredMetadata: ResolvedWorkbenchExtensionMetadata) => {
+        metadata = registeredMetadata;
+        setCachedDashboardExtensionMetadata(nextProjectId, registeredMetadata);
+        ctx.context.set(dashboardEditableTemplatesContextKey, hasEditableTemplateAssets(registeredMetadata));
+        ctx.settings.refresh();
       };
 
       const applyMetadata = (nextProjectId: string, nextMetadata: DashboardExtensionMetadata) => {
         const nextResolvedMetadata = localizeExtensionMetadata(nextMetadata);
-        const contributionsAreCurrent = hasSameSerializedMetadata(metadata, nextResolvedMetadata);
-        const pageLocationBeforeRefresh = displacedPageLocation ?? ctx.pages.store.getState().location;
-
         rawMetadata = nextMetadata;
-        metadata = nextResolvedMetadata;
-        setCachedDashboardExtensionMetadata(nextProjectId, nextResolvedMetadata);
-        ctx.context.set(dashboardEditableTemplatesContextKey, hasEditableTemplateAssets(nextResolvedMetadata));
-        ctx.settings.refresh();
-        if (contributionsAreCurrent) {
+        // `metadata` holds only what registered, so a refresh after a failure always retries.
+        if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) {
+          commitMetadata(nextProjectId, nextResolvedMetadata);
           setDashboardExtensionsReadyProject(ctx, nextProjectId);
           return;
         }
+        const pageLocationBeforeRefresh = displacedPageLocation ?? ctx.pages.store.getState().location;
         const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
         // Observers must see the completed refresh. A temporary missing page can
         // otherwise restore Start's terminal and mistake its removal for a close.
         batchWorkbenchChanges(() => {
-          replaceContributions(nextProjectId, nextResolvedMetadata);
+          commitMetadata(nextProjectId, replaceContributions(nextProjectId, nextResolvedMetadata));
           restoreExtensionContributionRefreshLayout(ctx, refreshLayout);
           if (pageLocationBeforeRefresh) {
             const replay = ctx.pageLocations.replay(pageLocationBeforeRefresh);
             displacedPageLocation = replay.ok ? undefined : pageLocationBeforeRefresh;
           }
         });
+        notifyUnresolvedExtensionMenus(ctx, metadata ?? nextResolvedMetadata);
         if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) {
           ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
         }

@@ -114,69 +114,31 @@ describe("resolveSessionSelectionSync", () => {
   const draftView = { agent: null, lastSelectedModel: null, workspaceId: null };
 
   test("keeps the user's picks across draft view refreshes", () => {
-    expect(
-      resolveSessionSelectionSync({
-        isViewSwitch: false,
-        isPreviousViewDraft: true,
-        previous: draftView,
-        view: draftView,
-      }),
-    ).toEqual({});
+    expect(resolveSessionSelectionSync(draftView, draftView)).toEqual({});
   });
 
-  test("adopts backend values when a draft becomes the created session", () => {
+  test("adopts the created session's values once it syncs", () => {
     expect(
-      resolveSessionSelectionSync({
-        isViewSwitch: true,
-        isPreviousViewDraft: true,
-        previous: draftView,
-        view: { agent: "agent-a", lastSelectedModel: "model-b", workspaceId: "ws-1" },
-      }),
+      resolveSessionSelectionSync(draftView, { agent: "agent-a", lastSelectedModel: "model-b", workspaceId: "ws-1" }),
     ).toEqual({ agent: "agent-a", model: "model-b", workspaceId: "ws-1" });
-  });
-
-  test("keeps the user's picks when the created session has not synced yet", () => {
-    expect(
-      resolveSessionSelectionSync({
-        isViewSwitch: true,
-        isPreviousViewDraft: true,
-        previous: draftView,
-        view: draftView,
-      }),
-    ).toEqual({});
   });
 
   test("does not clobber an unsent model pick when an unrelated view field changes", () => {
     expect(
-      resolveSessionSelectionSync({
-        isViewSwitch: false,
-        isPreviousViewDraft: false,
-        previous: { agent: "agent-a", lastSelectedModel: "model-a", workspaceId: null },
-        view: { agent: "agent-a", lastSelectedModel: "model-a", workspaceId: "ws-1" },
-      }),
+      resolveSessionSelectionSync(
+        { agent: "agent-a", lastSelectedModel: "model-a", workspaceId: null },
+        { agent: "agent-a", lastSelectedModel: "model-a", workspaceId: "ws-1" },
+      ),
     ).toEqual({ workspaceId: "ws-1" });
   });
 
   test("adopts a persisted model change on the same session", () => {
     expect(
-      resolveSessionSelectionSync({
-        isViewSwitch: false,
-        isPreviousViewDraft: false,
-        previous: { agent: "agent-a", lastSelectedModel: "model-a", workspaceId: "ws-1" },
-        view: { agent: "agent-a", lastSelectedModel: "model-b", workspaceId: "ws-1" },
-      }),
+      resolveSessionSelectionSync(
+        { agent: "agent-a", lastSelectedModel: "model-a", workspaceId: "ws-1" },
+        { agent: "agent-a", lastSelectedModel: "model-b", workspaceId: "ws-1" },
+      ),
     ).toEqual({ model: "model-b" });
-  });
-
-  test("resets all selections when switching to a different session", () => {
-    expect(
-      resolveSessionSelectionSync({
-        isViewSwitch: true,
-        isPreviousViewDraft: false,
-        previous: { agent: "agent-a", lastSelectedModel: "model-a", workspaceId: "ws-1" },
-        view: { agent: "agent-b", lastSelectedModel: null, workspaceId: null },
-      }),
-    ).toEqual({ agent: "agent-b", model: "", workspaceId: "" });
   });
 });
 
