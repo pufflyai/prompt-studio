@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
+import type { WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -19,6 +22,21 @@ const createStorage = (): WorkbenchStorageLike => {
     removeItem: (key) => {
       values.delete(key);
     },
+  };
+};
+const browserAt = (url: string): WorkbenchPageLocationBrowser => {
+  let current = { url };
+  return {
+    current: () => current,
+    push: (entry) => {
+      current = entry;
+    },
+    replace: (entry) => {
+      current = entry;
+    },
+    back: () => undefined,
+    forward: () => undefined,
+    onPopState: () => ({ dispose: () => undefined }),
   };
 };
 const sessionResource = {
@@ -68,6 +86,22 @@ afterEach(() => {
   getWriter("workspace_sessions")?.truncateAndWrite([]);
 });
 describe("createDashboardWorkbench restoration", () => {
+  test("opens the project named in the URL instead of the last selected project", async () => {
+    const storage = createStorage();
+    createDashboardProjectSelectionPersistence({
+      namespace: dashboardWorkbenchStorageNamespace,
+      storage,
+    }).setSelectedProjectId("project-1");
+    seedSyncedRows();
+    const workbench = createDashboardWorkbench({
+      storage,
+      pageLocationBrowser: browserAt("/projects/project-2/sessions"),
+    });
+    await flushMicrotasks();
+
+    expect(getDashboardSelectedProjectId(workbench)).toBe("project-2");
+  });
+
   test("keeps each project's Side Panel presentation when switching projects", async () => {
     const storage = createStorage();
     seedSyncedRows();

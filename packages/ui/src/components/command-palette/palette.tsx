@@ -98,9 +98,18 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   } = props;
   const [query, setQueryState] = useState(initialQuery);
   const [activeIndex, setActiveIndex] = useState(initialActiveIndex);
+  const [setup, setSetup] = useState({ open: false, resetKey });
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const setupRef = useRef({ open: false, resetKey });
+  // Reset while rendering, not in an effect, so the first open render already highlights
+  // the initial entry and listeners never see the previous session's entry.
+  if (setup.open !== open || setup.resetKey !== resetKey) {
+    setSetup({ open, resetKey });
+    if (open) {
+      setQueryState(initialQuery);
+      setActiveIndex(initialActiveIndex);
+    }
+  }
   const activeMode = mode ?? resolvePaletteMode(query, modes);
   const filteredEntries = filterEntries
     ? filterEntries(entries, query, activeMode)
@@ -128,15 +137,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   };
 
   useEffect(() => {
-    const previousSetup = setupRef.current;
-    setupRef.current = { open, resetKey };
-    if (!open) return;
-
-    const shouldInitialize = !previousSetup.open || previousSetup.resetKey !== resetKey;
-    if (!shouldInitialize) return;
-
-    setQueryState(initialQuery);
-    setActiveIndex(initialActiveIndex);
+    if (!setup.open) return;
 
     const timeout = setTimeout(() => {
       const input = inputRef.current;
@@ -146,15 +147,19 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
       input.setSelectionRange(length, length);
     }, 0);
     return () => clearTimeout(timeout);
-  }, [initialActiveIndex, initialQuery, open, resetKey]);
+  }, [setup]);
 
   useEffect(() => {
     setActiveIndex((current) => Math.min(current, Math.max(filteredEntries.length - 1, 0)));
   }, [filteredEntries.length]);
 
+  const activeEntryId = activeEntry?.id;
+  // Callers rebuild entries and callbacks on every render. Report only a real change of the
+  // highlighted entry, so a listener that updates state cannot start a render loop.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the entry and callback change identity on every render
   useEffect(() => {
     onActiveEntryChange?.(activeEntry, activeIndex);
-  }, [activeEntry, activeIndex, onActiveEntryChange]);
+  }, [activeEntryId, activeIndex]);
 
   const handleEscape = () => {
     const handled = onEscape?.({

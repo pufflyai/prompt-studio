@@ -214,7 +214,7 @@
       "noDescription": "未提供描述。",
       "scope": {
         "repo": "repo",
-        "global": "global"
+        "global": "共用"
       },
       "status": {
         "pending": "等待中",
@@ -310,7 +310,8 @@
           "themes": "主題",
           "navigationItems": "導覽項目",
           "commandPaletteResources": "命令面板資源"
-        }
+        },
+        "deleteHintShared": "刪除此擴充功能的檔案。它將從所有使用它的專案中移除。"
       },
       "toggleAriaLabel": "切換 {{name}}",
       "toggleErrorTitle": "更新擴充功能失敗",
@@ -322,8 +323,10 @@
         "headline": "要刪除擴充功能嗎？",
         "notification": "這將刪除\"{{name}}\"的擴充功能檔案並將其從專案中移除。其儲存的資料會保留，重新安裝後即可還原。",
         "deleteDataLabel": "同時刪除此擴充功能的資料（無法復原）",
-        "button": "刪除"
-      }
+        "button": "刪除",
+        "notificationShared": "這將刪除\"{{name}}\"的擴充功能檔案並將其從所有使用它的專案中移除。其儲存的資料會保留，重新安裝後即可還原。"
+      },
+      "enabledInProject": "在此專案中啟用"
     }
   },
   "list": {

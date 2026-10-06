@@ -214,7 +214,7 @@
       "noDescription": "説明がありません。",
       "scope": {
         "repo": "repo",
-        "global": "global"
+        "global": "共有"
       },
       "status": {
         "pending": "保留中",
@@ -310,7 +310,8 @@
           "themes": "テーマ",
           "navigationItems": "ナビゲーション項目",
           "commandPaletteResources": "コマンドパレットリソース"
-        }
+        },
+        "deleteHintShared": "この拡張機能のファイルを削除します。使用しているすべてのプロジェクトから取り除かれます。"
       },
       "toggleAriaLabel": "{{name}}を切り替え",
       "toggleErrorTitle": "拡張機能の更新に失敗しました",
@@ -322,8 +323,10 @@
         "headline": "拡張機能を削除しますか？",
         "notification": "\"{{name}}\"の拡張機能ファイルを削除し、プロジェクトから取り除きます。保存されたデータは保持されるため、再インストールすると復元されます。",
         "deleteDataLabel": "この拡張機能のデータも削除する（元に戻せません）",
-        "button": "削除"
-      }
+        "button": "削除",
+        "notificationShared": "\"{{name}}\"の拡張機能ファイルを削除し、使用しているすべてのプロジェクトから取り除きます。保存されたデータは保持されるため、再インストールすると復元されます。"
+      },
+      "enabledInProject": "このプロジェクトで有効"
     }
   },
   "list": {

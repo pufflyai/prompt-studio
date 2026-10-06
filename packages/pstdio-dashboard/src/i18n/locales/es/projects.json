@@ -219,7 +219,7 @@
       "noDescription": "Sin descripción.",
       "scope": {
         "repo": "repo",
-        "global": "global"
+        "global": "compartida"
       },
       "status": {
         "pending": "Pendiente",
@@ -317,7 +317,8 @@
           "themes": "Temas",
           "navigationItems": "Elementos de navegación",
           "commandPaletteResources": "Recursos de la paleta de comandos"
-        }
+        },
+        "deleteHintShared": "Eliminar los archivos de esta extensión. Esto la quita de todos los proyectos que la usan."
       },
       "toggleAriaLabel": "Alternar {{name}}",
       "toggleErrorTitle": "Error al actualizar la extensión",
@@ -329,8 +330,10 @@
         "headline": "¿Eliminar la extensión?",
         "notification": "Esto elimina los archivos de extensión de \"{{name}}\" y la quita del proyecto. Sus datos almacenados se conservan para restaurarlos al reinstalar.",
         "deleteDataLabel": "Eliminar también los datos de esta extensión (no se puede deshacer)",
-        "button": "Eliminar"
-      }
+        "button": "Eliminar",
+        "notificationShared": "Esto elimina los archivos de extensión de \"{{name}}\" y la quita de todos los proyectos que la usan. Sus datos almacenados se conservan para restaurarlos al reinstalar."
+      },
+      "enabledInProject": "Activada en este proyecto"
     }
   },
   "list": {

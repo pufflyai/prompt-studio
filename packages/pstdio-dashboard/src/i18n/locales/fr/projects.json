@@ -219,7 +219,7 @@
       "noDescription": "Aucune description fournie.",
       "scope": {
         "repo": "repo",
-        "global": "global"
+        "global": "partagée"
       },
       "status": {
         "pending": "En attente",
@@ -317,7 +317,8 @@
           "themes": "Thèmes",
           "navigationItems": "Éléments de navigation",
           "commandPaletteResources": "Ressources de la palette de commandes"
-        }
+        },
+        "deleteHintShared": "Supprimer les fichiers de cette extension. Elle est retirée de tous les projets qui l'utilisent."
       },
       "toggleAriaLabel": "Activer/désactiver {{name}}",
       "toggleErrorTitle": "Échec de la mise à jour de l'extension",
@@ -329,8 +330,10 @@
         "headline": "Supprimer l'extension ?",
         "notification": "Cela supprime les fichiers d'extension de \"{{name}}\" et la retire du projet. Ses données stockées sont conservées afin qu'une réinstallation les restaure.",
         "deleteDataLabel": "Supprimer aussi les données de cette extension (irréversible)",
-        "button": "Supprimer"
-      }
+        "button": "Supprimer",
+        "notificationShared": "Cela supprime les fichiers d'extension de \"{{name}}\" et la retire de tous les projets qui l'utilisent. Ses données stockées sont conservées afin qu'une réinstallation les restaure."
+      },
+      "enabledInProject": "Activée dans ce projet"
     }
   },
   "list": {

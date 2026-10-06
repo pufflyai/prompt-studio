@@ -214,7 +214,7 @@
       "noDescription": "설명이 없습니다.",
       "scope": {
         "repo": "repo",
-        "global": "global"
+        "global": "공유"
       },
       "status": {
         "pending": "대기 중",
@@ -310,7 +310,8 @@
           "themes": "테마",
           "navigationItems": "탐색 항목",
           "commandPaletteResources": "명령 팔레트 리소스"
-        }
+        },
+        "deleteHintShared": "이 확장의 파일을 삭제합니다. 이 확장을 사용하는 모든 프로젝트에서 제거됩니다."
       },
       "toggleAriaLabel": "{{name}} 전환",
       "toggleErrorTitle": "확장 업데이트 실패",
@@ -322,8 +323,10 @@
         "headline": "확장을 삭제하시겠습니까?",
         "notification": "\"{{name}}\"의 확장 파일을 삭제하고 프로젝트에서 제거합니다. 저장된 데이터는 유지되므로 재설치하면 복원됩니다.",
         "deleteDataLabel": "이 확장의 데이터도 삭제 (되돌릴 수 없음)",
-        "button": "삭제"
-      }
+        "button": "삭제",
+        "notificationShared": "\"{{name}}\"의 확장 파일을 삭제하고 이 확장을 사용하는 모든 프로젝트에서 제거합니다. 저장된 데이터는 유지되므로 재설치하면 복원됩니다."
+      },
+      "enabledInProject": "이 프로젝트에서 사용"
     }
   },
   "list": {

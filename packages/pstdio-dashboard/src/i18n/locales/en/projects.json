@@ -216,7 +216,7 @@
       "noDescription": "No description provided.",
       "scope": {
         "repo": "repo",
-        "global": "global"
+        "global": "shared"
       },
       "status": {
         "pending": "Pending",
@@ -314,7 +314,8 @@
           "themes": "Themes",
           "navigationItems": "Navigation items",
           "commandPaletteResources": "Command palette resources"
-        }
+        },
+        "deleteHintShared": "Delete this extension's files. This removes it from every project that uses it."
       },
       "toggleAriaLabel": "Toggle {{name}}",
       "toggleErrorTitle": "Failed to update extension",
@@ -326,8 +327,10 @@
         "headline": "Delete extension?",
         "notification": "This deletes \"{{name}}\"'s extension files and removes it from the project. Its stored data is kept so reinstalling restores it.",
         "deleteDataLabel": "Also delete this extension's data (cannot be undone)",
-        "button": "Delete"
-      }
+        "button": "Delete",
+        "notificationShared": "This deletes \"{{name}}\"'s extension files and removes it from every project that uses it. Its stored data is kept so reinstalling restores it."
+      },
+      "enabledInProject": "Enabled in this project"
     },
     "machineTokens": {
       "title": "Machine tokens",

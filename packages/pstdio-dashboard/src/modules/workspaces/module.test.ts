@@ -256,7 +256,7 @@ describe("createWorkspacesModule navigation", () => {
       commandId: dashboardCommandIds.openWorkspaces,
       target: { kind: "page", page: workbenchPages.workspaces },
     });
-    expect(workspacesNode?.hiddenByDefault).toBe(true);
+    expect(workspacesNode?.hiddenByDefault).toBeUndefined();
     expect(nodeIds).toContain(dashboardViews.workspaces.id);
   });
 });

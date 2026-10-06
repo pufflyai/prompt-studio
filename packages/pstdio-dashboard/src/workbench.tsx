@@ -3,7 +3,7 @@ import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@p
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
-import { createDashboardPageLocationBrowser } from "@/shared/app/page-location-browser";
+import { createDashboardPageLocationBrowser, readPageUrlProjectId } from "@/shared/app/page-location-browser";
 import {
   createDashboardProjectSelectionPersistence,
   type DashboardProjectSelectionPersistence,
@@ -104,6 +104,9 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const pageLocationBrowser =
     input.pageLocationBrowser ??
     (typeof window === "undefined" ? undefined : createDashboardPageLocationBrowser(window));
+  // The URL decides the project, so shared links and bookmarks open the project they name.
+  const urlProjectId = pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
+  if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
   const workbench = createWorkbench({
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },

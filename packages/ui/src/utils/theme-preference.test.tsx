@@ -195,3 +195,35 @@ describe("ThemePreferenceProvider pending theme", () => {
     expect([context?.themePreference, context?.pendingThemePreference]).toEqual(["lab.monokai", null]);
   });
 });
+
+describe("ThemePreferenceProvider preview", () => {
+  test("shows a previewed theme without saving it, then returns to the chosen theme", async () => {
+    const { act, create } = await import("react-test-renderer");
+    (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    installWindow();
+    const storage = installMockLocalStorage();
+    storage.setItem("theme-preference", "pstdio-dark");
+    let context: ReturnType<typeof useThemePreference> | undefined;
+    const CaptureTheme = () => {
+      context = useThemePreference();
+      return null;
+    };
+
+    await act(async () => {
+      create(
+        <ThemePreferenceProvider>
+          <CaptureTheme />
+        </ThemePreferenceProvider>,
+      );
+    });
+    await act(async () => context?.previewThemePreference("pstdio-light"));
+
+    expect([context?.themePreference, context?.chosenThemePreference]).toEqual(["pstdio-light", "pstdio-dark"]);
+    expect(storage.getItem("theme-preference")).toBe("pstdio-dark");
+
+    await act(async () => context?.previewThemePreference(null));
+
+    expect(context?.themePreference).toBe("pstdio-dark");
+    expect(storage.getItem("theme-preference")).toBe("pstdio-dark");
+  });
+});

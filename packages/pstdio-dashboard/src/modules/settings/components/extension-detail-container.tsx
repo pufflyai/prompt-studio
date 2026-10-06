@@ -140,9 +140,12 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         }}
         onDelete={handleUninstall}
         headline={t("projectSettings.extensionsPanel.deleteConfirm.headline")}
-        notificationText={t("projectSettings.extensionsPanel.deleteConfirm.notification", {
-          name: extension.displayName,
-        })}
+        notificationText={t(
+          extension.scope === "global"
+            ? "projectSettings.extensionsPanel.deleteConfirm.notificationShared"
+            : "projectSettings.extensionsPanel.deleteConfirm.notification",
+          { name: extension.displayName },
+        )}
         buttonText={t("projectSettings.extensionsPanel.deleteConfirm.button")}
       >
         <Checkbox checked={deleteUserData} onCheckedChange={(details) => setDeleteUserData(details.checked === true)}>

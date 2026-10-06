@@ -1,6 +1,6 @@
 import { Box } from "@chakra-ui/react";
-import { Palette, type PaletteEntry, PaletteShortcut, type ThemePreference, useThemePreference } from "@pstdio/ui";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Palette, type PaletteEntry, PaletteShortcut, useThemePreference } from "@pstdio/ui";
+import { type ReactNode, useEffect, useState } from "react";
 import {
   type Command,
   type KeybindingSequence,
@@ -34,7 +34,7 @@ import { createWorkbenchPanelWidgetPaletteEntries } from "./panel-widget-palette
 import { createWorkbenchResourcePaletteEntries } from "./resource-palette";
 import {
   createWorkbenchThemePreferencePaletteEntries,
-  getThemePreferenceEntryIndex,
+  getThemePaletteEntryIndex,
   type WorkbenchThemePaletteEntry,
 } from "./theme-palette";
 
@@ -55,23 +55,10 @@ export interface WorkbenchCommandPaletteEntry extends PaletteEntry {
   mode: typeof COMMAND_MODE_ID;
 }
 
-interface WorkbenchThemePreviewState {
-  baseTheme: ThemePreference;
-}
-
 interface WorkbenchCommandPaletteRecord {
   record: RegisteredCommand;
   action?: RegisteredMenuItem;
 }
-
-const rollbackThemePreview = (
-  setThemePreference: (themePreference: ThemePreference) => void,
-  themePreviewRef: { current: WorkbenchThemePreviewState | null },
-) => {
-  const preview = themePreviewRef.current;
-  themePreviewRef.current = null;
-  if (preview) setThemePreference(preview.baseTheme);
-};
 
 const getCommandSearchText = (command: Command, label: string) =>
   [label, command.id, command.description, command.category].filter(Boolean).join(" ");
@@ -192,9 +179,9 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     renderParamField,
     onClose,
   } = props;
-  const { themePreference, themePreferences, setThemePreference } = useThemePreference();
+  const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } =
+    useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
-  const themePreviewRef = useRef<WorkbenchThemePreviewState | null>(null);
   const [liveQuery, setLiveQuery] = useState(initialQuery);
   const commandPaletteResourceEntries = useWorkbenchCommandPaletteResourceEntries({
     workbench,
@@ -204,19 +191,15 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   });
   const compositionPanels = useWorkbenchCompositionPanels(workbench);
 
+  // A theme preview is never saved, so leaving the picker in any way shows the chosen theme again.
   const closePalette = () => {
-    rollbackThemePreview(setThemePreference, themePreviewRef);
+    previewThemePreference(null);
     onClose();
   };
 
   const exitPickerView = () => {
-    rollbackThemePreview(setThemePreference, themePreviewRef);
+    previewThemePreference(null);
     workbench.commandPalette.open({ view: "main" });
-  };
-
-  const commitThemePreview = () => {
-    themePreviewRef.current = null;
-    onClose();
   };
 
   const commandEntries = createWorkbenchCommandPaletteEntries({
@@ -227,10 +210,10 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   });
   const resourceEntries = createWorkbenchResourcePaletteEntries({ workbench, query: initialQuery, onClose });
   const themeEntries = createWorkbenchThemePreferencePaletteEntries({
-    themePreference,
+    chosenThemePreference,
     themePreferences,
     setThemePreference,
-    onClose: commitThemePreview,
+    onClose,
   });
   const panelWidgetEntries = createWorkbenchPanelWidgetPaletteEntries({
     workbench,
@@ -244,7 +227,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     ...panelWidgetEntries,
     ...themeEntries,
   ];
-  const themeInitialActiveIndex = getThemePreferenceEntryIndex(themePreference, themePreferences);
+  const themeInitialActiveIndex = getThemePaletteEntryIndex(themeEntries, chosenThemePreference);
   const isThemeView = isThemePaletteView(view);
   const initialActiveIndex = getPaletteInitialActiveIndex({
     view,
@@ -258,13 +241,8 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   }, [initialQuery, open]);
 
   useEffect(() => {
-    if (open && isThemeView) {
-      if (!themePreviewRef.current) themePreviewRef.current = { baseTheme: themePreference };
-      return;
-    }
-
-    rollbackThemePreview(setThemePreference, themePreviewRef);
-  }, [isThemeView, open, setThemePreference, themePreference]);
+    if (!open || !isThemeView) previewThemePreference(null);
+  }, [isThemeView, open, previewThemePreference]);
 
   return (
     <>
@@ -300,8 +278,10 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
           onActiveEntryChange={(entry) => {
             if (!open || !isThemeView) return;
             const themeEntry = entry as WorkbenchThemePaletteEntry | null;
-            if (!themeEntry?.themePreference || themeEntry.themePreference === themePreference) return;
-            setThemePreference(themeEntry.themePreference);
+            if (!themeEntry?.themePreference) return;
+            previewThemePreference(
+              themeEntry.themePreference === chosenThemePreference ? null : themeEntry.themePreference,
+            );
           }}
           onQueryChange={setLiveQuery}
           onClose={closePalette}

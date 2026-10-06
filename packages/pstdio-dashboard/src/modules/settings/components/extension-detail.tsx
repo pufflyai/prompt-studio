@@ -136,7 +136,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
             onCheckedChange={handleCheckedChange}
             disabled={toggling || uninstalling}
             aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
-          />
+          >
+            {t("projectSettings.extensionsPanel.enabledInProject")}
+          </Switch>
         </HStack>
 
         {extension.description && (
@@ -265,7 +267,11 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               </Text>
               <HStack justifyContent="space-between">
                 <Text textStyle="label/XS" color="fg.muted">
-                  {t("projectSettings.extensionsPanel.detail.deleteHint")}
+                  {t(
+                    extension.scope === "global"
+                      ? "projectSettings.extensionsPanel.detail.deleteHintShared"
+                      : "projectSettings.extensionsPanel.detail.deleteHint",
+                  )}
                 </Text>
                 <Button
                   variant="destructive"

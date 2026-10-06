@@ -36,3 +36,14 @@ export const createDashboardPageLocationBrowser = (
     },
   };
 };
+
+/** Reads the project ID from a dashboard page URL such as `/projects/<id>/sessions`. */
+export const readPageUrlProjectId = (url: string) => {
+  const [scope, projectId] = new URL(url, "http://dashboard.local").pathname.split("/").filter(Boolean);
+  if (scope !== "projects" || !projectId) return undefined;
+  try {
+    return decodeURIComponent(projectId);
+  } catch {
+    return undefined;
+  }
+};

@@ -16,14 +16,13 @@ const getThemeIconName = (preference: ThemePreference) => {
 
 const getThemePreferenceLabel = (themePreference: ThemePreferenceOption) => themePreference.title ?? themePreference.id;
 
-export const getThemePreferenceEntryIndex = (
+export const getThemePaletteEntryIndex = (
+  entries: readonly WorkbenchThemePaletteEntry[],
   themePreference: ThemePreference,
-  themePreferences: readonly ThemePreferenceOption[],
-) => {
-  const index = themePreferences.findIndex((preference) => preference.id === themePreference);
-
-  return Math.max(index, 0);
-};
+) => Math.max(
+    entries.findIndex((entry) => entry.themePreference === themePreference),
+    0,
+  );
 
 const THEME_GROUP_LABELS = { light: "Light", dark: "Dark" } as const;
 
@@ -35,12 +34,13 @@ const byModeThenLabel = (a: ThemePreferenceOption, b: ThemePreferenceOption) => 
 };
 
 export const createWorkbenchThemePreferencePaletteEntries = (input: {
-  themePreference: ThemePreference;
+  /** The saved theme. A theme shown only as a preview is never marked as selected. */
+  chosenThemePreference: ThemePreference;
   themePreferences: readonly ThemePreferenceOption[];
   setThemePreference: (themePreference: ThemePreference) => void;
   onClose: () => void;
 }) => {
-  const { onClose, setThemePreference, themePreference, themePreferences } = input;
+  const { chosenThemePreference, onClose, setThemePreference, themePreferences } = input;
 
   return [...themePreferences].sort(byModeThenLabel).map((preference): WorkbenchThemePaletteEntry => {
     const label = getThemePreferenceLabel(preference);
@@ -53,7 +53,7 @@ export const createWorkbenchThemePreferencePaletteEntries = (input: {
       searchText: `theme color appearance ${preference.mode} ${preference.id} ${label}`,
       group: THEME_GROUP_LABELS[preference.mode],
       icon: <WorkbenchIcon name={getThemeIconName(preference.id)} />,
-      isSelected: preference.id === themePreference,
+      isSelected: preference.id === chosenThemePreference,
       onActivate: () => {
         setThemePreference(preference.id);
         onClose();
