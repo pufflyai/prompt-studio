@@ -3,6 +3,7 @@ title: "Prompt Studio 0.38"
 description: Choose where a tool runs, upgrade or reload your extensions, and keep agent conversations going. Highlights from the September 29 releases, 0.37 and 0.38.
 published: 2026-09-29T21:15:47Z
 author: aurelien-franky
+category: release
 image:
   light: ../../../../../design/art/blog-prompt-studio-0-38-light.png
   dark: ../../../../../design/art/blog-prompt-studio-0-38.png

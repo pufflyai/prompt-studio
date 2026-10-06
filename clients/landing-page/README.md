@@ -184,8 +184,9 @@ the build:
 ---
 title: Welcome to Prompt Studio
 description: One sentence for the post list and search results.
-published: 2026-10-05
+published: 2026-04-24
 author: aurelien-franky
+category: thoughts
 image:
   light: ../../../../../design/art/blog-welcome-to-prompt-studio-light.png
   dark: ../../../../../design/art/blog-welcome-to-prompt-studio.png
@@ -194,6 +195,12 @@ image:
 
 Write `published` without quotes so YAML reads it as a date. `/blog/` and the Blog
 sidebar list posts newest first.
+Use a UTC timestamp to order posts published on the same day. Preserve the original
+publication date when updating or restoring a post; check its frontmatter in Git.
+Every post has one required category: `release`, `thoughts`, or `tool showcase`.
+Release posts cover shipped versions; thoughts cover ideas and personal essays;
+tool showcases explain a specific tool and how people and agents use it.
+The category appears in article and list metadata and in `BlogPosting.articleSection`.
 The newest list entry has a wider banner and larger title. Older entries omit artwork
 in the list. Every card opens its article across its whole area. Article banners use
 the site's light or dark theme; share metadata uses light artwork.

@@ -79,7 +79,9 @@ Update screenshots when the visible workflow changes. Build the website and chec
 
 ## Blog posts
 
-Blog posts live in `clients/landing-page/src/content/blog/`. Their frontmatter has `title`, `description`, `published`, and an author ID from `src/content/blog-authors.ts`. Use `author: aurelien-franky` for Aurélien Franky. The author registry supplies the name and local avatar. Reading time is calculated from article text at 220 words per minute; do not store it in frontmatter.
+Blog posts live in `clients/landing-page/src/content/blog/`. Their frontmatter has `title`, `description`, `published`, `category`, and an author ID from `src/content/blog-authors.ts`. Use `author: aurelien-franky` for Aurélien Franky. The author registry supplies the name and local avatar. Reading time is calculated from article text at 220 words per minute; do not store it in frontmatter.
+
+Give each post one category: `release` for shipped versions and their changes, `thoughts` for ideas and personal essays, or `tool showcase` for a specific tool and how people and agents use it. The schema rejects missing or unknown categories. The list and article header show the category, and article metadata carries it as `articleSection`.
 
 Every post has its own paired light and dark banners. Generate a distinct 4:1 piece with the repo-local Shape Art extension: `pst shape-art piece generate --id blog-<post-slug> --background ink --width 1600 --height 400`. Follow the [Shape Art skill](../../.pstdio/extensions/shape-art/skills/shape-art/SKILL.md) to keep blog art blue and pink, without yellow or orange washes or shapes. Save a second recipe with the same seed and composition on a paper background, using an `-light` suffix. Keep each PNG and its editable JSON recipe together in `design/art/`.
 
@@ -91,7 +93,7 @@ image:
 
 Astro checks both source paths and optimizes the banners. The site shows the variant for its active theme; link previews use the light variant. Keep the original proportions and opaque backgrounds. Art is decorative; screenshots and GIFs in the body explain the actual product.
 
-The blog list highlights the newest post with a wide banner and larger title. Older entries have no artwork in the list. Every card includes the author avatar/name, date, reading time, and description, and its whole area opens the post. Cards zoom slightly on hover and show a keyboard focus ring; reduced motion disables the zoom. Article pages keep their full banners. Use `##` headings for article sections: posts with at least two sections show the shared **On this page** outline on wide screens, with links to headings and a marker for the section being read.
+The blog list highlights the newest post with a wide banner and larger title. Older entries have no artwork in the list. Every card includes the author avatar/name, date, reading time, category, and description, and its whole area opens the post. Cards zoom slightly on hover and show a keyboard focus ring; reduced motion disables the zoom. Article pages keep their full banners. Use `##` headings for article sections: posts with at least two sections show the shared **On this page** outline on wide screens, with links to headings and a marker for the section being read.
 
 Write `published` as an unquoted date or UTC timestamp. Use a release's actual publication timestamp for release posts, so posts about releases published on the same day sort correctly. Check published GitHub releases; exclude drafts. Link each release post to its release notes and relevant changelogs at that release tag. Describe selected changes in terms of what people can do, and distinguish platform features from extension workflows.
 

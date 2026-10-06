@@ -1,8 +1,9 @@
 ---
 title: Welcome to Prompt Studio
 description: Why I stopped looking for the right tool to work with agents and built a place where you and your agents make your own.
-published: 2026-08-31
+published: 2026-04-24
 author: aurelien-franky
+category: thoughts
 image:
   light: ../../../../../design/art/blog-welcome-to-prompt-studio-light.png
   dark: ../../../../../design/art/blog-welcome-to-prompt-studio.png
@@ -44,7 +45,7 @@ Extensions can expose commands and data that other tools use; those connections 
 
 ![Prompt Studio Start page with Sessions, Notes, and Tickets in the sidebar and links to open a conversation or tool](../../../../../documentation/images/workbench.png)
 
-*A recent view of the workbench, with Notes and Planner enabled. This screenshot was added after the original August post.*
+*A recent view of the workbench, with Notes and Planner enabled. This post was first published on April 24, 2026; its text and screenshot have since been updated.*
 
 Some of the tools I use every day started as one sentence to an agent:
 

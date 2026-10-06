@@ -28849,6 +28849,29 @@
                       "gap": 1,
                       "children": [
                         {
+                          "id": "AMuXR",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Shape Art: a tool for humans and agents",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Shape Art: a tool for…",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
                           "id": "MMz8v",
                           "type": "ref",
                           "ref": "t5G2s8",
@@ -28898,7 +28921,7 @@
                           "id": "N4B2no",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Prompt Studio 0.38: clearer workspaces",
+                          "name": "Prompt Studio 0.38",
                           "theme": {
                             "tree": "default",
                             "depth": "0"
@@ -28921,7 +28944,7 @@
                           "id": "nN5WG",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Prompt Studio 0.37: easier updates",
+                          "name": "Prompt Studio 0.36",
                           "theme": {
                             "tree": "default",
                             "depth": "0"
@@ -29205,9 +29228,9 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "f83Fk",
-                              "name": "Post · From malleable software to Prompt Studio",
-                              "context": "Featured newest post. Whole card is one link. Hover scales 1.015; keyboard focus shows the focus ring; reduced motion disables scaling.",
+                              "id": "N1T1b",
+                              "name": "Post · Shape Art: a tool for humans and agents",
+                              "context": "Featured newest post. One native link, hover zoom, keyboard focus ring, reduced-motion treatment.",
                               "width": "fill_container",
                               "cornerRadius": "$input-radius",
                               "layout": "vertical",
@@ -29217,18 +29240,141 @@
                                 {
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
-                                  "id": "HJkHV",
+                                  "id": "b18sJ",
                                   "name": "Featured Shape Art banner",
                                   "context": "Full 4:1 banner. Paper in light mode, ink in dark mode.",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog-users-in-the-development-team-light.png",
+                                    "url": "art/blog-shape-art-light.png",
                                     "mode": "fill"
                                   },
                                   "width": "fill_container",
                                   "height": 168
                                 },
+                                {
+                                  "type": "frame",
+                                  "id": "qs6rG",
+                                  "name": "Post summary",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "v8KGq",
+                                      "name": "Featured title",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Shape Art: a tool for humans and agents",
+                                      "lineHeight": 1.2,
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 24,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "bGOHG",
+                                      "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "S1ugn",
+                                          "name": "Author identity",
+                                          "gap": 8,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "ellipse",
+                                              "id": "yIoys",
+                                              "name": "Aurélien Franky avatar",
+                                              "fill": {
+                                                "type": "image",
+                                                "enabled": true,
+                                                "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                                                "mode": "fill"
+                                              },
+                                              "width": 24,
+                                              "height": 24
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "JEAGu",
+                                              "name": "Author name",
+                                              "fill": "$ds-fg-muted",
+                                              "content": "Aurélien Franky",
+                                              "lineHeight": 1.5,
+                                              "fontFamily": "$font-label",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "ttgrk",
+                                          "name": "Date",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "October 6, 2026 · 4 min read",
+                                          "lineHeight": 1.5,
+                                          "fontFamily": "$font-label",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "G92R8",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Tool showcase",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Tool showcase"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "OP79M",
+                                      "name": "Description",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "The small art tool behind this blog’s banners, with a live editor for people and saved recipes agents can use from the CLI.",
+                                      "lineHeight": 1.71,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "f83Fk",
+                              "name": "Post · From malleable software to Prompt Studio",
+                              "context": "Older post. Whole-card link; author, date, reading time, category, and description; no list artwork.",
+                              "width": "fill_container",
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
+                              "children": [
                                 {
                                   "type": "frame",
                                   "id": "k8bBn",
@@ -29240,20 +29386,21 @@
                                     {
                                       "type": "text",
                                       "id": "MCrSZ",
-                                      "name": "Featured title",
+                                      "name": "Title",
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
                                       "content": "From malleable software to Prompt Studio",
                                       "lineHeight": 1.2,
                                       "fontFamily": "$font-heading",
-                                      "fontSize": 24,
+                                      "fontSize": 20,
                                       "fontWeight": "500"
                                     },
                                     {
                                       "type": "frame",
                                       "id": "o8DjO",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -29301,6 +29448,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "nHmuy",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Thoughts",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Thoughts"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -29357,6 +29523,7 @@
                                       "type": "frame",
                                       "id": "fkdib",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -29404,6 +29571,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "ehbm3",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Release",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Release"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -29460,6 +29646,7 @@
                                       "type": "frame",
                                       "id": "bM08v",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -29507,6 +29694,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "f9oyF",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Release",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Release"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -29563,6 +29769,7 @@
                                       "type": "frame",
                                       "id": "ZaCXm",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -29610,6 +29817,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "LLIYH",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Release",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Release"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -29666,6 +29892,7 @@
                                       "type": "frame",
                                       "id": "EmwLp",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -29708,11 +29935,30 @@
                                           "id": "MLNLX",
                                           "name": "Date",
                                           "fill": "$ds-fg-muted",
-                                          "content": "August 31, 2026 · 3 min read",
+                                          "content": "April 24, 2026 · 3 min read",
                                           "lineHeight": 1.5,
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "PACK8",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Thoughts",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Thoughts"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -29769,6 +30015,7 @@
                                       "type": "frame",
                                       "id": "G0gth",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -29816,6 +30063,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "Vi0Du",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Thoughts",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Thoughts"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -30230,6 +30496,29 @@
                       "gap": 1,
                       "children": [
                         {
+                          "id": "p6CYE",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Shape Art: a tool for humans and agents",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Shape Art: a tool for…",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
                           "id": "PDxXr",
                           "type": "ref",
                           "ref": "t5G2s8",
@@ -30279,7 +30568,7 @@
                           "id": "vQZAS",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Prompt Studio 0.38: clearer workspaces",
+                          "name": "Prompt Studio 0.38",
                           "theme": {
                             "tree": "default",
                             "depth": "0"
@@ -30302,7 +30591,7 @@
                           "id": "EUK3u",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Prompt Studio 0.37: easier updates",
+                          "name": "Prompt Studio 0.36",
                           "theme": {
                             "tree": "default",
                             "depth": "0"
@@ -30596,7 +30885,7 @@
                               "type": "frame",
                               "id": "ka0Ge",
                               "name": "Post metadata",
-                              "context": "Author avatar and name, then publication date and estimated reading time. Wrap the details onto another line on mobile.",
+                              "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                               "width": "fill_container",
                               "gap": 16,
                               "alignItems": "center",
@@ -30639,11 +30928,30 @@
                                   "id": "ehfRR",
                                   "name": "Publication date and reading time",
                                   "fill": "$ds-fg-muted",
-                                  "content": "August 31, 2026 · 3 min read",
+                                  "content": "April 24, 2026 · 3 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
+                                },
+                                {
+                                  "id": "rjDVe",
+                                  "type": "ref",
+                                  "ref": "dbK8Z",
+                                  "name": "Post category · Thoughts",
+                                  "theme": {
+                                    "badge": "chip",
+                                    "size": "sm",
+                                    "palette": "gray"
+                                  },
+                                  "descendants": {
+                                    "ohhQY": {
+                                      "enabled": false
+                                    },
+                                    "FaaBK": {
+                                      "content": "Thoughts"
+                                    }
+                                  }
                                 }
                               ]
                             }
@@ -38273,6 +38581,29 @@
                       "gap": 1,
                       "children": [
                         {
+                          "id": "EBgsn",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Shape Art: a tool for humans and agents",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Shape Art: a tool for…",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
                           "id": "M1stR",
                           "type": "ref",
                           "ref": "t5G2s8",
@@ -38322,7 +38653,7 @@
                           "id": "D7ve6u",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Prompt Studio 0.38: clearer workspaces",
+                          "name": "Prompt Studio 0.38",
                           "theme": {
                             "tree": "default",
                             "depth": "0"
@@ -38345,7 +38676,7 @@
                           "id": "U3F17W",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Prompt Studio 0.37: easier updates",
+                          "name": "Prompt Studio 0.36",
                           "theme": {
                             "tree": "default",
                             "depth": "0"
@@ -38629,9 +38960,9 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "z6nM7",
-                              "name": "Post · From malleable software to Prompt Studio",
-                              "context": "Featured newest post. Whole card is one link. Hover scales 1.015; keyboard focus shows the focus ring; reduced motion disables scaling.",
+                              "id": "y1jOn",
+                              "name": "Post · Shape Art: a tool for humans and agents",
+                              "context": "Featured newest post. One native link, hover zoom, keyboard focus ring, reduced-motion treatment.",
                               "width": "fill_container",
                               "cornerRadius": "$input-radius",
                               "layout": "vertical",
@@ -38641,18 +38972,141 @@
                                 {
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
-                                  "id": "aMiUL",
+                                  "id": "fKigd",
                                   "name": "Featured Shape Art banner",
                                   "context": "Full 4:1 banner. Paper in light mode, ink in dark mode.",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog-users-in-the-development-team.png",
+                                    "url": "art/blog-shape-art.png",
                                     "mode": "fill"
                                   },
                                   "width": "fill_container",
                                   "height": 168
                                 },
+                                {
+                                  "type": "frame",
+                                  "id": "uWcAy",
+                                  "name": "Post summary",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 8,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "XCbgN",
+                                      "name": "Featured title",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Shape Art: a tool for humans and agents",
+                                      "lineHeight": 1.2,
+                                      "fontFamily": "$font-heading",
+                                      "fontSize": 24,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "OA1oP",
+                                      "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
+                                      "width": "fill_container",
+                                      "gap": 16,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "f2WWHJ",
+                                          "name": "Author identity",
+                                          "gap": 8,
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "ellipse",
+                                              "id": "E4pfh",
+                                              "name": "Aurélien Franky avatar",
+                                              "fill": {
+                                                "type": "image",
+                                                "enabled": true,
+                                                "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                                                "mode": "fill"
+                                              },
+                                              "width": 24,
+                                              "height": 24
+                                            },
+                                            {
+                                              "type": "text",
+                                              "id": "wZ7OO",
+                                              "name": "Author name",
+                                              "fill": "$ds-fg-muted",
+                                              "content": "Aurélien Franky",
+                                              "lineHeight": 1.5,
+                                              "fontFamily": "$font-label",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "h68gwa",
+                                          "name": "Date",
+                                          "fill": "$ds-fg-muted",
+                                          "content": "October 6, 2026 · 4 min read",
+                                          "lineHeight": 1.5,
+                                          "fontFamily": "$font-label",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "iR1j9",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Tool showcase",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Tool showcase"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "oFC6X",
+                                      "name": "Description",
+                                      "fill": "$ds-fg-muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "The small art tool behind this blog’s banners, with a live editor for people and saved recipes agents can use from the CLI.",
+                                      "lineHeight": 1.71,
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "z6nM7",
+                              "name": "Post · From malleable software to Prompt Studio",
+                              "context": "Older post. Whole-card link; author, date, reading time, category, and description; no list artwork.",
+                              "width": "fill_container",
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
+                              "children": [
                                 {
                                   "type": "frame",
                                   "id": "ldBXT",
@@ -38664,20 +39118,21 @@
                                     {
                                       "type": "text",
                                       "id": "Ji2bx",
-                                      "name": "Featured title",
+                                      "name": "Title",
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
                                       "content": "From malleable software to Prompt Studio",
                                       "lineHeight": 1.2,
                                       "fontFamily": "$font-heading",
-                                      "fontSize": 24,
+                                      "fontSize": 20,
                                       "fontWeight": "500"
                                     },
                                     {
                                       "type": "frame",
                                       "id": "uwBEC",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -38725,6 +39180,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "dDqyx",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Thoughts",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Thoughts"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -38781,6 +39255,7 @@
                                       "type": "frame",
                                       "id": "NJ1hB",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -38828,6 +39303,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "ns3Mf",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Release",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Release"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -38884,6 +39378,7 @@
                                       "type": "frame",
                                       "id": "pm4al",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -38931,6 +39426,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "OjY76",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Release",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Release"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -38987,6 +39501,7 @@
                                       "type": "frame",
                                       "id": "T5BeWG",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -39034,6 +39549,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "ygDcs",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Release",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Release"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -39090,6 +39624,7 @@
                                       "type": "frame",
                                       "id": "xODT4",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -39132,11 +39667,30 @@
                                           "id": "cliQx",
                                           "name": "Date",
                                           "fill": "$ds-fg-muted",
-                                          "content": "August 31, 2026 · 3 min read",
+                                          "content": "April 24, 2026 · 3 min read",
                                           "lineHeight": 1.5,
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "bTFT1",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Thoughts",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Thoughts"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -39193,6 +39747,7 @@
                                       "type": "frame",
                                       "id": "FnVlf",
                                       "name": "Post metadata",
+                                      "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                                       "width": "fill_container",
                                       "gap": 16,
                                       "alignItems": "center",
@@ -39240,6 +39795,25 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "atV0Q",
+                                          "type": "ref",
+                                          "ref": "dbK8Z",
+                                          "name": "Post category · Thoughts",
+                                          "theme": {
+                                            "badge": "chip",
+                                            "size": "sm",
+                                            "palette": "gray"
+                                          },
+                                          "descendants": {
+                                            "ohhQY": {
+                                              "enabled": false
+                                            },
+                                            "FaaBK": {
+                                              "content": "Thoughts"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -39654,6 +40228,29 @@
                       "gap": 1,
                       "children": [
                         {
+                          "id": "oi51K",
+                          "type": "ref",
+                          "ref": "t5G2s8",
+                          "name": "Shape Art: a tool for humans and agents",
+                          "theme": {
+                            "tree": "default",
+                            "depth": "0"
+                          },
+                          "descendants": {
+                            "w2TSr": {
+                              "enabled": false
+                            },
+                            "Mbu4C": {
+                              "enabled": false
+                            },
+                            "ROY2j": {
+                              "content": "Shape Art: a tool for…",
+                              "textGrowth": "fixed-width-height",
+                              "height": 18
+                            }
+                          }
+                        },
+                        {
                           "id": "jvlA0",
                           "type": "ref",
                           "ref": "t5G2s8",
@@ -39703,7 +40300,7 @@
                           "id": "tvcOb",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Prompt Studio 0.38: clearer workspaces",
+                          "name": "Prompt Studio 0.38",
                           "theme": {
                             "tree": "default",
                             "depth": "0"
@@ -39726,7 +40323,7 @@
                           "id": "jxmFu",
                           "type": "ref",
                           "ref": "t5G2s8",
-                          "name": "Prompt Studio 0.37: easier updates",
+                          "name": "Prompt Studio 0.36",
                           "theme": {
                             "tree": "default",
                             "depth": "0"
@@ -40020,7 +40617,7 @@
                               "type": "frame",
                               "id": "plqve",
                               "name": "Post metadata",
-                              "context": "Author avatar and name, then publication date and estimated reading time. Wrap the details onto another line on mobile.",
+                              "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                               "width": "fill_container",
                               "gap": 16,
                               "alignItems": "center",
@@ -40063,11 +40660,30 @@
                                   "id": "OCnrR",
                                   "name": "Publication date and reading time",
                                   "fill": "$ds-fg-muted",
-                                  "content": "August 31, 2026 · 3 min read",
+                                  "content": "April 24, 2026 · 3 min read",
                                   "lineHeight": 1.5,
                                   "fontFamily": "$font-label",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
+                                },
+                                {
+                                  "id": "IQ8bo",
+                                  "type": "ref",
+                                  "ref": "dbK8Z",
+                                  "name": "Post category · Thoughts",
+                                  "theme": {
+                                    "badge": "chip",
+                                    "size": "sm",
+                                    "palette": "gray"
+                                  },
+                                  "descendants": {
+                                    "ohhQY": {
+                                      "enabled": false
+                                    },
+                                    "FaaBK": {
+                                      "content": "Thoughts"
+                                    }
+                                  }
                                 }
                               ]
                             }
@@ -42681,9 +43297,9 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "MnKP8",
-                  "name": "Post · From malleable software to Prompt Studio",
-                  "context": "Featured newest post. Whole card is one link. Hover scales 1.015; keyboard focus shows the focus ring; reduced motion disables scaling.",
+                  "id": "j9joQ",
+                  "name": "Post · Shape Art: a tool for humans and agents",
+                  "context": "Featured newest post. One native link, hover zoom, keyboard focus ring, reduced-motion treatment.",
                   "width": "fill_container",
                   "cornerRadius": "$input-radius",
                   "layout": "vertical",
@@ -42693,18 +43309,141 @@
                     {
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
-                      "id": "hXHdh",
+                      "id": "Q7rR0Z",
                       "name": "Featured Shape Art banner",
                       "context": "Full 4:1 banner. Paper in light mode, ink in dark mode.",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog-users-in-the-development-team-light.png",
+                        "url": "art/blog-shape-art-light.png",
                         "mode": "fill"
                       },
                       "width": "fill_container",
                       "height": 77.5
                     },
+                    {
+                      "type": "frame",
+                      "id": "bFoYT",
+                      "name": "Post summary",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fAIEy",
+                          "name": "Featured title",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Shape Art: a tool for humans and agents",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$font-heading",
+                          "fontSize": 24,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Fj79x",
+                          "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "C65rRa",
+                              "name": "Author identity",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "oerJU",
+                                  "name": "Aurélien Franky avatar",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                                    "mode": "fill"
+                                  },
+                                  "width": 24,
+                                  "height": 24
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "BQjFN",
+                                  "name": "Author name",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Aurélien Franky",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "BwIRO",
+                              "name": "Date",
+                              "fill": "$ds-fg-muted",
+                              "content": "October 6, 2026 · 4 min read",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "p40fQL",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Tool showcase",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Tool showcase"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "X9o3zD",
+                          "name": "Description",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The small art tool behind this blog’s banners, with a live editor for people and saved recipes agents can use from the CLI.",
+                          "lineHeight": 1.71,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MnKP8",
+                  "name": "Post · From malleable software to Prompt Studio",
+                  "context": "Older post. Whole-card link; author, date, reading time, category, and description; no list artwork.",
+                  "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 16,
+                  "children": [
                     {
                       "type": "frame",
                       "id": "qFo6z",
@@ -42716,20 +43455,21 @@
                         {
                           "type": "text",
                           "id": "ewrew",
-                          "name": "Featured title",
+                          "name": "Title",
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "From malleable software to Prompt Studio",
                           "lineHeight": 1.2,
                           "fontFamily": "$font-heading",
-                          "fontSize": 24,
+                          "fontSize": 20,
                           "fontWeight": "500"
                         },
                         {
                           "type": "frame",
                           "id": "x0J5VK",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -42777,6 +43517,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "atqJT",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Thoughts",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Thoughts"
+                                }
+                              }
                             }
                           ]
                         },
@@ -42833,6 +43592,7 @@
                           "type": "frame",
                           "id": "iGWgC",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -42880,6 +43640,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "TAr44",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Release",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Release"
+                                }
+                              }
                             }
                           ]
                         },
@@ -42936,6 +43715,7 @@
                           "type": "frame",
                           "id": "SbmQD",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -42983,6 +43763,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "h0ThO1",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Release",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Release"
+                                }
+                              }
                             }
                           ]
                         },
@@ -43039,6 +43838,7 @@
                           "type": "frame",
                           "id": "hFDe4",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -43086,6 +43886,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "feWrC",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Release",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Release"
+                                }
+                              }
                             }
                           ]
                         },
@@ -43142,6 +43961,7 @@
                           "type": "frame",
                           "id": "KD9pm",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -43184,11 +44004,30 @@
                               "id": "mrWj9",
                               "name": "Date",
                               "fill": "$ds-fg-muted",
-                              "content": "August 31, 2026 · 3 min read",
+                              "content": "April 24, 2026 · 3 min read",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "qhNEV",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Thoughts",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Thoughts"
+                                }
+                              }
                             }
                           ]
                         },
@@ -43245,6 +44084,7 @@
                           "type": "frame",
                           "id": "zchFl",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -43292,6 +44132,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "HfJEt",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Thoughts",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Thoughts"
+                                }
+                              }
                             }
                           ]
                         },
@@ -43686,7 +44545,7 @@
                   "type": "frame",
                   "id": "hUE11",
                   "name": "Post metadata",
-                  "context": "Author avatar and name, then publication date and estimated reading time. Wrap the details onto another line on mobile.",
+                  "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -43729,11 +44588,30 @@
                       "id": "sldqd",
                       "name": "Publication date and reading time",
                       "fill": "$ds-fg-muted",
-                      "content": "August 31, 2026 · 3 min read",
+                      "content": "April 24, 2026 · 3 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
                       "fontWeight": "normal"
+                    },
+                    {
+                      "id": "mvunc",
+                      "type": "ref",
+                      "ref": "dbK8Z",
+                      "name": "Post category · Thoughts",
+                      "theme": {
+                        "badge": "chip",
+                        "size": "sm",
+                        "palette": "gray"
+                      },
+                      "descendants": {
+                        "ohhQY": {
+                          "enabled": false
+                        },
+                        "FaaBK": {
+                          "content": "Thoughts"
+                        }
+                      }
                     }
                   ]
                 }
@@ -49326,9 +50204,9 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "jr3lq",
-                  "name": "Post · From malleable software to Prompt Studio",
-                  "context": "Featured newest post. Whole card is one link. Hover scales 1.015; keyboard focus shows the focus ring; reduced motion disables scaling.",
+                  "id": "y76dMU",
+                  "name": "Post · Shape Art: a tool for humans and agents",
+                  "context": "Featured newest post. One native link, hover zoom, keyboard focus ring, reduced-motion treatment.",
                   "width": "fill_container",
                   "cornerRadius": "$input-radius",
                   "layout": "vertical",
@@ -49338,18 +50216,141 @@
                     {
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
-                      "id": "Lona4",
+                      "id": "NA4fe",
                       "name": "Featured Shape Art banner",
                       "context": "Full 4:1 banner. Paper in light mode, ink in dark mode.",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog-users-in-the-development-team.png",
+                        "url": "art/blog-shape-art.png",
                         "mode": "fill"
                       },
                       "width": "fill_container",
                       "height": 77.5
                     },
+                    {
+                      "type": "frame",
+                      "id": "RbHI0",
+                      "name": "Post summary",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hfaKk",
+                          "name": "Featured title",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Shape Art: a tool for humans and agents",
+                          "lineHeight": 1.2,
+                          "fontFamily": "$font-heading",
+                          "fontSize": 24,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K52Od",
+                          "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "yr3Jl",
+                              "name": "Author identity",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "ellipse",
+                                  "id": "goqcC",
+                                  "name": "Aurélien Franky avatar",
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                                    "mode": "fill"
+                                  },
+                                  "width": 24,
+                                  "height": 24
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "TBAp9",
+                                  "name": "Author name",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "Aurélien Franky",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-label",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "keLZI",
+                              "name": "Date",
+                              "fill": "$ds-fg-muted",
+                              "content": "October 6, 2026 · 4 min read",
+                              "lineHeight": 1.5,
+                              "fontFamily": "$font-label",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "sXgdD",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Tool showcase",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Tool showcase"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "iR3OG",
+                          "name": "Description",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The small art tool behind this blog’s banners, with a live editor for people and saved recipes agents can use from the CLI.",
+                          "lineHeight": 1.71,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jr3lq",
+                  "name": "Post · From malleable software to Prompt Studio",
+                  "context": "Older post. Whole-card link; author, date, reading time, category, and description; no list artwork.",
+                  "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": 16,
+                  "children": [
                     {
                       "type": "frame",
                       "id": "LxCoa",
@@ -49361,20 +50362,21 @@
                         {
                           "type": "text",
                           "id": "hTkPs",
-                          "name": "Featured title",
+                          "name": "Title",
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "From malleable software to Prompt Studio",
                           "lineHeight": 1.2,
                           "fontFamily": "$font-heading",
-                          "fontSize": 24,
+                          "fontSize": 20,
                           "fontWeight": "500"
                         },
                         {
                           "type": "frame",
                           "id": "AJySR",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -49422,6 +50424,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "iR94Y",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Thoughts",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Thoughts"
+                                }
+                              }
                             }
                           ]
                         },
@@ -49478,6 +50499,7 @@
                           "type": "frame",
                           "id": "dR7On",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -49525,6 +50547,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "FQzf7",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Release",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Release"
+                                }
+                              }
                             }
                           ]
                         },
@@ -49581,6 +50622,7 @@
                           "type": "frame",
                           "id": "ELZHZ",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -49628,6 +50670,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "W3zBSP",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Release",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Release"
+                                }
+                              }
                             }
                           ]
                         },
@@ -49684,6 +50745,7 @@
                           "type": "frame",
                           "id": "nnwdc",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -49731,6 +50793,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "k2IaQq",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Release",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Release"
+                                }
+                              }
                             }
                           ]
                         },
@@ -49787,6 +50868,7 @@
                           "type": "frame",
                           "id": "qKr6T",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -49829,11 +50911,30 @@
                               "id": "Z9Au4i",
                               "name": "Date",
                               "fill": "$ds-fg-muted",
-                              "content": "August 31, 2026 · 3 min read",
+                              "content": "April 24, 2026 · 3 min read",
                               "lineHeight": 1.5,
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "L8FVHw",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Thoughts",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Thoughts"
+                                }
+                              }
                             }
                           ]
                         },
@@ -49890,6 +50991,7 @@
                           "type": "frame",
                           "id": "TM7hV",
                           "name": "Post metadata",
+                          "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                           "width": "fill_container",
                           "layout": "vertical",
                           "gap": 8,
@@ -49937,6 +51039,25 @@
                               "fontFamily": "$font-label",
                               "fontSize": 12,
                               "fontWeight": "normal"
+                            },
+                            {
+                              "id": "h9RrN",
+                              "type": "ref",
+                              "ref": "dbK8Z",
+                              "name": "Post category · Thoughts",
+                              "theme": {
+                                "badge": "chip",
+                                "size": "sm",
+                                "palette": "gray"
+                              },
+                              "descendants": {
+                                "ohhQY": {
+                                  "enabled": false
+                                },
+                                "FaaBK": {
+                                  "content": "Thoughts"
+                                }
+                              }
                             }
                           ]
                         },
@@ -50331,7 +51452,7 @@
                   "type": "frame",
                   "id": "biwyi",
                   "name": "Post metadata",
-                  "context": "Author avatar and name, then publication date and estimated reading time. Wrap the details onto another line on mobile.",
+                  "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
@@ -50374,11 +51495,30 @@
                       "id": "aW2bJ",
                       "name": "Publication date and reading time",
                       "fill": "$ds-fg-muted",
-                      "content": "August 31, 2026 · 3 min read",
+                      "content": "April 24, 2026 · 3 min read",
                       "lineHeight": 1.5,
                       "fontFamily": "$font-label",
                       "fontSize": 12,
                       "fontWeight": "normal"
+                    },
+                    {
+                      "id": "mU0vS",
+                      "type": "ref",
+                      "ref": "dbK8Z",
+                      "name": "Post category · Thoughts",
+                      "theme": {
+                        "badge": "chip",
+                        "size": "sm",
+                        "palette": "gray"
+                      },
+                      "descendants": {
+                        "ohhQY": {
+                          "enabled": false
+                        },
+                        "FaaBK": {
+                          "content": "Thoughts"
+                        }
+                      }
                     }
                   ]
                 }

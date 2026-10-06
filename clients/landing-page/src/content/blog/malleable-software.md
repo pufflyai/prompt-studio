@@ -3,6 +3,7 @@ title: "In the future, your users will be part of the development team."
 description: "An experiment in malleable software: users and developers building together through shared data and composable tools."
 published: 2025-10-25
 author: aurelien-franky
+category: thoughts
 image:
   light: ../../../../../design/art/blog-malleable-software-light.png
   dark: ../../../../../design/art/blog-malleable-software.png

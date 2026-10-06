@@ -1,4 +1,5 @@
 import { siteMetadata } from "../config/site-metadata";
+import type { BlogCategory } from "./blog-categories";
 import { type LandingView, VIEW_META } from "./landing-content";
 import { TOOL_EXAMPLES, type ToolExampleId } from "./tool-examples-content";
 
@@ -17,6 +18,7 @@ export type LandingPage =
   | (PageFields & {
       view: "post";
       published: string;
+      category: BlogCategory;
       author: ActivityActor;
       readingMinutes: number;
       image: Record<"light" | "dark", { src: string; width: number; height: number }>;
@@ -99,7 +101,7 @@ export const LANDING_PAGES: LandingPage[] = [
     view: "blog",
     label: "All posts",
     title: "Blog | Prompt Studio",
-    description: "News, releases, and breaking changes from the people who build Prompt Studio.",
+    description: "Releases, thoughts, and tool showcases from the people who build Prompt Studio.",
   },
 ];
 

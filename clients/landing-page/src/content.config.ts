@@ -1,6 +1,7 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
+import { BLOG_CATEGORIES } from "./content/blog-categories";
 import { DOCS_PATTERNS } from "./content/docs-topics";
 
 // Docs are read where contributors edit them: `documentation/` and each extension's
@@ -18,6 +19,7 @@ const blog = defineCollection({
       // Use an unquoted date or UTC timestamp. Timestamps order posts published on the same day.
       published: z.date(),
       author: z.enum(["aurelien-franky"]),
+      category: z.enum(BLOG_CATEGORIES),
       image: z.object({ light: image(), dark: image() }),
     }),
 });

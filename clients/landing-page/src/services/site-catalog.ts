@@ -55,6 +55,7 @@ const postPage = async (entry: CollectionEntry<"blog">) => {
     title: `${entry.data.title} | Prompt Studio blog`,
     description: entry.data.description,
     published: entry.data.published.toISOString(),
+    category: entry.data.category,
     author: BLOG_AUTHORS[entry.data.author],
     readingMinutes,
     image: { light, dark },

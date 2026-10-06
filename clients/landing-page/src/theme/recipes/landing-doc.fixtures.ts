@@ -4,6 +4,8 @@ const banner = new URL("../../../../../design/art/blog-welcome-to-prompt-studio.
 const lightBanner = new URL("../../../../../design/art/blog-welcome-to-prompt-studio-light.png", import.meta.url).href;
 const olderBanner = new URL("../../../../../design/art/blog-malleable-software.png", import.meta.url).href;
 const olderLightBanner = new URL("../../../../../design/art/blog-malleable-software-light.png", import.meta.url).href;
+const toolBanner = new URL("../../../../../design/art/blog-shape-art.png", import.meta.url).href;
+const toolLightBanner = new URL("../../../../../design/art/blog-shape-art-light.png", import.meta.url).href;
 
 // Sample pages and markup only. Real docs come from the repo's markdown.
 const doc = (path: string, label: string): LandingPage => ({
@@ -27,7 +29,7 @@ export const STORY_BLOG_HOME: LandingPage = {
   view: "blog",
   label: "All posts",
   title: "Blog | Prompt Studio",
-  description: "News, releases, and breaking changes from the people who build Prompt Studio.",
+  description: "Releases, thoughts, and tool showcases from the people who build Prompt Studio.",
 };
 
 export const STORY_SESSIONS = doc("/docs/references/cli/sessions/", "Sessions");
@@ -39,6 +41,7 @@ export const STORY_POST: Extract<LandingPage, { view: "post" }> = {
   title: "A sample post title | Prompt Studio blog",
   description: "One sentence that says what the post is about.",
   published: "2026-08-31",
+  category: "thoughts",
   author: BLOG_AUTHORS["aurelien-franky"],
   readingMinutes: 3,
   image: {
@@ -64,11 +67,24 @@ export const STORY_PAGES: LandingPage[] = [
     ...STORY_POST,
     path: "/blog/older-post/",
     label: "An older post",
-    published: "2026-09-01",
+    published: "2026-08-01",
+    category: "release",
     description: "Posts are listed newest first.",
     image: {
       light: { src: olderLightBanner, width: 1600, height: 400 },
       dark: { src: olderBanner, width: 1600, height: 400 },
+    },
+  },
+  {
+    ...STORY_POST,
+    path: "/blog/tool-showcase/",
+    label: "Shape Art: a tool for humans and agents",
+    published: "2026-10-06T08:00:00Z",
+    category: "tool showcase",
+    description: "A live editor for people and saved recipes agents can use from the CLI.",
+    image: {
+      light: { src: toolLightBanner, width: 1600, height: 400 },
+      dark: { src: toolBanner, width: 1600, height: 400 },
     },
   },
 ];

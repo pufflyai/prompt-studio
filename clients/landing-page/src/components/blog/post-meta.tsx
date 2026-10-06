@@ -1,5 +1,6 @@
-import { Box } from "@chakra-ui/react";
+import { Badge, Box } from "@chakra-ui/react";
 import { ActivityAvatar } from "@pstdio/ui";
+import { blogCategoryLabel } from "../../content/blog-categories";
 import type { LandingPage } from "../../content/landing-pages";
 import { useDocStyles } from "../../hooks/use-landing-styles";
 import { PostDate } from "./post-date";
@@ -23,6 +24,9 @@ export const PostMeta = (props: PostMetaProps) => {
         <span aria-hidden="true">·</span>
         <span>{page.readingMinutes} min read</span>
       </Box>
+      <Badge variant="chip" size="sm">
+        {blogCategoryLabel(page.category)}
+      </Badge>
     </Box>
   );
 };

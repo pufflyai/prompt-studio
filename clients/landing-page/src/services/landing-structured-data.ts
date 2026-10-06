@@ -1,4 +1,5 @@
 import { siteMetadata } from "../config/site-metadata";
+import { blogCategoryLabel } from "../content/blog-categories";
 import type { LandingPage } from "../content/landing-pages";
 import { DESKTOP_RELEASES_URL } from "./desktop-releases";
 
@@ -61,6 +62,7 @@ export const landingStructuredData = (page: LandingPage, canonicalUrl: string) =
       ? {
           headline: page.label,
           datePublished: page.published,
+          articleSection: blogCategoryLabel(page.category),
           author: {
             "@type": "Person",
             name: page.author.name,
