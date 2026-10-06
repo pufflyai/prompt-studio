@@ -115,7 +115,6 @@ describe("openSelectedWorkspace", () => {
         workspaceBranch: "workspace/PS-307_A2",
         workspaceShorthand: "PS-307_A2",
         workspaceIsDefault: false,
-        workspaceSupportsArchive: true,
         workspaceSupportsDelete: true,
         workspacePath: "/repo/.pstdio/workspaces/PS-307_A2",
       },
