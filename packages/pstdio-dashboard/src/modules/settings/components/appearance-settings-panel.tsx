@@ -1,13 +1,7 @@
 import { Stack, Text } from "@chakra-ui/react";
-import { type ThemePreferenceOption, useThemePreference } from "@pstdio/ui";
+import { useThemePreference } from "@pstdio/ui";
 import { ParamEditorRow, type SelectionParam } from "@pstdio/ui/param-editor";
 import { useTranslation } from "react-i18next";
-
-const themeIcon = (theme: ThemePreferenceOption) => {
-  if (theme.id === "pstdio-light") return "Sun";
-  if (theme.id === "pstdio-dark") return "Moon";
-  return "Palette";
-};
 
 // Lists every registered theme, light themes first, like the Change Theme picker.
 export const AppearanceSettingsPanel = () => {
@@ -23,7 +17,7 @@ export const AppearanceSettingsPanel = () => {
     description: t("appearance.themeHelper"),
     type: "selection",
     defaultValue: chosenThemePreference,
-    options: themes.map((theme) => ({ id: theme.id, name: theme.title ?? theme.id, icon: themeIcon(theme) })),
+    options: themes.map((theme) => ({ id: theme.id, name: theme.title ?? theme.id })),
     searchable: themes.length > 5,
   };
 

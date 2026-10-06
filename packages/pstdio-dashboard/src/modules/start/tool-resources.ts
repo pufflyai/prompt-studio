@@ -23,8 +23,10 @@ export const registerToolResources = (ctx: WorkbenchModuleContext) => {
       ctx.pages
         .listPages()
         .filter(isToolPage)
-        .map((page) => ({
-          resource: { type: "tool", id: page.id, label: toolTitle(page), icon: page.icon },
+        .map((page) => ({ page, title: toolTitle(page) }))
+        .sort((a, b) => a.title.localeCompare(b.title))
+        .map(({ page, title }) => ({
+          resource: { type: "tool", id: page.id, label: title, icon: page.icon },
           group: "Tools",
           activate: () => ctx.pageLocations.navigate({ kind: "page", page: page.ref }),
         })),
