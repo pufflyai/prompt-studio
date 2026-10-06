@@ -310,6 +310,7 @@ describe("serveApp options", () => {
         captured.hostname = options.hostname;
         return {} as ReturnType<typeof Bun.serve>;
       },
+      standaloneToken: () => "standalone-secret",
       onSignal: () => {},
       offSignal: () => {},
       log: () => {},
@@ -318,5 +319,36 @@ describe("serveApp options", () => {
     await serveApp({ port: 19840, host: "0.0.0.0" });
 
     expect(captured.hostname).toBe("0.0.0.0");
+  });
+
+  it("refuses to listen on a non-loopback host without an API token", async () => {
+    let served = false;
+    let appCreated = false;
+    const serveApp = createServeApp({
+      createApp: async () => {
+        appCreated = true;
+        return { app: { fetch: () => new Response("ok") }, close: async () => {} };
+      },
+      injectConfig: (html) => html,
+      isCompiledBinary: () => false,
+      loadEmbeddedAssets: () => new Map(),
+      loadFilesystemAssets: () => new Map(),
+      resolveMimeType: () => "text/html",
+      serve: () => {
+        served = true;
+        return {} as ReturnType<typeof Bun.serve>;
+      },
+      standaloneToken: () => undefined,
+      onSignal: () => {},
+      offSignal: () => {},
+      onFatal: () => {},
+      offFatal: () => {},
+      reportStartupError: () => {},
+      log: () => {},
+    });
+
+    await expect(serveApp({ port: 19840, host: "0.0.0.0" })).rejects.toThrow("without an API token");
+    expect(served).toBe(false);
+    expect(appCreated).toBe(false);
   });
 });

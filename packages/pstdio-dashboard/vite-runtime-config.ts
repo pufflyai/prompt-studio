@@ -3,7 +3,7 @@ import path from "node:path";
 import type { Plugin } from "vite";
 
 export type DashboardRuntimeConfig = {
-  terminalWebSocketUrl: string;
+  terminalWebSocketUrl?: string;
 };
 
 const parseExplicitTerminalUrl = (value: string) => {

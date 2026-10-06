@@ -1,4 +1,10 @@
-import { apiWebSocket, closeBeforeFatalExit, createApp, resolveAppConfig } from "pstdio-api/app";
+import {
+  apiWebSocket,
+  assertListenHostAllowed,
+  closeBeforeFatalExit,
+  createApp,
+  resolveAppConfig,
+} from "pstdio-api/app";
 import { disableExtensionMutationTimeout } from "pstdio-api/extensions/extension-request-timeout";
 import type { RuntimeHost, RuntimeOwnerType } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
@@ -32,6 +38,7 @@ type ServeAppDeps = {
   loadFilesystemAssets: typeof loadFilesystemAssets;
   resolveMimeType: typeof resolveMimeType;
   serve: typeof Bun.serve;
+  standaloneToken: () => string | undefined;
   log: (message: string) => void;
   reportStartupError: (error: Error) => void;
   onSignal: (signal: NodeJS.Signals, listener: () => void) => void;
@@ -43,8 +50,6 @@ type ServeAppDeps = {
 };
 
 let serveLogger: ReturnType<typeof createLogger> | null = null;
-
-const LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 const getServeLogger = () => {
   if (serveLogger) {
@@ -87,6 +92,7 @@ const defaultDeps: ServeAppDeps = {
   loadFilesystemAssets,
   resolveMimeType,
   serve: Bun.serve,
+  standaloneToken: () => process.env.PSTDIO_API_TOKEN,
   log: (message) => process.stdout.write(message),
   reportStartupError,
   onSignal: (signal, listener) => process.on(signal, listener),
@@ -150,9 +156,6 @@ const logServeUrls = (host: string, baseUrl: string, log: ServeAppDeps["log"]) =
   log(`pstdio serve: ${baseUrl}\n`);
   log(`  Dashboard: ${baseUrl}\n`);
   log(`  API:       ${baseUrl}/v1\n`);
-  if (LOCALHOST_HOSTS.has(host)) return;
-
-  log(`  WARNING: bound to ${host}; pstdio serve has no auth, only expose on trusted networks.\n`);
   if (host === "0.0.0.0" || host === "::") {
     log("  LAN clients should connect with this machine's LAN IP address.\n");
   }
@@ -222,6 +225,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
     const runtimeHost = runtime?.host;
 
     try {
+      assertListenHostAllowed(host, runtimeHost?.token ?? deps.standaloneToken());
       deps.onSignal("SIGINT", shutdown);
       deps.onSignal("SIGTERM", shutdown);
       deps.onFatal("uncaughtException", fatalShutdown);

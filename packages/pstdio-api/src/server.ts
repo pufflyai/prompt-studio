@@ -1,13 +1,15 @@
-import { apiWebSocket, closeBeforeFatalExit, createApp, resolveAppConfig } from "./app";
+import { apiWebSocket, assertListenHostAllowed, closeBeforeFatalExit, createApp, resolveAppConfig } from "./app";
 import { disableExtensionMutationTimeout } from "./features/extensions/extension-request-timeout";
 import { apiLogger } from "./lib/logger";
 
 const port = Number(process.env.PORT ?? "19840");
+const hostname = process.env.PSTDIO_API_HOST ?? "127.0.0.1";
 
 const startServer = async () => {
   let close: (() => Promise<void>) | undefined;
 
   try {
+    assertListenHostAllowed(hostname, process.env.PSTDIO_API_TOKEN);
     const appHandle = await createApp({
       config: resolveAppConfig({ env: process.env }),
       host: { kind: "standalone", token: process.env.PSTDIO_API_TOKEN },
@@ -39,12 +41,13 @@ const startServer = async () => {
         disableExtensionMutationTimeout(request, server);
         return app.fetch(request, server);
       },
+      hostname,
       idleTimeout: 20,
       port,
       websocket: apiWebSocket,
     });
 
-    apiLogger.info({ event: "api.server.started", port }, `Server running on http://localhost:${port}`);
+    apiLogger.info({ event: "api.server.started", hostname, port }, `Server running on http://${hostname}:${port}`);
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     apiLogger.error({ err, event: "api.startup.error" }, "API process failed to start");

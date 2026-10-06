@@ -1,6 +1,5 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, Next } from "hono";
-import { cors } from "hono/cors";
 import { redactSensitiveText } from "pstdio-logging";
 import { createAgentRoutes } from "./features/agents/routes";
 import { bearerTokenFrom, MAX_INPUT_BYTES } from "./features/automation/automation-policy";
@@ -27,6 +26,7 @@ import { createTerminalRoutes } from "./features/terminal/routes";
 import { createBoardViewsRoutes } from "./features/views/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
+import { isLoopbackHost } from "./listen-host";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
 
@@ -98,6 +98,30 @@ const registerSecureTransport = (app: OpenAPIHono<AppBindings>, security: Runtim
   });
 };
 
+const isLoopbackOrigin = (origin: string) => {
+  try {
+    const url = new URL(origin);
+    return url.protocol === "http:" && isLoopbackHost(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
+// Without a token the API only listens on loopback (see listen-host.ts), but a browser page can
+// still reach it. A page from another site sends its own Origin, and a DNS rebinding page reaches
+// 127.0.0.1 under its own host name. Both are refused. Loopback dashboards, such as the Vite dev
+// server, stay allowed. No CORS headers are sent, so other origins cannot read responses.
+const registerLoopbackTransport = (app: OpenAPIHono<AppBindings>) => {
+  app.use("*", async (c, next) => {
+    if (isPublicPath(c.req.path)) return next();
+    const origin = c.req.header("origin");
+    if (!isLoopbackHost(new URL(c.req.url).hostname) || (origin && !isLoopbackOrigin(origin))) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+    return next();
+  });
+};
+
 const registerApiMiddleware = (
   app: OpenAPIHono<AppBindings>,
   deps: RouteDeps,
@@ -127,8 +151,7 @@ const registerApiMiddleware = (
   );
 
   if (!security) {
-    const permissiveCors = cors();
-    app.use("*", permissiveCors);
+    registerLoopbackTransport(app);
     return;
   }
 

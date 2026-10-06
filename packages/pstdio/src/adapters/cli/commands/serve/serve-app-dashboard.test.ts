@@ -90,6 +90,7 @@ describe("serveApp dashboard config", () => {
         capturedFetch = options.fetch;
         return {} as ReturnType<typeof Bun.serve>;
       },
+      standaloneToken: () => "standalone-secret",
       onSignal: () => {},
       offSignal: () => {},
       log: () => {},
