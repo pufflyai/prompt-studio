@@ -46,6 +46,15 @@ export const registerHealthyExtensions = (input: RegisterHealthyExtensionsInput)
   const complete = tryRegister(allExtensionIds);
   if (!("error" in complete)) return complete;
 
+  // Try removing one failing owner before testing extensions separately. A healthy set may
+  // contain mutual references, so its members cannot always register on their own.
+  for (const extensionId of allExtensionIds) {
+    const trial = tryRegister(allExtensionIds.filter((id) => id !== extensionId));
+    if ("error" in trial) continue;
+    input.onFailure(extensionId, complete.error);
+    return trial;
+  }
+
   const accepted: string[] = [];
   const failures = new Map<string, unknown>();
   let remaining = allExtensionIds;

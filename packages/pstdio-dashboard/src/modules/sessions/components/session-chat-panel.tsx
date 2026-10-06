@@ -110,7 +110,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     harnessParamOverrides,
     setHarnessParamOverrides,
   } = useSessionModelSelection(view, projectId);
-  const draftAttachments = useSessionDraftAttachments(projectId);
+  const draftAttachments = useSessionDraftAttachments(projectId, view.draftKey, drafts);
   const { data: agents = [] } = useAgents(projectId);
   const canSubmit = canSubmitSessionMessage({
     agentOptions: agents.map((agent) => ({ value: agent.id, disabled: agent.availability.type === "NOT_FOUND" })),

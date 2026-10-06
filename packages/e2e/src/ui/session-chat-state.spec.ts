@@ -75,6 +75,10 @@ test("turns a New session tab into the created session when the request ends aft
   await side.getByTestId("send-message-button").last().click();
   await expect(editor).toBeEmpty();
   await header.getByRole("tab", { name: "Session B", exact: true }).click();
+  await draftTab.click();
+  await expect(editor).toHaveAttribute("contenteditable", "false");
+  await expect(side.getByTestId("send-message-button").last()).toBeDisabled();
+  await header.getByRole("tab", { name: "Session B", exact: true }).click();
   release();
   expect((await created).ok()).toBe(true);
 
@@ -136,4 +140,31 @@ test("keeps draft attachments with the session they were added to", async ({ pag
   await expect(side.getByText("notes-for-b.txt")).toBeVisible();
   await switchTab("Session B", "Session A");
   await expect(side.getByText("notes-for-b.txt")).toHaveCount(0);
+  await switchTab("Session A", "Session B");
+  await expect(side.getByText("notes-for-b.txt")).toBeVisible();
+  let release!: () => void;
+  let uploaded!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const uploading = new Promise<void>((resolve) => {
+    uploaded = resolve;
+  });
+  await page.route("**/v1/projects/*/session-attachments", async (route) => {
+    uploaded();
+    await held;
+    await route.continue();
+  });
+  await side.locator("input[type='file']").setInputFiles({
+    name: "late-upload-for-b.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Late context for B"),
+  });
+  await uploading;
+  await switchTab("Session B", "Session A");
+  await switchTab("Session A", "Session B");
+  await expect(side.getByTestId("send-message-button").last()).toBeDisabled();
+  release();
+  await expect(side.getByText("late-upload-for-b.txt")).toBeVisible();
+  await expect(side.getByText("notes-for-b.txt")).toBeVisible();
 });

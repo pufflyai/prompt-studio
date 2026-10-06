@@ -30,3 +30,18 @@ test("registers every extension except the one that cannot register", () => {
   expect(failures).toEqual(["broken"]);
   expect(registered.at(-1)).toEqual(["refers-to-later", "later"]);
 });
+
+test("keeps healthy extensions that refer to each other when another extension fails", () => {
+  const result = registerHealthyExtensions({
+    metadata: withExtensions(["broken", "first", "second"]),
+    register: (subset) => {
+      const ids = subset.extensions.map((extension) => extension.id);
+      if (ids.includes("broken")) throw new Error("View already registered");
+      if (ids.includes("first") !== ids.includes("second")) throw new Error("View not registered");
+      return { dispose: () => undefined };
+    },
+    onFailure: () => undefined,
+  });
+
+  expect(result.metadata.extensions.map((extension) => extension.id)).toEqual(["first", "second"]);
+});
