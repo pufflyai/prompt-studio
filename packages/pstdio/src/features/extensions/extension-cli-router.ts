@@ -109,16 +109,12 @@ const parseJsonParam = (name: string, value: string) => {
   }
 };
 
-const parseNumberParam = (name: string, value: string | boolean) => {
-  const number = Number(value);
-  if (typeof value !== "string" || value.trim() === "" || Number.isNaN(number)) {
-    throw new Error(`${formatParamName(name)} expects a number (got ${value})`);
-  }
-  return number;
-};
-
 const coerceParam = (name: string, descriptor: ParamDescriptor | undefined, value: string | boolean) => {
-  if (descriptor?.type === "number") return parseNumberParam(name, value);
+  if (descriptor?.type === "number") {
+    const number = typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+    if (Number.isNaN(number)) throw new Error(`${formatParamName(name)} expects a number (got ${value})`);
+    return number;
+  }
   if (descriptor?.type === "boolean") return value === true || value === "true";
   if (descriptor && JSON_PARAM_TYPES.has(descriptor.type) && typeof value === "string") {
     return parseJsonParam(name, value);
@@ -305,13 +301,11 @@ const readParamFlag = (command: ExtensionCommandRecord, args: string[], index: n
   const name = normalizeParamName(rawName ?? "");
   const descriptor = command.params?.[name];
   if (inlineValue !== undefined) return { descriptor, name, nextIndex: index, value: inlineValue };
-
   const next = args[index + 1];
-  if (descriptor?.type === "boolean") {
-    // A boolean flag takes the next word only when it is an explicit `true` or `false`.
-    if (next === "true" || next === "false") return { descriptor, name, nextIndex: index + 1, value: next };
-    return { descriptor, name, nextIndex: index, value: true };
-  }
+  // A boolean flag takes the next word only when it is an explicit `true` or `false`.
+  const explicitBoolean = descriptor?.type === "boolean" && (next === "true" || next === "false");
+  if (explicitBoolean) return { descriptor, name, nextIndex: index + 1, value: next };
+  if (descriptor?.type === "boolean") return { descriptor, name, nextIndex: index, value: true };
   if (descriptor && next === undefined) throw new Error(`${formatParamName(name)} expects a value`);
   return { descriptor, name, nextIndex: index + 1, value: next };
 };
@@ -390,15 +384,11 @@ export const dispatchExtensionCliCommand = async (input: {
   if (!command) {
     // A namespace or command group lists the namespace's commands, matching how yargs
     // command groups respond. A mistyped command must fail so scripts and agents notice.
-    const namespaceHelp = renderNamespaceHelp(commandPathParts[0]!, table);
-    const isGroup =
-      commandPathParts.length === 1 || [...table.byPath.keys()].some((path) => path.startsWith(`${commandPath} `));
-    if (isGroup) {
-      deps.log(namespaceHelp);
-      return 0;
-    }
-    (deps.error ?? deps.log)(`Unknown command "pstdio ${commandPath}".\n\n${namespaceHelp}`);
-    return 1;
+    const help = renderNamespaceHelp(commandPathParts[0]!, table);
+    const group = !commandPathParts[1] || [...table.byPath.keys()].some((p) => p.startsWith(`${commandPath} `));
+    if (!group) (deps.error ?? deps.log)(`Unknown command "pstdio ${commandPath}".\n\n${help}`);
+    else deps.log(help);
+    return group ? 0 : 1;
   }
 
   input.onCommandResolved?.(command);

@@ -55,7 +55,7 @@ const buildDeps = () => {
       create,
       archive,
       cancelQueued,
-        onSessionStarted,
+      onSessionStarted,
       onSessionStatusChanged,
       onSessionResumed,
     },
