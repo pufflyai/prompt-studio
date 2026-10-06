@@ -85,5 +85,12 @@
     "description": "Elige cómo se ve Prompt Studio. También puedes cambiar el tema con Alt+Shift+T.",
     "theme": "Tema",
     "themeHelper": "Se aplica a todos los proyectos."
+  },
+  "connectionStatus": {
+    "title": "Estado de conexión",
+    "description": "Muestra un aviso en la barra de estado mientras la aplicación se vuelve a conectar al servidor. La sincronización en vivo y la recuperación automática siguen activas cuando está desactivado.",
+    "enable": "Mostrar estado de conexión",
+    "helper": "Se guarda solo en este dispositivo. Desactivado por defecto.",
+    "saveError": "No se pudo cambiar la visualización del estado de conexión."
   }
 }

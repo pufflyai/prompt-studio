@@ -1,21 +1,25 @@
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { WorkbenchConnectionProvider } from "@pstdio/workbench/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { buildApiUrl } from "@/lib/api";
 import { BackendConnectionWarning } from "./backend-connection-warning";
 import { getAllCollections, markInitialCollectionsSyncComplete } from "./collections";
+import { ConnectionStatusSettingsContext } from "./connection-status-context";
+import type { ConnectionStatusSettings } from "./connection-status-settings";
 import { startSync } from "./sync-client";
 
 interface SyncProviderProps {
   children: React.ReactNode;
   workbench: WorkbenchCore;
+  connectionStatusSettings: ConnectionStatusSettings;
 }
 
 export const SyncProvider = (props: SyncProviderProps) => {
-  const { children, workbench } = props;
+  const { children, workbench, connectionStatusSettings } = props;
   const [connected, setConnected] = useState(true);
+  const showStatus = useSyncExternalStore(connectionStatusSettings.subscribe, connectionStatusSettings.getEnabled);
   useEffect(() => {
-    if (connected) return;
+    if (!showStatus || connected) return;
     const id = "dashboard.backend-connection";
     const view = workbench.views.registerView({
       id,
@@ -27,7 +31,7 @@ export const SyncProvider = (props: SyncProviderProps) => {
       item.dispose();
       view.dispose();
     };
-  }, [workbench, connected]);
+  }, [workbench, connected, showStatus]);
 
   useEffect(() => {
     getAllCollections();
@@ -46,5 +50,9 @@ export const SyncProvider = (props: SyncProviderProps) => {
     };
   }, []);
 
-  return <WorkbenchConnectionProvider connected={connected}>{children}</WorkbenchConnectionProvider>;
+  return (
+    <ConnectionStatusSettingsContext value={connectionStatusSettings}>
+      <WorkbenchConnectionProvider connected={connected}>{children}</WorkbenchConnectionProvider>
+    </ConnectionStatusSettingsContext>
+  );
 };

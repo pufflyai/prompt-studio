@@ -32095,7 +32095,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -74674,7 +74674,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95303,7 +95303,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124289,7 +124289,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -128235,6 +128235,28 @@
                               }
                             },
                             {
+                              "id": "YPRoY",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "wifi"
+                                },
+                                "ROY2j": {
+                                  "content": "Connection",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
                               "type": "frame",
                               "id": "EEFpj",
                               "name": "G",
@@ -128607,6 +128629,28 @@
                                 },
                                 "ROY2j": {
                                   "content": "Performance",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "nCLDE",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "wifi"
+                                },
+                                "ROY2j": {
+                                  "content": "Connection",
                                   "fill": "$tree-fg"
                                 }
                               }
@@ -150741,7 +150785,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -150763,7 +150807,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151491,7 +151535,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151513,7 +151557,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152129,7 +152173,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152151,7 +152195,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153502,7 +153546,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153524,7 +153568,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -164301,6 +164345,919 @@
               "fontWeight": "normal"
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "a3pIl",
+      "x": 27245,
+      "y": 0,
+      "name": "Developer Tools · Connection Status · Production",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 2000,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        40
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "dr0gZ",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Connection status · device preference",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "emsLF",
+          "name": "Connection settings",
+          "width": "fill_container",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "hftmD",
+              "name": "Connection · Off",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zRV8M",
+                  "name": "H",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SpjFs",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "connection · off · default",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "OZuCn",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Saved on this device. Hides the warning only. Live sync and recovery remain active.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "H7Kx9",
+                  "name": "Settings Surface",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 360,
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ERP3x",
+                      "name": "Head",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "NtQHn",
+                          "name": "I",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "settings",
+                          "library": "lucide",
+                          "fill": "$ds-accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "TMDYy",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fJmYO",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        },
+                        {
+                          "id": "a3Lm2",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CTxR8",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "CcWJQ",
+                          "name": "Sections",
+                          "width": 220,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "P7Zz1Q",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "WORKBENCH",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "u1uCZf",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Runtime",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "cpu"
+                                },
+                                "ROY2j": {
+                                  "content": "Runtime",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mEHop",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "PtaqH",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "DEVELOPER TOOLS",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "m2nn5",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "name": "Performance",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "gauge"
+                                },
+                                "ROY2j": {
+                                  "content": "Performance",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "VZqwd",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "wifi"
+                                },
+                                "ROY2j": {
+                                  "content": "Connection",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "RxlLj",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "MsAPG",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "EXPERIMENTAL",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "i8G3a",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Beta features",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "flask-conical"
+                                },
+                                "ROY2j": {
+                                  "content": "Beta features",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pE1tz",
+                          "name": "Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "OoVOC",
+                              "name": "Intro",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "MRt9s",
+                                  "name": "Title",
+                                  "fill": "$ds-fg",
+                                  "content": "Connection status",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "gX2OF",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Show a warning in the status bar while this app reconnects to the backend. Live sync and automatic recovery stay active when this is off.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "E0M6d",
+                              "name": "Switch Card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 12,
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "O4OBQA",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "TjTih",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "TJlFs",
+                                          "name": "Name",
+                                          "fill": "$ds-fg",
+                                          "content": "Show connection status",
+                                          "fontFamily": "$font-label",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "Q3FPw",
+                                          "name": "Helper",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Saved on this device only. Off by default.",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "z9wkvh",
+                                      "type": "ref",
+                                      "ref": "ZVbcE",
+                                      "name": "Switch",
+                                      "theme": {
+                                        "switch": "off"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "G06oYn",
+              "name": "Connection · On",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "mdbJ0",
+                  "name": "H",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "htHJJ",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "connection · on",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "SKU48",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Saved on this device. Hides the warning only. Live sync and recovery remain active.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rWje4",
+                  "name": "Settings Surface",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 360,
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "LC6I7",
+                      "name": "Head",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Rguwq",
+                          "name": "I",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "settings",
+                          "library": "lucide",
+                          "fill": "$ds-accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "HsThS",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pLz2i",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        },
+                        {
+                          "id": "wg5Tn",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bqPdY",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "P90S4u",
+                          "name": "Sections",
+                          "width": 220,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "unPg0",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "WORKBENCH",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "tfSYL",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Runtime",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "cpu"
+                                },
+                                "ROY2j": {
+                                  "content": "Runtime",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "QguAG",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "Slxa7",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "DEVELOPER TOOLS",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "pH04b",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "name": "Performance",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "gauge"
+                                },
+                                "ROY2j": {
+                                  "content": "Performance",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "xPTV2",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "wifi"
+                                },
+                                "ROY2j": {
+                                  "content": "Connection",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "PXMSt",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "WU7oF",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "EXPERIMENTAL",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "rVKK2",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Beta features",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "flask-conical"
+                                },
+                                "ROY2j": {
+                                  "content": "Beta features",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "padCZ",
+                          "name": "Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "UsH7D",
+                              "name": "Intro",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "w2OT3g",
+                                  "name": "Title",
+                                  "fill": "$ds-fg",
+                                  "content": "Connection status",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Epfn4",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Show a warning in the status bar while this app reconnects to the backend. Live sync and automatic recovery stay active when this is off.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "vH0QT",
+                              "name": "Switch Card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 12,
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "mlQ1t",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "u7Kf8x",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "aM4mo",
+                                          "name": "Name",
+                                          "fill": "$ds-fg",
+                                          "content": "Show connection status",
+                                          "fontFamily": "$font-label",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "OqpKK",
+                                          "name": "Helper",
+                                          "fill": "$ds-fg-muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Saved on this device only. Off by default.",
+                                          "lineHeight": 1.45,
+                                          "fontFamily": "$font-body",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "x42FG",
+                                      "type": "ref",
+                                      "ref": "ZVbcE",
+                                      "name": "Switch",
+                                      "theme": {
+                                        "switch": "on"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bo60d",
+          "name": "Outage warning · trailing status",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 12,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "mOcAC",
+              "fill": "$ds-fg-muted",
+              "content": "Loaded navigation stays visible",
+              "fontFamily": "$font-body",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "gsxnK",
+              "width": "fill_container",
+              "height": 2
+            },
+            {
+              "type": "frame",
+              "id": "N4Eijx",
+              "name": "Backend connection warning",
+              "height": 20,
+              "gap": 4,
+              "padding": [
+                0,
+                4
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "pavY8",
+                  "name": "Warning",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "triangle-alert",
+                  "library": "lucide",
+                  "fill": "$ds-warning"
+                },
+                {
+                  "type": "text",
+                  "id": "p8tx9B",
+                  "name": "Label",
+                  "fill": "$ds-warning",
+                  "content": "Reconnecting",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "fqWmQ",
+          "name": "Interaction",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Warning appears only when enabled and disconnected. Tooltip: Connection lost. Retrying automatically. Loaded data stays visible until the connection returns. Opens after 300 ms on hover or keyboard focus. Recovery clears the warning.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
         }
       ]
     }

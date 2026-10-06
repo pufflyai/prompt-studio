@@ -85,5 +85,12 @@
     "description": "选择 Prompt Studio 的外观。也可以按 Alt+Shift+T 更改主题。",
     "theme": "主题",
     "themeHelper": "适用于所有项目。"
+  },
+  "connectionStatus": {
+    "title": "连接状态",
+    "description": "应用重新连接服务器时，在状态栏中显示警告。关闭此选项后，实时同步和自动恢复仍然有效。",
+    "enable": "显示连接状态",
+    "helper": "仅保存在此设备上。默认关闭。",
+    "saveError": "无法更改连接状态显示。"
   }
 }

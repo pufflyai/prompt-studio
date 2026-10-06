@@ -98,5 +98,12 @@
     "description": "Choose how Prompt Studio looks. You can also change the theme with Alt+Shift+T.",
     "theme": "Theme",
     "themeHelper": "Applies to every project."
+  },
+  "connectionStatus": {
+    "title": "Connection status",
+    "description": "Show a warning in the status bar while this app reconnects to the backend. Live sync and automatic recovery stay active when this is off.",
+    "enable": "Show connection status",
+    "helper": "Saved on this device only. Off by default.",
+    "saveError": "Could not change connection status display."
   }
 }

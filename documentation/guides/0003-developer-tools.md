@@ -2,6 +2,12 @@
 
 Developer tools helps you find out which part of Prompt Studio is using your computer's CPU. Use it when the app feels slow, a fan spins up, or an extension seems to do too much work.
 
+## Show connection status
+
+Open **Settings → Developer tools → Connection** and turn on **Show connection status**. An amber **Reconnecting** warning appears at the trailing end of the status bar when the app loses contact with the backend. Hover or focus the warning for an explanation. Loaded navigation stays visible, and the warning clears when the connection returns.
+
+The switch is off by default and is saved on this device. Turning it off hides the warning. Live sync, retained navigation, and automatic recovery stay active.
+
 ## Turn on performance monitoring
 
 1. Open **Settings** and select **Developer tools → Performance**.

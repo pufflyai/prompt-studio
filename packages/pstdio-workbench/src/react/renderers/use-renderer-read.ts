@@ -21,7 +21,7 @@ interface ReadState<T> {
   queryKey: string;
   value?: T;
   loading: boolean;
-  error?: string;
+  error?: Error;
 }
 
 export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
@@ -36,28 +36,31 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     callbacks.current = options;
   });
   // Query identity controls ownership. Rendering a new callback must not start another read.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: A connection change reloads views after missed sync events, including local contributions.
   useEffect(() => {
-    if (!connected) return;
     const binding: RendererReadBinding = workbench.views.reads.bind(ownerKey);
-    let hasCompletedRead = false;
     const handlers = {
       onProgress: (value: T) => {
         // Background refreshes keep the complete snapshot until its replacement is ready.
-        if (!hasCompletedRead) setState({ queryKey, value, loading: true });
+        setState((previous) => {
+          if (previous.queryKey === queryKey && previous.value !== undefined && !previous.loading) return previous;
+          return { queryKey, value, loading: true };
+        });
       },
       onValue: (value: T) => {
-        hasCompletedRead = true;
         setState({ queryKey, value, loading: false });
       },
       onError: (error: unknown) => {
         const connectionLost = error instanceof PstdioConnectionError;
-        const message = error instanceof Error ? error.message : String(error);
+        const readError = error instanceof Error ? error : new Error(String(error));
         setState((previous) => ({
           queryKey,
           value: previous.queryKey === queryKey ? previous.value : undefined,
-          loading: connectionLost && !(previous.queryKey === queryKey && previous.value),
-          // The host reports connection loss once, outside individual views.
-          error: connectionLost ? undefined : message,
+          loading: false,
+          // Retain a loaded snapshot after a dropped response. An initial failure
+          // still needs Retry if the host's sync connection has not been lost.
+          error:
+            connectionLost && previous.queryKey === queryKey && previous.value !== undefined ? undefined : readError,
         }));
       },
     };
@@ -77,7 +80,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     // This read already uses the current refresh key, so the refresh effect below must not repeat it.
     lastRefreshKey.current = callbacks.current.refreshKey;
     retryRef.current = () => {
-      setState((previous) => ({ ...previous, loading: true, error: undefined }));
+      setState((previous) => ({ ...previous, loading: previous.value === undefined, error: undefined }));
       refresh("retry");
     };
     refresh();
@@ -96,10 +99,11 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     refreshRef.current?.();
   }, [refreshKey]);
   const current = state.queryKey === queryKey ? state : { queryKey, loading: true };
+  const connectionLost = current.error instanceof PstdioConnectionError && !connected;
   return {
     ...current,
-    error: connected ? current.error : undefined,
-    loading: current.loading || (!connected && current.value === undefined),
+    error: connectionLost ? undefined : current.error?.message,
+    loading: current.loading || (connectionLost && current.value === undefined),
     retry: () => retryRef.current?.(),
   };
 };

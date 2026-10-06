@@ -85,5 +85,12 @@
     "description": "Prompt Studio の見た目を選びます。Alt+Shift+T でもテーマを変更できます。",
     "theme": "テーマ",
     "themeHelper": "すべてのプロジェクトに適用されます。"
+  },
+  "connectionStatus": {
+    "title": "接続状態",
+    "description": "アプリがサーバーに再接続している間、ステータスバーに警告を表示します。オフでもライブ同期と自動復旧は有効です。",
+    "enable": "接続状態を表示",
+    "helper": "このデバイスにのみ保存されます。初期設定はオフです。",
+    "saveError": "接続状態の表示を変更できませんでした。"
   }
 }
