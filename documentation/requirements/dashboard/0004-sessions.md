@@ -75,8 +75,10 @@ It loads project sessions, groups them by date in the left rail, and renders the
 11. If the stream exposes a pending approval request, render approve and deny controls above the chat input.
 12. If the selected session is running or awaiting input, use the chat composer stop action to abort the active provider session and mark it cancelled.
 13. The "new session" button clears the selection; the next submitted message creates the new session.
-14. Preserve unsent chat drafts independently for each session and for the new-session state while switching layouts.
-15. Keep the chat input area scrollable after it reaches its max height so messages stay visible.
+14. Preserve unsent chat drafts independently for each session and for the new-session state while switching layouts or switching a tab between sessions. Draft attachments, harness picks, and sent or unsent messages also belong to one session or draft and never carry over to the next one shown in the same tab.
+15. Ending a queued follow-up edit puts the unsent draft back in the composer.
+16. A sent message stays with its conversation even when its chat panel closes before the request ends. A new session takes over its draft tab only while that tab still shows the draft.
+17. Keep the chat input area scrollable after it reaches its max height so messages stay visible.
 
 ## Agent and Model Selection
 

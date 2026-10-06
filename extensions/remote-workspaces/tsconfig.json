@@ -1,9 +1,4 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "paths": {
-      "@pstdio/sdk/extensions": ["../../packages/sdk/src/extensions/index.ts"]
-    }
-  },
   "include": ["*.ts"]
 }

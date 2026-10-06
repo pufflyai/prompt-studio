@@ -9,7 +9,6 @@ import type { StoredTicket } from "./types";
 export const TICKETS_DIR = ".pstdio/tickets";
 
 const layout = createDraftLayout(TICKETS_DIR, "ticket");
-export const ticketDir = layout.directory;
 export const ticketMarkdownPath = layout.markdown;
 export const ticketFilesDir = layout.files;
 export const ticketFilesPattern = (shorthand: string) => `${ticketFilesDir(shorthand)}/**`;

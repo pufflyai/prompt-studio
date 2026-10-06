@@ -1,6 +1,7 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { createDashboardResource } from "@/shared/app/resources";
+import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import type { RecentProjectResource } from "@/shared/recents/recent-project-resources";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
@@ -39,25 +40,33 @@ const actions: StartAction[] = [
   { id: "browse-extensions", label: "Browse extensions", icon: "blocks", run: () => undefined },
 ];
 
-const StartPagePreview = () => (
-  <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl">
-    <Stack gap="xs" minW="0">
-      <Text textStyle="heading/M">Prompt Studio</Text>
-      <Text textStyle="paragraph/M/regular" color="fg.muted">
-        Project home
-      </Text>
+const missingGitError =
+  "default extensions: Failed to clone https://github.com/pufflyai/prompt-studio.git at pstdio@0.40.0: spawn git ENOENT";
+
+const StartPagePreview = (props: { setupError?: string }) => {
+  const { setupError } = props;
+
+  return (
+    <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl">
+      <Stack gap="xs" minW="0">
+        <Text textStyle="heading/M">Prompt Studio</Text>
+        <Text textStyle="paragraph/M/regular" color="fg.muted">
+          Project home
+        </Text>
+      </Stack>
+      {setupError && <ProjectSetupStatus error={setupError} onRetry={() => undefined} />}
+      <StartAboutPanel />
+      <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
+        <Box flex="1" minW="0" w="full">
+          <StartActionList actions={actions} />
+        </Box>
+        <Box flex="1" minW="0" w="full">
+          <StartRecentList resources={resources} onOpen={() => undefined} />
+        </Box>
+      </Stack>
     </Stack>
-    <StartAboutPanel />
-    <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
-      <Box flex="1" minW="0" w="full">
-        <StartActionList actions={actions} />
-      </Box>
-      <Box flex="1" minW="0" w="full">
-        <StartRecentList resources={resources} onOpen={() => undefined} />
-      </Box>
-    </Stack>
-  </Stack>
-);
+  );
+};
 
 const meta: Meta<typeof StartPagePreview> = {
   title: "Start/StartPage",
@@ -70,6 +79,11 @@ export default meta;
 type Story = StoryObj<typeof StartPagePreview>;
 
 export const Default: Story = {};
+
+/** First run without Git or network: the default extensions, including every agent harness, did not install. */
+export const SetupDidNotFinish: Story = {
+  args: { setupError: missingGitError },
+};
 
 export const NoRecentResources: Story = {
   render: () => (

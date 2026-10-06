@@ -8,9 +8,9 @@ const shells = [
   ["/bin/bash", "--norc", "-i"],
   ["/bin/zsh", "-f", "-i"],
 ].filter(([shell]) => existsSync(shell));
-const waitFor = async (predicate: () => boolean) => {
-  for (let i = 0; i < 100 && !predicate(); i++) await Bun.sleep(10);
-  expect(predicate()).toBe(true);
+const waitFor = async (predicate: () => boolean | Promise<boolean>) => {
+  for (let i = 0; i < 100 && !(await predicate()); i++) await Bun.sleep(10);
+  expect(await predicate()).toBe(true);
 };
 
 test.each(shells)("tracks builtin work and returns to the prompt in %s", async (...command) => {
@@ -24,22 +24,22 @@ test.each(shells)("tracks builtin work and returns to the prompt in %s", async (
       if (event.kind === "data") output += new TextDecoder().decode(event.chunk);
   })();
   try {
-    await waitFor(() => supervisor.activity().length === 0);
+    await waitFor(async () => (await supervisor.activity()).length === 0);
     terminal.write("echo not-submitted");
     await Bun.sleep(20);
-    expect(supervisor.activity()).toEqual([]);
+    expect(await supervisor.activity()).toEqual([]);
     terminal.write("\x15");
-    expect(supervisor.activity()).toEqual([]);
+    expect(await supervisor.activity()).toEqual([]);
     terminal.write("printf 'READ_%s\\n' STARTED; read answer\n");
     await waitFor(() => output.includes("READ_STARTED"));
-    expect(supervisor.activity()).toEqual([{ id: terminal.id, label: basename(command[0]) }]);
+    expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: basename(command[0]) }]);
     terminal.write("finished\n");
-    await waitFor(() => supervisor.activity().length === 0);
+    await waitFor(async () => (await supervisor.activity()).length === 0);
     terminal.write(". ./loop.sh\n");
     await waitFor(() => output.includes("LOOP_STARTED"));
-    expect(supervisor.activity()).toEqual([{ id: terminal.id, label: basename(command[0]) }]);
+    expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: basename(command[0]) }]);
     terminal.write("\x03");
-    await waitFor(() => supervisor.activity().length === 0);
+    await waitFor(async () => (await supervisor.activity()).length === 0);
   } finally {
     await supervisor.dispose();
     rmSync(root, { recursive: true, force: true });
@@ -76,13 +76,13 @@ preexec_functions=(user_preexec)
       if (event.kind === "data") output += new TextDecoder().decode(event.chunk);
   })();
   try {
-    await waitFor(() => supervisor.activity().length === 0);
+    await waitFor(async () => (await supervisor.activity()).length === 0);
     terminal.write('printf \'RESULT:%s:%s\\n\' "$USER_STARTUP" "$ZDOTDIR"\n');
     await waitFor(() => output.includes(`RESULT:env:profile:rc:login:${config}`));
     expect(output).toContain("USER_HOOK");
     expect(output).toContain("custom> ");
     expect(output).not.toContain("PSTDIO=");
-    await waitFor(() => supervisor.activity().length === 0);
+    await waitFor(async () => (await supervisor.activity()).length === 0);
   } finally {
     await supervisor.dispose();
     rmSync(root, { recursive: true, force: true });
@@ -101,10 +101,10 @@ test.skipIf(!existsSync("/bin/bash"))("preserves a user DEBUG trap and keeps its
   })();
   try {
     await waitFor(() => output.includes("debug> "));
-    expect(supervisor.activity()).toHaveLength(1);
+    expect(await supervisor.activity()).toHaveLength(1);
     terminal.write("printf 'DEBUG:%s\\n' \"$USER_DEBUG\"\n");
     await waitFor(() => output.includes("DEBUG:kept"));
-    expect(supervisor.activity()).toHaveLength(1);
+    expect(await supervisor.activity()).toHaveLength(1);
   } finally {
     await supervisor.dispose();
     rmSync(root, { recursive: true, force: true });
@@ -131,12 +131,12 @@ PROMPT_COMMAND='${promptCommand}'
     })();
     try {
       await waitFor(() => output.includes("dynamic> "));
-      expect(supervisor.activity()).toEqual([]);
+      expect(await supervisor.activity()).toEqual([]);
       terminal.write("false\n");
-      await waitFor(() => supervisor.activity().length === 0);
+      await waitFor(async () => (await supervisor.activity()).length === 0);
       terminal.write('printf \'RESULT:%s:%s\\n\' "$?" "$USER_STARTUP"\n');
       await waitFor(() => output.includes("RESULT:1:loaded"));
-      await waitFor(() => supervisor.activity().length === 0);
+      await waitFor(async () => (await supervisor.activity()).length === 0);
       expect(output).not.toContain("PSTDIO=");
     } finally {
       await supervisor.dispose();

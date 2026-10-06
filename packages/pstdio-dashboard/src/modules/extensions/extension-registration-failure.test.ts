@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import {
   clearCachedDashboardExtensionMetadata,
   dashboardEditableTemplatesContextKey,
+  getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadata } from "./module-test-fixtures";
+import { emptyAppearance, flushMicrotasks, metadata, metadataWithResourceExtension } from "./module-test-fixtures";
 
 const projectId = "extension-registration-failure";
 const commandId = metadata.commands[0]!.id;
@@ -101,28 +103,46 @@ describe("extension contribution registration failures", () => {
     registration.dispose();
   });
 
-  test("rolls back the whole refresh when one contribution conflicts", async () => {
+  test("keeps the other extensions when one extension conflicts and retries the same metadata", async () => {
     const workbench = createWorkbench();
     selectDashboardProject(workbench, { id: projectId, name: "Registration failure" });
+    const issuesViewId = metadataWithResourceExtension.views.find(
+      (view) => view.extensionId === "acme.issue-tracker",
+    )!.id;
     const conflict = workbench.views.registerView({
-      id: viewId,
+      id: issuesViewId,
       title: "Existing view",
       body: { kind: "react", render: () => null },
     });
+    const writer = getWriter("extension_instances");
 
     const registration = workbench.registerModule(
       createExtensionsModule({
         loadAppearance: async () => emptyAppearance,
-        loadMetadata: async () => metadata,
+        loadMetadata: async () => metadataWithResourceExtension,
       }),
     );
-    await flushMicrotasks();
-    await flushMicrotasks();
+    try {
+      await flushMicrotasks();
+      await flushMicrotasks();
 
-    expect(workbench.commands.getCommand(commandId)).toBeUndefined();
-    expect(workbench.context.get(dashboardEditableTemplatesContextKey)).toBe(false);
+      expect(workbench.commands.getCommand(commandId)).toBeDefined();
+      expect(workbench.views.getView(viewId)).toBeDefined();
+      expect(workbench.views.getView(issuesViewId)?.title).toBe("Existing view");
+      expect(getCachedDashboardExtensionMetadata(projectId)?.extensions.map((extension) => extension.id)).toEqual([
+        "pstdio.extension-lab",
+      ]);
 
-    registration.dispose();
-    conflict.dispose();
+      conflict.dispose();
+      writer?.upsert({ id: "registration-retry" });
+      await flushMicrotasks();
+      await flushMicrotasks();
+
+      expect(workbench.views.getView(issuesViewId)?.title).toBe("Issues");
+      expect(getCachedDashboardExtensionMetadata(projectId)?.extensions).toHaveLength(2);
+    } finally {
+      registration.dispose();
+      writer?.remove("registration-retry");
+    }
   });
 });

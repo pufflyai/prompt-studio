@@ -91,10 +91,15 @@ export const ReopenAttached: Story = {
   args: { width: 700, menus: { closed: ["right"] } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("tab", { name: "Document" })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Close Document" })).toBeNull();
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
     await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel-menu="main-right"]')).toBeVisible());
     await expect(canvas.queryByRole("button", { name: "Open Main right menu" })).toBeNull();
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+    await expect(canvasElement.querySelector('[data-workbench-panel-header="main"]')).not.toBeVisible();
     await userEvent.dblClick(canvas.getByRole("separator", { name: "Resize Main right menu" }));
+    await expect(await canvas.findByRole("tab", { name: "Document" })).toBeVisible();
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
     await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel-menu="main-right"]')).toBeVisible());
   },
@@ -104,6 +109,8 @@ export const FloatingWhenNarrow: Story = {
   args: { width: 500, menus: { closed: ["right"] } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("tab", { name: "Document" })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Close Document" })).toBeNull();
     await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
     const floating = await within(canvasElement.ownerDocument.body).findByRole("menu", {
       name: "Main right menu controls",

@@ -1,0 +1,18 @@
+{
+  "seed": "alpha-0-40",
+  "width": 1600,
+  "height": 400,
+  "layout": "scatter",
+  "kinds": ["page", "command", "editor", "skill", "hook", "automation"],
+  "count": 11,
+  "scale": 0.8493753157556058,
+  "offsetX": -0.010436802534386516,
+  "offsetY": 0.017576879640109844,
+  "backgroundTop": "#F7F2E8",
+  "backgroundBottom": "#EAE1D1",
+  "bleed": 0.2075988604221493,
+  "layers": 41,
+  "texture": 0.5757138777873478,
+  "gradient": 0.3075456652091816,
+  "grain": 0.5210799133754336
+}

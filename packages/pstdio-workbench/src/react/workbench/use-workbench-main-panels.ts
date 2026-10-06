@@ -7,19 +7,6 @@ import { resolvePanelCollapsible } from "./workbench-panel-state";
 
 // The collapse/reveal state of one panel around the main editor region, bundled so
 // WorkbenchBody receives one object per panel instead of six flat props.
-export interface WorkbenchPanelView {
-  has: boolean;
-  hasHeader: boolean;
-  collapsible: boolean;
-  collapsed: boolean;
-  onCollapsedChange: (collapsed: boolean) => void;
-}
-
-export interface WorkbenchMainPanels {
-  hasMainHeader: boolean;
-  secondaryPanel: WorkbenchPanelView;
-}
-
 const useSecondaryPanelView = (workbench: WorkbenchCore) => {
   const hasContent = useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true });
   const hasHeader = useWorkbenchRegionContent(workbench, "secondary-header");

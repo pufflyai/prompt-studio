@@ -1,7 +1,7 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
-import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type MouseEvent, type ReactNode, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
-import { getTextFromSerializedEditorState, type PromptCommand, PromptEditor } from "../../rich-text";
+import { type PromptCommand, PromptEditor } from "../../rich-text";
 import { createSerializedPromptState } from "../utils/editor-state";
 import {
   type ChatInputAction,
@@ -16,9 +16,14 @@ import { type ComposerDecision, submitComposerResponse } from "./composer-decisi
 import { ComposerTakeover } from "./composer-takeover";
 import { focusPromptEditor, useComposerFocus } from "./use-chat-input-focus";
 import { useChatInputHistory } from "./use-chat-input-history";
+import { useChatInputText } from "./use-chat-input-text";
 import { useComposerRequest } from "./use-composer-request";
 
 export interface ChatInputProps {
+  /**
+   * Serialized editor state for the text to show. The editor adopts it whenever its text differs
+   * from what the editor shows, so a host can pass its live draft. It is never echoed to `onChange`.
+   */
   defaultState: string;
   /** Plain-text prompts from the active conversation, newest first. */
   recentUserMessages?: string[];
@@ -102,23 +107,8 @@ export const ChatInput = (props: ChatInputProps) => {
   const restingBorderColor = recessed ? "border.subtle" : "border";
   const [submitting, setSubmitting] = useState(false);
   const [isSelected, setIsSelected] = useState(false);
-  const [editorState, setEditorState] = useState(defaultState);
-  const [editorKey, setEditorKey] = useState(0);
-  const [text, setText] = useState(() => getTextFromSerializedEditorState(defaultState));
+  const { editorKey, editorState, remountEditor, setEditorState, setText, text } = useChatInputText(defaultState);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const onChangeRef = useRef(onChange);
-
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
-
-  useEffect(() => {
-    const resetText = getTextFromSerializedEditorState(defaultState);
-    setEditorState(defaultState);
-    setEditorKey((key) => key + 1);
-    setText(resetText);
-    onChangeRef.current?.(resetText);
-  }, [defaultState]);
 
   const focusAfterSubmission = useComposerFocus(containerRef, autoFocus, focusSignal, setIsSelected);
 
@@ -126,7 +116,7 @@ export const ChatInput = (props: ChatInputProps) => {
     recentUserMessages,
     text,
     blocked: isDisabled || submitting || occupied,
-    resetKey: JSON.stringify([defaultState, editorKey]),
+    resetKey: String(editorKey),
     onChange: (value) => {
       setText(value);
       onChange?.(value);
@@ -144,8 +134,7 @@ export const ChatInput = (props: ChatInputProps) => {
   };
 
   const replaceDraftText = (value: string) => {
-    setEditorState(createSerializedPromptState(value));
-    setEditorKey((key) => key + 1);
+    remountEditor(createSerializedPromptState(value));
     history.change(value);
   };
 

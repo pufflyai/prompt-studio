@@ -120,9 +120,11 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion }) 
       display="flex"
       alignItems="center"
       justifyContent="center"
-      pointerEvents="none"
-      visibility={highlighted ? "visible" : "hidden"}
-      layerStyle="tabDropZone"
+      // Keep tab drag events out of iframes, including release over a disallowed
+      // destination. Native file drops still reach the guest outside tab drags.
+      pointerEvents={activeId ? "auto" : "none"}
+      visibility={activeId ? "visible" : "hidden"}
+      layerStyle={highlighted ? "tabDropZone" : undefined}
       textStyle="label/XS/medium"
     >
       {highlighted && !drop?.widgetId ? "Drop here to add a tab" : null}

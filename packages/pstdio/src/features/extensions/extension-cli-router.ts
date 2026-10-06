@@ -110,7 +110,11 @@ const parseJsonParam = (name: string, value: string) => {
 };
 
 const coerceParam = (name: string, descriptor: ParamDescriptor | undefined, value: string | boolean) => {
-  if (descriptor?.type === "number") return typeof value === "number" ? value : Number(value);
+  if (descriptor?.type === "number") {
+    const number = typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+    if (Number.isNaN(number)) throw new Error(`${formatParamName(name)} expects a number (got ${value})`);
+    return number;
+  }
   if (descriptor?.type === "boolean") return value === true || value === "true";
   if (descriptor && JSON_PARAM_TYPES.has(descriptor.type) && typeof value === "string") {
     return parseJsonParam(name, value);
@@ -296,10 +300,14 @@ const readParamFlag = (command: ExtensionCommandRecord, args: string[], index: n
   const [rawName, inlineValue] = arg.slice(2).split("=", 2);
   const name = normalizeParamName(rawName ?? "");
   const descriptor = command.params?.[name];
-  const value = inlineValue ?? (descriptor?.type === "boolean" ? true : args[index + 1]);
-  const nextIndex = inlineValue === undefined && descriptor?.type !== "boolean" ? index + 1 : index;
-
-  return { descriptor, name, nextIndex, value };
+  if (inlineValue !== undefined) return { descriptor, name, nextIndex: index, value: inlineValue };
+  const next = args[index + 1];
+  // A boolean flag takes the next word only when it is an explicit `true` or `false`.
+  const explicitBoolean = descriptor?.type === "boolean" && (next === "true" || next === "false");
+  if (explicitBoolean) return { descriptor, name, nextIndex: index + 1, value: next };
+  if (descriptor?.type === "boolean") return { descriptor, name, nextIndex: index, value: true };
+  if (descriptor && next === undefined) throw new Error(`${formatParamName(name)} expects a value`);
+  return { descriptor, name, nextIndex: index + 1, value: next };
 };
 
 const assignParamValue = (
@@ -374,11 +382,13 @@ export const dispatchExtensionCliCommand = async (input: {
 
   const command = table.byPath.get(commandPath);
   if (!command) {
-    // A known namespace with no matching leaf command (bare `pstdio <ns>`,
-    // `pstdio <ns> --help`, or a mistyped subcommand) lists the namespace's
-    // commands, matching how yargs command groups respond.
-    deps.log(renderNamespaceHelp(commandPathParts[0]!, table));
-    return 0;
+    // A namespace or command group lists the namespace's commands, matching how yargs
+    // command groups respond. A mistyped command must fail so scripts and agents notice.
+    const help = renderNamespaceHelp(commandPathParts[0]!, table);
+    const group = !commandPathParts[1] || [...table.byPath.keys()].some((p) => p.startsWith(`${commandPath} `));
+    if (!group) (deps.error ?? deps.log)(`Unknown command "pstdio ${commandPath}".\n\n${help}`);
+    else deps.log(help);
+    return group ? 0 : 1;
   }
 
   input.onCommandResolved?.(command);

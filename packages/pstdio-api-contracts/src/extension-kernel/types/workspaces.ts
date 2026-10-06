@@ -59,6 +59,7 @@ export interface ExtensionWorkspacesApi {
   removeAnchors(workspaceId: string, refs: Pick<ResourceRef, "type" | "id">[]): Promise<void>;
   resolve(id: string): Promise<WorkspaceProviderResult>;
   cancel(id: string): Promise<ExtensionWorkspace>;
+  /** @deprecated Use delete(id). */
   archive(id: string): Promise<ExtensionWorkspace>;
   removeWorktree(id: string): Promise<{ removed: boolean }>;
   delete(id: string): Promise<void>;

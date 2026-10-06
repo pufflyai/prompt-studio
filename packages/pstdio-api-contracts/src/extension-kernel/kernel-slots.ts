@@ -108,9 +108,16 @@ export const viewDataEvents = {
 export const sessionEvents = {
   started: hostEventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.started"),
   resumed: hostEventRef<SessionLifecyclePayload>("session.resumed"),
+  /** The session asked the person a question and waits for the answer. */
   awaitingInput: hostEventRef<SessionLifecyclePayload>("session.awaitingInput"),
+  /** The run ended with status `completed`. */
   succeeded: hostEventRef<SessionLifecyclePayload>("session.succeeded"),
+  /** The run ended with status `failed`. */
   failed: hostEventRef<SessionLifecyclePayload>("session.failed"),
+  /**
+   * The run ended with any terminal status: `completed`, `failed`, `cancelled`, or `disconnected`.
+   * Read `sessionStatus` to tell them apart.
+   */
   completed: hostEventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.completed"),
 };
 
@@ -120,6 +127,7 @@ export const workspaceEvents = {
   provision: hostEventRef<WorkspaceProvisionPayload>("workspace.provision"),
   /** Fire-and-forget after the workspace is ready: background setup (deps install, builds). */
   ready: hostEventRef<WorkspaceProvisionPayload>("workspace.ready"),
+  /** @deprecated Use workspaceEvents.deleted. */
   archived: hostEventRef<{ workspace: ExtensionWorkspace }>("workspace.archived"),
   deleted: hostEventRef<{ workspace: ExtensionWorkspace }>("workspace.deleted"),
 };

@@ -9,7 +9,7 @@ export const metadataRefId = (ref: MetadataRef) =>
 export const metadataCommandId = (ref: { extensionId: string; id: string }) =>
   ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.command.${ref.id}`;
 
-export const toInternalWhen = (
+export const toWorkbenchWhenExpression = (
   when:
     | WorkbenchExtensionMetadata["navigationItems"][number]["when"]
     | WorkbenchExtensionMetadata["statusBarItems"][number]["when"],
@@ -27,5 +27,3 @@ export const toInternalWhen = (
     metadata: when.metadata,
   };
 };
-
-export const toWorkbenchWhenExpression = toInternalWhen;

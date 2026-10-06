@@ -60,7 +60,7 @@ The [session response schema](../../../packages/pstdio-api-contracts/src/session
 | ---------------- | ------------------------------------------- |
 | `queued`         | Accepted work waiting for runtime capacity  |
 | `in_progress`    | Agent is actively executing                 |
-| `awaiting_input` | Agent is waiting for user approval or input |
+| `awaiting_input` | Agent asked the person a question and waits |
 | `completed`      | Agent finished successfully                 |
 | `failed`         | Agent crashed or returned non-zero exit     |
 | `cancelled`      | Session was stopped by user                 |
@@ -86,6 +86,7 @@ create / follow-up ──► queued ──► in_progress
 - Harness fails → `failed`
 - Harness asks the person a question → `awaiting_input`; the answer returns it to `in_progress`
 - User stop → `cancelled`; the harness owns cancellation and process cleanup
+- Archive of a queued session → `cancelled`, then archived; workspace archive or delete → `cancelled` for each active session (see [session status lifecycle](0019-session-status-lifecycle.md))
 - Transport/fetch error during follow-up → `failed` + error in cached messages
 
 ## Entry points

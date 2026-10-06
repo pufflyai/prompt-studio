@@ -1,6 +1,5 @@
 import { getSurface, type ResourceRef, type WorkbenchRegion } from "../../../core";
 export const regionResourceKind = "workbench-region";
-export const regionMapRendererId = "region-map.placeholder";
 export const regionLabels = {
   nav: "Nav (top chrome)",
   activity: "Activity bar",
