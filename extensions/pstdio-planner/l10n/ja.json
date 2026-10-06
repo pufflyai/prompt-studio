@@ -31,5 +31,6 @@
   "settings.implementation.defaultTargetBranch.description": "新しい作業の対象となるリモートブランチです。クリアするとリポジトリのデフォルトブランチを使用します。",
   "commands.refinementPolicy.title": "チケットの詳細化オプションを読み取る",
   "settings.uxPrototype.title": "UX 機能のアーティファクトプロトタイプを生成する",
-  "settings.uxPrototype.description": "Artifacts が利用可能な場合、新しい UX 機能の詳細化時にインタラクティブなプロトタイプを必須にします。"
+  "settings.uxPrototype.description": "Artifacts が利用可能な場合、新しい UX 機能の詳細化時にインタラクティブなプロトタイプを必須にします。",
+  "ticketWorkspaces.project": "プロジェクトフォルダー"
 }

@@ -81,6 +81,28 @@ describe("createCodexStreamPipeline", () => {
     expect(patches[1].path).toBe("/messages/8");
   });
 
+  test("shows the readable message from a JSON error body", () => {
+    const { patches, sink } = recordingSink();
+    const pipeline = createCodexStreamPipeline(sink, {});
+    const body = JSON.stringify({
+      type: "error",
+      status: 400,
+      error: {
+        type: "invalid_request_error",
+        message: "The 'gpt-5.4' model is not supported when using Codex with a ChatGPT account.",
+      },
+    });
+
+    pipeline.handleLine(JSON.stringify({ type: "thread.started", thread_id: "t-1" }));
+    pipeline.handleLine(JSON.stringify({ type: "turn.started" }));
+    pipeline.handleLine(JSON.stringify({ type: "turn.failed", error: { message: body } }));
+
+    expect(messageOf(patches[0]).parts[0]).toMatchObject({
+      type: "error",
+      message: "The 'gpt-5.4' model is not supported when using Codex with a ChatGPT account.",
+    });
+  });
+
   test("maps a failed turn to a single error message", () => {
     const { patches, sink } = recordingSink();
     const pipeline = createCodexStreamPipeline(sink, {});

@@ -1,4 +1,5 @@
 import {
+  type DateControl,
   type Localizable,
   l10n,
   type ReadOnlyControl,
@@ -8,7 +9,6 @@ import {
 import { isSingleSelectTicketTag, ticketTagAttributeId } from "../../data/mappers";
 import type { StoredStatus, StoredTag, StoredTicket } from "../../data/types";
 import { reviewLinkLabel, reviewLinkTooltip } from "../../views/review-link-values";
-import { formatTicketTimestamp } from "../../views/ticket-properties-values";
 
 export interface TicketRef {
   id: string;
@@ -31,7 +31,8 @@ type WireResource = Omit<ResourceControl, "name" | "emptyText" | "placeholder"> 
   emptyText?: Localizable;
   placeholder?: Localizable;
 };
-export type WireParam = WireReadOnly | WireResource;
+type WireDate = Omit<DateControl, "name"> & { name: Localizable };
+export type WireParam = WireReadOnly | WireResource | WireDate;
 
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -40,6 +41,16 @@ const readOnlyControl = (id: string, name: Localizable, value: Localizable): Wir
   name,
   type: "readOnly",
   value,
+});
+
+// Commands run in the host's time zone, so timestamps go out as ISO values and the
+// viewer's browser formats them.
+const timestampControl = (id: string, name: Localizable, value: string): WireDate => ({
+  id,
+  name,
+  type: "date",
+  readOnly: true,
+  defaultValue: value,
 });
 
 const idParam = (ticket: StoredTicket): WireResource => ({
@@ -131,8 +142,8 @@ export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
 
   const params: WireParam[] = [
     idParam(ticket),
-    readOnlyControl("created", l10n("ticketDetail.createdAt", "Created at"), formatTicketTimestamp(ticket.createdAt)),
-    readOnlyControl("updated", l10n("ticketDetail.updatedAt", "Updated at"), formatTicketTimestamp(ticket.updatedAt)),
+    timestampControl("created", l10n("ticketDetail.createdAt", "Created at"), ticket.createdAt),
+    timestampControl("updated", l10n("ticketDetail.updatedAt", "Updated at"), ticket.updatedAt),
     reviewLinksParam(ticket),
     statusParam(ticket, statuses),
     ...(ticket.archived

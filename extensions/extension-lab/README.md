@@ -53,4 +53,4 @@ pst extensions dev ./extensions/extension-lab
 
 The dev command copies the extension and installs its own dependencies. To check the dashboard, follow the repository's [Docker development workflow](../../documentation/guides/development/0001-setup.md).
 
-The examples' layouts, data, and themes come from the workbench Showcase stories. **Lab (faulty)** is an example that fails on purpose, to show how the host handles a broken webview. Host contract fixtures, including the fake agent, live in `packages/workbench-fixture`.
+The examples' layouts, data, and themes come from the workbench Showcase stories. Host contract fixtures, including the fake agent and the webview that fails on purpose, live in `packages/workbench-fixture`.

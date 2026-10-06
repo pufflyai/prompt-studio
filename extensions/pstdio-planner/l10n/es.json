@@ -31,5 +31,6 @@
   "settings.implementation.defaultTargetBranch.description": "Rama remota a la que apunta el nuevo trabajo. Bórrala para usar la rama predeterminada del repositorio.",
   "commands.refinementPolicy.title": "Leer las opciones de refinamiento de tickets",
   "settings.uxPrototype.title": "Generar un prototipo de artefacto para funciones de UX",
-  "settings.uxPrototype.description": "Exigir un prototipo interactivo al refinar una nueva función de UX si Artifacts está disponible."
+  "settings.uxPrototype.description": "Exigir un prototipo interactivo al refinar una nueva función de UX si Artifacts está disponible.",
+  "ticketWorkspaces.project": "Carpeta del proyecto"
 }
