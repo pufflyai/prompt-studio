@@ -3,7 +3,7 @@
   "ignoreExportsUsedInFile": true,
   "ignoreBinaries": ["wait", "version"],
   "ignoreIssues": {
-    "packages/pstdio/src/adapters/cli/commands/{close,inbox,logs}.ts": ["exports"],
+    "packages/pstdio/src/adapters/cli/commands/{close,inbox,logs,performance}.ts": ["exports"],
     "packages/pstdio/src/adapters/cli/commands/notifications/list.ts": ["exports"],
     "packages/pstdio-api/src/features/extensions/extension-webviews.ts": ["types"],
     "packages/pstdio-api/src/features/extensions/repo-extensions.ts": ["types"],
@@ -16,7 +16,9 @@
     ".": {
       "entry": ["package.json", "knip.jsonc"],
       "project": ["*.json", "*.jsonc"],
-      "ignore": [".pstdio/**"]
+      "ignore": [".pstdio/**"],
+      // scripts/ci/install-native-dependencies.ts points npm_config_node_gyp at this package's binary.
+      "ignoreDependencies": ["node-gyp"]
     },
     "scripts": {
       "entry": ["**/*.ts"],
@@ -29,6 +31,9 @@
         "src/**/index.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        // Tests spawn fixtures by path, so nothing imports them.
+        "src/**/*.fixture.ts",
+        "src/**/*.typecheck.ts",
         "*.test.ts",
         "scripts/**/*.ts",
         "bin/**/*.cjs"
@@ -37,7 +42,15 @@
       "ignore": ["dist/**", "storybook-static/**"]
     },
     "packages/e2e": {
-      "entry": ["playwright.config.ts", "src/cli/run-pstdio.ts", "src/**/*.spec.ts", "src/**/*.test.ts"],
+      "entry": [
+        "playwright.config.ts",
+        "src/cli/run-pstdio.ts",
+        "src/**/*.spec.ts",
+        "src/**/*.test.ts",
+        "src/**/*.fixture.ts",
+        // Specs install fixture extensions by path.
+        "src/fixtures/**/extension.ts"
+      ],
       "project": ["playwright.config.ts", "src/**/*.ts"],
       "ignore": ["playwright-report/**", "screenshots/**", "test-results/**"],
       // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
@@ -60,9 +73,11 @@
       ]
     },
     "packages/pstdio-api": {
-      "entry": ["package.json", "src/index.ts", "src/server.ts", "src/**/*.test.ts"],
+      "entry": ["package.json", "src/index.ts", "src/server.ts", "src/**/*.test.ts", "src/**/*.fixture.ts"],
       "project": ["src/**/*.ts"],
-      "ignore": ["dist/**"]
+      "ignore": ["dist/**"],
+      // Tests install these core extensions from source. Declared so CI treats their changes as API changes.
+      "ignoreDependencies": ["extension-lab", "pstdio-planner", "pstdio-skills"]
     },
     "packages/pstdio-db": {
       "entry": ["drizzle.config.ts", "scripts/**/*.ts", "src/index.ts", "src/**/*.test.ts"],
@@ -81,7 +96,14 @@
       "ignore": ["dist/**", "storybook-static/**"]
     },
     "packages/pstdio-extension-testbench": {
-      "entry": ["vite.config.ts", "src/main.tsx", "src/lib/testbench-api-server.ts", "src/**/*.test.ts"],
+      "entry": [
+        "vite.config.ts",
+        "src/main.tsx",
+        "src/lib/testbench-api-server.ts",
+        "src/**/*.test.ts",
+        // Tests load fixture extensions by path.
+        "src/lib/fixtures/**/extension.ts"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**"]
     },
@@ -93,7 +115,8 @@
     "packages/sdk": {
       "entry": [
         "package.json",
-        "src/{api,client,extensions,prompts,hooks,resources}/index.ts",
+        "rolldown.*.config.ts",
+        "src/{api,client,extensions,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
         "src/**/*.test.ts",
         "src/**/*.typecheck.ts"
       ],
@@ -104,25 +127,33 @@
       "entry": [
         "package.json",
         ".storybook/**/*.{ts,tsx}",
+        "rolldown.*.config.ts",
         "src/index.ts",
-        "src/{core,react,storage,testing,extensions}/index.ts",
+        "src/{core,react,storage,testing,extensions,webview-runtime}/index.ts",
         "src/**/*.stories.tsx",
         "src/**/*.test.ts",
-        "src/**/*.test.tsx"
+        "src/**/*.test.tsx",
+        "src/**/*.typecheck.ts"
       ],
       "project": [".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**", "storybook-static/**"]
+      "ignore": ["dist/**", "storybook-static/**"],
+      // The build inlines pstdio-extensions and pstdio-api-contracts (build-entries.ts), so dist imports their dependencies.
+      "ignoreDependencies": ["rimless", "zod"]
     },
     "packages/ui": {
       "entry": [
         "package.json",
         "vite.config.ts",
+        "vite.monaco.config.ts",
+        "rolldown.*.config.ts",
+        "playwright.*.config.ts",
         ".storybook/**/*.{ts,tsx}",
         "scripts/**/*.ts",
+        // Keep in sync with build-entries.ts and vite.monaco.config.ts.
         "src/index.ts",
-        "src/components/rich-text/index.ts",
-        "src/components/chat-ui/index.ts",
         "src/theme/index.ts",
+        "src/components/{rich-text,chat-ui,diff-viewer,kanban-renderer,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.stories.tsx",
         "src/**/*.test.ts",
         "src/**/*.test.tsx"
@@ -130,33 +161,75 @@
       "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "scripts/**/*.ts", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**", "storybook-static/**"]
     },
-    "packages/ui-terminal": {
-      "entry": [
-        "package.json",
-        "vite.config.ts",
-        ".storybook/**/*.{ts,tsx}",
-        "src/index.ts",
-        "src/**/*.stories.tsx",
-        "src/**/*.test.ts",
-        "src/**/*.test.tsx"
-      ],
-      "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**", "storybook-static/**"]
+    "packages/workbench-fixture": {
+      // Views are webview entries that extension.ts references by path.
+      "entry": ["extension.ts", "*.test.ts", "src/**/*.test.ts", "src/views/*.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/*": {
+      "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
+    "extensions/extension-lab": {
+      "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/views/*.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-artifacts": {
+      "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/{view,open-artifact}.tsx"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-planner": {
       "entry": [
         "package.json",
         "extension.ts",
         "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/views/**/*.tsx",
-        "src/workspace-statuses/**/*.tsx"
+        "src/views/tags-settings-panel.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
+    "extensions/pstdio-skills": {
+      // The skill's example extensions are typechecked source.
+      "entry": ["extension.ts", "*.test.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"],
+      "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
+    },
+    "infra/local/extensions/*": {
+      "entry": ["extension.ts", "*.test.ts"],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "clients/desktop": {
+      "entry": [
+        "forge.config.ts",
+        "vite.config.ts",
+        "playwright*.config.ts",
+        ".storybook/**/*.{ts,tsx}",
+        "scripts/**/*.{ts,tsx}",
+        // Built by the build:main and build:preload scripts.
+        "src/main.ts",
+        "src/preload.ts",
+        "src/renderer/src.tsx",
+        // Specs launch these fixtures by path.
+        "src/e2e/*-fixture.ts",
+        "src/**/*.test.ts",
+        "src/**/*.spec.ts",
+        "src/**/*.stories.tsx"
+      ],
+      "project": ["*.ts", ".storybook/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+      "ignore": ["dist/**", "out/**"],
+      // forge.config.ts names these makers as strings.
+      "ignoreDependencies": ["@electron-forge/maker-deb", "@electron-forge/maker-squirrel", "@electron-forge/maker-zip"]
+    },
     "clients/*": {
-      "entry": ["package.json", "astro.config.*", "src/pages/**/*.{astro,md,mdx,ts,tsx}", "src/layouts/**/*.astro"],
+      "entry": [
+        "package.json",
+        "astro.config.*",
+        "src/pages/**/*.{astro,md,mdx,ts,tsx}",
+        "src/layouts/**/*.astro",
+        // Loaded by a <script src> tag in base-layout.astro.
+        "src/services/analytics.ts"
+      ],
       "project": ["*.{ts,mjs}", "src/**/*.{astro,ts,tsx,md,mdx}"],
       "ignore": ["dist/**"]
     }

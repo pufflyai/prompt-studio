@@ -107,18 +107,3 @@ export const createHostTerminalWorkbench = () => {
   workbench.shellPlacements.openPlacement({ placementId: notesWidgetId });
   return workbench;
 };
-export const createRestoredHostTerminalWorkbench = () => {
-  const layouts = new Map<string | undefined, WorkbenchLayout>();
-  const layoutPersistence = {
-    getLayout: (scope?: string) => layouts.get(scope),
-    setLayout: (layout: WorkbenchLayout, scope?: string) => layouts.set(scope, structuredClone(layout)),
-  };
-  const scope = "project/project-1/mode/review";
-  const source = setupHostTerminalWorkbench(layoutPersistence);
-  source.layout.setPersistenceScope(scope);
-  openWorkbenchTerminal(source);
-  source.shellPlacements.openPlacement({ placementId: notesWidgetId });
-  const restored = setupHostTerminalWorkbench(layoutPersistence);
-  restored.layout.setPersistenceScope(scope);
-  return restored;
-};

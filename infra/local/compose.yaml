@@ -20,6 +20,9 @@ services:
       PSTDIO_HOME: ${HOST_PSTDIO_HOME:?HOST_PSTDIO_HOME is required}
       PSTDIO_ISOLATED_API_TOKEN: ${PSTDIO_ISOLATED_API_TOKEN:-}
       PSTDIO_DESKTOP_FLOW: ${PSTDIO_DESKTOP_FLOW:-0}
+      # macOS keeps Claude Code login in the Keychain, which a Linux container cannot read.
+      CLAUDE_CODE_OAUTH_TOKEN:
+      ANTHROPIC_API_KEY:
     command:
       - bash
       - -c
@@ -81,7 +84,7 @@ services:
 
         curl -fsS "$${auth_header[@]}" -X PATCH "$$api_url/v1/projects/$$project_id" \
           -H 'content-type: application/json' \
-          --data '{"default_agent_id":"pstdio.harness-codex.harness.codex","default_agent_model":"gpt-5.5"}' >/dev/null
+          --data '{"default_agent_id":"pstdio.harness-codex.harness.codex"}' >/dev/null
 
         if [ -n "$$dashboard_child" ]; then
           wait -n "$$api_child" "$$dashboard_child"

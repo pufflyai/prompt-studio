@@ -37,6 +37,20 @@ import { registerExtensionResourceHierarchy } from "./extension-resource-hierarc
 import { watchOpenExtensionResource } from "./extension-resource-sync";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
+// Shown once for the registered set, never for the trial sets that isolate a failing extension.
+export const notifyUnresolvedExtensionMenus = (
+  ctx: Pick<WorkbenchModuleContext, "notifications">,
+  metadata: ResolvedWorkbenchExtensionMetadata,
+) => {
+  for (const unresolved of buildDashboardExtensionMenuRegistrations(metadata).unresolved) {
+    ctx.notifications.show({
+      level: "warning",
+      title: "Extension action unavailable",
+      message: `The menu target “${unresolved.targetId}” for “${unresolved.contribution.label}” is not available.`,
+    });
+  }
+};
+
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
   for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
 };
@@ -81,13 +95,6 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
       }),
     });
     const menuResult = buildDashboardExtensionMenuRegistrations(input.metadata);
-    for (const unresolved of menuResult.unresolved) {
-      input.ctx.notifications.show({
-        level: "warning",
-        title: "Extension action unavailable",
-        message: `The menu target “${unresolved.targetId}” for “${unresolved.contribution.label}” is not available.`,
-      });
-    }
     const kanban = createDashboardKanbanAdapter(input);
     disposables.push({
       dispose: subscribeToExtensionEventReset(() => {

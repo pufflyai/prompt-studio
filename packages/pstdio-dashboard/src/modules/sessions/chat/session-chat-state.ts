@@ -1,5 +1,6 @@
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { SessionAttachment } from "pstdio-api-contracts";
+import type { SetStateAction } from "react";
 import type { SessionNotice } from "../data/session-notice";
 
 export type PendingFollowUpState = {
@@ -9,7 +10,6 @@ export type PendingFollowUpState = {
   previousRunStarted: string | null;
   userMessageId: string;
   assistantMessageId: string;
-  sessionId: string | null;
   attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;
   // Set when the message could not be sent; it then stays in the conversation until resent or removed.
@@ -21,7 +21,6 @@ export const createPendingFollowUpState = (input: {
   messageCount: number;
   pendingId: string;
   previousRunStarted?: string | null;
-  sessionId?: string | null;
   attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;
 }): PendingFollowUpState => {
@@ -32,7 +31,6 @@ export const createPendingFollowUpState = (input: {
     previousRunStarted: input.previousRunStarted ?? null,
     userMessageId: `${input.pendingId}-user`,
     assistantMessageId: `${input.pendingId}-assistant`,
-    sessionId: input.sessionId ?? null,
     attachments: input.attachments,
     questionResponse: input.questionResponse,
   };
@@ -55,26 +53,25 @@ const attachmentParts = (attachments: SessionAttachment[] = []) =>
     url: attachment.url,
   }));
 
-export const assignPendingFollowUpSession = (
-  pending: PendingFollowUpState,
-  sessionId: string,
-): PendingFollowUpState => {
-  return {
-    ...pending,
-    sessionId,
+// A sent message belongs to one conversation: a new-session draft or a session, keyed like its
+// stored draft. It lives outside React, so a request that ends after its chat panel unmounted
+// still lands in its conversation, and a created session takes over its draft's first message.
+const pendingByConversation = new Map<string, PendingFollowUpState>();
+const pendingListeners = new Set<() => void>();
+export const getPendingFollowUp = (conversationKey: string) => pendingByConversation.get(conversationKey) ?? null;
+export const updatePendingFollowUp = (conversationKey: string, next: SetStateAction<PendingFollowUpState | null>) => {
+  const current = getPendingFollowUp(conversationKey);
+  const value = typeof next === "function" ? next(current) : next;
+  if (value === current) return;
+  if (value) pendingByConversation.set(conversationKey, value);
+  else pendingByConversation.delete(conversationKey);
+  for (const listener of pendingListeners) listener();
+};
+export const subscribePendingFollowUps = (listener: () => void) => {
+  pendingListeners.add(listener);
+  return () => {
+    pendingListeners.delete(listener);
   };
-};
-
-// Opening a created session can mount a new chat panel. The draft hands its first message to that
-// panel, so the message stays visible until the session's own conversation includes it.
-const handedOff = new Map<string, PendingFollowUpState>();
-export const handOffPendingFollowUp = (pending: PendingFollowUpState) => {
-  if (pending.sessionId) handedOff.set(pending.sessionId, pending);
-};
-export const peekHandedOffPendingFollowUp = (sessionId: string | null) =>
-  (sessionId && handedOff.get(sessionId)) || null;
-export const forgetHandedOffPendingFollowUp = (sessionId: string | null) => {
-  if (sessionId) handedOff.delete(sessionId);
 };
 
 export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState): SessionMessage[] => {
@@ -92,12 +89,6 @@ export const createOptimisticFollowUpMessages = (pending: PendingFollowUpState):
       parts: [{ type: "loading" }],
     },
   ];
-};
-
-// A pending submission belongs to its draft or to the created session it was handed to.
-export const shouldShowPendingFollowUp = (pending: PendingFollowUpState | null, sessionId: string | null) => {
-  if (!pending) return false;
-  return pending.sessionId === sessionId;
 };
 
 export const mergeMessagesWithPendingFollowUp = (

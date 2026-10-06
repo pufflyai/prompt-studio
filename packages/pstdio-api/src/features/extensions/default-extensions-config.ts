@@ -1,4 +1,4 @@
-import { loadExtensionCatalog, packagedExtensionCatalog } from "./extension-catalog";
+import { loadExtensionCatalog } from "./extension-catalog";
 
 export type DefaultExtensionEntry =
   | string
@@ -12,12 +12,6 @@ export type DefaultExtensionEntry =
 
 export type DefaultExtensionsConfig = {
   defaultExtensions: DefaultExtensionEntry[];
-};
-
-export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: packagedExtensionCatalog.extensions
-    .filter((extension) => extension.default)
-    .map((extension) => extension.installName),
 };
 
 const toConfig = (parsed: unknown): DefaultExtensionsConfig => {

@@ -1,6 +1,4 @@
-import type { SatteriProcessorOptions } from "@astrojs/markdown-satteri";
-
-type MdastPlugin = NonNullable<SatteriProcessorOptions["mdastPlugins"]>[number];
+import type { MdastPluginDefinition as MdastPlugin } from "satteri";
 
 /**
  * Docs pages carry no frontmatter. Their meta description is the first paragraph

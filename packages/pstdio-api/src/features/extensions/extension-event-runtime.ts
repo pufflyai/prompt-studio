@@ -1,12 +1,4 @@
-import type {
-  CommandInvocation,
-  CommandOutcome,
-  CommandRef,
-  EventRef,
-  ExtensionLoggerApi,
-  JsonObject,
-  Struct,
-} from "pstdio-api-contracts/extension-kernel";
+import type { EventRef, ExtensionLoggerApi, JsonObject, Struct } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
@@ -102,76 +94,4 @@ export const fireExtensionEventAsync = <TPayload extends Struct>(
       "Extension event dispatch failed",
     );
   });
-};
-
-const commandIdFor = (command: CommandRef | string) => (typeof command === "string" ? command : command.id);
-
-export const runExtensionCommand = async <TParams extends Struct, TResult>(
-  deps: ExtensionEventDeps,
-  projectId: string,
-  command: CommandRef<TParams, TResult> | string,
-  params: TParams,
-): Promise<CommandOutcome<TResult>> => {
-  const commandId = commandIdFor(command);
-  const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  const runner = createCommandRunner(snapshot.runtime, {
-    logger: extensionEventLogger,
-    buildEnvironment: (input) =>
-      createCommandEnvironment(deps, snapshot.enabledSources, {
-        artifactMounts: snapshot.runtime.artifactMounts,
-        extensionId: input.extensionId,
-        name: input.name,
-        project: snapshot.project,
-        projectId: input.projectId,
-        workspaceDir: input.workspaceDir,
-        workspaceId: input.workspaceId,
-        settings: snapshot.runtime.settings,
-      }),
-  });
-
-  const workspace = await deps.workspaceService.getDefault(projectId);
-  return (await runner.execute({
-    commandId,
-    projectId,
-    params: params as JsonObject,
-    source: "api",
-    workspaceId: workspace?.id,
-    workspaceDir: workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
-  })) as CommandOutcome<TResult>;
-};
-
-export const runExtensionHostCommand = async <TParams extends Struct, TResult>(
-  deps: ExtensionEventDeps,
-  projectId: string,
-  command: CommandRef<TParams, TResult> | string,
-  params: TParams,
-  run: (invocation: CommandInvocation<TParams>) => Promise<TResult> | TResult,
-): Promise<CommandOutcome<TResult>> => {
-  const commandId = commandIdFor(command);
-  const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  const runner = createCommandRunner(snapshot.runtime, {
-    logger: extensionEventLogger,
-    buildEnvironment: (input) =>
-      createCommandEnvironment(deps, snapshot.enabledSources, {
-        artifactMounts: snapshot.runtime.artifactMounts,
-        extensionId: input.extensionId,
-        name: input.name,
-        project: snapshot.project,
-        projectId: input.projectId,
-        workspaceDir: input.workspaceDir,
-        workspaceId: input.workspaceId,
-        settings: snapshot.runtime.settings,
-      }),
-  });
-
-  const workspace = await deps.workspaceService.getDefault(projectId);
-  return (await runner.executeHostCommand({
-    commandId,
-    projectId,
-    params: params as JsonObject,
-    source: "api",
-    workspaceId: workspace?.id,
-    workspaceDir: workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
-    run: run as (invocation: CommandInvocation) => Promise<TResult> | TResult,
-  })) as CommandOutcome<TResult>;
 };

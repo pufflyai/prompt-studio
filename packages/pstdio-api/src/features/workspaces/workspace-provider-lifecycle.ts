@@ -1,4 +1,5 @@
 import type { WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
+import { cancelWorkspaceSessions } from "./cancel-workspace-sessions";
 import type { WorkspacesRouteDeps } from "./deps";
 import {
   cancelledProviderPatch,
@@ -137,6 +138,7 @@ export const archiveProviderBackedWorkspace = async (
   workspace: WorkspaceRecord,
 ) => {
   assertWorkspaceArchiveAllowed(workspace);
+  await cancelWorkspaceSessions(deps, workspace.id);
   let updated: WorkspaceRecord;
   if (isBuiltInProviderId(workspace.provider_id)) {
     await cleanupWorkspaceWorktree(deps, workspace);
@@ -258,6 +260,7 @@ export const cleanupProviderBackedWorkspace = async (
   deps: WorkspaceProviderLifecycleDeps,
   workspace: WorkspaceRecord,
 ) => {
+  await cancelWorkspaceSessions(deps, workspace.id);
   if (isBuiltInProviderId(workspace.provider_id)) return cleanupWorkspaceWorktree(deps, workspace);
 
   const pending = await persistOperation(deps, workspace, "delete", "deleting");

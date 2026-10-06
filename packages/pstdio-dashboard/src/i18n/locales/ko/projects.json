@@ -1,66 +1,11 @@
 {
   "title": "프로젝트",
-  "subtitle": "프로젝트를 관리하고 진행 상황을 추적하세요",
-  "createProject": "프로젝트 생성",
   "loading": "프로젝트 로딩 중...",
-  "errors": {
-    "fetchFailed": "프로젝트를 불러오지 못했습니다",
-    "deleteFailed": "프로젝트 삭제에 실패했습니다"
-  },
-  "empty": {
-    "title": "아직 프로젝트가 없습니다",
-    "description": "첫 번째 프로젝트를 만들어 시작하세요.",
-    "createFirst": "첫 번째 프로젝트 생성"
-  },
-  "projectNotFound": "찾으시는 프로젝트가 존재하지 않거나 삭제되었습니다.",
-  "viewProject": "프로젝트 보기",
-  "openInIDE": "IDE에서 열기",
-  "createdDate": "생성일 {{date}}",
   "chatInput": {
-    "placeholder": "새 작업을 시작하세요",
-    "ariaLabel": "새 작업 만들기",
-    "openPanelLabel": "채팅 패널 열기",
-    "closeLabel": "채팅 최소화",
     "agent": {
       "selectLabel": "하니스 선택",
       "unknown": "사용 가능한 하니스가 없습니다",
       "loading": "하니스 불러오는 중..."
-    },
-    "branch": {
-      "selectLabel": "브랜치 선택",
-      "none": "브랜치 없음",
-      "noneAvailable": "사용 가능한 브랜치 없음",
-      "loading": "브랜치 불러오는 중...",
-      "searchPlaceholder": "브랜치 검색...",
-      "noSearchResults": "검색과 일치하는 브랜치가 없습니다",
-      "tags": {
-        "current": "현재",
-        "remote": "원격"
-      }
-    },
-    "sessionMeta": {
-      "agent": "하니스",
-      "branch": "브랜치"
-    },
-    "session": {
-      "selectLabel": "세션 선택",
-      "none": "새 세션",
-      "noneHint": "새 세션 시작",
-      "loading": "세션 로딩 중...",
-      "noneAvailable": "아직 세션이 없습니다",
-      "unknown": "알 수 없는 세션",
-      "emptyTitle": "새 세션",
-      "emptyDescription": "새 세션을 시작하거나 메뉴에서 선택하세요.",
-      "notFoundTitle": "세션을 찾을 수 없습니다",
-      "notFoundDescription": "목록에서 다른 세션을 선택하세요.",
-      "resumePlaceholder": "이 세션 재개",
-      "viewMore": "더 많은 세션 보기",
-      "executorSessionIdLabel": "실행자 세션 ID",
-      "panelTitle": "모든 세션",
-      "group": {
-        "today": "오늘",
-        "yesterday": "어제"
-      }
     },
     "model": {
       "selectLabel": "모델 선택",
@@ -69,123 +14,7 @@
       "loading": "모델 로딩 중..."
     }
   },
-  "createProjectDialog": {
-    "title": "프로젝트 만들기",
-    "projectName": {
-      "label": "프로젝트 이름",
-      "placeholder": "프로젝트 이름",
-      "required": "프로젝트 이름이 필요합니다."
-    },
-    "actions": {
-      "next": "다음",
-      "back": "뒤로",
-      "create": "프로젝트 만들기"
-    },
-    "harnesses": {
-      "title": "하니스 선택",
-      "description": "이 프로젝트에서 사용할 하니스를 선택하세요.",
-      "selectAtLeastOne": "최소 한 개의 하니스를 선택하세요.",
-      "notDetectedWarning": "이 하니스가 감지되지 않았습니다. 설치될 때까지 작동하지 않을 수 있습니다."
-    }
-  },
-  "ticketPanel": {
-    "fields": {
-      "id": "ID",
-      "updated": "업데이트됨",
-      "status": "상태",
-      "blockedReason": "차단 사유",
-      "dependsOn": "의존 항목",
-      "parent": "상위",
-      "tags": "태그",
-      "blockedBy": "차단 원인",
-      "dependencies": "의존성",
-      "archived": "보관됨"
-    },
-    "title": {
-      "label": "티켓 제목",
-      "placeholder": "제목 없는 티켓"
-    },
-    "none": "없음",
-    "properties": {
-      "title": "속성"
-    },
-    "options": {
-      "ticket": "작업 옵션 열기",
-      "refineTicket": "티켓 정제",
-      "archiveTicket": "티켓 보관",
-      "unarchiveTicket": "티켓 보관 해제",
-      "deleteTicket": "작업 삭제",
-      "breakIntoSubTickets": "하위 티켓으로 분할",
-      "createSubTicket": "하위 티켓 생성"
-    },
-    "deleteConfirmation": {
-      "ticket": {
-        "headline": "티켓을 삭제하시겠습니까?",
-        "notification": "이 티켓이 삭제되고 프로젝트에서 제거됩니다."
-      }
-    },
-    "attempts": {
-      "title": "시도",
-      "startNew": "새 시도 시작",
-      "emptyTitle": "아직 시도가 없습니다",
-      "emptyDescription": "여기에서 작업 시도를 시작해 세션을 추적하세요.",
-      "updatedLabel": "{{date}} 업데이트됨",
-      "dialog": {
-        "title": "새 시도 시작",
-        "modelLabel": "모델",
-        "modelPlaceholder": "기본 모델 사용",
-        "promptLabel": "프롬프트",
-        "start": "시도 시작"
-      }
-    },
-    "description": {
-      "edit": "편집",
-      "save": "변경 사항 저장"
-    },
-    "dataTable": {
-      "noData": "데이터 없음",
-      "emptyValue": "-"
-    }
-  },
-  "workspacePanel": {
-    "options": {
-      "workspace": "워크스페이스 옵션 열기",
-      "deleteWorkspace": "워크스페이스 삭제"
-    },
-    "deleteConfirmation": {
-      "workspace": {
-        "headline": "워크스페이스를 삭제하시겠습니까?",
-        "notification": "이 작업은 워크스페이스를 삭제하고 티켓에서 제거합니다."
-      }
-    }
-  },
-  "createProjectSession": {
-    "errors": {
-      "missingProjectId": "세션을 만들려면 프로젝트 ID가 필요합니다."
-    }
-  },
-  "createTicketAttempt": {
-    "errors": {
-      "missingProjectId": "시도를 만들려면 프로젝트 ID가 필요합니다."
-    }
-  },
-  "sidenav": {
-    "search": "검색",
-    "tickets": "티켓",
-    "projectChangelog": "프로젝트 변경 로그",
-    "projectSettings": "프로젝트 설정",
-    "help": "도움말",
-    "documentationLink": "문서",
-    "discordLink": "Discord"
-  },
-  "shell": {
-    "loadingProject": "프로젝트 로딩 중...",
-    "notFound": "프로젝트를 찾을 수 없습니다",
-    "notFoundDescription": "목록에서 프로젝트를 선택하여 계속하세요."
-  },
   "projectSettings": {
-    "title": "프로젝트 설정",
-    "skills": "스킬",
     "machineTokens": {
       "title": "머신 토큰",
       "description": "이 프로젝트의 정확한 자동화 명령에 만료되는 자격 증명을 발급합니다.",
@@ -217,11 +46,7 @@
         "global": "global"
       },
       "status": {
-        "pending": "대기 중",
-        "loaded": "로드됨",
-        "error": "로드 실패",
-        "missing": "없음",
-        "disabled": "비활성화됨"
+        "error": "로드 실패"
       },
       "health": {
         "triggerAriaLabel": "{{name}}의 문제 표시",
@@ -327,37 +152,8 @@
     }
   },
   "list": {
-    "projectCreated": "프로젝트가 생성되었습니다",
-    "createProjectFailed": "프로젝트 생성에 실패했습니다",
-    "projectCount_one": "{{count}}개의 프로젝트가 있습니다.",
-    "projectCount_other": "{{count}}개의 프로젝트가 있습니다.",
-    "title": "프로젝트",
     "createProject": "프로젝트 생성",
-    "loadingProjects": "프로젝트 로딩 중...",
-    "unableToLoad": "프로젝트를 불러올 수 없습니다",
     "noProjectsYet": "아직 프로젝트가 없습니다",
-    "noProjectsDescription": "첫 번째 프로젝트를 만들어 시작하세요.",
-    "createFirstProject": "첫 번째 프로젝트 만들기",
-    "agentLoadErrorBanner": {
-      "title": "에이전트 가용성을 불러올 수 없습니다",
-      "description": "설치된 에이전트를 확인할 수 없습니다. 프로젝트를 만든 후 에이전트를 나중에 추가할 수 있습니다.",
-      "retry": "다시 시도"
-    }
-  },
-  "sessions": {
-    "title": "세션",
-    "newSession": "새 세션",
-    "noSessionsYet": "아직 세션이 없습니다",
-    "nextBuildTitle": "다음에는 무엇을 만들까요?",
-    "noSessionSelected": "선택된 세션 없음",
-    "selectSession": "사이드바에서 세션을 선택하거나 새 세션을 시작하세요.",
-    "followUpPlaceholder": "후속 메시지 보내기...",
-    "queuedStatus": {
-      "title": "세션이 대기열에 있습니다",
-      "message": "동시 실행 용량이 생기면 이 세션이 자동으로 시작됩니다."
-    },
-    "downloadSessionJson": "세션 JSON 다운로드",
-    "archiveSession": "세션 보관",
-    "sessionActions": "세션 작업"
+    "noProjectsDescription": "첫 번째 프로젝트를 만들어 시작하세요."
   }
 }

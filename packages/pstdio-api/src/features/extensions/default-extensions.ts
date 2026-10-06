@@ -22,7 +22,6 @@ import {
 export {
   type DefaultExtensionEntry,
   type DefaultExtensionsConfig,
-  defaultExtensions,
   resolveDefaultExtensionsConfig,
 } from "./default-extensions-config";
 export { syncInstalledExtensionsForProject, syncInstalledExtensionsForProjects } from "./installed-extension-sync";

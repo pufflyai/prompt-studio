@@ -1,7 +1,7 @@
 import { sessionLogger } from "../../lib/logger";
+import { workspaceSessionReadiness } from "../workspaces/workspace-session-readiness";
 import type { SessionsRouteDeps } from "./deps";
 import { dispatchQueuedEntry } from "./session-queue-dispatch";
-import { isWorkspaceDispatchPending } from "./session-queue-readiness";
 import { hasCreateCapacity, withSchedulingLock } from "./session-scheduler-internals";
 
 const isTerminal = (status: string) =>
@@ -37,7 +37,8 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
           const session = await deps.sessionService.get(entry.session_id);
           if (session?.status !== "queued") return true;
           const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
-          if (isWorkspaceDispatchPending(workspace)) return true;
+          // A workspace that will become ready keeps the entry pending; its `set` event drains again.
+          if (workspaceSessionReadiness(workspace).kind === "wait") return true;
           const dispatch = await dispatchQueuedEntry(deps, session, entry);
           dispatches.push(dispatch?.settled);
           return true;

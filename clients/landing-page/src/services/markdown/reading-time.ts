@@ -1,6 +1,5 @@
-import type { SatteriProcessorOptions } from "@astrojs/markdown-satteri";
+import type { MdastPluginDefinition as MdastPlugin } from "satteri";
 
-type MdastPlugin = NonNullable<SatteriProcessorOptions["mdastPlugins"]>[number];
 type TextBlock = Parameters<NonNullable<MdastPlugin["paragraph" | "heading" | "code" | "tableCell"]>>[0];
 type VisitorContext = Parameters<NonNullable<MdastPlugin["paragraph"]>>[1];
 
