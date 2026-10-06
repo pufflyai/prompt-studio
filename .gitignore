@@ -198,3 +198,6 @@ packages/pstdio/.readme.generated
 .pstdio/reports
 .pstdio/extension-storage
 .pstdio/config.json
+
+# Shape Art pieces. Add one with `git add -f` when a page uses it.
+design/art

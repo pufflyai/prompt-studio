@@ -5,7 +5,7 @@ description: Paint reusable watercolor art from the Prompt Studio tool shapes an
 
 # Shape Art pieces
 
-A piece is a recipe in `design/art/<id>.json` and its painted image in `design/art/<id>.png`. The same recipe always paints the same image, so commit both and edit the recipe to change the art.
+A piece is a recipe in `design/art/<id>.json` and its painted image in `design/art/<id>.png`. The same recipe always paints the same image, so edit the recipe to change the art. Git ignores `design/art`. When a page uses a piece, add its recipe and image with `git add -f`.
 
 1. Run `pst shape-art piece list` to see existing pieces. Read one with `pst shape-art piece read --id <id>`.
 2. Generate a random piece with `pst shape-art piece generate --id <kebab-id> --background ink --width 1600 --height 400`. This makes a 4:1 banner and saves its full recipe and PNG. Use a different id for each blog post. Or supply a recipe with `pst shape-art piece save --id <kebab-id> --recipe '<json>'`; omitted fields use the defaults below.
