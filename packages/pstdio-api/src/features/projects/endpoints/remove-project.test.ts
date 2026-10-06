@@ -110,10 +110,10 @@ describe("DELETE /v1/projects/:id", () => {
 
   test("keeps connection credentials when project deletion fails", async () => {
     const project = await createProject("failed-delete");
-    const originalHardDelete = appHandle.deps.projectService.hardDelete;
+    const originalDelete = appHandle.deps.projectService.delete;
     const originalPrepareConnectionRemoval = appHandle.deps.extensionConnectionService.prepareProjectRemoval;
     const removeConnectionSecrets = mock(async () => {});
-    appHandle.deps.projectService.hardDelete = async () => {
+    appHandle.deps.projectService.delete = async () => {
       throw new Error("project deletion failed");
     };
     appHandle.deps.extensionConnectionService.prepareProjectRemoval = async () => removeConnectionSecrets;
@@ -125,7 +125,7 @@ describe("DELETE /v1/projects/:id", () => {
       expect(removeConnectionSecrets).not.toHaveBeenCalled();
       expect((await app.request(`/v1/projects/${project.id}`)).status).toBe(200);
     } finally {
-      appHandle.deps.projectService.hardDelete = originalHardDelete;
+      appHandle.deps.projectService.delete = originalDelete;
       appHandle.deps.extensionConnectionService.prepareProjectRemoval = originalPrepareConnectionRemoval;
     }
   });

@@ -45,9 +45,7 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
         removeProjectStorage: deps.fileService.removeProjectStorage,
       });
       const removeConnectionSecrets = await deps.extensionConnectionService.prepareProjectRemoval(id);
-      await deps.syncService.emitCascadeDeletes("projects", id);
-
-      await deps.projectService.hardDelete(id);
+      await deps.projectService.delete(id);
       try {
         await removeConnectionSecrets();
       } catch (error) {

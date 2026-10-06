@@ -64,7 +64,6 @@ describe("stream bootstrap race condition", () => {
         // Return stale snapshot (session still in_progress)
         return { sessions: [{ id: "s1", status: "in_progress" }] };
       },
-      emitCascadeDeletes: async () => {},
     } as Parameters<typeof streamHandler>[0]["syncService"];
 
     const app = new Hono();
@@ -111,7 +110,6 @@ describe("stream bootstrap race condition", () => {
 
     const syncService = {
       getFullState: async () => ({}),
-      emitCascadeDeletes: async () => {},
     } as Parameters<typeof streamHandler>[0]["syncService"];
 
     const app = new Hono();
@@ -139,7 +137,6 @@ describe("stream bootstrap race condition", () => {
       getFullState: async () => ({
         projects: [{ id: "p1", name: "stale-reconnect-project" }],
       }),
-      emitCascadeDeletes: async () => {},
     } as Parameters<typeof streamHandler>[0]["syncService"];
 
     const app = new Hono();

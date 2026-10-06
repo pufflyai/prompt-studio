@@ -9,6 +9,7 @@ import {
 import { EventBus } from "../features/sync/event-bus";
 import { createExtensionService } from "./extension-service";
 import { createProjectService } from "./project-service";
+import { createSyncService } from "./sync-service";
 
 let close: (() => Promise<void>) | undefined;
 let projectService: ReturnType<typeof createProjectService>;
@@ -20,6 +21,7 @@ beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
   projectService = createProjectService({
+    syncService: createSyncService({ db: result.db }),
     eventBus: new EventBus(),
     projectsDBService: createProjectsDBService(result.db),
   });

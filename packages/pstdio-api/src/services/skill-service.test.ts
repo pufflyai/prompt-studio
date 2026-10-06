@@ -21,6 +21,7 @@ import { createExtensionService } from "./extension-service";
 import { createFileService } from "./file-service";
 import { createProjectService } from "./project-service";
 import { createSkillService } from "./skill-service";
+import { createSyncService } from "./sync-service";
 import { createWorkspaceService } from "./workspace-service";
 
 const emptyRuntime = {
@@ -181,6 +182,7 @@ const setupServiceWithExtension = async () => {
   writeExtensionWithSkill(extensionRoot, importCountPath);
 
   const projectService = createProjectService({
+    syncService: createSyncService({ db: db }),
     eventBus: new EventBus(),
     projectsDBService: createProjectsDBService(db),
   });

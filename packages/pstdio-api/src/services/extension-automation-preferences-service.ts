@@ -10,5 +10,5 @@ export const createExtensionAutomationPreferencesService = (deps: {
     deps.eventBus.emit("extension_automation_preferences", "set", preference);
     return preference;
   };
-  return { ...deps.db, set };
+  return { list: deps.db.list, set };
 };

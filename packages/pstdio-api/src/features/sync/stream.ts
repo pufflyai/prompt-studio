@@ -6,7 +6,7 @@ import type { EventBus, SyncEvent } from "./event-bus";
 
 interface StreamDeps {
   eventBus: EventBus;
-  syncService: ReturnType<typeof createSyncService>;
+  syncService: Pick<ReturnType<typeof createSyncService>, "getFullState">;
 }
 
 const formatSSE = (event: SyncEvent) => ({

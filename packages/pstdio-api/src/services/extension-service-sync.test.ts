@@ -11,6 +11,7 @@ import { EventBus } from "../features/sync/event-bus";
 import type { SyncInstalledSourceInput } from "./extension-service";
 import { createExtensionService } from "./extension-service";
 import { createProjectService } from "./project-service";
+import { createSyncService } from "./sync-service";
 
 let close: (() => Promise<void>) | undefined;
 let service: ReturnType<typeof createExtensionService>;
@@ -36,7 +37,11 @@ beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
   const projectDbService = createProjectsDBService(result.db);
-  projectService = createProjectService({ eventBus: new EventBus(), projectsDBService: projectDbService });
+  projectService = createProjectService({
+    syncService: createSyncService({ db: result.db }),
+    eventBus: new EventBus(),
+    projectsDBService: projectDbService,
+  });
   extensionInstancesService = createExtensionInstancesDBService(result.db);
   installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
   extensionUserDataService = createExtensionUserDataDBService(result.db);

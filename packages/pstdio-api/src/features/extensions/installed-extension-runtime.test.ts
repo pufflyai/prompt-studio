@@ -12,6 +12,7 @@ import {
 } from "pstdio-db";
 import { createExtensionService } from "../../services/extension-service";
 import { createProjectService } from "../../services/project-service";
+import { createSyncService } from "../../services/sync-service";
 import { EventBus } from "../sync/event-bus";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
@@ -210,6 +211,7 @@ describe("createInstalledExtensionRuntime", () => {
 
     try {
       const projectService = createProjectService({
+        syncService: createSyncService({ db: db }),
         eventBus: new EventBus(),
         projectsDBService: createProjectsDBService(db),
       });
