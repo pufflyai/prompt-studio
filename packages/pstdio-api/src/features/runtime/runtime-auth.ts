@@ -1,5 +1,5 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { WEBSOCKET_CREDENTIAL_PROTOCOL_PREFIX } from "pstdio-api-contracts/runtime-auth";
+import { WEBSOCKET_CREDENTIAL_PROTOCOL_PREFIX } from "pstdio-api-contracts";
 
 const LOGIN_CODE_TTL_MS = 60_000;
 

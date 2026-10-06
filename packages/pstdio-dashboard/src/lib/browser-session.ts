@@ -2,7 +2,7 @@ import {
   BROWSER_LOGIN_FRAGMENT_PARAM,
   RUNTIME_WEBSOCKET_PROTOCOL,
   WEBSOCKET_CREDENTIAL_PROTOCOL_PREFIX,
-} from "pstdio-api-contracts/runtime-auth";
+} from "pstdio-api-contracts";
 
 const STORAGE_KEY = "pstdio.browserSession";
 

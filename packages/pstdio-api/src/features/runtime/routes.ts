@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { BROWSER_LOGIN_FRAGMENT_PARAM } from "pstdio-api-contracts/runtime-auth";
+import { BROWSER_LOGIN_FRAGMENT_PARAM } from "pstdio-api-contracts";
 import type { AppBindings } from "../../types";
 import {
   type BrowserSessions,
