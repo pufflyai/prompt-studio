@@ -4,9 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
+import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import { useProject } from "@/shared/projects/use-project";
 import { useUpdateProjectDefaults } from "../data/use-project-defaults";
-import { ProjectSetupStatus } from "./project-setup-status";
 
 export const ProjectFolderPanel = (props: { projectId?: string }) => {
   const { projectId } = props;

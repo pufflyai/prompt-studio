@@ -13,9 +13,11 @@ import {
 import { type RecentProjectResource, readRecentProjectResources } from "@/shared/recents/recent-project-resources";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { readProjectSetupError } from "@/shared/workspaces/dashboard-workspaces";
 import { StartAboutPanel } from "./start-about-panel";
 import { type StartAction, StartActionList } from "./start-action-list";
 import { StartRecentList } from "./start-recent-list";
+import { StartSetupStatus } from "./start-setup-status";
 
 const dashboardExtensionsSettingsPanelId = "extensions";
 
@@ -35,6 +37,7 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
     getDashboardDataVersion,
   );
   const recentResources = readRecentProjectResources(projectId, dashboardDataVersion);
+  const setupError = readProjectSetupError(projectId, dashboardDataVersion);
 
   const actions: StartAction[] = [
     {
@@ -73,6 +76,7 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
             Project home
           </Text>
         </Stack>
+        {projectId && setupError && <StartSetupStatus key={projectId} projectId={projectId} error={setupError} />}
         <StartAboutPanel />
         <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
           <Box flex="1" minW="0" w="full">

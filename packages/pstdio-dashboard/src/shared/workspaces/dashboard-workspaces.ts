@@ -168,6 +168,14 @@ export const buildDashboardWorkspacesFromRows = (
     })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 };
+// The version argument makes the React compiler read the synced rows again after each sync change.
+export const readProjectSetupError = (projectId: string | undefined, _dataVersion: number) => {
+  if (!projectId) return null;
+  return (
+    buildDashboardWorkspacesFromRows(readWorkspaceRows(), { projectId }).find((workspace) => workspace.isDefault)
+      ?.setupError ?? null
+  );
+};
 // Tools can link a workspace by id alone. Its icon still comes from the synced row, so every route shows the same icon.
 export const resolveDashboardWorkspaceIcon = (workspaceId: string) => {
   const workspace = getCollection("workspaces").state.get(workspaceId);
