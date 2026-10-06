@@ -110,7 +110,13 @@ export const ChatInput = (props: ChatInputProps) => {
   const { editorKey, editorState, remountEditor, setEditorState, setText, text } = useChatInputText(defaultState);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const focusAfterSubmission = useComposerFocus(containerRef, autoFocus, focusSignal, setIsSelected);
+  const focusAfterSubmission = useComposerFocus(
+    containerRef,
+    autoFocus,
+    !isDisabled && !submitting && !occupied,
+    focusSignal,
+    setIsSelected,
+  );
 
   const history = useChatInputHistory({
     recentUserMessages,

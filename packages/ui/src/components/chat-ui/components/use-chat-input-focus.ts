@@ -14,16 +14,21 @@ const requestPromptEditorFocus = (container: HTMLDivElement | null, onFocus?: ()
 export const useComposerFocus = (
   containerRef: { current: HTMLDivElement | null },
   autoFocus: boolean,
+  editable: boolean,
   focusSignal: number,
   setIsSelected: (selected: boolean) => void,
 ) => {
-  const [submissionFocusSignal, setSubmissionFocusSignal] = useState(0);
+  const [submissionFocusPending, setSubmissionFocusPending] = useState(false);
   useEffect(() => {
-    if (submissionFocusSignal === 0) return;
-    // Focus after React commits the restored editor and its editable state.
-    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
+    if (!submissionFocusPending || !editable) return;
+    // The parent can remain disabled after the submission promise resolves. Keep the
+    // focus request until the editor becomes editable, then consume it once.
+    const handle = requestPromptEditorFocus(containerRef.current, () => {
+      setIsSelected(true);
+      setSubmissionFocusPending(false);
+    });
     return () => cancelAnimationFrame(handle);
-  }, [submissionFocusSignal, containerRef, setIsSelected]);
+  }, [submissionFocusPending, editable, containerRef, setIsSelected]);
 
   useEffect(() => {
     if (!autoFocus) return;
@@ -37,5 +42,5 @@ export const useComposerFocus = (
     return () => cancelAnimationFrame(handle);
   }, [focusSignal, containerRef, setIsSelected]);
 
-  return () => setSubmissionFocusSignal((signal) => signal + 1);
+  return () => setSubmissionFocusPending(true);
 };
