@@ -277,7 +277,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     });
   });
 
-  test("lists uninstalled core extensions in the marketplace", async () => {
+  test("lists uninstalled core extensions in the marketplace at the running release", async () => {
     const project = await createProject("Extension Marketplace Project");
 
     const res = await app.request(`/v1/projects/${project.id}/extensions`);
@@ -293,7 +293,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
           origin: {
             kind: "git",
             path: "extensions/pstdio-planner",
-            ref: "{hostRelease}",
+            ref: "pstdio@0.27.0",
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pufflyai",

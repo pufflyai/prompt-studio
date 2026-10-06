@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
-import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
+import { getSidenavEntry } from "./helpers/sidenav-navigation";
 
 const source = `
 const ready = (providerRef) => ({
@@ -54,7 +54,7 @@ test("the global workspace action uses declared cloud parameters without a repos
     projectId = (await created.json()).id;
     await page.addInitScript((id) => localStorage.setItem("dashboard-wb2:selected-project:global", id), projectId!);
     await page.goto(`/projects/${projectId}`);
-    const row = await showHiddenSidenavEntry(page, "Workspaces");
+    const row = await getSidenavEntry(page, "Workspaces");
     await row.hover();
     await expect(row.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
 

@@ -4,7 +4,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin } from "../ui-server";
 import { enableCloudWorkspaceProvider } from "./helpers/cloud-workspace-provider";
-import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
+import { getSidenavEntry } from "./helpers/sidenav-navigation";
 
 test("a plain-folder ticket creates a linked cloud workspace through its provider form", async ({ page, request }) => {
   const home = await (await request.get(`${uiOrigin}/v1/filesystem/list`)).json();
@@ -23,7 +23,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     const [homeWorkspace] = await (await request.get(workspacesUrl)).json();
     await page.addInitScript((id) => localStorage.setItem("dashboard-wb2:selected-project:global", id), projectId!);
     await page.goto(`/projects/${projectId}`);
-    const workspaceNavigation = await showHiddenSidenavEntry(page, "Workspaces");
+    const workspaceNavigation = await getSidenavEntry(page, "Workspaces");
     await workspaceNavigation.hover();
     await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
     const catalogCaptured = Promise.withResolvers<void>();
@@ -61,7 +61,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     });
     await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Cloud workspace ticket", { exact: true }).click();
-    await expect(page.getByRole("option", { name: "Project workspace", exact: true })).toBeVisible();
+    await expect(page.getByRole("option", { name: /^Project (workspace|folder)$/ })).toBeVisible();
     await page.getByText("Workspaces", { exact: true }).last().hover();
     await page.getByRole("button", { name: "Create workspace", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Create workspace", exact: true });

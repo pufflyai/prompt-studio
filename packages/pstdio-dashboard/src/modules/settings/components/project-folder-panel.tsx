@@ -65,7 +65,7 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
           {update.error.message}
         </Text>
       )}
-      <Text textStyle="label/S/medium">Project workspace</Text>
+      <Text textStyle="label/S/medium">Project folder</Text>
       <Text>{home?.root_path ?? home?.display_path ?? "No workspace attached"}</Text>
       {setupError && (
         <ProjectSetupStatus error={setupError} retrying={retry.isPending} onRetry={() => retry.mutate()} />

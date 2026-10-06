@@ -96,26 +96,65 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
     onClose,
     onEscape,
   } = props;
-  const [query, setQueryState] = useState(initialQuery);
-  const [activeIndex, setActiveIndex] = useState(initialActiveIndex);
+  const getFilteredEntries = (value: string) => {
+    const entryMode = mode ?? resolvePaletteMode(value, modes);
+    return filterEntries
+      ? filterEntries(entries, value, entryMode)
+      : filterPaletteEntries(entries, {
+          query: value,
+          mode: entryMode,
+          getEffectiveQuery: (search) => getPaletteEffectiveQuery(search, modes, entryMode),
+        });
+  };
+  const [searchState, setSearchState] = useState<{ query: string; activeId: string | null }>(() => ({
+    query: initialQuery,
+    activeId: getFilteredEntries(initialQuery)[initialActiveIndex]?.id ?? null,
+  }));
+  const { query, activeId } = searchState;
+  const [setup, setSetup] = useState({ open: false, resetKey });
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const setupRef = useRef({ open: false, resetKey });
-  const activeMode = mode ?? resolvePaletteMode(query, modes);
-  const filteredEntries = filterEntries
-    ? filterEntries(entries, query, activeMode)
-    : filterPaletteEntries(entries, {
-        query,
-        mode: activeMode,
-        getEffectiveQuery: (value) => getPaletteEffectiveQuery(value, modes, activeMode),
+  // Reset while rendering, not in an effect, so the first open render already highlights
+  // the initial entry and listeners never see the previous session's entry.
+  const shouldReset = setup.open !== open || setup.resetKey !== resetKey;
+  if (shouldReset) {
+    setSetup({ open, resetKey });
+    if (open) {
+      setSearchState({
+        query: initialQuery,
+        activeId: getFilteredEntries(initialQuery)[initialActiveIndex]?.id ?? null,
       });
+    }
+  }
+  const activeMode = mode ?? resolvePaletteMode(query, modes);
+  const filteredEntries = getFilteredEntries(query);
+  // Entries can arrive or reorder while the palette is open. Keep the highlight on the
+  // same entry instead of previewing a different theme at its previous row number.
+  const activeIndex = Math.max(
+    filteredEntries.findIndex((entry) => entry.id === activeId),
+    0,
+  );
   const activeEntry = filteredEntries[activeIndex] ?? null;
+  if (!shouldReset && (activeEntry?.id ?? null) !== activeId) {
+    setSearchState({ ...searchState, activeId: activeEntry?.id ?? null });
+  }
+  const setActiveIndex = (index: SetStateAction<number>) => {
+    setSearchState((current) => {
+      const currentEntries = getFilteredEntries(current.query);
+      const currentIndex = Math.max(
+        currentEntries.findIndex((entry) => entry.id === current.activeId),
+        0,
+      );
+      const nextIndex = typeof index === "function" ? index(currentIndex) : index;
+      return { ...current, activeId: currentEntries[nextIndex]?.id ?? null };
+    });
+  };
   const state: PaletteState<T> = { query, mode: activeMode, activeIndex, entries: filteredEntries };
   const resolvedInputIcon = resolveStateValue(inputIcon, state, null);
   const resolvedPlaceholder = resolveStateValue(placeholder, state, "Search");
 
   const setQuery = (nextQuery: string) => {
-    setQueryState(nextQuery);
+    setSearchState({ query: nextQuery, activeId: null });
     onQueryChange?.(nextQuery);
   };
 
@@ -128,15 +167,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   };
 
   useEffect(() => {
-    const previousSetup = setupRef.current;
-    setupRef.current = { open, resetKey };
-    if (!open) return;
-
-    const shouldInitialize = !previousSetup.open || previousSetup.resetKey !== resetKey;
-    if (!shouldInitialize) return;
-
-    setQueryState(initialQuery);
-    setActiveIndex(initialActiveIndex);
+    if (!setup.open) return;
 
     const timeout = setTimeout(() => {
       const input = inputRef.current;
@@ -146,15 +177,15 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
       input.setSelectionRange(length, length);
     }, 0);
     return () => clearTimeout(timeout);
-  }, [initialActiveIndex, initialQuery, open, resetKey]);
+  }, [setup]);
 
-  useEffect(() => {
-    setActiveIndex((current) => Math.min(current, Math.max(filteredEntries.length - 1, 0)));
-  }, [filteredEntries.length]);
-
+  const activeEntryId = activeEntry?.id;
+  // Callers rebuild entries and callbacks on every render. Report only a real change of the
+  // highlighted entry, so a listener that updates state cannot start a render loop.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the entry and callback change identity on every render
   useEffect(() => {
     onActiveEntryChange?.(activeEntry, activeIndex);
-  }, [activeEntry, activeIndex, onActiveEntryChange]);
+  }, [activeEntryId, activeIndex]);
 
   const handleEscape = () => {
     const handled = onEscape?.({

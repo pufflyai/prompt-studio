@@ -92,5 +92,11 @@
       "title": "{{name}} is paused",
       "body": "Paused from the performance monitor. Its views stay unloaded until you resume."
     }
+  },
+  "appearance": {
+    "title": "Appearance",
+    "description": "Choose how Prompt Studio looks. You can also change the theme with Alt+Shift+T.",
+    "theme": "Theme",
+    "themeHelper": "Applies to every project."
   }
 }

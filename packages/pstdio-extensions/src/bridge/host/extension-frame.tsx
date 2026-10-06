@@ -22,6 +22,7 @@ export interface ExtensionFrameProps {
   /** Publisher whose emitted events are forwarded into the guest once connected. */
   hostEvents?: HostEventPublisher;
   onReady?: () => void;
+  /** Reports a load or runtime failure. The frame draws no error UI; the caller shows the failure once. */
   onError?: (error: { message: string; stack?: string }) => void;
   onDiagnostics?: (diagnostics: WebviewCapabilityDiagnostic[]) => void;
   title?: string;
@@ -58,19 +59,6 @@ const frameShellStyle: CSSProperties = {
   width: "100%",
 };
 
-const errorOverlayStyle: CSSProperties = {
-  alignItems: "center",
-  background: "rgba(255, 255, 255, 0.92)",
-  color: "#7a1f12",
-  display: "flex",
-  inset: 0,
-  justifyContent: "center",
-  padding: "24px",
-  position: "absolute",
-  textAlign: "center",
-  zIndex: 1,
-};
-
 export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups";
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
@@ -99,7 +87,6 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const onReadyRef = useRef(onReady);
   const onErrorRef = useRef(onError);
   const onDiagnosticsRef = useRef(onDiagnostics);
-  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   // Bumped when the browser reloads the iframe (e.g. a DOM reparent while the Side
   // Panel floats). The bump remounts a fresh iframe so a single clean connection
   // owns the new browsing context.
@@ -160,7 +147,6 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         // no-op; init fires from host.connect().then() below.
       },
       runtimeError: (payload: { message: string; stack?: string }) => {
-        setRuntimeError(payload.message);
         onErrorRef.current?.(payload);
       },
       call: async (request: HostCapabilityRequest) => {
@@ -195,14 +181,11 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           });
           if (iframeRef.current !== iframe) return;
           initializedRef.current = true;
-          setRuntimeError(null);
           onReadyRef.current?.();
         })
         .catch((error) => {
           if (iframeRef.current !== iframe) return;
-          const normalized = normalizeRuntimeError(error);
-          setRuntimeError(normalized.message);
-          onErrorRef.current?.(normalized);
+          onErrorRef.current?.(normalizeRuntimeError(error));
         });
     };
 
@@ -267,29 +250,18 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
 
   return (
     <div style={frameShellStyle}>
-      {runtimeError ? (
-        <div role="alert" style={errorOverlayStyle}>
-          <div>
-            <strong>Extension view failed to load.</strong>
-            <div>{runtimeError}</div>
-          </div>
-        </div>
-      ) : null}
       <iframe
         // A new runtime or module needs its own browsing context and bridge handshake.
         key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}
         ref={iframeRef}
         title={title ?? view.label}
         allow={extensionIframeAllow(view.webview.capabilities)}
-        allowFullScreen
         sandbox={EXTENSION_IFRAME_SANDBOX}
         // Match the host theme so the empty/loading iframe paints the right canvas
         // instead of flashing the default light background while the guest connects.
         style={{ ...iframeStyle, colorScheme: theme }}
         onError={() => {
-          const message = `Failed to load extension runtime at ${view.webview.runtimeUrl}`;
-          setRuntimeError(message);
-          onErrorRef.current?.({ message });
+          onErrorRef.current?.({ message: `Failed to load extension runtime at ${view.webview.runtimeUrl}` });
         }}
       />
     </div>

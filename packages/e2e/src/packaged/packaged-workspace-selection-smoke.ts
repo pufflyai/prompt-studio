@@ -32,7 +32,9 @@ export const expectPackagedWorkspaceSelection = async (descriptor: RuntimeDescri
       name: `${outcome.value.shorthand} Packaged workspace selection`,
       exact: true,
     });
-    const workspace = sidenav.getByRole("option", { name: "Project workspace", exact: true });
+    // The packaged runtime installs the planner from its release tag, which names this row
+    // "Project workspace" until the release that renames it to "Project folder".
+    const workspace = sidenav.getByRole("option", { name: /^Project (workspace|folder)$/ });
     await expectBrowser(ticket).toHaveAttribute("aria-selected", "true");
     const finishObservingRows = await observeTreeRows(sidenav, [
       ticket,

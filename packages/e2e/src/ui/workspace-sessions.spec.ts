@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
-import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
+import { getSidenavEntry } from "./helpers/sidenav-navigation";
 import {
   STORY_RENDER_TIMEOUT_MS,
   startStorybook,
@@ -39,7 +39,7 @@ test.describe("workspace sessions", () => {
     await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible();
     await expect(sidenav.getByRole("option", { name: "Wire up board", exact: true })).toBeVisible();
 
-    const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
+    const workspacesNavigation = await getSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
     const workspaceRow = page.getByRole("row").filter({ hasText: "Mode-driven sidenav" });
     await workspaceRow.getByRole("cell", { name: "Mode-driven sidenav", exact: true }).click();

@@ -84,6 +84,8 @@ export const InputSelectionLongValues: Story = {
   },
 };
 export const InputDate = inputStory(paramEditorInputFixtures.date);
+/** A read-only timestamp shows in the viewer's locale and time zone. */
+export const InputDateReadOnly = inputStory(paramEditorInputFixtures.dateReadOnly);
 export const InputColor = inputStory(paramEditorInputFixtures.color);
 export const InputProperty = inputStory(paramEditorInputFixtures.property);
 export const InputReadOnly = inputStory(paramEditorInputFixtures.readOnly);

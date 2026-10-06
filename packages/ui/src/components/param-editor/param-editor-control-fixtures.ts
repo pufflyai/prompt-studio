@@ -114,6 +114,16 @@ export const paramEditorInputFixtures = {
     },
     "2026-07-30",
   ),
+  dateReadOnly: fixture(
+    {
+      id: "created-at",
+      name: "Created at",
+      type: "date",
+      readOnly: true,
+      defaultValue: "2026-10-05T22:05:00.000Z",
+    },
+    "2026-10-05T22:05:00.000Z",
+  ),
   color: fixture(
     {
       id: "tint",

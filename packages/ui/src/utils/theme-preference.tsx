@@ -30,11 +30,16 @@ const browserStorage: ThemePreferenceStorage = {
 const ThemePreferenceContext = createContext<ThemePreferenceContextValue | null>(null);
 
 interface ThemePreferenceContextValue {
+  /** The theme on screen: a preview while one is shown, otherwise the chosen theme. */
   themePreference: ThemePreference;
+  /** The saved choice. It differs from `themePreference` only while a preview is shown. */
+  chosenThemePreference: ThemePreference;
   /** The chosen theme while it waits for its contribution to register; `themePreference` shows a fallback until then. */
   pendingThemePreference: ThemePreference | null;
   themePreferences: readonly ThemePreferenceOption[];
   setThemePreference: (preference: ThemePreference) => void;
+  /** Shows a theme without saving it. Pass `null` to return to the chosen theme. */
+  previewThemePreference: (preference: ThemePreference | null) => void;
   toggleThemePreference: () => void;
 }
 
@@ -96,10 +101,12 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
     props.defaultPreference ??
     getInitialThemePreference(themePreferences, storage);
   const [selection, setSelection] = useState({ storageKey, preference: initialPreference });
+  const [preview, setPreview] = useState<ThemePreference | null>(null);
   const themePreference = selection.storageKey === storageKey ? selection.preference : initialPreference;
   const resolvedThemePreference = isThemePreference(themePreference, themePreferences)
     ? themePreference
     : getDefaultThemePreference(themePreferences, getThemePreferenceMode(themePreference, themePreferences));
+  const shownPreview = preview && isThemePreference(preview, themePreferences) ? preview : null;
   // The provider shows a fallback while a chosen extension theme registers. The choice
   // stays in the selection on the first render and in storage after the fallback applies.
   const pendingThemePreference =
@@ -123,7 +130,7 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
       return;
     }
 
-    applyThemePreference(themePreference, themePreferences);
+    applyThemePreference(shownPreview ?? themePreference, themePreferences);
     const hasPendingStoredTheme =
       storedPreference &&
       storedPreference !== themePreference &&
@@ -132,6 +139,7 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
     if (!hasPendingStoredTheme && !props.defaultPreference) storeThemePreference(storage, storageKey, themePreference);
   }, [
     resolvedThemePreference,
+    shownPreview,
     storage,
     storedPreference,
     themePreference,
@@ -143,6 +151,7 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
   const setThemePreference = (preference: ThemePreference) => {
     storeThemePreference(storage, storageKey, preference);
     setSelection({ storageKey, preference });
+    setPreview(null);
   };
 
   const toggleThemePreference = () => {
@@ -154,10 +163,12 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
   return (
     <ThemePreferenceContext
       value={{
-        themePreference: resolvedThemePreference,
+        themePreference: shownPreview ?? resolvedThemePreference,
+        chosenThemePreference: resolvedThemePreference,
         pendingThemePreference,
         themePreferences,
         setThemePreference,
+        previewThemePreference: setPreview,
         toggleThemePreference,
       }}
     >

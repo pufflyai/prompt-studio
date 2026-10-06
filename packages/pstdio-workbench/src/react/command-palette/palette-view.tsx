@@ -42,5 +42,5 @@ export const getPalettePlaceholder = (input: { view: WorkbenchCommandPaletteView
   if (isThemePaletteView(input.view)) return "Search themes";
   if (input.mode === COMMAND_MODE_ID) return "Run command";
 
-  return "Search resources";
+  return "Search, or type > to run a command";
 };

@@ -43,7 +43,7 @@
       "noDescription": "未提供描述。",
       "scope": {
         "repo": "repo",
-        "global": "global"
+        "global": "共享"
       },
       "status": {
         "error": "加载失败"
@@ -135,7 +135,8 @@
           "themes": "主题",
           "navigationItems": "导航项",
           "commandPaletteResources": "命令面板资源"
-        }
+        },
+        "deleteHintShared": "删除此扩展的文件。它将从所有使用它的项目中移除。"
       },
       "toggleAriaLabel": "切换 {{name}}",
       "toggleErrorTitle": "更新扩展失败",
@@ -147,8 +148,10 @@
         "headline": "删除扩展？",
         "notification": "这将删除\"{{name}}\"的扩展文件并将其从项目中移除。其存储的数据会保留，重新安装后可恢复。",
         "deleteDataLabel": "同时删除此扩展的数据（无法撤销）",
-        "button": "删除"
-      }
+        "button": "删除",
+        "notificationShared": "这将删除\"{{name}}\"的扩展文件并将其从所有使用它的项目中移除。其存储的数据会保留，重新安装后可恢复。"
+      },
+      "enabledInProject": "在此项目中启用"
     }
   },
   "list": {

@@ -4,6 +4,7 @@ import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
 import { StartWidget } from "./components/start-widget";
+import { registerToolResources } from "./tool-resources";
 
 const registerStartWidget = (ctx: WorkbenchModuleContext) => {
   ctx.views.registerView(
@@ -43,6 +44,6 @@ export const createStartModule = () =>
           if (pageId === dashboardViews.start.id) setDashboardSidenavSelection(ctx, undefined);
         },
       );
-      return { dispose: unsubscribe };
+      return [{ dispose: unsubscribe }, ...registerToolResources(ctx)];
     },
   }) satisfies WorkbenchModuleContribution;

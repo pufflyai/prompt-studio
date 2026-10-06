@@ -7,7 +7,7 @@ import {
   expectResourceMenuItems as expectMenuItems,
   prepareResourceActionsDashboard as prepareDashboard,
 } from "./helpers/resource-actions";
-import { openProjectHome, showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
+import { getSidenavEntry, openProjectHome } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
@@ -41,7 +41,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
       }),
     ).toBeVisible();
     await openProjectHome(page, "Resource Actions");
-    const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
+    const workspacesNavigation = await getSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
     const ticketsNavigation = sidenav.getByRole("option", { name: "Tickets", exact: true }).first();
     await expect(ticketsNavigation).toBeVisible();

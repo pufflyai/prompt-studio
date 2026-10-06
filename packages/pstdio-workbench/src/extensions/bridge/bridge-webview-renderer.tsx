@@ -1,16 +1,12 @@
 import type { HostCapabilityRegistry, ThemePreference } from "pstdio-extensions/bridge/contract";
-import {
-  createHostEventPublisher,
-  createWebviewDiagnostics,
-  ExtensionFrame,
-  type HostEventPublisher,
-} from "pstdio-extensions/bridge/host";
+import { createHostEventPublisher, type HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type {
   WorkbenchCore,
   WorkbenchPanelInstance,
   WorkbenchPanelRenderInput,
   WorkbenchRendererRegistration,
 } from "../../core";
+import { BridgeWebviewFrame } from "./bridge-webview-frame";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 export interface BridgeWebviewRenderContext {
@@ -97,7 +93,7 @@ export const renderBridgeWebviewFrame = (input: {
     webview,
   } = input;
   return (
-    <ExtensionFrame
+    <BridgeWebviewFrame
       view={{
         extensionId: ownerId ?? "workbench",
         id: context.webviewId,
@@ -113,7 +109,6 @@ export const renderBridgeWebviewFrame = (input: {
       theme={createTheme(context)}
       capabilities={createHostCapabilities(context)}
       hostEvents={context.hostEvents}
-      {...createWebviewDiagnostics({ extensionId: ownerId ?? "workbench", id: context.webviewId })}
     />
   );
 };

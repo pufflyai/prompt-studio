@@ -79,5 +79,11 @@
       "title": "{{name}} は一時停止中です",
       "body": "パフォーマンスモニターから一時停止されました。再開するまでビューはアンロードされたままです。"
     }
+  },
+  "appearance": {
+    "title": "外観",
+    "description": "Prompt Studio の見た目を選びます。Alt+Shift+T でもテーマを変更できます。",
+    "theme": "テーマ",
+    "themeHelper": "すべてのプロジェクトに適用されます。"
   }
 }

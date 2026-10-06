@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, workbenchCommandPaletteMenuPath } from "../../core";
 import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
-import { createWorkbenchThemePreferencePaletteEntries, getThemePreferenceEntryIndex } from "./theme-palette";
+import { createWorkbenchThemePreferencePaletteEntries, getThemePaletteEntryIndex } from "./theme-palette";
 
 describe("createWorkbenchCommandPaletteEntries", () => {
   test("keeps command palette groups contiguous and orders actions inside each group", () => {
@@ -103,7 +103,7 @@ describe("createWorkbenchThemePreferencePaletteEntries", () => {
       { id: "lab.monokai", title: "Monokai", mode: "dark" },
     ] as const;
     const entries = createWorkbenchThemePreferencePaletteEntries({
-      themePreference: "lab.monokai",
+      chosenThemePreference: "lab.monokai",
       themePreferences,
       setThemePreference: (themePreference) => selectedThemes.push(themePreference),
       onClose: () => (closed = true),
@@ -117,7 +117,22 @@ describe("createWorkbenchThemePreferencePaletteEntries", () => {
     entries.find((entry) => entry.themePreference === "pstdio-light")?.onActivate();
     expect(selectedThemes).toEqual(["pstdio-light"]);
     expect(closed).toBe(true);
-    expect(getThemePreferenceEntryIndex("missing", themePreferences)).toBe(0);
+    expect(getThemePaletteEntryIndex(entries, "missing")).toBe(0);
+  });
+
+  test("finds the chosen theme in the sorted picker order", () => {
+    const entries = createWorkbenchThemePreferencePaletteEntries({
+      chosenThemePreference: "pstdio-light",
+      themePreferences: [
+        { id: "pstdio-light", mode: "light" },
+        { id: "pstdio-dark", mode: "dark" },
+        { id: "lab.paper", title: "Paper", mode: "light" },
+      ],
+      setThemePreference: () => undefined,
+      onClose: () => undefined,
+    });
+
+    expect(entries[getThemePaletteEntryIndex(entries, "pstdio-light")]?.themePreference).toBe("pstdio-light");
   });
 });
 describe("createWorkbenchResourcePaletteEntries", () => {

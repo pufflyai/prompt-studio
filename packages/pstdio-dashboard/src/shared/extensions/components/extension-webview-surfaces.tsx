@@ -64,7 +64,6 @@ export const StaticWebviewSurface = (props: {
       <iframe
         title={title}
         allow={extensionIframeAllow(webview.capabilities)}
-        allowFullScreen
         src={src}
         sandbox={sandbox}
         width="100%"
