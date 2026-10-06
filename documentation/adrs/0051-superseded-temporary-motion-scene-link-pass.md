@@ -4,7 +4,7 @@ Proposed: 2026-09-30
 
 ## Status
 
-Accepted in PS-457.
+SUPERSEDED. Scenes no longer need export discovery on the server. The compiler marks shared imports with a `motion-lab-shared:` placeholder, and the preview links them to the library modules it already loaded. The link pass and export discovery are removed. Discovery also failed for good in a long-running host when a package lookup failed once, because Bun keeps failed lookups for the life of the process.
 
 ## Intended design
 

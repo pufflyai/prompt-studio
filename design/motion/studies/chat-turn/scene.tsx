@@ -1,72 +1,59 @@
-import { Box, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Stack } from "@chakra-ui/react";
 import type { SceneProps } from "motion-lab/kit";
-import { Activity, Composer, Message, reveal, SessionWindow, ToolTimeline, timings } from "motion-lab/kit";
+import { Composer, duration, Message, progress, reveal, SessionWindow, timings } from "motion-lab/kit";
+import { ComposerEdge, TurnStatus } from "./turn-status";
+
+const answer =
+  "I’ll build the motion examples in design/motion and make them available in the Motion Lab extension. Each example will use the same visual language as Prompt Studio.";
+const words = answer.match(/\S+\s*/g) ?? [];
+const send = 1;
+const wait = 1.3;
+const firstResponse = 3;
+const complete = 9;
+const wordsPerSecond = 7;
+
+// Words appear in reading order and fade in briefly, so lines grow without characters flickering.
+const StreamedReply = (props: SceneProps) => {
+  const { time } = props;
+  const fade = duration(props, timings.textChunk);
+  return words.map((word, index) => {
+    const at = firstResponse + index / wordsPerSecond;
+    if (time < at) return null;
+    return (
+      <Box as="span" key={index} opacity={progress(time, at, fade)}>
+        {word}
+      </Box>
+    );
+  });
+};
 
 export const ChatTurn = (props: SceneProps) => {
-  const { time } = props;
-  const answer =
-    "I’ll build the motion examples in design/motion and make them available in the Motion Lab extension. Each example will use the same visual language as Prompt Studio.";
-  const text = answer.slice(0, Math.max(0, Math.floor((time - 3) * 38)));
+  const { time, variant } = props;
+  // Only the rise style moves messages; the others fade in place.
+  const rise = variant.values.turn === "rise" ? 4 : 0;
   return (
     <SessionWindow>
       <Flex direction="column" h="full" minH="0" gap="0">
-        <Stack flex="1" minH="0" overflow="hidden" p="sm" gap="sm">
+        <Stack flex="1" minH="0" overflow="hidden" p="sm" gap="0">
           <Message>We can explore the chat and workbench together.</Message>
-          <Box {...reveal(props, 1, timings.message, 4)}>
+          <Box {...reveal(props, send, timings.message, rise)}>
             <Message user>Build a set of motion studies for Prompt Studio.</Message>
           </Box>
-          <Box {...reveal(props, 3, timings.firstResponse)}>
-            <Message>{text}</Message>
-          </Box>
-        </Stack>
-        <Box h="16" flexShrink="0" position="relative">
-          <Box position="absolute" inset="0">
-            <Activity {...props} start={1.3} elapsedFrom={1} end={9} />
-          </Box>
-        </Box>
-        <Composer working={time >= 1 && time < 9} />
-      </Flex>
-    </SessionWindow>
-  );
-};
-export const Loaders = (props: SceneProps) => {
-  const { time } = props;
-  const active = (time >= 1 && time < 1.2) || (time >= 2 && time < 7) || (time >= 8.5 && time < 12);
-  return (
-    <SessionWindow>
-      <Flex direction="column" h="full" minH="0" gap="0">
-        <Stack flex="1" minH="0" overflow="hidden" p="sm" gap="sm">
-          <Message user>Check the motion studies and describe the changes.</Message>
-          <Box {...reveal(props, 1.2, timings.firstResponse)}>
-            <Message>I’ll inspect the study files, then compare the rendered frames.</Message>
-          </Box>
-          <Box {...reveal(props, 2, timings.message)}>
-            <ToolTimeline {...props} expand={3} finish={6} />
-          </Box>
-          {time >= 7 && time < 8.5 && (
-            <Text textStyle="label/XS/regular" color="fg.muted">
-              Stopped
-            </Text>
-          )}
-          <Box {...reveal(props, 8.5, timings.message, 4)}>
-            <Message user>Continue with the visual review.</Message>
-          </Box>
-          <Box {...reveal(props, 12, timings.firstResponse)}>
-            <Message>The tool rows and workspace controls now follow the current app layout.</Message>
-          </Box>
-        </Stack>
-        <Box h="16" position="relative" flexShrink="0">
-          {[
-            { start: 1, end: 1.2 },
-            { start: 2, end: 7 },
-            { start: 8.5, end: 12 },
-          ].map((turn) => (
-            <Box position="absolute" inset="0" key={turn.start}>
-              <Activity {...props} {...turn} />
+          {time >= firstResponse && (
+            <Box {...reveal(props, firstResponse, timings.firstResponse, rise / 2)}>
+              <Message>
+                <StreamedReply {...props} />
+              </Message>
             </Box>
-          ))}
+          )}
+        </Stack>
+        <Box position="relative" flexShrink="0">
+          <Composer
+            working={time >= send && time < complete}
+            status={<TurnStatus {...props} start={wait} end={complete} elapsedFrom={send} />}
+          />
+          {variant.values.turn === "edge" && <ComposerEdge {...props} start={wait} end={complete} />}
         </Box>
-        <Composer working={active} />
       </Flex>
     </SessionWindow>
   );

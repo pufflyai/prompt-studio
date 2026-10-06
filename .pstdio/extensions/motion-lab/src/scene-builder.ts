@@ -1,16 +1,6 @@
 import { posix } from "node:path";
-import { linkSharedImports } from "./shared-imports";
+import { sharedImportPrefix, sharedSpecifiers } from "./shared-modules";
 
-export const sharedSpecifiers = [
-  "react",
-  "react/jsx-runtime",
-  "remotion",
-  "@chakra-ui/react",
-  "@pstdio/ui",
-  "@pstdio/ui/chat-ui",
-  "lucide-react",
-  "motion-lab/kit",
-];
 export interface BuildError {
   message: string;
   file?: string;
@@ -20,7 +10,7 @@ export interface BuildError {
 
 export const buildScene = async (files: Record<string, string>) => {
   try {
-    let result = await Bun.build({
+    const result = await Bun.build({
       entrypoints: ["./scene.tsx"],
       throw: false,
       jsx: { development: false },
@@ -31,7 +21,8 @@ export const buildScene = async (files: Record<string, string>) => {
           name: "motion-study",
           setup(build) {
             build.onResolve({ filter: /.*/ }, (args) => {
-              if (sharedSpecifiers.includes(args.path)) return { path: args.path, external: true };
+              if ((sharedSpecifiers as readonly string[]).includes(args.path))
+                return { path: `${sharedImportPrefix}${args.path}`, external: true };
               if (!args.path.startsWith(".")) throw new Error(`"${args.path}" is not available to Motion Lab scenes`);
               const path = posix.normalize(posix.join(posix.dirname(args.importer || "scene.tsx"), args.path));
               if (path.startsWith("../")) throw new Error("Scene imports must stay inside the study folder");
@@ -49,7 +40,6 @@ export const buildScene = async (files: Record<string, string>) => {
         },
       ],
     });
-    if (result.success) result = await linkSharedImports(await result.outputs[0].text());
     if (!result.success) {
       const log = result.logs.find((item) => item.level === "error")!;
       return {

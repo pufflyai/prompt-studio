@@ -50,7 +50,8 @@
     "workbench-fixture",
     "motion-lab",
     "social-radar",
-    "pstdio-shader-lab"
+    "pstdio-shader-lab",
+    "shape-art"
   ],
   "privatePackages": {
     "version": true,

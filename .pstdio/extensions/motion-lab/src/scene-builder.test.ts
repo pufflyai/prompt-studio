@@ -1,24 +1,17 @@
 import { expect, test } from "bun:test";
-import { copyFile, cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildScene } from "./scene-builder";
 
-test("builds React scenes without resolving unused shared libraries", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "motion-scene-react-"));
+test("builds scenes that use shared libraries without reading installed packages", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "motion-scene-"));
   try {
-    for (const name of ["scene-builder.ts", "shared-exports.ts", "shared-imports.ts"]) {
-      await copyFile(new URL(`./${name}`, import.meta.url), join(cwd, name));
-    }
-    await cp(fileURLToPath(new URL(".", import.meta.resolve("react"))), join(cwd, "node_modules/react"), {
-      recursive: true,
-    });
+    await cp(fileURLToPath(new URL(".", import.meta.url)), cwd, { recursive: true });
     const files = {
-      "scene.tsx": 'export { default } from "./content";',
-      "content.tsx":
-        'import {useState} from "react"; export default function Scene(){ return <div>{useState("Ready")[0]}</div> }',
-      "unused.tsx": 'import {AbsoluteFill} from "remotion"; export default AbsoluteFill;',
+      "scene.tsx":
+        'import { Box } from "@chakra-ui/react"; import { AbsoluteFill } from "remotion"; import { WorkbenchFrame } from "motion-lab/kit"; export default function Scene(){ return <AbsoluteFill><WorkbenchFrame><Box>Ready</Box></WorkbenchFrame></AbsoluteFill> }',
     };
     const child = Bun.spawn(
       [
@@ -48,7 +41,7 @@ test("builds a scene against shared React and bundles local helpers", async () =
   });
   expect(result).toHaveProperty("code");
   if ("code" in result) {
-    expect(result.code).toContain("__motionLabShared");
+    expect(result.code).toContain('"motion-lab-shared:react"');
     expect(result.code).toContain("Ready");
     expect(result.code).not.toContain("react.development");
   }
@@ -60,7 +53,7 @@ test("builds a scene using a shared browser library from a local helper", async 
     "content.tsx":
       'import {AbsoluteFill} from "remotion"; export function Scene(){ return <AbsoluteFill>Ready</AbsoluteFill> }',
   });
-  expect(result).toMatchObject({ code: expect.stringContaining('__motionLabShared["remotion"]') });
+  expect(result).toMatchObject({ code: expect.stringContaining('"motion-lab-shared:remotion"') });
 });
 
 test.each([

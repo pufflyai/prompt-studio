@@ -62,22 +62,46 @@ export const Message = (props: { children: ReactNode; user?: boolean }) => {
     </ChatMessage.Root>
   );
 };
-export const Composer = (props: { working?: boolean; text?: string; queue?: ReactNode; hasQueue?: boolean }) => {
-  const { working = false, text = "Ask a follow-up…", queue, hasQueue = false } = props;
+interface ComposerProps {
+  working?: boolean;
+  text?: string;
+  queue?: ReactNode;
+  hasQueue?: boolean;
+  /** Turn activity shown beside the workspace name. */
+  status?: ReactNode;
+}
+// The workspace is fixed for the conversation, so its name is a label, not a selector.
+// Diff counts sit with the open action on the right, leaving the left side for activity.
+export const Composer = (props: ComposerProps) => {
+  const { working = false, text = "Ask a follow-up…", queue, hasQueue = false, status } = props;
   return (
     <Stack px="2xs" pb="2xs" gap="2xs" flexShrink="0">
       <Stack gap="2xs" p="2xs" borderWidth="1px" borderColor="border" borderRadius="sm" bg="bg.subtle">
         <ChatWorkspaceHub
-          additions={24}
-          deletions={3}
+          additions={0}
+          deletions={0}
           workspaceControl={
-            <HStack gap="xs">
-              <GitBranch size={14} />
-              <Text textStyle="label/XS/regular">motion-studies</Text>
-              <ChevronDown size={12} />
+            <HStack gap="sm" minW="0">
+              <HStack gap="xs">
+                <GitBranch size={14} />
+                <Text textStyle="label/XS/regular">motion-studies</Text>
+              </HStack>
+              {status}
             </HStack>
           }
-          action={<ArrowUpRight size={14} />}
+          action={
+            <HStack gap="sm">
+              <HStack gap="2xs">
+                <Text textStyle="label/XS/medium" color="fg.success">
+                  +24
+                </Text>
+                <Text textStyle="label/XS/medium" color="fg.error">
+                  −3
+                </Text>
+              </HStack>
+              <ArrowUpRight size={14} />
+            </HStack>
+          }
         />
         {queue}
         <ChatInput
