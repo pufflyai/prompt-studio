@@ -173,6 +173,7 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0022 — Workspace Diff Presentation](../references/architecture/0022-workspace-diff-presentation.md)
 - [0023 — Worktrees and Git operations](../references/architecture/0023-worktrees.md)
 - [0024 — Extension API version checks](../references/architecture/0024-extension-api-version-checks.md)
+- [0025 — Database upgrades](../references/architecture/0025-database-upgrades.md)
 
 ### CLI
 
