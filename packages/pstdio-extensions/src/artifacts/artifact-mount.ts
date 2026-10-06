@@ -132,6 +132,20 @@ export const createFileMount = (mountRoot: string, signal?: AbortSignal): Artifa
 
 let syncTmpCounter = 0;
 
+// Two syncs of one folder at once race on creating new folders and, on Windows, on renaming over
+// the same file. Syncs of the same folder in this process run one after another.
+const pendingSyncs = new Map<string, Promise<void>>();
+
+const runAfterPendingSync = (key: string, sync: () => Promise<void>) => {
+  const next = (pendingSyncs.get(key) ?? Promise.resolve()).catch(() => {}).then(sync);
+  pendingSyncs.set(key, next);
+  const forget = () => {
+    if (pendingSyncs.get(key) === next) pendingSyncs.delete(key);
+  };
+  void next.then(forget, forget);
+  return next;
+};
+
 type WorkspaceSyncState = {
   version: 1;
   dir: string;
@@ -169,7 +183,7 @@ export const createWorkspaceFilesMount = (
 ): WorkspaceFilesMount & WorkspaceFileAccess => {
   const { mount, safeRoot } = createFileMountState(mountRoot, options.signal);
 
-  const syncDir: WorkspaceFilesMount["syncDir"] = async (dir, files) => {
+  const writeSyncedDir: WorkspaceFilesMount["syncDir"] = async (dir, files) => {
     if (!options.syncStateRoot) throw new Error("Workspace sync state root is required");
 
     const dirRel = normalizeMountRelativePath(dir);
@@ -202,6 +216,9 @@ export const createWorkspaceFilesMount = (
     const state: WorkspaceSyncState = { version: 1, dir: dirRel, files: [...wanted.keys()].sort() };
     await stateMount.writeText(stateFile, `${JSON.stringify(state)}\n`);
   };
+
+  const syncDir: WorkspaceFilesMount["syncDir"] = (dir, files) =>
+    runAfterPendingSync(resolve(mountRoot, normalizeMountRelativePath(dir)), () => writeSyncedDir(dir, files));
 
   return { ...mount, ...createWorkspaceFileAccess(safeRoot), syncDir };
 };

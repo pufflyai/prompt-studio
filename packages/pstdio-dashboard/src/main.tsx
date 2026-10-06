@@ -1,10 +1,12 @@
 import "@pstdio/ui/style.css";
 
+import { PstdioApiError } from "@pstdio/sdk/client";
 import { HostStorageProvider } from "@pstdio/ui";
-import { Workbench } from "@pstdio/workbench/react";
+import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { apiRequest } from "@/lib/api";
 import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
@@ -16,11 +18,35 @@ import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appe
 import { DesktopProjectTabs } from "@/modules/projects/components/desktop-project-tabs";
 import { openDashboardSidePanel } from "@/modules/sessions/bubble/open-side-panel";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
+import { BrowserSignInRequired } from "@/shared/components/browser-sign-in-required";
 
 import { createDashboardWorkbench } from "./workbench";
 import "./i18n";
 
+// A runtime accepts a browser only with the session that `pst` or the desktop app gives it.
+// A server without auth has no runtime routes and answers 404.
+const isBrowserSignedOut = async () => {
+  try {
+    await apiRequest("/runtime/ready", { allowNotFound: true });
+    return false;
+  } catch (error) {
+    return error instanceof PstdioApiError && error.status === 401;
+  }
+};
+
 const renderDashboard = async () => {
+  const root = createRoot(document.getElementById("root")!);
+  if (await isBrowserSignedOut()) {
+    root.render(
+      <StrictMode>
+        <WorkbenchThemeProvider>
+          <BrowserSignInRequired />
+        </WorkbenchThemeProvider>
+      </StrictMode>,
+    );
+    return;
+  }
+
   const storage = await createDesktopWorkbenchStorage(window.promptStudioDesktop);
   const projectTabs = await createDesktopProjectTabs(window.promptStudioDesktop);
   const desktopLifecycle = resolveDesktopLifecycleBridge(window.promptStudioDesktop);
@@ -35,7 +61,6 @@ const renderDashboard = async () => {
   (window as unknown as Record<string, unknown>).__pstdioDashboardWorkbench = dashboardWorkbench;
   const renderParamField = createDashboardParamFieldRenderer(dashboardWorkbench);
 
-  const root = createRoot(document.getElementById("root")!);
   window.addEventListener("pagehide", (event) => {
     if (event.persisted) return;
     root.unmount();

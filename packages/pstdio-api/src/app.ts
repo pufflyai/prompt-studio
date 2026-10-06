@@ -20,6 +20,7 @@ import { createExtensionSettingsService } from "./features/extensions/extension-
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
+import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
@@ -43,6 +44,7 @@ export const apiWebSocket = websocket;
 export type { AppConfig, ExtensionRelease } from "./app-config";
 export { resolveAppConfig } from "./app-config";
 export type { AppDependencies, AppHost, AppLifecycle, CreateAppInput } from "./app-contracts";
+export { closeBeforeFatalExit } from "./app-runtime";
 
 const createCoreDomainServices = (input: {
   db: Parameters<typeof createAppDatabaseServices>[0];
@@ -90,19 +92,20 @@ const createAppAutomationService = async (input: {
   return service;
 };
 
-const appHostSecurity = (host: CreateAppInput["host"]) =>
-  host.kind === "runtime"
-    ? { runtimeHost: host.runtime, securityToken: host.runtime.token }
-    : { runtimeHost: undefined, securityToken: host.token };
-
-const apiSecurity = (token: string | undefined, runtimeHost: ReturnType<typeof appHostSecurity>["runtimeHost"]) => {
-  if (!token) return undefined;
-  return runtimeHost ? { token, origin: runtimeHost.origin } : { token };
+// A runtime accepts its token as a bearer and its own browser session as an exact-origin cookie.
+const apiSecurity = (host: CreateAppInput["host"], runtime: RuntimeRouteDeps | undefined) => {
+  if (runtime)
+    return { token: runtime.host.token, origin: runtime.host.origin, browserSessions: runtime.browserSessions };
+  return host.kind === "standalone" && host.token ? { token: host.token } : undefined;
 };
 
-export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
-  const { db, close: closeDb } = await openAppDatabase(input.config.database.path, input.lifecycle);
-  const { runtimeHost, securityToken } = appHostSecurity(input.host);
+const buildApp = async (
+  input: CreateAppInput,
+  dependencies: AppDependencies,
+  database: Awaited<ReturnType<typeof openAppDatabase>>,
+) => {
+  const { db, close: closeDb } = database;
+  const runtimeHost = input.host.kind === "runtime" ? input.host.runtime : undefined;
   const app = new OpenAPIHono<AppBindings>();
 
   const storageRoot = input.config.storage.root;
@@ -299,7 +302,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
 
   registerApi(app, deps, {
-    security: apiSecurity(securityToken, runtimeHost),
+    security: apiSecurity(input.host, runtimeDeps),
     terminalOrigins: input.config.transport.terminalOrigins,
   });
 
@@ -314,4 +317,15 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     closeDb,
   });
   return { app, close, deps, eventBus };
+};
+
+export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
+  const database = await openAppDatabase(input.config.database.path, input.lifecycle);
+  try {
+    return await buildApp(input, dependencies, database);
+  } catch (error) {
+    // Nothing else owns the database until startup returns its close function.
+    await database.close();
+    throw error;
+  }
 };

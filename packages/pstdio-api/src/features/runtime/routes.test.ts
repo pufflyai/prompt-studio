@@ -3,6 +3,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import { createTerminalSupervisor } from "../extensions/extension-terminal-runtime";
 import { createRuntimeRoutes, type RuntimeActivitySummary, type RuntimeHost } from "./routes";
+import { createBrowserSessions } from "./runtime-auth";
 
 const emptyActivity = (): RuntimeActivitySummary => ({ jobs: [], sessions: [], terminals: [] });
 
@@ -33,6 +34,7 @@ const createHarness = (input: { activity?: RuntimeActivitySummary | (() => Runti
   };
   const deps = {
     host,
+    browserSessions: createBrowserSessions(),
     activity: async () =>
       typeof input.activity === "function" ? input.activity() : (input.activity ?? emptyActivity()),
     cancelActivity: async () => {

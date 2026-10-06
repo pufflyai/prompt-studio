@@ -1,10 +1,15 @@
-import { timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 
 export const RUNTIME_AUTH_COOKIE = "pstdio_runtime_session";
+
+const LOGIN_CODE_TTL_MS = 60_000;
+
+export type BrowserSessions = ReturnType<typeof createBrowserSessions>;
 
 export type RuntimeSecurity = {
   token: string;
   origin?: () => string | null;
+  browserSessions?: BrowserSessions;
 };
 
 const tokenMatches = (candidate: string | undefined, expected: string) => {
@@ -31,6 +36,37 @@ const cookieToken = (request: Request, cookieName: string) => {
   return undefined;
 };
 
+const randomSecret = () => randomBytes(32).toString("base64url");
+
+const runtimeSessionCookie = (secret: string) =>
+  `${RUNTIME_AUTH_COOKIE}=${encodeURIComponent(secret)}; Path=/; HttpOnly; SameSite=Strict`;
+
+// The browser cookie has its own secret, never the runtime token, so a cookie sent to another
+// local server grants no bearer access (ADR 0054). Only bearer holders can give a browser this
+// cookie: directly, or through a single-use login code that the browser redeems.
+export const createBrowserSessions = (now = Date.now) => {
+  const secret = randomSecret();
+  const loginCodes = new Map<string, number>();
+
+  return {
+    cookie: () => runtimeSessionCookie(secret),
+    matches: (candidate: string | undefined) => tokenMatches(candidate, secret),
+    createLoginCode: () => {
+      for (const [code, expiresAt] of loginCodes) {
+        if (expiresAt <= now()) loginCodes.delete(code);
+      }
+      const code = randomSecret();
+      loginCodes.set(code, now() + LOGIN_CODE_TTL_MS);
+      return code;
+    },
+    redeemLoginCode: (code: string) => {
+      const expiresAt = loginCodes.get(code);
+      loginCodes.delete(code);
+      return expiresAt !== undefined && expiresAt > now();
+    },
+  };
+};
+
 export const runtimeOrigin = (security: RuntimeSecurity) => security.origin?.() ?? null;
 
 export const isRuntimeOriginAllowed = (request: Request, security: RuntimeSecurity) => {
@@ -48,8 +84,5 @@ export const isRuntimeRequestAuthorized = (request: Request, security: RuntimeSe
 
   const expectedOrigin = runtimeOrigin(security);
   if (!expectedOrigin || new URL(request.url).origin !== expectedOrigin) return false;
-  return tokenMatches(cookieToken(request, RUNTIME_AUTH_COOKIE), security.token);
+  return security.browserSessions?.matches(cookieToken(request, RUNTIME_AUTH_COOKIE)) ?? false;
 };
-
-export const runtimeSessionCookie = (token: string) =>
-  `${RUNTIME_AUTH_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict`;

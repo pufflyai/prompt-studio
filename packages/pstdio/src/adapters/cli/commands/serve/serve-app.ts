@@ -1,6 +1,6 @@
-import { apiWebSocket, createApp, resolveAppConfig } from "pstdio-api/app";
+import { apiWebSocket, closeBeforeFatalExit, createApp, resolveAppConfig } from "pstdio-api/app";
 import { disableExtensionMutationTimeout } from "pstdio-api/extensions/extension-request-timeout";
-import { type RuntimeHost, type RuntimeOwnerType, runtimeSessionCookie } from "pstdio-api/runtime";
+import type { RuntimeHost, RuntimeOwnerType } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { injectConfig } from "../../dashboard/serve-dashboard";
@@ -39,6 +39,7 @@ type ServeAppDeps = {
   onFatal: (event: "uncaughtException" | "unhandledRejection", listener: (error: unknown) => void) => void;
   offFatal: (event: "uncaughtException" | "unhandledRejection", listener: (error: unknown) => void) => void;
   exit: (code?: number) => never;
+  fatalCloseTimeoutMs?: number;
 };
 
 let serveLogger: ReturnType<typeof createLogger> | null = null;
@@ -98,27 +99,24 @@ const defaultDeps: ServeAppDeps = {
 const isApiPath = (pathname: string) =>
   pathname.startsWith("/v1") || pathname.startsWith("/runtime/") || pathname === "/healthz" || pathname === "/readyz";
 
+// Page loads never sign a browser in: anything that can reach the port could load a page. Browsers
+// get their session from `pst` or the desktop shell, which hold the runtime token (ADR 0054).
 const createRequestHandler = (
   appReady: Promise<AppHandle>,
   assets: Map<string, Blob>,
   deps: Pick<ServeAppDeps, "injectConfig" | "resolveMimeType">,
-  runtimeHost: RuntimeHost | undefined,
 ) => {
-  const serveHtml = (request: Request, blob: Blob) =>
-    blob.text().then((html) => {
-      const injected = deps.injectConfig(html, { version: CLI_VERSION });
-      const headers = new Headers({ "Content-Type": "text/html" });
-      if (runtimeHost?.origin() === new URL(request.url).origin) {
-        headers.append("set-cookie", runtimeSessionCookie(runtimeHost.token));
-      }
-      return new Response(injected, { headers });
-    });
+  const serveHtml = (blob: Blob) =>
+    blob
+      .text()
+      .then(
+        (html) =>
+          new Response(deps.injectConfig(html, { version: CLI_VERSION }), { headers: { "Content-Type": "text/html" } }),
+      );
 
-  const serveAsset = (request: Request, assetPath: string, blob: Blob) => {
+  const serveAsset = (assetPath: string, blob: Blob) => {
     const mimeType = deps.resolveMimeType(assetPath);
-    return mimeType === "text/html"
-      ? serveHtml(request, blob)
-      : new Response(blob, { headers: { "Content-Type": mimeType } });
+    return mimeType === "text/html" ? serveHtml(blob) : new Response(blob, { headers: { "Content-Type": mimeType } });
   };
 
   return async (request: Request, server: object) => {
@@ -131,10 +129,10 @@ const createRequestHandler = (
     // Mapping root to index.html prevents browsers downloading it as application/octet-stream.
     const assetPath = pathname === "/" ? "index.html" : pathname.slice(1);
     const asset = assets.get(assetPath);
-    if (asset) return serveAsset(request, assetPath, asset);
+    if (asset) return serveAsset(assetPath, asset);
 
     const index = assets.get("index.html");
-    return index ? serveHtml(request, index) : new Response("Not Found", { status: 404 });
+    return index ? serveHtml(index) : new Response("Not Found", { status: 404 });
   };
 };
 
@@ -171,23 +169,20 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
     let server: ReturnType<typeof Bun.serve> | null = null;
     let runtime: ReturnType<typeof createServeRuntime> = null;
 
-    let closed = false;
-    const closeApp = async () => {
-      if (closed) {
-        return;
-      }
-
-      closed = true;
-      // Bun may keep this promise pending for upgraded browser connections. ADR 0009 keeps this
-      // workaround isolated: start teardown, then release resources and let process exit close sockets.
-      void (server as { stop?: (closeActiveConnections?: boolean) => void | Promise<void> } | null)?.stop?.(true);
-      try {
-        const handle = appHandle ?? (await appReady.promise.catch(() => null));
-        await handle?.close();
-      } finally {
-        runtime?.cleanup();
-      }
-    };
+    // Every caller waits for the same close, so a signal during a fatal close cannot exit early.
+    let closing: Promise<void> | null = null;
+    const closeApp = () =>
+      (closing ??= (async () => {
+        // Bun may keep this promise pending for upgraded browser connections. ADR 0009 keeps this
+        // workaround isolated: start teardown, then release resources and let process exit close sockets.
+        void (server as { stop?: (closeActiveConnections?: boolean) => void | Promise<void> } | null)?.stop?.(true);
+        try {
+          const handle = appHandle ?? (await appReady.promise.catch(() => null));
+          await handle?.close();
+        } finally {
+          runtime?.cleanup();
+        }
+      })());
 
     const removeShutdownListeners = () => {
       deps.offSignal("SIGINT", shutdown);
@@ -204,13 +199,19 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
       });
     };
 
+    let fatalExitStarted = false;
     const fatalShutdown = (error: unknown) => {
-      removeShutdownListeners();
       if (error instanceof Error) deps.reportStartupError(error);
       else deps.reportStartupError(new Error(String(error)));
+      if (fatalExitStarted) return;
 
-      void closeApp();
-      deps.exit(1);
+      fatalExitStarted = true;
+      // The listeners stay until exit: an unhandled error during close would otherwise end the
+      // process while PGlite is still closing.
+      void closeBeforeFatalExit(closeApp, deps.fatalCloseTimeoutMs).then(() => {
+        removeShutdownListeners();
+        deps.exit(1);
+      });
     };
 
     runtime = createServeRuntime(options, async () => {
@@ -232,7 +233,7 @@ export const createServeApp = (overrides: Partial<ServeAppDeps> = {}) => {
         idleTimeout: 20,
         hostname: host,
         port,
-        fetch: createRequestHandler(appReady.promise, assets, deps, runtimeHost),
+        fetch: createRequestHandler(appReady.promise, assets, deps),
         websocket: apiWebSocket,
       });
 

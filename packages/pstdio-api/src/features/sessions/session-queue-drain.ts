@@ -1,3 +1,4 @@
+import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
 import { dispatchQueuedEntry } from "./session-queue-dispatch";
 import { isWorkspaceDispatchPending } from "./session-queue-readiness";
@@ -47,8 +48,16 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
     await dispatchPending().finally(async () => {
       // Failed startups can drain released capacity, so settle outside the scheduling lock.
       const results = await Promise.allSettled(dispatches);
-      const failed = results.find((result) => result.status === "rejected");
-      if (failed) throw failed.reason;
+      // A dispatch failure belongs to its own session. It must not fail the status change or
+      // settings update that started this drain.
+      for (const result of results) {
+        if (result.status === "rejected") {
+          sessionLogger.error(
+            { err: result.reason, event: "session.queue.dispatch_failed" },
+            "Queued session dispatch failed",
+          );
+        }
+      }
     });
   };
 

@@ -4,6 +4,7 @@ import type { RouteDeps } from "./features/deps";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import type { RuntimeHost } from "./features/runtime/routes";
+import { createBrowserSessions } from "./features/runtime/runtime-auth";
 import { watchSessionQueueReadiness } from "./features/sessions/session-queue-readiness";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { apiLogger } from "./lib/logger";
@@ -13,6 +14,21 @@ import type { createSessionService } from "./services/session-service";
 import { runStartupTasks } from "./startup";
 
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
+const FATAL_CLOSE_TIMEOUT_MS = 5_000;
+
+// Exiting while PGlite is open can corrupt its WAL (lessons 0002 and 0011), so a fatal exit waits
+// for close. The deadline keeps a close that hangs from keeping a broken process alive.
+export const closeBeforeFatalExit = async (close: () => Promise<void>, timeoutMs = FATAL_CLOSE_TIMEOUT_MS) => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, timeoutMs);
+  });
+  const closing = close().catch((err) =>
+    apiLogger.error({ err, event: "api.fatal_close.error" }, "API failed to close before a fatal exit"),
+  );
+  await Promise.race([closing, deadline]);
+  clearTimeout(timer);
+};
 
 export const sessionStatusEventFor = (status: string) => {
   if (status === "awaiting_input") return sessionEvents.awaitingInput;
@@ -50,6 +66,7 @@ export const createRuntimeRouteDeps = (input: {
 
   return {
     host: input.host,
+    browserSessions: createBrowserSessions(),
     activity: async () => ({
       sessions: await activeSessions(),
       terminals: input.terminalSupervisor.activity(),
@@ -104,25 +121,26 @@ const createAppCloser = (input: {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
-      input.startupAbort.abort();
-      const queueStopped = input.sessionQueueLifecycle.close();
-      // A queued startup can need worker disposal to settle. Stop admission first,
-      // then begin cleanup before waiting for those dispatches to finish.
-      const harnessesStopped = input.harnessRegistry.dispose();
-      harnessesStopped.catch(() => {});
-      await input.stopQueueReadiness();
-      await queueStopped;
-      await input.startupDone;
-      await input.getStartupBackgroundDone();
-      clearInterval(input.notificationWakeTimer);
-      input.unsubscribeExtensionEvents();
-      input.extensionRuntime.dispose();
-      await input.extensionScheduler.dispose();
-      await input.automationService.close();
-      await input.terminalSupervisor.dispose();
       try {
+        input.startupAbort.abort();
+        const queueStopped = input.sessionQueueLifecycle.close();
+        // A queued startup can need worker disposal to settle. Stop admission first,
+        // then begin cleanup before waiting for those dispatches to finish.
+        const harnessesStopped = input.harnessRegistry.dispose();
+        harnessesStopped.catch(() => {});
+        await input.stopQueueReadiness();
+        await queueStopped;
+        await input.startupDone;
+        await input.getStartupBackgroundDone();
+        clearInterval(input.notificationWakeTimer);
+        input.unsubscribeExtensionEvents();
+        input.extensionRuntime.dispose();
+        await input.extensionScheduler.dispose();
+        await input.automationService.close();
+        await input.terminalSupervisor.dispose();
         await harnessesStopped;
       } finally {
+        // A part that fails to stop must not leave PGlite open (lessons 0002 and 0011).
         await input.closeDb();
       }
     })();

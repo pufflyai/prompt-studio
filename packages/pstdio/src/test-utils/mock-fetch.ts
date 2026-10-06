@@ -1,12 +1,14 @@
-import { afterEach, mock } from "bun:test";
+import { mock } from "bun:test";
 import { resetApiClient } from "@/features/api-client";
 
 const originalFetch = globalThis.fetch;
 
-afterEach(() => {
+// Bun loads this module once per run, so a hook registered here would only run for the first test
+// file that imports it. Each test file registers this itself with `afterEach(restoreFetch)`.
+export const restoreFetch = () => {
   globalThis.fetch = originalFetch;
   resetApiClient();
-});
+};
 
 const setFetchMock = (fetchMock: typeof fetch) => {
   resetApiClient();

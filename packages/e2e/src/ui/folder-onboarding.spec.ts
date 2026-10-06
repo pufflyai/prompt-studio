@@ -9,6 +9,16 @@ const openPicker = async (page: import("@playwright/test").Page) => {
   await page.getByRole("button", { name: "Create project", exact: true }).click();
   return page.getByRole("dialog").filter({ hasText: "Open project folder" });
 };
+// On an empty host the project chooser may open by itself. Wait for the dashboard to render before
+// checking, or a chooser that opens late would be closed by the Switch project click.
+const openPickerFromStart = async (page: import("@playwright/test").Page) => {
+  const createProject = page.getByRole("button", { name: "Create project", exact: true });
+  const switchProject = page.getByRole("button", { name: "Switch project", exact: true });
+  await expect(createProject.or(switchProject).first()).toBeVisible();
+  if (!(await createProject.isVisible())) await switchProject.click();
+  await createProject.click();
+  return page.getByRole("dialog").filter({ hasText: "Open project folder" });
+};
 const navigate = async (picker: import("@playwright/test").Locator, path: string) => {
   await picker.getByRole("textbox", { name: "Folder path", exact: true }).fill(path);
   await picker.getByRole("textbox", { name: "Folder path", exact: true }).press("Enter");
@@ -23,12 +33,7 @@ test("opens a created Unicode folder, reuses it, and preserves files after delet
   let projectId: string | undefined;
   try {
     await page.goto("/");
-    // The project chooser may already be open on an empty host.
-    if (!(await page.getByRole("button", { name: "Create project", exact: true }).isVisible())) {
-      await page.getByRole("button", { name: "Switch project", exact: true }).click();
-    }
-    await page.getByRole("button", { name: "Create project", exact: true }).click();
-    const picker = page.getByRole("dialog").filter({ hasText: "Open project folder" });
+    const picker = await openPickerFromStart(page);
     await navigate(picker, parent);
     await picker.getByRole("button", { name: "New folder", exact: true }).click();
     await picker.getByRole("textbox", { name: "New folder name" }).fill("123 笔记");
@@ -78,10 +83,7 @@ for (const blocker of ["file", "foreign binding"]) {
     let projectId: string | undefined;
     try {
       await page.goto("/");
-      if (!(await page.getByRole("button", { name: "Create project", exact: true }).isVisible()))
-        await page.getByRole("button", { name: "Switch project", exact: true }).click();
-      await page.getByRole("button", { name: "Create project", exact: true }).click();
-      const picker = page.getByRole("dialog").filter({ hasText: "Open project folder" });
+      const picker = await openPickerFromStart(page);
       await navigate(picker, folder);
       await picker.getByRole("button", { name: "Open folder", exact: true }).click();
       await expect(picker.getByRole("alert")).toBeVisible();
