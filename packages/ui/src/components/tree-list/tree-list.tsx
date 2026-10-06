@@ -59,7 +59,7 @@ interface TreeListProps {
 const VIRTUAL_ROW_ESTIMATE = 32;
 const VIRTUAL_ROW_OVERSCAN = 4;
 
-interface RenderVirtualRowInput {
+interface TreeListRowProps {
   row: VirtualRow;
   expandedNodeIds: string[];
   activeNodeId?: string | string[] | null;
@@ -75,7 +75,7 @@ interface RenderVirtualRowInput {
   onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
 }
 
-const renderVirtualRow = (input: RenderVirtualRowInput) => {
+const TreeListRow = (props: TreeListRowProps) => {
   const {
     row,
     expandedNodeIds,
@@ -90,7 +90,7 @@ const renderVirtualRow = (input: RenderVirtualRowInput) => {
     onToggleNode,
     onSectionContextMenu,
     onMoveNode,
-  } = input;
+  } = props;
 
   if (row.kind === "section-header") {
     return (
@@ -193,21 +193,21 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
             pb={virtualItem.index === rows.length - 1 ? "0" : nodeGap}
             style={{ transform: `translateY(${virtualItem.start}px)` }}
           >
-            {renderVirtualRow({
-              row,
-              expandedNodeIds,
-              activeNodeId,
-              focusRowId: keyboard.focusRowId,
-              rowVariant,
-              nodeGap,
-              linkComponent,
-              onRowFocus: keyboard.onRowFocus,
-              onNavigate,
-              onToggleSection,
-              onToggleNode,
-              onSectionContextMenu,
-              onMoveNode,
-            })}
+            <TreeListRow
+              row={row}
+              expandedNodeIds={expandedNodeIds}
+              activeNodeId={activeNodeId}
+              focusRowId={keyboard.focusRowId}
+              rowVariant={rowVariant}
+              nodeGap={nodeGap}
+              linkComponent={linkComponent}
+              onRowFocus={keyboard.onRowFocus}
+              onNavigate={onNavigate}
+              onToggleSection={onToggleSection}
+              onToggleNode={onToggleNode}
+              onSectionContextMenu={onSectionContextMenu}
+              onMoveNode={onMoveNode}
+            />
           </Box>
         );
       })}
@@ -271,21 +271,21 @@ const StackTreeList = (props: TreeListProps) => {
           >
             {sectionRows.map((row) => (
               <Box key={row.key} w="full" minW="0">
-                {renderVirtualRow({
-                  row,
-                  expandedNodeIds,
-                  activeNodeId,
-                  focusRowId: keyboard.focusRowId,
-                  rowVariant,
-                  nodeGap,
-                  linkComponent,
-                  onRowFocus: keyboard.onRowFocus,
-                  onNavigate,
-                  onToggleSection,
-                  onToggleNode,
-                  onSectionContextMenu,
-                  onMoveNode,
-                })}
+                <TreeListRow
+                  row={row}
+                  expandedNodeIds={expandedNodeIds}
+                  activeNodeId={activeNodeId}
+                  focusRowId={keyboard.focusRowId}
+                  rowVariant={rowVariant}
+                  nodeGap={nodeGap}
+                  linkComponent={linkComponent}
+                  onRowFocus={keyboard.onRowFocus}
+                  onNavigate={onNavigate}
+                  onToggleSection={onToggleSection}
+                  onToggleNode={onToggleNode}
+                  onSectionContextMenu={onSectionContextMenu}
+                  onMoveNode={onMoveNode}
+                />
               </Box>
             ))}
           </Stack>

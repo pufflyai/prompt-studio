@@ -2,6 +2,7 @@ import { DiffEditor, Editor } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import { lazy, Suspense, useEffect, useId, useRef } from "react";
 import type { MonacoThemeData } from "../../theme";
+import psTheme from "../../theme/theme";
 import { useThemePreference } from "../../utils/theme-preference";
 
 export const createCodeEditorPreloader = (initialize: () => Promise<unknown>) => {
@@ -31,14 +32,15 @@ export const customTheme = {
   base: "vs-dark" as const,
   inherit: true,
   rules: [],
+  // Monaco parses color strings itself, so resolve raw token values instead of CSS variables.
   colors: {
-    "editor.background": "#0a0d15",
-    "editor.foreground": "#f5f5f5",
-    "editor.lineHighlightBackground": "#22252C",
-    "editorCursor.foreground": "#A7A7A7",
-    "editorWhitespace.foreground": "#3B3B3B",
-    "editorIndentGuide.background": "#404040",
-    "editorIndentGuide.activeBackground": "#707070",
+    "editor.background": psTheme.token("colors.codeEditor.background"),
+    "editor.foreground": psTheme.token("colors.codeEditor.foreground"),
+    "editor.lineHighlightBackground": psTheme.token("colors.codeEditor.lineHighlightBackground"),
+    "editorCursor.foreground": psTheme.token("colors.codeEditor.cursor"),
+    "editorWhitespace.foreground": psTheme.token("colors.codeEditor.whitespace"),
+    "editorIndentGuide.background": psTheme.token("colors.codeEditor.indentGuide"),
+    "editorIndentGuide.activeBackground": psTheme.token("colors.codeEditor.indentGuideActive"),
   },
 } satisfies MonacoThemeData;
 

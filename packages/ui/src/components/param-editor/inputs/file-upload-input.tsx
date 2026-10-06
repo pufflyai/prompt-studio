@@ -19,6 +19,8 @@ interface FileUploadInputProps {
   presentation?: "stacked" | "horizontal";
 }
 
+const statusIcons = { queued: Clock3, complete: CircleCheck, error: CircleAlert };
+
 const UploadStatus = (props: { values: FileUploadValue[] }) => {
   const { values } = props;
   const summary = getFileUploadSummary(values);
@@ -36,10 +38,7 @@ const UploadStatus = (props: { values: FileUploadValue[] }) => {
     summary.state === "uploading" ? (
       <Spinner boxSize="12px" borderWidth="1px" />
     ) : (
-      <Icon
-        as={summary.state === "error" ? CircleAlert : summary.state === "complete" ? CircleCheck : Clock3}
-        boxSize="12px"
-      />
+      <Icon as={statusIcons[summary.state]} boxSize="12px" />
     );
 
   return (

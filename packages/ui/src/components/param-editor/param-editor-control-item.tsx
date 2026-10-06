@@ -30,7 +30,8 @@ export const ParamEditorControlItem = (props: ParamEditorControlItemProps) => {
   } = props;
 
   const label = hideLabel || !name ? null : <ParamEditorFieldLabel name={name} description={description} />;
-  const resolved = orientation === "auto" ? (fullWidth ? "stacked" : "inline") : orientation;
+  const autoOrientation = fullWidth ? "stacked" : "inline";
+  const resolved = orientation === "auto" ? autoOrientation : orientation;
 
   if (resolved === "stacked") {
     const header = label || labelTrailing;

@@ -56,11 +56,10 @@ const ownerFor = (context: ExtensionSettingsContext, definition: ExtensionSettin
 const toValueRecord = (
   definition: ExtensionSettingDefinitionRecord,
   stored: { value_json: unknown } | null,
-): ExtensionSettingValueRecord => ({
-  ...definition,
-  source: stored ? "stored" : "default",
-  value: stored ? stored.value_json : hasOwn(definition, "default") ? definition.default : undefined,
-});
+): ExtensionSettingValueRecord => {
+  if (stored) return { ...definition, source: "stored", value: stored.value_json };
+  return { ...definition, source: "default", value: hasOwn(definition, "default") ? definition.default : undefined };
+};
 
 export const createExtensionSettingsService = (deps: ExtensionSettingsServiceDeps) => {
   const definitionFor = (context: ExtensionSettingsContext, key: string) => {

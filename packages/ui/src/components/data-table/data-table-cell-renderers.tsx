@@ -43,7 +43,7 @@ export const SelectionHeader = (props: HeaderContext<RowData, unknown>) => {
 
   return (
     <Checkbox
-      checked={checked ? true : isIndeterminate ? "indeterminate" : false}
+      checked={isIndeterminate ? "indeterminate" : checked}
       aria-label="Select all"
       icon={<ChakraIcon as={isIndeterminate ? Minus : Check} boxSize="12px" strokeWidth="3" />}
       onClick={stopControlPropagation}

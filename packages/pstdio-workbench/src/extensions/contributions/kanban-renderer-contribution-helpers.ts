@@ -45,20 +45,21 @@ const localizeAttributes = (
         ? { kind: "badge-list" as const, itemsAttributeId: display.itemsAttributeId }
         : undefined;
     if (display && !knownDisplay) reportUnknownDisplay?.(attribute.id, display.kind);
+    const resolveType = () => {
+      const { type } = attribute;
+      if (type.kind === "status") return { kind: "enum" as const, options: resolveStatusOptions(type.statuses) };
+      if (type.kind !== "enum" && type.kind !== "enum-multi") return type;
+      return {
+        ...type,
+        options: Array.isArray(type.options)
+          ? type.options.map((option) => ({ ...option, label: localize(option.label, option.value) }))
+          : type.options,
+      };
+    };
     const base: AttributeDescriptor = {
       ...attribute,
       label: localize(attribute.label, attribute.id),
-      type:
-        attribute.type.kind === "status"
-          ? { kind: "enum", options: resolveStatusOptions(attribute.type.statuses) }
-          : attribute.type.kind === "enum" || attribute.type.kind === "enum-multi"
-            ? {
-                ...attribute.type,
-                options: Array.isArray(attribute.type.options)
-                  ? attribute.type.options.map((option) => ({ ...option, label: localize(option.label, option.value) }))
-                  : attribute.type.options,
-              }
-            : attribute.type,
+      type: resolveType(),
       display: knownDisplay,
     };
     return decorate(record, base);

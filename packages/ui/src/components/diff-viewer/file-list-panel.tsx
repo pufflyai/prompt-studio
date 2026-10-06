@@ -29,9 +29,13 @@ const getFilePathParts = (filePath: string) => {
   return { fileName: filePath.slice(lastSlashIndex + 1), dirPath: filePath.slice(0, lastSlashIndex) };
 };
 
-const renderFileLabel = (node: ChangedFileTreeNode, viewMode: ChangedFilesViewMode, filePath: string) => {
-  const { fileName, dirPath } = getFilePathParts(filePath);
-  if (viewMode !== "flat" || !dirPath) return node.name;
+interface FlatFileLabelProps {
+  fileName: string;
+  dirPath: string;
+}
+
+const FlatFileLabel = (props: FlatFileLabelProps) => {
+  const { fileName, dirPath } = props;
 
   return (
     <Text textStyle="label/S/regular" truncate>
@@ -71,11 +75,12 @@ const toTreeListNodes = (input: {
     }
 
     const filePath = node.id.replace(/^file:/, "");
+    const { fileName, dirPath } = getFilePathParts(filePath);
     const fileIcon = resolveFileIcon?.(filePath) ?? { icon: <Icon as={FileText} boxSize="16px" />, color: "fg.subtle" };
     const change = changeByPath?.get(filePath);
     return {
       id: node.id,
-      label: renderFileLabel(node, viewMode, filePath),
+      label: viewMode === "flat" && dirPath ? <FlatFileLabel fileName={fileName} dirPath={dirPath} /> : node.name,
       icon: fileIcon.icon,
       iconColor: fileIcon.color,
       endContent: change ? <FileChangeBadge change={change} /> : undefined,

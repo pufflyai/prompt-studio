@@ -3,9 +3,13 @@ import { WorkbenchIcon } from "../../react";
 
 const rendererId = "data-table-renderer.story.health";
 const themeColor = (light: string, dark: string) => ({ light, dark });
+const healthStatus = (score: number) => {
+  if (score >= 80) return "healthy";
+  return score >= 55 ? "degraded" : "critical";
+};
 const rows = Array.from({ length: 24 }, (_, index) => {
   const score = 35 + ((index * 17) % 66);
-  const status = score >= 80 ? "healthy" : score >= 55 ? "degraded" : "critical";
+  const status = healthStatus(score);
   return {
     id: `service-${index + 1}`,
     values: {

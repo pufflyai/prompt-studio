@@ -30,6 +30,7 @@ export const DiffBubble = (props: DiffBubbleProps) => {
   } = props;
 
   const isSmall = size === "small";
+  const outlinePaddingX = isSmall ? "3xs" : "2xs";
 
   return (
     <Span
@@ -39,7 +40,7 @@ export const DiffBubble = (props: DiffBubbleProps) => {
       border={variant === "outline" ? "1px solid" : "none"}
       borderColor="border.subtle"
       color="fg.muted"
-      paddingX={variant === "outline" ? (isSmall ? "3xs" : "2xs") : "2px"}
+      paddingX={variant === "outline" ? outlinePaddingX : "2px"}
       paddingY="1px"
       borderRadius="xs"
       textStyle={isSmall ? "label/S/regular" : undefined}

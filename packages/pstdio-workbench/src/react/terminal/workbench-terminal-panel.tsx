@@ -1,7 +1,7 @@
 import { Box, Center, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
 import { Terminal, type TerminalBridge } from "@pstdio/ui/terminal";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ResourceRef, WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { terminalPlacementBindingId } from "./terminal-placement-binding";
@@ -67,7 +67,11 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const { placement, workbench } = props;
   const { themePreference } = useThemePreference();
   const placementRef = useRef(placement);
-  placementRef.current = placement;
+  // A layout effect runs before the terminal's passive effect opens a session,
+  // so a session opened in the same commit reads the current placement.
+  useLayoutEffect(() => {
+    placementRef.current = placement;
+  }, [placement]);
   const [bridge] = useState(() =>
     createControllerTerminalBridge(workbench.terminal, {
       getBindingId: () =>

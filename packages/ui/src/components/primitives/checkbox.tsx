@@ -9,7 +9,8 @@ export interface CheckboxProps extends ChakraCheckbox.RootProps {
 
 export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(props, ref) {
   const { icon, children, inputProps, rootRef, disabled = false, readOnly = false, ...rest } = props;
-  const interactiveCursor = disabled ? "not-allowed" : readOnly ? "default" : "pointer";
+  const enabledCursor = readOnly ? "default" : "pointer";
+  const interactiveCursor = disabled ? "not-allowed" : enabledCursor;
 
   return (
     <ChakraCheckbox.Root ref={rootRef} disabled={disabled} readOnly={readOnly} cursor={interactiveCursor} {...rest}>

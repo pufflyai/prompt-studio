@@ -126,11 +126,11 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     modelSearchPlaceholder: labels?.modelSearchPlaceholder ?? t("chatInput.model.searchPlaceholder"),
   };
 
-  const selectedAgentLabel = isAgentsLoading
-    ? resolvedLabels.agentLoading
-    : agentOptions.length === 0
+  const agentLabel =
+    agentOptions.length === 0
       ? resolvedLabels.agentUnknown
       : getSelectedLabel(agentOptions, selectedAgent, resolvedLabels.agentSelect, resolvedLabels.agentUnknown);
+  const selectedAgentLabel = isAgentsLoading ? resolvedLabels.agentLoading : agentLabel;
   const selectedModelLabel = isModelsLoading
     ? resolvedLabels.modelLoading
     : getSelectedLabel(modelOptions, selectedModel, resolvedLabels.modelSelect, resolvedLabels.modelNone);

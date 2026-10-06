@@ -11,6 +11,7 @@ import type {
 import { useKanbanRendererStore } from "./use-kanban-renderer-store";
 
 const STORYBOOK_STORAGE_KEY = "storybook-kanban-renderer";
+const boardColumnColors: Record<string, string> = { done: "green", in_progress: "blue" };
 
 const reorderRows = (items: StoryRow[], rowId: string, beforeRowId?: string) => {
   const currentIndex = items.findIndex((row) => row.id === rowId);
@@ -116,7 +117,7 @@ export const Wrapper = (props: {
         onAttributeChange={handleAttributeChange}
         onReorder={handleReorder}
         getBoardColumnConfig={(groupKey) => ({
-          color: groupKey === "done" ? "green" : groupKey === "in_progress" ? "blue" : "gray",
+          color: boardColumnColors[groupKey] ?? "gray",
           canDragIn: true,
           canDragOut: true,
           canCreate: false,

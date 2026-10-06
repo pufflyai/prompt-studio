@@ -63,6 +63,9 @@ export const MermaidSvgView = (props: MermaidSvgViewProps) => {
     event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
+  const panCursor = isPanning ? "grabbing" : "grab";
+  const cursor = canPan ? panCursor : "default";
+
   useEffect(() => {
     if (canPan) {
       return;
@@ -79,7 +82,7 @@ export const MermaidSvgView = (props: MermaidSvgViewProps) => {
       minHeight={minHeight}
       maxHeight={maxHeight}
       overflow="hidden"
-      cursor={canPan ? (isPanning ? "grabbing" : "grab") : "default"}
+      cursor={cursor}
       touchAction={canPan ? "none" : "auto"}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -96,7 +99,7 @@ export const MermaidSvgView = (props: MermaidSvgViewProps) => {
         textAlign="center"
         transform={`translate3d(${offset.x}px, ${offset.y}px, 0) scale(${zoom})`}
         transformOrigin="top left"
-        cursor={canPan ? (isPanning ? "grabbing" : "grab") : "default"}
+        cursor={cursor}
         css={{
           "& img": {
             display: "inline-block",

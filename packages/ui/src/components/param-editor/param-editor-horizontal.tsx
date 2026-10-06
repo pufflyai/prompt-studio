@@ -1,4 +1,5 @@
 import { Box, HStack, Stack, Text, VStack } from "@chakra-ui/react";
+import type { ComponentProps } from "react";
 import type { InputGroup, Param, ParamValue, ParamValueMap, ResourceRefValue } from "./param-editor.types";
 import { ParamEditorField } from "./param-editor-field";
 import { isParamEditorHorizontalControl, isParamEditorRichControl } from "./param-editor-presentation";
@@ -13,10 +14,12 @@ export interface ParamEditorHorizontalProps {
   variant?: "default" | "small";
 }
 
+type HorizontalFieldProps = Omit<ComponentProps<typeof ParamEditorField>, "param">;
+
 interface HorizontalGroupProps {
   group: InputGroup;
   params: Param[];
-  renderParam: (param: Param) => React.ReactNode;
+  fieldProps: HorizontalFieldProps;
   variant: "default" | "small";
   width?: "auto" | "full";
 }
@@ -39,7 +42,7 @@ const HorizontalGroupTitle = (props: { children: string }) => {
 };
 
 const HorizontalGroup = (props: HorizontalGroupProps) => {
-  const { group, params, renderParam, variant, width = "auto" } = props;
+  const { group, params, fieldProps, variant, width = "auto" } = props;
 
   return (
     <VStack
@@ -52,7 +55,9 @@ const HorizontalGroup = (props: HorizontalGroupProps) => {
     >
       <HorizontalGroupTitle>{group.title}</HorizontalGroupTitle>
       <HStack gap={variant === "small" ? "2xs" : "xs"} flexWrap="wrap" alignItems="start" minW="0" width={width}>
-        {params.map(renderParam)}
+        {params.map((param) => (
+          <ParamEditorField key={param.id} param={param} {...fieldProps} />
+        ))}
       </HStack>
     </VStack>
   );
@@ -65,18 +70,14 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
     ...group,
     params: group.params.filter(isParamEditorHorizontalControl),
   }));
-  const renderParam = (param: Param) => (
-    <ParamEditorField
-      key={param.id}
-      param={param}
-      defaultValues={defaultValues}
-      onChange={onChange}
-      onOpenResource={onOpenResource}
-      readOnly={readOnly}
-      presentation="horizontal"
-      size={variant === "small" ? "xs" : "sm"}
-    />
-  );
+  const fieldProps: HorizontalFieldProps = {
+    defaultValues,
+    onChange,
+    onOpenResource,
+    readOnly,
+    presentation: "horizontal",
+    size: variant === "small" ? "xs" : "sm",
+  };
   const compactParams = horizontalParams.filter((param) => !isParamEditorRichControl(param));
   const richParams = horizontalParams.filter(isParamEditorRichControl);
   const compactGroups = horizontalGroups
@@ -92,13 +93,15 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
     <Stack flex="1" maxW="full" gap={gap} minW="0">
       {hasCompactControls ? (
         <HStack gap={gap} flexWrap="wrap" alignItems="start" minW="0">
-          {compactParams.map(renderParam)}
+          {compactParams.map((param) => (
+            <ParamEditorField key={param.id} param={param} {...fieldProps} />
+          ))}
           {compactGroups.map(({ group, params: groupParams }) => (
             <HorizontalGroup
               key={group.id}
               group={group}
               params={groupParams}
-              renderParam={renderParam}
+              fieldProps={fieldProps}
               variant={variant}
             />
           ))}
@@ -107,7 +110,7 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
 
       {richParams.map((param) => (
         <Box key={param.id} width="full" minW="0">
-          {renderParam(param)}
+          <ParamEditorField param={param} {...fieldProps} />
         </Box>
       ))}
 
@@ -116,7 +119,7 @@ export const ParamEditorHorizontal = (props: ParamEditorHorizontalProps) => {
           key={`${group.id}-rich`}
           group={group}
           params={groupParams}
-          renderParam={renderParam}
+          fieldProps={fieldProps}
           variant={variant}
           width="full"
         />

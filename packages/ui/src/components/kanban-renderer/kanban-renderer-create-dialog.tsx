@@ -49,10 +49,10 @@ const initialAttributeValues = (
   columnId: string,
 ) =>
   Object.fromEntries(
-    attributes.map((attribute) => [
-      attribute.id,
-      attribute.id === columnAttributeId ? columnId : attribute.type.kind === "enum-multi" ? [] : "",
-    ]),
+    attributes.map((attribute) => {
+      const emptyValue = attribute.type.kind === "enum-multi" ? [] : "";
+      return [attribute.id, attribute.id === columnAttributeId ? columnId : emptyValue];
+    }),
   );
 
 /**

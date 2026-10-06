@@ -34,6 +34,16 @@ interface StickyMessageGroupProps {
   onToggleStickyMessage: (messageId: string) => void;
 }
 
+interface ChatMessageListEntryProps
+  extends Pick<
+    ChatMessageListProps,
+    "streaming" | "hideActiveQuestionForms" | "expandedStickyMessageIds" | "onToggleStickyMessage"
+  > {
+  item: ChatMessageListItem;
+  groupCount: number;
+  animate: boolean;
+}
+
 type ChatMessageListItem =
   | {
       type: "leading-response";
@@ -173,6 +183,12 @@ const getStickyMessageBodyMaxHeight = (isExpandedCollapsible: boolean) => {
   return STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT;
 };
 
+const getStickyMessageContentState = (isCollapsible: boolean, isExpanded: boolean) => {
+  if (!isCollapsible) return undefined;
+
+  return isExpanded ? "expanded" : "collapsed";
+};
+
 const StickyMessageGroup = (props: StickyMessageGroupProps) => {
   const { group, streaming, hideQuestionForms, isExpanded, animate, onToggleStickyMessage } = props;
   const isCollapsible = isStickyUserMessageCollapsible(group.userMessage);
@@ -197,7 +213,7 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
             position={isCollapsible ? "relative" : undefined}
           >
             <Box
-              data-sticky-user-message-content={isCollapsible ? (isExpanded ? "expanded" : "collapsed") : undefined}
+              data-sticky-user-message-content={getStickyMessageContentState(isCollapsible, isExpanded)}
               display="flex"
               flexDirection="column"
               gap="sm"
@@ -237,19 +253,14 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
   );
 };
 
-const renderListItem = (
-  item: ChatMessageListItem,
-  props: Pick<
-    ChatMessageListProps,
-    "groups" | "streaming" | "hideActiveQuestionForms" | "expandedStickyMessageIds" | "onToggleStickyMessage"
-  > & { animatedItemKeys: Set<string> },
-) => {
+const ChatMessageListEntry = (props: ChatMessageListEntryProps) => {
   const {
-    groups,
+    item,
+    groupCount,
     streaming,
     hideActiveQuestionForms,
     expandedStickyMessageIds,
-    animatedItemKeys,
+    animate,
     onToggleStickyMessage,
   } = props;
 
@@ -258,8 +269,8 @@ const renderListItem = (
       <ChatMessageListResponse
         message={item.message}
         streaming={streaming}
-        hideQuestionForms={groups.length > 0 || hideActiveQuestionForms}
-        animate={animatedItemKeys.has(item.key)}
+        hideQuestionForms={groupCount > 0 || hideActiveQuestionForms}
+        animate={animate}
         showAssistantActions={item.showAssistantActions}
       />
     );
@@ -269,9 +280,9 @@ const renderListItem = (
     <StickyMessageGroup
       group={item.group}
       streaming={streaming}
-      hideQuestionForms={item.groupIndex < groups.length - 1 || hideActiveQuestionForms}
+      hideQuestionForms={item.groupIndex < groupCount - 1 || hideActiveQuestionForms}
       isExpanded={expandedStickyMessageIds.has(item.group.userMessage.id)}
-      animate={animatedItemKeys.has(item.key)}
+      animate={animate}
       onToggleStickyMessage={onToggleStickyMessage}
     />
   );
@@ -330,14 +341,15 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
               width="100%"
               style={{ top: virtualItem.start }}
             >
-              {renderListItem(item, {
-                groups,
-                streaming,
-                hideActiveQuestionForms,
-                expandedStickyMessageIds,
-                animatedItemKeys,
-                onToggleStickyMessage,
-              })}
+              <ChatMessageListEntry
+                item={item}
+                groupCount={groups.length}
+                streaming={streaming}
+                hideActiveQuestionForms={hideActiveQuestionForms}
+                expandedStickyMessageIds={expandedStickyMessageIds}
+                animate={animatedItemKeys.has(item.key)}
+                onToggleStickyMessage={onToggleStickyMessage}
+              />
             </Box>
           );
         })}

@@ -112,7 +112,7 @@ export const resolveTreeListFocusRowId = (
   const focusableIds = new Set(focusableRows.map(getRowFocusId));
   if (focusedRowId && focusableIds.has(focusedRowId)) return focusedRowId;
 
-  const activeIds = Array.isArray(activeNodeId) ? activeNodeId : activeNodeId ? [activeNodeId] : [];
+  const activeIds = activeNodeId ? [activeNodeId].flat() : [];
   const activeId = activeIds.find((id) => focusableIds.has(id));
   if (activeId) return activeId;
 

@@ -1,3 +1,6 @@
+import { codeEditor } from "./colors-code-editor";
+import { terminal } from "./colors-terminal";
+
 export const blacks = {
   DEFAULT: { value: "#0A0D15" },
   50: { value: "#FFFFFF" },
@@ -232,4 +235,6 @@ export const colors = {
   purple,
   neutral,
   mint,
+  terminal,
+  codeEditor,
 };

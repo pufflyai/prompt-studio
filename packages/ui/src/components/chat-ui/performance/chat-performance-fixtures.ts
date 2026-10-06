@@ -164,12 +164,13 @@ const buildToolState = (sessionId: string, turn: number, tool: (typeof toolNames
 const buildToolPart = (sessionId: string, turn: number, toolIndex: number): SessionMessage["parts"][number] => {
   const tool = toolNames[(turn + toolIndex) % toolNames.length];
   const state = buildToolState(sessionId, turn, tool);
+  const readOrOther = tool === "grep" || tool === "glob" || tool === "skill" ? "read" : "other";
 
   return {
     type: "tool",
     tool,
     callId: `${sessionId}-tool-${turn}-${toolIndex}`,
-    actionType: tool === "bash" ? "execute" : tool === "grep" || tool === "glob" || tool === "skill" ? "read" : "other",
+    actionType: tool === "bash" ? "execute" : readOrOther,
     status: "completed",
     state: {
       status: "completed",

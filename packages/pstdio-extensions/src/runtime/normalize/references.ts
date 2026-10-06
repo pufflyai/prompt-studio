@@ -52,10 +52,15 @@ export const resolveResourceKindReference = (reference: string, references: Read
 
 const refs = <Kind extends ContributionKind>(
   value: ContributionRef<Kind> | readonly ContributionRef<Kind>[] | undefined,
-) => (value ? (Array.isArray(value) ? value : [value]) : []);
+) => {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+};
 
-const oneOrMany = (values: readonly string[]) =>
-  values.length === 0 ? undefined : values.length === 1 ? values[0] : [...values];
+const oneOrMany = (values: readonly string[]) => {
+  if (values.length === 0) return undefined;
+  return values.length === 1 ? values[0] : [...values];
+};
 
 export const serializeWhenExpression = (
   when: WhenExpression | undefined,

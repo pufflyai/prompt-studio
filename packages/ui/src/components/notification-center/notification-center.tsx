@@ -257,13 +257,14 @@ export const NotificationCenter = (props: NotificationCenterProps) => {
             {error}
           </AlertMessage>
         </Box>
-      ) : loading ? (
-        <LoadingRows />
-      ) : filteredItems.length === 0 ? (
+      ) : null}
+      {!error && loading && <LoadingRows />}
+      {!error && !loading && filteredItems.length === 0 && (
         <Text textStyle="paragraph/S/regular" color="fg.muted" px="sm" py="md">
           {emptyLabel}
         </Text>
-      ) : (
+      )}
+      {!error && !loading && filteredItems.length > 0 && (
         <NotificationRows
           {...props}
           items={filteredItems}

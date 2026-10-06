@@ -1,65 +1,47 @@
 import type { ITheme } from "@xterm/xterm";
+import psTheme from "../../theme/theme";
 
 /**
- * xterm theme presets aligned with the workbench `bg.inverted` / `fg.inverted`
- * pairings so the terminal blends with the surrounding chrome without the
- * consuming extension touching xterm directly. Consumers can still pass any
- * `ITheme` they like via the `theme` prop.
+ * xterm theme presets built from the `colors.terminal.<preset>` tokens so the
+ * terminal blends with the surrounding chrome without the consuming extension
+ * touching xterm directly. Consumers can still pass any `ITheme` they like via
+ * the `theme` prop.
  */
 export type TerminalThemeName = "light" | "dark";
 
-const baseTheme: Partial<ITheme> = {
-  cursorAccent: "#000000",
-  selectionForeground: undefined,
+const createTerminalTheme = (preset: TerminalThemeName) => {
+  // xterm parses color strings itself, so resolve raw token values instead of CSS variables.
+  const color = (name: string) => psTheme.token(`colors.terminal.${preset}.${name}`);
+
+  return {
+    background: color("background"),
+    foreground: color("foreground"),
+    cursor: color("cursor"),
+    cursorAccent: color("cursorAccent"),
+    selectionBackground: color("selectionBackground"),
+    selectionForeground: undefined,
+    black: color("black"),
+    red: color("red"),
+    green: color("green"),
+    yellow: color("yellow"),
+    blue: color("blue"),
+    magenta: color("magenta"),
+    cyan: color("cyan"),
+    white: color("white"),
+    brightBlack: color("brightBlack"),
+    brightRed: color("brightRed"),
+    brightGreen: color("brightGreen"),
+    brightYellow: color("brightYellow"),
+    brightBlue: color("brightBlue"),
+    brightMagenta: color("brightMagenta"),
+    brightCyan: color("brightCyan"),
+    brightWhite: color("brightWhite"),
+  };
 };
 
-export const lightTerminalTheme: ITheme = {
-  ...baseTheme,
-  background: "#f4f4f5",
-  foreground: "#171717",
-  cursor: "#171717",
-  selectionBackground: "#d4d4d8",
-  black: "#27272a",
-  red: "#dc2626",
-  green: "#16a34a",
-  yellow: "#ca8a04",
-  blue: "#2563eb",
-  magenta: "#c026d3",
-  cyan: "#0891b2",
-  white: "#e4e4e7",
-  brightBlack: "#52525b",
-  brightRed: "#ef4444",
-  brightGreen: "#22c55e",
-  brightYellow: "#eab308",
-  brightBlue: "#3b82f6",
-  brightMagenta: "#d946ef",
-  brightCyan: "#06b6d4",
-  brightWhite: "#fafafa",
-};
+export const lightTerminalTheme: ITheme = createTerminalTheme("light");
 
-export const darkTerminalTheme: ITheme = {
-  ...baseTheme,
-  background: "#0a0a0a",
-  foreground: "#fafafa",
-  cursor: "#fafafa",
-  selectionBackground: "#3f3f46",
-  black: "#27272a",
-  red: "#f87171",
-  green: "#4ade80",
-  yellow: "#facc15",
-  blue: "#60a5fa",
-  magenta: "#e879f9",
-  cyan: "#22d3ee",
-  white: "#e4e4e7",
-  brightBlack: "#52525b",
-  brightRed: "#fca5a5",
-  brightGreen: "#86efac",
-  brightYellow: "#fde047",
-  brightBlue: "#93c5fd",
-  brightMagenta: "#f0abfc",
-  brightCyan: "#67e8f9",
-  brightWhite: "#fafafa",
-};
+export const darkTerminalTheme: ITheme = createTerminalTheme("dark");
 
 export const terminalThemes: Record<TerminalThemeName, ITheme> = {
   light: lightTerminalTheme,

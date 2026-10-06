@@ -11,13 +11,14 @@ export const parseNotificationTarget = (value: string): ResourceRef => {
   return { type, id, label: id };
 };
 
+const SNOOZE_UNIT_MS: Record<string, number> = { m: 60_000, h: 3_600_000, d: 86_400_000 };
+
 export const parseSnoozeUntil = (value: string, now = new Date()) => {
   const relative = value.match(/^(\d+)(m|h|d)$/);
   if (relative) {
     const amount = Number(relative[1]);
     const unit = relative[2];
-    const multiplier = unit === "m" ? 60_000 : unit === "h" ? 3_600_000 : 86_400_000;
-    return new Date(now.getTime() + amount * multiplier).toISOString();
+    return new Date(now.getTime() + amount * SNOOZE_UNIT_MS[unit]).toISOString();
   }
 
   const parsed = new Date(value);

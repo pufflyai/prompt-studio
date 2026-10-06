@@ -2,7 +2,7 @@ import { Box, Stack, type StackProps } from "@chakra-ui/react";
 import { DndContext, PointerSensor, useDndContext, useDndMonitor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Fragment, type MouseEvent as ReactMouseEvent, useContext, useState } from "react";
-import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
+import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
 import {
   createTreeListDropHandler,
   dragPointerY,
@@ -127,39 +127,35 @@ interface SortableOrPlainNodeRowProps {
   indicator: TreeListDropIndicator | null;
 }
 
-const renderNodeRow = (input: {
-  node: TreeListNode;
-  sectionId: string;
-  level: number;
-  expandedNodeIds: string[];
-  activeNodeId?: string | string[] | null;
-  rowVariant: TreeListRowVariant;
-  nodeGap: StackProps["gap"];
-  linkComponent?: TreeListLinkComponent;
-  onNavigate?: (event: TreeListNavigateEvent) => void;
-  onToggleNode?: (nodeId: string) => void;
-}) => (
-  <TreeListNodeRow
-    sectionId={input.sectionId}
-    node={input.node}
-    level={input.level}
-    expandedNodeIds={input.expandedNodeIds}
-    activeNodeId={input.activeNodeId}
-    rowVariant={input.rowVariant}
-    nodeGap={input.nodeGap}
-    linkComponent={input.linkComponent}
-    onNavigate={input.onNavigate}
-    onToggleNode={input.onToggleNode}
-  />
-);
-
 // Top-level nodes participate in their section's SortableContext and can move
 // between sections. Nested rows inherit position from their parent and render plain.
 const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
-  const { row, indicator, ...rest } = props;
-  if (row.level > 0) {
-    return renderNodeRow({ node: row.node, sectionId: row.sectionId, level: row.level, ...rest });
-  }
+  const {
+    row,
+    expandedNodeIds,
+    activeNodeId,
+    rowVariant,
+    nodeGap,
+    linkComponent,
+    onNavigate,
+    onToggleNode,
+    indicator,
+  } = props;
+  const nodeRow = (
+    <TreeListNodeRow
+      sectionId={row.sectionId}
+      node={row.node}
+      level={row.level}
+      expandedNodeIds={expandedNodeIds}
+      activeNodeId={activeNodeId}
+      rowVariant={rowVariant}
+      nodeGap={nodeGap}
+      linkComponent={linkComponent}
+      onNavigate={onNavigate}
+      onToggleNode={onToggleNode}
+    />
+  );
+  if (row.level > 0) return nodeRow;
   return (
     <SortableHost
       id={row.node.id}
@@ -168,7 +164,7 @@ const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
       handle="self"
       liftedBg="bg.hover"
     >
-      {() => renderNodeRow({ node: row.node, sectionId: row.sectionId, level: row.level, ...rest })}
+      {() => nodeRow}
     </SortableHost>
   );
 };

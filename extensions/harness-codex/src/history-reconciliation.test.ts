@@ -64,7 +64,9 @@ test("a code-mode rollout reconciles with the live stream of the same turn", asy
   const shape = (messages: SessionMessage[]) =>
     messages.map((message) => {
       const part = message.parts[0];
-      return [message.role, part.type === "tool" ? part.tool : part.type === "text" ? part.text : part.type];
+      if (part.type === "tool") return [message.role, part.tool];
+      if (part.type === "text") return [message.role, part.text];
+      return [message.role, part.type];
     });
   expect(shape(result.messages)).toEqual(shape(knownMessages));
 });

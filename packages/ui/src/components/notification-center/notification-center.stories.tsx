@@ -143,11 +143,14 @@ export const ErrorState: Story = {
 
 export const HighVolume: Story = {
   args: {
-    items: Array.from({ length: 80 }, (_, index) => ({
-      ...sampleItems[index % sampleItems.length],
-      id: `notification-${index}`,
-      title: `${sampleItems[index % sampleItems.length].title} ${index + 1}`,
-      priority: index % 6 === 0 ? "urgent" : index % 3 === 0 ? "high" : "normal",
-    })),
+    items: Array.from({ length: 80 }, (_, index) => {
+      const highOrNormal = index % 3 === 0 ? "high" : "normal";
+      return {
+        ...sampleItems[index % sampleItems.length],
+        id: `notification-${index}`,
+        title: `${sampleItems[index % sampleItems.length].title} ${index + 1}`,
+        priority: index % 6 === 0 ? "urgent" : highOrNormal,
+      };
+    }),
   },
 };

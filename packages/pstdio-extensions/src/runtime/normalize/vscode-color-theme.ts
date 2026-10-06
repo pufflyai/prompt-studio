@@ -73,7 +73,7 @@ export const createMonacoTheme = (mode: "light" | "dark", theme: VsCodeColorThem
   base: mode === "dark" ? "vs-dark" : "vs",
   inherit: true,
   rules: (theme.tokenColors ?? []).flatMap((tokenColor) => {
-    const scopes = Array.isArray(tokenColor.scope) ? tokenColor.scope : tokenColor.scope ? [tokenColor.scope] : [];
+    const scopes = tokenColor.scope ? [tokenColor.scope].flat() : [];
     return scopes.map((scope) => ({
       token: scope,
       ...(tokenColor.settings?.foreground ? { foreground: stripHash(tokenColor.settings.foreground) } : {}),
