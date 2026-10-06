@@ -102,14 +102,14 @@ describe("createWorkspacesDBService rename", () => {
     expect(after!.updated_at).toBe(before!.updated_at);
   });
 
-  test("allows reusing an archived workspace name", async () => {
-    const archived = await workspacesService.create({
+  test("allows reusing a deleted workspace name", async () => {
+    const deleted = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
       anchors: [ticketAnchor],
     });
-    await workspacesService.rename(archived.id, "Spike - API only");
-    await workspacesService.archive(archived.id);
+    await workspacesService.rename(deleted.id, "Spike - API only");
+    await workspacesService.softDelete(deleted.id);
 
     const active = await workspacesService.create({
       project_id: projectId,
