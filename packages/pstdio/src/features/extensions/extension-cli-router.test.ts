@@ -182,6 +182,33 @@ describe("extension CLI router", () => {
     });
     expect(() => parseExtensionCommandArgs(command, ["--agent", "codex"])).toThrow("--agent expects a JSON value");
   });
+
+  test("reads true or false after a boolean flag as its value", () => {
+    const command: ExtensionCommandRecord = {
+      id: "lab.reset",
+      extensionId: "pstdio.extension-lab",
+      title: "Reset",
+      cliPath: "lab reset",
+      params: { force: { type: "boolean" }, note: { type: "text" } },
+    };
+
+    expect(parseExtensionCommandArgs(command, ["--force", "false"]).params).toEqual({ force: false });
+    expect(parseExtensionCommandArgs(command, ["--force", "true", "--note", "x"]).params).toEqual({
+      force: true,
+      note: "x",
+    });
+    expect(parseExtensionCommandArgs(command, ["--force", "--note", "x"]).params).toEqual({ force: true, note: "x" });
+  });
+
+  test("rejects a value flag with no value", () => {
+    expect(() => parseExtensionCommandArgs(labCommands[0]!, ["--amount"])).toThrow("--amount expects a value");
+  });
+
+  test("rejects a number flag that is not a number", () => {
+    expect(() => parseExtensionCommandArgs(labCommands[0]!, ["--amount", "lots"])).toThrow(
+      "--amount expects a number (got lots)",
+    );
+  });
 });
 
 describe("extension CLI router dispatch", () => {
@@ -326,14 +353,12 @@ describe("extension CLI router dispatch", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("pstdio lab counter bump"));
   });
 
-  test("lists namespace commands when a mistyped subcommand is invoked", async () => {
+  test("lists namespace commands for a command group", async () => {
     const log = mock();
-    const error = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["lab", "nope"],
+      rawArgs: ["lab", "counter", "--help"],
       deps: {
-        error,
         execute: mock(async () => successResponse),
         listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
         log,
@@ -342,8 +367,29 @@ describe("extension CLI router dispatch", () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(error).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledWith(expect.stringContaining("pstdio lab counter bump"));
+  });
+
+  test("fails a mistyped subcommand without executing anything", async () => {
+    const log = mock();
+    const error = mock();
+    const execute = mock(async () => successResponse);
+
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs: ["lab", "counter", "bmup", "--amount", "2"],
+      deps: {
+        error,
+        execute,
+        listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
+        log,
+        resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
+      },
+    });
+
+    expect(exitCode).toBe(1);
+    expect(execute).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('Unknown command "pstdio lab counter bmup"'));
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("pstdio lab counter bump"));
   });
 
   test("ignores unknown root commands outside extension namespaces", async () => {
