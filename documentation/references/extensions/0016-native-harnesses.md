@@ -18,4 +18,4 @@ Codex reports a status dot with native state: active is green, paused/blocked/us
 
 The checked native versions are Codex 0.159.3, Claude Code 2.1.287, and OpenCode 1.18.25. Regenerate the checked-in Codex types with `bun extensions/harness-codex/scripts/generate-protocol.ts` using the supported Codex executable.
 
-Legacy history identity migration and Claude literal slash input need isolated temporary workarounds. Their limits and removal criteria are in [ADR 0053](../../adrs/0053-temporary-codex-history-identity-migration.md) and [ADR 0054](../../adrs/0054-temporary-claude-literal-slash-input.md). Question reply confirmation retains [ADR 0052](../../adrs/0052-temporary-codex-question-delivery-confirmation.md).
+Legacy history identity migration and Claude literal slash input need isolated temporary workarounds. Their limits and removal criteria are in [ADR 0062](../../adrs/0062-temporary-codex-history-identity-migration.md) and [ADR 0063](../../adrs/0063-temporary-claude-literal-slash-input.md). Question reply confirmation retains [ADR 0052](../../adrs/0052-temporary-codex-question-delivery-confirmation.md).
