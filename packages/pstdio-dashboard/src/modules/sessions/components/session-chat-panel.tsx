@@ -23,7 +23,7 @@ import { sessionDraftSubmission } from "../chat/session-draft-submission";
 import { sessionUnsentActions } from "../chat/session-unsent-actions";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
-import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
+import type { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { useStopSession } from "../hooks/use-stop-session";
@@ -43,6 +43,7 @@ import { useSessionModelSelection } from "./use-session-model-selection";
 interface DashboardSessionChatPanelProps {
   input: WorkbenchPanelRenderInput;
   view: DashboardSessionView;
+  history: ReturnType<typeof useDashboardSessionMessages>;
   emptyStateTitle: string;
   emptyStateDescription: string;
   workspaceAction: ReactNode;
@@ -84,7 +85,7 @@ export const openSelectedWorkspace = (
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 
 export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps) => {
-  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, drafts } = props;
+  const { input, view, emptyStateTitle, emptyStateDescription, workspaceAction, drafts, history } = props;
   const attachedResources = [view.workspaceTitle, view.workspaceShorthand].filter(Boolean);
   const sessionId = view.sessionId ?? null;
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
@@ -92,10 +93,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     return typeof value === "string" ? value : undefined;
   });
 
-  const { messages, loading, streaming, reconnect, refreshQueue, error, queueError } = useDashboardSessionMessages(
-    input,
-    view.sessionId,
-  );
+  const { messages, loading, streaming, reconnect, refreshQueue, error, queueError } = history;
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();

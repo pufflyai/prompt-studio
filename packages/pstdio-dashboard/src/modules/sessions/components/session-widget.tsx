@@ -8,6 +8,7 @@ import {
 } from "@/shared/extensions/workbench-extension-contributions";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { subscribeSessionData } from "../data/session-data-subscription";
+import { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { DashboardSessionChatPanel, ReviewChangesAction } from "./session-chat-panel";
 
 interface SessionWidgetProps {
@@ -27,6 +28,7 @@ export const SessionWidget = (props: SessionWidgetProps) => {
     refresh();
     return unsubscribe;
   }, [input.instance]);
+  const history = useDashboardSessionMessages(input, view.sessionId);
   // Hide the open action when this workspace is already the active resource — you are looking at it.
   const isWorkspaceOpen = useWorkbenchStore(
     input.workbench.context.store,
@@ -42,6 +44,7 @@ export const SessionWidget = (props: SessionWidgetProps) => {
       key={view.draftKey}
       input={input}
       view={view}
+      history={history}
       drafts={drafts}
       emptyStateTitle="No messages yet"
       emptyStateDescription="Send a message to start this session."
