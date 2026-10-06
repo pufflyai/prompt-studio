@@ -228,7 +228,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
             },
           });
           await expectPlannerProperties(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
-          await expectPackagedWorkspaceSelection(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
+          await expectPackagedWorkspaceSelection(started.descriptor, project.id);
           const reportType = metadata.templateTypes.find((type) => type.localId === "report");
           expect(reportType?.commands).toEqual(
             expect.objectContaining({

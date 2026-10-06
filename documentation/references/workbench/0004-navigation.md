@@ -26,7 +26,7 @@ Retention is local to the current project and workbench. Removing a view contrib
 
 Tree selection follows the active resource and page. A node's declared `selected` value distinguishes documents that share a resource identity, but applies only while that resource or page is active. Rows without a resource or navigation target keep their declared selection. Contextual parent trees remain visible without overriding the current workspace selection. Returning to the parent restores its active document selection.
 
-Tree reads belong to the mounted placement. Changing its resource, navigation level, or filter refreshes its data while keeping the current rows until the complete replacement arrives. Rows with the same identity keep their DOM, focus, and scroll position. A changed read scope cancels older reads and ignores their late results. Opening a different tree or project starts a new snapshot.
+Tree reads belong to the mounted placement. Changing its resource or navigation level refreshes its data while keeping the current rows until the complete replacement arrives. Rows with the same identity keep their DOM, focus, and scroll position. A changed read scope cancels older reads and ignores their late results. Opening a different tree or project starts a new snapshot. A changed search filter also starts a new snapshot, so results from the previous query cannot be clicked while its replacement loads.
 
 ## Resource actions on navigation rows
 

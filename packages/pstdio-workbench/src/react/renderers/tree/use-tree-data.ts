@@ -33,21 +33,21 @@ export const useTreeData = (
     getPageOwner,
     getPageOwner,
   );
-  // Navigation changes what a mounted tree reads, not the identity of its rows.
-  const queryKey = JSON.stringify([treeViewId, viewId, project]);
-  const refreshKey = JSON.stringify([
-    filter,
+  // Navigation keeps mounted rows. A new search clears results that no longer match its query.
+  const queryKey = JSON.stringify([treeViewId, viewId, project, filter]);
+  const refreshKey = JSON.stringify(
     trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter }) ?? [
       resourceKey(resource),
       resourceKey(location?.resource),
       mode,
       pageOwner,
     ],
-  ]);
+  );
+  const childrenKey = JSON.stringify([queryKey, refreshKey]);
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
   const [expandedChildren, setExpandedChildren] = useState<{ queryKey: string; byNodeId: Record<string, TreeNode[]> }>({
-    queryKey: refreshKey,
+    queryKey: childrenKey,
     byNodeId: {},
   });
   const read = useRendererRead<LoadedTreeData & { children: Record<string, TreeNode[]> }>({
@@ -74,8 +74,8 @@ export const useTreeData = (
   const loadChildren = (node: TreeNode) => {
     void trees.getChildren(treeViewId, node, { resource, viewId, filter }).then((children) => {
       setExpandedChildren((current) => ({
-        queryKey: refreshKey,
-        byNodeId: { ...(current.queryKey === refreshKey ? current.byNodeId : {}), [node.id]: children },
+        queryKey: childrenKey,
+        byNodeId: { ...(current.queryKey === childrenKey ? current.byNodeId : {}), [node.id]: children },
       }));
     });
   };
@@ -84,7 +84,7 @@ export const useTreeData = (
     header: read.value?.header ?? [],
     footer: read.value?.footer ?? [],
     childrenByNodeId: {
-      ...(expandedChildren.queryKey === refreshKey ? expandedChildren.byNodeId : {}),
+      ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
       ...read.value?.children,
     },
     loadChildren,

@@ -1,12 +1,11 @@
 import { expect } from "bun:test";
 import { chromium, expect as expectBrowser } from "@playwright/test";
 import { observeTreeRows } from "../helpers/tree-continuity";
+import { type RuntimeDescriptor, runtimeAuthorization, signInBrowser } from "./packaged-serve-helpers";
 
-export const expectPackagedWorkspaceSelection = async (
-  baseUrl: string,
-  projectId: string,
-  headers: Record<string, string>,
-) => {
+export const expectPackagedWorkspaceSelection = async (descriptor: RuntimeDescriptor, projectId: string) => {
+  const baseUrl = descriptor.origin;
+  const headers = runtimeAuthorization(descriptor);
   const response = await fetch(
     `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.create-ticket/execute`,
     {
@@ -25,6 +24,7 @@ export const expectPackagedWorkspaceSelection = async (
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, projectId);
+    await signInBrowser(page, descriptor);
     await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Packaged workspace selection", { exact: true }).click();
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
