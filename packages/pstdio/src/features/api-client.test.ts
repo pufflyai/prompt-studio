@@ -11,6 +11,7 @@ afterEach(() => {
 });
 
 it("uses the same default API URL as the rest of the CLI", async () => {
+  resetApiClient();
   delete process.env.PSTDIO_API_URL;
   const requested: string[] = [];
   const originalFetch = globalThis.fetch;
