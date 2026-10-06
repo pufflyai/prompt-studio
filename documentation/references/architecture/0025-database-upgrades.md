@@ -21,10 +21,10 @@ Code that only repairs databases older than a given release may be deleted once 
 | `pstdio-db/src/db/legacy-worktree.ts`, `workspace-location-migration.ts`, and the `migrateThrough(db, migrationsFolder, 31)` step in `connection.pglite.ts`. `migrate-through.ts` goes with its last caller. | `pstdio@0.36.0`, 2026-09-28 | 2026-12-27 |
 | `pstdio-db/src/db/shared-workspace-folders.ts` | `pstdio@0.37.0`, 2026-09-29 | 2026-12-28 |
 
-Generated Drizzle migrations (`pstdio-db/drizzle/*.sql`) stay. They are the schema history that new databases replay. Do not edit them by hand, including `0020_harness_id_namespacing.sql` and `0029_contribution_id_grammar.sql`, which name first-party extension ids.
+Generated Drizzle migrations (`pstdio-db/drizzle/*.sql`) stay. They are the schema history that new databases replay. Do not edit them by hand, including `0020_harness_id_namespacing.sql`, `0029_contribution_id_grammar.sql` and `0036_superb_diamondback.sql`, which translate released first-party extension identities.
 
 ## Extension data belongs to extensions
 
-The core database does not own extension data, so new database code and new migrations must not name extension ids. `pstdio-db/src/db/extension-owned-ids.test.ts` fails when a file outside the legacy list above names a first-party extension id.
+The core database does not own extension data, so new database code and new migrations must not name extension ids. The resource-anchor migration and `pstdio-db/src/services/legacy-resource-links.ts` translate the released anchor arrays under [ADR 0061](../../adrs/0061-project-resource-anchors.md). This is the only new exception: the public Extension API must preserve released anchor methods until their grouped breaking removal. Delete the legacy bridge with those methods; the generated schema migration stays. Generic resource-link storage must use explicit owners. `pstdio-db/src/db/extension-owned-ids.test.ts` fails when a file outside the legacy list above names a first-party extension id.
 
 An extension that renames its own commands, schedules, or stored values needs an extension-owned data migration that ships with the extension. That capability does not exist yet; it is the missing piece [ADR 0015](../../adrs/0015-template-content-belongs-to-extensions-temporary-migration.md) names. Until it exists, an extension keeps reading its old values or migrates them in its own startup code.

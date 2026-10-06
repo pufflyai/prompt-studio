@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbenchResourceContextValues, matchesContextExpression } from "@pstdio/workbench";
-import { canonicalDashboardResource } from "./resource-identity";
+import { canonicalDashboardPageTarget, canonicalDashboardResource } from "./resource-identity";
 import {
   buildDashboardExtensionMenuRegistrations,
   emptyDashboardExtensionMetadata,
@@ -49,4 +49,22 @@ test("owner inference considers declarations with no resolver and preserves expl
   expect(
     canonicalDashboardResource({ type: "item", id: "one", extensionId: "example.art" }, "project", kinds).extensionId,
   ).toBe("example.art");
+});
+
+test("page targets and their parents use the same owner and project identity as resource trees", () => {
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, id: "workspace", extensionId: "pstdio" },
+    resource: { type: "workspace", id: "one" },
+    parent: {
+      kind: "page" as const,
+      page: { kind: "page" as const, id: "ticket", extensionId: "example.planner" },
+      resource: { type: "ticket", id: "one", metadata: { documentId: "body" } },
+    },
+  };
+  const kinds = [{ id: "ticket", extensionId: "example.planner" }];
+  const resolved = canonicalDashboardPageTarget(target, "project", kinds);
+  expect(resolved.resource).toEqual(canonicalDashboardResource(target.resource, "project", kinds));
+  expect(resolved.parent?.resource).toEqual(canonicalDashboardResource(target.parent.resource, "project", kinds));
+  expect(resolved.parent?.page).toEqual(target.parent.page);
 });

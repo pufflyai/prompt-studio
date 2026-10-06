@@ -12,7 +12,7 @@ import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/
 import { apiRequest } from "@/lib/api";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
-import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
+import { canonicalDashboardPageTarget, canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
@@ -106,7 +106,7 @@ const decorateAttribute = (
     projectId,
     navigate: (resource, target) => {
       if (target) {
-        void ctx.navigation.openTarget(target);
+        void ctx.navigation.openTarget(canonicalDashboardPageTarget(target, projectId));
         return;
       }
       if (resource.type === "workspace") {
