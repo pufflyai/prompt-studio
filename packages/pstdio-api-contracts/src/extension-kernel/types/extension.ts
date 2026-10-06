@@ -97,6 +97,7 @@ export interface WorkspaceCapabilities {
   diff: boolean;
   merge: boolean;
   rebase: boolean;
+  /** @deprecated Use delete. */
   archive: boolean;
   delete: boolean;
 }
@@ -175,6 +176,7 @@ export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace
   create(ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput): MaybePromise<WorkspaceProviderResult>;
   resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;
   cancel?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
+  /** @deprecated Use the delete hook. */
   archive?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
   delete?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<void>;
 }

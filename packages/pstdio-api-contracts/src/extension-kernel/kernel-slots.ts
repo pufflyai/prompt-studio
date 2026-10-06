@@ -120,6 +120,7 @@ export const workspaceEvents = {
   provision: hostEventRef<WorkspaceProvisionPayload>("workspace.provision"),
   /** Fire-and-forget after the workspace is ready: background setup (deps install, builds). */
   ready: hostEventRef<WorkspaceProvisionPayload>("workspace.ready"),
+  /** @deprecated Use workspaceEvents.deleted. */
   archived: hostEventRef<{ workspace: ExtensionWorkspace }>("workspace.archived"),
   deleted: hostEventRef<{ workspace: ExtensionWorkspace }>("workspace.deleted"),
 };
