@@ -67,9 +67,8 @@ describe("archive ticket", () => {
           resource: { type: "ticket", id: "ticket-1" },
           workspaces: {
             list: async () => workspaces,
-            archive: async (id: string) => {
+            delete: async (id: string) => {
               archived.push(id);
-              return workspaces.find((workspace) => workspace.id === id)!;
             },
           },
         },
@@ -100,11 +99,10 @@ describe("archive ticket", () => {
             resource: { type: "ticket", id: "ticket-1" },
             workspaces: {
               list: async () => workspaces,
-              archive: async (id: string) => {
+              delete: async (id: string) => {
                 archiveStarted.resolve();
                 await cascadeSettled.promise;
                 archived.push(id);
-                return workspaces.find((workspace) => workspace.id === id)!;
               },
             },
           },
@@ -148,9 +146,8 @@ describe("archive ticket", () => {
         overrides: {
           workspaces: {
             list: async () => workspaces,
-            archive: async (id: string) => {
+            delete: async (id: string) => {
               archived.push(id);
-              return workspaces.find((workspace) => workspace.id === id)!;
             },
           },
         },
@@ -181,10 +178,9 @@ describe("archive ticket", () => {
           overrides: {
             workspaces: {
               list: async () => workspaces,
-              archive: async () => {
+              delete: async () => {
                 archiveStarted.resolve();
                 await cascadeSettled.promise;
-                return workspaces[0]!;
               },
             },
           },
@@ -207,7 +203,7 @@ describe("archive ticket", () => {
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
   });
 
-  test("archive all column action keeps ticket archival when linked workspace archive fails", async () => {
+  test("archive all column action keeps ticket archival when linked workspace deletion fails", async () => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({ id: "ticket-1", shorthand: "T-1", statusId: "default-done" }));
 
@@ -222,7 +218,7 @@ describe("archive ticket", () => {
         overrides: {
           workspaces: {
             list: async () => workspaces,
-            archive: async () => {
+            delete: async () => {
               throw new Error("cascade failed");
             },
           },
@@ -244,14 +240,14 @@ describe("archive ticket", () => {
     expect(notifications).toEqual([
       {
         title: "Workspace cleanup failed",
-        body: "Linked workspace cleanup failed after archiving the ticket: cascade failed",
+        body: "Linked workspace cleanup failed after changing the ticket: cascade failed",
         kind: "failed",
         priority: "normal",
       },
     ]);
   });
 
-  test("archive ticket keeps ticket archival when linked workspace archive fails", async () => {
+  test("archive ticket keeps ticket archival when linked workspace deletion fails", async () => {
     const storage = createMemoryStorage();
     await seedTicket(storage);
 
@@ -266,7 +262,7 @@ describe("archive ticket", () => {
           resource: { type: "ticket", id: "ticket-1" },
           workspaces: {
             list: async () => workspaces,
-            archive: async () => {
+            delete: async () => {
               throw new Error("cascade failed");
             },
           },
@@ -285,7 +281,7 @@ describe("archive ticket", () => {
     expect(notifications).toEqual([
       {
         title: "Workspace cleanup failed",
-        body: "Linked workspace cleanup failed after archiving the ticket: cascade failed",
+        body: "Linked workspace cleanup failed after changing the ticket: cascade failed",
         kind: "failed",
         priority: "normal",
       },
@@ -308,9 +304,8 @@ test("keeps a shared workspace until every linked ticket is archived", async () 
           resource: { type: "ticket", id },
           workspaces: {
             list: async () => [workspace],
-            archive: async (id) => {
+            delete: async (id) => {
               archived.push(id);
-              return workspace;
             },
           },
         },

@@ -18,7 +18,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
         readText: async () =>
           "{{ticket}} {{workspaceId}} {{templateName}} {{additionalContext}} {{reviewId}} {{revision}} {{headSha}}",
       },
-      settings: { all: async () => ({ "automation.maxInProgress": 2 }) },
+      settings: { get: async () => true, all: async () => ({ "automation.maxInProgress": 2 }) },
       logger: { info: () => {}, warn: () => {}, error: () => {} },
       ...input.overrides,
       workspaces: {

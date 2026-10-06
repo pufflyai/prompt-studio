@@ -1,13 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
-import { join } from "node:path";
 import type { WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
-import {
-  archiveProviderBackedWorkspace,
-  cancelProviderBackedWorkspace,
-  deleteProviderBackedWorkspace,
-} from "./workspace-provider-lifecycle";
-import { resolveWorkspacesRoot } from "./worktree-setup";
+import { cancelProviderBackedWorkspace, deleteProviderBackedWorkspace } from "./workspace-provider-lifecycle";
 
 const readyRemoteResult = (state: WorkspaceProviderResult["state"]): WorkspaceProviderResult => ({
   providerRef: { version: 1, data: { remoteId: "remote-1" } },
@@ -79,111 +73,7 @@ const workspaceSessions: SessionRow[] = [
   { id: "done", status: "completed", archived: false },
 ];
 
-describe("archiveProviderBackedWorkspace", () => {
-  test("calls provider archive with a persisted operation id and skips worktree cleanup", async () => {
-    const archive = mock(async (_ctx: unknown, input: { operationId: string }) => {
-      expect(input.operationId).toBeTruthy();
-      return readyRemoteResult("archived");
-    });
-    const { deps, beginProviderOperation } = makeDeps({ archive });
-
-    const updated = await archiveProviderBackedWorkspace(deps, makeWorkspace() as never);
-
-    expect(archive).toHaveBeenCalledTimes(1);
-    expect(updated?.provider_state).toBe("archived");
-    expect(beginProviderOperation).toHaveBeenCalledWith("ws-1", {
-      operationId: expect.any(String),
-      kind: "archive",
-      state: "archiving",
-    });
-  });
-
-  test("keeps worktree cleanup for the built-in provider", async () => {
-    const workspace = makeWorkspace({
-      provider_id: "pstdio.worktree",
-      execution_kind: "local",
-      root_path: join(resolveWorkspacesRoot(), "already-removed"),
-      provider_ref_json: {
-        version: 1,
-        data: {
-          sourceRoot: "/source",
-          worktreeRoot: join(resolveWorkspacesRoot(), "already-removed"),
-          relativePath: "",
-        },
-      },
-    });
-    const { deps, updateProviderProjection } = makeDeps({}, workspace);
-
-    const updated = await archiveProviderBackedWorkspace(deps, workspace as never);
-
-    expect(updated?.provider_state).toBe("archived");
-    expect(updateProviderProjection.mock.calls[0]?.[1]).toMatchObject({ provider_state: "archived" });
-  });
-
-  test("marks the workspace blocked when the provider is missing and preserves the reference", async () => {
-    const workspace = makeWorkspace();
-    const updateProviderProjection = mock(async (_id: string, patch: Record<string, unknown>) => ({
-      ...workspace,
-      ...patch,
-    }));
-    const deps = {
-      workspaceService: {
-        updateProviderProjection,
-        beginProviderOperation: async (_id: string, input: { operationId: string; kind: string; state: string }) => ({
-          ...workspace,
-          provider_state: input.state,
-          provider_operation_id: input.operationId,
-          provider_operation_kind: input.kind,
-        }),
-      },
-      workspaceSessionService: { listByWorkspace: async () => [] },
-      workspaceProviderRuntime: { find: async () => undefined },
-      extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
-    } as never;
-
-    const updated = await archiveProviderBackedWorkspace(deps, workspace as never);
-
-    expect(updated?.provider_state).toBe("provider_missing");
-    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
-      provider_ref_json: workspace.provider_ref_json,
-      provider_operation_kind: "archive",
-    });
-  });
-
-  test("keeps an accepted create id pending until archive can recover its provider reference", async () => {
-    const workspace = makeWorkspace({
-      provider_ref_json: null,
-      provider_state: "provisioning",
-      provider_operation_id: "op-create-before-archive",
-      provider_operation_kind: "create",
-    });
-    const archive = mock(async () => readyRemoteResult("archived"));
-    const { deps } = makeDeps({ archive }, workspace);
-
-    const updated = await archiveProviderBackedWorkspace(deps, workspace as never);
-
-    expect(archive).not.toHaveBeenCalled();
-    expect(updated).toMatchObject({
-      provider_state: "archiving",
-      provider_operation_id: "op-create-before-archive",
-      provider_operation_kind: "archive",
-    });
-  });
-});
-
 describe("workspace removal stops its agents first", () => {
-  test("archive cancels active sessions before the provider removes the workspace", async () => {
-    const { deps, events } = makeDeps(
-      { archive: async () => events.push("provider archive") && readyRemoteResult("archived") },
-      makeWorkspace(),
-      workspaceSessions,
-    );
-
-    await archiveProviderBackedWorkspace(deps, makeWorkspace() as never);
-
-    expect(events.slice(0, 4)).toEqual(["cancel running", "cancel waiting", "cancel queued", "provider archive"]);
-  });
-
   test("delete cancels active sessions before the provider removes the workspace", async () => {
     const { deps, events } = makeDeps(
       { delete: async () => events.push("provider delete") },
