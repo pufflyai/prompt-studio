@@ -34,6 +34,16 @@ Run `command -v pst` on macOS or Linux, or `where.exe pst` on Windows. If it poi
 
 On Windows, close and reopen your terminal after you install the app, so it sees the new `PATH`.
 
+## Default extensions did not install
+
+The first time you open a folder, Prompt Studio downloads the default extensions from GitHub with Git. They connect the agents. If this fails, no agent appears in the agent list.
+
+- Check that Git is installed: run `git --version` in a terminal.
+- Check that your computer can reach `github.com`.
+- Open **Settings → Project folder** and choose **Retry setup**, or open the same folder again.
+
+`pst logs` shows why the download failed. **Settings → Project folder** shows the same error.
+
 ## An agent shows as not installed
 
 Prompt Studio looks for the agent's command, such as `claude`, `codex`, or `opencode`, on the `PATH` of the runtime. Check it with `pst agents list`.

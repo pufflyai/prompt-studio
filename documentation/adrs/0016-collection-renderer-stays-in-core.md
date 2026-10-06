@@ -13,8 +13,7 @@ shared plumbing that extensions cannot reasonably rebuild or that most extension
 
 The kanban renderer is shared plumbing. It renders rows, attributes, groups, filters, saved views,
 and inline edits from data supplied by a caller. It contains no ticket fields. The planner uses it
-for tickets, while the dashboard uses it for workspaces. The data table also reuses its collection
-types and state.
+for tickets. The data table also reuses its collection types and state.
 
 The old contracts did contain tracker-specific rules:
 
@@ -56,9 +55,8 @@ formatter.
 
 ### Move the renderer into the planner
 
-Rejected. The workspace board would either depend on a ticket tracker or copy the renderer. The data
-table would still need the shared collection types. Moving the code would preserve the domain leaks
-instead of fixing them.
+Rejected. The data table would still need the shared collection types. Moving the code would
+preserve the domain leaks instead of fixing them.
 
 ### Keep board rules on statuses
 
@@ -98,3 +96,11 @@ handle installed capability declarations and migrate the existing browser storag
 Nothing in this decision is temporary. The removed parts are `workspace-badge`,
 `WorkflowStatus.board`, `WorkflowStatusBoardRules`, `statusColumnConfig`, the status-backed query
 error, and the three `workbench.status.can-*` action ids.
+
+## Corrections
+
+- 2026-10-06 (PS-505): the context said "the dashboard uses it for workspaces", and the rejected
+  move cited the workspace board. The Workspaces module uses the data table renderer
+  (`packages/pstdio-dashboard/src/modules/workspaces/module.tsx`), so the planner is the only
+  shipped kanban user. The remaining reason to keep the renderer in core is the collection model it
+  shares with the data table. PS-521 proposes what stays in core.

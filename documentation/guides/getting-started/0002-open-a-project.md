@@ -9,7 +9,9 @@ Open a folder to create a local project, or to return to one you already opened.
 3. In **Open project folder**, browse to the folder, or type its path. Choose **New folder** to create an empty one.
 4. Choose **Open folder**.
 
-The folder does not need Git, and you do not need a coding agent installed yet. You can add both later.
+The folder does not need to be a Git repository, and you do not need a coding agent installed yet. You can add both later.
+
+The first project does need Git installed and an internet connection. Prompt Studio downloads the default extensions from GitHub with Git when you open your first folder. Without them, the agent list stays empty. If the download fails, see [Troubleshooting](0005-troubleshooting.md#default-extensions-did-not-install).
 
 ![Open project folder dialog with a folder path, a list of folders, and an Open folder button.](../../images/open-project-folder.png)
 
@@ -37,7 +39,7 @@ Other `pst` commands find the project from the folder you run them in. See [CLI 
 - The folder name becomes the project name. You can rename the project in its settings.
 - Prompt Studio writes `.pstdio/config.json` in the folder. This file links the folder to its project. A `.pstdio/.gitignore` keeps it out of Git.
 - The project gets its default workspace: the folder itself. Agent sessions work in this folder and share its files.
-- The default extensions are installed and turned on. They connect the Claude Code, Codex, and OpenCode agents, and add themes and skills.
+- The default extensions are downloaded, installed, and turned on. They connect the Claude Code, Codex, and OpenCode agents, and add themes and skills.
 
 Opening the same folder again reopens its project. A subfolder is a separate project, even inside a Git repository. Deleting a project keeps your chosen folder and your own files, but removes the project's matching `.pstdio/config.json` link and saved host data. Provider-created workspaces follow their provider's cleanup rules.
 
