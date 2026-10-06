@@ -12,6 +12,9 @@ import {
 } from "./install-extension-source";
 import { makeExtension, writeManifest } from "./install-extension-source-test-fixtures";
 
+// The host never runs package scripts and installs exactly what a shipped lockfile names.
+const ownedCopyInstallArgs = ["install", "--frozen-lockfile", "--ignore-scripts", "--production"];
+
 let root: string;
 let pstdioHome: string;
 
@@ -197,7 +200,7 @@ describe("installExtensionSource", () => {
       runCommand,
     });
 
-    expect(runCommand).toHaveBeenCalledWith("bun", ["install", "--production"], {
+    expect(runCommand).toHaveBeenCalledWith("bun", ownedCopyInstallArgs, {
       cwd: expect.stringContaining(join(pstdioHome, ".extension-install-")),
       env: {
         PATH: "/bin",
@@ -223,7 +226,7 @@ describe("installExtensionSource", () => {
       runCommand,
     });
 
-    expect(runCommand).toHaveBeenCalledWith("/Applications/Prompt Studio.app/pstdio", ["install", "--production"], {
+    expect(runCommand).toHaveBeenCalledWith("/Applications/Prompt Studio.app/pstdio", ownedCopyInstallArgs, {
       cwd: expect.stringContaining(join(pstdioHome, ".extension-install-")),
       env: expect.objectContaining({
         BUN_BE_BUN: "1",

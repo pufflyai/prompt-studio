@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -322,13 +322,8 @@ test(
         headers: runtimeAuthorization(started.descriptor),
       });
 
-      expect(JSON.parse(readFileSync(join(tempRoot, "install-env.json"), "utf8"))).toEqual({
-        httpsProxy: "http://127.0.0.1:9",
-        npmRegistry: "http://127.0.0.1:9",
-        npmToken: "registry-secret",
-        sourceControlToken: null,
-        providerKey: null,
-      });
+      // Even trusted dependency scripts must not run during an extension install.
+      expect(existsSync(join(tempRoot, "install-env.json"))).toBe(false);
     } finally {
       if (child) {
         await stopProcess(child);
