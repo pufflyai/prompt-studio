@@ -2,6 +2,16 @@ import { expect, test } from "bun:test";
 import type { NavigationTarget, TreeViewSection } from "../../../core";
 import { resolveTreeListSelection } from "./tree-list-adapter";
 
+test("preserves declared selection in a tree without navigation targets", () => {
+  expect(
+    resolveTreeListSelection({
+      sections: [{ id: "guide", nodes: [{ id: "start", label: "Getting started", selected: true }] }],
+      childrenByNodeId: {},
+      activeLocation: { page: { kind: "page", extensionId: "author.guide", id: "guide" } },
+    }),
+  ).toBe("start");
+});
+
 test.each(["body", "first-file", "second-file"])("selects only the declared ticket document: %s", (documentId) => {
   const page = { kind: "page", extensionId: "author.planner", id: "ticket" } as const;
   const resource = { type: "ticket", id: "ticket-1", metadata: { documentId } };

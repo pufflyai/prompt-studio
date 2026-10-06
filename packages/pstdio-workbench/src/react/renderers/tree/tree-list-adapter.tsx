@@ -107,6 +107,7 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
       .filter((node) => {
         if (!node.selected) return false;
         const nodeResourceKey = resolveTreeNodeResourceKey(node);
+        if (!nodeResourceKey && !node.target) return true;
         if (nodeResourceKey && activeResourceKeys.includes(nodeResourceKey)) return true;
         return activeLocation ? targetMatchesPage(node.target, activeLocation.page, activeResource) : !activeResource;
       })

@@ -166,6 +166,7 @@ documents within one ticket. The declaration stays on the node when trees are co
 and their IDs are scoped. While its resource or page is active, it takes precedence
 over saved row selection and automatic page or resource matching. A contextual parent
 tree's declared document selection does not override the open workspace.
+Rows without a resource or navigation target keep their declared selection.
 
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
