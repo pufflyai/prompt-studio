@@ -55,7 +55,6 @@ export const exampleDefaults = {
 };
 
 export type ExampleName = keyof typeof exampleDefaults;
-export type ExampleState<Name extends ExampleName> = (typeof exampleDefaults)[Name];
 export const exampleNames = Object.keys(exampleDefaults) as ExampleName[];
 export const exampleResources = {
   scribble: scribbleDocuments.map((doc) => ({ type: "scribble.document", id: doc.id, label: doc.title })),
