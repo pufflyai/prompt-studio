@@ -9,7 +9,10 @@ interface Props {
 }
 
 const { page } = Astro.props;
-const { title, description, canonicalUrl, structuredData, banner, indexable } = landingMetadata(page, Astro.url.pathname);
+const { title, description, canonicalUrl, structuredData, banner, indexable } = landingMetadata(
+  page,
+  Astro.url.pathname,
+);
 const { themeColor } = siteMetadata;
 const faviconSvgUrl = new URL(siteMetadata.faviconSvgPath, siteMetadata.siteUrl).href;
 const faviconPngUrl = new URL(siteMetadata.faviconPngPath, siteMetadata.siteUrl).href;

@@ -3,12 +3,7 @@
   "width": 1600,
   "height": 400,
   "layout": "solo",
-  "kinds": [
-    "page",
-    "editor",
-    "skill",
-    "hook"
-  ],
+  "kinds": ["page", "editor", "skill", "hook"],
   "count": 17,
   "scale": 1.227863233909011,
   "offsetX": -0.0021237297076731887,

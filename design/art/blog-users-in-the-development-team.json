@@ -3,12 +3,7 @@
   "width": 1600,
   "height": 400,
   "layout": "shelf",
-  "kinds": [
-    "page",
-    "editor",
-    "skill",
-    "hook"
-  ],
+  "kinds": ["page", "editor", "skill", "hook"],
   "count": 22,
   "scale": 1.2992648074403406,
   "offsetX": 0.005449265101924533,

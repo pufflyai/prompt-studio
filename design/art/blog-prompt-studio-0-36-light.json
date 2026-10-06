@@ -3,12 +3,7 @@
   "width": 1600,
   "height": 400,
   "layout": "scatter",
-  "kinds": [
-    "page",
-    "editor",
-    "skill",
-    "hook"
-  ],
+  "kinds": ["page", "editor", "skill", "hook"],
   "count": 18,
   "scale": 1.015638053044677,
   "offsetX": 0.012439816826954483,

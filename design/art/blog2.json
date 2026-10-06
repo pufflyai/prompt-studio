@@ -3,11 +3,7 @@
   "width": 1600,
   "height": 900,
   "layout": "shelf",
-  "kinds": [
-    "page",
-    "editor",
-    "skill"
-  ],
+  "kinds": ["page", "editor", "skill"],
   "count": 9,
   "scale": 1,
   "offsetX": 0.3,
