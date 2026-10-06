@@ -20,6 +20,13 @@ The React integration needs the peer dependencies `react` and `react-dom` (19), 
 
 Runnable examples live in the workbench's Storybook stories under `packages/pstdio-workbench/src/examples`. Start with the [panels and pages stories](../../../packages/pstdio-workbench/src/examples/api/api.stories.tsx).
 
+## Tabs
+
+Tabs can be dragged onto panel content, including webviews in panels without a
+tab strip. During a tab drag, the workbench catches pointer events over panels
+so iframe content cannot interrupt the drop, even at a disallowed destination.
+Outside tab drags, webviews receive their normal pointer events and native file drops.
+
 ## Panel menus
 
 Closing an attached panel menu hides it until its header opener is selected. The
