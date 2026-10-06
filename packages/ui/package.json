@@ -126,7 +126,7 @@
     "@xterm/xterm": "^5.5.0",
     "diff": "^8.0.3",
     "dompurify": "^3.4.13",
-    "katex": "^0.16.33",
+    "katex": "^0.19.0",
     "lexical": "^0.40.0",
     "lucide-react": "^0.557.0",
     "mdast-util-from-markdown": "^2.0.3",
