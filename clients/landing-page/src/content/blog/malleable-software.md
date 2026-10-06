@@ -96,8 +96,9 @@ These systems extend the Unix-like model of small, composable tools into the rea
 
 Over the past months, I’ve been working on Kaset, a framework designed to explore this new kind of software.
 
-The [Kaset Playground](https://kaset.dev/playground) is a website that looks like a desktop.
-You can see Kaset in action by generating plugins and tools just for you that extend the way the website works.
+![Kaset Playground with an agent creating a shader editor beside desktop-style tools and an open readme](../../../../../documentation/images/kaset-playground.png)
+
+*The [Kaset Playground](https://kaset.dev/playground) is a website that looks like a desktop. You can see Kaset in action by generating plugins and tools just for you that extend the way the website works.*
 
 Kaset is built around one idea: your application can be defined as an editable file system (substrate) accessible by coding agents (instrumental interface).
 
@@ -112,6 +113,10 @@ A simple coding agent and instructions stored in a `agents.md` file are enough.
 Instead of waiting for a feature request to reach the dev team, a user could simply ask the system:
 
 > “Add a button that exports my data to CSV.”
+
+![Kaset agent adding confetti and moving completed todo items to the bottom, with the shopping list and its Markdown file visible](../../../../../documentation/images/kaset-todo-customization.png)
+
+*A user modifying the behavior of a deployed todo app live in the browser.*
 
 ### Enforcing guardrails
 
