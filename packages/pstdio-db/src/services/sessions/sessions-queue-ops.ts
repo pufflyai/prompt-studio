@@ -111,20 +111,3 @@ export const cancelQueued = async (db: DbClient, id: string) => {
     return updated;
   });
 };
-
-export const archiveQueued = async (db: DbClient, id: string) => {
-  const timestamp = nowTimestamp();
-
-  return db.transaction(async (tx) => {
-    const [updated] = await tx
-      .update(sessions)
-      .set({ archived: true, updated_at: timestamp })
-      .where(and(eq(sessions.id, id), eq(sessions.status, "queued")))
-      .returning();
-
-    if (!updated) return null;
-
-    await tx.delete(session_queue_entries).where(eq(session_queue_entries.session_id, id));
-    return updated;
-  });
-};

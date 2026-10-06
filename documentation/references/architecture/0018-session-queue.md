@@ -76,6 +76,24 @@ workspace. Entries without attachments are removed only when start or resume acc
 the run. Retryable workspace readiness failures release the claim and keep the prompt
 queued for the next drain. Attachment entries retain their existing transcript guard.
 
+### Workspace readiness
+
+`workspaceSessionReadiness` (`features/workspaces/workspace-session-readiness.ts`) is the one rule
+for whether a session may start in its workspace. It returns:
+
+- `ready`: no workspace, or the provider state is `ready`.
+- `wait`: the workspace is still initializing, the provider is `provisioning` or
+  `provider_missing`, or the provider error is retryable. A failed `archiving` or `deleting`
+  operation is retryable, so it waits.
+- `fail`: setup failed, or the provider state is not ready and will not recover on its own.
+
+The drain and the spawn gate (`ensureWorkspaceReady`) both read it. The drain leaves a `wait`
+entry pending and does not claim it. The workspace `set` event, watched by
+`watchSessionQueueReadiness`, drains again when the workspace changes. A `fail` entry is
+dispatched so the spawn gate records the failure on the session. Because both gates share the
+rule, the drain never claims work that the spawn gate would release again, which used to retry
+the same entry in a tight loop.
+
 A drain waits for startup and durable queue cleanup after releasing the scheduling lock.
 One app-owned lifecycle tracks every drain, including workspace readiness, released
 session capacity, and settings changes. Shutdown stops accepting new drains, unsubscribes
@@ -112,7 +130,7 @@ When a follow-up is accepted but queued:
 3. Conversation hydration includes the queued user prompt before the queued status banner.
 4. The dashboard clears the composer when the message enters the conversation and keeps sending locked until the request settles. After acceptance, it hydrates the durable queue. It does not keep a separate client queue.
 
-Question responses for `awaiting_input` sessions bypass capacity checks. They resume work that already occupies active capacity, so queueing them would deadlock the approval flow.
+Question responses for `awaiting_input` sessions bypass capacity checks. They resume work that already occupies active capacity, so queueing them would deadlock the question flow.
 
 ## Planner Ticket Attempts
 

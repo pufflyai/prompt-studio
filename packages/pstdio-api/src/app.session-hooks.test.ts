@@ -81,6 +81,18 @@ const writeSessionHookExtension = () => {
             },
           },
           {
+            id: "remember-session-completed",
+            ref: { kind: "hook", id: "remember-session-completed" },
+            event: { extensionId: "pstdio", kind: "event", id: "session.completed" },
+            async run(ctx, event) {
+              await ctx.storage.set(\`session.completed:\${event.sessionId}\`, {
+                eventId: "session.completed",
+                sessionId: event.sessionId,
+                sessionStatus: event.sessionStatus,
+              });
+            },
+          },
+          {
             id: "remember-session-succeeded",
             ref: { kind: "hook", id: "remember-session-succeeded" },
             event: { extensionId: "pstdio", kind: "event", id: "session.succeeded" },
@@ -128,21 +140,40 @@ afterEach(async () => {
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
+const enableSessionHookExtension = async (projectId: string) =>
+  handle.deps.extensionService.enableInstalledSourceForProject({
+    projectId,
+    installName: "session-hook-extension",
+    extensionId: "pstdio.session-hook-extension",
+    name: "session-hook-extension",
+    displayName: "Session Hook Extension",
+    version: "1.0.0",
+    sourceKind: "local_path",
+    sourcePath: writeSessionHookExtension(),
+    manifest: { id: "pstdio.session-hook-extension" },
+  });
+
 describe("session lifecycle extension hooks", () => {
+  test("dispatches session.completed for every terminal status", async () => {
+    const project = await handle.deps.projectService.create({ name: "Completed hooks" });
+    const enabled = await enableSessionHookExtension(project.id);
+
+    for (const status of ["completed", "failed", "cancelled", "disconnected"] as const) {
+      const session = await handle.deps.sessionService.create(
+        { project_id: project.id, title: `Ends ${status}`, agent: "test-agent" },
+        { emitStartedHook: false },
+      );
+      await handle.deps.sessionService.transitionStatus(session.id, status, { drainCapacity: false });
+
+      await expect(
+        waitForStoredEvent(enabled.instance.id, project.id, `session.completed:${session.id}`),
+      ).resolves.toEqual({ eventId: "session.completed", sessionId: session.id, sessionStatus: status });
+    }
+  });
+
   test("dispatches status transition events to enabled extension hooks", async () => {
     const project = await handle.deps.projectService.create({ name: "Hooked Project" });
-    const sourcePath = writeSessionHookExtension();
-    const enabled = await handle.deps.extensionService.enableInstalledSourceForProject({
-      projectId: project.id,
-      installName: "session-hook-extension",
-      extensionId: "pstdio.session-hook-extension",
-      name: "session-hook-extension",
-      displayName: "Session Hook Extension",
-      version: "1.0.0",
-      sourceKind: "local_path",
-      sourcePath,
-      manifest: { id: "pstdio.session-hook-extension" },
-    });
+    const enabled = await enableSessionHookExtension(project.id);
     const session = await handle.deps.sessionService.create({
       project_id: project.id,
       title: "Hooked session",

@@ -17,8 +17,11 @@ const readyRemoteResult = (state: WorkspaceProviderResult["state"]): WorkspacePr
   capabilities: remoteWorkspaceCapabilities,
 });
 
-const makeDeps = (provider: Record<string, unknown>, workspace = makeWorkspace()) => {
+type SessionRow = { id: string; status: string; archived: boolean };
+
+const makeDeps = (provider: Record<string, unknown>, workspace = makeWorkspace(), sessions: SessionRow[] = []) => {
   let stored = workspace;
+  const events: string[] = [];
   const updateProviderProjection = mock(async (_id: string, patch: Record<string, unknown>) => {
     stored = { ...stored, ...patch };
     return stored;
@@ -50,8 +53,11 @@ const makeDeps = (provider: Record<string, unknown>, workspace = makeWorkspace()
           return stored;
         },
       },
-      workspaceSessionService: { listByWorkspace: async () => [] },
-      sessionService: { archive: async () => {} },
+      workspaceSessionService: { listByWorkspace: async () => sessions },
+      sessionService: {
+        archive: async (id: string) => events.push(`archive ${id}`),
+        cancel: async (id: string) => events.push(`cancel ${id}`),
+      },
       workspaceProviderRuntime: {
         find: async () => ({ context: {} as never, provider: provider as never }),
       },
@@ -62,8 +68,16 @@ const makeDeps = (provider: Record<string, unknown>, workspace = makeWorkspace()
     updateProviderProjection,
     beginProviderOperation,
     softDelete,
+    events,
   };
 };
+
+const workspaceSessions: SessionRow[] = [
+  { id: "running", status: "in_progress", archived: false },
+  { id: "waiting", status: "awaiting_input", archived: false },
+  { id: "queued", status: "queued", archived: false },
+  { id: "done", status: "completed", archived: false },
+];
 
 describe("archiveProviderBackedWorkspace", () => {
   test("calls provider archive with a persisted operation id and skips worktree cleanup", async () => {
@@ -122,6 +136,7 @@ describe("archiveProviderBackedWorkspace", () => {
           provider_operation_kind: input.kind,
         }),
       },
+      workspaceSessionService: { listByWorkspace: async () => [] },
       workspaceProviderRuntime: { find: async () => undefined },
       extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
     } as never;
@@ -153,6 +168,32 @@ describe("archiveProviderBackedWorkspace", () => {
       provider_operation_id: "op-create-before-archive",
       provider_operation_kind: "archive",
     });
+  });
+});
+
+describe("workspace removal stops its agents first", () => {
+  test("archive cancels active sessions before the provider removes the workspace", async () => {
+    const { deps, events } = makeDeps(
+      { archive: async () => events.push("provider archive") && readyRemoteResult("archived") },
+      makeWorkspace(),
+      workspaceSessions,
+    );
+
+    await archiveProviderBackedWorkspace(deps, makeWorkspace() as never);
+
+    expect(events.slice(0, 4)).toEqual(["cancel running", "cancel waiting", "cancel queued", "provider archive"]);
+  });
+
+  test("delete cancels active sessions before the provider removes the workspace", async () => {
+    const { deps, events } = makeDeps(
+      { delete: async () => events.push("provider delete") },
+      makeWorkspace(),
+      workspaceSessions,
+    );
+
+    await deleteProviderBackedWorkspace(deps, makeWorkspace() as never);
+
+    expect(events).toEqual(["cancel running", "cancel waiting", "cancel queued", "provider delete"]);
   });
 });
 
@@ -269,6 +310,7 @@ describe("deleteProviderBackedWorkspace without an installed provider", () => {
           provider_operation_kind: input.kind,
         }),
       },
+      workspaceSessionService: { listByWorkspace: async () => [] },
       workspaceProviderRuntime: { find: async () => undefined },
       extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
     } as never;

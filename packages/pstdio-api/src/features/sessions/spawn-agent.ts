@@ -1,6 +1,7 @@
 import type { HarnessAttachment, HarnessParams, HarnessSession, QuestionResponse } from "pstdio-api-contracts";
 import { sessionLogger } from "../../lib/logger";
 import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
+import { workspaceSessionReadiness } from "../workspaces/workspace-session-readiness";
 import type { SessionsRouteDeps } from "./deps";
 import { initializeConversation } from "./initialize-conversation";
 import {
@@ -70,26 +71,8 @@ const ensureWorkspaceReady = async (deps: SpawnDeps, sessionId: string) => {
   if (!deps.workspaceSessionService) return null;
 
   const workspace = await waitForWorkspaceReady({ workspaceSessionService: deps.workspaceSessionService }, sessionId);
-  if (workspace?.initializing) {
-    throw new WorkspaceSessionNotReadyError(
-      `Workspace ${workspace.id} is still provisioning; refusing to start the session.`,
-      true,
-    );
-  }
-  if (workspace?.setup_error) {
-    throw new WorkspaceSessionNotReadyError(
-      `Workspace ${workspace.id} failed to provision: ${workspace.setup_error}`,
-      false,
-    );
-  }
-  if (workspace?.provider_state && workspace.provider_state !== "ready") {
-    const message = workspace.provider_error_json?.message ?? `provider state is ${workspace.provider_state}`;
-    const retryable =
-      workspace.provider_error_json?.retryable === true ||
-      workspace.provider_state === "provisioning" ||
-      workspace.provider_state === "provider_missing";
-    throw new WorkspaceSessionNotReadyError(`Workspace ${workspace.id} is not ready: ${message}`, retryable);
-  }
+  const readiness = workspaceSessionReadiness(workspace);
+  if (readiness.kind !== "ready") throw new WorkspaceSessionNotReadyError(readiness.message, readiness.kind === "wait");
   return workspace;
 };
 

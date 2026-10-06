@@ -16,7 +16,7 @@ The extension owns the shared scene kit, review state, and build cache. Project 
 
 The scene compiler bundles only study files. It writes each allowed shared import as a `motion-lab-shared:<specifier>` placeholder. The preview replaces each placeholder with a blob module that re-exports its own loaded copy of that library. The server never resolves installed packages for a scene, so a scene build does not depend on the extension's `node_modules` or the host's current directory. This replaces the [temporary separate link pass](0051-superseded-temporary-motion-scene-link-pass.md).
 
-The host emits `session.awaitingInput` after a turn, and `session.succeeded` or `session.failed` when a session ends. The extension subscribes to those events. The declared `session.completed` event is not emitted by the current host.
+The host emits `session.awaitingInput` when the agent asks the person a question, and `session.succeeded` or `session.failed` when a run ends that way. The extension subscribes to those events. The host also emits `session.completed` when a run ends with any terminal status, including `cancelled` and `disconnected`.
 
 Study deletion reports the removed resource to the host after deleting files and review state. This clears cached palette entries and uses the shared behavior for closing deleted resources. Opening a stale link still shows the missing-study message.
 
