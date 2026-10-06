@@ -195,6 +195,15 @@ describe("ensureApi descriptor discovery", () => {
 });
 
 describe("ensureApi fixed URL startup", () => {
+  it("does not start a local api when a remote url is down", async () => {
+    const spies = { runApiCalled: false };
+
+    await expect(ensureApi("https://studio.example.com", unhealthyThenHealthyDeps(spies))).rejects.toThrow(
+      "Cannot reach the Prompt Studio API at https://studio.example.com",
+    );
+    expect(spies.runApiCalled).toBe(false);
+  });
+
   it("starts api when not healthy", async () => {
     const spies = { runApiCalled: false };
     let stdio: string | undefined;
