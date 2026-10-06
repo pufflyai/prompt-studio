@@ -75,6 +75,9 @@ jobs:
       - name: Check package boundaries and browser test origins
         run: bun run verify:boundaries
 
+      - name: Check for unused files, exports, and dependencies
+        run: bun run knip
+
       - name: Check lockfile and extension API version
         run: bun run verify:lockfile && bun run verify:extension-api-version && bun run verify:extension-api-report
 

@@ -316,7 +316,5 @@ export const tokenEditorPresets: TokenEditorPreset[] = [
   },
 ];
 
-export const defaultTokenEditorValues = pstLightTokenEditorValues;
-
 export const createTokenEditorStyle = (values: TokenEditorValues) =>
   Object.fromEntries(tokenEditorTokens.map((token) => [token.cssVariable, values[token.id] ?? token.defaultValue]));

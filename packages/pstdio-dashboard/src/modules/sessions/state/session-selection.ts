@@ -25,5 +25,3 @@ export const getDashboardSelectedSession = (ctx: DashboardSessionSelectionContex
   if (!sessionId) return undefined;
   return createDashboardSessions(getDashboardSelectedProjectId(ctx)).find((session) => session.id === sessionId);
 };
-export const subscribeDashboardSelectedSession = (ctx: DashboardSessionSelectionContext, listener: () => void) =>
-  ctx.context.store.subscribeSelector((state) => state.values[dashboardSelectedSessionIdContextKey], listener);

@@ -29,12 +29,6 @@ export const workspaceDiffFilesQueryKey = (workspaceId: string, mode: WorkspaceD
 export const workspaceDiffFileQueryKey = (workspaceId: string, mode: WorkspaceDiffMode, path: string) =>
   ["workspace-diffs", workspaceId, "file", mode, path] as const;
 
-export const workspaceFilesQueryOptions = (workspaceId: string, input: ListWorkspaceFilesInput) =>
-  queryOptions({
-    queryKey: workspaceFilesQueryKey(workspaceId, input),
-    queryFn: ({ signal }) => getApiClient().workspaces.listFiles(workspaceId, input, { signal }),
-  });
-
 export const workspaceFileQueryOptions = (workspaceId: string, path: string) =>
   queryOptions({
     queryKey: workspaceFileQueryKey(workspaceId, path),

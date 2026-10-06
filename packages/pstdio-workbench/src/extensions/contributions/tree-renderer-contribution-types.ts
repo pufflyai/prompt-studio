@@ -9,7 +9,6 @@ import type {
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 
 export type ExtensionTreeRendererRecord = NonNullable<WorkbenchExtensionMetadata["treeRenderers"]>[number];
-export type ExtensionTreePanelRecord = WorkbenchExtensionMetadata["panels"][number];
 export type ExtensionTreeViewRecord =
   | WorkbenchExtensionMetadata["panels"][number]
   | NonNullable<WorkbenchExtensionMetadata["panels"][number]["panelMenus"]>[number];

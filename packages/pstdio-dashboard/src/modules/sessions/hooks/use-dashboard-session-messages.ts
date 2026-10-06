@@ -5,7 +5,6 @@ import { getApiClient } from "@/lib/api";
 import { getCollection, subscribeCollections } from "@/lib/sync/collections";
 import { createSessionHistoryController, type SessionHistoryState } from "../data/session-history-controller";
 
-export type DashboardSessionMessagesState = SessionHistoryState;
 const emptyState: SessionHistoryState = { messages: [], loading: false, streaming: false };
 
 export const nextStateForConnectionStart = (args: { current: SessionHistoryState; isSessionChange: boolean }) =>

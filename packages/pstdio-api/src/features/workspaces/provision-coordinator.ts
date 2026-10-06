@@ -19,8 +19,6 @@ const defaultHooks = (): WorkspaceProvisioningHooks => ({
   fireReadyAsync: fireExtensionEventAsync,
   ensureConfig: ensureWorkspaceConfig,
 });
-export const resolveWorkspaceDir = (workspace: Pick<ExtensionWorkspace, "root_path">) => workspace.root_path;
-export const workspaceType = (workspace: Pick<ExtensionWorkspace, "provider_id">) => workspace.provider_id;
 
 export const runWorkspaceProvisioning = async <
   W extends { id: string; root_path: string | null; execution_kind: string; provider_id: string },
