@@ -178,5 +178,3 @@ export const startAppLifecycle = async (input: {
     getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
   });
 };
-
-export { sessionStatusEventFor } from "./services/session-lifecycle-callbacks";

@@ -30,7 +30,7 @@ People and agents need to connect outputs from different tools without copying t
 
 ## Delivery
 
-Four ordered PRs are required: host/SDK, shared UI, first-party extensions using the released SDK, then legacy cleanup. The host stage cannot change extension sources in the same PR. Follow [ADR 0056](../../adrs/0056-project-resource-anchors.md).
+Four ordered PRs are required: host/SDK, shared UI, first-party extensions using the released SDK, then legacy cleanup. The host stage cannot change extension sources in the same PR. Follow [ADR 0061](../../adrs/0061-project-resource-anchors.md).
 
 ## Non-goals
 
