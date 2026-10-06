@@ -11,15 +11,13 @@ export const workbenchPaletteModes: PaletteMode[] = [{ id: SEARCH_MODE_ID }, { i
 
 export const isThemePaletteView = (view: WorkbenchCommandPaletteView) => view === THEME_MODE_ID;
 
-export const isPickerPaletteView = isThemePaletteView;
-
 export const getPaletteViewMode = (view: WorkbenchCommandPaletteView) => {
   if (isThemePaletteView(view)) return THEME_MODE_ID;
   return undefined;
 };
 
 export const getPaletteViewModes = (view: WorkbenchCommandPaletteView) => {
-  if (isPickerPaletteView(view)) return undefined;
+  if (isThemePaletteView(view)) return undefined;
 
   return workbenchPaletteModes;
 };

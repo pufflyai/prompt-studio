@@ -30,11 +30,14 @@ export const closeBeforeFatalExit = async (close: () => Promise<void>, timeoutMs
   clearTimeout(timer);
 };
 
-export const sessionStatusEventFor = (status: string) => {
-  if (status === "awaiting_input") return sessionEvents.awaitingInput;
-  if (status === "completed") return sessionEvents.succeeded;
-  if (status === "failed") return sessionEvents.failed;
-  return null;
+// `session.completed` means "the run ended" and fires for every terminal status; the payload's
+// `sessionStatus` says how. `succeeded` and `failed` stay as the narrower events.
+export const sessionStatusEventsFor = (status: string) => {
+  if (status === "awaiting_input") return [sessionEvents.awaitingInput];
+  if (status === "completed") return [sessionEvents.succeeded, sessionEvents.completed];
+  if (status === "failed") return [sessionEvents.failed, sessionEvents.completed];
+  if (status === "cancelled" || status === "disconnected") return [sessionEvents.completed];
+  return [];
 };
 
 export const createAppTerminalSupervisor = () =>
@@ -69,7 +72,7 @@ export const createRuntimeRouteDeps = (input: {
     browserSessions: createBrowserSessions(),
     activity: async () => ({
       sessions: await activeSessions(),
-      terminals: input.terminalSupervisor.activity(),
+      terminals: await input.terminalSupervisor.activity(),
       jobs: input.extensionScheduler.activity(),
     }),
     cancelActivity: async () => {

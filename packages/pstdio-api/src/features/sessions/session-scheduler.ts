@@ -291,10 +291,6 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     return { status: "dispatched" };
   };
 
-  const resumeForApproval = async (sessionId: string) => {
-    return deps.sessionService.resume(sessionId);
-  };
-
   const recoverQueuedSessions = async () => {
     const claimedEntries = await deps.sessionQueueEntriesService.listDispatchStarted();
     for (const entry of claimedEntries) {
@@ -314,7 +310,6 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   return {
     createAndStartSession,
     startOrQueueExisting,
-    resumeForApproval,
     drainQueue,
     recoverQueuedSessions,
   };

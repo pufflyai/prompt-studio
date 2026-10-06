@@ -27,7 +27,6 @@ import {
   getPalettePlaceholder,
   getPaletteViewMode,
   getPaletteViewModes,
-  isPickerPaletteView,
   isThemePaletteView,
 } from "./palette-view";
 import { createWorkbenchPanelWidgetPaletteEntries } from "./panel-widget-palette";
@@ -285,7 +284,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
           onQueryChange={setLiveQuery}
           onClose={closePalette}
           onEscape={(ctx) => {
-            if (isPickerPaletteView(view)) {
+            if (isThemePaletteView(view)) {
               exitPickerView();
               return true;
             }

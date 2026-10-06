@@ -208,14 +208,9 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   };
 
   const archive = async (id: string) => {
+    // A queued session must keep a queue entry, so archiving queued work cancels it first.
     const existing = await raw.get(id);
-    if (existing?.status === "queued") {
-      const archived = await raw.archiveQueued(id);
-      if (archived) {
-        deps.eventBus.emit("sessions", "set", archived);
-        return archived;
-      }
-    }
+    if (existing?.status === "queued") await cancel(id);
 
     const updated = await raw.archive(id);
     if (!updated) return null;

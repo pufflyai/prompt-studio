@@ -66,5 +66,3 @@ export const createFrameRateCounter = () => {
     },
   };
 };
-
-export type FrameRateCounter = ReturnType<typeof createFrameRateCounter>;

@@ -62,7 +62,7 @@ describe("terminal supervisor", () => {
     const terminal = supervisor.api.openSession({ command, cols: 80, rows: 24 });
     try {
       await Bun.sleep(100);
-      expect(supervisor.activity()).toEqual([{ id: terminal.id, label: basename(command[0]) }]);
+      expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: basename(command[0]) }]);
     } finally {
       await supervisor.dispose();
     }
@@ -75,7 +75,7 @@ describe("terminal supervisor", () => {
     try {
       terminal.write("exec sleep 5\n");
       await Bun.sleep(100);
-      expect(supervisor.activity()).toEqual([{ id: terminal.id, label: "bash" }]);
+      expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: "bash" }]);
     } finally {
       await supervisor.dispose();
     }
@@ -86,7 +86,7 @@ describe("terminal supervisor", () => {
     const supervisor = createTerminalSupervisor({ logger });
     const terminal = supervisor.api.openSession({ command: ["/bin/sleep", "5"], cols: 80, rows: 24 });
     try {
-      expect(supervisor.activity()).toEqual([{ id: terminal.id, label: "sleep" }]);
+      expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: "sleep" }]);
     } finally {
       await supervisor.dispose();
     }
@@ -233,17 +233,18 @@ describe("terminal supervisor", () => {
 
     try {
       await Bun.sleep(100);
-      expect(supervisor.activity()).toEqual([]);
+      expect(await supervisor.activity()).toEqual([]);
       handle.write(line("sleep 0.5"));
-      for (let attempt = 0; attempt < 30 && supervisor.activity().length === 0; attempt += 1) await Bun.sleep(10);
-      expect(supervisor.activity()).toEqual([{ id: handle.id, label: "bash" }]);
+      for (let attempt = 0; attempt < 30 && (await supervisor.activity()).length === 0; attempt += 1)
+        await Bun.sleep(10);
+      expect(await supervisor.activity()).toEqual([{ id: handle.id, label: "bash" }]);
       await Bun.sleep(600);
-      expect(supervisor.activity()).toEqual([]);
+      expect(await supervisor.activity()).toEqual([]);
     } finally {
       await handle.kill("SIGKILL");
     }
 
-    expect(supervisor.activity()).toEqual([]);
+    expect(await supervisor.activity()).toEqual([]);
     expect(records).toContainEqual({
       message: "terminal session kill",
       metadata: { id: handle.id, signal: "SIGKILL" },
@@ -278,7 +279,7 @@ describe("terminal supervisor", () => {
     expect(settled).toBe("settled");
 
     expect(await waitForExit(jobPid)).toBe(false);
-    expect(supervisor.activity()).toEqual([]);
+    expect(await supervisor.activity()).toEqual([]);
   });
 
   posixOnlyTest("kill stops a session child that ignores the stop signal", async () => {

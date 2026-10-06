@@ -154,13 +154,20 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       // Publish the launched process name right away — deterministic and free of
       // the PTY foreground-group race at spawn — then track the live foreground.
       publishTitle(fallbackTitle);
-      const titlePoll = setInterval(
-        () => publishTitle(readTerminalForeground(child.pid)?.name || fallbackTitle),
-        TITLE_POLL_INTERVAL_MS,
-      );
+      // Each probe is scheduled after the last one settles, so a slow probe never piles up.
+      let exited = false;
+      let titlePoll: ReturnType<typeof setTimeout> | undefined;
+      const pollTitle = async () => {
+        const title = (await readTerminalForeground(child.pid))?.name || fallbackTitle;
+        if (exited) return;
+        publishTitle(title);
+        titlePoll = setTimeout(pollTitle, TITLE_POLL_INTERVAL_MS);
+      };
+      titlePoll = setTimeout(pollTitle, TITLE_POLL_INTERVAL_MS);
 
       void child.exited.then((code) => {
-        clearInterval(titlePoll);
+        exited = true;
+        clearTimeout(titlePoll);
         sessions.delete(id);
         shell.dispose();
         logger.info("terminal session exited", { id, code });
@@ -211,10 +218,15 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
     sessions.clear();
   };
 
-  const activity = () =>
-    [...sessions]
-      .filter(([, session]) => !session.atPrompt() || readTerminalForeground(session.pid)?.group !== session.pid)
-      .map(([id, session]) => ({ id, label: session.label }));
+  const activity = async () => {
+    const entries = await Promise.all(
+      [...sessions].map(async ([id, session]) => {
+        const busy = !session.atPrompt() || (await readTerminalForeground(session.pid))?.group !== session.pid;
+        return busy ? { id, label: session.label } : null;
+      }),
+    );
+    return entries.filter((entry) => entry !== null);
+  };
 
   return { activity, api, dispose };
 };

@@ -23,12 +23,12 @@ graph TD
 
     subgraph "Status path (badges)"
         SSE_SYNC["/v1/sync/stream\nSSE sync"] --> TANSTACK["TanStack DB\nsessions collection"]
-        TANSTACK -- "useLiveQuery" --> BADGES["SessionSelector\nSessionsList\nTicketCard"]
+        TANSTACK -- "useLiveQuery" --> BADGES["Session badges\n(side navigation, tabs)"]
     end
 
     subgraph "Message path (chat)"
         STREAM_SSE["/v1/session-stream\nSSE session stream"] --> HOOK["useDashboardSessionMessages\nmessages, streaming"]
-        HOOK --> CHAT["SessionChatPanel"]
+        HOOK --> CHAT["DashboardSessionChatPanel"]
     end
 
 ```
@@ -43,7 +43,7 @@ Every session badge in the UI reads from the synced sessions collection:
 4. Client `sync-client.ts` writes to the TanStack DB `sessions` collection.
 5. `useLiveQuery` re-renders badge components with the new status.
 
-Components on this path: `TicketCard`, `SessionSelector`, `SessionsList`.
+Components on this path: the dashboard session badges in the side navigation and session tabs (`SessionIndicator`). Ticket cards belong to the planner extension, which reads sessions through the SDK.
 
 ### Message path — session stream (chat)
 
@@ -53,7 +53,7 @@ The session chat panel reads messages from the shared session stream:
 2. Server sends `patch` events (JSON patches for messages) and `approval_request` events for that subscription.
 3. The `useDashboardSessionMessages` hook maintains local state for messages and the streaming indicator.
 
-Components on this path: `SessionChatPanel` (messages and streaming indicator only).
+Components on this path: `DashboardSessionChatPanel` (messages and streaming indicator only).
 
 `useDashboardSessionMessages` does not expose session status. All visible status badges come from the DB sync path.
 
@@ -71,7 +71,9 @@ create / follow-up ──► queued ──► in_progress
 ```
 
 `awaiting_input` means the agent cannot continue without the person. The harness asks through the
-host question channel, and the host writes the status. An agent waiting for its own background work
+host question channel, and the host writes the status. The question channel is the only owner of
+this status. A tool approval request does not change the status: the run keeps `in_progress`, and
+answering the approval only resolves that tool call. An agent waiting for its own background work
 is still working, so it stays `in_progress`.
 
 `disconnected` means the server lost the live process handle and could not reattach, or the provider reported a lost connection. A follow-up sent by the user starts a fresh resume and transitions the session back to `in_progress`.
@@ -92,11 +94,12 @@ Harnesses that opt into the host activity watchdog, or omit a timeout strategy, 
 | Follow-up accepted at capacity | `queued`        | `createSessionScheduler`                  |
 | Harness asks the person a question | `awaiting_input` | question channel (`initializeConversation`) |
 | Question answered      | `in_progress`          | question channel (`initializeConversation`) |
-| Approval granted       | `in_progress`          | `approveSessionHandler`                   |
 | Process exit code 0    | `completed`            | `trackHarnessSession`                        |
 | Process exit code != 0 | `failed`               | `trackHarnessSession`                        |
 | Host activity timeout (opt-in/default harnesses) | `failed` | `trackHarnessSession`                 |
 | User stop              | `cancelled`            | `sessionService.cancel`                   |
+| Archive of a queued session | `cancelled`, then archived | `sessionService.archive` (calls `cancel`) |
+| Workspace archive or delete | `cancelled` for each active session | `cancelWorkspaceSessions` (calls `sessionService.cancel`) |
 | Stale recovery (reattach) | stays `in_progress` | `resolveOrphanedSessions` (startup sweep) |
 | Stale recovery (no reattach) | `disconnected`   | `resolveOrphanedSessions` (startup sweep) |
 
@@ -119,8 +122,28 @@ Current paths that must follow this contract:
 - Startup orphan recovery (`resolveOrphanedSessions`)
 - Session create spawn failure fallback (`createSessionHandler` catch path)
 - Session scheduler transitions for create, follow-up, queue claim, and drain
-- Approval transition `awaiting_input -> in_progress` (`approveSessionHandler`)
 - Question channel transitions `in_progress -> awaiting_input` on an ask and back on an answer (`initializeConversation`)
+- Archive of a queued session (`sessionService.archive`)
+- Workspace archive and delete (`cancelWorkspaceSessions`)
+
+### Archive and workspace removal
+
+A queued session must keep a queue entry. Archiving deletes queued work, so `sessionService.archive` first cancels a queued session. The session ends as `cancelled` and archived, its queue entries are gone, and the status hook fires like any other cancel.
+
+A session's agent runs inside its workspace. Before a workspace archive or delete removes the worktree or calls the provider, `cancelWorkspaceSessions` cancels every `queued`, `in_progress`, and `awaiting_input` session in that workspace through `sessionService.cancel`. No agent keeps running in a deleted tree.
+
+### Lifecycle events
+
+The host sends these extension events from the status hook (`sessionStatusEventsFor` in `app-runtime.ts`):
+
+| New status | Events |
+| --- | --- |
+| `awaiting_input` | `session.awaitingInput` |
+| `completed` | `session.succeeded`, `session.completed` |
+| `failed` | `session.failed`, `session.completed` |
+| `cancelled`, `disconnected` | `session.completed` |
+
+`session.completed` means the run ended, with any terminal status. Read `sessionStatus` in the payload to tell the cases apart.
 
 ## Queue Recovery
 
@@ -187,10 +210,10 @@ packages/pstdio-api/src/
   features/
     sessions/
       startup.ts          ← resolveOrphanedSessions(deps)
-  app.ts                  ← calls runStartupTasks after deps are assembled
+  app-runtime.ts          ← startAppLifecycle calls runStartupTasks
 ```
 
-Each feature owns its startup logic. `createApp` makes one call. New tasks are one import + one line.
+Each feature owns its startup logic. `startAppLifecycle` makes one call. New tasks are one import + one line.
 
 ## Rules
 

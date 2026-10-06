@@ -10,7 +10,6 @@ import {
   workbenchViewIdContextKey,
 } from "@pstdio/workbench";
 import {
-  buildWorkbenchExtensionCommandPaletteRegistrations,
   buildWorkbenchExtensionMenuRegistrations,
   emptyWorkbenchExtensionMetadata,
   type WorkbenchExtensionMenuSlotConfig,
@@ -113,9 +112,6 @@ export const dashboardMenuTargetsById = new Map<string, WorkbenchExtensionMenuSl
 const createWorkbenchExtensionCommandId = (contribution: { id: string }) =>
   `dashboard.extension.menu.${contribution.id}`;
 
-const createWorkbenchExtensionPaletteCommandId = (contribution: { id: string }) =>
-  `dashboard.extension.palette.${contribution.id}`;
-
 const isContextPrimitive = (value: unknown) =>
   typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 
@@ -205,10 +201,3 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
   });
   return { registrations, unresolved: result.unresolved, menuSlotsById };
 };
-
-export const buildDashboardExtensionCommandPaletteRegistrations = (metadata: DashboardExtensionMetadata) =>
-  buildWorkbenchExtensionCommandPaletteRegistrations({
-    metadata,
-    createCommandId: createWorkbenchExtensionPaletteCommandId,
-    resolveString: resolveLocalizableString,
-  });

@@ -1,7 +1,6 @@
 import type { Project, WorkspaceListItem } from "@pstdio/sdk/resources";
 import { apiRequest } from "@/lib/api";
 
-export const deleteProject = (projectId: string) => apiRequest(`/v1/projects/${projectId}`, { method: "DELETE" });
 export const createProject = async (input: { path: string }) => {
   const project = await apiRequest<Project>("/v1/projects", {
     method: "POST",
