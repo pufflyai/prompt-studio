@@ -18,6 +18,7 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
+import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
 import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
@@ -174,6 +175,7 @@ test.describe("packaged extension webviews", () => {
               project.id,
               runtimeAuthorization(started.descriptor),
             );
+            await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
           }
 
           expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);

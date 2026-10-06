@@ -1,55 +1,45 @@
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { SessionAttachment } from "pstdio-api-contracts";
-import type { Dispatch, SetStateAction } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
 import type { HarnessParamValues } from "../components/harness-param-values";
+import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { toSessionNotice } from "../data/session-notice";
 import { rememberDashboardSessionResource } from "../state/session-selection";
 import {
-  assignPendingFollowUpSession,
   createPendingFollowUpState,
   failPendingFollowUp,
-  handOffPendingFollowUp,
   type PendingFollowUpState,
+  updatePendingFollowUp,
 } from "./session-chat-state";
 
+// Post-send work runs on the request promise. Callbacks passed to TanStack's `mutate()` are
+// skipped once the chat panel unmounts, which would leave the message without an owner.
 export type CreateSessionMutation = {
-  mutate: (
-    input: {
-      projectId: string;
-      prompt: string;
-      agent: string;
-      model: string | undefined;
-      params?: HarnessParamValues;
-      workspaceId?: string;
-      attachments?: SessionAttachment[];
-    },
-    options: {
-      onSuccess: (result: { sessionId: string; status: string }) => void;
-      onError: (error?: Error) => void;
-    },
-  ) => void;
+  mutateAsync: (input: {
+    projectId: string;
+    prompt: string;
+    agent: string;
+    model: string | undefined;
+    params?: HarnessParamValues;
+    workspaceId?: string;
+    attachments?: SessionAttachment[];
+  }) => Promise<{ sessionId: string; status: string }>;
 };
 
 export type FollowUpDecision = { status: "dispatched" } | { status: "queued"; queue_position: number };
 
 export type FollowUpMutation = {
-  mutate: (
-    input: {
-      sessionId: string;
-      prompt: string;
-      agent?: string;
-      model?: string;
-      params?: HarnessParamValues;
-      questionResponse?: ChatInputQuestionResponse;
-      attachments?: SessionAttachment[];
-    },
-    options: {
-      onSuccess: (result: { status: string; followUp?: FollowUpDecision }) => void;
-      onError: (error?: Error) => void;
-    },
-  ) => void;
+  mutateAsync: (input: {
+    sessionId: string;
+    prompt: string;
+    agent?: string;
+    model?: string;
+    params?: HarnessParamValues;
+    questionResponse?: ChatInputQuestionResponse;
+    attachments?: SessionAttachment[];
+  }) => Promise<{ status: string; followUp?: FollowUpDecision }>;
 };
 
 export type MoveQueuedFollowUpMutation = {
@@ -88,13 +78,22 @@ export const moveQueuedFollowUpBySteps = async (input: {
 
 const createSessionTitle = (prompt: string) => prompt.slice(0, 100) || "Session";
 
+// The user may have moved the panel to another session while the request was open.
+const placementShowsDraft = (input: WorkbenchPanelRenderInput, draftKey: string) => {
+  const placement = Object.values(input.workbench.layout.getLayout().regions)
+    .flatMap((region) => region.widgets)
+    .find((widget) => widget.widgetId === input.instance.instanceId);
+  return Boolean(placement && resolveDashboardSessionViewForPlacement(placement).draftKey === draftKey);
+};
+
 export const openCreatedSessionFromDraft = (args: {
   input: WorkbenchPanelRenderInput;
+  draftKey: string;
   sessionId: string;
   prompt: string;
   projectId: string;
-  pending?: PendingFollowUpState;
 }) => {
+  if (!placementShowsDraft(args.input, args.draftKey)) return undefined;
   const title = createSessionTitle(args.prompt);
   const resource = createDashboardResource("session", args.sessionId, title, "MessageCircle", args.projectId);
 
@@ -105,8 +104,6 @@ export const openCreatedSessionFromDraft = (args: {
     return identity;
   }
   if (identity?.kind === "page") {
-    // The session page mounts a new chat panel; it starts from the draft's first message.
-    if (args.pending) handOffPendingFollowUp(args.pending);
     const result = args.input.workbench.pageLocations.navigate({
       kind: "page",
       page: workbenchPages.session,
@@ -118,16 +115,17 @@ export const openCreatedSessionFromDraft = (args: {
   throw new Error("A session draft must be opened through an owned placement.");
 };
 
-const clearPendingFollowUpForCreatedSession = (
-  current: PendingFollowUpState | null,
-  pending: PendingFollowUpState,
-  sessionId: string,
-) => {
-  if (!current || current.userMessageId !== pending.userMessageId) return current;
-  return assignPendingFollowUpSession(current, sessionId);
-};
+// Ids only need to be unique among the messages a conversation shows at once.
+let nextPendingId = 0;
+
+// Only the submission that finished leaves; a newer submission keeps its own state.
+const clearPendingFollowUp = (conversationKey: string, pending: PendingFollowUpState) =>
+  updatePendingFollowUp(conversationKey, (current) =>
+    current?.userMessageId === pending.userMessageId ? null : current,
+  );
 
 const submitNewSessionMessage = (input: {
+  conversationKey: string;
   projectId: string | undefined;
   agent: string | null;
   model: string | undefined;
@@ -136,66 +134,52 @@ const submitNewSessionMessage = (input: {
   text: string;
   attachments?: SessionAttachment[];
   messages: SessionMessage[];
-  pendingId: string;
-  setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   createSession: CreateSessionMutation;
   onSubmitted?: () => void;
-  onSessionCreated?: (sessionId: string, pending?: PendingFollowUpState) => void;
+  onSessionCreated?: (sessionId: string) => void;
 }) => {
   if (!input.projectId || !input.agent)
     return Promise.reject(new Error("Select a project and an agent before sending."));
-  const projectId = input.projectId;
-  const agent = input.agent;
 
   const pending = createPendingFollowUpState({
     prompt: input.text,
     messageCount: input.messages.length,
-    pendingId: input.pendingId,
+    pendingId: `pending-${nextPendingId++}`,
     attachments: input.attachments,
   });
-  input.setPendingFollowUp(pending);
+  updatePendingFollowUp(input.conversationKey, pending);
   input.onSubmitted?.();
 
-  return new Promise<void>((resolve) =>
-    input.createSession.mutate(
-      {
-        projectId,
-        prompt: input.text,
-        agent,
-        model: input.model,
-        params: input.params,
-        workspaceId: input.workspaceId,
-        attachments: input.attachments,
+  return input.createSession
+    .mutateAsync({
+      projectId: input.projectId,
+      prompt: input.text,
+      agent: input.agent,
+      model: input.model,
+      params: input.params,
+      workspaceId: input.workspaceId,
+      attachments: input.attachments,
+    })
+    .then(
+      ({ sessionId, status }) => {
+        clearPendingFollowUp(input.conversationKey, pending);
+        // The created session owns its first message until its conversation includes it. A queued
+        // session shows the prompt in its queued list instead.
+        if (status !== "queued") updatePendingFollowUp(sessionId, pending);
+        input.onSessionCreated?.(sessionId);
       },
-      {
-        onSuccess: ({ sessionId, status }) => {
-          input.setPendingFollowUp((current) =>
-            status === "queued" ? null : clearPendingFollowUpForCreatedSession(current, pending, sessionId),
-          );
-          // A queued session shows its prompt in the queued list, so only a started one hands it off.
-          input.onSessionCreated?.(
-            sessionId,
-            status === "queued" ? undefined : assignPendingFollowUpSession(pending, sessionId),
-          );
-          resolve();
-        },
-        // The conversation keeps ownership of the failed message.
-        onError: (error) => {
-          const failure = toSessionNotice(error ?? new Error("Could not create the session."));
-          input.setPendingFollowUp((current) => failPendingFollowUp(current, pending, failure));
-          resolve();
-        },
+      // The conversation keeps ownership of the failed message.
+      (error: Error | undefined) => {
+        const failure = toSessionNotice(error ?? new Error("Could not create the session."));
+        updatePendingFollowUp(input.conversationKey, (current) => failPendingFollowUp(current, pending, failure));
       },
-    ),
-  );
+    );
 };
 
 const submitFollowUpMessage = (input: {
   sessionId: string;
   lastRequestStarted?: string | null;
   messages: SessionMessage[];
-  pendingId: string;
-  setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   agent: string | null;
   model: string | undefined;
   params?: HarnessParamValues;
@@ -210,52 +194,44 @@ const submitFollowUpMessage = (input: {
   const pending = createPendingFollowUpState({
     prompt: input.text,
     messageCount: input.messages.length,
-    pendingId: input.pendingId,
-    sessionId: input.sessionId,
+    pendingId: `pending-${nextPendingId++}`,
     previousRunStarted: input.lastRequestStarted,
     attachments: input.attachments,
     questionResponse: input.questionResponse,
   });
-  input.setPendingFollowUp(pending);
+  updatePendingFollowUp(input.sessionId, pending);
   if (!input.questionResponse) input.onSubmitted?.();
 
-  return new Promise<void>((resolve, reject) =>
-    input.followUp.mutate(
-      {
-        sessionId: input.sessionId,
-        prompt: input.text,
-        agent: input.agent ?? undefined,
-        model: input.model,
-        params: input.params,
-        questionResponse: input.questionResponse,
-        attachments: input.attachments,
+  return input.followUp
+    .mutateAsync({
+      sessionId: input.sessionId,
+      prompt: input.text,
+      agent: input.agent ?? undefined,
+      model: input.model,
+      params: input.params,
+      questionResponse: input.questionResponse,
+      attachments: input.attachments,
+    })
+    .then(
+      ({ followUp }) => {
+        if (input.questionResponse) input.onSubmitted?.();
+        // Queued turns use their queue entry; accepted answers update the existing question.
+        if (followUp?.status === "queued" || input.questionResponse) clearPendingFollowUp(input.sessionId, pending);
+        input.reconnect();
       },
-      {
-        onSuccess: ({ followUp }) => {
-          if (input.questionResponse) input.onSubmitted?.();
-          // Queued turns use their queue entry; accepted answers update the existing question.
-          if (followUp?.status === "queued" || input.questionResponse)
-            input.setPendingFollowUp((current) => (current?.userMessageId === pending.userMessageId ? null : current));
-          input.reconnect();
-          resolve();
-        },
-        // The conversation keeps ownership of the failed message.
-        onError: (error) => {
-          input.onQuestionResponseError?.();
-          const failure = toSessionNotice(error ?? new Error("Could not send the follow-up."));
-          input.setPendingFollowUp((current) => failPendingFollowUp(current, pending, failure));
-          if (input.questionResponse) {
-            reject(error ?? new Error("Could not send the answer."));
-            return;
-          }
-          resolve();
-        },
+      // The conversation keeps ownership of the failed message.
+      (error: Error | undefined) => {
+        input.onQuestionResponseError?.();
+        const failure = toSessionNotice(error ?? new Error("Could not send the follow-up."));
+        updatePendingFollowUp(input.sessionId, (current) => failPendingFollowUp(current, pending, failure));
+        if (input.questionResponse) throw error ?? new Error("Could not send the answer.");
       },
-    ),
-  );
+    );
 };
 
 export const submitSessionMessage = (input: {
+  /** The conversation that owns the message: the session id, or the draft key of a new session. */
+  conversationKey: string;
   sessionId: string | null;
   lastRequestStarted?: string | null;
   projectId: string | undefined;
@@ -267,53 +243,13 @@ export const submitSessionMessage = (input: {
   attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;
   messages: SessionMessage[];
-  pendingIdRef: { current: number };
-  setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   createSession: CreateSessionMutation;
   followUp: FollowUpMutation;
   reconnect: () => void;
   onSubmitted?: () => void;
   onQuestionResponseError?: () => void;
-  onSessionCreated?: (sessionId: string, pending?: PendingFollowUpState) => void;
+  onSessionCreated?: (sessionId: string) => void;
 }) => {
-  const pendingId = `pending-${input.pendingIdRef.current}`;
-  input.pendingIdRef.current += 1;
-
-  if (!input.sessionId) {
-    return submitNewSessionMessage({
-      projectId: input.projectId,
-      agent: input.agent,
-      model: input.model,
-      params: input.params,
-      workspaceId: input.workspaceId,
-      text: input.text,
-      attachments: input.attachments,
-      messages: input.messages,
-      pendingId,
-      setPendingFollowUp: input.setPendingFollowUp,
-      createSession: input.createSession,
-      onSubmitted: input.onSubmitted,
-      onSessionCreated: input.onSessionCreated,
-    });
-  }
-
-  return submitFollowUpMessage({
-    sessionId: input.sessionId,
-    lastRequestStarted: input.lastRequestStarted,
-    messages: input.messages,
-    pendingId,
-    setPendingFollowUp: input.setPendingFollowUp,
-    agent: input.agent,
-    model: input.model,
-    params: input.params,
-    text: input.text,
-    attachments: input.attachments,
-    questionResponse: input.questionResponse,
-    followUp: input.followUp,
-    reconnect: input.reconnect,
-    onSubmitted: input.onSubmitted,
-    onQuestionResponseError: input.onQuestionResponseError,
-  });
+  if (!input.sessionId) return submitNewSessionMessage(input);
+  return submitFollowUpMessage({ ...input, sessionId: input.sessionId });
 };
-
-import { workbenchPages } from "@pstdio/sdk/extensions";

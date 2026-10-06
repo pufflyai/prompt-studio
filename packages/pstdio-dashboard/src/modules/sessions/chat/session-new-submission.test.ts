@@ -1,15 +1,23 @@
 import { expect, test } from "bun:test";
 import { type CreateSessionMutation, submitSessionMessage } from "./session-chat-actions";
-import type { PendingFollowUpState } from "./session-chat-state";
+import { getPendingFollowUp } from "./session-chat-state";
+
+type CreateSessionResult = Awaited<ReturnType<CreateSessionMutation["mutateAsync"]>>;
 
 test.each([
   "accepted",
   "failed",
 ])("hands off a new draft immediately and waits for the %s response", async (outcome) => {
-  let pending: PendingFollowUpState | null = null;
-  let response!: Parameters<CreateSessionMutation["mutate"]>[1];
+  const conversationKey = `draft-${outcome}`;
+  let resolve!: (result: CreateSessionResult) => void;
+  let reject!: (error: Error) => void;
+  const response = new Promise<CreateSessionResult>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
   let submitted = 0;
   const result = submitSessionMessage({
+    conversationKey,
     sessionId: null,
     projectId: "project-1",
     agent: "codex",
@@ -28,19 +36,14 @@ test.each([
       },
     ],
     messages: [],
-    pendingIdRef: { current: 0 },
-    setPendingFollowUp: (next) => {
-      pending = typeof next === "function" ? next(pending) : next;
-    },
-    createSession: {
-      mutate: (_input, options) => {
-        response = options;
-      },
-    },
-    followUp: { mutate: () => undefined },
+    createSession: { mutateAsync: () => response },
+    followUp: { mutateAsync: () => Promise.reject(new Error("Must create a session")) },
     reconnect: () => undefined,
     onSubmitted: () => {
-      expect(pending).toMatchObject({ prompt: "Start here", attachments: [{ file_id: "file-1" }] });
+      expect(getPendingFollowUp(conversationKey)).toMatchObject({
+        prompt: "Start here",
+        attachments: [{ file_id: "file-1" }],
+      });
       submitted += 1;
     },
   });
@@ -51,32 +54,30 @@ test.each([
   });
   await Promise.resolve();
   expect(settled).toBe(false);
-  if (outcome === "accepted") response.onSuccess({ sessionId: "session-1", status: "running" });
-  else response.onError(new Error("Could not create session"));
+  if (outcome === "accepted") resolve({ sessionId: `session-${outcome}`, status: "running" });
+  else reject(new Error("Could not create session"));
   await result;
   expect(submitted).toBe(1);
+  if (outcome === "failed") expect(getPendingFollowUp(conversationKey)?.failure).toBeDefined();
 });
 
 test("keeps a new draft when no agent is selected", async () => {
   let submitted = false;
   await expect(
     submitSessionMessage({
+      conversationKey: "draft-no-agent",
       sessionId: null,
       projectId: "project-1",
       agent: null,
       model: undefined,
       text: "Start here",
       messages: [],
-      pendingIdRef: { current: 0 },
-      setPendingFollowUp: () => {
-        throw new Error("No message should be added");
-      },
       createSession: {
-        mutate: () => {
+        mutateAsync: () => {
           throw new Error("No request should start");
         },
       },
-      followUp: { mutate: () => undefined },
+      followUp: { mutateAsync: () => Promise.reject(new Error("Must create a session")) },
       reconnect: () => undefined,
       onSubmitted: () => {
         submitted = true;
@@ -84,4 +85,5 @@ test("keeps a new draft when no agent is selected", async () => {
     }),
   ).rejects.toThrow("Select a project and an agent before sending.");
   expect(submitted).toBe(false);
+  expect(getPendingFollowUp("draft-no-agent")).toBeNull();
 });

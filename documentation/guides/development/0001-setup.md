@@ -41,6 +41,38 @@ Tools and caches live under `/opt/bun` and `/home/bun`; run the launcher without
 
 The container mounts the checkout, including built package files. Stop its container before rebuilding shared packages or running `verify:packages`, then start the same container and reload the browser. A running Vite server can retain imports to deleted build chunks, causing a later action such as enabling table statistics to fail. Use `docker ps` to find the container name, then `docker stop <container-name>` and `docker start <container-name>`. These commands preserve its database and project. Use `--down` only when you intend to discard the isolated state.
 
+### Sign agents in inside the stack
+
+The isolated stack, including `bun run dev:playwright`, runs agents inside its container. Each agent needs a login that the container can read. Sign in once on the host before you start a stack. The image installs these versions:
+
+| Agent       | Version in the image                             | How the container signs in                                                 |
+| ----------- | ------------------------------------------------ | -------------------------------------------------------------------------- |
+| Codex       | `@openai/codex` 0.160.1                          | Mounts the host `~/.codex/auth.json`                                       |
+| OpenCode    | `opencode-ai` 1.18.34                            | Mounts the host `~/.local/share/opencode/auth.json`                        |
+| Claude Code | Latest release from the installer, at build time | Reads `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` from the host shell |
+
+Versions are pinned in [`infra/local/Dockerfile`](../../../infra/local/Dockerfile). OpenCode's free models need OpenCode 1.18.0 or newer.
+
+**Codex.** Run `codex login` on the host. The container mounts `~/.codex/auth.json`, so the file must exist before the stack starts. The seeded project uses Codex but does not pick a model. Sessions start with the model Codex marks as the default for your account. A ChatGPT account can use only the models Codex lists for it.
+
+**OpenCode.** Run `opencode auth login` on the host. The container mounts `~/.local/share/opencode/auth.json` and `~/.local/share/opencode/mcp-auth.json`, so both files must exist. Create an empty `mcp-auth.json` containing `{}` if you have none. The free `opencode/*` models need no provider login.
+
+**Claude Code.** On macOS, Claude Code keeps its login in the Keychain, which the Linux container cannot read. Create a long-lived token on the host with `claude setup-token`, then export it in the shell that starts the stack:
+
+```bash
+export CLAUDE_CODE_OAUTH_TOKEN=<token from claude setup-token>
+bun run dev:playwright
+```
+
+Compose passes `CLAUDE_CODE_OAUTH_TOKEN` and `ANTHROPIC_API_KEY` into the container only when they are set on the host. You can also sign in inside a running stack. The login is kept in the stack's `claude-config` volume until you run `--down`:
+
+```bash
+docker exec -it <stack-name>-prompt-studio-1 claude
+# then type /login and follow the prompts
+```
+
+For `bun run dev:playwright`, the stack name is `pstdio-playwright`.
+
 Build and serve the landing page separately in Docker when working on it. From the repository root:
 
 ```bash
@@ -119,7 +151,7 @@ Start the fixed-name isolated stack used for manual Playwright validation:
 bun run dev:playwright
 ```
 
-Open the dashboard URL printed by the command, complete the browser checks, and tear down the stack afterward:
+Open the dashboard URL printed by the command, complete the browser checks, and tear down the stack afterward. To run agent sessions in this stack, sign the agents in first, as described in [Sign agents in inside the stack](#sign-agents-in-inside-the-stack):
 
 ```bash
 bun run dev:playwright:down

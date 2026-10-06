@@ -69,6 +69,16 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     }
     await expect(editor).toHaveAttribute("contenteditable", "true");
     await expect(editor).toBeFocused();
+    await page.unroute("**/follow-up");
+
+    const equations = "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nEnd equations.";
+    await editor.fill(equations);
+    await editor.press("Enter");
+    const reply = page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last();
+    await expect(reply).toContainText("Packaged equations:");
+    await expect(reply.locator(".katex")).toHaveCount(2);
+    await expect(reply.locator(".katex-display")).toBeVisible();
+    await expect(reply.locator(".katex-error")).toHaveCount(0);
   } finally {
     await browser.close();
   }

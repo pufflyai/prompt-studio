@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
@@ -107,15 +107,35 @@ describe("normalizeRollout in code mode", () => {
 });
 
 describe("findRolloutPath", () => {
-  test("locates the rollout file for a thread id under nested date directories", () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-sessions-"));
+  const writeRollout = (root: string, threadId: string) => {
     const dayDir = join(root, "2026", "06", "11");
-    const path = join(dayDir, "rollout-2026-06-11T21-32-34-thread-xyz.jsonl");
-
-    require("node:fs").mkdirSync(dayDir, { recursive: true });
+    mkdirSync(dayDir, { recursive: true });
+    const path = join(dayDir, `rollout-2026-06-11T21-32-34-${threadId}.jsonl`);
     writeFileSync(path, "{}\n");
+    return path;
+  };
 
-    expect(findRolloutPath("thread-xyz", root)).toBe(path);
-    expect(findRolloutPath("missing-thread", root)).toBeNull();
+  test("locates the rollout file for a thread id under nested date directories", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codex-sessions-"));
+    const path = writeRollout(root, "thread-xyz");
+
+    const lookup = findRolloutPath("thread-xyz", root);
+
+    expect(lookup).toBeInstanceOf(Promise);
+    expect(await lookup).toBe(path);
+    expect(await findRolloutPath("missing-thread", root)).toBeNull();
+  });
+
+  // Harness code runs in the API process, so a full scan of ~/.codex/sessions on every history
+  // load would stall it. A thread keeps its rollout file, so only the first lookup scans.
+  test("scans for a thread once and finds a rollout written after a miss", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codex-sessions-"));
+    expect(await findRolloutPath("thread-late", root)).toBeNull();
+    const path = writeRollout(root, "thread-late");
+    expect(await findRolloutPath("thread-late", root)).toBe(path);
+
+    rmSync(join(root, "2026"), { recursive: true });
+
+    expect(await findRolloutPath("thread-late", root)).toBe(path);
   });
 });

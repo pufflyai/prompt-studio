@@ -145,7 +145,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           onMove={onQueuedFollowUpMove}
         />
         <ChatInput
-          key={conversationKey}
+          key={`${conversationKey ?? ""}:${queuedComposer.editingItemId ?? "draft"}`}
           recentUserMessages={recentUserMessages}
           placeholder={chatInputPlaceholder}
           defaultState={createSerializedPromptState(queuedComposer.inputValue)}

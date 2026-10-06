@@ -105,6 +105,14 @@ export const createLabUi = (baseUrl: string) => {
   const labPageContribution = createLabPage(labPage.ref);
   const labModePageContribution = createLabModePage(overview.ref, artifactDetail.ref);
   const faultyPageContribution = createFaultyPage(faultyPage.ref);
+  const camerasPageContribution = definePage({
+    id: "cameras",
+    title: "Cameras",
+    path: "cameras",
+    mode: workbenchModes.project,
+    main: { kind: "view", view: cams.ref, cardinality: "one" },
+    slots: [],
+  });
   const placements = [
     definePlacement({
       id: "artifacts.lab",
@@ -155,7 +163,7 @@ export const createLabUi = (baseUrl: string) => {
       }),
     ],
     placements,
-    pages: [labPageContribution, labModePageContribution, faultyPageContribution],
+    pages: [labPageContribution, labModePageContribution, faultyPageContribution, camerasPageContribution],
     navigationItems: [
       defineNavigationItem({
         id: "lab",

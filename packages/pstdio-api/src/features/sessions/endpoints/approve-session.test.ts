@@ -20,7 +20,8 @@ const createContext = (input: { id: string; body: { id: string; decision: "appro
 };
 
 describe("approveSessionHandler", () => {
-  test("calls sessionService.resume when awaiting input is approved", async () => {
+  // The question channel owns `awaiting_input`. An approval answers only its own tool call.
+  test("answers the approval without moving a session that waits on a question", async () => {
     const resume = mock(async () => ({ id: "session-1", project_id: "project-1", status: "in_progress" }));
     const handleResponse = mock(() => {});
     const deps = {
@@ -39,6 +40,6 @@ describe("approveSessionHandler", () => {
 
     expect(response.status).toBe(200);
     expect(handleResponse).toHaveBeenCalledWith({ id: "approval-1", decision: "approve" });
-    expect(resume).toHaveBeenCalledWith("session-1");
+    expect(resume).not.toHaveBeenCalled();
   });
 });
