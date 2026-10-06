@@ -124,7 +124,7 @@ test("keeps the tab viewport unscrolled during drag and supports pointer and key
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
   await page.mouse.down();
   await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, { steps: 3 });
-  await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2, { steps: 10 });
+  await page.mouse.move(end.x + end.width * 0.75, end.y + end.height / 2, { steps: 10 });
   await page.mouse.up();
   const order = () => tabs.evaluateAll((elements) => elements.map((element) => element.id));
   await expect.poll(order).toEqual([ids[1], ids[2], ids[0]]);
