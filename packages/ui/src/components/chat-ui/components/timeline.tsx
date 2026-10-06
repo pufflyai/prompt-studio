@@ -1,12 +1,15 @@
-import { Avatar, Box, Button, Card, Timeline as ChakraTimeline, Image, Span, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Card, Timeline as ChakraTimeline, Image, Span, Stack, Text } from "@chakra-ui/react";
 import { ChevronUpIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { DiffEditor } from "@/components/diff-viewer/lazy-diff-editor";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import type { ChatLinkProps } from "../links/chat-link";
+import { ChatLinkAnchor } from "../links/chat-link-anchor";
+import { ChatLinkProvider, useChatLinkHandler } from "../links/chat-link-context";
 import type { IconName } from "../utils/get-icon";
-import { getIconComponent } from "../utils/get-icon";
+import { IndicatorView } from "./timeline-indicator";
 import { TitleInline } from "./timeline-title";
 import { QuestionFormBlockView, TodoListBlockView } from "./timeline-tool-blocks";
 
@@ -97,30 +100,6 @@ export type Block =
       render: (ctx: { onOpenFile?: (filePath: string) => void }) => ReactNode;
     };
 
-function IndicatorView({ ind }: { ind?: Indicator }) {
-  if (!ind || ind.type === "none") return null;
-
-  if (ind.type === "icon") {
-    const IndicatorIcon = getIconComponent(ind.icon);
-    return (
-      <Timeline.Indicator outline="none" border="none" background="bg" color="fg">
-        <Span display="inline-flex" alignItems="center">
-          <IndicatorIcon size={14} strokeWidth={1} />
-        </Span>
-      </Timeline.Indicator>
-    );
-  }
-
-  return (
-    <Timeline.Indicator>
-      <Avatar.Root boxSize="full">
-        <Avatar.Image src={ind.src} alt={ind.alt} />
-        <Avatar.Fallback background="bg.muted" color="fg.muted" />
-      </Avatar.Root>
-    </Timeline.Indicator>
-  );
-}
-
 function CodeBlock({ code, language }: { code: string; language?: string }) {
   return (
     <ScrollArea
@@ -198,7 +177,9 @@ function BlockView({ b, onOpenFile }: { b: Block; onOpenFile?: (filePath: string
       return (
         <Stack mt="xs" gap="xs" flexDir="row" flexWrap="wrap">
           {b.references.map((ref) => (
-            <ResourceBadge key={ref} fileName={ref} />
+            <ChatLinkAnchor key={ref} candidate={{ source: ref, origin: "tool" }}>
+              <ResourceBadge fileName={ref} />
+            </ChatLinkAnchor>
           ))}
         </Stack>
       );
@@ -311,7 +292,29 @@ function TimelineItemRow({
   );
 }
 
-export function TimelineFromJSON({ data, onOpenFile }: { data: TimelineDoc; onOpenFile?: (filePath: string) => void }) {
+interface TimelineFromJSONProps extends ChatLinkProps {
+  data: TimelineDoc;
+  /** @deprecated Use linkHandler. */
+  onOpenFile?: (filePath: string) => void;
+}
+
+export function TimelineFromJSON(props: TimelineFromJSONProps) {
+  const inherited = useChatLinkHandler();
+  return (
+    <ChatLinkProvider handler={props.linkHandler ?? inherited}>
+      <TimelineContent {...props} />
+    </ChatLinkProvider>
+  );
+}
+
+function TimelineContent(props: TimelineFromJSONProps) {
+  const { data, onOpenFile } = props;
+  const handler = useChatLinkHandler();
+  const openFile = handler
+    ? (path: string) => {
+        void handler.open({ source: path, origin: "tool" });
+      }
+    : onOpenFile;
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const getKey = (it: Item, idx: number) => (it.id ? `id:${it.id}` : `idx:${idx}`);
@@ -337,7 +340,7 @@ export function TimelineFromJSON({ data, onOpenFile }: { data: TimelineDoc; onOp
             canExpand={canExpand}
             hasBlocks={hasBlocks}
             onToggle={toggle}
-            onOpenFile={onOpenFile}
+            onOpenFile={openFile}
           />
         );
       })}

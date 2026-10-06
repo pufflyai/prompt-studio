@@ -38,6 +38,8 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
+import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
+
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
 
@@ -162,6 +164,13 @@ test(
       expect(createRes.status).toBe(201);
 
       const project = (await createRes.json()) as { id: string };
+      await expectPackagedWorkspaceFileLink({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        projectRoot: repoPath,
+        home: tempRoot,
+        headers: runtimeAuthorization(started.descriptor),
+      });
       const providersRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/workspace-providers`, {
         headers: runtimeAuthorization(started.descriptor),
       });

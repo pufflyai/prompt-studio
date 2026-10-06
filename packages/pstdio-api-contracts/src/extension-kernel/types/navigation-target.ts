@@ -2,7 +2,7 @@ import type { CommandTarget } from "./commands";
 import type { PageRef } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { JsonObject } from "./json";
-import type { PageOpenIntent, PanelRef } from "./pages";
+import type { FileSourcePosition, PageOpenIntent, PanelRef } from "./pages";
 import type { ResourceRef } from "./resources";
 
 export interface NavigationTargetPage {
@@ -10,6 +10,7 @@ export interface NavigationTargetPage {
   page: PageRef;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
   open?: PageOpenIntent;
   parent?: NavigationTargetPage;
 }

@@ -14,7 +14,7 @@ The workbench navigates only to explicit targets. This page lists the target kin
 | `href` | Opens an external URL. |
 | `compound` | Prepares page and panel steps against proposed state, then publishes the final state with at most one history entry. |
 
-A page target may carry `resource`, `section`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
+A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
 
 ## Validation and history
 
@@ -41,3 +41,15 @@ Tree reads belong to the mounted placement. Changing its resource or navigation 
 Set `TreeNode.resource` to the subject of row actions. `target` remains the normal-click destination. Session rows in the Sessions level, workspace group, and Planner ticket section use the same session reference for both. The shared tree resolves resource menu contributions and keeps the clicked resource in command context, including parameter dialogs. Opening or dismissing a menu does not navigate.
 
 Keep these identities separate when they differ. A file row may open its parent ticket while declaring file-specific `contextMenuActions`. Do not infer its action subject from the destination. Rows with no applicable actions and the navigation background keep the customization menu.
+
+## Document routes and source positions
+
+A routed resource page can declare `document: { metadataKey: "workspaceFilePath" }`. The selected document stays in that ResourceRef metadata field. The shared page URL codec projects only that declared string into the `document` query parameter. Labels, roots, permissions, and other metadata stay out of URLs. Owners hydrate those values and validate document membership before loading content.
+
+`serializePageUrl` and `parsePageUrl` from `@pstdio/sdk/extensions` round-trip the declared selector. Browser history distinguishes documents within one resource. Display or capability refreshes preserve selection without adding a history entry. Document and position changes share the owner's layout and mounted view.
+
+`position: { line, column?, endLine?, endColumn? }` is a one-based source location. It requires a selected document and cannot be combined with a Markdown heading `section`. URLs use the same named coordinate parameters. Monaco reveals and selects the requested range after loading, and on another explicit navigation within the same file. It retains the editor draft. Images and rich Markdown show a notice when source positions are unavailable. Markdown heading navigation still uses `section`.
+
+Chat UI accepts an optional `linkHandler` with `resolveHref`, `open`, and optional `describe` methods. It passes the original destination and its origin (Markdown, inline code, reference, or tool) to the host. The session host resolves relative paths from the originating workspace root, checks rooted paths against that root, and uses registered page URLs for saved resources. A file path under `.pstdio/tickets` opens those workspace bytes. It does not imply a saved Planner document. Absolute dashboard URLs must have the dashboard's origin; another project is selected before its page is restored. Raw custom schemes cannot execute commands. Uploaded attachments retain their own open behavior.
+
+The legacy public `onOpenFile` callback remains available and is deprecated in favor of `linkHandler`. Existing callers without a handler retain their behavior.

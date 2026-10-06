@@ -4,6 +4,7 @@ import { type Diff, DiffViewer } from "@pstdio/ui/diff";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { workspaceMetadataString } from "@/shared/workspaces/workspace-file-resource";
 import {
   type WorkspaceDiffMode,
   type WorkspaceDiffSummaryFile,
@@ -11,7 +12,6 @@ import {
   workspaceDiffFileQueryOptions,
   workspaceDiffFilesQueryOptions,
 } from "../data/workspace-queries";
-import { workspaceMetadataString } from "../workspace-file-resource";
 import { resolveDefaultWorkspaceDiffPath, resolveWorkspaceDiffRequest } from "./workspace-widget-state";
 
 const toDiff = (summary: WorkspaceDiffSummaryFile, body?: WorkspaceDiffSummaryFile | null): Diff => ({

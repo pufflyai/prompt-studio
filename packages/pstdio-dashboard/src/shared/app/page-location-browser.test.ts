@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createDashboardPageLocationBrowser } from "./page-location-browser";
+import { createDashboardPageLocationBrowser, projectIdFromPageUrl } from "./page-location-browser";
 
 const createBrowserWindow = () => {
   const listeners = new Set<() => void>();
@@ -74,4 +74,12 @@ describe("dashboard page location browser", () => {
       url: "/projects/project-1/extensions/pstdio.extension-lab/lab?section=one",
     });
   });
+});
+
+test("reads the project from a copied document URL", () => {
+  expect(projectIdFromPageUrl("/projects/project%20two/workspace?document=README.md")).toBe("project two");
+  expect(projectIdFromPageUrl("/projects/project-1")).toBe("project-1");
+  expect(projectIdFromPageUrl("/projects/%ZZ/workspace")).toBeUndefined();
+  expect(projectIdFromPageUrl("/")).toBeUndefined();
+  expect(projectIdFromPageUrl(undefined)).toBeUndefined();
 });

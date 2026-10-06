@@ -1,12 +1,14 @@
+import type { ChatLinkProps } from "../links/chat-link";
 import { buildTimelineDocFromInvocations } from "../tool-rendering";
 import { normalizeToolName } from "../utils/tool-name";
 import type { ToolPart } from "./message-types";
 import { TimelineFromJSON } from "./timeline";
 
-export interface ToolInvocationTimelineProps {
+export interface ToolInvocationTimelineProps extends ChatLinkProps {
   invocations: ToolPart[];
   labeledBlocks?: boolean;
   hideQuestionForms?: boolean;
+  /** @deprecated Use linkHandler. */
   onOpenFile?: (filePath: string) => void;
 }
 
@@ -22,7 +24,7 @@ const hasToolOutput = (invocation: ToolPart) => {
 };
 
 export function ToolInvocationTimeline(props: ToolInvocationTimelineProps) {
-  const { invocations, labeledBlocks, hideQuestionForms = false, onOpenFile } = props;
+  const { invocations, labeledBlocks, hideQuestionForms = false, onOpenFile, linkHandler } = props;
   const visibleInvocations = hideQuestionForms
     ? invocations.filter((invocation) => !isQuestionTool(invocation) || hasToolOutput(invocation))
     : invocations;
@@ -31,5 +33,5 @@ export function ToolInvocationTimeline(props: ToolInvocationTimelineProps) {
 
   const data = buildTimelineDocFromInvocations(visibleInvocations, { labeledBlocks });
 
-  return <TimelineFromJSON data={data} onOpenFile={onOpenFile} />;
+  return <TimelineFromJSON data={data} linkHandler={linkHandler} onOpenFile={onOpenFile} />;
 }

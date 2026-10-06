@@ -32,3 +32,25 @@ describe("external navigation targets", () => {
     expect(() => qualifyNavigationTarget(target, "notes")).toThrow("Invalid navigation target");
   });
 });
+
+test("validates source ranges consistently at the navigation and metadata boundaries", () => {
+  const base = { kind: "page", page: { kind: "page", id: "workspace", extensionId: "pstdio" } };
+  for (const position of [{ line: 1 }, { line: 2, column: 4, endLine: 3, endColumn: 1 }]) {
+    expect(isNavigationTarget({ ...base, position })).toBe(true);
+    expect(navigationTargetSchema.safeParse({ ...base, position }).success).toBe(true);
+  }
+  for (const position of [
+    { line: 0 },
+    { line: 1.5 },
+    { line: 2, endLine: 1 },
+    { line: 2, endColumn: 2 },
+    { line: 1, column: 3, endLine: 1, endColumn: 2 },
+  ]) {
+    expect(isNavigationTarget({ ...base, position })).toBe(false);
+    expect(navigationTargetSchema.safeParse({ ...base, position }).success).toBe(false);
+  }
+  expect(isNavigationTarget({ ...base, position: { line: 1 }, section: { anchors: [] } })).toBe(false);
+  expect(navigationTargetSchema.safeParse({ ...base, position: { line: 1 }, section: { anchors: [] } }).success).toBe(
+    false,
+  );
+});

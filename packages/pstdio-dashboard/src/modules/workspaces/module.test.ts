@@ -10,9 +10,9 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { dataTableViewBody, treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
+import { workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
-import { workspaceFileResource } from "./workspace-file-resource";
 
 const registerTicketHierarchy = (workbench: ReturnType<typeof createWorkbench>) => {
   workbench.resources.registerKind({

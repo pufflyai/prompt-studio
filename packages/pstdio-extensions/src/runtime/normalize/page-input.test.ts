@@ -203,3 +203,20 @@ describe("page input validation", () => {
     expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page");
   });
 });
+
+test("document declarations require a nonempty key and a routed resource", () => {
+  const page = definePage({
+    id: "document",
+    title: "Document",
+    path: "document",
+    mode: workbenchModes.project,
+    main: { kind: "panels", empty: pageView.ref },
+    slots: [],
+  });
+  for (const document of [{ metadataKey: "documentId" }, { metadataKey: "" }]) {
+    const runtime = normalizeExtensionSources([
+      source(defineExtension({ views: [pageView], pages: [{ ...page, document }] })),
+    ]);
+    expect(runtime.diagnostics.map((item) => item.code)).toContain("invalid_page");
+  }
+});

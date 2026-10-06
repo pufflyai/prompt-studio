@@ -1,10 +1,12 @@
 import type {
   FileRendererSectionTarget,
+  FileSourcePosition,
   NavigationTargetPage,
   PageLocation,
   PageRef,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
+import { isFileSourcePosition } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 
 export const workbenchPageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:page:${ref.id}`;
@@ -61,36 +63,84 @@ const sharesPageResource = (left: PageLocation, right: PageLocation, resources: 
   workbenchPageRefKey(left.page) === workbenchPageRefKey(right.page) &&
   resourceKey(left, resources) === resourceKey(right, resources);
 
-export const workbenchPageLocationRouteKey = (location: PageLocation, resources: WorkbenchPageResourceCodec) =>
-  [workbenchPageRefKey(location.page), resourceKey(location, resources), sectionKey(location.section)].join("|");
+export const workbenchPageLocationRouteKey = (
+  location: PageLocation,
+  resources: WorkbenchPageResourceCodec,
+  pages: readonly WorkbenchPageContribution[] = [],
+) => {
+  const declaration = pageForRef(pages, location.page)?.document;
+  const document = declaration ? location.resource?.metadata?.[declaration.metadataKey] : undefined;
+  return JSON.stringify([
+    workbenchPageRefKey(location.page),
+    resourceKey(location, resources),
+    document ?? null,
+    location.position
+      ? [
+          location.position.line,
+          location.position.column ?? 1,
+          location.position.endLine ?? null,
+          location.position.endColumn ?? null,
+        ]
+      : null,
+    sectionKey(location.section),
+  ]);
+};
 
-export const workbenchPageLocationKey = (location: PageLocation, resources: WorkbenchPageResourceCodec): string => {
-  const own = workbenchPageLocationRouteKey(location, resources);
-  return location.parent ? `${own}>${workbenchPageLocationKey(location.parent, resources)}` : own;
+export const workbenchPageLocationKey = (
+  location: PageLocation,
+  resources: WorkbenchPageResourceCodec,
+  pages: readonly WorkbenchPageContribution[] = [],
+): string => {
+  const own = workbenchPageLocationRouteKey(location, resources, pages);
+  return location.parent ? `${own}>${workbenchPageLocationKey(location.parent, resources, pages)}` : own;
 };
 
 export const workbenchPageLocationsEqual = (
   left: PageLocation | undefined,
   right: PageLocation | undefined,
   resources: WorkbenchPageResourceCodec,
+  pages: readonly WorkbenchPageContribution[] = [],
 ) => {
   if (!left || !right) return left === right;
-  return workbenchPageLocationKey(left, resources) === workbenchPageLocationKey(right, resources);
+  return workbenchPageLocationKey(left, resources, pages) === workbenchPageLocationKey(right, resources, pages);
 };
+
+const canonicalPosition = (position: FileSourcePosition) =>
+  Object.isFrozen(position)
+    ? position
+    : Object.freeze({
+        line: position.line,
+        ...(position.column !== undefined ? { column: position.column } : {}),
+        ...(position.endLine !== undefined ? { endLine: position.endLine } : {}),
+        ...(position.endColumn !== undefined ? { endColumn: position.endColumn } : {}),
+      });
 
 const createLocation = (input: {
   page: WorkbenchPageContribution;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
   parent?: PageLocation;
   resources: WorkbenchPageResourceCodec;
-}) =>
-  Object.freeze({
+}) => {
+  const key = input.page.document?.metadataKey;
+  const document = key ? input.resource?.metadata?.[key] : undefined;
+  if (document !== undefined && (typeof document !== "string" || !document))
+    throw new Error("Page location has an invalid document");
+  if (input.position && (!key || !document || input.section || !isFileSourcePosition(input.position)))
+    throw new Error("Page location has an invalid source position");
+  return Object.freeze({
     page: canonicalPageRef(input.page),
     ...(input.resource ? { resource: canonicalResource(input.resource, input.resources) } : {}),
     ...(input.section ? { section: canonicalSection(input.section) } : {}),
+    ...(input.position
+      ? {
+          position: canonicalPosition(input.position),
+        }
+      : {}),
     ...(input.parent ? { parent: input.parent } : {}),
   }) as PageLocation;
+};
 
 const declaredParent = (input: {
   page: WorkbenchPageContribution;
@@ -116,6 +166,7 @@ const normalizeResolvedLocation = (input: {
   seen: Set<string>;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
   parent?: PageLocation;
 }): PageLocation => {
   const candidate = createLocation({
@@ -123,8 +174,9 @@ const normalizeResolvedLocation = (input: {
     resources: input.resources,
     ...(input.resource ? { resource: input.resource } : {}),
     ...(input.section ? { section: input.section } : {}),
+    ...(input.position ? { position: input.position } : {}),
   });
-  const routeKey = workbenchPageLocationRouteKey(candidate, input.resources);
+  const routeKey = workbenchPageLocationRouteKey(candidate, input.resources, input.pages);
   if (input.seen.has(routeKey)) throw new Error(`Page location parent cycle reaches ${input.page.id}`);
   const seen = new Set(input.seen).add(routeKey);
   const parent =
@@ -134,6 +186,7 @@ const normalizeResolvedLocation = (input: {
     resources: input.resources,
     ...(candidate.resource ? { resource: candidate.resource } : {}),
     ...(candidate.section ? { section: candidate.section } : {}),
+    ...(candidate.position ? { position: candidate.position } : {}),
     ...(parent ? { parent } : {}),
   });
 };
@@ -160,8 +213,9 @@ const normalizePageTarget = (input: {
     resources: input.resources,
     ...(input.target.resource ? { resource: input.target.resource } : {}),
     ...(input.target.section ? { section: input.target.section } : {}),
+    ...(input.target.position ? { position: { ...input.target.position } } : {}),
   });
-  const routeKey = workbenchPageLocationRouteKey(candidate, input.resources);
+  const routeKey = workbenchPageLocationRouteKey(candidate, input.resources, input.pages);
   if (input.seen.has(routeKey)) throw new Error(`Page location parent cycle reaches ${page.id}`);
   const seen = new Set(input.seen).add(routeKey);
   const contextualParent = input.target.parent
@@ -175,6 +229,7 @@ const normalizePageTarget = (input: {
     seen: input.seen,
     ...(candidate.resource ? { resource: candidate.resource } : {}),
     ...(candidate.section ? { section: candidate.section } : {}),
+    ...(candidate.position ? { position: candidate.position } : {}),
     ...(contextualParent ? { parent: contextualParent } : {}),
   });
   return { pageId: page.id, location, ...(input.target.open ? { open: input.target.open } : {}) };
@@ -200,8 +255,9 @@ export const normalizeWorkbenchPageLocation = (input: {
       resources: input.resources,
       ...(location.resource ? { resource: location.resource } : {}),
       ...(location.section ? { section: location.section } : {}),
+      ...(location.position ? { position: location.position } : {}),
     });
-    const routeKey = workbenchPageLocationRouteKey(candidate, input.resources);
+    const routeKey = workbenchPageLocationRouteKey(candidate, input.resources, input.pages);
     if (seen.has(routeKey)) throw new Error(`Page location parent cycle reaches ${page.id}`);
     const nextSeen = new Set(seen).add(routeKey);
     const explicitParent = location.parent ? normalize(location.parent, nextSeen).location : undefined;
@@ -214,6 +270,7 @@ export const normalizeWorkbenchPageLocation = (input: {
         seen,
         ...(candidate.resource ? { resource: candidate.resource } : {}),
         ...(candidate.section ? { section: candidate.section } : {}),
+        ...(candidate.position ? { position: candidate.position } : {}),
         ...(explicitParent ? { parent: explicitParent } : {}),
       }),
     };
@@ -227,6 +284,7 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
   resources: WorkbenchPageResourceCodec;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
 }) => {
   const page = pageForId(input.pages, input.pageId);
   if (!page) throw new Error(`Unknown page: ${input.pageId}`);
@@ -239,6 +297,7 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
       seen: new Set(),
       ...(input.resource ? { resource: input.resource } : {}),
       ...(input.section ? { section: input.section } : {}),
+      ...(input.position ? { position: input.position } : {}),
     }),
   };
 };
