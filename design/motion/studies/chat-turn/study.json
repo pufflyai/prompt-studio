@@ -1,6 +1,6 @@
 {
   "title": "Chat turn",
-  "description": "Follow a new message without moving the composer or replaying the history.",
+  "description": "Follow a new message without moving the composer or replaying the history. Every style shows a small spinner and the elapsed time. Compare it alone, with messages rising 4px, or with a glint on the composer edge. Activity sits beside the workspace name; when the turn completes, \"Worked for 8s\" stays there.",
   "duration": 12,
   "markers": [
     {
@@ -28,8 +28,8 @@
   "canvas": "pane",
   "params": [
     {
-      "id": "loader",
-      "name": "Working treatment",
+      "id": "turn",
+      "name": "Turn style",
       "type": "selection",
       "options": [
         {
@@ -37,25 +37,17 @@
           "name": "Spinner"
         },
         {
-          "id": "pulse",
-          "name": "Pulse"
+          "id": "rise",
+          "name": "Spinner and rise"
         },
         {
-          "id": "scan",
-          "name": "Scanning line"
-        },
-        {
-          "id": "aurora",
-          "name": "Aurora background"
-        },
-        {
-          "id": "contours",
-          "name": "Contour field"
+          "id": "edge",
+          "name": "Spinner and composer edge"
         }
       ],
       "default": {
         "left": "spinner",
-        "right": "aurora"
+        "right": "edge"
       }
     }
   ]

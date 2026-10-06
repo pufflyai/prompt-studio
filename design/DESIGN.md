@@ -78,3 +78,8 @@ A page can have its own navigation tree. Opening that page replaces the project 
 - The Start page is only the fallback, used when no root-level page has been visited yet.
 - A click on the active project tab on a root-level page does nothing.
 - Do not add a Back row to the side navigation when back and forward buttons already appear in the navigation bar.
+
+## Activity
+
+- Show work in progress with a spinner or the elapsed time. Never animate text: no shimmer, gradient sweeps, or pulsing labels. Moving text is harder to read and looks like an effect rather than status.
+- When the work finishes, keep its duration visible, for example "Worked for 7s".
