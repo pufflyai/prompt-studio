@@ -1,11 +1,12 @@
 import type { NavigationTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout, WorkbenchPanelRegion } from "../../registries/layout/layout-model";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchOwnedPlacementItem } from "../../registries/placements/owned-placement-lifecycle";
 import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
 import { modePlacementContributionId, pagePlacementContributionId } from "../../registries/views/view-placement";
-import { contributionRefId, resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { runUserAction } from "../../shared/run-user-action";
 import type { WorkbenchCore } from "../../workbench-core";
 import type { WorkbenchCompositionAddablePanel } from "./composition-controller";

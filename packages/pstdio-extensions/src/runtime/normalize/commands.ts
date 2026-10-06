@@ -1,4 +1,4 @@
-import type { CommandDefinition } from "@pstdio/sdk/extensions";
+import { type CommandDefinition, contributionRefId } from "@pstdio/sdk/extensions";
 import { normalizeCliPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeCliContribution, RuntimeCommandRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
@@ -6,7 +6,6 @@ import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, uniqueContributions } from "./contribution-collection";
 import { asLocalizableString, isLocalizableString } from "./localizable";
-import { normalizedContributionId } from "./references";
 import { hasCompatibleSlotKind } from "./slot-kind";
 
 const splitCommandKey = (key: string) => key.split(".");
@@ -26,7 +25,7 @@ const normalizeCommandParams = (ext: NormalizedExtension, value: unknown): Runti
       }
       const templateType = descriptor.templateType.includes(".template-type.")
         ? descriptor.templateType
-        : normalizedContributionId(ext.id, "template-type", descriptor.templateType);
+        : contributionRefId({ extensionId: ext.id, kind: "template-type", id: descriptor.templateType });
       return [key, { ...descriptor, templateType }];
     }),
   ) as RuntimeCommandRecord["params"];

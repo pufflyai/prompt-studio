@@ -1,13 +1,7 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { ContributionKind } from "@pstdio/sdk/extensions";
+import { type ContributionKind, contributionRefId } from "@pstdio/sdk/extensions";
 
 export type MetadataRef = { extensionId: string; kind: ContributionKind; id: string };
-
-export const metadataRefId = (ref: MetadataRef) =>
-  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
-
-export const metadataCommandId = (ref: { extensionId: string; id: string }) =>
-  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.command.${ref.id}`;
 
 export const toWorkbenchWhenExpression = (
   when:
@@ -17,7 +11,7 @@ export const toWorkbenchWhenExpression = (
   if (!when) return undefined;
   const ids = (value: MetadataRef | MetadataRef[] | undefined) => {
     if (!value) return undefined;
-    return Array.isArray(value) ? value.map(metadataRefId) : metadataRefId(value);
+    return Array.isArray(value) ? value.map((ref) => contributionRefId(ref)) : contributionRefId(value);
   };
   return {
     mode: ids(when.mode as MetadataRef | MetadataRef[] | undefined),

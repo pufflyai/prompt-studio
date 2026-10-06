@@ -1,4 +1,4 @@
-import { defaultPageResourceCodec, resourceKey } from "@pstdio/sdk/extensions";
+import { contributionRefId, defaultPageResourceCodec, resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
 import { createPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
@@ -26,7 +26,6 @@ import type { WorkbenchShellPlacementRegistry } from "../../registries/placement
 import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view-menu-registry";
 import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
-import { contributionRefId } from "../../shared/contributions/reference-id";
 import { createDisposable } from "../../shared/disposable";
 export interface ConnectWorkbenchPageRuntimeInput {
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;

@@ -1,26 +1,23 @@
-import type { TerminalHostEvent, TerminalSessionOperation, TerminalSessionRequest } from "../api/terminal";
+import type {
+  TerminalSessionAdapter as RendererTerminalSessionAdapter,
+  TerminalHostEvent,
+  TerminalSessionExit,
+  TerminalSessionOperation,
+  TerminalSessionRequest,
+} from "../api/terminal";
 import type { GuestHost } from "./define-extension-view";
+
+export type { TerminalSessionExit } from "../api/terminal";
 
 const TERMINAL_SESSION_CAPABILITY = "terminal.session";
 
-export interface TerminalSessionExit {
-  code: number | null;
-  signal: string | null;
-}
-
 /**
- * Renderer-side session over the `terminal.session` capability. Structurally
- * compatible with the `TerminalSessionAdapter` contract of `@pstdio/ui/terminal`,
- * so it plugs straight into the `Terminal` component's `bridge` prop.
+ * Renderer-side session over the `terminal.session` capability. It is the shared
+ * renderer adapter with an awaitable `kill`, so it plugs straight into the
+ * `Terminal` component's `bridge` prop.
  */
-export interface TerminalSessionAdapter {
-  readonly id: string;
-  write(data: string | Uint8Array): void;
-  resize(cols: number, rows: number): void;
+export interface TerminalSessionAdapter extends RendererTerminalSessionAdapter {
   kill(signal?: string): Promise<void>;
-  onData(handler: (chunk: Uint8Array) => void): () => void;
-  onExit(handler: (exit: TerminalSessionExit) => void): () => void;
-  onError(handler: (error: { message: string }) => void): () => void;
 }
 
 export interface TerminalSessionBridge {
@@ -75,7 +72,12 @@ export const createTerminalSessionBridge = (host: GuestHost): TerminalSessionBri
       unsubscribeHostEvents();
     });
 
-    await call({ operation: "subscribe", sessionId });
+    try {
+      await call({ operation: "subscribe", sessionId });
+    } catch (error) {
+      unsubscribeHostEvents();
+      throw error;
+    }
 
     return {
       id: sessionId,

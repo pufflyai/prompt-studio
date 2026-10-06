@@ -1,7 +1,6 @@
-import type { ParamObjectSchema, ParamOptionSource } from "@pstdio/sdk/extensions";
+import { contributionRefId, type ParamObjectSchema, type ParamOptionSource } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import { resolveContributionRefId } from "./references";
 
 const isValueRef = (value: unknown): value is { kind: "param-value"; key: string } =>
   typeof value === "object" &&
@@ -34,7 +33,7 @@ export const validateParamOptions = (runtime: ExtensionRuntime) => {
           return [key, param];
         }
         const command = { ...source.command, extensionId: source.command.extensionId ?? owner.extensionId };
-        const commandId = resolveContributionRefId(owner.extensionId, command);
+        const commandId = contributionRefId(command, owner.extensionId);
         if (!commandIds.has(commandId))
           error("unknown_param_option_command", `Parameter "${key}" refers to unknown command "${commandId}".`);
         const dependencies = Object.values(source.params ?? {})
@@ -98,7 +97,7 @@ export const validateParamOptions = (runtime: ExtensionRuntime) => {
       );
     }
     body.toolbarActions = body.toolbarActions?.map((action) => {
-      const id = resolveContributionRefId(view.extensionId, action.command);
+      const id = contributionRefId(action.command, view.extensionId);
       if (!commandIds.has(id))
         runtime.diagnostics.push(
           createDiagnostic({

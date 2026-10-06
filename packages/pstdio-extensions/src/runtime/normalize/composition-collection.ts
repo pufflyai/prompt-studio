@@ -1,4 +1,4 @@
-import type { ResourceHierarchyProvider, ResourceKindDefinition } from "@pstdio/sdk/extensions";
+import { contributionRefId, type ResourceHierarchyProvider, type ResourceKindDefinition } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
@@ -6,7 +6,6 @@ import { contributionArray, contributionRecordBase, uniqueContributions } from "
 import {
   contributionId,
   normalizeContributionRef,
-  resolveContributionRefId,
   resolveResourceKindReference,
   resourceKindReferences,
 } from "./references";
@@ -65,7 +64,7 @@ export const collectCompositionContributions = (
       // `resolveResourceKindReference` for why the host must not namespace it.
       id: localId,
       ...(isRecord(contribution.resolve)
-        ? { resolveCommandId: resolveContributionRefId(ext.id, contribution.resolve as ResourceKindResolver) }
+        ? { resolveCommandId: contributionRefId(contribution.resolve as ResourceKindResolver, ext.id) }
         : {}),
       contribution: {
         ...contribution,

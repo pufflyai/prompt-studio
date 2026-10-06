@@ -82,7 +82,11 @@ export { sessionAttachmentMimeTypesByExtension } from "./sessions";
 export type { Settings, UpdateSettingsInput } from "./settings";
 export type { UpdateSkillInput } from "./skills";
 export type {
+  TerminalBridge,
   TerminalHostEvent,
+  TerminalSessionAdapter,
+  TerminalSessionError,
+  TerminalSessionExit,
   TerminalSessionOperation,
   TerminalSessionRequest,
   TerminalSessionResult,

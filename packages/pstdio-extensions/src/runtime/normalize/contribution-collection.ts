@@ -1,9 +1,8 @@
-import type { ContributionKind } from "@pstdio/sdk/extensions";
+import { type ContributionKind, contributionRefId } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator } from "./accumulator";
-import { normalizedContributionId } from "./references";
 
 export const contributionArray = <T extends { id: string }>(input: unknown): readonly T[] =>
   Array.isArray(input) ? (input as readonly T[]) : [];
@@ -14,7 +13,7 @@ export const contributionRecordBase = (
   kind: ContributionKind,
   localId: string,
 ) => ({
-  id: normalizedContributionId(ext.id, kind, localId),
+  id: contributionRefId({ extensionId: ext.id, kind, id: localId }),
   localId,
   extensionId: ext.id,
   name: ext.name,

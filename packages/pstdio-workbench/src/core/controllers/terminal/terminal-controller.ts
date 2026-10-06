@@ -1,36 +1,17 @@
+import type {
+  TerminalSessionAdapter,
+  TerminalSessionError,
+  TerminalSessionExit,
+  TerminalSessionRequest,
+} from "@pstdio/sdk/api";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
-// Structural copies of the renderer-side terminal contract (`@pstdio/ui/terminal`
-// and `@pstdio/sdk` mirror the same shapes). Core owns its contracts, so these are
-// declared here instead of importing UI package types — the React layer bridges the two.
-export interface WorkbenchTerminalSessionRequest {
-  command?: string[];
-  cwd?: string;
-  env?: Record<string, string>;
-  cols: number;
-  rows: number;
-}
-
-export interface WorkbenchTerminalSessionExit {
-  code: number | null;
-  signal: string | null;
-}
-
-export interface WorkbenchTerminalSessionError {
-  message: string;
-}
-
-export interface WorkbenchTerminalSessionAdapter {
-  readonly id: string;
-  write(data: string | Uint8Array): void;
-  resize(cols: number, rows: number): void;
-  kill(signal?: string): Promise<void> | void;
-  onData(handler: (chunk: Uint8Array) => void): () => void;
-  /** Foreground process name updates, when the opener can report them (real PTYs). */
-  onTitle?(handler: (title: string) => void): () => void;
-  onExit(handler: (exit: WorkbenchTerminalSessionExit) => void): () => void;
-  onError(handler: (error: WorkbenchTerminalSessionError) => void): () => void;
-}
+// The renderer-side terminal contract is shared through the public SDK. Core keeps its
+// Workbench* names as aliases so its API does not depend on @pstdio/ui.
+export type WorkbenchTerminalSessionRequest = TerminalSessionRequest;
+export type WorkbenchTerminalSessionExit = TerminalSessionExit;
+export type WorkbenchTerminalSessionError = TerminalSessionError;
+export type WorkbenchTerminalSessionAdapter = TerminalSessionAdapter;
 
 // Host-injected session factory. Production hosts back this with a PTY transport;
 // the testbench and stories inject a deterministic scripted opener.

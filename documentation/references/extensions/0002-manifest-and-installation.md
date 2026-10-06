@@ -239,6 +239,8 @@ a ref's `extensionId` carries it. `pst extensions check` rejects ids outside the
 `extension_contribution_id_invalid`. Host-published refs (for example `workbenchPages.start`) resolve to the
 host's registered id without owner prefixing, for every contribution kind; runtime ids such as
 `pstdio.planner.command.tickets.create` are opaque routing values that no code may split back into parts.
+`contributionRefId(ref, ownerExtensionId?)` and `commandRefId(ref, ownerExtensionId?)` from `@pstdio/sdk/extensions`
+are the one implementation of this rule; a ref without `extensionId` belongs to the owner, or to the host when there is none.
 
 This manifest is illustrative. The built-in Planner package is named `pstdio-planner`,
 so its extension ID is `pstdio.pstdio-planner`. Its `list-tickets` command resolves

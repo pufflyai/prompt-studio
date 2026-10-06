@@ -7,18 +7,14 @@ import type {
   ExtensionLoggerApi,
   Struct,
 } from "@pstdio/sdk/extensions";
-import { resolveEventReferenceId } from "@pstdio/sdk/extensions";
+import { commandRefId, resolveEventReferenceId } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
 
 export const refId = (ref: CommandRef | EventRef | string, ownerExtensionId?: string): string => {
   if (typeof ref === "string") return ref;
-  const extensionId = ref.extensionId ?? ownerExtensionId;
-  // Host-owned refs (extensionId "pstdio") resolve to the host's registered id without
-  // owner prefixing — the same rule normalize/references.ts applies.
-  if (!extensionId || extensionId === "pstdio") return ref.id;
-  if (ref.kind === "command") return `${extensionId}.command.${ref.id}`;
+  if (ref.kind === "command") return commandRefId(ref, ownerExtensionId);
   return resolveEventReferenceId(ref, ownerExtensionId);
 };
 

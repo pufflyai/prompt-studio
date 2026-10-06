@@ -1,24 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { workbenchModes, workbenchResourceKinds } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
-import { resolveCommandRef, resolveContributionRefId, serializeWhenExpression } from "./references";
+import { resolveCommandRef, serializeWhenExpression } from "./references";
 
 const ext = { id: "pstdio.pstdio-planner", name: "pstdio-planner" } as NormalizedExtension;
 
 describe("contribution ref resolution", () => {
-  test("prefixes extension-owned refs with owner and kind", () => {
-    expect(resolveContributionRefId(ext.id, { kind: "view", id: "tickets" })).toBe(
-      "pstdio.pstdio-planner.view.tickets",
-    );
+  test("prefixes extension-owned command refs with owner and kind", () => {
     expect(resolveCommandRef(ext, { kind: "command", id: "ticket-status.read" })).toBe(
       "pstdio.pstdio-planner.command.ticket-status.read",
-    );
-  });
-
-  test("resolves host-published refs to the host's registered id for every kind", () => {
-    expect(resolveContributionRefId(ext.id, workbenchModes.project)).toBe("project");
-    expect(resolveContributionRefId(ext.id, { extensionId: "pstdio", kind: "view", id: "workspaces" })).toBe(
-      "workspaces",
     );
   });
 

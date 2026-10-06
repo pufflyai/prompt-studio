@@ -1,7 +1,8 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { commandRefId, contributionRefId } from "@pstdio/sdk/extensions";
 import type { ParamObjectSchema } from "pstdio-api-contracts";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
-import { metadataCommandId, metadataRefId, toWorkbenchWhenExpression } from "./workbench-extension-metadata-ref";
+import { toWorkbenchWhenExpression } from "./workbench-extension-metadata-ref";
 import { toInternalWorkbenchPages } from "./workbench-extension-page-metadata";
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
 
@@ -14,14 +15,14 @@ const resourceKindForView = (metadata: WorkbenchExtensionMetadata, viewId: strin
   bindings.push(
     ...metadata.placements.flatMap((placement) => (placement.item.kind === "binding" ? [placement.item.binding] : [])),
   );
-  return bindings.find((binding) => metadataRefId(binding.view) === viewId)?.kinds[0]?.id;
+  return bindings.find((binding) => contributionRefId(binding.view) === viewId)?.kinds[0]?.id;
 };
 const viewBody = (view: MetadataView) =>
   view.body.kind === "webview" ? { webview: view.body.webview } : { renderer: { kind: view.body.kind, id: view.id } };
 const panelMenus = (metadata: WorkbenchExtensionMetadata, owner: MetadataView) =>
   metadata.viewMenus.flatMap((menu) => {
-    if (metadataRefId(menu.owner) !== owner.id) return [];
-    const view = metadata.views.find((candidate) => candidate.id === metadataRefId(menu.view));
+    if (contributionRefId(menu.owner) !== owner.id) return [];
+    const view = metadata.views.find((candidate) => candidate.id === contributionRefId(menu.view));
     if (!view) return [];
     return [
       {
@@ -60,7 +61,7 @@ const commandActions = <
   },
 >(
   actions: T[] | undefined,
-) => actions?.map(({ command, ...action }) => ({ ...action, commandId: metadataCommandId(command) }));
+) => actions?.map(({ command, ...action }) => ({ ...action, commandId: commandRefId(command) }));
 const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensionMetadata["kanbanRenderers"] =>
   metadata.views.flatMap((view) => {
     const body = view.body;
@@ -81,12 +82,12 @@ const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenc
               params: body.createRow.params as ParamObjectSchema | undefined,
               attributesParam: body.createRow.attributesParam,
               labels: body.createRow.labels,
-              commandId: metadataCommandId(body.createRow.command),
+              commandId: commandRefId(body.createRow.command),
               attachments: body.createRow.attachments
                 ? {
                     resourceParam: body.createRow.attachments.resourceParam,
                     fileParam: body.createRow.attachments.fileParam,
-                    commandId: metadataCommandId(body.createRow.attachments.command),
+                    commandId: commandRefId(body.createRow.attachments.command),
                   }
                 : undefined,
             }
@@ -173,11 +174,14 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     panelRegions: mode.regions,
     regionSettings: mode.regionSettings,
     floatingPanels: mode.floatingPanels,
-    ...(mode.defaultTheme ? { defaultTheme: metadataRefId(mode.defaultTheme) } : {}),
+    ...(mode.defaultTheme ? { defaultTheme: contributionRefId(mode.defaultTheme) } : {}),
     ...(mode.chrome
       ? {
           chrome: Object.fromEntries(
-            Object.entries(mode.chrome).map(([region, view]) => [region, view === false ? false : metadataRefId(view)]),
+            Object.entries(mode.chrome).map(([region, view]) => [
+              region,
+              view === false ? false : contributionRefId(view),
+            ]),
           ),
         }
       : {}),
@@ -201,7 +205,7 @@ export const toInternalWorkbenchExtensionMetadata = (
     placements: metadata.placements.map((placement) => ({
       id: placement.id,
       ref: { extensionId: placement.extensionId, kind: "placement", id: placement.localId },
-      modeId: metadataRefId(placement.mode),
+      modeId: contributionRefId(placement.mode),
       item: placement.item,
       region: placement.region,
       order: placement.order,
@@ -243,7 +247,7 @@ export const toInternalWorkbenchExtensionMetadata = (
     })),
     settingsSections: metadata.settingsSections ?? [],
     settingsPanels: metadata.settingsPanels.flatMap((panel) => {
-      const view = metadata.views.find((candidate) => candidate.id === metadataRefId(panel.view));
+      const view = metadata.views.find((candidate) => candidate.id === contributionRefId(panel.view));
       if (!view) return [];
       return [
         {
@@ -254,7 +258,7 @@ export const toInternalWorkbenchExtensionMetadata = (
           scope: panel.slot.id.includes("global") ? ("global" as const) : ("project" as const),
           title: view.title,
           icon: view.icon,
-          section: panel.section ? metadataRefId(panel.section) : undefined,
+          section: panel.section ? contributionRefId(panel.section) : undefined,
         },
       ];
     }),
@@ -270,7 +274,7 @@ export const toInternalWorkbenchExtensionMetadata = (
     statusBarItems: metadata.statusBarItems.map((item) => ({
       id: item.id,
       extensionId: item.extensionId,
-      viewId: metadataRefId(item.view),
+      viewId: contributionRefId(item.view),
       slot: item.slot.id.endsWith("leading") ? "leading" : "trailing",
       order: item.order,
       when: toWorkbenchWhenExpression(item.when),

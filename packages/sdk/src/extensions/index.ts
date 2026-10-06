@@ -81,6 +81,7 @@ export {
 } from "pstdio-api-contracts/history-reconciliation";
 export { SDK_VERSION } from "../version";
 export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
+export { commandRefId, contributionRefId } from "./contribution-reference";
 export { defineCommand, defineHook, defineMiddleware } from "./define-command";
 export {
   defineActivityItem,

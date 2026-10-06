@@ -3,7 +3,7 @@ import type { TerminalHostEvent, TerminalSessionOperation } from "../api/termina
 import type { GuestHost } from "./define-extension-view";
 import { createTerminalSessionBridge } from "./terminal-session-bridge";
 
-const createFakeHost = (rejectWrites = false) => {
+const createFakeHost = (rejectWrites = false, rejectSubscribe = false) => {
   const calls: TerminalSessionOperation[] = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -14,6 +14,7 @@ const createFakeHost = (rejectWrites = false) => {
       calls.push(operation);
       if (rejectWrites && (operation.operation === "write" || operation.operation === "resize"))
         throw new Error(`session gone: ${operation.operation}`);
+      if (rejectSubscribe && operation.operation === "subscribe") throw new Error("subscribe refused");
       if (operation.operation === "open") return { operation: "open", sessionId: "session-1" } as TResult;
       return { operation: operation.operation, accepted: true } as TResult;
     },
@@ -35,6 +36,16 @@ const createFakeHost = (rejectWrites = false) => {
 };
 
 describe("createTerminalSessionBridge", () => {
+  test("a refused subscribe removes the host listener and rejects the open", async () => {
+    const fake = createFakeHost(false, true);
+
+    await expect(createTerminalSessionBridge(fake.host).openSession({ cols: 80, rows: 24 })).rejects.toThrow(
+      "subscribe refused",
+    );
+
+    expect(fake.listenerCount()).toBe(0);
+  });
+
   test("open subscribes to host events and returns a session addressing the returned id", async () => {
     const fake = createFakeHost();
     const bridge = createTerminalSessionBridge(fake.host);

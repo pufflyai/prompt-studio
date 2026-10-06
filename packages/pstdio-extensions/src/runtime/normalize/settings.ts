@@ -1,9 +1,9 @@
 import type { ExtensionSettingDefinitionRecord } from "@pstdio/sdk/api";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime, NormalizedExtension, RuntimeExtensionSettingRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
-import { resolveContributionRefId } from "./references";
 
 const settingTypes = new Set(["boolean", "number", "string", "array", "object"]);
 
@@ -184,7 +184,7 @@ export const validateSettingOptions = (runtime: ExtensionRuntime) => {
   for (const setting of runtime.settings) {
     const { options } = setting.contribution;
     if (!options) continue;
-    const commandId = resolveContributionRefId(setting.extensionId, options.command);
+    const commandId = contributionRefId(options.command, setting.extensionId);
     if (commandIds.has(commandId)) continue;
     runtime.diagnostics.push(
       createDiagnostic({
@@ -208,7 +208,7 @@ export const toSettingDefinitionRecord = (setting: RuntimeExtensionSettingRecord
     default: setting.contribution.default,
     enum: setting.contribution.enum,
     options: options && {
-      commandId: resolveContributionRefId(setting.extensionId, options.command),
+      commandId: contributionRefId(options.command, setting.extensionId),
       valueField: options.valueField,
       labelField: options.labelField,
       params: options.params,
