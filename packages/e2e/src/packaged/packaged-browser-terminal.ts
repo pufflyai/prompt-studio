@@ -1,8 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 
 export const verifyPackagedTerminal = async (page: Page, origin: string, projectId: string, token: string) => {
-  await page.goto(`${origin}/projects/${projectId}`);
-  await page.getByTestId("start-page").waitFor();
+  await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/lab`);
+  const iframe = page.locator('iframe[title="Lab"]');
+  await expect(iframe.contentFrame().getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
   const connection = page.waitForEvent("websocket", (socket) => new URL(socket.url()).pathname === "/v1/terminal");
   const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
@@ -21,8 +22,17 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   });
   await terminalInput.pressSequentially("export PSTDIO_PACKAGED_STATE=retained");
   await terminalInput.press("Enter");
-  await page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab").click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
+  const mainHeader = page.locator('[data-workbench-panel-header="main"]');
+  await expect(mainHeader).toBeHidden();
+  const terminalTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab");
+  const start = (await terminalTab.boundingBox())!;
+  const end = (await iframe.boundingBox())!;
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, { steps: 3 });
+  await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2, { steps: 10 });
+  await page.mouse.up();
+  await expect(mainHeader.getByRole("tab")).toHaveCount(2);
   await expect(
     page.locator('[data-workbench-region="main"]').getByRole("textbox", { name: "Terminal input" }),
   ).toBeVisible();

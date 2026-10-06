@@ -96,12 +96,13 @@ export const MultipleAvailableFixedPanels: Story = {
   },
 };
 
-export const CollapsedMenuWithoutTabs: Story = {
+export const CollapsedMenuWithTab: Story = {
   args: { workbench: createPanelWorkbench({ collapsed: true }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("button", { name: "Open Main left menu" })).toBeVisible();
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+    await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Close Files" })).toBeNull();
   },
 };
 
