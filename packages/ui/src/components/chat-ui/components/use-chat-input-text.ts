@@ -17,8 +17,9 @@ export const useChatInputText = (defaultState: string) => {
 
   if (adoptedState !== defaultState) {
     setAdoptedState(defaultState);
+    // Compare serialized text on both sides: the plain editor text has no paragraph newlines.
     const nextText = getTextFromSerializedEditorState(defaultState);
-    if (nextText !== text) {
+    if (nextText !== getTextFromSerializedEditorState(editorState)) {
       remountEditor(defaultState);
       setText(nextText);
     }

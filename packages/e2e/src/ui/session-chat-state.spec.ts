@@ -7,7 +7,9 @@ test("keeps each session's draft when one Side Panel tab switches between sessio
   const { switchTab } = await openSessionsInOneSidePanelTab(page, request, "Session drafts");
   const editor = page.locator('[data-workbench-region="side"]').getByTestId("content-editable").last();
 
-  await editor.fill("Draft for B");
+  // Key by key: the composer must keep focus while the host stores each keystroke.
+  await editor.pressSequentially("Draft for B");
+  await expect(editor).toHaveText("Draft for B");
   await switchTab("Session B", "Session A");
   await expect(editor).toBeEmpty();
   await editor.fill("Draft for A");
