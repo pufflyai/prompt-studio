@@ -6,6 +6,10 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { syncExtensionDevelopmentSource } from "./extension-development";
 import { installExtensionSource, removePathBestEffort } from "./install-extension-source";
 
+// The host never runs package scripts and installs exactly what a shipped lockfile names.
+const ownedCopyInstallArgs = ["install", "--frozen-lockfile", "--ignore-scripts", "--production"];
+const sourceCheckoutInstallArgs = ["install", "--frozen-lockfile", "--ignore-scripts"];
+
 let root: string;
 let pstdioHome: string;
 let source: string;
@@ -157,7 +161,7 @@ describe("installExtensionSource replacement", () => {
 
     expect(runCommand).toHaveBeenCalledWith(
       "bun",
-      ["install", "--no-save"],
+      sourceCheckoutInstallArgs,
       expect.objectContaining({
         cwd: source,
       }),
@@ -195,7 +199,7 @@ describe("installExtensionSource replacement", () => {
     ).rejects.toThrow("Dependency install failed");
 
     expect(existsSync(join(target, "extension.ts"))).toBe(false);
-    expect(runCommand).toHaveBeenCalledWith("bun", ["install", "--production"], {
+    expect(runCommand).toHaveBeenCalledWith("bun", ownedCopyInstallArgs, {
       cwd: expect.stringContaining(join(pstdioHome, ".extension-install-")),
       env: {},
     });

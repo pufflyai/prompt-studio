@@ -29,7 +29,6 @@ export type InstallExtensionSourceInput = {
   processExecPath?: string;
   reuseInstalledDependencies?: boolean;
   runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
-  saveLockfile?: boolean;
   skipInstall?: boolean;
   signal?: AbortSignal;
   source: string;

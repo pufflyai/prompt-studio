@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { installExtensionSource } from "./install-extension-source";
@@ -108,5 +108,31 @@ describe("installExtensionSource dependency reinstall", () => {
     });
 
     expect(runCommand).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("installExtensionSource package scripts", () => {
+  test("never runs lifecycle scripts from a dropped folder that fails validation", async () => {
+    const source = join(root, "dropped-extension");
+    const marker = join(root, "script-ran");
+    makeExtension(source);
+    writeManifest(source, {
+      scripts: {
+        preinstall: `bun -e "require('node:fs').writeFileSync(process.argv[1], 'preinstall')" ${JSON.stringify(marker)}`,
+        postinstall: `bun -e "require('node:fs').writeFileSync(process.argv[1], 'postinstall')" ${JSON.stringify(marker)}`,
+      },
+    });
+    writeFileSync(join(source, "extension.ts"), 'throw new Error("invalid extension");\n');
+
+    await expect(
+      installExtensionSource({
+        source,
+        env: { HOME: root, PATH: process.env.PATH, PSTDIO_HOME: pstdioHome },
+        homedir: () => root,
+      }),
+    ).rejects.toThrow("Extension validation failed");
+
+    expect(existsSync(marker)).toBe(false);
+    expect(existsSync(join(pstdioHome, "extensions", "dropped-extension"))).toBe(false);
   });
 });

@@ -21,7 +21,7 @@ import { type InstallExtensionSourceInput, installExtensionSource } from "./inst
 
 export type SyncExtensionDevelopmentSourceInput = Omit<
   InstallExtensionSourceInput,
-  "existsOk" | "force" | "reuseInstalledDependencies" | "saveLockfile" | "skipInstall"
+  "existsOk" | "force" | "reuseInstalledDependencies" | "skipInstall"
 >;
 
 export const syncExtensionDevelopmentSource = (input: SyncExtensionDevelopmentSourceInput) =>
@@ -29,5 +29,4 @@ export const syncExtensionDevelopmentSource = (input: SyncExtensionDevelopmentSo
     ...input,
     force: true,
     reuseInstalledDependencies: true,
-    saveLockfile: false,
   });

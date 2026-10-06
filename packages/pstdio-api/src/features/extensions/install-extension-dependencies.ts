@@ -28,7 +28,6 @@ export type DependencyInstallInput = {
   // belongs to its author and keeps its development dependencies.
   production?: boolean;
   runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
-  saveLockfile?: boolean;
   signal?: AbortSignal;
 };
 
@@ -88,17 +87,18 @@ export const shouldInstallDependencies = (targetPath: string) => {
 // Prompt Studio installs extension dependencies with bun only: a packaged build runs the bundled bun
 // (the compiled pstdio binary), and from-source runs bun on PATH. Extensions never choose a package
 // manager — bun installs npm-published packages fine and reuses the warm bun cache.
+//
+// Installing never runs package code. `--ignore-scripts` skips lifecycle scripts of the package and
+// of every dependency, including `trustedDependencies`, so an install cannot run code before the
+// host validates the extension. `--frozen-lockfile` installs exactly what a shipped `bun.lock`
+// names and refuses a lockfile that no longer matches `package.json`. It never writes a lockfile.
 export const installDependencies = async (targetPath: string, input: DependencyInstallInput) => {
   if (!existsSync(join(targetPath, "package.json"))) return;
 
   const run = input.runCommand ?? runCommand;
   const packaged = (input.isPackagedRuntime ?? isPackagedRuntime)();
   const env = createExtensionInstallEnvironment(input.env ?? process.env);
-  const args = [
-    "install",
-    ...(input.saveLockfile === false ? ["--no-save"] : []),
-    ...(input.production ? ["--production"] : []),
-  ];
+  const args = ["install", "--frozen-lockfile", "--ignore-scripts", ...(input.production ? ["--production"] : [])];
   const command = packaged
     ? resolveManagedBunCommand({
         args,

@@ -119,6 +119,15 @@ Installs and updates are explicit. Source that appears in the extensions root is
   unchanged does not re-provision.
 - `pst extensions dev <path>` still reinstalls on every edit. That is an explicit development loop,
   not automatic adoption.
+- Dependency installs never run package code. The host runs
+  `bun install --frozen-lockfile --ignore-scripts`, adding `--production` for the copies it owns.
+  Lifecycle scripts (`preinstall`, `postinstall`, `prepare`) do not run, for the extension or for any
+  dependency, and `trustedDependencies` does not change that. An extension that needs a build step
+  must ship the built files. When the source has a `bun.lock`, the install uses exactly what it names
+  and fails if it no longer matches `package.json`; run `bun install` in the source folder and keep the
+  updated lockfile. A source without a `bun.lock` resolves from `package.json`, and no lockfile is
+  written. The host checks `package.json` before it installs anything. It imports the entry to
+  validate it only after the install.
 
 The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to a local JSON file or
 an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is
