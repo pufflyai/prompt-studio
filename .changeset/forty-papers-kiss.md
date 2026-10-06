@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Fix tab drops onto headerless webviews while preserving native file drops.
+Fix webview tab drops and show single panel tabs beside menu openers.

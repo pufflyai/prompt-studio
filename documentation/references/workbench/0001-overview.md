@@ -22,6 +22,9 @@ Runnable examples live in the workbench's Storybook stories under `packages/pstd
 
 ## Tabs
 
+When a panel menu shows an opener in the header, the panel also shows its tab,
+even for a single fixed panel. The tab keeps its existing close behavior.
+
 Tabs can be dragged onto panel content, including webviews in panels without a
 tab strip. During a tab drag, the workbench catches pointer events over panels
 so iframe content cannot interrupt the drop, even at a disallowed destination.
