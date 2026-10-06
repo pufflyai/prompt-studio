@@ -42,7 +42,7 @@ The first time you open a folder, Prompt Studio downloads the default extensions
 - Check that your computer can reach `github.com`.
 - Open **Settings → Project folder** and choose **Retry setup**, or open the same folder again.
 
-`pst logs` shows the error for each extension that did not install.
+`pst logs` shows why the download failed. **Settings → Project folder** shows the same error.
 
 ## An agent shows as not installed
 
