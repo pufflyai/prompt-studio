@@ -124,7 +124,13 @@ describe("extension tree resource navigation", () => {
   ])("preserves the declared document selection in a composed navigation tree: %s", async (documentId) => {
     const workbench = createWorkbench();
     const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
-    const resource = { type: "ticket", id: "ticket-1", metadata: { documentId } };
+    const resource = {
+      type: "ticket",
+      id: "ticket-1",
+      extensionId: page.extensionId,
+      projectId: "project-1",
+      metadata: { documentId },
+    };
     workbench.registerModule({
       id: "test.extension-tree",
       activate: (context) =>

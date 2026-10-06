@@ -11,6 +11,7 @@ import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
 import { expectPlannerProperties } from "./packaged-planner-properties-smoke";
 import { expectPlannerWorkflow } from "./packaged-planner-workflow-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { expectPackagedWorkspaceSelection } from "./packaged-workspace-selection-smoke";
 
 // The macOS Intel release runner can spend over a minute extracting and loading all bundled core extensions.
 const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
@@ -227,6 +228,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
             },
           });
           await expectPlannerProperties(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
+          await expectPackagedWorkspaceSelection(started.descriptor, project.id);
           const reportType = metadata.templateTypes.find((type) => type.localId === "report");
           expect(reportType?.commands).toEqual(
             expect.objectContaining({

@@ -123,11 +123,13 @@ export const PageResourceActions: Story = {
   args: { pageOwned: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("option", { name: "Loaded first" })).toBeVisible();
+    const first = await canvas.findByRole("option", { name: "Loaded first" });
     await userEvent.click(canvas.getByRole("button", { name: "Open second session" }));
-    await waitFor(() => expect(canvas.queryByRole("option", { name: "Loaded first" })).not.toBeInTheDocument());
+    await expect(first).toBeVisible();
+    await expect(first).toBe(canvas.getByRole("option", { name: "Loaded first" }));
     await userEvent.click(canvas.getByRole("button", { name: "Finish loading" }));
     await expect(await canvas.findByRole("option", { name: "Loaded second" })).toBeVisible();
+    await waitFor(() => expect(canvas.queryByRole("option", { name: "Loaded first" })).not.toBeInTheDocument());
   },
 };
 

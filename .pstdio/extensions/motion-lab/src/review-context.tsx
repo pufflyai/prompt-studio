@@ -49,7 +49,6 @@ export const useReviewConnection = (host: GuestHost, propsStore: PropsStore<Revi
     let version = 0;
     let definition: StudyMetadata | undefined;
     let loaded: { study: StudyMetadata; hash: string; module: { code: string } | { error: BuildError } } | undefined;
-    setValue(undefined);
     setError(undefined);
     const connection = createReviewSession(initialState({ id, params: [] }), {
       duration: () => definition?.duration ?? 6,
@@ -103,11 +102,18 @@ export const useReviewConnection = (host: GuestHost, propsStore: PropsStore<Revi
       unsubscribeProps();
     };
   }, [host, propsStore, id]);
+  const loading = value?.study.id !== id;
   return {
-    value: value?.study.id === id ? value : undefined,
+    value,
+    loading,
     error,
-    preview: (change: ReviewChange) => session.current?.preview(change),
-    update: (change: ReviewChange) => session.current?.update(change) ?? Promise.resolve(),
+    preview: (change: ReviewChange) => {
+      if (!loading) session.current?.preview(change);
+    },
+    update: (change: ReviewChange) => {
+      if (!loading) return session.current?.update(change) ?? Promise.resolve();
+      return Promise.resolve();
+    },
   };
 };
 export const usePlaybackPosition = (state: ReviewState, duration: number) => {

@@ -9,6 +9,10 @@ on:
       tag:
         required: true
         type: string
+      validation_ref:
+        description: Git revision with desktop checks compatible with the release tag
+        required: false
+        type: string
     secrets:
       MACOS_CERTIFICATE:
         required: true
@@ -31,6 +35,10 @@ on:
       tag:
         description: Existing draft GitHub release tag
         required: true
+        type: string
+      validation_ref:
+        description: Git revision with compatible desktop checks (defaults to the workflow revision)
+        required: false
         type: string
 
 concurrency:
@@ -192,10 +200,10 @@ jobs:
           sudo chmod 4755 clients/desktop/node_modules/electron/dist/chrome-sandbox
 
       # The source suite reuses the desktop build from packaging.
-      - name: Load desktop checks from the workflow revision
+      - name: Load compatible desktop checks
         shell: bash
         env:
-          DESKTOP_VALIDATION_REF: ${{ github.sha }}
+          DESKTOP_VALIDATION_REF: ${{ inputs.validation_ref || github.sha }}
         run: git restore --source="$DESKTOP_VALIDATION_REF" -- clients/desktop/src/e2e
 
       - name: Test source Electron

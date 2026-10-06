@@ -19,8 +19,17 @@ export const useDashboardSessionMessages = (input: WorkbenchPanelRenderInput, se
   const lastResult = useRef(result);
   const ownerKey = rendererReadKey(input.instance, "session");
   const workbench = input.workbench;
+  useEffect(
+    () => () => {
+      controller.current?.dispose();
+      controller.current = undefined;
+    },
+    [],
+  );
   useEffect(() => {
     if (!sessionId) {
+      controller.current?.dispose();
+      controller.current = undefined;
       setResult({ state: emptyState });
       return;
     }
@@ -36,8 +45,6 @@ export const useDashboardSessionMessages = (input: WorkbenchPanelRenderInput, se
         setResult(lastResult.current);
       },
     });
-    controller.current = current;
-    current.connect();
     const unsubscribe = subscribeCollections((change) => {
       if (!change) {
         current.connect();
@@ -47,11 +54,17 @@ export const useDashboardSessionMessages = (input: WorkbenchPanelRenderInput, se
         current.sessionChanged(getCollection("sessions").get(sessionId));
       }
     });
-    return () => {
-      unsubscribe();
-      current.dispose();
-      if (controller.current === current) controller.current = undefined;
+    const previous = controller.current;
+    controller.current = {
+      ...current,
+      dispose() {
+        unsubscribe();
+        current.dispose();
+      },
     };
+    // Transfer the live subscription before releasing the old one, keeping the shared stream open.
+    current.connect();
+    previous?.dispose();
   }, [sessionId, ownerKey, workbench]);
   return {
     ...(result.sessionId === sessionId ? result.state : { ...emptyState, loading: Boolean(sessionId) }),
