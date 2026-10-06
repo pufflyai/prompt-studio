@@ -52,7 +52,9 @@ for (const shell of environments) {
         }),
       });
       const agents = await app.page.evaluate(async () => {
-        const response = await fetch("/v1/agents/info");
+        const response = await fetch("/v1/agents/info", {
+          headers: { authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}` },
+        });
         return { status: response.status, body: await response.json() };
       });
       expect(agents.status).toBe(200);
