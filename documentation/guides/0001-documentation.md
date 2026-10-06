@@ -294,7 +294,6 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0046 — Let extension webviews write to the clipboard when they declare it](../adrs/0046-declared-webview-clipboard-writes.md)
 - [0047 — Semantic versioning for the extension API](../adrs/0047-semantic-versioning-for-the-extension-api.md)
 - [0048 — Motion Lab runtime studies](../adrs/0048-motion-lab-runtime-studies.md)
-- [0048 — Board views are core project data](../adrs/0048-shared-project-board-views.md)
 - [0049 — Temporary scroll content width override for panel tabs](../adrs/0049-temporary-scroll-content-width-override.md)
 - [0050 — Reuse webview bundles across restarts](../adrs/0050-reuse-webview-bundles-across-restarts.md)
 - [0051 — Temporary Motion Lab scene link pass (Superseded)](../adrs/0051-superseded-temporary-motion-scene-link-pass.md)
@@ -302,6 +301,7 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0053 — Temporary webview move fallback](../adrs/0053-temporary-webview-move-fallback.md)
 - [0054 — Browser sessions for the local runtime](../adrs/0054-browser-sessions-for-the-local-runtime.md)
 - [0055 — Temporary webview guest message filter](../adrs/0055-temporary-webview-guest-message-filter.md)
+- [0060 — Board views are core project data](../adrs/0060-shared-project-board-views.md)
 
 ## Lessons learned
 

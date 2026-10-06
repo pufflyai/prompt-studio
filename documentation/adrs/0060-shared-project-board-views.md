@@ -8,7 +8,7 @@ Accepted for PS-415.
 
 ## Context
 
-Saved kanban board views live in client storage (browser local storage or the desktop state file), keyed by panel instance. People can create them, agents cannot, and they do not sync. The kanban renderer is a core UI contract used by several extensions.
+Saved board views live in client storage (browser local storage or the desktop state file), keyed by panel instance. People can create them, agents cannot, and they do not sync. Saved views belong to the host view bar of the collection renderers: kanban boards and data tables. The core Workspaces data table and every extension data table use them. The kanban renderer itself has one shipped user, the planner. The other kanban boards are an Extension Lab example and a repo-local extension.
 
 ## Decision
 
@@ -29,3 +29,7 @@ Saved views are project data owned by the core API. They are stored in the `boar
 - Saved views remove filters on values that no longer exist. The API cleans them on read, so the core never needs to know about an extension's deletes.
 - Personal views are out of scope. Adding them later means an owner column and visibility rules, not a new design.
 - Tree view customization has the same problem and should follow this decision.
+
+## Corrections
+
+- 2026-10-06 (PS-505): renumbered from 0048 to 0060, because [Motion Lab runtime studies](0048-motion-lab-runtime-studies.md) also used 0048. The context claimed the kanban renderer was "used by several extensions". Only the planner ships a kanban board. The decision still holds because saved views also serve data tables, including the core Workspaces table. Whether the kanban and status contracts stay in core is proposed in PS-521.
