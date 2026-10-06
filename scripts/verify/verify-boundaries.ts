@@ -15,7 +15,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { parseConfigFileTextToJson } from "typescript";
+import { flattenDiagnosticMessageText, getParsedCommandLineOfConfigFile, sys } from "typescript";
 import {
   ALLOWED_WORKSPACE_DEPS,
   DEFAULT_PRIVATE_EXPORT_LIMIT,
@@ -131,7 +131,7 @@ const findCycles = (packages: WorkspacePackage[]) => {
 const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, errors: string[]) => {
   const allowed = ALLOWED_WORKSPACE_DEPS[pkg.name] ?? (pkg.isExtension ? EXTENSION_ALLOWED_DEPS : undefined);
   if (!allowed) {
-    errors.push(`${pkg.dir}: package "${pkg.name}" is missing from the allowed layer map in verify-boundaries.ts`);
+    errors.push(`${pkg.dir}: package "${pkg.name}" is missing from the allowed layer map in boundary-rules.ts`);
     return;
   }
   for (const dep of pkg.declared) {
@@ -144,14 +144,20 @@ const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, e
       errors.push(`${pkg.dir}: layer map allows "${dep}" but the package does not declare it; remove the allowance`);
     }
   }
-  const exportLimit = PRIVATE_EXPORT_LIMITS[pkg.name] ?? DEFAULT_PRIVATE_EXPORT_LIMIT;
-  if (pkg.privateExports !== undefined && pkg.privateExports > exportLimit) {
-    errors.push(`${pkg.dir}: private package exports ${pkg.privateExports} subpaths; the limit is ${exportLimit}`);
-  }
   for (const forbidden of FORBIDDEN_SPECIFIERS[pkg.name] ?? []) {
     if (pkg.declared.has(forbidden)) {
       errors.push(`${pkg.dir}: declares forbidden dependency "${forbidden}"`);
     }
+  }
+};
+
+const checkPrivateExports = (pkg: WorkspacePackage, errors: string[]) => {
+  const exportLimit = PRIVATE_EXPORT_LIMITS[pkg.name] ?? DEFAULT_PRIVATE_EXPORT_LIMIT;
+  if (pkg.privateExports !== undefined && pkg.privateExports > exportLimit) {
+    errors.push(`${pkg.dir}: private package exports ${pkg.privateExports} entries; the limit is ${exportLimit}`);
+  }
+  if (pkg.name in PRIVATE_EXPORT_LIMITS && (pkg.privateExports ?? 0) < exportLimit) {
+    errors.push(`${pkg.dir}: lower its export limit in boundary-rules.ts to ${pkg.privateExports ?? 0}`);
   }
 };
 
@@ -238,9 +244,19 @@ const checkTsconfigPaths = (pkg: WorkspacePackage, workspace: Workspace, errors:
   const pkgRoot = path.join(workspace.root, pkg.dir);
   for (const file of collectFiles(pkgRoot, /^tsconfig.*\.json$/)) {
     const relativeFile = path.relative(workspace.root, file).replaceAll("\\", "/");
-    const { config } = parseConfigFileTextToJson(file, readFileSync(file, "utf8"));
-    const options = (config?.compilerOptions ?? {}) as { baseUrl?: string; paths?: Record<string, string[]> };
-    const base = path.resolve(path.dirname(file), options.baseUrl ?? ".");
+    // Parse with `extends` applied, so inherited paths and baseUrl count too.
+    const parsed = getParsedCommandLineOfConfigFile(file, undefined, {
+      ...sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        errors.push(`${relativeFile}: ${flattenDiagnosticMessageText(diagnostic.messageText, " ")}`);
+      },
+    });
+    const options = (parsed?.options ?? {}) as {
+      baseUrl?: string;
+      paths?: Record<string, string[]>;
+      pathsBasePath?: string;
+    };
+    const base = options.baseUrl ?? options.pathsBasePath ?? path.dirname(file);
     for (const [alias, targets] of Object.entries(options.paths ?? {})) {
       for (const target of targets) {
         const resolved = path.resolve(base, target);
@@ -266,6 +282,7 @@ export const verifyBoundaries = (root: string) => {
   }
   for (const pkg of packages) {
     checkDeclaredDeps(pkg, workspace.names, errors);
+    checkPrivateExports(pkg, errors);
     checkExtensionUiVersion(pkg, errors);
     checkSourceImports(pkg, workspace, errors);
     checkTsconfigPaths(pkg, workspace, errors);

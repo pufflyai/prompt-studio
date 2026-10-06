@@ -101,7 +101,39 @@ describe("verifyBoundaries", () => {
     });
 
     expect(verifyBoundaries(root)).toContainEqual(
-      expect.stringContaining("packages/pstdio-wt: private package exports 3 subpaths; the limit is 2"),
+      expect.stringContaining("packages/pstdio-wt: private package exports 3 entries; the limit is 2"),
     );
+  });
+
+  test("follows extends when checking tsconfig paths", () => {
+    const root = createWorkspace({
+      "extensions/example/package.json": { name: "example", engines: { pstdio: "*" } },
+      "extensions/example/tsconfig.base.json": {
+        compilerOptions: { paths: { "@pstdio/sdk/extensions": ["../../packages/sdk/src/extensions/index.ts"] } },
+      },
+      "extensions/example/tsconfig.json": { extends: "./tsconfig.base.json" },
+    });
+
+    expect(verifyBoundaries(root)).toContainEqual(
+      expect.stringContaining('extensions/example/tsconfig.json: path "@pstdio/sdk/extensions"'),
+    );
+  });
+
+  test("lets a non-extension package map only a declared workspace dependency to source", () => {
+    const root = createWorkspace({
+      "packages/ui/tsconfig.json": {
+        compilerOptions: {
+          paths: {
+            "@pstdio/sdk/extensions": ["../sdk/src/extensions/index.ts"],
+            "pstdio-wt": ["../wt/src/index.ts"],
+          },
+        },
+      },
+      "packages/wt/package.json": { name: "pstdio-wt" },
+    });
+
+    const errors = verifyBoundaries(root).filter((error) => error.includes("tsconfig"));
+
+    expect(errors).toEqual([expect.stringContaining('packages/ui/tsconfig.json: path "pstdio-wt"')]);
   });
 });

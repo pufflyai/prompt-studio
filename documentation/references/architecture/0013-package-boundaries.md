@@ -2,7 +2,8 @@
 
 Prompt Studio keeps package ownership explicit so shared packages do not absorb
 app, runtime, or packaging concerns. The source of truth for mechanical rules is
-`scripts/verify/verify-boundaries.ts`; update this document with any intentional
+`scripts/verify/verify-boundaries.ts`, with the layer map and rule tables in
+`scripts/verify/boundary-rules.ts`; update this document with any intentional
 layer-map change.
 
 ## Layers
@@ -83,15 +84,15 @@ layer-map change.
 - No cross-package relative imports except explicit generated packaging
   allowlists.
 - No imports from `clients/*`, by relative path or by package name.
-- tsconfig `paths` stay inside the package. A non-extension package may map a
+- tsconfig `paths`, including inherited ones, stay inside the package. A non-extension package may map a
   declared workspace dependency to its source (the SDK and workbench builds bundle
   their private dependencies). Extensions may not map anything outside their
   package, so they type-check against the released SDK they declare.
 - Every layer-map allowance matches a declared dependency. Remove an allowance
   when the package stops declaring it.
-- Private packages export at most two subpaths. `pstdio-api`,
-  `pstdio-api-contracts`, and `pstdio-extensions` have frozen higher limits that
-  may only go down.
+- Private packages have at most two `exports` entries. `pstdio-api`,
+  `pstdio-api-contracts`, and `pstdio-extensions` have frozen higher limits. The
+  check fails when a limit is above the current count, so a limit only goes down.
 - `@pstdio/workbench` `src/core` imports no `@pstdio/ui` specifier, including
   subpaths and type-only imports.
 - Every workspace package import must be declared in the importer's

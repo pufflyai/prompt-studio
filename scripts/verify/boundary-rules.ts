@@ -92,8 +92,9 @@ export const FORBIDDEN_FOLDER_SPECIFIERS: Record<string, { folder: string; speci
   "@pstdio/workbench": { folder: "src/core", specifiers: ["@pstdio/ui"], rule: "workbench core must not import" },
 };
 
-// Private packages expose their internals through subpath exports. Each subpath is a
-// way around the package's own API, so the count may only go down. pstdio-api exports
+// Private packages expose their internals through export entries. Each entry is a way
+// around the package's own API, so the count may only go down; the checker asks for a
+// lower limit as soon as an entry is removed. pstdio-api exports
 // install internals for the CLI until `pst extensions add` calls the API (PS-504 item 3).
 export const DEFAULT_PRIVATE_EXPORT_LIMIT = 2;
 export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
