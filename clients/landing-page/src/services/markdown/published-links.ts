@@ -1,11 +1,10 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { SatteriProcessorOptions } from "@astrojs/markdown-satteri";
+import type { MdastPluginDefinition as MdastPlugin } from "satteri";
 import { siteMetadata } from "../../config/site-metadata";
 import { publishedDocPath } from "../../content/docs-topics";
 
-type MdastPlugin = NonNullable<SatteriProcessorOptions["mdastPlugins"]>[number];
 type VisitorContext = Parameters<NonNullable<MdastPlugin["link"]>>[1];
 
 const ABSOLUTE = /^([a-z][a-z0-9+.-]*:|\/|#)/i;
