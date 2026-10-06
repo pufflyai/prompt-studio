@@ -44,7 +44,7 @@ A new project starts with these tags:
 | Complexity | single-select | Simple, Moderate, Complex         |
 | Flags      | multi-select  | Review Needed                     |
 
-Open **Settings → Planner → Ticket tags** to add, rename, reorder, or delete tags and their options. From a terminal, use [`pst tags`](0004-cli.md#tags). When you delete a tag, Planner removes its options from every ticket.
+Open **Settings → Project → Ticket tags** to add, rename, reorder, or delete tags and their options. From a terminal, use [`pst tags`](0004-cli.md#tags). When you delete a tag, Planner removes its options from every ticket.
 
 The Review Needed flag tells people that a ticket waits for a human decision. Planner sets it, for example, when a reviewer approves an attempt. While it is set, Planner does not change the ticket's status. Planner always keeps the Flags tag and its Review Needed option. If you delete them, Planner adds them back. You can rename them.
 

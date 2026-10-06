@@ -96,7 +96,7 @@ Host authors should use the [workbench guide](https://github.com/pufflyai/prompt
 
 ## Workspace contracts
 
-The host opens one folder per project and uses workspace APIs for execution and files.
+The host gives each project one default workspace, local or remote, and uses workspace APIs for execution and files.
 Use `ctx.projectFiles` for the project's default workspace and `ctx.workspaceFiles`
 for the invocation's working files. Project file operations check the current workspace
 readiness and file capabilities. Remote workspaces never fall back to local files.
