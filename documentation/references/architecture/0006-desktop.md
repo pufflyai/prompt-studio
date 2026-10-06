@@ -192,9 +192,10 @@ organization; see [Apple account roles](https://developer.apple.com/help/account
 After the required agreement is in effect, rerun the desktop release workflow.
 Keep notarization and the complete four-target publish check enabled.
 
-The workflow checks out `inputs.tag`. If a source or test fix is also needed,
-release a version whose tag contains that fix. Rerunning an older tag uses its
-original files, even after the fix is merged into `main`.
+The workflow checks out `inputs.tag` for application builds. Application fixes
+and checks outside `clients/desktop/src/e2e` require a release tag containing the
+fix. The Electron checks can use a separate compatible `validation_ref`, as
+described in the release retry instructions below.
 
 The native updater is configured in packaged macOS and Windows apps. It resolves
 the newest complete `pstdio@<version>` release and points Electron at that
@@ -255,12 +256,21 @@ and browser traces. Trace export removes runtime cookies and bearer
 credentials from every text entry before artifacts are uploaded.
 
 Release builds use the requested package tag. The Electron specs and their helpers
-come from the workflow revision, so a manual run can correct a release check for
-an existing draft without changing its tagged application. Windows signing trusts
-the `main` branch's GitHub identity. Merge corrected checks before retrying a draft,
-then run `Release Desktop` on `main`, set `version` to the
-existing version, and set `tag` to its `pstdio@<version>` tag. The final job publishes
-the draft only after every native target passes all checks.
+come from `validation_ref` when supplied, or the workflow revision by default.
+Choose checks compatible with the tagged application when retrying an older draft;
+newer checks may require APIs that the release does not contain. Only
+`clients/desktop/src/e2e` is restored from that revision. Builds and publication
+still use the unchanged release tag. Windows signing trusts the `main` branch's
+GitHub identity, so run `Release Desktop` on `main`. The final job publishes the
+draft only after every native target passes all checks.
+
+To retry the original 0.40.0 application with its corrected release checks:
+
+```bash
+gh workflow run release-desktop.yml --repo pufflyai/prompt-studio --ref main \
+  -f version=0.40.0 -f tag=pstdio@0.40.0 \
+  -f validation_ref=3bbbe15db648232bdbce6c5256eca3f93aac6dfe
+```
 
 The secured compiled-runtime browser suite runs Chromium, Firefox, and WebKit.
 `bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
