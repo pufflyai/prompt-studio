@@ -3,7 +3,9 @@ title: "Prompt Studio 0.39"
 description: Navigate inside your tools, share saved board views, and keep several agent conversations open without stalling the workbench.
 published: 2026-10-01T09:40:43Z
 author: aurelien-franky
-image: ../../../../../design/art/blog-prompt-studio-0-39.png
+image:
+  light: ../../../../../design/art/blog-prompt-studio-0-39-light.png
+  dark: ../../../../../design/art/blog-prompt-studio-0-39.png
 ---
 
 Open Notes, and the sidebar becomes your note list. Open Sessions, and it becomes your conversations grouped by day. Prompt Studio 0.39 gives a tool room for its own navigation, while keeping the rows you pinned within reach.

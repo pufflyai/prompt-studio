@@ -68,7 +68,7 @@ export const landingStructuredData = (page: LandingPage, canonicalUrl: string) =
           },
           timeRequired: `PT${page.readingMinutes}M`,
           publisher: { "@id": organizationId },
-          image: new URL(page.image.src, siteMetadata.siteUrl).href,
+          image: new URL(page.image.light.src, siteMetadata.siteUrl).href,
         }
       : {}),
   };

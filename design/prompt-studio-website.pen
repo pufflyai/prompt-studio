@@ -28386,23 +28386,27 @@
                               "type": "frame",
                               "id": "f83Fk",
                               "name": "Post · From malleable software to Prompt Studio",
+                              "context": "Featured newest post. Whole card is one link. Hover scales 1.015; keyboard focus shows the focus ring; reduced motion disables scaling.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
                                 {
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "HJkHV",
-                                  "name": "Shape Art thumbnail · users-in-the-development-team",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
+                                  "name": "Featured Shape Art banner",
+                                  "context": "Full 4:1 banner. Paper in light mode, ink in dark mode.",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "art/blog-users-in-the-development-team.png",
+                                    "url": "art/blog-users-in-the-development-team-light.png",
                                     "mode": "fill"
                                   },
-                                  "width": 128,
-                                  "height": 128
+                                  "width": "fill_container",
+                                  "height": 168
                                 },
                                 {
                                   "type": "frame",
@@ -28415,14 +28419,14 @@
                                     {
                                       "type": "text",
                                       "id": "MCrSZ",
-                                      "name": "Title link",
+                                      "name": "Featured title",
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
                                       "content": "From malleable software to Prompt Studio",
                                       "lineHeight": 1.2,
                                       "fontFamily": "$font-heading",
-                                      "fontSize": 20,
+                                      "fontSize": 24,
                                       "fontWeight": "500"
                                     },
                                     {
@@ -28500,24 +28504,13 @@
                               "type": "frame",
                               "id": "InpYB",
                               "name": "Post · Prompt Studio 0.39: tools that stay in sync",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "IlujE",
-                                  "name": "Shape Art thumbnail · prompt-studio-0-39",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-prompt-studio-0-39.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "WPCUd",
@@ -28614,24 +28607,13 @@
                               "type": "frame",
                               "id": "guVVY",
                               "name": "Post · Prompt Studio 0.38",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "rg1ky",
-                                  "name": "Shape Art thumbnail · prompt-studio-0-38",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-prompt-studio-0-38.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "JtuiS",
@@ -28728,24 +28710,13 @@
                               "type": "frame",
                               "id": "pRIZS",
                               "name": "Post · Prompt Studio 0.36",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "A59YS",
-                                  "name": "Shape Art thumbnail · prompt-studio-0-36",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-prompt-studio-0-36.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "boC3S",
@@ -28842,24 +28813,13 @@
                               "type": "frame",
                               "id": "VEzwM",
                               "name": "Post · Welcome to Prompt Studio",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "p0TJZX",
-                                  "name": "Shape Art thumbnail · welcome-to-prompt-studio",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-welcome-to-prompt-studio.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "SmJc0",
@@ -28956,24 +28916,13 @@
                               "type": "frame",
                               "id": "nIUJv",
                               "name": "Post · In the future, your users will be part of the development team",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "Q6y4v",
-                                  "name": "Shape Art thumbnail · welcome-to-prompt-studio",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-welcome-to-prompt-studio.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "hgP15",
@@ -29757,7 +29706,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "art/blog-welcome-to-prompt-studio.png",
+                            "url": "art/blog-welcome-to-prompt-studio-light.png",
                             "mode": "fit"
                           },
                           "width": "fill_container",
@@ -37671,23 +37620,27 @@
                               "type": "frame",
                               "id": "z6nM7",
                               "name": "Post · From malleable software to Prompt Studio",
+                              "context": "Featured newest post. Whole card is one link. Hover scales 1.015; keyboard focus shows the focus ring; reduced motion disables scaling.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
                                 {
                                   "type": "rectangle",
                                   "cornerRadius": "$input-radius",
                                   "id": "aMiUL",
-                                  "name": "Shape Art thumbnail · users-in-the-development-team",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
+                                  "name": "Featured Shape Art banner",
+                                  "context": "Full 4:1 banner. Paper in light mode, ink in dark mode.",
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
                                     "url": "art/blog-users-in-the-development-team.png",
                                     "mode": "fill"
                                   },
-                                  "width": 128,
-                                  "height": 128
+                                  "width": "fill_container",
+                                  "height": 168
                                 },
                                 {
                                   "type": "frame",
@@ -37700,14 +37653,14 @@
                                     {
                                       "type": "text",
                                       "id": "Ji2bx",
-                                      "name": "Title link",
+                                      "name": "Featured title",
                                       "fill": "$ds-fg",
                                       "textGrowth": "fixed-width",
                                       "width": "fill_container",
                                       "content": "From malleable software to Prompt Studio",
                                       "lineHeight": 1.2,
                                       "fontFamily": "$font-heading",
-                                      "fontSize": 20,
+                                      "fontSize": 24,
                                       "fontWeight": "500"
                                     },
                                     {
@@ -37785,24 +37738,13 @@
                               "type": "frame",
                               "id": "x7phg",
                               "name": "Post · Prompt Studio 0.39: tools that stay in sync",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "BoScy",
-                                  "name": "Shape Art thumbnail · prompt-studio-0-39",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-prompt-studio-0-39.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "Nx5P2",
@@ -37899,24 +37841,13 @@
                               "type": "frame",
                               "id": "e48qTz",
                               "name": "Post · Prompt Studio 0.38",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "J7iKQo",
-                                  "name": "Shape Art thumbnail · prompt-studio-0-38",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-prompt-studio-0-38.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "Hb2JG",
@@ -38013,24 +37944,13 @@
                               "type": "frame",
                               "id": "whkia",
                               "name": "Post · Prompt Studio 0.36",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "hOQLK",
-                                  "name": "Shape Art thumbnail · prompt-studio-0-36",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-prompt-studio-0-36.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "pDMK4",
@@ -38127,24 +38047,13 @@
                               "type": "frame",
                               "id": "Om6vX",
                               "name": "Post · Welcome to Prompt Studio",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "k1qT5",
-                                  "name": "Shape Art thumbnail · welcome-to-prompt-studio",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-welcome-to-prompt-studio.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "w3htYX",
@@ -38241,24 +38150,13 @@
                               "type": "frame",
                               "id": "tXbQD",
                               "name": "Post · In the future, your users will be part of the development team",
+                              "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                               "width": "fill_container",
-                              "gap": 24,
+                              "cornerRadius": "$input-radius",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": 16,
                               "children": [
-                                {
-                                  "type": "rectangle",
-                                  "cornerRadius": "$input-radius",
-                                  "id": "V4t7y",
-                                  "name": "Shape Art thumbnail · welcome-to-prompt-studio",
-                                  "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                                  "fill": {
-                                    "type": "image",
-                                    "enabled": true,
-                                    "url": "art/blog-welcome-to-prompt-studio.png",
-                                    "mode": "fill"
-                                  },
-                                  "width": 128,
-                                  "height": 128
-                                },
                                 {
                                   "type": "frame",
                                   "id": "EJ8Wl",
@@ -41662,23 +41560,27 @@
                   "type": "frame",
                   "id": "MnKP8",
                   "name": "Post · From malleable software to Prompt Studio",
+                  "context": "Featured newest post. Whole card is one link. Hover scales 1.015; keyboard focus shows the focus ring; reduced motion disables scaling.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
                     {
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "hXHdh",
-                      "name": "Shape Art thumbnail · users-in-the-development-team",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
+                      "name": "Featured Shape Art banner",
+                      "context": "Full 4:1 banner. Paper in light mode, ink in dark mode.",
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "art/blog-users-in-the-development-team.png",
+                        "url": "art/blog-users-in-the-development-team-light.png",
                         "mode": "fill"
                       },
-                      "width": 80,
-                      "height": 80
+                      "width": "fill_container",
+                      "height": 77.5
                     },
                     {
                       "type": "frame",
@@ -41691,14 +41593,14 @@
                         {
                           "type": "text",
                           "id": "ewrew",
-                          "name": "Title link",
+                          "name": "Featured title",
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "From malleable software to Prompt Studio",
                           "lineHeight": 1.2,
                           "fontFamily": "$font-heading",
-                          "fontSize": 20,
+                          "fontSize": 24,
                           "fontWeight": "500"
                         },
                         {
@@ -41776,24 +41678,13 @@
                   "type": "frame",
                   "id": "TxSbx",
                   "name": "Post · Prompt Studio 0.39: tools that stay in sync",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "h4PK7L",
-                      "name": "Shape Art thumbnail · prompt-studio-0-39",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-prompt-studio-0-39.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "Rlo2S",
@@ -41890,24 +41781,13 @@
                   "type": "frame",
                   "id": "K2bXX2",
                   "name": "Post · Prompt Studio 0.38",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "hfWe2",
-                      "name": "Shape Art thumbnail · prompt-studio-0-38",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-prompt-studio-0-38.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "f55Zhm",
@@ -42004,24 +41884,13 @@
                   "type": "frame",
                   "id": "e01ooo",
                   "name": "Post · Prompt Studio 0.36",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "nIOOU",
-                      "name": "Shape Art thumbnail · prompt-studio-0-36",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-prompt-studio-0-36.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "Ni7Ac",
@@ -42118,24 +41987,13 @@
                   "type": "frame",
                   "id": "wPj6f",
                   "name": "Post · Welcome to Prompt Studio",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "jrpQZ",
-                      "name": "Shape Art thumbnail · welcome-to-prompt-studio",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-welcome-to-prompt-studio.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "dxPVU",
@@ -42232,24 +42090,13 @@
                   "type": "frame",
                   "id": "Wv7sF",
                   "name": "Post · In the future, your users will be part of the development team",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "PVILj",
-                      "name": "Shape Art thumbnail · welcome-to-prompt-studio",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-welcome-to-prompt-studio.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "b7OAF",
@@ -42648,7 +42495,7 @@
               "fill": {
                 "type": "image",
                 "enabled": true,
-                "url": "art/blog-welcome-to-prompt-studio.png",
+                "url": "art/blog-welcome-to-prompt-studio-light.png",
                 "mode": "fit"
               },
               "width": "fill_container",
@@ -48136,23 +47983,27 @@
                   "type": "frame",
                   "id": "jr3lq",
                   "name": "Post · From malleable software to Prompt Studio",
+                  "context": "Featured newest post. Whole card is one link. Hover scales 1.015; keyboard focus shows the focus ring; reduced motion disables scaling.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
                     {
                       "type": "rectangle",
                       "cornerRadius": "$input-radius",
                       "id": "Lona4",
-                      "name": "Shape Art thumbnail · users-in-the-development-team",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
+                      "name": "Featured Shape Art banner",
+                      "context": "Full 4:1 banner. Paper in light mode, ink in dark mode.",
                       "fill": {
                         "type": "image",
                         "enabled": true,
                         "url": "art/blog-users-in-the-development-team.png",
                         "mode": "fill"
                       },
-                      "width": 80,
-                      "height": 80
+                      "width": "fill_container",
+                      "height": 77.5
                     },
                     {
                       "type": "frame",
@@ -48165,14 +48016,14 @@
                         {
                           "type": "text",
                           "id": "hTkPs",
-                          "name": "Title link",
+                          "name": "Featured title",
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "From malleable software to Prompt Studio",
                           "lineHeight": 1.2,
                           "fontFamily": "$font-heading",
-                          "fontSize": 20,
+                          "fontSize": 24,
                           "fontWeight": "500"
                         },
                         {
@@ -48250,24 +48101,13 @@
                   "type": "frame",
                   "id": "oCpEd",
                   "name": "Post · Prompt Studio 0.39: tools that stay in sync",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "K6Jmml",
-                      "name": "Shape Art thumbnail · prompt-studio-0-39",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-prompt-studio-0-39.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "YZpn0",
@@ -48364,24 +48204,13 @@
                   "type": "frame",
                   "id": "uVFIp",
                   "name": "Post · Prompt Studio 0.38",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "kVksP",
-                      "name": "Shape Art thumbnail · prompt-studio-0-38",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-prompt-studio-0-38.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "KIZBr",
@@ -48478,24 +48307,13 @@
                   "type": "frame",
                   "id": "mzOmD",
                   "name": "Post · Prompt Studio 0.36",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "DCHE8",
-                      "name": "Shape Art thumbnail · prompt-studio-0-36",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-prompt-studio-0-36.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "cUcG4",
@@ -48592,24 +48410,13 @@
                   "type": "frame",
                   "id": "x04N6",
                   "name": "Post · Welcome to Prompt Studio",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "YojRZ",
-                      "name": "Shape Art thumbnail · welcome-to-prompt-studio",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-welcome-to-prompt-studio.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "s8v6k",
@@ -48706,24 +48513,13 @@
                   "type": "frame",
                   "id": "DnGKF",
                   "name": "Post · In the future, your users will be part of the development team",
+                  "context": "Text-only older post. Whole card is one link, with the same hover and keyboard behavior.",
                   "width": "fill_container",
+                  "cornerRadius": "$input-radius",
+                  "layout": "vertical",
                   "gap": 16,
+                  "padding": 16,
                   "children": [
-                    {
-                      "type": "rectangle",
-                      "cornerRadius": "$input-radius",
-                      "id": "cYV8i",
-                      "name": "Shape Art thumbnail · welcome-to-prompt-studio",
-                      "context": "Square center crop of the post artwork, rounded xs corners. Original article banner remains 4:1.",
-                      "fill": {
-                        "type": "image",
-                        "enabled": true,
-                        "url": "art/blog-welcome-to-prompt-studio.png",
-                        "mode": "fill"
-                      },
-                      "width": 80,
-                      "height": 80
-                    },
                     {
                       "type": "frame",
                       "id": "OrBpn",

@@ -17,7 +17,7 @@ Run `pst shape-art piece generate --help` for its flags. Background choices are 
 
 Pass `--seed <text>` to repeat the same generated recipe with the same dimensions and background. Omit it for a new random composition. `piece generate` replaces an existing id; `piece render` preserves and repaints that id's current recipe.
 
-Blog banners use ink backgrounds with blue and pink glows. Avoid yellow and orange shapes: after generation, save the recipe with `kinds` set to `["page", "editor", "skill", "hook"]` and `gradient` at most `0.3` to keep the color drift cool. Preserve its other settings and seed so every post keeps a different composition.
+Blog banners have paired paper and ink backgrounds with blue and pink glows. Avoid yellow and orange shapes: after generation, save the recipe with `kinds` set to `["page", "editor", "skill", "hook"]` and `gradient` at most `0.3` to keep the color drift cool. Preserve its other settings and seed so every post keeps a different composition.
 
 ## Recipe fields
 
@@ -40,3 +40,5 @@ Blog banners use ink backgrounds with blue and pink glows. Avoid yellow and oran
 Shape colors come from the landing page illustration tokens, so a shape's color always matches its meaning.
 
 Use the PNG as a source image. The landing page optimizes images imported through Astro assets.
+
+For a blog post, keep the same composition and seed in both variants. Save the light recipe as `<id>-light` with paper colors (`#F7F2E8` to `#EAE1D1`) and the dark recipe as `<id>` with ink colors (`#0A0C10` to `#141A28`). Both remain opaque. The landing page chooses the image for its active theme; only the newest post shows artwork in the blog list.

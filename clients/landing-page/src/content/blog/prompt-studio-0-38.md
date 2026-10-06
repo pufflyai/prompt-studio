@@ -3,7 +3,9 @@ title: "Prompt Studio 0.38"
 description: Choose where a tool runs, upgrade or reload your extensions, and keep agent conversations going. Highlights from the September 29 releases, 0.37 and 0.38.
 published: 2026-09-29T21:15:47Z
 author: aurelien-franky
-image: ../../../../../design/art/blog-prompt-studio-0-38.png
+image:
+  light: ../../../../../design/art/blog-prompt-studio-0-38-light.png
+  dark: ../../../../../design/art/blog-prompt-studio-0-38.png
 ---
 
 Building a useful tool is a loop: ask for it, try it, change it, and run it again. The two releases on September 29 make that loop easier to manage. This post brings the changes in **0.37 and 0.38** together under the latest version, **0.38**.

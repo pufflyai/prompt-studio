@@ -19,7 +19,7 @@ export type LandingPage =
       published: string;
       author: ActivityActor;
       readingMinutes: number;
-      image: { src: string; width: number; height: number };
+      image: Record<"light" | "dark", { src: string; width: number; height: number }>;
     });
 
 /** The title bar tabs. Every page belongs to one. */

@@ -1,4 +1,4 @@
-import { Image } from "@chakra-ui/react";
+import { Box, Image } from "@chakra-ui/react";
 import type { LandingPage } from "../../content/landing-pages";
 import { useDocStyles } from "../../hooks/use-landing-styles";
 
@@ -12,14 +12,20 @@ export const PostBanner = (props: PostBannerProps) => {
   const styles = useDocStyles();
 
   return (
-    <Image
-      src={image.src}
-      htmlWidth={image.width}
-      htmlHeight={image.height}
-      alt=""
-      loading={loading}
-      decoding="async"
-      css={styles.postBanner}
-    />
+    <Box as="span" css={styles.postArtwork}>
+      {(["light", "dark"] as const).map((tone) => (
+        <Image
+          key={tone}
+          data-art-tone={tone}
+          src={image[tone].src}
+          htmlWidth={image[tone].width}
+          htmlHeight={image[tone].height}
+          alt=""
+          loading={loading}
+          decoding="async"
+          css={styles.postBanner}
+        />
+      ))}
+    </Box>
   );
 };

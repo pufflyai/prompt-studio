@@ -76,6 +76,14 @@ export const DocsPage: Story = {
 
 export const BlogIndex: Story = { render: () => <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} /> };
 
+export const BlogIndexDark: Story = {
+  render: () => (
+    <Box className="dark" height="full">
+      <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} />
+    </Box>
+  ),
+};
+
 export const BlogIndexMobile: Story = {
   render: () => (
     <Box width="full" maxWidth="sm" height="full">
@@ -98,6 +106,14 @@ export const PostOutline: Story = {
 };
 
 export const PostHeader: Story = { render: () => <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} /> };
+
+export const PostHeaderDark: Story = {
+  render: () => (
+    <Box className="dark" height="full">
+      <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} />
+    </Box>
+  ),
+};
 
 export const PostHeaderLongTitle: Story = {
   render: () => (

@@ -9,12 +9,15 @@ interface BlogIndexViewProps {
 
 export const BlogIndexView = (props: BlogIndexViewProps) => {
   const { page, pages } = props;
+  const posts = pages.filter((post) => post.view === "post").sort((a, b) => b.published.localeCompare(a.published));
 
   return (
     <DocColumn pageKey={page.path}>
       <h1>Blog</h1>
       <p>{page.description}</p>
-      {pages.map((post) => post.view === "post" && <PostListItem key={post.path} page={post} />)}
+      {posts.map((post, index) => (
+        <PostListItem key={post.path} page={post} featured={index === 0} />
+      ))}
     </DocColumn>
   );
 };

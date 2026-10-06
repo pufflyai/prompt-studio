@@ -11,9 +11,9 @@ export const landingMetadata = (page: LandingPage | undefined, path: string) => 
   const image =
     page?.view === "post"
       ? {
-          path: page.image.src,
-          width: page.image.width,
-          height: page.image.height,
+          path: page.image.light.src,
+          width: page.image.light.width,
+          height: page.image.light.height,
           alt: "Watercolor Prompt Studio tool shapes.",
         }
       : siteMetadata.banner;

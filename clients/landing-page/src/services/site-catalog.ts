@@ -42,7 +42,12 @@ const docPage = (entry: CollectionEntry<"docs">): LandingPage => {
 const postPage = async (entry: CollectionEntry<"blog">) => {
   const readingMinutes = metadataOf(entry).frontmatter?.readingMinutes;
   if (readingMinutes === undefined) throw new Error(`${entry.id} is missing its calculated reading time.`);
-  const image = await getImage({ src: entry.data.image, width: 1280, format: "webp" });
+  const [light, dark] = await Promise.all(
+    [entry.data.image.light, entry.data.image.dark].map(async (source) => {
+      const image = await getImage({ src: source, width: 1280, format: "webp" });
+      return { src: image.src, width: Number(image.attributes.width), height: Number(image.attributes.height) };
+    }),
+  );
   return {
     path: `/blog/${entry.id}/`,
     view: "post",
@@ -52,7 +57,7 @@ const postPage = async (entry: CollectionEntry<"blog">) => {
     published: entry.data.published.toISOString(),
     author: BLOG_AUTHORS[entry.data.author],
     readingMinutes,
-    image: { src: image.src, width: Number(image.attributes.width), height: Number(image.attributes.height) },
+    image: { light, dark },
   } satisfies LandingPage;
 };
 

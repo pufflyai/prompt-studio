@@ -3,7 +3,9 @@ title: "From malleable software to Prompt Studio"
 description: "From Kaset's editable apps to a shared workbench: why users and agents should build their own tools, while developers maintain the foundations."
 published: 2026-10-06
 author: aurelien-franky
-image: ../../../../../design/art/blog-users-in-the-development-team.png
+image:
+  light: ../../../../../design/art/blog-users-in-the-development-team-light.png
+  dark: ../../../../../design/art/blog-users-in-the-development-team.png
 ---
 
 Last year, I wrote [In the future, your users will be part of the development team](/blog/malleable-software/).

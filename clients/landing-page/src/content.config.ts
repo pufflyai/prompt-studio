@@ -18,7 +18,7 @@ const blog = defineCollection({
       // Use an unquoted date or UTC timestamp. Timestamps order posts published on the same day.
       published: z.date(),
       author: z.enum(["aurelien-franky"]),
-      image: image(),
+      image: z.object({ light: image(), dark: image() }),
     }),
 });
 

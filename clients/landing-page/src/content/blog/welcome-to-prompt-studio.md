@@ -3,7 +3,9 @@ title: Welcome to Prompt Studio
 description: Why I stopped looking for the right tool to work with agents and built a place where you and your agents make your own.
 published: 2026-08-31
 author: aurelien-franky
-image: ../../../../../design/art/blog-welcome-to-prompt-studio.png
+image:
+  light: ../../../../../design/art/blog-welcome-to-prompt-studio-light.png
+  dark: ../../../../../design/art/blog-welcome-to-prompt-studio.png
 ---
 
 A while ago, I found myself with less time to write code.

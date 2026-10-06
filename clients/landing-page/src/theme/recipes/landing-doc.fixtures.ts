@@ -1,7 +1,9 @@
 import type { LandingDocument, LandingPage } from "../../content/landing-pages";
 
 const banner = new URL("../../../../../design/art/blog-welcome-to-prompt-studio.png", import.meta.url).href;
+const lightBanner = new URL("../../../../../design/art/blog-welcome-to-prompt-studio-light.png", import.meta.url).href;
 const olderBanner = new URL("../../../../../design/art/blog-malleable-software.png", import.meta.url).href;
+const olderLightBanner = new URL("../../../../../design/art/blog-malleable-software-light.png", import.meta.url).href;
 
 // Sample pages and markup only. Real docs come from the repo's markdown.
 const doc = (path: string, label: string): LandingPage => ({
@@ -39,7 +41,10 @@ export const STORY_POST: Extract<LandingPage, { view: "post" }> = {
   published: "2026-08-31",
   author: BLOG_AUTHORS["aurelien-franky"],
   readingMinutes: 3,
-  image: { src: banner, width: 1600, height: 400 },
+  image: {
+    light: { src: lightBanner, width: 1600, height: 400 },
+    dark: { src: banner, width: 1600, height: 400 },
+  },
 };
 
 export const STORY_PAGES: LandingPage[] = [
@@ -61,7 +66,10 @@ export const STORY_PAGES: LandingPage[] = [
     label: "An older post",
     published: "2026-09-01",
     description: "Posts are listed newest first.",
-    image: { src: olderBanner, width: 1600, height: 400 },
+    image: {
+      light: { src: olderLightBanner, width: 1600, height: 400 },
+      dark: { src: olderBanner, width: 1600, height: 400 },
+    },
   },
 ];
 

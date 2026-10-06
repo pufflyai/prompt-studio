@@ -3,7 +3,9 @@ title: "Prompt Studio 0.36"
 description: Open a folder without Git, share workspaces and sessions between Planner tickets, and keep conversations and tool views intact.
 published: 2026-09-28T14:33:08Z
 author: aurelien-franky
-image: ../../../../../design/art/blog-prompt-studio-0-36.png
+image:
+  light: ../../../../../design/art/blog-prompt-studio-0-36-light.png
+  dark: ../../../../../design/art/blog-prompt-studio-0-36.png
 ---
 
 A tool should be able to work with the folder you already have. Prompt Studio 0.36 makes that the starting point: open one folder as a project, then choose a workspace when the work needs a different environment. Git is optional.
