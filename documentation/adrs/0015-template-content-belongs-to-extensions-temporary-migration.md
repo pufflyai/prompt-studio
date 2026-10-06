@@ -32,7 +32,7 @@ For a database older than extension storage, startup first runs the generated mi
 
 ## Removal
 
-This workaround is isolated to the legacy template migration, its startup repair, and source adoption. Remove all three after every supported database version has passed the schema migration that drops the old tables. A future migration system should allow extensions to run owned data migrations before core schema removal.
+This workaround is isolated to the legacy template migration, its startup repair, and source adoption. Remove all three after every supported database version has passed the schema migration that drops the old tables. The supported versions are the releases published in the last 90 days ([Database upgrades](../references/architecture/0025-database-upgrades.md)). The table-drop migration first shipped in `pstdio@0.30.0` on 2026-08-28, so the workaround may be removed in the first breaking release after 2026-11-26. A future migration system should allow extensions to run owned data migrations before core schema removal.
 
 ## Consequences
 
