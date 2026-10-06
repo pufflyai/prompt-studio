@@ -8,18 +8,15 @@ import {
   createNotificationsDBService,
   createProjectsDBService,
 } from "pstdio-db";
-import { EventBus } from "../features/sync/event-bus";
 import { createSyncService, SYNCED_TABLES } from "./sync-service";
 
 let close: () => Promise<void>;
 let db: DbClient;
-let eventBus: EventBus;
 
 const setup = async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
   db = result.db;
-  eventBus = new EventBus();
 };
 
 afterAll(async () => {
@@ -30,7 +27,7 @@ describe("createSyncService", () => {
   describe("getFullState", () => {
     test("returns all synced tables as keys", async () => {
       await setup();
-      const syncService = createSyncService({ db, eventBus });
+      const syncService = createSyncService({ db });
       const state = await syncService.getFullState();
 
       for (const table of SYNCED_TABLES) {
@@ -41,7 +38,7 @@ describe("createSyncService", () => {
 
     test("returns empty arrays for fresh database", async () => {
       await setup();
-      const syncService = createSyncService({ db, eventBus });
+      const syncService = createSyncService({ db });
       const state = await syncService.getFullState();
 
       for (const table of SYNCED_TABLES) {
@@ -51,7 +48,7 @@ describe("createSyncService", () => {
 
     test("returns inserted data", async () => {
       await setup();
-      const syncService = createSyncService({ db, eventBus });
+      const syncService = createSyncService({ db });
 
       const projectsService = createProjectsDBService(db);
 
@@ -65,7 +62,7 @@ describe("createSyncService", () => {
 
     test("includes installed extension sources and project instances", async () => {
       await setup();
-      const syncService = createSyncService({ db, eventBus });
+      const syncService = createSyncService({ db });
       const projectsService = createProjectsDBService(db);
       const sourcesService = createInstalledExtensionSourcesDBService(db);
       const instancesService = createExtensionInstancesDBService(db);
@@ -93,7 +90,7 @@ describe("createSyncService", () => {
 
     test("excludes soft-deleted rows", async () => {
       await setup();
-      const syncService = createSyncService({ db, eventBus });
+      const syncService = createSyncService({ db });
 
       const projectsService = createProjectsDBService(db);
       const project = await projectsService.create({ name: "soft-delete-test" });
@@ -106,33 +103,12 @@ describe("createSyncService", () => {
     });
   });
 
-  describe("emitCascadeDeletes", () => {
-    test("emits delete event for a simple row", async () => {
+  describe("cascadeDeletes", () => {
+    test("lists project dependents before the project", async () => {
       await setup();
-      const syncService = createSyncService({ db, eventBus });
-
-      const projectsService = createProjectsDBService(db);
-      const project = await projectsService.create({ name: "simple-delete" });
-
-      const events: { table: string; op: string; data: unknown }[] = [];
-      eventBus.subscribe((e) => events.push(e));
-
-      await syncService.emitCascadeDeletes("projects", project.id);
-
-      expect(events).toHaveLength(1);
-      expect(events[0].table).toBe("projects");
-      expect(events[0].op).toBe("delete");
-      expect(events[0].data).toEqual({ id: project.id });
-    });
-
-    test("emits cascade deletes for a project and its dependents", async () => {
-      await setup();
-      const syncService = createSyncService({ db, eventBus });
-
-      const projectsService = createProjectsDBService(db);
-      const notificationsService = createNotificationsDBService(db);
-      const project = await projectsService.create({ name: "cascade-test" });
-      const notification = await notificationsService.create({
+      const syncService = createSyncService({ db });
+      const project = await createProjectsDBService(db).create({ name: "cascade-test" });
+      const notification = await createNotificationsDBService(db).create({
         project_id: project.id,
         source: "core",
         origin: "system",
@@ -140,37 +116,22 @@ describe("createSyncService", () => {
         kind: "needs_review",
       });
 
-      const events: { table: string; op: string; data: unknown }[] = [];
-      eventBus.subscribe((e) => events.push(e));
+      const deletes = await syncService.cascadeDeletes("projects", project.id);
 
-      await syncService.emitCascadeDeletes("projects", project.id);
-
-      const tables = events.map((e) => e.table);
-      expect(events).toContainEqual(
-        expect.objectContaining({ table: "notifications", op: "delete", data: { id: notification.id } }),
-      );
-      expect(tables).toContain("projects");
-
-      // The project delete should be last
-      expect(events[events.length - 1].table).toBe("projects");
-      expect(events[events.length - 1].data).toEqual({ id: project.id });
+      expect(deletes).toContainEqual({ table: "notifications", id: notification.id });
+      expect(deletes.at(-1)).toEqual({ table: "projects", id: project.id });
     });
 
-    test("does nothing for a non-existent row", async () => {
+    test("lists nothing for a missing row", async () => {
       await setup();
-      const syncService = createSyncService({ db, eventBus });
+      const syncService = createSyncService({ db });
 
-      const events: { table: string; op: string; data: unknown }[] = [];
-      eventBus.subscribe((e) => events.push(e));
-
-      await syncService.emitCascadeDeletes("projects", "non-existent-id");
-
-      expect(events).toHaveLength(0);
+      expect(await syncService.cascadeDeletes("projects", "non-existent-id")).toEqual([]);
     });
   });
 });
 
-test("snapshots shared board views and emits their project cascade deletions", async () => {
+test("snapshots shared board views and lists their project cascade deletions", async () => {
   await setup();
   const project = await createProjectsDBService(db).create({ name: "Shared snapshot" });
   const source = await createInstalledExtensionSourcesDBService(db).register({
@@ -200,18 +161,14 @@ test("snapshots shared board views and emits their project cascade deletions", a
     sorts: [],
   });
   await views.setDefault(scope, view.id);
-  const sync = createSyncService({ db, eventBus });
+  const sync = createSyncService({ db });
   const state = await sync.getFullState();
   const defaultId = JSON.stringify([project.id, instance.id, "tasks"]);
   expect(state.board_views).toContainEqual(expect.objectContaining({ id: view.id }));
   expect(state.board_default_views).toContainEqual(
     expect.objectContaining({ id: defaultId, default_view_id: view.id }),
   );
-  const events: { table: string; op: string; data: unknown }[] = [];
-  eventBus.subscribe((event) => events.push(event));
-  await sync.emitCascadeDeletes("projects", project.id);
-  expect(events).toContainEqual(expect.objectContaining({ table: "board_views", op: "delete", data: { id: view.id } }));
-  expect(events).toContainEqual(
-    expect.objectContaining({ table: "board_default_views", op: "delete", data: { id: defaultId } }),
-  );
+  const deletes = await sync.cascadeDeletes("projects", project.id);
+  expect(deletes).toContainEqual({ table: "board_views", id: view.id });
+  expect(deletes).toContainEqual({ table: "board_default_views", id: defaultId });
 });

@@ -57,15 +57,17 @@ const createCoreDomainServices = (input: {
   const filesStorageService = createFilesStorageService(storageRoot);
   const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService, eventBus });
 
+  const syncService = createSyncService({ db });
+
   return {
     fileService,
-    projectService: createProjectService({ projectsDBService: dbs.projectsDBService, eventBus }),
+    projectService: createProjectService({ projectsDBService: dbs.projectsDBService, syncService, eventBus }),
     extensionFileService: createExtensionFileService({
       extensionFilesDBService: dbs.extensionFilesDBService,
       extensionInstancesDBService: dbs.extensionInstancesService,
       fileService,
     }),
-    syncService: createSyncService({ db, eventBus }),
+    syncService,
     notificationService: createNotificationService({
       notificationsDb: dbs.notificationsDbService,
       activityEventsService: dbs.activityEventsService,

@@ -11,12 +11,17 @@ import { testHarnessId } from "../../harnesses/test-harness-registry";
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
 let app: OpenAPIHono<AppBindings>;
+let eventBus: Awaited<ReturnType<typeof createTestApp>>["eventBus"];
 let closeApp: () => Promise<void>;
 let tempRoot: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-project-test-"));
-  ({ app, close: closeApp } = await createTestApp({
+  ({
+    app,
+    eventBus,
+    close: closeApp,
+  } = await createTestApp({
     databasePath: ":memory:",
     storageRoot: join(tempRoot, "storage"),
   }));
@@ -69,6 +74,29 @@ describe("PATCH /v1/projects/:id", () => {
     const fetched = await getRes.json();
     expect(fetched.default_agent_id).toBe(CLAUDE_CODE_ID);
     expect(fetched.default_agent_model).toBe("claude-3-5-sonnet");
+  });
+
+  test("publishes the new default agent to synced clients", async () => {
+    const project = await createProject("Publish Default Agent");
+    const published: unknown[] = [];
+    const unsubscribe = eventBus.subscribe((event) => {
+      if (event.table === "projects" && event.op === "set") published.push(event.data);
+    });
+
+    await app.request(`/v1/projects/${project.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ default_agent_id: CLAUDE_CODE_ID, default_agent_model: "claude-3-5-sonnet" }),
+    });
+    unsubscribe();
+
+    expect(published).toContainEqual(
+      expect.objectContaining({
+        id: project.id,
+        default_agent_id: CLAUDE_CODE_ID,
+        default_agent_model: "claude-3-5-sonnet",
+      }),
+    );
   });
 
   test("clears default model independently of agent", async () => {

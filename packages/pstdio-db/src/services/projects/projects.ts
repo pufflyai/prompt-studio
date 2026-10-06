@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { projects } from "../../db/schemas.pg";
+import { extension_instances, projects } from "../../db/schemas.pg";
 import { deriveShorthand } from "./derive-shorthand";
 
 type ProjectRecord = typeof projects.$inferSelect;
@@ -82,39 +82,18 @@ export const createProjectsDBService = (db: DbClient) => {
     return true;
   };
 
-  const hardDelete = async (id: string) => {
-    const [existing] = await db.select().from(projects).where(eq(projects.id, id));
-
-    if (!existing) return false;
-
-    await db.delete(projects).where(eq(projects.id, id));
-
-    return true;
-  };
-
-  const getStartupScript = async (id: string) => {
-    const project = await get(id);
-    if (!project) return null;
-    return project.startup_script;
-  };
-
-  const setStartupScript = async (id: string, script: string) => {
-    const existing = await get(id);
-    if (!existing) return null;
-
-    await db.update(projects).set({ startup_script: script, updated_at: nowTimestamp() }).where(eq(projects.id, id));
-
-    return true;
-  };
-
-  const clearStartupScript = async (id: string) => {
-    const existing = await get(id);
-    if (!existing) return null;
-
-    await db.update(projects).set({ startup_script: null, updated_at: nowTimestamp() }).where(eq(projects.id, id));
-
-    return true;
-  };
+  // Project-scoped extension instances point at the project through a polymorphic scope, so no
+  // foreign key cascades them. The caller receives them to publish their removal.
+  const hardDelete = async (id: string) =>
+    db.transaction(async (tx) => {
+      const [deleted] = await tx.delete(projects).where(eq(projects.id, id)).returning({ id: projects.id });
+      if (!deleted) return null;
+      const extensionInstances = await tx
+        .delete(extension_instances)
+        .where(and(eq(extension_instances.scope_type, "project"), eq(extension_instances.scope_id, id)))
+        .returning();
+      return { extensionInstances };
+    });
 
   return {
     list,
@@ -124,8 +103,5 @@ export const createProjectsDBService = (db: DbClient) => {
     setDefaults,
     remove,
     hardDelete,
-    getStartupScript,
-    setStartupScript,
-    clearStartupScript,
   };
 };

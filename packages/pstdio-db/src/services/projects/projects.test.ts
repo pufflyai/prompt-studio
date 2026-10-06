@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
+import { extension_instances } from "../../db/schemas.pg";
+import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
+import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
 import { createProjectsDBService } from "./projects";
 
 let close: () => Promise<void>;
@@ -70,4 +74,33 @@ test("projects setDefaults persists default agent and model", async () => {
 test("projects setDefaults returns null when project missing", async () => {
   const result = await projects.setDefaults("missing", { default_agent_id: "claude-code" });
   expect(result).toBeNull();
+});
+
+test("projects hardDelete removes the project's extension instances and returns them", async () => {
+  const project = await projects.create({ name: "Owner" });
+  const other = await projects.create({ name: "Other" });
+  const source = await createInstalledExtensionSourcesDBService(db).register({
+    install_name: "lab",
+    extension_id: "test.lab",
+    display_name: "Lab",
+    source_kind: "local_path",
+    source_path: "/extensions/lab",
+  });
+  const instances = createExtensionInstancesDBService(db);
+  const owned = await instances.create({
+    installed_extension_id: source.id,
+    scope_type: "project",
+    scope_id: project.id,
+  });
+  const kept = await instances.create({ installed_extension_id: source.id, scope_type: "project", scope_id: other.id });
+
+  const removed = await projects.hardDelete(project.id);
+
+  expect(removed?.extensionInstances.map((instance) => instance.id)).toEqual([owned.id]);
+  expect(await projects.get(project.id)).toBeNull();
+  expect(await db.select().from(extension_instances).where(eq(extension_instances.id, kept.id))).toHaveLength(1);
+});
+
+test("projects hardDelete returns null for a missing project", async () => {
+  expect(await projects.hardDelete("missing")).toBeNull();
 });

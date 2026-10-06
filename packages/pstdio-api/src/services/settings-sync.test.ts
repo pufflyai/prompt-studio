@@ -17,7 +17,7 @@ test("publishes confirmed settings and restores them in a new sync snapshot", as
         capacityChecks++;
       },
     });
-    const sync = createSyncService({ db: connection.db, eventBus });
+    const sync = createSyncService({ db: connection.db });
     await settings.get();
     expect((await sync.getFullState()).settings).toEqual([
       expect.objectContaining({ id: "global", notifications_enabled: false }),
