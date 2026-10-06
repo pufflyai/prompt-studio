@@ -2,13 +2,6 @@ import { createExampleStore } from "../example-store";
 import { exampleDefaults } from "../state-defaults";
 import type { KilnVector } from "./kiln-data";
 
-export interface KilnObjectState {
-  position: KilnVector;
-  rotation: KilnVector;
-  scale: KilnVector;
-  visible: boolean;
-}
-
 const stateStore = createExampleStore("kiln", exampleDefaults.kiln);
 export const kilnStore = {
   ...stateStore,

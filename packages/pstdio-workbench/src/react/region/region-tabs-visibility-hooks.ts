@@ -56,6 +56,7 @@ export const useWorkbenchRegionTabsState = (
   workbench: WorkbenchCore,
   region: WorkbenchRegion,
   visibilityStorageKey?: string,
+  hasPanelMenuOpeners = false,
 ) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
@@ -93,7 +94,8 @@ export const useWorkbenchRegionTabsState = (
   );
   const showTabs =
     !suppressesSidenavTabStrip(region, visiblePlacements) &&
-    (hasMovedPlacement ||
+    ((hasPanelMenuOpeners && visiblePlacements.length > 0) ||
+      hasMovedPlacement ||
       shouldShowRegionTabs(visiblePlacements, {
         alwaysShowTabs: workbench.layout.getRegionSettings(region)?.alwaysShowTabs,
       }));
@@ -121,11 +123,22 @@ export const useWorkbenchRegionTabsState = (
   };
 };
 
-export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
-  const { showTabs, hasActions, hasTrailingActions } = useWorkbenchRegionTabsState(workbench, region);
+export const useWorkbenchPanelRegionTabsState = (
+  workbench: WorkbenchCore,
+  region: WorkbenchPanelRegion,
+  visibilityStorageKey?: string,
+) => {
   const [left, right] = useWorkbenchPanelMenus(workbench, region);
   const hasPanelMenus = [left, right].some((menu) => menu.has && menu.collapsed);
+  const tabs = useWorkbenchRegionTabsState(workbench, region, visibilityStorageKey, hasPanelMenus);
+  return { ...tabs, hasPanelMenus };
+};
 
+export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
+  const { showTabs, hasActions, hasTrailingActions, hasPanelMenus } = useWorkbenchPanelRegionTabsState(
+    workbench,
+    region,
+  );
   return shouldShowPanelHeader({
     hasTabs: showTabs,
     hasHeaderActions: hasActions || hasTrailingActions,
@@ -133,7 +146,7 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
   });
 };
 
-export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: WorkbenchRegion) => {
-  const { showTabs, hasActions } = useWorkbenchRegionTabsState(workbench, region);
+export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
+  const { showTabs, hasActions } = useWorkbenchPanelRegionTabsState(workbench, region);
   return showTabs || hasActions;
 };

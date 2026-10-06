@@ -155,8 +155,6 @@ export const authorizeAutomationToken = async (
   return auth;
 };
 
-export type AutomationAuth = Awaited<ReturnType<typeof authenticateAutomationToken>>;
-
 type AutomationRunRow = NonNullable<Awaited<ReturnType<AutomationPolicyDeps["automationDBService"]["getRunById"]>>>;
 
 export const recordRunActivity = async (deps: AutomationPolicyDeps, run: AutomationRunRow) => {

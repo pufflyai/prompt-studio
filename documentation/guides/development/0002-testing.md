@@ -31,6 +31,17 @@ bun run --cwd packages/e2e playwright install --with-deps chromium firefox webki
 
 For manual app validation, use `bun run dev:playwright`, open the printed dashboard URL, and stop it with `bun run dev:playwright:down`. Do not start a development server directly or use the developer database.
 
+## Unused code
+
+`bun run knip` reports unused files, exports, and dependencies across the workspace. CI runs it in the Linux job, so a pull request fails when it leaves dead code or an unused dependency behind. Configure it in `knip.jsonc`:
+
+- Add an entry point when code is loaded by path instead of imported. Examples are webview entries passed to `packageAsset()`, fixtures that tests spawn, and files named in build configs.
+- Add an `ignoreDependencies` entry only when a dependency is used where knip cannot see it, and write a comment that names the user. For example, the workbench build inlines `pstdio-extensions` and `pstdio-api-contracts`, so its `dist` imports their `rimless` and `zod` dependencies.
+
+## Coverage
+
+`bun run test:coverage` runs every package's `test:coverage` script with an lcov reporter. Packages and first-party extensions with tests define a `test:coverage` script. Run one with `bun run --cwd <package-or-extension> test:coverage`.
+
 ## Pull request and main runs
 
 Test and Build runs on every pull request update: opening, reopening, and each new push. The `main` ruleset requires its `ci_passed` check before a pull request can merge. A newer push to the same pull request cancels the older run.

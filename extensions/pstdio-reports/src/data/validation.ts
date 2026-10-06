@@ -18,9 +18,3 @@ export const assertSafeReportName = (value: string) => {
 export const assertSafeReportFileName = (value: string) => {
   assertSafePathSegment(value);
 };
-
-export const nameFromKind = (kind: string) =>
-  kind
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");

@@ -3,7 +3,7 @@ import { type ContributionKind, contributionRefId } from "@pstdio/sdk/extensions
 
 export type MetadataRef = { extensionId: string; kind: ContributionKind; id: string };
 
-export const toInternalWhen = (
+export const toWorkbenchWhenExpression = (
   when:
     | WorkbenchExtensionMetadata["navigationItems"][number]["when"]
     | WorkbenchExtensionMetadata["statusBarItems"][number]["when"],
@@ -21,5 +21,3 @@ export const toInternalWhen = (
     metadata: when.metadata,
   };
 };
-
-export const toWorkbenchWhenExpression = toInternalWhen;

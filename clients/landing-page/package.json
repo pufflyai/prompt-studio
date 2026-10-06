@@ -15,19 +15,20 @@
     "bun": ">=1.4.2"
   },
   "dependencies": {
-    "@astrojs/markdown-satteri": "^0.3.5",
+    "@astrojs/markdown-satteri": "^0.4.2",
     "@astrojs/react": "^5.0.0",
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
     "@phosphor-icons/react": "^2.1.10",
     "@pstdio/ui": "workspace:*",
-    "astro": "^7.1.0",
+    "astro": "^7.3.5",
     "lucide-react": "^0.557.0",
     "matter-js": "^0.20.0",
     "posthog-js": "^1.430.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sharp": "0.34.5"
+    "satteri": "^0.10.3",
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@storybook/addon-docs": "^10.6.0",

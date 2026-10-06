@@ -9,7 +9,13 @@ import {
 } from "@pstdio/ui";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
-import type { WorkbenchCore, WorkbenchRegion as WorkbenchRegionId, WorkbenchWidgetPlacement } from "../../core";
+import {
+  type WorkbenchCore,
+  type WorkbenchPanelRegion,
+  type WorkbenchRegion as WorkbenchRegionId,
+  type WorkbenchWidgetPlacement,
+  workbenchPanelRegions,
+} from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
 import type { WorkbenchMenuItem } from "../menus/menu-items";
@@ -17,7 +23,7 @@ import { WorkbenchIcon } from "../shared/icon";
 import { WorkbenchPanelAddMenu } from "./panel-add-menu";
 import { RegionTabList } from "./region-tab-list";
 import { resolveDisplayedActiveWidgetId, resolveTabIconName, toTabKey } from "./region-tabs-visibility";
-import { useWorkbenchRegionTabsState } from "./region-tabs-visibility-hooks";
+import { useWorkbenchPanelRegionTabsState, useWorkbenchRegionTabsState } from "./region-tabs-visibility-hooks";
 
 export {
   shouldShowPanelHeader,
@@ -39,8 +45,12 @@ const resolvePlacementIcon = (workbench: WorkbenchCore, placement: WorkbenchWidg
   );
   return iconName ? <WorkbenchIcon name={iconName} size={14} /> : undefined;
 };
-export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
-  const { workbench, region, visibilityStorageKey } = props;
+interface WorkbenchRegionTabsContentProps extends WorkbenchRegionTabsProps {
+  state: ReturnType<typeof useWorkbenchRegionTabsState>;
+}
+
+const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
+  const { workbench, region, state } = props;
   const {
     commands,
     regionState,
@@ -53,7 +63,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     eligibleSubPanels,
     showTabs,
     hasActions,
-  } = useWorkbenchRegionTabsState(workbench, region, visibilityStorageKey);
+  } = state;
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
@@ -236,4 +246,26 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
       {leadingActions}
     </HStack>
   );
+};
+
+interface WorkbenchPanelRegionTabsProps extends WorkbenchRegionTabsProps {
+  region: WorkbenchPanelRegion;
+}
+
+const WorkbenchPanelRegionTabs = (props: WorkbenchPanelRegionTabsProps) => {
+  const { workbench, region, visibilityStorageKey } = props;
+  const state = useWorkbenchPanelRegionTabsState(workbench, region, visibilityStorageKey);
+  return <WorkbenchRegionTabsContent {...props} state={state} />;
+};
+
+const WorkbenchOtherRegionTabs = (props: WorkbenchRegionTabsProps) => {
+  const { workbench, region, visibilityStorageKey } = props;
+  const state = useWorkbenchRegionTabsState(workbench, region, visibilityStorageKey);
+  return <WorkbenchRegionTabsContent {...props} state={state} />;
+};
+
+export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
+  const { region } = props;
+  const panel = workbenchPanelRegions.find((panelRegion) => panelRegion === region);
+  return panel ? <WorkbenchPanelRegionTabs {...props} region={panel} /> : <WorkbenchOtherRegionTabs {...props} />;
 };

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PackageAssetDescriptor, SkillFile } from "pstdio-api-contracts";
@@ -67,17 +67,6 @@ export const resolvePackageAssetPath = (sourceRoot: string, source: unknown) => 
   }
 
   return assertInsideRoot(sourceRoot, targetPath);
-};
-
-export const readTextPackageAsset = (sourceRoot: string, source: unknown) =>
-  readFileSync(resolvePackageAssetPath(sourceRoot, source), "utf8");
-
-export const writeTextPackageAsset = (sourceRoot: string, source: unknown, content: string) => {
-  const filePath = resolvePackageAssetPath(sourceRoot, source);
-  if (!statSync(filePath).isFile()) {
-    throw new ExtensionCatalogAssetError("Extension template source must resolve to a file");
-  }
-  writeFileSync(filePath, content, "utf8");
 };
 
 const sortSkillFiles = (files: SkillFile[]) =>

@@ -40,14 +40,11 @@ export const useCommandComposer = (
     message?: string;
     submitted?: SubmittedCommand;
   } | null>(null);
-  const draftText = useRef(chatDraft.seed);
   const commands = useHarnessCommands(sessionId, selectedAgent, draft, createCommand);
-  const [commandText, setCommandText] = useState("");
   const [commandError, setCommandError] = useState<string | null>(null);
   const [commandOutcome, setCommandOutcome] = useState<string | null>(null);
   const [intent, setIntent] = useState<ComposerIntent | null>(null);
   const [submitted, setSubmitted] = useState<SubmittedCommand | null>(null);
-  const previousSession = useRef(sessionId);
   const intentProblem = intent ? composerCommandProblem(intent, selectedAgent, commands.state) : undefined;
   const invokeCommand = async (operation: HarnessOperation, modeSnapshot?: HarnessCommandState["modes"][number]) => {
     const requestScope = scope;
@@ -65,16 +62,10 @@ export const useCommandComposer = (
       throw error;
     }
   };
-  useEffect(() => {
-    setCommandText(chatDraft.seed);
-    draftText.current = chatDraft.seed;
-  }, [chatDraft.seed]);
   const previousScope = useRef<string | null>(null);
   useEffect(() => {
     if (previousScope.current === scope) return;
     previousScope.current = scope;
-    if (previousSession.current !== sessionId) setIntent(null);
-    previousSession.current = sessionId;
     const handedOff = takeNativeCommand(sessionId, selectedAgent);
     pendingCommand.current = handedOff?.kind === "pending" ? { scope, ...handedOff } : null;
     setCommandError(null);
@@ -96,8 +87,8 @@ export const useCommandComposer = (
     if (["in_progress", "awaiting_input", "queued"].includes(status)) return;
     pendingCommand.current = null;
     if (status === "failed" || status === "disconnected") {
-      if (!draftText.current) {
-        chatDraft.restore(pending.submitted?.objective ?? pending.text);
+      if (!chatDraft.text) {
+        chatDraft.change(pending.submitted?.objective ?? pending.text);
         setIntent(pending.submitted?.intent ?? null);
       }
       setSubmitted(null);
@@ -127,10 +118,8 @@ export const useCommandComposer = (
         submitted: reference,
       });
     onSubmitted?.();
-    draftText.current = "";
     setIntent(null);
     setSubmitted(reference ?? null);
-    setCommandText("");
     if (result.sessionId) onCreated(result.sessionId, text);
   };
   const operationForDraft = (
@@ -203,7 +192,7 @@ export const useCommandComposer = (
                 closeLabel: `Remove ${intent.command.composer?.label ?? intent.command.name}`,
                 description:
                   intentProblem ??
-                  `${intent.command.composer?.label}: ${commandText.trim() || "draft input"} · ${commands.invoke.isPending ? "Starting" : "Draft"}`,
+                  `${intent.command.composer?.label}: ${chatDraft.text.trim() || "draft input"} · ${commands.invoke.isPending ? "Starting" : "Draft"}`,
                 onClose: () => setIntent(null),
               }
             : undefined
@@ -224,11 +213,6 @@ export const useCommandComposer = (
         onAction={invokeModeAction}
       />
     ),
-    change: (text: string) => {
-      draftText.current = text;
-      chatDraft.change(text);
-      setCommandText(text);
-    },
     notices: (
       <CommandComposerNotices
         error={commandError}

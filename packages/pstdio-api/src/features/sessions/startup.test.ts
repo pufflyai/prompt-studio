@@ -575,7 +575,6 @@ describe("resolveOrphanedSessions hooks", () => {
       update: mock(async () => null),
       archive: mock(async () => null),
       cancelQueued: mock(async () => null),
-      archiveQueued: mock(async () => null),
     } as unknown as Parameters<typeof createSessionService>[0]["sessionsDb"];
 
     const onSessionStatusChanged = mock(() => {});

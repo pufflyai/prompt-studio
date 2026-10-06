@@ -2,7 +2,7 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { commandRefId, contributionRefId } from "@pstdio/sdk/extensions";
 import type { ParamObjectSchema } from "pstdio-api-contracts";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
-import { toInternalWhen } from "./workbench-extension-metadata-ref";
+import { toWorkbenchWhenExpression } from "./workbench-extension-metadata-ref";
 import { toInternalWorkbenchPages } from "./workbench-extension-page-metadata";
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
 
@@ -277,7 +277,7 @@ export const toInternalWorkbenchExtensionMetadata = (
       viewId: contributionRefId(item.view),
       slot: item.slot.id.endsWith("leading") ? "leading" : "trailing",
       order: item.order,
-      when: toInternalWhen(item.when),
+      when: toWorkbenchWhenExpression(item.when),
     })),
     diagnostics: metadata.diagnostics,
   };

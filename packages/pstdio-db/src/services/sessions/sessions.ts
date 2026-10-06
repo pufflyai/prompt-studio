@@ -4,7 +4,6 @@ import { type ResourceRef, session_queue_entries, sessions } from "../../db/sche
 import { mergeResourceAnchors, removeResourceAnchors } from "../resource-anchors";
 import { type SessionStatusGuards, updateSessionStatus } from "./session-status";
 import {
-  archiveQueued,
   cancelQueued,
   claimQueuedForDispatch,
   recoverQueuedDispatchClaim,
@@ -280,7 +279,6 @@ export const createSessionsDBService = (db: DbClient) => {
       recoverQueuedDispatchClaim(db, id, queuePosition, expectedLastRequestStarted),
     requeueAfterTerminal: (id: string) => requeueAfterTerminal(db, id),
     cancelQueued: (id: string) => cancelQueued(db, id),
-    archiveQueued: (id: string) => archiveQueued(db, id),
     addAnchors: async (id: string, anchors: ResourceRef[]) => {
       const [updated] = await db
         .update(sessions)

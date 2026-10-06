@@ -35,6 +35,9 @@ ownership alongside the shell's prompt state. Unknown process state remains acti
 cannot hide running work. Windows retains that conservative behavior.
 
 The macOS probe starts a short process, which costs more than a direct system call.
+The probe runs every second for each open terminal, so it is async: it uses `Bun.spawn` on
+macOS and `fs/promises` on Linux and never blocks the API event loop. The title poll waits for
+one probe to settle before it schedules the next, so slow probes cannot pile up.
 Keep it isolated in `terminal-foreground.ts`.
 
 ## Removal

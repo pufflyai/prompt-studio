@@ -37,6 +37,7 @@ export const workspaceCapabilitiesSchema: z.ZodType<WorkspaceCapabilities> = z.o
   diff: z.boolean(),
   merge: z.boolean(),
   rebase: z.boolean(),
+  /** @deprecated Use delete. */
   archive: z.boolean(),
   delete: z.boolean(),
 });

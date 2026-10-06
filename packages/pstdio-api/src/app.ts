@@ -9,7 +9,7 @@ import { registerApi } from "./app-routing";
 import {
   createAppTerminalSupervisor,
   createRuntimeRouteDeps,
-  sessionStatusEventFor,
+  sessionStatusEventsFor,
   startAppExtensionScheduler,
   startAppLifecycle,
   startNotificationWakeTimer,
@@ -230,8 +230,7 @@ const buildApp = async (
       fireSessionLifecycleEventAsync(sessionHookDeps(), sessionEvents.started, session);
     },
     onSessionStatusChanged: (session) => {
-      const event = sessionStatusEventFor(session.status);
-      if (event) {
+      for (const event of sessionStatusEventsFor(session.status)) {
         fireSessionLifecycleEventAsync(sessionHookDeps(), event, session);
       }
     },

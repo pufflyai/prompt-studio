@@ -1,12 +1,7 @@
 import type { SessionAttachment } from "pstdio-api-contracts";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { apiRequest } from "@/lib/api";
-import {
-  cleanupDraftAttachments,
-  clearSubmittedDraftAttachments,
-  removeDeletedDraftAttachment,
-  resetDraftAttachmentsForProjectChange,
-} from "./session-draft-attachment-state";
+import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { uploadDraftAttachmentFiles } from "./session-draft-attachment-upload";
 import { createClipboardAttachmentFile } from "./session-draft-clipboard-attachment";
 
@@ -25,50 +20,34 @@ const deleteSessionAttachment = (projectId: string, fileId: string) =>
     method: "DELETE",
   });
 
-export const useSessionDraftAttachments = (projectId: string | undefined) => {
-  const [attachments, setAttachments] = useState<SessionAttachment[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const attachmentsRef = useRef(attachments);
-  const projectIdRef = useRef(projectId);
+const emptySnapshot = { attachments: [] as SessionAttachment[], uploading: false };
+const getEmptySnapshot = () => emptySnapshot;
+const subscribeEmpty = () => () => undefined;
+
+// The keyed panel displays one conversation. Leaving it keeps the draft and its uploaded files.
+export const useSessionDraftAttachments = (
+  projectId: string | undefined,
+  draftKey: string,
+  drafts: DashboardSessionDraftPersistence | undefined,
+) => {
+  const draft = projectId ? drafts?.getAttachmentDraft(projectId, draftKey) : undefined;
+  const { attachments, uploading } = useSyncExternalStore(
+    draft?.subscribe ?? subscribeEmpty,
+    draft?.getSnapshot ?? getEmptySnapshot,
+  );
   const clipboardAttachmentCountRef = useRef(0);
 
-  useEffect(() => {
-    attachmentsRef.current = attachments;
-  }, [attachments]);
-
-  useEffect(() => {
-    const previousProjectId = projectIdRef.current;
-    if (previousProjectId === projectId) return;
-
-    projectIdRef.current = projectId;
-    setAttachments((current) =>
-      resetDraftAttachmentsForProjectChange({
-        attachments: current,
-        deleteAttachment: deleteSessionAttachment,
-        nextProjectId: projectId,
-        previousProjectId,
-      }),
-    );
-  }, [projectId]);
-
-  useEffect(() => {
-    return () => {
-      cleanupDraftAttachments(projectIdRef.current, attachmentsRef.current, deleteSessionAttachment);
-    };
-  }, []);
-
   const uploadFiles = async (files: File[]) => {
-    if (!projectId || files.length === 0) return;
-
-    setUploading(true);
+    if (!projectId || !draft || files.length === 0) return;
+    draft.changeUploading(1);
     try {
       await uploadDraftAttachmentFiles({
         files,
-        onUploaded: (attachment) => setAttachments((current) => [...current, attachment]),
+        onUploaded: (attachment) => draft.changeAttachments((current) => [...current, attachment]),
         uploadFile: (file) => uploadSessionAttachment(projectId, file),
       });
     } finally {
-      setUploading(false);
+      draft.changeUploading(-1);
     }
   };
 
@@ -78,33 +57,22 @@ export const useSessionDraftAttachments = (projectId: string | undefined) => {
   };
 
   const removeAttachment = (fileId: string) => {
-    void removeDeletedDraftAttachment({
-      attachments: attachmentsRef.current,
-      deleteAttachment: deleteSessionAttachment,
-      fileId,
-      projectId,
-    })
-      .then(() => {
-        setAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId));
-      })
+    if (!projectId) return;
+    void deleteSessionAttachment(projectId, fileId)
+      .then(() => draft?.changeAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId)))
       .catch(() => undefined);
   };
 
-  // An unsent message returns its attachments to the draft when the user takes it back.
   const restoreAttachments = (restored: SessionAttachment[]) => {
-    setAttachments((current) => [
+    draft?.changeAttachments((current) => [
       ...restored,
       ...current.filter((attachment) => !restored.some((item) => item.file_id === attachment.file_id)),
     ]);
   };
 
-  const clearSubmittedAttachments = () => {
-    clearSubmittedDraftAttachments({ attachmentsRef, setAttachments });
-  };
-
   return {
     attachments,
-    clearSubmittedAttachments,
+    clearSubmittedAttachments: () => draft?.changeAttachments(() => []),
     removeAttachment,
     restoreAttachments,
     uploadFiles,

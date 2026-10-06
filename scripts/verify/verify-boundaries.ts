@@ -9,110 +9,23 @@
  * - no relative imports that escape a package root (packaging glue excepted)
  * - nothing imports from clients/*
  * - per-package content rules (e.g. @pstdio/ui owns no router/query policy)
+ * - tsconfig paths stay inside the package or point at a declared dependency
+ * - layer-map allowances match declared dependencies
+ * - private packages keep their subpath exports under a limit
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { flattenDiagnosticMessageText, getParsedCommandLineOfConfigFile, sys } from "typescript";
+import {
+  ALLOWED_WORKSPACE_DEPS,
+  DEFAULT_PRIVATE_EXPORT_LIMIT,
+  EXTENSION_ALLOWED_DEPS,
+  FORBIDDEN_FOLDER_SPECIFIERS,
+  FORBIDDEN_SPECIFIERS,
+  PRIVATE_EXPORT_LIMITS,
+  RELATIVE_ESCAPE_ALLOWLIST,
+} from "./boundary-rules";
 import { sourceImports } from "./source-imports";
-
-const ROOT = path.resolve(import.meta.dir, "../..");
-
-// Workspace-internal dependencies each package may declare. Additions here are
-// intentional architecture changes — update the docs when this map changes.
-const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
-  "pstdio-api-contracts": [],
-  "pstdio-file-types": [],
-  "pstdio-paths": [],
-  "pstdio-logging": ["pstdio-paths"],
-  "pstdio-db": ["pstdio-api-contracts", "pstdio-paths"],
-  "pstdio-scheduler": [],
-  "pstdio-wt": ["pstdio-file-types"],
-  "pstdio-storage": ["pstdio-api-contracts", "pstdio-db", "pstdio-paths"],
-  "@pstdio/sdk": ["pstdio-api-contracts"],
-  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths"],
-  "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions"],
-  // pstdio-api also declares the core extensions its tests install from source,
-  // so changing one marks pstdio-api as affected.
-  "pstdio-api": [
-    "pstdio-api-contracts",
-    "pstdio-api-runtime-host",
-    "pstdio-db",
-    "pstdio-extensions",
-    "pstdio-logging",
-    "pstdio-paths",
-    "pstdio-scheduler",
-    "pstdio-storage",
-    "pstdio-wt",
-    "extension-lab",
-    "pstdio-planner",
-    "pstdio-skills",
-  ],
-  pstdio: [
-    "@pstdio/sdk",
-    "pstdio-api",
-    "pstdio-api-contracts",
-    "pstdio-dashboard",
-    "pstdio-db",
-    "pstdio-logging",
-    "pstdio-paths",
-    "pstdio-wt",
-  ],
-  "@pstdio/ui": ["@pstdio/sdk", "pstdio-file-types"],
-  "@pstdio/workbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions"],
-  "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "@pstdio/workbench"],
-  "pstdio-extension-testbench": [
-    "@pstdio/sdk",
-    "@pstdio/ui",
-    "pstdio-api-contracts",
-    "pstdio-extensions",
-    "@pstdio/workbench",
-  ],
-  // e2e also declares the extensions it installs at runtime and the dashboard it serves,
-  // so changing one marks e2e as affected.
-  e2e: [
-    "@pstdio/sdk",
-    "pstdio",
-    "pstdio-api-contracts",
-    "pstdio-db",
-    "pstdio-extensions",
-    "pstdio-wt",
-    "extension-lab",
-    "harness-claude-code",
-    "harness-codex",
-    "harness-open-code",
-    "local-example",
-    "pstdio-artifacts",
-    "pstdio-base-themes",
-    "pstdio-dashboard",
-    "pstdio-notes",
-    "pstdio-planner",
-    "pstdio-reports",
-    "pstdio-skills",
-    "remote-workspaces",
-    "workbench-fixture",
-  ],
-  "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
-  "@pstdio/desktop": [
-    "@pstdio/ui",
-    "pstdio",
-    "pstdio-api-contracts",
-    "pstdio-logging",
-    "pstdio-paths",
-    "workbench-fixture",
-  ],
-  "@pstdio/landing-page": ["@pstdio/ui"],
-  "motion-lab": ["@pstdio/sdk", "@pstdio/ui"],
-};
-
-// Extensions may only consume the public authoring surface.
-const EXTENSION_ALLOWED_DEPS = ["@pstdio/sdk", "@pstdio/ui"];
-
-// Specifiers a package's sources must never reference or declare.
-const FORBIDDEN_SPECIFIERS: Record<string, string[]> = {
-  "@pstdio/ui": ["@tanstack/react-router", "@tanstack/react-query"],
-};
-
-// Generated packaging glue that intentionally reaches across package roots.
-const RELATIVE_ESCAPE_ALLOWLIST = ["packages/pstdio/src/_embed-manifest.generated.ts"];
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".cache", "__test-tmp__", "_reference", "storybook-static"]);
 
@@ -122,23 +35,30 @@ interface WorkspacePackage {
   declared: Set<string>;
   dependencies: Record<string, string>;
   isExtension: boolean;
+  privateExports?: number;
+}
+
+interface Workspace {
+  root: string;
+  packages: WorkspacePackage[];
+  names: Set<string>;
 }
 
 const readJson = (file: string) => JSON.parse(readFileSync(file, "utf8"));
 
-const listDirs = (parent: string) =>
-  readdirSync(path.join(ROOT, parent), { withFileTypes: true })
+const listDirs = (root: string, parent: string) =>
+  readdirSync(path.join(root, parent), { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_") && !entry.name.startsWith("."))
     .map((entry) => `${parent}/${entry.name}`);
 
-const discoverPackages = () => {
-  const rootManifest = readJson(path.join(ROOT, "package.json")) as { workspaces?: string[] };
+const discoverPackages = (root: string) => {
+  const rootManifest = readJson(path.join(root, "package.json")) as { workspaces?: string[] };
   const dirs = (rootManifest.workspaces ?? []).flatMap((workspace) =>
-    workspace.endsWith("/*") ? listDirs(workspace.slice(0, -2)) : [workspace],
+    workspace.endsWith("/*") ? listDirs(root, workspace.slice(0, -2)) : [workspace],
   );
   const packages: WorkspacePackage[] = [];
   for (const dir of dirs) {
-    const manifestPath = path.join(ROOT, dir, "package.json");
+    const manifestPath = path.join(root, dir, "package.json");
     let manifest: { name?: string; version?: string; [key: string]: unknown };
     try {
       manifest = readJson(manifestPath);
@@ -157,12 +77,16 @@ const discoverPackages = () => {
       declared,
       dependencies,
       isExtension: Boolean((manifest.engines as { pstdio?: unknown } | undefined)?.pstdio),
+      privateExports:
+        manifest.private === true && typeof manifest.exports === "object" && manifest.exports
+          ? Object.keys(manifest.exports).length
+          : undefined,
     });
   }
   return packages;
 };
 
-const collectSourceFiles = (dir: string) => {
+const collectFiles = (dir: string, pattern: RegExp) => {
   const files: string[] = [];
   const walk = (current: string) => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
@@ -170,7 +94,7 @@ const collectSourceFiles = (dir: string) => {
         if (!SKIP_DIRS.has(entry.name) && !entry.name.startsWith(".")) walk(path.join(current, entry.name));
         continue;
       }
-      if (/\.(ts|tsx)$/.test(entry.name)) files.push(path.join(current, entry.name));
+      if (pattern.test(entry.name)) files.push(path.join(current, entry.name));
     }
   };
   if (statSync(dir, { throwIfNoEntry: false })?.isDirectory()) walk(dir);
@@ -207,7 +131,7 @@ const findCycles = (packages: WorkspacePackage[]) => {
 const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, errors: string[]) => {
   const allowed = ALLOWED_WORKSPACE_DEPS[pkg.name] ?? (pkg.isExtension ? EXTENSION_ALLOWED_DEPS : undefined);
   if (!allowed) {
-    errors.push(`${pkg.dir}: package "${pkg.name}" is missing from the allowed layer map in verify-boundaries.ts`);
+    errors.push(`${pkg.dir}: package "${pkg.name}" is missing from the allowed layer map in boundary-rules.ts`);
     return;
   }
   for (const dep of pkg.declared) {
@@ -215,10 +139,25 @@ const checkDeclaredDeps = (pkg: WorkspacePackage, workspaceNames: Set<string>, e
       errors.push(`${pkg.dir}: declares workspace dependency "${dep}" not allowed by the layer map`);
     }
   }
+  for (const dep of ALLOWED_WORKSPACE_DEPS[pkg.name] ?? []) {
+    if (!pkg.declared.has(dep)) {
+      errors.push(`${pkg.dir}: layer map allows "${dep}" but the package does not declare it; remove the allowance`);
+    }
+  }
   for (const forbidden of FORBIDDEN_SPECIFIERS[pkg.name] ?? []) {
     if (pkg.declared.has(forbidden)) {
       errors.push(`${pkg.dir}: declares forbidden dependency "${forbidden}"`);
     }
+  }
+};
+
+const checkPrivateExports = (pkg: WorkspacePackage, errors: string[]) => {
+  const exportLimit = PRIVATE_EXPORT_LIMITS[pkg.name] ?? DEFAULT_PRIVATE_EXPORT_LIMIT;
+  if (pkg.privateExports !== undefined && pkg.privateExports > exportLimit) {
+    errors.push(`${pkg.dir}: private package exports ${pkg.privateExports} entries; the limit is ${exportLimit}`);
+  }
+  if (pkg.name in PRIVATE_EXPORT_LIMITS && (pkg.privateExports ?? 0) < exportLimit) {
+    errors.push(`${pkg.dir}: lower its export limit in boundary-rules.ts to ${pkg.privateExports ?? 0}`);
   }
 };
 
@@ -235,38 +174,53 @@ export const checkExtensionUiVersion = (pkg: WorkspacePackage, errors: string[])
   }
 };
 
-const checkSpecifier = (
-  specifier: string,
-  context: { pkg: WorkspacePackage; pkgRoot: string; file: string; relativeFile: string; workspaceNames: Set<string> },
-  errors: string[],
-) => {
-  const { pkg, pkgRoot, file, relativeFile, workspaceNames } = context;
-  if (specifier.includes("clients/")) {
-    errors.push(`${relativeFile}: imports from clients/* ("${specifier}")`);
+interface FileContext {
+  pkg: WorkspacePackage;
+  pkgRoot: string;
+  file: string;
+  relativeFile: string;
+  workspace: Workspace;
+}
+
+const matchesPackage = (specifier: string, packages: string[]) =>
+  packages.some((name) => specifier === name || specifier.startsWith(`${name}/`));
+
+const isWithin = (dir: string, target: string) => target === dir || target.startsWith(dir + path.sep);
+
+const checkSpecifier = (specifier: string, context: FileContext, errors: string[]) => {
+  const { pkg, pkgRoot, file, relativeFile, workspace } = context;
+  if (matchesPackage(specifier, FORBIDDEN_SPECIFIERS[pkg.name] ?? [])) {
+    errors.push(`${relativeFile}: forbidden import "${specifier}"`);
   }
-  for (const banned of FORBIDDEN_SPECIFIERS[pkg.name] ?? []) {
-    if (specifier === banned || specifier.startsWith(`${banned}/`)) {
-      errors.push(`${relativeFile}: forbidden import "${specifier}"`);
-    }
+  const folderRule = FORBIDDEN_FOLDER_SPECIFIERS[pkg.name];
+  if (
+    folderRule &&
+    isWithin(path.join(pkgRoot, folderRule.folder), file) &&
+    matchesPackage(specifier, folderRule.specifiers)
+  ) {
+    errors.push(`${relativeFile}: ${folderRule.rule} "${specifier}"`);
   }
   if (specifier.startsWith(".")) {
     const resolved = path.resolve(path.dirname(file), specifier);
-    const escapes = !resolved.startsWith(pkgRoot + path.sep) && resolved !== pkgRoot;
-    if (escapes && !RELATIVE_ESCAPE_ALLOWLIST.includes(relativeFile)) {
+    if (!isWithin(pkgRoot, resolved) && !RELATIVE_ESCAPE_ALLOWLIST.includes(relativeFile)) {
       errors.push(`${relativeFile}: relative import escapes the package root ("${specifier}")`);
     }
     return;
   }
-  const target = packageNameOf(specifier, workspaceNames);
-  if (target && target !== pkg.name && !pkg.declared.has(target)) {
+  const target = packageNameOf(specifier, workspace.names);
+  if (!target || target === pkg.name) return;
+  if (workspace.packages.find((candidate) => candidate.name === target)?.dir.startsWith("clients/")) {
+    errors.push(`${relativeFile}: imports from clients/* ("${specifier}")`);
+  }
+  if (!pkg.declared.has(target)) {
     errors.push(`${relativeFile}: imports undeclared workspace package "${target}" ("${specifier}")`);
   }
 };
 
-const checkSourceImports = (pkg: WorkspacePackage, workspaceNames: Set<string>, errors: string[]) => {
-  const pkgRoot = path.join(ROOT, pkg.dir);
-  for (const file of collectSourceFiles(pkgRoot)) {
-    const relativeFile = path.relative(ROOT, file).replaceAll("\\", "/");
+const checkSourceImports = (pkg: WorkspacePackage, workspace: Workspace, errors: string[]) => {
+  const pkgRoot = path.join(workspace.root, pkg.dir);
+  for (const file of collectFiles(pkgRoot, /\.(ts|tsx)$/)) {
+    const relativeFile = path.relative(workspace.root, file).replaceAll("\\", "/");
     const source = readFileSync(file, "utf8");
     if (
       (/^packages\/e2e\/src\/(?:ui|vite-terminal)\//.test(relativeFile) ||
@@ -278,31 +232,73 @@ const checkSourceImports = (pkg: WorkspacePackage, workspaceNames: Set<string>, 
       );
     }
     for (const specifier of sourceImports(source)) {
-      checkSpecifier(specifier, { pkg, pkgRoot, file, relativeFile, workspaceNames }, errors);
+      checkSpecifier(specifier, { pkg, pkgRoot, file, relativeFile, workspace }, errors);
     }
   }
 };
 
-const main = () => {
-  const packages = discoverPackages();
-  const workspaceNames = new Set(packages.map((pkg) => pkg.name));
+// A path alias outside the package bypasses package exports and, for extensions, the
+// released SDK version they declare. Only declared non-extension workspace dependencies
+// may be mapped to source (the SDK and workbench bundle their private dependencies).
+const checkTsconfigPaths = (pkg: WorkspacePackage, workspace: Workspace, errors: string[]) => {
+  const pkgRoot = path.join(workspace.root, pkg.dir);
+  for (const file of collectFiles(pkgRoot, /^tsconfig.*\.json$/)) {
+    const relativeFile = path.relative(workspace.root, file).replaceAll("\\", "/");
+    // Parse with `extends` applied, so inherited paths and baseUrl count too.
+    const parsed = getParsedCommandLineOfConfigFile(file, undefined, {
+      ...sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        errors.push(`${relativeFile}: ${flattenDiagnosticMessageText(diagnostic.messageText, " ")}`);
+      },
+    });
+    const options = (parsed?.options ?? {}) as {
+      baseUrl?: string;
+      paths?: Record<string, string[]>;
+      pathsBasePath?: string;
+    };
+    const base = options.baseUrl ?? options.pathsBasePath ?? path.dirname(file);
+    for (const [alias, targets] of Object.entries(options.paths ?? {})) {
+      for (const target of targets) {
+        const resolved = path.resolve(base, target);
+        if (isWithin(pkgRoot, resolved)) continue;
+        const owner = workspace.packages.find((candidate) =>
+          isWithin(path.join(workspace.root, candidate.dir), resolved),
+        );
+        if (!pkg.isExtension && owner && pkg.declared.has(owner.name)) continue;
+        errors.push(`${relativeFile}: path "${alias}" resolves outside the package ("${target}")`);
+      }
+    }
+  }
+};
+
+/** Returns every boundary violation in the workspace at `root`. */
+export const verifyBoundaries = (root: string) => {
+  const packages = discoverPackages(root);
+  const workspace = { root, packages, names: new Set(packages.map((pkg) => pkg.name)) };
   const errors: string[] = [];
 
   for (const cycle of findCycles(packages)) {
     errors.push(`package cycle: ${cycle}`);
   }
   for (const pkg of packages) {
-    checkDeclaredDeps(pkg, workspaceNames, errors);
+    checkDeclaredDeps(pkg, workspace.names, errors);
+    checkPrivateExports(pkg, errors);
     checkExtensionUiVersion(pkg, errors);
-    checkSourceImports(pkg, workspaceNames, errors);
+    checkSourceImports(pkg, workspace, errors);
+    checkTsconfigPaths(pkg, workspace, errors);
   }
+  return [...new Set(errors)];
+};
 
+const main = () => {
+  const root = path.resolve(import.meta.dir, "../..");
+  const errors = verifyBoundaries(root);
   if (errors.length > 0) {
     console.error(`Boundary violations (${errors.length}):`);
-    for (const error of [...new Set(errors)]) console.error(`  - ${error}`);
+    for (const error of errors) console.error(`  - ${error}`);
     process.exit(1);
   }
-  console.log(`Boundaries OK across ${packages.length} workspace packages.`);
+  console.log(`Boundaries OK across ${discoverPackages(root).length} workspace packages.`);
 };
 
 if (import.meta.main) main();

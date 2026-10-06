@@ -1,66 +1,11 @@
 {
   "title": "專案",
-  "subtitle": "管理您的專案並追蹤進度",
-  "createProject": "建立專案",
   "loading": "載入專案中...",
-  "errors": {
-    "fetchFailed": "取得專案失敗",
-    "deleteFailed": "刪除專案失敗"
-  },
-  "empty": {
-    "title": "還沒有專案",
-    "description": "先建立您的第一個專案。",
-    "createFirst": "建立您的第一個專案"
-  },
-  "projectNotFound": "您要查找的專案不存在或已被刪除。",
-  "viewProject": "查看專案",
-  "openInIDE": "在 IDE 中開啟",
-  "createdDate": "建立於 {{date}}",
   "chatInput": {
-    "placeholder": "開始新的任務",
-    "ariaLabel": "建立新的任務",
-    "openPanelLabel": "開啟聊天面板",
-    "closeLabel": "最小化聊天",
     "agent": {
       "selectLabel": "選擇 Harness",
       "unknown": "沒有可用的 Harness",
       "loading": "正在載入 Harness..."
-    },
-    "branch": {
-      "selectLabel": "選擇分支",
-      "none": "沒有分支",
-      "noneAvailable": "沒有可用分支",
-      "loading": "正在載入分支...",
-      "searchPlaceholder": "搜尋分支...",
-      "noSearchResults": "沒有分支符合你的搜尋",
-      "tags": {
-        "current": "目前",
-        "remote": "遠端"
-      }
-    },
-    "sessionMeta": {
-      "agent": "Harness",
-      "branch": "分支"
-    },
-    "session": {
-      "selectLabel": "選擇工作階段",
-      "none": "新工作階段",
-      "noneHint": "開始新的工作階段",
-      "loading": "載入工作階段中...",
-      "noneAvailable": "尚無工作階段",
-      "unknown": "未知工作階段",
-      "emptyTitle": "新工作階段",
-      "emptyDescription": "開始新的工作階段或從選單中選擇一個。",
-      "notFoundTitle": "找不到工作階段",
-      "notFoundDescription": "請從清單中選擇其他工作階段。",
-      "resumePlaceholder": "繼續此工作階段",
-      "viewMore": "查看更多工作階段",
-      "executorSessionIdLabel": "執行器工作階段 ID",
-      "panelTitle": "所有工作階段",
-      "group": {
-        "today": "今天",
-        "yesterday": "昨天"
-      }
     },
     "model": {
       "selectLabel": "選擇模型",
@@ -69,123 +14,7 @@
       "loading": "載入模型中..."
     }
   },
-  "createProjectDialog": {
-    "title": "建立專案",
-    "projectName": {
-      "label": "專案名稱",
-      "placeholder": "專案名稱",
-      "required": "專案名稱為必填。"
-    },
-    "actions": {
-      "next": "下一步",
-      "back": "返回",
-      "create": "建立專案"
-    },
-    "harnesses": {
-      "title": "選擇 Harness",
-      "description": "選擇要為此專案啟用的 Harness。",
-      "selectAtLeastOne": "請至少選擇一個 Harness。",
-      "notDetectedWarning": "未偵測到此 Harness。安裝前可能無法正常運作。"
-    }
-  },
-  "ticketPanel": {
-    "fields": {
-      "id": "ID",
-      "updated": "已更新",
-      "status": "狀態",
-      "blockedReason": "阻塞原因",
-      "dependsOn": "依賴於",
-      "parent": "父級",
-      "tags": "標籤",
-      "blockedBy": "被阻擋",
-      "dependencies": "相依性",
-      "archived": "已封存"
-    },
-    "title": {
-      "label": "任務標題",
-      "placeholder": "未命名任務"
-    },
-    "none": "無",
-    "properties": {
-      "title": "屬性"
-    },
-    "options": {
-      "ticket": "開啟任務選項",
-      "refineTicket": "精煉任務",
-      "archiveTicket": "封存任務",
-      "unarchiveTicket": "取消封存任務",
-      "deleteTicket": "刪除任務",
-      "breakIntoSubTickets": "拆分為子工單",
-      "createSubTicket": "建立子任務"
-    },
-    "deleteConfirmation": {
-      "ticket": {
-        "headline": "刪除任務？",
-        "notification": "這將刪除該任務並從專案中移除。"
-      }
-    },
-    "attempts": {
-      "title": "嘗試",
-      "startNew": "開始新嘗試",
-      "emptyTitle": "尚無嘗試",
-      "emptyDescription": "在此開始任務嘗試以追蹤工作階段。",
-      "updatedLabel": "{{date}} 已更新",
-      "dialog": {
-        "title": "開始新嘗試",
-        "modelLabel": "模型",
-        "modelPlaceholder": "使用預設模型",
-        "promptLabel": "提示",
-        "start": "開始嘗試"
-      }
-    },
-    "description": {
-      "edit": "編輯",
-      "save": "儲存變更"
-    },
-    "dataTable": {
-      "noData": "無資料",
-      "emptyValue": "-"
-    }
-  },
-  "workspacePanel": {
-    "options": {
-      "workspace": "開啟工作區選項",
-      "deleteWorkspace": "刪除工作區"
-    },
-    "deleteConfirmation": {
-      "workspace": {
-        "headline": "刪除工作區？",
-        "notification": "此操作會刪除工作區，並將其從工單中移除。"
-      }
-    }
-  },
-  "createProjectSession": {
-    "errors": {
-      "missingProjectId": "建立工作階段需要專案 ID。"
-    }
-  },
-  "createTicketAttempt": {
-    "errors": {
-      "missingProjectId": "建立嘗試需要專案 ID。"
-    }
-  },
-  "sidenav": {
-    "search": "搜尋",
-    "tickets": "工單",
-    "projectChangelog": "專案變更日誌",
-    "projectSettings": "專案設定",
-    "help": "說明",
-    "documentationLink": "文件",
-    "discordLink": "Discord"
-  },
-  "shell": {
-    "loadingProject": "正在載入專案...",
-    "notFound": "找不到專案",
-    "notFoundDescription": "請從清單中選擇一個專案以繼續。"
-  },
   "projectSettings": {
-    "title": "專案設定",
-    "skills": "技能",
     "machineTokens": {
       "title": "機器權杖",
       "description": "為此專案中的指定自動化命令簽發有到期時間的憑證。",
@@ -217,11 +46,7 @@
         "global": "global"
       },
       "status": {
-        "pending": "等待中",
-        "loaded": "已載入",
-        "error": "載入失敗",
-        "missing": "缺失",
-        "disabled": "已停用"
+        "error": "載入失敗"
       },
       "health": {
         "triggerAriaLabel": "顯示 {{name}} 的問題",
@@ -327,37 +152,8 @@
     }
   },
   "list": {
-    "projectCreated": "專案已建立",
-    "createProjectFailed": "建立專案失敗",
-    "projectCount_one": "您有 {{count}} 個專案。",
-    "projectCount_other": "您有 {{count}} 個專案。",
-    "title": "專案",
     "createProject": "建立專案",
-    "loadingProjects": "正在載入專案...",
-    "unableToLoad": "無法載入專案",
     "noProjectsYet": "尚無專案",
-    "noProjectsDescription": "建立您的第一個專案以開始使用。",
-    "createFirstProject": "建立您的第一個專案",
-    "agentLoadErrorBanner": {
-      "title": "無法載入代理可用性",
-      "description": "無法檢查已安裝的代理。您可以先建立專案，稍後再新增代理。",
-      "retry": "重試"
-    }
-  },
-  "sessions": {
-    "title": "工作階段",
-    "newSession": "新增工作階段",
-    "noSessionsYet": "尚無工作階段",
-    "nextBuildTitle": "接下來我們應該建構什麼？",
-    "noSessionSelected": "未選擇工作階段",
-    "selectSession": "從側邊欄選擇一個工作階段或開始新的工作階段。",
-    "followUpPlaceholder": "傳送後續訊息...",
-    "queuedStatus": {
-      "title": "工作階段已排隊",
-      "message": "當並行容量可用時，此工作階段會自動開始。"
-    },
-    "downloadSessionJson": "下載工作階段 JSON",
-    "archiveSession": "封存工作階段",
-    "sessionActions": "工作階段操作"
+    "noProjectsDescription": "建立您的第一個專案以開始使用。"
   }
 }

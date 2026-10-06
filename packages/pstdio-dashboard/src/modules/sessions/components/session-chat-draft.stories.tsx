@@ -19,9 +19,16 @@ const draftResource = {
   label: "New session",
   icon: "PenBox",
 };
+const emptyAttachments = { attachments: [], uploading: false };
 const drafts: DashboardSessionDraftPersistence = {
   getDraft: (draftKey) => (draftKey === draftResource.id ? "Keep the restored Side Panel attached after refresh." : ""),
   setDraft: () => undefined,
+  getAttachmentDraft: () => ({
+    getSnapshot: () => emptyAttachments,
+    subscribe: () => () => undefined,
+    changeAttachments: () => undefined,
+    changeUploading: () => undefined,
+  }),
 };
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },

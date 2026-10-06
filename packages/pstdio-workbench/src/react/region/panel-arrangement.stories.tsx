@@ -1,10 +1,16 @@
 import { Box, Input, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { createWorkbench } from "../../core";
+import type { ReactNode } from "react";
+import { expect } from "storybook/test";
+import { createWorkbench, type WorkbenchPanelRegion } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createWorkbenchTerminalModule } from "../terminal/terminal-module";
 
-export const createArrangementWorkbench = (crowded = false) => {
+export const createArrangementWorkbench = (
+  crowded = false,
+  pageContent: ReactNode = <Text p="md">Page without a header</Text>,
+  movableTo?: WorkbenchPanelRegion[],
+) => {
   const page = { kind: "page", extensionId: "storybook", id: "arrangement" } as const;
   const w = createWorkbench({
     startPage: page,
@@ -15,7 +21,7 @@ export const createArrangementWorkbench = (crowded = false) => {
   w.views.registerView({
     id: "page",
     title: "Page",
-    body: { kind: "react", render: () => <Text p="md">Page without a header</Text> },
+    body: { kind: "react", render: () => pageContent },
   });
   w.views.registerView({
     id: "editor",
@@ -62,6 +68,7 @@ export const createArrangementWorkbench = (crowded = false) => {
     ref: { kind: "placement", extensionId: "storybook", id: "sessions" },
     modeId: "arrangement",
     region: "side",
+    movableTo,
     item: {
       kind: "binding",
       binding: {
@@ -118,6 +125,34 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const HeaderlessMain: Story = { args: { workbench: createArrangementWorkbench() } };
+const headerlessWebview = (
+  <Box asChild h="full" minH="full" w="full">
+    <iframe
+      title="Headerless webview"
+      sandbox="allow-scripts"
+      srcDoc={`<!doctype html><html
+            ondragover="event.preventDefault()"
+            ondrop="event.preventDefault(); document.querySelector('output').textContent = event.dataTransfer.files[0]?.name">
+          <body><h1>Headerless webview</h1>
+            <input aria-label="Webview draft" placeholder="Edit this draft before dragging a tab">
+            <p>Drop a file anywhere in this webview.</p>
+            <output aria-label="Dropped file"></output>
+          </body></html>`}
+    />
+  </Box>
+);
+export const HeaderlessWebview: Story = {
+  args: { workbench: createArrangementWorkbench(false, headerlessWebview) },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('iframe[title="Headerless webview"]')).toBeVisible();
+    await expect(canvasElement.querySelector('[data-workbench-panel-header="main"]')).not.toBeVisible();
+    await expect(canvasElement.querySelector('[data-workbench-tab-drop="main"]')).not.toBeVisible();
+  },
+};
+export const DisallowedWebviewDestination: Story = {
+  ...HeaderlessWebview,
+  args: { workbench: createArrangementWorkbench(false, headerlessWebview, ["side", "secondary"]) },
+};
 export const Crowded: Story = { args: { workbench: createArrangementWorkbench(true) } };
 const secondaryWorkbench = createArrangementWorkbench();
 const secondarySession = secondaryWorkbench.layout.getLayout().regions.side.widgets.at(-1)!;

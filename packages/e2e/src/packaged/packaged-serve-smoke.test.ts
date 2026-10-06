@@ -11,6 +11,7 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+// Also checks inline and display equations with the packaged KaTeX assets.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 // Core extension checks include Notes ownership, Planner commands, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -33,7 +34,7 @@ import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
-// The paired browser smoke also retains live views across navigation and exercises session row menus.
+// The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 const BUILD_TIMEOUT = 180_000;

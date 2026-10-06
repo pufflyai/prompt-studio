@@ -2,16 +2,18 @@
 
 Prompt Studio keeps package ownership explicit so shared packages do not absorb
 app, runtime, or packaging concerns. The source of truth for mechanical rules is
-`scripts/verify/verify-boundaries.ts`; update this document with any intentional
+`scripts/verify/verify-boundaries.ts`, with the layer map and rule tables in
+`scripts/verify/boundary-rules.ts`; update this document with any intentional
 layer-map change.
 
 ## Layers
 
 1. **Contracts and utilities**
    `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
-   `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, and `pstdio-db` define
-   stable contracts, file-type metadata, paths, logging, scheduling, git, and
-   persistence primitives. They do not
+   `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
+   `pstdio-storage` define stable contracts, file-type metadata, paths, logging,
+   scheduling, git, persistence, and filesystem storage primitives.
+   `pstdio-storage` does not depend on `pstdio-db`. They do not
    depend on SDK, UI, workbench, dashboard, or API host packages.
 
 2. **Public authoring SDK**
@@ -81,7 +83,18 @@ layer-map change.
 - No workspace package cycles.
 - No cross-package relative imports except explicit generated packaging
   allowlists.
-- No imports from `clients/*`.
+- No imports from `clients/*`, by relative path or by package name.
+- tsconfig `paths`, including inherited ones, stay inside the package. A non-extension package may map a
+  declared workspace dependency to its source (the SDK and workbench builds bundle
+  their private dependencies). Extensions may not map anything outside their
+  package, so they type-check against the released SDK they declare.
+- Every layer-map allowance matches a declared dependency. Remove an allowance
+  when the package stops declaring it.
+- Private packages have at most two `exports` entries. `pstdio-api`,
+  `pstdio-api-contracts`, and `pstdio-extensions` have frozen higher limits. The
+  check fails when a limit is above the current count, so a limit only goes down.
+- `@pstdio/workbench` `src/core` imports no `@pstdio/ui` specifier, including
+  subpaths and type-only imports.
 - Every workspace package import must be declared in the importer's
   `package.json`.
 - Extensions consume host APIs only through `@pstdio/sdk` and `@pstdio/ui`. Additional workspace dependencies must be listed explicitly in the layer map.
