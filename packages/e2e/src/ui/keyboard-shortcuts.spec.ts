@@ -60,6 +60,8 @@ test("the theme picker opens on the current theme and Escape keeps it", async ({
   const html = page.locator("html");
   const savedTheme = () => page.evaluate(() => localStorage.getItem("theme-preference"));
 
+  // Keep a parked pointer from selecting a row when the keyboard opens the picker.
+  await page.mouse.move(0, 0);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await page.keyboard.press("Alt+Shift+T");
     const picker = page.getByRole("dialog");
