@@ -5,6 +5,15 @@ import type { FileSourcePosition } from "../extension-kernel/types/pages";
 import { extensionResourceRefSchema } from "./resource-ref";
 import { commandTargetSchema, pageRefSchema, panelRefSchema } from "./workbench-refs-metadata";
 
+const sourcePositionSchema = z
+  .object({
+    line: z.number().int().positive(),
+    column: z.number().int().positive().optional(),
+    endLine: z.number().int().positive().optional(),
+    endColumn: z.number().int().positive().optional(),
+  })
+  .refine(isFileSourcePosition, "Expected ordered source coordinates");
+
 const sectionSchema = z.object({
   anchors: z.array(
     z.object({ id: z.string(), heading: z.string(), occurrence: z.number().int().nonnegative().optional() }),
@@ -30,7 +39,7 @@ const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
         resource: extensionResourceRefSchema.optional(),
         open: z.enum(["preview", "pin"]).optional(),
         section: sectionSchema.optional(),
-        position: z.custom<FileSourcePosition>(isFileSourcePosition).optional(),
+        position: sourcePositionSchema.optional(),
         parent: pageTargetSchema.optional(),
       })
       .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),
