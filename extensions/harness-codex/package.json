@@ -15,6 +15,7 @@
   "type": "module",
   "scripts": {
     "test": "bun test --silent",
+    "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write ."
