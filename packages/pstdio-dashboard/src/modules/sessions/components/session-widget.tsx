@@ -37,6 +37,9 @@ export const SessionWidget = (props: SessionWidgetProps) => {
 
   return (
     <DashboardSessionChatPanel
+      // Draft, pending message, attachments and harness picks belong to one conversation. A tab that
+      // switches sessions in place gets a fresh panel instead of carrying them over.
+      key={view.draftKey}
       input={input}
       view={view}
       drafts={drafts}
