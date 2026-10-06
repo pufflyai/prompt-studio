@@ -14,3 +14,16 @@ test("reopening a resource-less placement keeps its read owner while duplicate p
     rendererReadKey({ ...placement, placementIdentity: { ...placement.placementIdentity!, instanceKey: "second" } }),
   ).not.toBe(rendererReadKey(placement));
 });
+
+test("a single placement keeps its read owner when its resource changes", () => {
+  const placement: WorkbenchPanelInstance = {
+    instanceId: "animation-preview",
+    panelId: "preview",
+    closable: false,
+    placementIdentity: { kind: "page", pageId: "animation", slotId: "main", instanceKey: "one" },
+    resource: { type: "animation", id: "first" },
+  };
+  expect(rendererReadKey({ ...placement, resource: { type: "animation", id: "second" } })).toBe(
+    rendererReadKey(placement),
+  );
+});

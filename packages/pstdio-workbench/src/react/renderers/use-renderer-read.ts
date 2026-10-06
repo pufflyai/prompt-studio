@@ -36,9 +36,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   useEffect(() => {
     const binding: RendererReadBinding = workbench.views.reads.bind(ownerKey);
     let hasCompletedRead = false;
-    const request = {
-      queryKey,
-      load: (signal: AbortSignal, publish: (value: T) => void) => callbacks.current.load(signal, publish),
+    const handlers = {
       onProgress: (value: T) => {
         // Background refreshes keep the complete snapshot until its replacement is ready.
         if (!hasCompletedRead) setState({ queryKey, value, loading: true });
@@ -55,13 +53,24 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
           error: error instanceof Error ? error.message : String(error),
         })),
     };
-    const refresh = () => binding.request(request);
-    refreshRef.current = refresh;
+    const refresh = (reason?: "retry") => {
+      const current = callbacks.current;
+      binding.request(
+        {
+          ...handlers,
+          // A changed read scope cancels older work without clearing the mounted view's snapshot.
+          queryKey: JSON.stringify([queryKey, current.refreshKey]),
+          load: current.load,
+        },
+        reason,
+      );
+    };
+    refreshRef.current = () => refresh();
     // This read already uses the current refresh key, so the refresh effect below must not repeat it.
     lastRefreshKey.current = callbacks.current.refreshKey;
     retryRef.current = () => {
       setState((previous) => ({ ...previous, loading: true, error: undefined }));
-      binding.request(request, "retry");
+      refresh("retry");
     };
     refresh();
     const subscription = callbacks.current.subscribe(refresh);

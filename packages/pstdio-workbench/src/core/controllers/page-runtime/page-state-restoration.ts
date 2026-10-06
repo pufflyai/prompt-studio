@@ -6,6 +6,7 @@ import type {
   WorkbenchPageRuntimeState,
   WorkbenchPageSlotInstance,
 } from "../../registries/pages/page-registry-types";
+import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placement-instance-key";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
 
@@ -36,7 +37,7 @@ export const pageStateFromLayout = (
       if (!identity || !placement.resource || !resourceMatchesConstraint(binding, placement.resource)) return [];
       return [
         {
-          instanceKey: identity.instanceKey,
+          instanceKey: binding.cardinality === "one" ? SINGLE_RESOURCE_INSTANCE_KEY : identity.instanceKey,
           resource: placement.resource,
           ...(placement.section ? { section: placement.section } : {}),
           ...(binding.cardinality === "many"
@@ -48,7 +49,9 @@ export const pageStateFromLayout = (
     resourceInstances[slot.id] = binding.cardinality === "one" ? instances.slice(-1) : instances;
     if (slot.role === "primary") {
       const active = matching.find((placement) => layout.activeLocationWidgetId === placement.widgetId);
-      activePrimaryInstanceKey = active?.placementIdentity?.instanceKey;
+      activePrimaryInstanceKey = active
+        ? instances.find((instance) => instance.resource === active.resource)?.instanceKey
+        : undefined;
     }
   }
   return { openStaticSlotIds, resourceInstances, activePrimaryInstanceKey };

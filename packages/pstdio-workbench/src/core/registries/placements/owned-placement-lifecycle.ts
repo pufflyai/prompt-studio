@@ -2,6 +2,7 @@ import type { PageOpenIntent, PlacementItem } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { contributionRefId, resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { ResourceRef } from "../resources/resource-registry";
+import { SINGLE_RESOURCE_INSTANCE_KEY } from "./placement-instance-key";
 export type WorkbenchPlacementPresence = "fixed" | "open" | "closed";
 export type WorkbenchOwnedPlacementItem = PlacementItem;
 export const placementItemViewId = (item: PlacementItem) =>
@@ -108,7 +109,8 @@ export const openResourcePlacement = (input: {
   }
   const current = state.resourceInstances.get(id) ?? [];
   const instance: OwnedResourceInstance = {
-    instanceKey: resourceInstanceKey(current, input.resource),
+    instanceKey:
+      item.binding.cardinality === "one" ? SINGLE_RESOURCE_INSTANCE_KEY : resourceInstanceKey(current, input.resource),
     resource: input.resource,
     ...(item.binding.cardinality === "many" ? { open: input.open ?? ("preview" as const) } : {}),
     ...(input.title ? { title: input.title } : {}),

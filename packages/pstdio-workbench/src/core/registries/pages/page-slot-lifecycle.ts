@@ -1,5 +1,6 @@
 import type { PageOpenIntent, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
 import { isPageSlotClosable, primarySlot, type ResolvedPageSlot } from "./page-main";
 import type {
   WorkbenchPageContribution,
@@ -50,7 +51,7 @@ export const openResourceSlot = (input: {
     throw new Error(`Page slot "${slot.id}" does not accept resource kind "${target.resource.type}"`);
   if (target.open && binding.cardinality !== "many")
     throw new Error(`Page slot "${slot.id}" accepts open intent only with many cardinality`);
-  const instanceKey = input.resourceKey(target.resource);
+  const instanceKey = binding.cardinality === "one" ? SINGLE_RESOURCE_INSTANCE_KEY : input.resourceKey(target.resource);
   const instance: WorkbenchPageSlotInstance = {
     instanceKey,
     resource: target.resource,

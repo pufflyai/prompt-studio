@@ -2,6 +2,7 @@ import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { WorkbenchWidgetPlacement } from "../layout/layout-types";
 import type { OwnedPlacementState, WorkbenchOwnedPlacementItem } from "./owned-placement-lifecycle";
+import { SINGLE_RESOURCE_INSTANCE_KEY } from "./placement-instance-key";
 
 export const restoreOwnedPlacementState = (input: {
   state: OwnedPlacementState;
@@ -32,7 +33,8 @@ export const restoreOwnedPlacementState = (input: {
         return [];
       return [
         {
-          instanceKey: candidate.placementIdentity.instanceKey,
+          instanceKey:
+            binding.cardinality === "one" ? SINGLE_RESOURCE_INSTANCE_KEY : candidate.placementIdentity.instanceKey,
           resource: candidate.resource,
           title: candidate.title,
           ...(binding.cardinality === "many"
