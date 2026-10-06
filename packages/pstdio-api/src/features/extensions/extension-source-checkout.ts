@@ -4,6 +4,19 @@ import { dirname, join } from "node:path";
 import { findExtensionCatalogEntry, type GitExtensionOrigin, packagedExtensionCatalog } from "./extension-catalog";
 import { type CommandOptions, type CommandResult, runCommand } from "./install-extension-dependencies";
 
+// Extension sources come from https remotes, or from local repositories that a catalog file names.
+// Every other transport is refused, including `ext::`, which runs commands.
+export const extensionSourceGitConfig = [
+  "-c",
+  "protocol.allow=never",
+  "-c",
+  "protocol.https.allow=always",
+  "-c",
+  "protocol.file.allow=always",
+];
+
+export const isExtensionSourceUrl = (url: string) => url.startsWith("https://") || url.startsWith("file://");
+
 const cloneRepoSparse = async (
   checkoutPath: string,
   paths: string[],
@@ -13,10 +26,11 @@ const cloneRepoSparse = async (
   signal?: AbortSignal,
 ) => {
   const tempParent = dirname(checkoutPath);
-  const cloneArgs = ["clone", "--depth", "1", "--filter=blob:none", "--sparse"];
+  const cloneArgs = [...extensionSourceGitConfig, "clone", "--depth", "1", "--filter=blob:none", "--sparse"];
   if (ref) cloneArgs.push("--branch", ref);
   signal?.throwIfAborted();
-  const clone = await run("git", [...cloneArgs, repositoryUrl, checkoutPath], {
+  // `--` keeps a stored URL that starts with `-` from being read as an option.
+  const clone = await run("git", [...cloneArgs, "--", repositoryUrl, checkoutPath], {
     cwd: tempParent,
     ...(signal ? { signal } : {}),
   });

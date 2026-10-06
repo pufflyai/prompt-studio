@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createLogger, redactSensitiveText, resolveDefaultLogPath } from "./index";
@@ -101,6 +101,26 @@ describe("createLogger", () => {
       expect(entries[0]?.component).toBe("test");
       expect(entries[0]?.msg).toBe("hello");
       expect(entries[0]?.service).toBe("pstdio-test");
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test.skipIf(process.platform === "win32")("keeps log files and new log folders private to the user", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-logging-test-"));
+    const logPath = join(tempRoot, "state", "logs.jsonl");
+    const existingPath = join(tempRoot, "existing.jsonl");
+    writeFileSync(existingPath, "", { mode: 0o644 });
+
+    try {
+      process.env.PSTDIO_LOG_PATH = logPath;
+      createLogger({ level: "info", service: "pstdio-test", sync: true }).info("new file");
+      process.env.PSTDIO_LOG_PATH = existingPath;
+      createLogger({ level: "info", service: "pstdio-test", sync: true }).info("existing file");
+
+      expect(statSync(join(tempRoot, "state")).mode & 0o777).toBe(0o700);
+      expect(statSync(logPath).mode & 0o777).toBe(0o600);
+      expect(statSync(existingPath).mode & 0o777).toBe(0o600);
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });
     }

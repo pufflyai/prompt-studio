@@ -1,3 +1,4 @@
+import { extensionSourceGitConfig, isExtensionSourceUrl } from "../features/extensions/extension-source-checkout";
 import { runCommand } from "../features/extensions/install-extension-dependencies";
 
 const gitCommitPattern = /^[0-9a-f]{40}$/i;
@@ -10,7 +11,8 @@ export const parseExtensionSourceRef = (sourceRef: string | null) => {
   const commit = sourceRef.slice(commitSeparator + 1, pathSeparator);
   const path = sourceRef.slice(pathSeparator + 1);
   const url = sourceRef.slice(0, commitSeparator);
-  if (!url || !path || !gitCommitPattern.test(commit)) return null;
+  // Stored refs later reach Git, so they must use the same allowed origins as installs.
+  if (!isExtensionSourceUrl(url) || !path || !gitCommitPattern.test(commit)) return null;
   return { commit: commit.toLowerCase(), path, url };
 };
 
@@ -20,7 +22,9 @@ export const resolveExtensionReleaseCommit = async (originUrl: string, releaseRe
   const tagRef = releaseRef.startsWith("refs/") ? releaseRef : `refs/tags/${releaseRef}`;
   const branchRef = releaseRef.startsWith("refs/") ? null : `refs/heads/${releaseRef}`;
   const refs = [`${tagRef}^{}`, tagRef, ...(branchRef ? [branchRef] : [])];
-  const result = await run("git", ["ls-remote", originUrl, ...refs], { cwd: process.cwd() });
+  const result = await run("git", [...extensionSourceGitConfig, "ls-remote", "--", originUrl, ...refs], {
+    cwd: process.cwd(),
+  });
   if (result.exitCode !== 0) {
     throw new Error(result.stderr.trim() || result.stdout.trim() || `Could not resolve ${releaseRef}`);
   }
