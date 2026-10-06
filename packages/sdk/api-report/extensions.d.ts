@@ -2040,6 +2040,7 @@ interface WorkspaceCapabilities {
   diff: boolean;
   merge: boolean;
   rebase: boolean;
+  /** @deprecated */
   archive: boolean;
   delete: boolean;
 }
@@ -2093,6 +2094,7 @@ interface WorkspaceTypeProvider extends ContributionDefinition<"workspace-type">
   create(ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput): MaybePromise<WorkspaceProviderResult>;
   resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;
   cancel?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
+  /** @deprecated */
   archive?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
   delete?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<void>;
 }
@@ -2225,6 +2227,7 @@ interface ExtensionWorkspacesApi {
   removeAnchors(workspaceId: string, refs: Pick<ResourceRef, "type" | "id">[]): Promise<void>;
   resolve(id: string): Promise<WorkspaceProviderResult>;
   cancel(id: string): Promise<ExtensionWorkspace>;
+  /** @deprecated */
   archive(id: string): Promise<ExtensionWorkspace>;
   removeWorktree(id: string): Promise<{
     removed: boolean;
@@ -3045,6 +3048,7 @@ export declare const workspaceEvents: {
   }>;
   provision: EventRef<WorkspaceProvisionPayload>;
   ready: EventRef<WorkspaceProvisionPayload>;
+  /** @deprecated */
   archived: EventRef<{
     workspace: ExtensionWorkspace;
   }>;
