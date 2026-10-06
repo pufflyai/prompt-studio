@@ -42,7 +42,7 @@ const defaultDeps: EnsureApiDeps = {
 
 const API_HEALTH_TIMEOUT_MS = 15_000;
 const RUNTIME_DISCOVERY_INTERVAL_MS = 50;
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost"]);
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -127,6 +127,11 @@ export const ensureApi = async (apiUrl?: string, deps: EnsureApiDeps = defaultDe
   if (await deps.isHealthy(healthUrl)) {
     await publishConfiguredRuntimeToken(apiUrl, deps);
     return;
+  }
+
+  // A local API cannot answer for another machine, so starting one would only hide the outage.
+  if (!LOOPBACK_HOSTS.has(new URL(apiUrl).hostname)) {
+    throw new Error(`Cannot reach the Prompt Studio API at ${apiUrl}. Check that it is running and reachable.`);
   }
 
   if (!shouldAutoStartApi(process.env)) {
