@@ -49,7 +49,7 @@ test("an extension page navigates through the public API and browser history", a
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav).toHaveCount(1);
   await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toHaveCount(0);
-  await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
+  await expect(sidenav.getByRole("option", { name: "Workspaces", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option")).toContainText(["Search", "Notifications", "Sessions", "Tickets", "Lab"]);
   await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
 

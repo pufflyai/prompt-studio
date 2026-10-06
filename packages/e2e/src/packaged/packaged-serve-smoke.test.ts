@@ -190,7 +190,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-artifacts",
-            ref: "{hostRelease}",
+            ref: expect.stringMatching(/^pstdio@\d/),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pstdio",
@@ -202,7 +202,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-notes",
-            ref: "{hostRelease}",
+            ref: expect.stringMatching(/^pstdio@\d/),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pstdio",
@@ -214,7 +214,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-planner",
-            ref: "{hostRelease}",
+            ref: expect.stringMatching(/^pstdio@\d/),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pufflyai",
