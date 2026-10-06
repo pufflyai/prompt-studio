@@ -1,3 +1,4 @@
+import { AlertMessage } from "@pstdio/ui";
 import type { LandingDocument, LandingPage } from "../../content/landing-pages";
 import { DocColumn, DocHtml } from "../workbench/doc-column";
 import { DocOutline } from "../workbench/doc-outline";
@@ -19,6 +20,17 @@ export const PostView = (props: PostViewProps) => {
         <h1>{page.label}</h1>
         <PostMeta page={page} />
       </header>
+      {page.category === "release" && (
+        <AlertMessage
+          role="note"
+          aria-label="Alpha release notice"
+          status="info"
+          variant="subtle"
+          title="Prompt Studio is still in alpha"
+        >
+          Breaking changes can happen until we reach beta.
+        </AlertMessage>
+      )}
       <DocHtml html={document.html} />
     </DocColumn>
   );

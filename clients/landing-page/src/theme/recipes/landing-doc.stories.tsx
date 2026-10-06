@@ -140,6 +140,28 @@ export const PostOutline: Story = {
 
 export const PostHeader: Story = { render: () => <PostView page={STORY_POST} document={STORY_POST_DOCUMENT} /> };
 
+const ReleasePost = () => (
+  <PostView page={{ ...STORY_POST, label: "Prompt Studio 0.39", category: "release" }} document={STORY_POST_DOCUMENT} />
+);
+
+export const ReleaseAlphaNotice: Story = { render: () => <ReleasePost /> };
+
+export const ReleaseAlphaNoticeDark: Story = {
+  render: () => (
+    <Box className="dark" height="full">
+      <ReleasePost />
+    </Box>
+  ),
+};
+
+export const ReleaseAlphaNoticeMobile: Story = {
+  render: () => (
+    <Box width="full" maxWidth="sm" height="full">
+      <ReleasePost />
+    </Box>
+  ),
+};
+
 export const PostHeaderDark: Story = {
   render: () => (
     <Box className="dark" height="full">

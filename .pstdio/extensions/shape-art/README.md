@@ -20,7 +20,7 @@ The bundled skill documents every recipe field.
 
 `piece generate` randomizes the layout, shape selection, count, placement, and paint settings. It saves both the complete recipe and PNG. `--background` accepts `paper` (default) or `ink`; dimensions default to 1600×900 and must be whole pixels from 64 to 4096. For a 4:1 banner, use `--width 1600 --height 400`.
 
-Paper and ink backgrounds use blue and pink glows. For blog banners, avoid yellow and orange shapes too: save the generated recipe with `kinds` set to `page`, `editor`, `skill`, and `hook`, and `gradient` at most `0.3` to keep the color drift cool. Keep each post's own seed and composition.
+Paper and ink backgrounds use blue and pink glows. Allow all six shape kinds in future blog banners, including the yellow command and orange automation shapes. Keep each post’s own seed and composition.
 
 Each call gets a new random seed. Pass `--seed <text>` to reproduce the same generated recipe with the same dimensions and background. To repaint an edited recipe, use `piece render` instead. An existing piece id is replaced, just as with `piece save`.
 

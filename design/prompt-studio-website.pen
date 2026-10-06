@@ -11255,6 +11255,156 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "Vu5yJ",
+          "name": "cmp/IconButton",
+          "context": "Square: width = height = button height for the size (2xs 24 · xs 28 · sm 32 · md 40 · lg 48). Icon 12/14/16/20/20. Instances set width/height explicitly.",
+          "theme": {
+            "btn": "outline",
+            "size": "sm"
+          },
+          "reusable": true,
+          "width": 32,
+          "height": 32,
+          "fill": "$btn-fill",
+          "cornerRadius": "$btn-radius",
+          "stroke": "$btn-stroke",
+          "strokeWidth": "$btn-stroke-w",
+          "strokeAlignment": "inner",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "zpfpp",
+              "name": "Icon",
+              "width": 16,
+              "height": 16,
+              "icon": "plus",
+              "library": "lucide",
+              "fill": "$btn-fg"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "w5N0C",
+          "name": "cmp/AlertMessage",
+          "context": "Problems in the chat appear in the conversation as inline alerts. The Actions slot holds Retry, shown only for a temporary failure, and Close, shown on every problem.",
+          "theme": {
+            "status": "info"
+          },
+          "reusable": true,
+          "width": "fill_container",
+          "fill": "$status-bg",
+          "cornerRadius": "$alert-radius",
+          "stroke": "$status-border",
+          "strokeAlignment": "inner",
+          "gap": 4,
+          "padding": [
+            4,
+            8
+          ],
+          "children": [
+            {
+              "type": "icon",
+              "id": "f0fc52",
+              "name": "Icon",
+              "width": 18,
+              "height": 18,
+              "icon": "info",
+              "library": "lucide",
+              "fill": "$status-fg"
+            },
+            {
+              "type": "frame",
+              "id": "l6uk1",
+              "name": "Text",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "daU0Q",
+                  "name": "Title",
+                  "fill": "$status-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Pipeline saved",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "NEHna",
+                  "name": "Body",
+                  "fill": "$status-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Everything is configured and ready to go.",
+                  "lineHeight": 1.35,
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ywabx",
+              "name": "Actions",
+              "width": "fit_content(0)",
+              "height": "fit_content(0)",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "c88bd",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Action",
+                  "enabled": false,
+                  "height": 24,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Retry"
+                    }
+                  }
+                },
+                {
+                  "id": "IRK8m",
+                  "type": "ref",
+                  "ref": "Vu5yJ",
+                  "name": "Close",
+                  "enabled": false,
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "zpfpp": {
+                      "icon": "x",
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -52138,6 +52288,674 @@
           "icon": "arrow-right",
           "library": "lucide",
           "fill": "$ds-fg"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "lVWUx",
+      "x": 31040,
+      "y": 0,
+      "name": "Website · Blog · Release alpha notice · Desktop · light",
+      "context": "Release article body prefix, using shared AlertMessage info variant. All release-category articles get this notice until beta. Other categories retain their normal article layout.",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 768,
+      "height": 850,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        32,
+        40,
+        32
+      ],
+      "children": [
+        {
+          "type": "rectangle",
+          "cornerRadius": "$input-radius",
+          "id": "Yw5Nm",
+          "name": "Shape Art banner · prompt-studio-0-39",
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "art/blog-prompt-studio-0-39-light.png",
+            "mode": "fit"
+          },
+          "width": "fill_container",
+          "height": 176
+        },
+        {
+          "type": "frame",
+          "id": "MQ5LC",
+          "name": "Post header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "MveOC",
+              "name": "h1",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Prompt Studio 0.39",
+              "lineHeight": 1.1,
+              "fontFamily": "$font-heading",
+              "fontSize": 36,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "UNOA5",
+              "name": "Post metadata",
+              "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
+              "width": "fill_container",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "kVVLO",
+                  "name": "Author identity",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "lM86G",
+                      "name": "Aurélien Franky avatar",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                        "mode": "fill"
+                      },
+                      "width": 24,
+                      "height": 24
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z9Daz4",
+                      "name": "Author name",
+                      "fill": "$ds-fg-muted",
+                      "content": "Aurélien Franky",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "s37wC",
+                  "name": "Publication date and reading time",
+                  "fill": "$ds-fg-muted",
+                  "content": "October 1, 2026 · 5 min read",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "mMSw0",
+                  "type": "ref",
+                  "ref": "dbK8Z",
+                  "name": "Post category · Release",
+                  "theme": {
+                    "badge": "chip",
+                    "size": "sm",
+                    "palette": "gray"
+                  },
+                  "descendants": {
+                    "ohhQY": {
+                      "enabled": false
+                    },
+                    "FaaBK": {
+                      "content": "Release"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "os26L",
+          "type": "ref",
+          "ref": "w5N0C",
+          "name": "Alpha release notice",
+          "width": "fill_container",
+          "theme": {
+            "status": "info"
+          },
+          "descendants": {
+            "daU0Q": {
+              "content": "Prompt Studio is still in alpha"
+            },
+            "NEHna": {
+              "content": "Breaking changes can happen until we reach beta."
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "UBp9Y",
+          "name": "Release introduction",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Open Notes, and the sidebar becomes your note list. Open Sessions, and it becomes your conversations grouped by day. Prompt Studio 0.39 gives a tool room for its own navigation, while keeping the rows you pinned within reach.",
+          "lineHeight": 1.71,
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "B9F4E",
+      "x": 31888,
+      "y": 0,
+      "name": "Website · Blog · Release alpha notice · Desktop · dark",
+      "context": "Release article body prefix, using shared AlertMessage info variant. All release-category articles get this notice until beta. Other categories retain their normal article layout.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 768,
+      "height": 850,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        32,
+        40,
+        32
+      ],
+      "children": [
+        {
+          "type": "rectangle",
+          "cornerRadius": "$input-radius",
+          "id": "hQEZw",
+          "name": "Shape Art banner · prompt-studio-0-39",
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "art/blog-prompt-studio-0-39.png",
+            "mode": "fit"
+          },
+          "width": "fill_container",
+          "height": 176
+        },
+        {
+          "type": "frame",
+          "id": "e22yQ",
+          "name": "Post header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "v8Ng7",
+              "name": "h1",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Prompt Studio 0.39",
+              "lineHeight": 1.1,
+              "fontFamily": "$font-heading",
+              "fontSize": 36,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "oDsfC",
+              "name": "Post metadata",
+              "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
+              "width": "fill_container",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "opNmo",
+                  "name": "Author identity",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "CiBX9",
+                      "name": "Aurélien Franky avatar",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                        "mode": "fill"
+                      },
+                      "width": 24,
+                      "height": 24
+                    },
+                    {
+                      "type": "text",
+                      "id": "nYOYI",
+                      "name": "Author name",
+                      "fill": "$ds-fg-muted",
+                      "content": "Aurélien Franky",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "mCvZN",
+                  "name": "Publication date and reading time",
+                  "fill": "$ds-fg-muted",
+                  "content": "October 1, 2026 · 5 min read",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "KF55b",
+                  "type": "ref",
+                  "ref": "dbK8Z",
+                  "name": "Post category · Release",
+                  "theme": {
+                    "badge": "chip",
+                    "size": "sm",
+                    "palette": "gray"
+                  },
+                  "descendants": {
+                    "ohhQY": {
+                      "enabled": false
+                    },
+                    "FaaBK": {
+                      "content": "Release"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "vJoFu",
+          "type": "ref",
+          "ref": "w5N0C",
+          "name": "Alpha release notice",
+          "width": "fill_container",
+          "theme": {
+            "status": "info"
+          },
+          "descendants": {
+            "daU0Q": {
+              "content": "Prompt Studio is still in alpha"
+            },
+            "NEHna": {
+              "content": "Breaking changes can happen until we reach beta."
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "vOs6Y",
+          "name": "Release introduction",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Open Notes, and the sidebar becomes your note list. Open Sessions, and it becomes your conversations grouped by day. Prompt Studio 0.39 gives a tool room for its own navigation, while keeping the rows you pinned within reach.",
+          "lineHeight": 1.71,
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "vZ3nP",
+      "x": 32736,
+      "y": 0,
+      "name": "Website · Blog · Release alpha notice · Mobile · light",
+      "context": "Release article body prefix, using shared AlertMessage info variant. All release-category articles get this notice until beta. Other categories retain their normal article layout.",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 390,
+      "height": 850,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        24,
+        40,
+        24
+      ],
+      "children": [
+        {
+          "type": "rectangle",
+          "cornerRadius": "$input-radius",
+          "id": "Pwpgj",
+          "name": "Shape Art banner · prompt-studio-0-39",
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "art/blog-prompt-studio-0-39-light.png",
+            "mode": "fit"
+          },
+          "width": "fill_container",
+          "height": 85.5
+        },
+        {
+          "type": "frame",
+          "id": "Fuk8G",
+          "name": "Post header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "n1wiRf",
+              "name": "h1",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Prompt Studio 0.39",
+              "lineHeight": 1.2,
+              "fontFamily": "$font-heading",
+              "fontSize": 24,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "C0WgZ",
+              "name": "Post metadata",
+              "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "MTq0d",
+                  "name": "Author identity",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "iaoku",
+                      "name": "Aurélien Franky avatar",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                        "mode": "fill"
+                      },
+                      "width": 24,
+                      "height": 24
+                    },
+                    {
+                      "type": "text",
+                      "id": "Ho45S",
+                      "name": "Author name",
+                      "fill": "$ds-fg-muted",
+                      "content": "Aurélien Franky",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "Au3uL",
+                  "name": "Publication date and reading time",
+                  "fill": "$ds-fg-muted",
+                  "content": "October 1, 2026 · 5 min read",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "rvDKv",
+                  "type": "ref",
+                  "ref": "dbK8Z",
+                  "name": "Post category · Release",
+                  "theme": {
+                    "badge": "chip",
+                    "size": "sm",
+                    "palette": "gray"
+                  },
+                  "descendants": {
+                    "ohhQY": {
+                      "enabled": false
+                    },
+                    "FaaBK": {
+                      "content": "Release"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n2apE",
+          "type": "ref",
+          "ref": "w5N0C",
+          "name": "Alpha release notice",
+          "width": "fill_container",
+          "theme": {
+            "status": "info"
+          },
+          "descendants": {
+            "daU0Q": {
+              "content": "Prompt Studio is still in alpha"
+            },
+            "NEHna": {
+              "content": "Breaking changes can happen until we reach beta."
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "L7nvf4",
+          "name": "Release introduction",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Open Notes, and the sidebar becomes your note list. Open Sessions, and it becomes your conversations grouped by day. Prompt Studio 0.39 gives a tool room for its own navigation, while keeping the rows you pinned within reach.",
+          "lineHeight": 1.71,
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "md762",
+      "x": 33206,
+      "y": 0,
+      "name": "Website · Blog · Release alpha notice · Mobile · dark",
+      "context": "Release article body prefix, using shared AlertMessage info variant. All release-category articles get this notice until beta. Other categories retain their normal article layout.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "height": 850,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        24,
+        40,
+        24
+      ],
+      "children": [
+        {
+          "type": "rectangle",
+          "cornerRadius": "$input-radius",
+          "id": "lOdXx",
+          "name": "Shape Art banner · prompt-studio-0-39",
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "art/blog-prompt-studio-0-39.png",
+            "mode": "fit"
+          },
+          "width": "fill_container",
+          "height": 85.5
+        },
+        {
+          "type": "frame",
+          "id": "y4w63",
+          "name": "Post header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "children": [
+            {
+              "type": "text",
+              "id": "OHJAC",
+              "name": "h1",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Prompt Studio 0.39",
+              "lineHeight": 1.2,
+              "fontFamily": "$font-heading",
+              "fontSize": 24,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "r2bOiO",
+              "name": "Post metadata",
+              "context": "Author identity, date and reading time, then a neutral shared chip badge for Release, Thoughts, or Tool showcase. Metadata wraps on narrow screens.",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "lmZWd",
+                  "name": "Author identity",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "D6V4m2",
+                      "name": "Aurélien Franky avatar",
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
+                        "mode": "fill"
+                      },
+                      "width": 24,
+                      "height": 24
+                    },
+                    {
+                      "type": "text",
+                      "id": "USumu",
+                      "name": "Author name",
+                      "fill": "$ds-fg-muted",
+                      "content": "Aurélien Franky",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "HRIQ6",
+                  "name": "Publication date and reading time",
+                  "fill": "$ds-fg-muted",
+                  "content": "October 1, 2026 · 5 min read",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "h0dxK",
+                  "type": "ref",
+                  "ref": "dbK8Z",
+                  "name": "Post category · Release",
+                  "theme": {
+                    "badge": "chip",
+                    "size": "sm",
+                    "palette": "gray"
+                  },
+                  "descendants": {
+                    "ohhQY": {
+                      "enabled": false
+                    },
+                    "FaaBK": {
+                      "content": "Release"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "zaUbs",
+          "type": "ref",
+          "ref": "w5N0C",
+          "name": "Alpha release notice",
+          "width": "fill_container",
+          "theme": {
+            "status": "info"
+          },
+          "descendants": {
+            "daU0Q": {
+              "content": "Prompt Studio is still in alpha"
+            },
+            "NEHna": {
+              "content": "Breaking changes can happen until we reach beta."
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "ngp6v",
+          "name": "Release introduction",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Open Notes, and the sidebar becomes your note list. Open Sessions, and it becomes your conversations grouped by day. Prompt Studio 0.39 gives a tool room for its own navigation, while keeping the rows you pinned within reach.",
+          "lineHeight": 1.71,
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
         }
       ]
     }

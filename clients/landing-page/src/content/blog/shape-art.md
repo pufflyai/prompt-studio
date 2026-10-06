@@ -13,13 +13,43 @@ This blog needed banners.
 I wanted each post to have its own image, with a consistent visual language and versions that worked on light and dark pages.
 Finding and adjusting them by hand would have become another little job to keep doing.
 
-So I built a little tool with my coding agent.
+So I built a little tool with Codex, using GPT-6.1 Sol.
 It is called Shape Art, and it paints the images you see at the top of these posts.
 
 It starts with the six shapes I use to explain Prompt Studio’s building blocks: pages, commands, editors, skills, hooks, and automation.
 It arranges them on a sheet, then adds soft edges, uneven pigment, and grain.
 The result looks like watercolor, but every image comes from a small set of saved settings.
 No image model is involved in painting a piece.
+
+## The prompt that started it
+
+Here is a reconstructed version of the brief I gave the agent:
+
+> Build a Shape Art tool inside Prompt Studio. Use the six shapes from the website’s illustrations to paint watercolor-like images, with soft edges, uneven pigment, and grain.
+>
+> Give me a live preview and controls for the layout, shapes, colors, and paint. Let me save each piece as a PNG and an editable JSON recipe. The same recipe should reproduce the same image.
+>
+> Make the actions available to agents through the CLI too. Add random generation with a chosen background and dimensions: `--background ink --width 1600 --height 400` for a blog banner. I want matching paper and ink versions, with a different composition for each post.
+>
+> Build it as a repository-local extension using Prompt Studio’s public APIs, shared UI components, and project file storage.
+
+## How it was built and integrated
+
+Codex wrote the tool in TypeScript.
+The painting code places the shapes, softens their outlines, and adds layers of pigment and grain.
+The browser preview and PNG exporter use the same renderer, so what I adjust in the editor is what gets saved.
+A seed makes the random choices repeatable.
+
+The integration is a small extension.
+Its extension declaration registers a page, a sidebar entry, commands, and a skill that explains the tool to agents.
+The editor uses Prompt Studio’s shared UI components and invokes the same commands exposed by the CLI.
+Those commands read and write through the public project-files interface.
+Shape Art owns its recipes and painting; Prompt Studio supplies the workbench, command execution, and access to files.
+
+I could then open the tool in the workbench, try different compositions, and ask the agent to change it as the blog’s needs became clearer.
+The CLI generator and paired light and dark banners grew out of that loop.
+Tests check repeatable rendering, saved files, and the generation options.
+Finally, the website imports the saved PNGs and selects the banner for its active theme.
 
 ## Make something you want to look at
 
@@ -84,7 +114,6 @@ The agent can do the repetitive work while I make the visual choices.
 ## How I use it for this blog
 
 I ask the agent for a different composition for every post, then keep the recipe beside the image.
-For these banners I use blue and pink washes, leaving out the yellow and orange shapes.
 I save a paper version and an ink version with the same seed, shapes, and placement.
 Only the two background colors change.
 The website shows the version that matches its theme.

@@ -201,9 +201,15 @@ Every post has one required category: `release`, `thoughts`, or `tool showcase`.
 Release posts cover shipped versions; thoughts cover ideas and personal essays;
 tool showcases explain a specific tool and how people and agents use it.
 The category appears in article and list metadata and in `BlogPosting.articleSection`.
+`PostView` prefixes each release article’s body with the shared alpha notice. Update
+that notice when Prompt Studio reaches beta.
 The newest list entry has a wider banner and larger title. Older entries omit artwork
 in the list. Every card opens its article across its whole area. Article banners use
 the site's light or dark theme; share metadata uses light artwork.
+
+Record future UX GIFs in matching light and dark variants. Follow the
+[documentation media rules](../../documentation/guides/0001-documentation.md#screenshots-and-gifs)
+for sample data, naming, theme selection, and playback checks.
 
 ## Analytics
 

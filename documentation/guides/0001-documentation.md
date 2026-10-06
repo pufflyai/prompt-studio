@@ -59,6 +59,8 @@ Link with relative paths to `.md` files, so the same markdown works on GitHub an
 
 Prefer short GIFs when movement explains a feature: entering a sidebar level, choosing an option, dragging a row, or reloading a tool. Use a still screenshot when someone mainly needs to find a control or read a screen. Record real app interactions with sample data; do not animate a mock screen to imply working behavior.
 
+For every new UX GIF, record matching light and dark variants of the same workflow. Use the same sample data, framing, actions, and playback speed. Save them with `-light.gif` and `-dark.gif` suffixes. Show the variant for the page’s active theme, and verify both versions remain animated after direct loading and in-site navigation.
+
 Keep each recording focused on one workflow, with enough time to read the result. Avoid unnecessary typing and loading pauses. Store GIFs beside screenshots in `documentation/images/`, link them with relative Markdown paths, and give them useful alt text and a caption. Label the capture version when showing an earlier release. Verify the production asset still has multiple frames and plays after in-site navigation; image optimization must not flatten it.
 
 Add screenshots when they help someone find a control, understand a screen, or check the result of a workflow. Getting-started guides and tool walkthroughs should show the relevant workbench or settings screen. API signatures and terminal-only instructions usually do not need an image.
@@ -71,7 +73,7 @@ For example, from a guide in `guides/getting-started/`:
 ![Workbench showing the project sidebar and the Start page.](../../images/workbench.png)
 ```
 
-Capture the real app with `bun run dev:playwright`, using its printed dashboard URL. Use a disposable project, sample content, and the light theme. Do not include credentials, private paths, or personal conversations. Stop the capture stack afterward with `bun run dev:playwright:down`.
+Capture the real app with `bun run dev:playwright`, using its printed dashboard URL. Use a disposable project and sample content. Capture both light and dark themes for UX GIFs; choose the clearest theme for still screenshots. Do not include credentials, private paths, or personal conversations. Stop the capture stack afterward with `bun run dev:playwright:down`.
 
 Show enough of the workbench to explain where a tool lives. For settings, capture the dialog with its navigation and relevant controls, rather than the whole desktop. Keep text readable at the documentation's column width. Give every image useful alt text and a nearby sentence that explains what to look for. State when enabled extensions or sample data make the picture differ from a new project.
 
@@ -81,9 +83,11 @@ Update screenshots when the visible workflow changes. Build the website and chec
 
 Blog posts live in `clients/landing-page/src/content/blog/`. Their frontmatter has `title`, `description`, `published`, `category`, and an author ID from `src/content/blog-authors.ts`. Use `author: aurelien-franky` for Aurélien Franky. The author registry supplies the name and local avatar. Reading time is calculated from article text at 220 words per minute; do not store it in frontmatter.
 
+Release article views show an alpha notice before the body: Prompt Studio is still in alpha, and breaking changes can happen until beta. Keep the shared notice in `PostView` consistent when the release stage changes.
+
 Give each post one category: `release` for shipped versions and their changes, `thoughts` for ideas and personal essays, or `tool showcase` for a specific tool and how people and agents use it. The schema rejects missing or unknown categories. The list and article header show the category, and article metadata carries it as `articleSection`.
 
-Every post has its own paired light and dark banners. Generate a distinct 4:1 piece with the repo-local Shape Art extension: `pst shape-art piece generate --id blog-<post-slug> --background ink --width 1600 --height 400`. Follow the [Shape Art skill](../../.pstdio/extensions/shape-art/skills/shape-art/SKILL.md) to keep blog art blue and pink, without yellow or orange washes or shapes. Save a second recipe with the same seed and composition on a paper background, using an `-light` suffix. Keep each PNG and its editable JSON recipe together in `design/art/`.
+Every post has its own paired light and dark banners. Generate a distinct 4:1 piece with the repo-local Shape Art extension: `pst shape-art piece generate --id blog-<post-slug> --background ink --width 1600 --height 400`. Follow the [Shape Art skill](../../.pstdio/extensions/shape-art/skills/shape-art/SKILL.md). Allow all six shape kinds, including yellow commands and orange automation shapes. Save a second recipe with the same seed and composition on a paper background, using an `-light` suffix. Keep each PNG and its editable JSON recipe together in `design/art/`.
 
 ```yaml
 image:
