@@ -25,7 +25,7 @@ describe("ticket work in shared folders", () => {
   ])("archiving a ticket preserves the project folder (linked: $linked)", async ({ linked }) => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
-    const archive = mock(async () => home);
+    const deleteWorkspace = mock(async () => undefined);
     await archiveTicketCommand.run(
       ...makeCommandArgs({
         storage,
@@ -39,19 +39,19 @@ describe("ticket work in shared folders", () => {
                 anchors_json: linked ? [{ type: "ticket", id: ticket.id, shorthand: ticket.shorthand }] : [],
               },
             ],
-            archive,
+            delete: deleteWorkspace,
           },
         },
       }),
     );
-    expect(archive).not.toHaveBeenCalled();
+    expect(deleteWorkspace).not.toHaveBeenCalled();
   });
 
   test.each([
-    { supportsArchive: false },
-    { supportsArchive: true },
-  ])("archiving a ticket respects a remote provider's archive capability ($supportsArchive)", async ({
-    supportsArchive,
+    { supportsDelete: false },
+    { supportsDelete: true },
+  ])("archiving a ticket respects a remote provider's delete capability ($supportsDelete)", async ({
+    supportsDelete,
   }) => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Remote" } }));
@@ -67,15 +67,11 @@ describe("ticket work in shared folders", () => {
         diff: false,
         merge: false,
         rebase: false,
-        delete: false,
-        archive: supportsArchive,
+        delete: supportsDelete,
       },
       anchors_json: [{ type: "ticket", id: ticket.id, shorthand: ticket.shorthand }],
     };
-    const archive = mock(async () => {
-      if (!supportsArchive) throw new Error("This provider does not support archiving");
-      return remote;
-    });
+    const deleteWorkspace = mock(async () => undefined);
     const action = mock(makeCommandArgs({ storage, params: {} })[0].notify.action);
     const result = await archiveTicketCommand.run(
       ...makeCommandArgs({
@@ -83,13 +79,13 @@ describe("ticket work in shared folders", () => {
         params: {},
         overrides: {
           resource: { type: "ticket", id: ticket.id },
-          workspaces: { list: async () => [remote], archive } as never,
+          workspaces: { list: async () => [remote], delete: deleteWorkspace } as never,
           notify: { action } as never,
         },
       }),
     );
     expect(result?.archived).toBe(true);
-    expect(archive).toHaveBeenCalledTimes(supportsArchive ? 1 : 0);
+    expect(deleteWorkspace).toHaveBeenCalledTimes(supportsDelete ? 1 : 0);
     expect(action).not.toHaveBeenCalled();
   });
 
