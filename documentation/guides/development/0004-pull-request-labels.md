@@ -44,18 +44,18 @@ gh workflow run pr-risk-labels.yml --ref main -f pr-number=123
 
 Opening, reopening, pushing commits, editing the base, and editing labels also refresh classification. A failed or interrupted run needs a rerun. Label absence is not approval.
 
-## Current enforcement and merge queue
+## Current enforcement
 
-PS-78 implements PRD PS-76. As checked on 2026-09-28, the active `main` ruleset uses a merge queue and requires `ci_passed`. It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
+PS-78 implements PRD PS-76. As checked on 2026-10-02, the active `main` ruleset requires `ci_passed` and has no merge queue. It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
 
-The area-label workflow evaluates pull request heads and manual dispatches. It does not handle `merge_group` or publish a separation status on a queue group. Before requiring this context for queued merges, add group handling that evaluates each constituent PR independently. Separate SDK-only and extension-only PRs in one group must remain valid.
+The area-label workflow evaluates pull request heads and manual dispatches.
 
 After changing the policy, verify it on disposable PRs:
 
 1. Check SDK plus database, SDK plus extensions, either alone, neither, overlapping security/runtime paths, and manual consequence labels.
 2. Revert SDK changes and verify stale labels disappear. Delete a managed label and verify reclassification restores it.
 3. Check forks, base changes, additions, deletions, and renames across mapped areas.
-4. Verify group statuses and mixed-PR blocking before making the context required. Preserve existing rules and bypass settings.
+4. Verify mixed-PR blocking before making the context required. Preserve existing rules and bypass settings.
 
 A failing workflow alone does not enforce separation. Current whole-package mappings also flag documentation-only README changes in both areas; they do not distinguish public API changes from link repairs.
 

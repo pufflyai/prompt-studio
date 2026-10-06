@@ -20,9 +20,9 @@ const pullRequest = (changedFiles: string[], affectedPackages: string[] = []) =>
 const everything = { lernaFilter: "", windows: true, e2e: true, license: true, publishedExtensions: true };
 
 describe("pull request CI scope", () => {
-  test("the merge queue runs every job on every package", () => {
+  test("a push to main runs every job on every package", () => {
     const scope = resolveCiScope({
-      event: "merge_group",
+      event: "push",
       changedFiles: ["README.md"],
       packageDirs,
       affectedPackages: [],
