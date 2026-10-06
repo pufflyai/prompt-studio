@@ -198,3 +198,6 @@ packages/pstdio/.readme.generated
 .pstdio/reports
 .pstdio/extension-storage
 .pstdio/config.json
+
+# Shape Art drafts. A page keeps its own copy of each piece it uses.
+design/art
