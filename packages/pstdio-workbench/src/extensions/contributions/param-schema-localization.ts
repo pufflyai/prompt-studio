@@ -1,6 +1,6 @@
 import type { Localizable } from "@pstdio/sdk/extensions";
+import { commandRefId } from "@pstdio/sdk/extensions";
 import type { CommandParamSchema } from "../../core";
-import { metadataCommandId } from "../host/workbench-extension-metadata-ref";
 
 type LocalizableText = Localizable<string> | undefined;
 type ParamLocalizer = (value: LocalizableText, fallback?: string) => string;
@@ -47,7 +47,7 @@ const localizeOptionSource = (value: unknown, ownerExtensionId?: string) => {
     valueField: source.valueField,
     labelField: source.labelField,
     params: source.params,
-    commandId: metadataCommandId({
+    commandId: commandRefId({
       id: source.command.id,
       extensionId: source.command.extensionId ?? ownerExtensionId ?? "pstdio",
     }),

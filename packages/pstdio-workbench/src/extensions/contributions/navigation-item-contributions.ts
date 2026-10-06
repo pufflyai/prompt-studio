@@ -1,5 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { NavigationTarget as ExtensionNavigationTarget } from "@pstdio/sdk/extensions";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
@@ -11,7 +12,6 @@ import type {
 } from "../../core";
 import { navigationSlotRootSectionId } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
-import { metadataRefId } from "../host/workbench-extension-metadata-ref";
 
 type NavigationItem = WorkbenchExtensionMetadata["navigationItems"][number];
 type NavigationTree = WorkbenchExtensionMetadata["navigationTrees"][number];
@@ -24,7 +24,7 @@ export interface RegisterWorkbenchExtensionNavigationItemsInput {
 
 const toOwner = (ref: NavigationItem["owner"] | NavigationTree["owner"]): NavigationTreeOwner => ({
   kind: ref.kind,
-  id: metadataRefId(ref),
+  id: contributionRefId(ref),
   extensionId: ref.extensionId,
 });
 
@@ -90,7 +90,7 @@ const registerItems = (input: RegisterWorkbenchExtensionNavigationItemsInput) =>
     const first = items[0]!;
     const resourceDependent = items.some((item) => item.when?.resourceType?.length || item.when?.metadata);
     return input.workbench.navigationTrees.registerContribution({
-      id: `${first.extensionId}.navigation-items.${first.owner.kind}.${metadataRefId(first.owner)}.${first.slot}`,
+      id: `${first.extensionId}.navigation-items.${first.owner.kind}.${contributionRefId(first.owner)}.${first.slot}`,
       owner: toOwner(first.owner),
       sourceExtensionId: first.extensionId,
       declarationIndex: input.metadata.navigationItems.indexOf(first),
@@ -103,7 +103,7 @@ const registerItems = (input: RegisterWorkbenchExtensionNavigationItemsInput) =>
 
 const registerTrees = (input: RegisterWorkbenchExtensionNavigationItemsInput) =>
   input.metadata.navigationTrees.map((tree, declarationIndex) => {
-    const viewId = metadataRefId(tree.view);
+    const viewId = contributionRefId(tree.view);
     return input.workbench.navigationTrees.registerContribution({
       id: tree.id,
       idScope: tree.id,

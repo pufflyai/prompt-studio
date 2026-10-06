@@ -1,5 +1,5 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
-import { contributionRefId } from "../../shared/contributions/reference-id";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
 import { isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";

@@ -1,30 +1,15 @@
 import type { CommandRef, ContributionKind, ContributionRef, EventRef, WhenExpression } from "@pstdio/sdk/extensions";
-import { resolveEventReferenceId } from "@pstdio/sdk/extensions";
+import { contributionRefId, resolveEventReferenceId } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 
 export const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
-
-// The host publishes refs with extensionId "pstdio" (builtin-refs.ts). Their ids are the
-// host's registered ids and must never be owner-prefixed, for any contribution kind.
-export const hostExtensionId = "pstdio";
-
-export const normalizedContributionId = (extensionId: string, kind: ContributionKind, localId: string) =>
-  `${extensionId}.${kind}.${localId}`;
 
 export const normalizeContributionRef = <Kind extends ContributionKind>(
   ext: NormalizedExtension,
   ref: ContributionRef<Kind>,
 ) => ({ ...ref, extensionId: ref.extensionId ?? ext.id });
 
-export const resolveContributionRefId = <Kind extends ContributionKind>(
-  ownerExtensionId: string,
-  ref: ContributionRef<Kind>,
-) => {
-  const extensionId = ref.extensionId ?? ownerExtensionId;
-  return extensionId === hostExtensionId ? ref.id : normalizedContributionId(extensionId, ref.kind, ref.id);
-};
-
-export const resolveCommandRef = (ext: NormalizedExtension, ref: CommandRef) => resolveContributionRefId(ext.id, ref);
+export const resolveCommandRef = (ext: NormalizedExtension, ref: CommandRef) => contributionRefId(ref, ext.id);
 
 export const resolveEventRef = (ext: NormalizedExtension, ref: EventRef) => resolveEventReferenceId(ref, ext.id);
 
@@ -42,7 +27,7 @@ export const resourceKindReferences = (kinds: readonly { id: string; name: strin
       [`${kind.name}.${kind.id}`, kind.id],
       ...(kind.extensionId ? [[`${kind.extensionId}.${kind.id}`, kind.id] as const] : []),
       ...(kind.extensionId
-        ? [[normalizedContributionId(kind.extensionId, "resource-kind", kind.id), kind.id] as const]
+        ? [[contributionRefId({ extensionId: kind.extensionId, kind: "resource-kind", id: kind.id }), kind.id] as const]
         : []),
     ]),
   );
@@ -63,10 +48,10 @@ export const serializeWhenExpression = (
   resourceKinds: ReadonlyMap<string, string> = new Map(),
 ) => {
   if (!when) return undefined;
-  const mode = oneOrMany(refs(when.mode).map((ref) => resolveContributionRefId(extensionId, ref)));
-  const viewId = oneOrMany(refs(when.view).map((ref) => resolveContributionRefId(extensionId, ref)));
+  const mode = oneOrMany(refs(when.mode).map((ref) => contributionRefId(ref, extensionId)));
+  const viewId = oneOrMany(refs(when.view).map((ref) => contributionRefId(ref, extensionId)));
   const resourceType = when.resourceType?.map((ref) =>
-    resolveResourceKindReference(resolveContributionRefId(extensionId, ref), resourceKinds),
+    resolveResourceKindReference(contributionRefId(ref, extensionId), resourceKinds),
   );
   return {
     ...(mode ? { mode } : {}),

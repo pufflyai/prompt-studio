@@ -1,6 +1,6 @@
 import type { PageOpenIntent, PlacementItem } from "@pstdio/sdk/extensions";
-import { resourceKey } from "@pstdio/sdk/extensions";
-import { contributionRefId, resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
+import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { ResourceRef } from "../resources/resource-registry";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "./placement-instance-key";
 export type WorkbenchPlacementPresence = "fixed" | "open" | "closed";

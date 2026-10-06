@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import { commandRefId } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
@@ -12,7 +13,7 @@ import type {
 } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
-import { metadataCommandId } from "../host/workbench-extension-metadata-ref";
+
 import { localizeParamSchema } from "./param-schema-localization";
 import { createQueryParams, executeCallback, executeTreeActionCommand } from "./tree-renderer-callbacks";
 import type {
@@ -102,7 +103,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     ctx: TreeContext,
   ): TreeAction => {
     const commandId = action.command
-      ? metadataCommandId({ ...action.command, extensionId: action.command.extensionId ?? record.extensionId })
+      ? commandRefId({ ...action.command, extensionId: action.command.extensionId ?? record.extensionId })
       : undefined;
     return {
       id: action.id,

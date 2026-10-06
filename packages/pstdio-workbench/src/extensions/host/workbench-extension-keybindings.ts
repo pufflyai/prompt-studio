@@ -1,8 +1,8 @@
 import type { NavigationTarget as ExtensionNavigationTarget } from "@pstdio/sdk/extensions";
+import { commandRefId } from "@pstdio/sdk/extensions";
 import type { ExtensionKeybindingRecord } from "pstdio-api-contracts";
 import type { WorkbenchModuleContext } from "../../core";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
-import { metadataCommandId } from "./workbench-extension-metadata-ref";
 
 type KeybindingPlatform = keyof NonNullable<ExtensionKeybindingRecord["platformOverrides"]>;
 
@@ -27,7 +27,7 @@ export const registerWorkbenchExtensionKeybindings = (input: {
     input.workbench.keybindings.registerKeybinding({
       action: toWorkbenchNavigationTarget(binding.action as ExtensionNavigationTarget, {
         commandIdOf: (command) =>
-          command.extensionId ? metadataCommandId({ extensionId: command.extensionId, id: command.id }) : undefined,
+          command.extensionId ? commandRefId({ extensionId: command.extensionId, id: command.id }) : undefined,
       }),
       keybinding: resolveExtensionKeybindingChord(binding),
       when: input.createWhenExpression?.(binding.when),

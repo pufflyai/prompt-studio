@@ -225,6 +225,23 @@ type TerminalSessionResult = {
   operation: "write" | "resize" | "kill" | "subscribe";
   accepted: true;
 };
+interface TerminalSessionExit {
+  code: number | null;
+  signal: string | null;
+}
+interface TerminalSessionError {
+  message: string;
+}
+interface TerminalSessionAdapter$1 {
+  readonly id: string;
+  write(data: string | Uint8Array): void;
+  resize(cols: number, rows: number): void;
+  kill(signal?: string): Promise<void> | void;
+  onData(handler: (chunk: Uint8Array) => void): () => void;
+  onTitle?(handler: (title: string) => void): () => void;
+  onExit(handler: (exit: TerminalSessionExit) => void): () => void;
+  onError(handler: (error: TerminalSessionError) => void): () => void;
+}
 type ResourceRole = "primary" | "context" | "source" | "result";
 interface ResourceRef {
   type: string;
@@ -3140,6 +3157,15 @@ type CommandResponse<TResult = unknown> = {
   outcome: CommandOutcome<TResult>;
 };
 export declare const unwrapCommandOutcome: <TResult>(response: CommandResponse<TResult>, fallbackReason?: string) => TResult;
+export declare const contributionRefId: (ref: {
+  extensionId?: string;
+  kind: string;
+  id: string;
+}, ownerExtensionId?: string) => string;
+export declare const commandRefId: (ref: {
+  extensionId?: string;
+  id: string;
+}, ownerExtensionId?: string) => string;
 type CommandContribution<TSchema extends ParamObjectSchema | undefined, TResult> = CommandDefinition<TSchema, TResult> & ContributionDefinition<"command">;
 type CommandInput<TSchema extends ParamObjectSchema | undefined, TResult> = Omit<CommandDefinition<TSchema, TResult>, "ref">;
 export declare function defineCommand<const TSchema extends ParamObjectSchema | undefined = undefined, TResult = unknown>(definition: CommandInput<TSchema, TResult>): CommandContribution<TSchema, TResult>;
@@ -3354,30 +3380,11 @@ export declare function qualifyRef<Ref extends QualifiableRef>(owner: string, re
 export declare const commandEvent: <TPhase extends CommandLifecyclePhase, TParams extends Struct = Struct, TResult = unknown>(command: CommandRef<TParams, TResult>, phase: TPhase) => EventRef<CommandLifecycleEventPayload<TPhase, TParams, TResult>>;
 export declare function resourceKey(resource: ResourceRef): string;
 export declare function resourceKey(resource: ResourceRef | undefined): string | undefined;
-interface TerminalSessionRequest$1 {
-  command?: string[];
-  cwd?: string;
-  env?: Record<string, string>;
-  cols: number;
-  rows: number;
-}
-interface TerminalSessionExit {
-  code: number | null;
-  signal: string | null;
-}
-interface TerminalSessionAdapter {
-  readonly id: string;
-  write(data: string | Uint8Array): void;
-  resize(cols: number, rows: number): void;
+interface TerminalSessionAdapter extends TerminalSessionAdapter$1 {
   kill(signal?: string): Promise<void>;
-  onData(handler: (chunk: Uint8Array) => void): () => void;
-  onExit(handler: (exit: TerminalSessionExit) => void): () => void;
-  onError(handler: (error: {
-    message: string;
-  }) => void): () => void;
 }
 interface TerminalSessionBridge {
-  openSession(request: TerminalSessionRequest$1): Promise<TerminalSessionAdapter>;
+  openSession(request: TerminalSessionRequest): Promise<TerminalSessionAdapter>;
 }
 export declare const createTerminalSessionBridge: (host: GuestHost) => TerminalSessionBridge;
 type ArtifactMountKey = string | {

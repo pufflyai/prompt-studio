@@ -1,10 +1,10 @@
 import { IconButton, Stack } from "@chakra-ui/react";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import { Tooltip } from "@pstdio/ui";
 import { runUserAction } from "@pstdio/workbench";
 import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -27,9 +27,7 @@ export const ExtensionActivityRailWidget = (props: { input: WorkbenchPanelRender
 
   const projectId = getDashboardSelectedProjectId(workbench);
   const items = (getCachedDashboardExtensionMetadata(projectId)?.activityItems ?? [])
-    .filter((item) =>
-      Boolean(activeModeId && item.modes.some((mode) => toWorkbenchContributionId(mode) === activeModeId)),
-    )
+    .filter((item) => Boolean(activeModeId && item.modes.some((mode) => contributionRefId(mode) === activeModeId)))
     .sort((a, b) => placementRank[a.placement ?? "default"] - placementRank[b.placement ?? "default"]);
 
   return (
@@ -44,7 +42,7 @@ export const ExtensionActivityRailWidget = (props: { input: WorkbenchPanelRender
               size="sm"
               onClick={() =>
                 void runUserAction(workbench, title, () =>
-                  workbench.commands.executeCommand(toWorkbenchContributionId(item.command), item.params),
+                  workbench.commands.executeCommand(contributionRefId(item.command), item.params),
                 )
               }
             >

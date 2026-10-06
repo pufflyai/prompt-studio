@@ -84,3 +84,34 @@ export type TerminalRendererEvent =
   | { sessionId: string; kind: "write"; data: Uint8Array }
   | { sessionId: string; kind: "resize"; cols: number; rows: number }
   | { sessionId: string; kind: "kill"; signal?: string };
+
+export interface TerminalSessionExit {
+  code: number | null;
+  signal: string | null;
+}
+
+export interface TerminalSessionError {
+  message: string;
+}
+
+/**
+ * Renderer-side projection of one terminal session. The host handle exposes a
+ * single-consumer async iterable, which does not fit React, so renderers use
+ * subscriptions instead. Real bridges and scripted stubs implement this shape.
+ */
+export interface TerminalSessionAdapter {
+  readonly id: string;
+  write(data: string | Uint8Array): void;
+  resize(cols: number, rows: number): void;
+  kill(signal?: string): Promise<void> | void;
+  onData(handler: (chunk: Uint8Array) => void): () => void;
+  /** Foreground process name updates, when the opener can report them (real PTYs). */
+  onTitle?(handler: (title: string) => void): () => void;
+  onExit(handler: (exit: TerminalSessionExit) => void): () => void;
+  onError(handler: (error: TerminalSessionError) => void): () => void;
+}
+
+/** Renderer-side projection of the `terminal.session` capability. */
+export interface TerminalBridge {
+  openSession(request: TerminalSessionRequest): Promise<TerminalSessionAdapter>;
+}

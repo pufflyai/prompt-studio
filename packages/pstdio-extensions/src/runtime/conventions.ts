@@ -1,3 +1,4 @@
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import { isValidLocalContributionId, localContributionIdGrammar } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic, ExtensionRuntime } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
@@ -17,13 +18,13 @@ const toKebabIconName = (name: string) =>
 // Host-owned contributions (extensionId "pstdio") are registered at runtime by the
 // application, not by extensions, so references to them cannot be resolved here and
 // are skipped by returning undefined.
-const contributionRefId = (value: unknown) => {
+const referencedContributionId = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;
   const ref = value as { extensionId?: unknown; kind?: unknown; id?: unknown };
   if (typeof ref.extensionId !== "string" || typeof ref.kind !== "string" || typeof ref.id !== "string")
     return undefined;
   if (ref.extensionId === "pstdio") return undefined;
-  return `${ref.extensionId}.${ref.kind}.${ref.id}`;
+  return contributionRefId({ extensionId: ref.extensionId, kind: ref.kind, id: ref.id });
 };
 
 interface ContributionSite {
@@ -133,13 +134,13 @@ const collectIdGrammarDiagnostics = (runtime: ExtensionRuntime) => {
 const commandReferenceSites = (runtime: ExtensionRuntime) => {
   const sites: { record: ContributionSite; reference: string | undefined; kind: string }[] = [];
   for (const record of runtime.activityItems) {
-    sites.push({ record, reference: contributionRefId(record.contribution.command), kind: "activityItem" });
+    sites.push({ record, reference: referencedContributionId(record.contribution.command), kind: "activityItem" });
   }
   for (const record of runtime.schedules) sites.push({ record, reference: record.commandId, kind: "schedule" });
   for (const record of runtime.navigationItems) {
     const collect = (action: (typeof record.contribution)["action"]) => {
       if (action.kind === "command")
-        sites.push({ record, reference: contributionRefId(action.target.command), kind: "navigationItem" });
+        sites.push({ record, reference: referencedContributionId(action.target.command), kind: "navigationItem" });
       if (action.kind === "compound") action.targets.forEach(collect);
     };
     collect(record.contribution.action);
@@ -176,14 +177,14 @@ const collectViewReferenceDiagnostics = (runtime: ExtensionRuntime) => {
   const sites: { record: ContributionSite; reference: string | undefined; kind: string }[] = [];
   for (const record of runtime.placements) {
     if (record.contribution.item.kind === "view")
-      sites.push({ record, reference: contributionRefId(record.contribution.item.view), kind: "placement" });
+      sites.push({ record, reference: referencedContributionId(record.contribution.item.view), kind: "placement" });
   }
   for (const record of runtime.settingsPanels)
-    sites.push({ record, reference: contributionRefId(record.contribution.view), kind: "settingsPanel" });
+    sites.push({ record, reference: referencedContributionId(record.contribution.view), kind: "settingsPanel" });
   for (const record of runtime.statusBarItems)
-    sites.push({ record, reference: contributionRefId(record.contribution.view), kind: "statusBarItem" });
+    sites.push({ record, reference: referencedContributionId(record.contribution.view), kind: "statusBarItem" });
   for (const record of runtime.navigationTrees)
-    sites.push({ record, reference: contributionRefId(record.contribution.view), kind: "navigationTree" });
+    sites.push({ record, reference: referencedContributionId(record.contribution.view), kind: "navigationTree" });
   for (const site of sites) {
     if (!site.reference || known.has(site.reference)) continue;
     diagnostics.push(
@@ -208,7 +209,7 @@ const collectNavigationOwnerDiagnostics = (runtime: ExtensionRuntime) => {
   ]);
   const sites = [...runtime.navigationItems, ...runtime.navigationTrees];
   for (const record of sites) {
-    const reference = contributionRefId(record.contribution.owner);
+    const reference = referencedContributionId(record.contribution.owner);
     if (!reference || knownOwners.has(reference)) continue;
     diagnostics.push(
       createDiagnostic({
@@ -227,7 +228,7 @@ const collectNavigationTreeViewDiagnostics = (runtime: ExtensionRuntime) => {
   const diagnostics: ExtensionDiagnostic[] = [];
   const views = new Map(runtime.views.map((record) => [record.id, record]));
   for (const record of runtime.navigationTrees) {
-    const reference = contributionRefId(record.contribution.view);
+    const reference = referencedContributionId(record.contribution.view);
     if (!reference) continue;
     const view = views.get(reference);
     if (!view || view.contribution.body.kind === "tree") continue;
