@@ -7,6 +7,7 @@ export const landingSlotRecipe = defineSlotRecipe({
     "titlebar",
     "windowControls",
     "windowControl",
+    "actionMenuButton",
     "mobileTitlebar",
     "mobileNav",
     "sidebar",
@@ -53,6 +54,7 @@ export const landingSlotRecipe = defineSlotRecipe({
       alignItems: "center",
     },
     windowControls: { display: "flex", alignItems: "center", gap: "xs", px: "sm", flexShrink: 0 },
+    actionMenuButton: { marginInlineStart: "auto", flexShrink: 0 },
     windowControl: {
       display: "flex",
       alignItems: "center",
@@ -197,7 +199,7 @@ export const landingSlotRecipe = defineSlotRecipe({
       minHeight: { base: "56", lg: "full" },
     },
     download: { display: "flex", flexDirection: "column", gap: "sm", alignItems: "start", width: "full" },
-    siteTabs: { gap: "2xs", flexShrink: 0 },
+    siteTabs: { gap: "2xs", flexShrink: 1, minWidth: 0, overflowX: "auto" },
     siteTab: {
       display: "flex",
       alignItems: "center",

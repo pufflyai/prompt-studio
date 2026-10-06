@@ -1,8 +1,11 @@
 import { Box, chakra, HStack, Text } from "@chakra-ui/react";
 import { BookOpen, Maximize2, Minimize2, Minus, Newspaper, X } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { SiteSection } from "../../content/landing-pages";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
+import { trackWindowControlClicked } from "../../services/landing-analytics";
 import { PromptStudioIcon } from "../icons/prompt-studio-icon";
+import { ActionMenuButton } from "./action-menu-button";
 
 const SITE_TABS: { section: SiteSection; label: string; icon: React.ReactNode }[] = [
   { section: "studio", label: "Prompt Studio", icon: <PromptStudioIcon /> },
@@ -19,13 +22,26 @@ interface SiteTabsProps {
 const SiteTabs = (props: SiteTabsProps) => {
   const { selected, sectionPath } = props;
   const styles = useLandingStyles();
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const tabs = tabsRef.current!;
+    const revealSelected = () => {
+      tabs.querySelector(`[data-section="${selected}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+    revealSelected();
+    const observer = new ResizeObserver(revealSelected);
+    observer.observe(tabs);
+    return () => observer.disconnect();
+  }, [selected]);
 
   return (
-    <HStack as="nav" aria-label="Site" css={styles.siteTabs}>
+    <HStack as="nav" ref={tabsRef} aria-label="Site" css={styles.siteTabs}>
       {SITE_TABS.map((tab) => (
         <chakra.a
           key={tab.section}
           href={sectionPath(tab.section)}
+          data-section={tab.section}
           css={styles.siteTab}
           aria-current={tab.section === selected ? "page" : undefined}
           onPointerDown={(event) => event.stopPropagation()}
@@ -48,10 +64,21 @@ interface ProjectTabsBarProps extends SiteTabsProps {
   onToggleWindowed: () => void;
   onTitleBarPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   onTitleBarDoubleClick: () => void;
+  actionMenuOpen: boolean;
+  onOpenActionMenu: () => void;
 }
 
 export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
-  const { windowed, selected, sectionPath, onToggleWindowed, onTitleBarPointerDown, onTitleBarDoubleClick } = props;
+  const {
+    windowed,
+    selected,
+    sectionPath,
+    onToggleWindowed,
+    onTitleBarPointerDown,
+    onTitleBarDoubleClick,
+    actionMenuOpen,
+    onOpenActionMenu,
+  } = props;
 
   const styles = useLandingStyles(windowed);
   const controls = [
@@ -63,12 +90,13 @@ export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
       icon: windowed ? Maximize2 : Minimize2,
       disabled: false,
     },
-  ];
+  ] as const;
 
   return (
     <>
       <Box css={styles.mobileTitlebar}>
         <SiteTabs selected={selected} sectionPath={sectionPath} />
+        <ActionMenuButton open={actionMenuOpen} onOpen={onOpenActionMenu} />
       </Box>
       <Box css={styles.titlebar} onPointerDown={onTitleBarPointerDown} onDoubleClick={onTitleBarDoubleClick}>
         <Box
@@ -86,13 +114,17 @@ export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
               disabled={control.disabled}
               aria-label={control.label}
               title={control.label}
-              onClick={onToggleWindowed}
+              onClick={() => {
+                trackWindowControlClicked(control.id, windowed);
+                onToggleWindowed();
+              }}
             >
               <control.icon strokeWidth={3} />
             </chakra.button>
           ))}
         </Box>
         <SiteTabs selected={selected} sectionPath={sectionPath} />
+        <ActionMenuButton open={actionMenuOpen} onOpen={onOpenActionMenu} />
       </Box>
     </>
   );

@@ -104,6 +104,8 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
           onToggleWindowed={toggleWindowed}
           onTitleBarPointerDown={onTitleBarPointerDown}
           onTitleBarDoubleClick={toggleWindowed}
+          actionMenuOpen={paletteOpen}
+          onOpenActionMenu={() => setPaletteOpen(true)}
         />
         <Flex css={styles.body}>
           <ResizableSplitLayout

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { LandingPage, SiteSection } from "../content/landing-pages";
+import { trackActionMenuOpened } from "../services/landing-analytics";
 import { updateLandingMetadata } from "../services/landing-metadata";
 import { landingPageFromPath, SECTION_HOME, sectionForPage } from "../services/landing-route";
 
@@ -12,6 +13,10 @@ export const useLandingNavigation = (initialPath: string, pages: LandingPage[]) 
   // The last page read in each title bar tab during this visit. A reload starts fresh.
   const [lastPaths, setLastPaths] = useState(() => ({ ...SECTION_HOME, [sectionForPage(page)]: initialPath }));
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    if (paletteOpen) trackActionMenuOpened();
+  }, [paletteOpen]);
 
   const show = (nextPath: string) => {
     const nextPage = landingPageFromPath(pages, nextPath);

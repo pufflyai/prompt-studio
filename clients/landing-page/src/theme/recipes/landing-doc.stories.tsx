@@ -1,9 +1,11 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
 import { BlogIndexView } from "../../components/blog/blog-index-view";
 import { PostView } from "../../components/blog/post-view";
 import { DocsHomeView } from "../../components/docs/docs-home-view";
 import { DocsPageView } from "../../components/docs/docs-page-view";
+import { CommandPaletteModal } from "../../components/workbench/command-palette-modal";
 import { ProjectTabsBar } from "../../components/workbench/project-tabs-bar";
 import { ResourceSidebar } from "../../components/workbench/resource-sidebar";
 import type { SiteSection } from "../../content/landing-pages";
@@ -44,12 +46,43 @@ const TabBar = (props: { selected: SiteSection }) => (
     onToggleWindowed={noop}
     onTitleBarPointerDown={noop}
     onTitleBarDoubleClick={noop}
+    actionMenuOpen={false}
+    onOpenActionMenu={noop}
   />
 );
 
 export const TabBarDocsSelected: Story = { render: () => <TabBar selected="docs" /> };
 
 export const TabBarBlogSelected: Story = { render: () => <TabBar selected="blog" /> };
+
+const ActionMenuTitleBar = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <ProjectTabsBar
+        windowed={false}
+        selected="blog"
+        sectionPath={(section) => SECTION_HOME[section]}
+        onToggleWindowed={noop}
+        onTitleBarPointerDown={noop}
+        onTitleBarDoubleClick={noop}
+        actionMenuOpen={open}
+        onOpenActionMenu={() => setOpen(true)}
+      />
+      <CommandPaletteModal open={open} pages={STORY_PAGES} onClose={() => setOpen(false)} onNavigate={noop} />
+    </>
+  );
+};
+
+export const TabBarActionMenu: Story = { render: () => <ActionMenuTitleBar /> };
+
+export const TabBarActionMenuDark: Story = {
+  render: () => (
+    <Box className="dark">
+      <ActionMenuTitleBar />
+    </Box>
+  ),
+};
 
 export const DocsSidebar: Story = {
   render: () => (

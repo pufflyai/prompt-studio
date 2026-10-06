@@ -49,7 +49,8 @@ half-disc uses a curved polygon and renders around its physical centre of mass, 
 its drawing and collisions stay aligned as it turns.
 
 The desktop header contains the window controls and three tabs: Prompt Studio, Docs,
-and Blog. The mobile header shows the same tabs. The selected tab follows the URL.
+and Blog. The mobile header shows the same tabs. A shortcut indicator at the top right
+opens the action menu: Command+P on Mac, or Ctrl+P elsewhere. The selected tab follows the URL.
 Each tab has its own sidebar. Selecting another tab reopens the last page read in
 that section during this visit; selecting the open tab returns to the section's first
 page (`/`, `/docs/`, or `/blog/`). A reload starts fresh. The green control collapses
@@ -184,13 +185,24 @@ the build:
 title: Welcome to Prompt Studio
 description: One sentence for the post list and search results.
 published: 2026-10-05
-author: Aurélien Franky
-image: /images/blog/optional-image.png
+author: aurelien-franky
+image:
+  light: ../../../../../design/art/blog-welcome-to-prompt-studio-light.png
+  dark: ../../../../../design/art/blog-welcome-to-prompt-studio.png
 ---
 ```
 
 Write `published` without quotes so YAML reads it as a date. `/blog/` and the Blog
 sidebar list posts newest first.
+The newest list entry has a wider banner and larger title. Older entries omit artwork
+in the list. Every card opens its article across its whole area. Article banners use
+the site's light or dark theme; share metadata uses light artwork.
+
+## Analytics
+
+The existing PostHog client records custom events for action-menu opens and window
+button clicks. See the [website analytics reference](../../documentation/references/website/0001-analytics.md)
+for event names, properties, counting rules, and local validation.
 
 ## Legal documents
 

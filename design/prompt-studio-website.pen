@@ -108,6 +108,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "SZEkO",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "bf50L",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -1424,6 +1461,43 @@
               "fontFamily": "$font-heading",
               "fontSize": 14,
               "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "R8xa84",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "O9rjGx",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -1981,6 +2055,43 @@
               "fontFamily": "$font-heading",
               "fontSize": 14,
               "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "gR2K0",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "AxUxq",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -2810,6 +2921,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "nKT42",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "Ccb62",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -4368,6 +4516,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "M2OR9S",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "Nmhok",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -5636,6 +5821,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "dL35V",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "YgvfV",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -6897,6 +7119,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "lUAiY",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "xJVAN",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -8617,6 +8876,43 @@
               "fontFamily": "$font-heading",
               "fontSize": 14,
               "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "t9TuTM",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "D9JGM",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -11069,6 +11365,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "Hy0ee",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "P6E0E",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -12724,6 +13057,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "wFt98",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "WuweH",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -14215,6 +14585,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "EQ9eF",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "EYeru",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -16040,6 +16447,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "q8ZoSg",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "e6euBO",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -17201,6 +17645,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "BoTNr",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "v2O6M",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -18447,6 +18928,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "Kg9qx",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "LIlWv",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -19399,6 +19917,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "U0d8hw",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "xhYlW",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -20086,6 +20641,43 @@
                   "fontWeight": "500"
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "J0mQsj",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "kkIJL",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -20925,6 +21517,43 @@
               "fontFamily": "$font-heading",
               "fontSize": 14,
               "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "hroSz",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "wps2w",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -21346,6 +21975,43 @@
               "fontFamily": "$font-heading",
               "fontSize": 14,
               "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "GvwIe",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "xHpq5",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -21980,6 +22646,43 @@
               "fontFamily": "$font-heading",
               "fontSize": 14,
               "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "ILZTZ",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "MzYfE",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -22552,6 +23255,7 @@
                   "x": 94,
                   "y": 8,
                   "name": "Site tabs",
+                  "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
                   "gap": 4,
                   "alignItems": "center",
                   "children": [
@@ -22664,6 +23368,7 @@
                   "x": 94,
                   "y": 8,
                   "name": "Site tabs",
+                  "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
                   "gap": 4,
                   "alignItems": "center",
                   "children": [
@@ -22983,6 +23688,7 @@
                   "x": 94,
                   "y": 8,
                   "name": "Site tabs",
+                  "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
                   "gap": 4,
                   "alignItems": "center",
                   "children": [
@@ -23095,6 +23801,7 @@
                   "x": 94,
                   "y": 8,
                   "name": "Site tabs",
+                  "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
                   "gap": 4,
                   "alignItems": "center",
                   "children": [
@@ -23295,6 +24002,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -23351,6 +24059,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "aEpDm",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "WFXrU",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -25340,6 +26085,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -25396,6 +26142,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "MDaI9",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "C7CiD",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -27889,6 +28672,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -27945,6 +28729,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "g0sMn",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "CiAQb",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -29232,6 +30053,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -29288,6 +30110,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "IRobD",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "kbkgW",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -30482,6 +31341,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -30538,6 +31398,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "AKqip",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "aIQAa",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -32529,6 +33426,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -32585,6 +33483,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "OKubu",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "F882hl",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -35078,6 +36013,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -35134,6 +36070,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "QVVVy",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "M7nC8",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -37123,6 +38096,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -37179,6 +38153,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "a5fAt",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "fP7EI",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -38466,6 +39477,7 @@
               "x": 94,
               "y": 8,
               "name": "Site tabs",
+              "context": "Tabs keep their content width and scroll horizontally when needed. Reveal the selected tab fully on selection and header resize. The action-menu button stays at the right edge.",
               "gap": 4,
               "alignItems": "center",
               "children": [
@@ -38522,6 +39534,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "wkDfn",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "HLPPZ",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -39723,6 +40772,43 @@
                 },
                 "rONTK": {
                   "content": "Blog"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "Pd2Jt",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "PA2Fu",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
                 }
               }
             }
@@ -41468,6 +42554,43 @@
                   "fill": "$ds-fg"
                 }
               }
+            },
+            {
+              "type": "frame",
+              "id": "L3rjeh",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "jVDtP",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -42426,6 +43549,43 @@
                   "fill": "$ds-fg"
                 }
               }
+            },
+            {
+              "type": "frame",
+              "id": "F0otT8",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "Z4MZ3q",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -43123,6 +44283,43 @@
                 },
                 "rONTK": {
                   "content": "Blog"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "abbDN",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "oVkPS",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
                 }
               }
             }
@@ -44133,6 +45330,43 @@
                   "content": "Blog"
                 }
               }
+            },
+            {
+              "type": "frame",
+              "id": "HkfHe",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "FiQAh",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -45139,6 +46373,43 @@
                 },
                 "rONTK": {
                   "content": "Blog"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "NssSj",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "awjXu",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
                 }
               }
             }
@@ -46884,6 +48155,43 @@
                   "content": "Blog"
                 }
               }
+            },
+            {
+              "type": "frame",
+              "id": "SXRHw",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "M2uv9Y",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -47891,6 +49199,43 @@
                   "fill": "$ds-fg"
                 }
               }
+            },
+            {
+              "type": "frame",
+              "id": "MCm2F",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "eExT0",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
+                }
+              }
             }
           ]
         },
@@ -48847,6 +50192,43 @@
                 "rONTK": {
                   "content": "Blog",
                   "fill": "$ds-fg"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "GDg6b",
+              "name": "Action menu spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "id": "a9TrZF",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Open action menu · Command/Ctrl P",
+              "theme": {
+                "btn": "ghost",
+                "size": "xs"
+              },
+              "height": 24,
+              "context": "Opens the shared action menu. Keyboard: Command+P on Mac, Ctrl+P elsewhere. Pointer and double click do not drag or resize the window.",
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "enabled": false
+                },
+                "khvEs": {
+                  "enabled": true,
+                  "theme": {
+                    "kbd": "plain",
+                    "size": "sm"
+                  }
+                },
+                "khvEs/uD3AU": {
+                  "content": "P"
                 }
               }
             }
