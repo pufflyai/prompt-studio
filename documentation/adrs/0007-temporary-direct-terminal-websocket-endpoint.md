@@ -16,6 +16,8 @@ Vite development and preview derive the endpoint from the server-side `PSTDIO_AP
 
 The API treats the `Origin` header as part of terminal authorization. Same-origin requests remain valid. A cross-origin browser request is valid only when its exact origin appears in the server-only `PSTDIO_TERMINAL_ORIGINS` list. Requests without an `Origin` header remain available to native clients. Source and isolated development configure the Vite origin. Packaged and secure remote runtimes do not inject a direct endpoint and keep the existing same-origin security path.
 
+This direct endpoint only works for an API without a token, such as `bun run dev` and the Vite terminal end-to-end suite. When the dashboard dev server has `PSTDIO_API_TOKEN`, as in the isolated Docker stack, the browser cannot reach the API directly. The dev server then bridges `/v1/terminal` itself (`packages/pstdio-dashboard/vite-api-credential.ts`): it accepts the browser socket on its own origin with the `ws` package and opens the API socket with the platform `WebSocket` client and the token. That path does not use `http-proxy-3`, so the failure below does not apply to it (PS-503).
+
 ## Context
 
 The intended design is simple: the dashboard and API share one origin, and a development web server proxies both HTTP and WebSocket traffic. Packaged Prompt Studio already follows this design. PS-227 protected it by removing the build-time `VITE_API_BASE_URL`; packaged dashboard requests now use injected runtime configuration or their own origin.

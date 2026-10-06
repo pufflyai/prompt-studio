@@ -3,7 +3,6 @@ import { posix, resolve } from "node:path";
 import {
   composeMountPaths,
   resolveContainerPorts,
-  resolveIsolatedBrowserTransport,
   resolveIsolatedDashboardUrl,
   resolveIsolatedDefaultExtensions,
   resolveIsolatedExtensionReleaseRef,
@@ -26,13 +25,6 @@ describe("isolated development paths", () => {
 
     expect(resolveContainerPorts(hostPorts, true)).toEqual({ dashboard: 5173, api: 43002 });
     expect(resolveContainerPorts(hostPorts, false)).toEqual({ dashboard: 5173, api: 19841 });
-  });
-
-  test("uses browser-reachable host ports for isolated terminal transport", () => {
-    expect(resolveIsolatedBrowserTransport({ dashboard: 43001, api: 43002 })).toEqual({
-      PSTDIO_TERMINAL_ORIGINS: "http://127.0.0.1:43001",
-      PSTDIO_TERMINAL_WEBSOCKET_URL: "ws://127.0.0.1:43002/v1/terminal",
-    });
   });
 
   test("prints the authenticated loopback origin for isolated dashboards", () => {

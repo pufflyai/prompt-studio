@@ -18,9 +18,8 @@ services:
       PSTDIO_EXTENSION_RELEASE_REF: ${PSTDIO_EXTENSION_RELEASE_REF:?PSTDIO_EXTENSION_RELEASE_REF is required}
       PSTDIO_EXTENSION_SOURCE_ROOT: ${HOST_WORKTREE:?HOST_WORKTREE is required}
       PSTDIO_HOME: ${HOST_PSTDIO_HOME:?HOST_PSTDIO_HOME is required}
+      PSTDIO_ISOLATED_API_TOKEN: ${PSTDIO_ISOLATED_API_TOKEN:-}
       PSTDIO_DESKTOP_FLOW: ${PSTDIO_DESKTOP_FLOW:-0}
-      PSTDIO_TERMINAL_ORIGINS: ${PSTDIO_TERMINAL_ORIGINS:?PSTDIO_TERMINAL_ORIGINS is required}
-      PSTDIO_TERMINAL_WEBSOCKET_URL: ${PSTDIO_TERMINAL_WEBSOCKET_URL:?PSTDIO_TERMINAL_WEBSOCKET_URL is required}
     command:
       - bash
       - -c
@@ -34,6 +33,10 @@ services:
         fi
         api_url="http://127.0.0.1:$$api_port"
         export PSTDIO_API_URL="$$api_url"
+        if [ "$$PSTDIO_DESKTOP_FLOW" != "1" ]; then
+          # The API listens on every container interface, so it requires a token.
+          export PSTDIO_API_TOKEN="$${PSTDIO_ISOLATED_API_TOKEN:?PSTDIO_ISOLATED_API_TOKEN is required}"
+        fi
 
         bun install --frozen-lockfile
         bunx lerna run build --scope @pstdio/workbench --include-dependencies
@@ -45,7 +48,7 @@ services:
           api_child=$$!
           dashboard_child=""
         else
-          PORT="$$api_port" bun run --cwd packages/pstdio-api start &
+          PORT="$$api_port" PSTDIO_API_HOST=0.0.0.0 bun run --cwd packages/pstdio-api start &
           api_child=$$!
           bun run --cwd packages/pstdio-dashboard dev -- --host 0.0.0.0 --port 5173 &
           dashboard_child=$$!
@@ -54,10 +57,7 @@ services:
         trap 'kill "$$api_child" $$dashboard_child 2>/dev/null || true' INT TERM EXIT
 
         runtime_token="$$(bun scripts/dev/isolated-runtime-readiness.ts "$$api_url" "$$api_child")"
-        auth_header=()
-        if [ "$$PSTDIO_DESKTOP_FLOW" = "1" ]; then
-          auth_header=(-H "authorization: Bearer $$runtime_token")
-        fi
+        auth_header=(-H "authorization: Bearer $${PSTDIO_API_TOKEN:-$$runtime_token}")
 
         mkdir -p "$$PROJECT_ROOT"
         cd "$$PROJECT_ROOT"

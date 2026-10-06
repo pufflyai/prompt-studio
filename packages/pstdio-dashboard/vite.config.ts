@@ -1,17 +1,24 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { createApiCredentialPlugin, createApiProxy } from "./vite-api-credential.ts";
 import { createDashboardRuntimeConfigPlugin, resolveTerminalWebSocketUrl } from "./vite-runtime-config.ts";
 
 const apiProxyTarget = process.env.PSTDIO_API_URL ?? "http://localhost:19841";
-const terminalWebSocketUrl = resolveTerminalWebSocketUrl({
-  apiProxyTarget,
-  terminalWebSocketUrl: process.env.PSTDIO_TERMINAL_WEBSOCKET_URL,
-});
-const apiProxy = {
-  "/v1": apiProxyTarget,
-  "/healthz": apiProxyTarget,
-};
+// An API with a token is reached only through this server, terminal included (vite-api-credential.ts).
+const apiToken = process.env.PSTDIO_API_TOKEN;
+const terminalWebSocketUrl = apiToken
+  ? undefined
+  : resolveTerminalWebSocketUrl({
+      apiProxyTarget,
+      terminalWebSocketUrl: process.env.PSTDIO_TERMINAL_WEBSOCKET_URL,
+    });
+const apiProxy = apiToken
+  ? createApiProxy(apiProxyTarget, apiToken)
+  : {
+      "/v1": apiProxyTarget,
+      "/healthz": apiProxyTarget,
+    };
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -38,6 +45,7 @@ export default defineConfig({
   },
   plugins: [
     createDashboardRuntimeConfigPlugin({ terminalWebSocketUrl }),
+    ...(apiToken ? [createApiCredentialPlugin({ target: apiProxyTarget, token: apiToken })] : []),
     react({
       // Workspace dist entries have already passed through the React compiler.
       exclude: ["**/node_modules/**", "**/dist/**"],

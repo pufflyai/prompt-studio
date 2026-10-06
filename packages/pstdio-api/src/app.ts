@@ -45,6 +45,7 @@ export type { AppConfig, ExtensionRelease } from "./app-config";
 export { resolveAppConfig } from "./app-config";
 export type { AppDependencies, AppHost, AppLifecycle, CreateAppInput } from "./app-contracts";
 export { closeBeforeFatalExit } from "./app-runtime";
+export { assertListenHostAllowed } from "./listen-host";
 
 const createCoreDomainServices = (input: {
   db: Parameters<typeof createAppDatabaseServices>[0];

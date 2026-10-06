@@ -34,6 +34,8 @@ bun run dev:isolated -- --name my-feature --logs
 bun run dev:isolated -- --name my-feature --down
 ```
 
+The API requires a token, created for each run. Open the dashboard URL; the dashboard dev server adds the token for you. To call the API from another tool, read `apiPort` and `apiToken` from `__test-tmp__/dev-isolated/<name>/connection.json` and send `Authorization: Bearer <apiToken>`.
+
 The container runs with your host user and group IDs. Windows uses the image's
 non-root user (1000:1000). Builds write into the checkout with that identity.
 Tools and caches live under `/opt/bun` and `/home/bun`; run the launcher without

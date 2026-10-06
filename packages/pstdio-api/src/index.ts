@@ -1,6 +1,9 @@
-import { apiWebSocket, closeBeforeFatalExit, createApp, resolveAppConfig } from "./app";
+import { apiWebSocket, assertListenHostAllowed, closeBeforeFatalExit, createApp, resolveAppConfig } from "./app";
 import { disableExtensionMutationTimeout } from "./features/extensions/extension-request-timeout";
 import { apiLogger } from "./lib/logger";
+
+const hostname = process.env.PSTDIO_API_HOST ?? "127.0.0.1";
+assertListenHostAllowed(hostname, process.env.PSTDIO_API_TOKEN);
 
 const { app, close } = await createApp({
   config: resolveAppConfig({ env: process.env }),
@@ -32,5 +35,6 @@ export default {
     disableExtensionMutationTimeout(request, server);
     return app.fetch(request, server);
   },
+  hostname,
   websocket: apiWebSocket,
 };

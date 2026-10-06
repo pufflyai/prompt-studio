@@ -73,11 +73,6 @@ export const resolveIsolatedHome = (repoRoot: string, projectName: string) => {
   return resolve(repoRoot, "__test-tmp__", "dev-isolated", projectName, "pstdio-home");
 };
 
-export const resolveIsolatedBrowserTransport = (hostPorts?: HostPorts) => ({
-  PSTDIO_TERMINAL_ORIGINS: `http://${ISOLATED_BROWSER_HOST}:${hostPorts?.dashboard ?? CONTAINER_DASHBOARD_PORT}`,
-  PSTDIO_TERMINAL_WEBSOCKET_URL: `ws://${ISOLATED_BROWSER_HOST}:${hostPorts?.api ?? CONTAINER_API_PORT}/v1/terminal`,
-});
-
 export const resolveIsolatedDashboardUrl = (port: number) => `http://${ISOLATED_BROWSER_HOST}:${port}/`;
 
 export const resolveIsolatedDefaultExtensions = (
@@ -116,8 +111,15 @@ export const composeMountPaths = ({
   HOST_GIT_COMMON_DIR: gitCommonDir,
   HOST_WORKTREE: repoRoot,
 });
-const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts, desktopMode = false) => ({
+const composeEnv = (
+  repoRoot: string,
+  projectName: string,
+  hostPorts?: HostPorts,
+  desktopMode = false,
+  apiToken?: string,
+) => ({
   ...process.env,
+  ...(apiToken ? { PSTDIO_ISOLATED_API_TOKEN: apiToken } : {}),
   ...resolveIsolatedUser(),
   HOME: process.env.HOME ?? process.env.USERPROFILE,
   ...composeMountPaths({
@@ -128,7 +130,6 @@ const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts
   PSTDIO_DEFAULT_EXTENSIONS: resolveIsolatedDefaultExtensions(repoRoot),
   PSTDIO_EXTENSION_RELEASE_REF: resolveIsolatedExtensionReleaseRef(repoRoot),
   PSTDIO_DESKTOP_FLOW: desktopMode ? "1" : "0",
-  ...resolveIsolatedBrowserTransport(hostPorts),
   ...(hostPorts
     ? {
         HOST_DASHBOARD_PORT: String(hostPorts.dashboard),
@@ -144,10 +145,11 @@ const runCompose = (
   extraArgs: string[],
   hostPorts?: HostPorts,
   desktopMode = false,
+  apiToken?: string,
 ) => {
   const result = spawnSync("docker", ["compose", "-f", COMPOSE_FILE, "-p", projectName, ...extraArgs], {
     cwd: repoRoot,
-    env: composeEnv(repoRoot, projectName, hostPorts, desktopMode),
+    env: composeEnv(repoRoot, projectName, hostPorts, desktopMode, apiToken),
     stdio: "inherit",
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -222,7 +224,7 @@ const createComposeServiceMonitor = (
   };
 };
 
-const waitForSeededProject = async (apiPort: number, token?: string) => {
+const waitForSeededProject = async (apiPort: number, token: string | undefined) => {
   for (let attempt = 0; attempt < 90; attempt += 1) {
     try {
       const response = await fetch(`http://127.0.0.1:${apiPort}/v1/projects`, {
@@ -270,7 +272,10 @@ const main = async () => {
 
   const hostPorts = await reserveHostPorts();
   mkdirSync(pstdioHome, { recursive: true });
-  runCompose(projectName, repoRoot, ["up", "-d", "--build"], hostPorts, desktopMode);
+  // The API listens on every container interface, so it needs a token. The desktop flow's runtime
+  // creates its own; the Vite flow gets one per run, and the dashboard dev server holds it.
+  const apiToken = desktopMode ? undefined : randomBytes(32).toString("base64url");
+  runCompose(projectName, repoRoot, ["up", "-d", "--build"], hostPorts, desktopMode, apiToken);
 
   const containerPorts = resolveContainerPorts(hostPorts, desktopMode);
   const apiPort = lookupHostPort(projectName, repoRoot, containerPorts.api, hostPorts, desktopMode);
@@ -282,12 +287,12 @@ const main = async () => {
         pstdioHome,
         createComposeServiceMonitor(projectName, repoRoot, hostPorts, desktopMode),
       )
-    : undefined;
+    : apiToken;
   const project = await waitForSeededProject(apiPort, token);
   const dashboardUrl = resolveIsolatedDashboardUrl(port);
   writeFileSync(
     resolve(pstdioHome, "..", "connection.json"),
-    `${JSON.stringify({ apiPort, dashboardUrl, pstdioHome }, null, 2)}\n`,
+    `${JSON.stringify({ apiPort, apiToken: token, dashboardUrl, pstdioHome }, null, 2)}\n`,
   );
   process.stdout.write(`\nStack:     ${projectName}\n`);
   process.stdout.write(`Dashboard: ${dashboardUrl}\n`);
