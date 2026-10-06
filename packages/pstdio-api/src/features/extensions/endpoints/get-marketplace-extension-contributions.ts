@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
-import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-service";
+import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "../deps";
 import { loadExtensionSourceRuntime } from "../extension-runtime";

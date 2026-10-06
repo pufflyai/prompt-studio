@@ -3,11 +3,9 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { packagedExtensionCatalog } from "../features/extensions/extension-catalog";
 import { namedSourceRef } from "../features/extensions/install-extension-source";
-import {
-  createExtensionUpgradeService,
-  ExtensionUpgradeUnavailableError,
-  resolveExtensionReleaseCommit,
-} from "./extension-upgrade-service";
+import { resolveExtensionReleaseCommit } from "./extension-source-ref";
+import { createExtensionUpgradeService } from "./extension-upgrade-service";
+import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 
 const instance = {
   id: "instance-1",

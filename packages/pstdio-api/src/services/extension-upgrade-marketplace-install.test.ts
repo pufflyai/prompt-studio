@@ -1,7 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { join, resolve } from "node:path";
 import { RepoScopedExtensionNeedsProjectFolderError } from "../features/extensions/install-extension-source";
-import { createExtensionUpgradeService, ExtensionUpgradeUnavailableError } from "./extension-upgrade-service";
+import { createExtensionUpgradeService } from "./extension-upgrade-service";
+import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 
 const repoToolsCatalog = {
   version: 1 as const,

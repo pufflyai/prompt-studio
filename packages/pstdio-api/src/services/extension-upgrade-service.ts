@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { ExtensionRelease } from "../app-config";
 import {
@@ -6,19 +5,20 @@ import {
   type ExtensionCatalogEntry,
   getExtensionCatalog,
 } from "../features/extensions/extension-catalog";
-import { runCommand } from "../features/extensions/install-extension-dependencies";
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
   prepareGitExtensionSource,
-  RepoScopedExtensionNeedsProjectFolderError,
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
 import { compatibilityError } from "../features/extensions/project-extension-instance";
+import { createMarketplaceExtensionInstaller } from "./extension-marketplace-install";
 import type { createExtensionService } from "./extension-service";
+import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
+import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 
-type ExtensionService = Pick<
+export type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
   | "enableInstalledSourceForProject"
   | "getInstalledSource"
@@ -29,7 +29,7 @@ type ExtensionService = Pick<
 
 type WorkspaceService = { getDefault(projectId: string): Promise<{ root_path: string | null } | null> };
 
-type ExtensionUpgradeServiceDeps = {
+export type ExtensionUpgradeServiceDeps = {
   extensionService: ExtensionService;
   installExtensionSource?: (input: InstallExtensionSourceInput) => ReturnType<typeof installExtensionSourceDefault>;
   catalog?: ExtensionCatalog;
@@ -63,86 +63,10 @@ const installFromRecordedOrigin = (input: {
     reuseInstalledDependencies: true,
   });
 
-export class ExtensionUpgradeUnavailableError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ExtensionUpgradeUnavailableError";
-  }
-}
-
 const repoForSource = async (deps: ExtensionUpgradeServiceDeps, projectId: string, sourcePath: string) => {
   const workspace = await deps.workspaceService.getDefault(projectId);
   const root = workspace?.root_path;
   return root && resolve(root, ".pstdio/extensions") === resolve(sourcePath, "..") ? root : undefined;
-};
-
-const repoScopeUnavailableMessage =
-  "This extension installs into the project folder. Open the project from a local folder.";
-
-const extensionScope = (manifest: unknown) => {
-  if (!manifest || typeof manifest !== "object" || !("pstdio" in manifest)) return "user";
-  const pstdio = manifest.pstdio;
-  return pstdio && typeof pstdio === "object" && "scope" in pstdio && pstdio.scope === "repo" ? "repo" : "user";
-};
-
-const enableExisting = async (
-  deps: ExtensionUpgradeServiceDeps,
-  projectId: string,
-  source: NonNullable<Awaited<ReturnType<ExtensionService["getInstalledSource"]>>>,
-) => {
-  const manifest = (source.manifest_json ?? {}) as Record<string, unknown>;
-  const name = typeof manifest.name === "string" ? manifest.name : source.install_name;
-  return deps.extensionService.enableInstalledSourceForProject({
-    displayName: source.display_name,
-    extensionId: source.extension_id,
-    installName: source.install_name,
-    manifest,
-    name,
-    projectId,
-    sourceHash: source.source_hash,
-    sourceKind: source.source_kind as "git" | "local_path" | "registry",
-    sourcePath: source.source_path,
-    sourceRef: source.source_ref,
-    version: source.version,
-  });
-};
-
-const gitCommitPattern = /^[0-9a-f]{40}$/i;
-
-export const parseExtensionSourceRef = (sourceRef: string | null) => {
-  if (!sourceRef) return null;
-  const pathSeparator = sourceRef.lastIndexOf("#");
-  const commitSeparator = sourceRef.lastIndexOf("@", pathSeparator);
-  if (pathSeparator < 1 || commitSeparator < 1) return null;
-  const commit = sourceRef.slice(commitSeparator + 1, pathSeparator);
-  const path = sourceRef.slice(pathSeparator + 1);
-  const url = sourceRef.slice(0, commitSeparator);
-  if (!url || !path || !gitCommitPattern.test(commit)) return null;
-  return { commit: commit.toLowerCase(), path, url };
-};
-
-export const resolveExtensionReleaseCommit = async (originUrl: string, releaseRef: string, run = runCommand) => {
-  if (gitCommitPattern.test(releaseRef)) return releaseRef.toLowerCase();
-
-  const tagRef = releaseRef.startsWith("refs/") ? releaseRef : `refs/tags/${releaseRef}`;
-  const branchRef = releaseRef.startsWith("refs/") ? null : `refs/heads/${releaseRef}`;
-  const refs = [`${tagRef}^{}`, tagRef, ...(branchRef ? [branchRef] : [])];
-  const result = await run("git", ["ls-remote", originUrl, ...refs], { cwd: process.cwd() });
-  if (result.exitCode !== 0) {
-    throw new Error(result.stderr.trim() || result.stdout.trim() || `Could not resolve ${releaseRef}`);
-  }
-
-  const commits = new Map(
-    result.stdout
-      .trim()
-      .split("\n")
-      .map((line) => line.split("\t", 2))
-      .filter((entry): entry is [string, string] => entry.length === 2)
-      .map(([commit, ref]) => [ref, commit]),
-  );
-  const commit = refs.map((ref) => commits.get(ref)).find(Boolean);
-  if (!commit || !gitCommitPattern.test(commit)) throw new Error(`Could not resolve ${releaseRef}`);
-  return commit.toLowerCase();
 };
 
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
@@ -249,70 +173,11 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     return preview;
   };
 
-  const installMarketplaceExtension = async (projectId: string, installName: string) => {
-    const requestedEntry = await requireCatalogEntry(installName);
-    const workspace = await deps.workspaceService.getDefault(projectId);
-    const projectFolder = workspace?.root_path ?? undefined;
-    const records = await deps.extensionService.listProjectExtensionInstances(projectId);
-    const knownRepoScope = records.some(
-      (record) =>
-        record.installedSource.install_name === installName &&
-        extensionScope(record.installedSource.manifest_json) === "repo",
-    );
-
-    const installRepoScoped = async (installed?: Awaited<ReturnType<typeof installForRelease>>) => {
-      if (!projectFolder) throw new ExtensionUpgradeUnavailableError(repoScopeUnavailableMessage);
-      const targetPath = resolve(projectFolder, ".pstdio/extensions", installName);
-      const existing = records.find(
-        (record) => resolve(record.installedSource.source_path) === targetPath && existsSync(targetPath),
-      );
-      if (existing) return enableExisting(deps, projectId, existing.installedSource);
-
-      const resolved = installed ?? (await installForRelease(installName, projectFolder));
-      return deps.extensionService.enableInstalledSourceForProject({
-        installName: resolved.installName,
-        projectId,
-        ...toExtensionEnableInput(resolved),
-      });
-    };
-
-    if (knownRepoScope) return installRepoScoped();
-
-    const existing = await deps.extensionService.getInstalledSource(installName);
-    const existingOrigin = parseExtensionSourceRef(existing?.source_ref ?? null);
-    if (
-      existingOrigin &&
-      (existingOrigin.url !== requestedEntry.origin.url || existingOrigin.path !== requestedEntry.origin.path)
-    ) {
-      throw new ExtensionUpgradeUnavailableError(
-        `Extension ${installName} is already installed from ${existingOrigin.url}#${existingOrigin.path}`,
-      );
-    }
-    if (
-      existing &&
-      extensionScope(existing.manifest_json) === "user" &&
-      existsSync(join(existing.source_path, "package.json"))
-    ) {
-      return enableExisting(deps, projectId, existing);
-    }
-
-    let installed: Awaited<ReturnType<typeof installForRelease>>;
-    try {
-      installed = await installForRelease(installName, projectFolder);
-    } catch (error) {
-      if (error instanceof RepoScopedExtensionNeedsProjectFolderError) {
-        throw new ExtensionUpgradeUnavailableError(repoScopeUnavailableMessage);
-      }
-      throw error;
-    }
-    if (extensionScope(installed.manifest) === "repo") return installRepoScoped(installed);
-
-    return deps.extensionService.enableInstalledSourceForProject({
-      installName: installed.installName,
-      projectId,
-      ...toExtensionEnableInput(installed),
-    });
-  };
+  const installMarketplaceExtension = createMarketplaceExtensionInstaller({
+    deps,
+    installForRelease,
+    requireCatalogEntry,
+  });
 
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);

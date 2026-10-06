@@ -1,7 +1,7 @@
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "pstdio-api-contracts";
 import { apiLogger } from "../../lib/logger";
 import { ProjectNotFoundError } from "../../services/extension-service";
-import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-service";
+import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
 import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "./deps";
