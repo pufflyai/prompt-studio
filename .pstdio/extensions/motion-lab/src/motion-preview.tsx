@@ -44,31 +44,32 @@ export const MotionPreview = () => {
     return <StudyStatus message={`${[file, line, column].filter((v) => v !== undefined).join(":")} ${message}`} />;
   }
   if (error) return <StudyStatus message={error} />;
-  if (!loaded || loaded.hash !== hash) return null;
   return (
     <Flex direction="column" h="full" minH="0" minW="0" overflow="hidden">
       <Box className={settings.theme} position="relative" flex="1" minH="0" minW="0" overflow="hidden" bg="bg.subtle">
-        <SceneBoundary key={hash}>
-          <Player
-            ref={player}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-            component={MotionStudy}
-            inputProps={{ ...settings, Scene: loaded.Scene, canvas: study.canvas }}
-            durationInFrames={max + 1}
-            fps={FPS}
-            compositionWidth={settings.comparison ? 1920 : 1440}
-            compositionHeight={settings.comparison ? 1080 : 900}
-            playbackRate={state.rate}
-            loop={state.loop}
-            inFrame={state.loop && state.playing ? start : undefined}
-            outFrame={state.loop && state.playing ? end : undefined}
-            autoPlay={false}
-            moveToBeginningWhenEnded={false}
-            controls={false}
-            clickToPlay={false}
-            numberOfSharedAudioTags={0}
-          />
-        </SceneBoundary>
+        {loaded && loaded.hash === hash && (
+          <SceneBoundary key={hash}>
+            <Player
+              ref={player}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+              component={MotionStudy}
+              inputProps={{ ...settings, Scene: loaded.Scene, canvas: study.canvas }}
+              durationInFrames={max + 1}
+              fps={FPS}
+              compositionWidth={settings.comparison ? 1920 : 1440}
+              compositionHeight={settings.comparison ? 1080 : 900}
+              playbackRate={state.rate}
+              loop={state.loop}
+              inFrame={state.loop && state.playing ? start : undefined}
+              outFrame={state.loop && state.playing ? end : undefined}
+              autoPlay={false}
+              moveToBeginningWhenEnded={false}
+              controls={false}
+              clickToPlay={false}
+              numberOfSharedAudioTags={0}
+            />
+          </SceneBoundary>
+        )}
       </Box>
       <PlayerControls />
     </Flex>

@@ -13,11 +13,22 @@ export const ReviewRoot = (props: RootProps) => {
   const { Component, host, propsStore } = props;
   const connection = useReviewConnection(host, propsStore);
   return (
-    <Box h="full" w="full" minH="0" minW="0" overflow="hidden" bg="bg" color="fg">
+    <Box
+      h="full"
+      w="full"
+      minH="0"
+      minW="0"
+      overflow="hidden"
+      bg="bg"
+      color="fg"
+      aria-busy={connection.loading && !connection.error}
+    >
       {connection.error && <StudyStatus message={connection.error} />}
       {connection.value && (
         <ReviewContext value={{ ...connection.value, preview: connection.preview, update: connection.update }}>
-          <Component />
+          <Box h="full" w="full" minH="0" minW="0" inert={connection.loading}>
+            <Component />
+          </Box>
         </ReviewContext>
       )}
     </Box>

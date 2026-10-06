@@ -2,6 +2,7 @@ import { existsSync, rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile } from "../helpers/planner-api";
+import { observeTreeRows } from "../helpers/tree-continuity";
 import { uiOrigin } from "../ui-server";
 import { enableCloudWorkspaceProvider } from "./helpers/cloud-workspace-provider";
 
@@ -72,6 +73,13 @@ test("workspace navigation owns selection while keeping ticket document context"
     const card = page.getByTestId("renderer-card").filter({ hasText: "Workspace selection" });
     await card.getByText("Workspace selection", { exact: true }).click();
     await expect(body).toHaveAttribute("aria-selected", "true");
+    const finishObservingRows = await observeTreeRows(sidenav, [
+      body,
+      file,
+      rootRow,
+      sidenav.getByRole("option", { name: "Search", exact: true }),
+      sidenav.getByRole("option", { name: "Settings", exact: true }),
+    ]);
     await rootRow.click();
     await expect(rootRow).toHaveAttribute("aria-selected", "true");
     await expect(body).toHaveAttribute("aria-selected", "false");
@@ -98,6 +106,7 @@ test("workspace navigation owns selection while keeping ticket document context"
     await body.click();
     await expect(body).toHaveAttribute("aria-selected", "true");
     await expect(file).toHaveAttribute("aria-selected", "false");
+    expect(await finishObservingRows()).toEqual([]);
     await page.goto(board);
     await card.getByTestId("workspace-badge-trigger").click();
     await expect(linkedRow).toHaveAttribute("aria-selected", "true");

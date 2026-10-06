@@ -16,7 +16,7 @@ export const useTreeData = (
   resource?: ResourceRef,
   viewId?: string,
   filter?: string,
-  ownerKey = JSON.stringify(["tree", treeViewId, resourceKey(resource)]),
+  ownerKey = JSON.stringify(["tree", treeViewId, viewId]),
 ) => {
   const trees = getWorkbenchRenderers(workbench);
   useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
@@ -33,28 +33,28 @@ export const useTreeData = (
     getPageOwner,
     getPageOwner,
   );
-  // Composed navigation owns its data scope. Other trees conservatively follow
-  // the page resource so pending reads cannot publish into a different resource.
-  const queryKey = JSON.stringify([
-    treeViewId,
-    resourceKey(resource),
-    viewId,
+  // Navigation changes what a mounted tree reads, not the identity of its rows.
+  const queryKey = JSON.stringify([treeViewId, viewId, project]);
+  const refreshKey = JSON.stringify([
     filter,
-    project,
-    mode,
-    pageOwner,
-    trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter }) ?? resourceKey(location?.resource),
+    trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter }) ?? [
+      resourceKey(resource),
+      resourceKey(location?.resource),
+      mode,
+      pageOwner,
+    ],
   ]);
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
   const [expandedChildren, setExpandedChildren] = useState<{ queryKey: string; byNodeId: Record<string, TreeNode[]> }>({
-    queryKey,
+    queryKey: refreshKey,
     byNodeId: {},
   });
   const read = useRendererRead<LoadedTreeData & { children: Record<string, TreeNode[]> }>({
     workbench,
     ownerKey,
     queryKey,
+    refreshKey,
     load: async (signal, publish) => {
       const ctx = { resource, viewId, filter, signal };
       const data = await loadTreeData(trees, treeViewId, ctx, (available) => publish({ ...available, children: {} }));
@@ -74,8 +74,8 @@ export const useTreeData = (
   const loadChildren = (node: TreeNode) => {
     void trees.getChildren(treeViewId, node, { resource, viewId, filter }).then((children) => {
       setExpandedChildren((current) => ({
-        queryKey,
-        byNodeId: { ...(current.queryKey === queryKey ? current.byNodeId : {}), [node.id]: children },
+        queryKey: refreshKey,
+        byNodeId: { ...(current.queryKey === refreshKey ? current.byNodeId : {}), [node.id]: children },
       }));
     });
   };
@@ -84,7 +84,7 @@ export const useTreeData = (
     header: read.value?.header ?? [],
     footer: read.value?.footer ?? [],
     childrenByNodeId: {
-      ...(expandedChildren.queryKey === queryKey ? expandedChildren.byNodeId : {}),
+      ...(expandedChildren.queryKey === refreshKey ? expandedChildren.byNodeId : {}),
       ...read.value?.children,
     },
     loadChildren,

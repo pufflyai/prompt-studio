@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Select the open workspace without overriding ticket document selection.
+Preserve navigation rows and live views during resource changes while selecting the open workspace correctly.

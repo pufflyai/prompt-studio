@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
 import { chromium, expect as expectBrowser } from "@playwright/test";
+import { observeTreeRows } from "../helpers/tree-continuity";
 
 export const expectPackagedWorkspaceSelection = async (
   baseUrl: string,
@@ -33,11 +34,18 @@ export const expectPackagedWorkspaceSelection = async (
     });
     const workspace = sidenav.getByRole("option", { name: "Project workspace", exact: true });
     await expectBrowser(ticket).toHaveAttribute("aria-selected", "true");
+    const finishObservingRows = await observeTreeRows(sidenav, [
+      ticket,
+      workspace,
+      sidenav.getByRole("option", { name: "Search", exact: true }),
+      sidenav.getByRole("option", { name: "Settings", exact: true }),
+    ]);
     await workspace.click();
     await expectBrowser(workspace).toHaveAttribute("aria-selected", "true");
     await expectBrowser(ticket).toHaveAttribute("aria-selected", "false");
     await page.goBack();
     await expectBrowser(ticket).toHaveAttribute("aria-selected", "true");
+    expect(await finishObservingRows()).toEqual([]);
   } finally {
     await browser.close();
   }

@@ -158,13 +158,13 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     let instanceKey = "default";
     const resource = target.resource ? normalizeResource(target.resource) : undefined;
     if (resource) {
-      instanceKey = resourceKey(resource);
       pageState = openResourceSlot({
         slot,
         state: pageState,
         target: { ...target, resource },
-        resourceKey: () => instanceKey,
+        resourceKey,
       });
+      instanceKey = pageState.resourceInstances[slot.id]!.at(-1)!.instanceKey;
     } else {
       if (slot.item.kind === "binding") throw new Error(`Page slot "${slot.id}" requires a resource`);
       if (target.open) throw new Error(`Page slot "${slot.id}" accepts open intent only with a resource`);
