@@ -302,6 +302,7 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0053 — Temporary webview move fallback](../adrs/0053-temporary-webview-move-fallback.md)
 - [0054 — Browser sessions for the local runtime](../adrs/0054-browser-sessions-for-the-local-runtime.md)
 - [0055 — Temporary webview guest message filter](../adrs/0055-temporary-webview-guest-message-filter.md)
+- [0056 — Temporary KaTeX security override](../adrs/0056-temporary-katex-security-override.md)
 
 ## Lessons learned
 
