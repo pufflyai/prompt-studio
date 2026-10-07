@@ -42,6 +42,17 @@ export const NewRevision: Story = {
   },
 };
 
+export const NarrowHeader: Story = {
+  decorators: [
+    (Story) => (
+      <Box width="xs" height="full" data-testid="narrow-reader">
+        <Story />
+      </Box>
+    ),
+  ],
+  args: { content: { ...content, label: "A longer label for the current version" } },
+};
+
 export const Visualization: Story = {
   args: {
     content: { ...content, title: "Weekly activity", html: weeklyActivityHtml },

@@ -1,5 +1,5 @@
-import { Box, Button, HStack, Menu, Stack, Text } from "@chakra-ui/react";
-import { createGlyphIcon } from "@pstdio/ui";
+import { Box, Button, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
+import { createGlyphIcon, Header } from "@pstdio/ui";
 import { useState } from "react";
 import type { ArtifactContent, ArtifactSummary } from "../artifacts";
 import { useArtifactTranslations } from "../translations";
@@ -8,6 +8,11 @@ import { HtmlPreview } from "./html-preview";
 import { RenameArtifactDialog } from "./rename-artifact-dialog";
 
 const ChevronDown = createGlyphIcon("arrow-down-1");
+const History = createGlyphIcon("history");
+const Actions = createGlyphIcon("more");
+const Rename = createGlyphIcon("edit");
+const Delete = createGlyphIcon("trash");
+const Library = createGlyphIcon("grid-4");
 interface ArtifactReaderProps {
   content: ArtifactContent;
   revisions: ArtifactSummary[];
@@ -23,18 +28,24 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
   const [dialog, setDialog] = useState<"rename" | "delete">();
   const latest = revisions[0];
   const title = latest?.title ?? content.title;
+  const selectedIndex = revisions.findIndex((revision) => revision.id === content.id);
+  const selectedLabel =
+    content.label || t("reader.version", "Version {{number}}", { number: revisions.length - selectedIndex });
   return (
     <Stack height="full" gap="0" minHeight="0">
-      <HStack p="sm" borderBottomWidth="1px" borderColor="border.subtle">
+      <Header flexShrink="0" justifyContent="space-between">
         <Menu.Root positioning={{ placement: "bottom-start" }}>
           <Menu.Trigger asChild>
             <Button
               variant="ghost"
-              aria-label={t("reader.actions", "{{title}} — versions and actions", { title })}
+              aria-label={t("reader.versions", "Versions")}
+              minWidth="0"
+              flexShrink="1"
               maxWidth="full"
             >
+              <History />
               <Text truncate textStyle="paragraph/S/medium">
-                {title}
+                {selectedLabel}
               </Text>
               <ChevronDown />
             </Button>
@@ -46,6 +57,7 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
                 <Menu.RadioItemGroup value={content.id} onValueChange={(event) => onSelect(event.value)}>
                   {revisions.map((revision, index) => (
                     <Menu.RadioItem key={revision.id} value={revision.id}>
+                      <History />
                       <Menu.ItemText>
                         {revision.label ||
                           t("reader.version", "Version {{number}}", { number: revisions.length - index })}
@@ -56,21 +68,34 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
                   ))}
                 </Menu.RadioItemGroup>
               </Menu.ItemGroup>
-              <Menu.Separator />
+            </Menu.Content>
+          </Menu.Positioner>
+        </Menu.Root>
+        <Menu.Root positioning={{ placement: "bottom-end" }}>
+          <Menu.Trigger asChild>
+            <IconButton variant="ghost" aria-label={t("reader.actions", "Artifact actions")}>
+              <Actions />
+            </IconButton>
+          </Menu.Trigger>
+          <Menu.Positioner>
+            <Menu.Content>
               <Menu.Item value="rename" onClick={() => setDialog("rename")}>
+                <Rename />
                 {t("reader.rename", "Rename artifact…")}
               </Menu.Item>
               <Menu.Separator />
               <Menu.Item value="library" onClick={onBack}>
+                <Library />
                 {t("reader.all", "All artifacts")}
               </Menu.Item>
               <Menu.Item value="delete" onClick={() => setDialog("delete")}>
+                <Delete />
                 {t("reader.delete", "Delete artifact…")}
               </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>
         </Menu.Root>
-      </HStack>
+      </Header>
       <Box flex="1" minHeight="0" width="full" bg="bg.muted" overflow="hidden">
         <HtmlPreview
           key={content.id}
