@@ -35,13 +35,12 @@ The command reads the file from the agent's current workspace. Without one, it r
 
 ## Browse artifacts
 
-Open **Artifacts** in the project navigation. The library shows a grid of page previews with their names and edit dates. Select a card to open the artifact. Cards also work with the keyboard. Use the search field to filter the library.
+Open **Artifacts** in the project navigation. The library shows a grid of page previews with their names and edit dates. Select a card to open the artifact. Cards also work with the keyboard.
 
-The library stays open as an **Artifacts** tab next to each artifact you open. Switching tabs keeps your search and the state of each interactive preview. A link to a published URL opens the matching artifact tab.
+The library stays open as an **Artifacts** tab next to each artifact you open. Switching tabs keeps the state of each interactive preview. Click **Artifacts** in the breadcrumb to return to the library tab. A link to a published URL opens the matching artifact tab.
 
-Each artifact has one menu, named after the artifact. Use it to:
+Each artifact has two icon menus in its header. Use **Versions** to pick a saved version. New versions appear in this menu without resetting the preview you are looking at. Use **Artifact actions** to:
 
-- Pick a version. New versions appear there without resetting the preview you are looking at.
 - Rename the artifact. The new name applies to all versions and later updates. The saved HTML does not change.
 - Delete the artifact. After you confirm, Artifacts removes all its versions and their saved copies. Your original source files stay.
 - Go back to the library tab.

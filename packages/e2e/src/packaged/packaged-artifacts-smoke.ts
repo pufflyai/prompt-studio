@@ -24,6 +24,13 @@ export const expectPackagedArtifacts = async (input: {
       extensionId: "pstdio.pstdio-artifacts",
       localId: "artifacts",
       main: { kind: "panels", empty: expect.any(Object) },
+      slots: expect.arrayContaining([
+        expect.objectContaining({
+          id: "library",
+          region: "main",
+          item: expect.objectContaining({ kind: "view", presence: "fixed" }),
+        }),
+      ]),
     }),
   );
   expect(metadata.views).toContainEqual(

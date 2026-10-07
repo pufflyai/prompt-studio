@@ -35,6 +35,33 @@ const page = (id: string, title: string): WorkbenchPageContribution => ({
   slots: [],
 });
 describe("page breadcrumbs", () => {
+  test("returns a panel page to its fixed main panel from its current breadcrumb", () => {
+    const library: WorkbenchPageContribution = {
+      ...page("artifacts", "Artifacts"),
+      main: { kind: "panels", empty: { kind: "view", id: "empty" } },
+      slots: [
+        {
+          id: "library",
+          region: "main",
+          item: { kind: "view", view: { kind: "view", id: "library" }, presence: "fixed" },
+        },
+      ],
+    };
+    const targets: NavigationTargetPage[] = [];
+    const panels: string[] = [];
+    const items = createWorkbenchPageBreadcrumbItems({
+      location: { page: library.ref },
+      pages: [library],
+      navigationTrees,
+      modes,
+      resources,
+      navigate: (target) => targets.push(target),
+      openPanel: (pageId, slotId) => panels.push(`${pageId}:${slotId}`),
+    });
+    items[0].onClick?.();
+    expect(targets).toEqual([{ kind: "page", page: library.ref }]);
+    expect(panels).toEqual(["artifacts:library"]);
+  });
   test("derives one trail from the canonical parent chain", () => {
     const tickets = page("tickets", "Tickets");
     const ticket = { ...page("ticket", "Ticket"), parentId: tickets.id };
