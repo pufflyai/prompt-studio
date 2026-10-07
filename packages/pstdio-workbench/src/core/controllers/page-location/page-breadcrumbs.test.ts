@@ -35,6 +35,31 @@ const page = (id: string, title: string): WorkbenchPageContribution => ({
   slots: [],
 });
 describe("page breadcrumbs", () => {
+  test("keeps the current resource breadcrumb focused on the resource", () => {
+    const workspace: WorkbenchPageContribution = {
+      ...page("workspace", "Workspace"),
+      main: { kind: "panels", empty: { kind: "view", id: "empty" } },
+      slots: [
+        {
+          id: "files",
+          region: "main",
+          item: { kind: "view", view: { kind: "view", id: "files" }, presence: "fixed" },
+        },
+      ],
+    };
+    const resource = { type: "workspace", id: "ws-1", label: "WS-1" };
+    const items = createWorkbenchPageBreadcrumbItems({
+      location: { page: workspace.ref, resource },
+      pages: [workspace],
+      navigationTrees,
+      modes,
+      resources,
+      navigate: () => undefined,
+      openPanel: () => undefined,
+    });
+    expect(items[0].resource).toEqual(resource);
+    expect(items[0].onClick).toBeUndefined();
+  });
   test("returns a panel page to its fixed main panel from its current breadcrumb", () => {
     const library: WorkbenchPageContribution = {
       ...page("artifacts", "Artifacts"),
