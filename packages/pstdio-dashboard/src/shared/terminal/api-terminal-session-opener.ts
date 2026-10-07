@@ -1,6 +1,7 @@
 import type { WorkbenchTerminalSessionExit, WorkbenchTerminalSessionOpener } from "@pstdio/workbench";
 import type { TerminalWebSocketClientMessage, TerminalWebSocketServerMessage } from "pstdio-api-contracts";
 import { buildAbsoluteApiUrl, readRuntimeConfig } from "@/lib/api";
+import { browserSessionWebSocketProtocols, readBrowserSession } from "@/lib/browser-session";
 
 const encodeBase64 = (data: string | Uint8Array) => {
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
@@ -69,7 +70,7 @@ const terminalWebSocketUrl = () => {
 /** Opens a PTY over one bidirectional WebSocket, including stdin and resize. */
 export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (request) =>
   new Promise((resolve, reject) => {
-    const socket = new WebSocket(terminalWebSocketUrl());
+    const socket = new WebSocket(terminalWebSocketUrl(), browserSessionWebSocketProtocols(readBrowserSession()));
     const hub = createSessionEventHub();
     let opened = false;
 

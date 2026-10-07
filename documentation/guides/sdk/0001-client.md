@@ -21,15 +21,17 @@ const client = createClient({
 All options are optional. With no arguments, a non-browser client reads `PSTDIO_API_URL` and `PSTDIO_API_TOKEN` from
 the environment. Without a configured URL, the client targets `http://127.0.0.1:19840`, including in a browser.
 
-For browser code served by the authenticated Prompt Studio runtime, use that page's origin explicitly:
+For browser code served by the authenticated Prompt Studio runtime, use that page's origin explicitly and pass the
+browser session secret as the token:
 
 ```ts
-const client = createClient({ baseUrl: window.location.origin });
+const client = createClient({ baseUrl: window.location.origin, token: browserSessionSecret });
 ```
 
-Same-origin requests use the runtime's HttpOnly session cookie for REST and SSE without exposing the bearer token
-to JavaScript. This example does not authenticate a page hosted on another origin. Extension webviews should use
-the [webview client](../../references/extensions/0005-webview-and-storage-api.md), which calls the host through its bridge.
+The dashboard gets the browser session secret through a single-use login link and keeps it in per-origin storage
+([ADR 0057](../../adrs/0057-browser-sessions-in-per-origin-storage.md)). Never pass the descriptor token to a page.
+Extension webviews should use the [webview client](../../references/extensions/0005-webview-and-storage-api.md),
+which calls the host through its bridge.
 
 The runtime usually listens on a port the operating system picks, so set both values for scripts. The running
 runtime records its address as `origin` and its access token as `token` in `$PSTDIO_HOME/runtime.json`
@@ -60,12 +62,12 @@ client.automation; // Scoped tokens and durable automation runs
 client.notifications; // Project inbox items and resolution
 client.settings; // Global settings
 client.sync; // SSE sync helpers
-client.runtime; // Browser-session provisioning
+client.runtime; // Browser login links
 ```
 
-Desktop main processes can provision the dedicated browser session through `client.runtime.provisionBrowserSession()`.
-The request uses the bearer header, returns no token payload, and sets the `HttpOnly; SameSite=Strict` cookie. Do not
-forward the descriptor token into renderer JavaScript.
+Processes that hold the descriptor token can sign a browser in with `client.runtime.createBrowserLogin()`. It returns
+`{ url }`, a dashboard link with a single-use code in the URL fragment that expires after 60 seconds. Open that link
+in the browser. Do not forward the descriptor token into renderer JavaScript.
 
 ## Projects
 

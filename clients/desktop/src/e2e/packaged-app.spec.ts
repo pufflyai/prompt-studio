@@ -175,7 +175,14 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
       values: { [pageLocationKey]: pageLocation, [selectedProjectKey]: projectId },
     });
     expect(
-      await second.page.evaluate(async () => (await (await fetch("/v1/projects")).json()) as Array<{ name: string }>),
+      await second.page.evaluate(
+        async () =>
+          (await (
+            await fetch("/v1/projects", {
+              headers: { authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}` },
+            })
+          ).json()) as Array<{ name: string }>,
+      ),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
     await expect(second.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
     await expect(second.page.getByTestId("workbench-side-panel-attached")).toBeVisible();

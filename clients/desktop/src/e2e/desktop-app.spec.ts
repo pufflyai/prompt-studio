@@ -55,13 +55,13 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       );
       return;
     }
-    if (request.url === "/runtime/browser-session") {
+    if (request.url === "/runtime/browser-login") {
       if (request.headers.authorization !== `Bearer ${token}`) {
         response.writeHead(401).end();
         return;
       }
-      response.setHeader("set-cookie", `pstdio_runtime_session=${token}; Path=/; HttpOnly; SameSite=Strict`);
-      response.writeHead(204).end();
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({ url: `http://${request.headers.host}/#browser-login=fixture-code` }));
       return;
     }
     if (request.url === "/runtime/events") {

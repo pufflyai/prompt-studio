@@ -1,44 +1,25 @@
 import { describe, expect, test } from "bun:test";
-import { provisionRuntimeSession } from "./runtime-session";
+import { createRuntimeLoginUrl } from "./runtime-session";
 
-describe("runtime browser session", () => {
-  test("clears the ephemeral session and provisions the runtime's own HttpOnly browser cookie", async () => {
+describe("runtime browser login", () => {
+  test("asks the runtime for a single-use login link with the token in a header", async () => {
     const calls: string[] = [];
-    const session = {
-      clearStorageData: async (options: { storages: Array<"cookies"> }) => {
-        calls.push(`clear:${options.storages.join(",")}`);
-      },
-      fetch: async (input: string, init: RequestInit) => {
-        calls.push(`fetch:${input}:${new Headers(init.headers).get("authorization")}`);
-        return new Response(null, { status: 204 });
-      },
-      cookies: {
-        get: async () => [{ httpOnly: true, sameSite: "strict", secure: false, value: "browser-session-secret" }],
-      },
+    const fetchFn = async (input: string, init: RequestInit) => {
+      calls.push(`${init.method} ${input} ${new Headers(init.headers).get("authorization")}`);
+      return Response.json({ url: "http://127.0.0.1:43127/#browser-login=one-time" });
     };
 
-    await provisionRuntimeSession(session, {
-      origin: "http://127.0.0.1:43127",
-      token: "runtime-secret",
-    });
+    const url = await createRuntimeLoginUrl(fetchFn, { origin: "http://127.0.0.1:43127", token: "runtime-secret" });
 
-    expect(calls).toEqual([
-      "clear:cookies",
-      "fetch:http://127.0.0.1:43127/runtime/browser-session:Bearer runtime-secret",
-    ]);
+    expect(url).toBe("http://127.0.0.1:43127/#browser-login=one-time");
+    expect(calls).toEqual(["POST http://127.0.0.1:43127/runtime/browser-login Bearer runtime-secret"]);
   });
 
-  test("fails closed when the runtime does not provision the expected protected cookie", async () => {
-    const session = {
-      clearStorageData: async () => {},
-      fetch: async () => new Response(null, { status: 204 }),
-      cookies: {
-        get: async () => [{ httpOnly: false, sameSite: "lax", secure: false, value: "browser-session-secret" }],
-      },
-    };
+  test("fails when the runtime refuses the login link", async () => {
+    const fetchFn = async () => Response.json({ error: "Unauthorized" }, { status: 401 });
 
     await expect(
-      provisionRuntimeSession(session, { origin: "http://127.0.0.1:43127", token: "runtime-secret" }),
-    ).rejects.toThrow("protected runtime session cookie");
+      createRuntimeLoginUrl(fetchFn, { origin: "http://127.0.0.1:43127", token: "runtime-secret" }),
+    ).rejects.toThrow("status 401");
   });
 });

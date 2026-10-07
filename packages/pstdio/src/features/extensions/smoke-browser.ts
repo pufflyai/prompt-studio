@@ -8,13 +8,14 @@ import { checkSmokeComposition, visitSmokePage, waitForSmokeCondition } from "./
 export const exerciseSmokeDashboard = async (input: {
   context: BrowserContext;
   origin: string;
+  loginUrl: string;
   projectId: string;
   inventory: WorkbenchExtensionMetadata;
   result: SmokeResult;
   logPath: string;
   signal: AbortSignal;
 }) => {
-  const { context, origin, projectId, inventory, result, signal } = input;
+  const { context, origin, loginUrl, projectId, inventory, result, signal } = input;
   const page = await context.newPage();
   page.setDefaultTimeout(10_000);
   const observation = observeSmokePage(page, result, input.logPath);
@@ -26,7 +27,10 @@ export const exerciseSmokeDashboard = async (input: {
   const plan = planSmokePages(inventory.pages, extensionId, projectId);
   result.coverage.unexercised.push(...plan.unexercised);
   try {
-    await page.goto(`${origin}/projects/${projectId}`);
+    // The dashboard redeems the login code on any page, so the first page signs the browser in.
+    const projectPage = new URL(loginUrl);
+    projectPage.pathname = `/projects/${projectId}`;
+    await page.goto(projectPage.toString());
     await waitForSmokeCondition(
       () => observation.events.some((event) => event.event === "registration-ready" && event.projectId === projectId),
       signal,

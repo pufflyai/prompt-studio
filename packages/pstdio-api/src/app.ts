@@ -95,7 +95,7 @@ const createAppAutomationService = async (input: {
   return service;
 };
 
-// A runtime accepts its token as a bearer and its own browser session as an exact-origin cookie.
+// A runtime accepts its token and its own browser session secret as bearer credentials.
 const apiSecurity = (host: CreateAppInput["host"], runtime: RuntimeRouteDeps | undefined) => {
   if (runtime)
     return { token: runtime.host.token, origin: runtime.host.origin, browserSessions: runtime.browserSessions };

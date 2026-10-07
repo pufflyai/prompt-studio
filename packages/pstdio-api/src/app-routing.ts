@@ -11,7 +11,7 @@ import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createProjectRoutes } from "./features/projects/routes";
-import { createBrowserLoginRoutes, createRuntimeRoutes } from "./features/runtime/routes";
+import { createBrowserSessionRoutes, createRuntimeRoutes } from "./features/runtime/routes";
 import {
   isRuntimeOriginAllowed,
   isRuntimeRequestAuthorized,
@@ -214,7 +214,7 @@ export const registerApi = (
   input: { security: RuntimeSecurity | undefined; terminalOrigins: string[] },
 ) => {
   app.route("/v1", createExtensionWebviewAssetRoutes(deps));
-  if (deps.runtime) app.route("/runtime", createBrowserLoginRoutes(deps.runtime));
+  if (deps.runtime) app.route("/runtime", createBrowserSessionRoutes(deps.runtime));
   registerApiMiddleware(app, deps, input.security);
   registerApiRoutes(app, deps, input.terminalOrigins);
   registerApiErrorHandler(app, input.security);

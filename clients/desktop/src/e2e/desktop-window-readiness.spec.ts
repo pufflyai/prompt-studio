@@ -14,12 +14,9 @@ test("loads the workbench after the startup window shows while lifecycle resourc
   const root = mkdtempSync(join(tmpdir(), "desktop-window-readiness-"));
   let workbenchRequests = 0;
   const server = createServer((request, response) => {
-    if (request.url === "/runtime/browser-session") {
-      response.setHeader(
-        "set-cookie",
-        "pstdio_runtime_session=window-readiness-secret; Path=/; HttpOnly; SameSite=Strict",
-      );
-      response.writeHead(204).end();
+    if (request.url === "/runtime/browser-login") {
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({ url: `http://${request.headers.host}/#browser-login=fixture-code` }));
       return;
     }
     if (request.url === "/") workbenchRequests += 1;

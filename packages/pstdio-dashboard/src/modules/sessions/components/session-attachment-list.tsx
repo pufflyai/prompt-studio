@@ -1,8 +1,9 @@
-import { Dialog, IconButton, Image, Stack } from "@chakra-ui/react";
+import { Dialog, IconButton, Stack } from "@chakra-ui/react";
 import { ResourceBadge } from "@pstdio/ui";
 import { X } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { useState } from "react";
+import { ApiImage } from "@/shared/components/api-image";
 
 interface SessionAttachmentListProps {
   attachments: SessionAttachment[];
@@ -32,7 +33,7 @@ export const SessionAttachmentList = (props: SessionAttachmentListProps) => {
               tone="neutral"
               icon={
                 isImage ? (
-                  <Image
+                  <ApiImage
                     src={attachment.url}
                     alt={`${attachment.name} preview thumbnail`}
                     boxSize="18px"
@@ -66,7 +67,7 @@ export const SessionAttachmentList = (props: SessionAttachmentListProps) => {
             </Dialog.Header>
             <Dialog.Body p="md">
               {previewAttachment && (
-                <Image
+                <ApiImage
                   src={previewAttachment.url}
                   alt={`${previewAttachment.name} preview`}
                   maxH="70vh"
