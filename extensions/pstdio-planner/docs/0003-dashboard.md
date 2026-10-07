@@ -6,6 +6,8 @@ Planner adds a ticket board and a page for each ticket to the Prompt Studio dash
 
 Open **Tickets** in the project sidebar. The board shows one column for each [status](0001-tags-and-statuses.md#statuses), in status order. Newest tickets come first.
 
+To reach off-screen columns, hold the primary mouse button and drag empty board space or a column heading. You can also use the horizontal scrollbar or your trackpad. Dragging a card moves the ticket instead.
+
 ### Cards
 
 Each card shows the ticket's title and these properties:

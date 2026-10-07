@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Archive, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -141,6 +142,22 @@ const Wrapper = () => {
 
 export const Default: Story = {
   render: () => <Wrapper />,
+};
+
+export const WideBoard: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Hold the primary mouse button and drag empty space or a column heading to pan horizontally. Cards still open and drag between columns. Column controls keep their normal actions. Touch and scrollbars use native scrolling.",
+      },
+    },
+  },
+  render: () => (
+    <Box maxW="lg" height="md">
+      <Wrapper />
+    </Box>
+  ),
 };
 
 export const WithContextMenuActions: Story = {
