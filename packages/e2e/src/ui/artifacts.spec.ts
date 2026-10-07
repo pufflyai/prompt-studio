@@ -121,7 +121,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     const second = await execute("publish", { file_path: "update.html", url: first.url, label: "Second" });
     expect(second.url).toBe(first.url);
     rmSync(join(repo, "update.html"));
-    await expect(page.getByRole("tab", { name: "Second page", exact: true })).toBeVisible();
+    await expect(frame.locator('iframe[title^="Preview: "]')).toHaveAttribute("title", "Preview: Second page");
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
     await versionMenu.click();
     await frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();

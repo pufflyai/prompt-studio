@@ -45,8 +45,9 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
       ...(leavesProjectNavigation(location, input) ? { startsLevel: true } : {}),
       ...(location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };
+    // Collection pages return to their landing panel; resource crumbs keep their resource link.
     const landingPanel =
-      page?.main.kind === "panels"
+      page?.main.kind === "panels" && !location.resource
         ? page.slots.find(
             (slot) => slot.region === "main" && slot.item.kind === "view" && slot.item.presence === "fixed",
           )
