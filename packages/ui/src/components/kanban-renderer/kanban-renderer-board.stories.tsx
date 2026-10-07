@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Archive, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, within } from "storybook/test";
+import { expect, fireEvent, fn, userEvent, within } from "storybook/test";
 
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
@@ -13,6 +13,8 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
+
+const runAttempt = fn();
 
 const mockColumns: KanbanRendererBoardColumn[] = [
   {
@@ -27,7 +29,7 @@ const mockColumns: KanbanRendererBoardColumn[] = [
       {
         id: "t1",
         contextMenuActions: [
-          { key: "run", label: "Run attempt", icon: <Play size={14} />, onClick: () => undefined },
+          { key: "run", label: "Run attempt", icon: <Play size={14} />, onClick: runAttempt },
           {
             key: "delete",
             label: "Delete",
@@ -161,13 +163,20 @@ export const WideBoard: Story = {
 };
 
 export const WithContextMenuActions: Story = {
-  render: () => <Wrapper />,
+  render: () => (
+    <Box maxW="lg" height="md">
+      <Wrapper />
+    </Box>
+  ),
   play: async ({ canvasElement }) => {
+    runAttempt.mockClear();
     const canvas = within(canvasElement);
     const card = canvas.getByText("Set up auth").closest('[data-testid="renderer-card"]');
     expect(card).not.toBeNull();
     fireEvent.contextMenu(card!);
     await expect(await within(document.body).findByRole("menuitem", { name: "Run attempt" })).toBeVisible();
     await expect(within(document.body).getByRole("menuitem", { name: "Delete" })).toBeVisible();
+    await userEvent.click(within(document.body).getByRole("menuitem", { name: "Run attempt" }));
+    await expect(runAttempt).toHaveBeenCalledTimes(1);
   },
 };

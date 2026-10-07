@@ -8,6 +8,7 @@ Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass
 - Write **TypeScript only**.
 - Use **bun**. Do not use `npm`, `yarn`, or `pnpm`.
 - A task is not complete until the relevant tests and checks for the change pass.
+- A PR is not complete until all applicable CI checks pass on its latest commit. See [CI completion](#ci-completion).
 - If you get stuck, read the relevant [lessons learned](documentation/lessons-learned/) before trying another approach.
 
 # Language
@@ -249,6 +250,14 @@ Do not write:
 ## Manual Playwright validation
 
 Run `bun run dev:playwright`. Open the dashboard URL printed by the command with Playwright or another browser tool. When finished, stop it with `bun run dev:playwright:down`.
+
+## CI completion
+
+- After each push, wait for all applicable CI checks on that commit to finish.
+- Inspect failures, fix their causes, and push again. Continue until CI passes on the latest PR commit.
+- Pending, failed, cancelled, or timed-out checks mean the work is unfinished. Checks skipped by workflow conditions are allowed.
+- Local checks passing or opening a draft PR does not complete the task.
+- If CI is blocked, report the blocker and keep the PR open. Do not report the task as done.
 
 ## CI timeouts
 

@@ -7,7 +7,7 @@ interface BoardPan {
 }
 
 const interactiveTarget =
-  'button, a, input, textarea, select, [role="button"], [contenteditable]:not([contenteditable="false"]), [data-board-pan-ignore], [data-scope="scroll-area"][data-part="scrollbar"]';
+  'button, a, input, textarea, select, [role="button"], [role="menu"], [contenteditable]:not([contenteditable="false"]), [data-board-pan-ignore], [data-scope="scroll-area"][data-part="scrollbar"]';
 
 export const useBoardPan = () => {
   const pan = useRef<BoardPan | null>(null);
@@ -28,8 +28,15 @@ export const useBoardPan = () => {
     onPointerDownCapture: (event: PointerEvent<HTMLDivElement>) => {
       // Leave touch scrolling and card/control gestures with their existing owners.
       if (event.pointerType !== "mouse" || event.button !== 0 || !event.isPrimary) return;
-      if (!(event.target instanceof Element) || event.target.closest(interactiveTarget)) return;
       const viewport = event.currentTarget;
+      // React portal events bubble here even when their DOM is outside the viewport.
+      if (
+        !(event.target instanceof Element) ||
+        !viewport.contains(event.target) ||
+        event.target.closest(interactiveTarget)
+      ) {
+        return;
+      }
       if (viewport.scrollWidth <= viewport.clientWidth) return;
 
       event.preventDefault();

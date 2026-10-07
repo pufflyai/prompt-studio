@@ -36,10 +36,20 @@ export const registerBoardPanningSmokeTests = () => {
       });
       await signInBrowser(page, runtime.descriptor);
       await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" });
+      await createPlannerTicket(page.request, runtime.baseUrl, id, {
+        content: "# Completed board ticket",
+        statusId: "done",
+      });
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
       await page.goto(`${runtime.baseUrl}/projects/${id}/`);
       await page.getByRole("option", { name: "Tickets", exact: true }).click();
       await verifyBoardPanning(page);
+      const doneCard = page.getByTestId("renderer-card").filter({ hasText: "Completed board ticket" });
+      await doneCard.scrollIntoViewIfNeeded();
+      await page.getByRole("button", { name: "Column actions for Done", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Archive all", exact: true }).click();
+      await expect(doneCard).toBeHidden();
+      await page.getByTestId("board-column-backlog").scrollIntoViewIfNeeded();
       await page.getByRole("button", { name: "Create row", exact: true }).first().click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.keyboard.press("Escape");
