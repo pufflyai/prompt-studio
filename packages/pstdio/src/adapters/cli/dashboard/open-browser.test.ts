@@ -1,35 +1,28 @@
 import { expect, test } from "bun:test";
 import { openBrowser } from "./open-browser";
 
-test("calls open command on darwin", () => {
-  let calledWith = "";
-  const opener = (cmd: string) => {
-    calledWith = cmd;
-  };
+const capture = () => {
+  const calls: Array<{ file: string; args: string[] }> = [];
+  return { calls, opener: (file: string, args: string[]) => void calls.push({ file, args }) };
+};
 
-  openBrowser("http://localhost:5555", "darwin", opener);
+// The URL is passed as one argument, never through a shell, so quotes or `&` in it cannot run commands.
+const url = 'http://127.0.0.1:5555/runtime/browser-login?code=a"b&c';
 
-  expect(calledWith).toBe('open "http://localhost:5555"');
+test("opens the URL with open on darwin", () => {
+  const { calls, opener } = capture();
+  openBrowser(url, "darwin", opener);
+  expect(calls).toEqual([{ file: "open", args: [url] }]);
 });
 
-test("calls xdg-open on linux", () => {
-  let calledWith = "";
-  const opener = (cmd: string) => {
-    calledWith = cmd;
-  };
-
-  openBrowser("http://localhost:5555", "linux", opener);
-
-  expect(calledWith).toBe('xdg-open "http://localhost:5555"');
+test("opens the URL with xdg-open on linux", () => {
+  const { calls, opener } = capture();
+  openBrowser(url, "linux", opener);
+  expect(calls).toEqual([{ file: "xdg-open", args: [url] }]);
 });
 
-test("calls start on win32", () => {
-  let calledWith = "";
-  const opener = (cmd: string) => {
-    calledWith = cmd;
-  };
-
-  openBrowser("http://localhost:5555", "win32", opener);
-
-  expect(calledWith).toBe('start "" "http://localhost:5555"');
+test("opens the URL with the URL protocol handler on win32", () => {
+  const { calls, opener } = capture();
+  openBrowser(url, "win32", opener);
+  expect(calls).toEqual([{ file: "rundll32", args: ["url.dll,FileProtocolHandler", url] }]);
 });
