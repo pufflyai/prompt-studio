@@ -7,6 +7,7 @@ import { chromium, expect } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { verifyBoardEdgeScrolling } from "./packaged-board-edge-scrolling";
 import { verifyBoardPanning } from "./packaged-board-panning";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -36,6 +37,7 @@ export const registerBoardPanningSmokeTests = () => {
       });
       await signInBrowser(page, runtime.descriptor);
       await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Pan board ticket" });
+      await createPlannerTicket(page.request, runtime.baseUrl, id, { content: "# Edge scroll ticket" });
       await createPlannerTicket(page.request, runtime.baseUrl, id, {
         content: "# Completed board ticket",
         statusId: "done",
@@ -44,6 +46,7 @@ export const registerBoardPanningSmokeTests = () => {
       await page.goto(`${runtime.baseUrl}/projects/${id}/`);
       await page.getByRole("option", { name: "Tickets", exact: true }).click();
       await verifyBoardPanning(page);
+      await verifyBoardEdgeScrolling(page);
       const doneCard = page.getByTestId("renderer-card").filter({ hasText: "Completed board ticket" });
       await doneCard.scrollIntoViewIfNeeded();
       await page.getByRole("button", { name: "Column actions for Done", exact: true }).click();

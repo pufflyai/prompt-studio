@@ -25,6 +25,7 @@ You can also create tickets from a terminal with [`pst tickets create`](0004-cli
 ### Move and change tickets
 
 - Drag a card to another column to change its status.
+- Hold a dragged card near either side of the board to scroll toward hidden columns. Move closer to the edge to scroll faster.
 - Choose **Manual** ordering in the display menu, then drag cards within a column to change their order.
 - In the Done column, choose **Archive all** to archive every ticket in it.
 - Select a card to open the ticket page.

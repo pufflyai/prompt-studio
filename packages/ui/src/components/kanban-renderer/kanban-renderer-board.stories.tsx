@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Archive, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, fn, userEvent, within } from "storybook/test";
+import { expect, fireEvent, fn, userEvent, waitFor, within } from "storybook/test";
 
 import { KanbanRendererBoard, type KanbanRendererBoardColumn } from "./kanban-renderer-board";
 
@@ -160,6 +160,37 @@ export const WideBoard: Story = {
       <Wrapper />
     </Box>
   ),
+};
+
+export const EdgeScrolling: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: "Hold a dragged card near either side of the board to scroll. Moving closer to the edge scrolls faster.",
+      },
+    },
+  },
+  render: () => (
+    <Box maxW="lg" height="md">
+      <Wrapper />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const card = within(canvasElement).getByText("Set up auth").closest('[data-testid="renderer-card"]')!;
+    const viewport = canvasElement.querySelector<HTMLDivElement>('[data-part="viewport"]')!;
+    const bounds = viewport.getBoundingClientRect();
+    const dataTransfer = new DataTransfer();
+    const clientY = bounds.top + bounds.height / 2;
+    fireEvent.dragStart(card, { dataTransfer, clientX: bounds.left + bounds.width / 2, clientY });
+    try {
+      fireEvent.dragOver(viewport, { dataTransfer, clientX: bounds.right - 48, clientY });
+      await waitFor(() => expect(viewport.scrollLeft).toBeGreaterThan(60));
+      fireEvent.dragOver(viewport, { dataTransfer, clientX: bounds.left + 48, clientY });
+      await waitFor(() => expect(viewport.scrollLeft).toBe(0));
+    } finally {
+      fireEvent.dragEnd(card, { dataTransfer });
+    }
+  },
 };
 
 export const WithContextMenuActions: Story = {
